@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.agent.hopaw.mapper.AgentMapper">
+    
+    <resultMap id="AgentResultMap" type="com.agent.hopaw.model.Agent">
+        <id property="id" column="id"/>
+        <result property="name" column="name"/>
+        <result property="description" column="description"/>
+        <result property="tools" column="tools"/>
+    </resultMap>
+    
+    <select id="findAll" resultMap="AgentResultMap">
+        SELECT id, name, description, tools 
+        FROM agents 
+        ORDER BY id DESC
+    </select>
+    
+    <select id="findById" resultMap="AgentResultMap">
+        SELECT id, name, description, tools 
+        FROM agents 
+        WHERE id = #{id}
+    </select>
+    
+    <insert id="insert" parameterType="com.agent.hopaw.model.Agent">
+        INSERT INTO agents (name, description, tools) 
+        VALUES (#{name}, #{description}, #{tools})
+    </insert>
+    
+    <update id="update" parameterType="com.agent.hopaw.model.Agent">
+        UPDATE agents 
+        SET name = #{name}, 
+            description = #{description}, 
+            tools = #{tools} 
+        WHERE id = #{id}
+    </update>
+    
+    <delete id="deleteById">
+        DELETE FROM agents WHERE id = #{id}
+    </delete>
+    
+</mapper>

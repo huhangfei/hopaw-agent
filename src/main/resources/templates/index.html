@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>智能 Agent 平台</title>
+    <link rel="stylesheet" th:href="@{/css/style.css}">
+</head>
+<body>
+    <header>
+        <h1>🤖 智能 Agent 平台</h1>
+    </header>
+    
+    <div class="main-container">
+        <aside class="sidebar">
+            <div class="sidebar-header">
+                <h2>Agent 列表</h2>
+                <button class="btn-add" onclick="showAddModal()" title="添加 Agent">
+                    <svg viewBox="0 0 24 24" fill="currentColor"><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/></svg>
+                </button>
+            </div>
+            <div class="agent-list">
+                <div th:each="agent : ${agents}" 
+                     class="agent-item" 
+                     th:classappend="${selectedAgentId == agent.id ? 'selected' : ''}"
+                     th:attr="data-id=${agent.id}, onclick=|selectAgent(${agent.id})|">
+                    <div class="agent-name" th:text="${agent.name}"></div>
+                    <div class="agent-description" th:text="${agent.description}"></div>
+                    <div class="agent-tools">
+                        <span th:each="tool : ${agent.getToolsArray()}" 
+                              class="tool-tag" 
+                              th:text="${tool}"></span>
+                    </div>
+                </div>
+            </div>
+        </aside>
+        
+        <main class="chat-area">
+            <div th:if="${selectedAgent != null}" class="chat-header">
+                <div>
+                    <h2 th:text="${selectedAgent.name}"></h2>
+                    <p th:text="${selectedAgent.description}"></p>
+                </div>
+                <div class="header-actions">
+                    <button class="btn-edit" th:attr="onclick=|showEditModal(${selectedAgent.id}, '${selectedAgent.name}', '${selectedAgent.description}', '${selectedAgent.tools}')|" title="编辑">
+                        <svg viewBox="0 0 24 24" fill="currentColor"><path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/></svg>
+                    </button>
+                    <button class="btn-delete" th:attr="onclick=|deleteAgent(${selectedAgent.id})|" title="删除">
+                        <svg viewBox="0 0 24 24" fill="currentColor"><path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/></svg>
+                    </button>
+                    <button class="btn-clear" th:attr="onclick=|clearHistory(${selectedAgent.id})|" title="清空对话">
+                        <svg viewBox="0 0 24 24" fill="currentColor"><path d="M17.65 6.35C16.2 4.9 14.21 4 12 4c-4.42 0-7.99 3.58-7.99 8s3.57 8 7.99 8c3.73 0 6.84-2.55 7.73-6h-2.08c-.82 2.33-3.04 4-5.65 4-3.31 0-6-2.69-6-6s2.69-6 6-6c1.66 0 3.14.69 4.22 1.78L13 11h7V4l-2.35 2.35z"/></svg>
+                    </button>
+                </div>
+            </div>
+            <div th:if="${selectedAgent != null}" class="chat-messages" id="chatMessages">
+                <div th:each="chat : ${chatHistory}" th:classappend="${chat.role == 'user' ? 'user' : 'agent'}" class="message">
+                    <div class="message-label" th:text="${chat.role == 'user' ? '你' : selectedAgent.name}"></div>
+                    <div th:text="${chat.content}"></div>
+                    <div class="message-time" th:text="${#temporals.format(chat.createTime, 'HH:mm:ss')}"></div>
+                </div>
+                <div th:if="${message != null}" class="message user">
+                    <div class="message-label">你</div>
+                    <div th:text="${message}"></div>
+                </div>
+                <div th:if="${response != null}" class="message agent">
+                    <div class="message-label" th:text="${selectedAgent.name}"></div>
+                    <div th:text="${response}"></div>
+                </div>
+            </div>
+            <div th:if="${selectedAgent != null}" class="chat-input-area">
+                <form th:action="@{/chat}" method="post" class="chat-form" id="chatForm">
+                    <input type="hidden" name="agentId" th:value="${selectedAgent.id}">
+                    <input type="text" name="message" id="messageInput" placeholder="输入消息..." required>
+                    <button type="submit" id="sendBtn">发送</button>
+                </form>
+            </div>
+            
+            <div th:if="${selectedAgent == null}" class="empty-state">
+                <svg viewBox="0 0 24 24" fill="currentColor">
+                    <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/>
+                </svg>
+                <p>选择一个 Agent 开始对话</p>
+            </div>
+        </main>
+    </div>
+    
+    <div id="addAgentModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>添加新 Agent</h3>
+                <button class="modal-close" onclick="hideAddModal()">&times;</button>
+            </div>
+            <form th:action="@{/agent/create}" method="post">
+                <div class="form-group">
+                    <label>名称</label>
+                    <input type="text" name="name" placeholder="输入 Agent 名称" required>
+                </div>
+                <div class="form-group">
+                    <label>描述</label>
+                    <textarea name="description" placeholder="输入 Agent 描述" required></textarea>
+                </div>
+                <div class="form-group">
+                    <label>工具</label>
+                    <div class="checkbox-group">
+                        <label th:each="tool : ${tools}" class="checkbox-item">
+                            <input type="checkbox" name="tools" th:value="${tool.name}">
+                            <span th:text="${tool.name}"></span>
+                            <span class="tool-desc" th:text="${tool.description}"></span>
+                        </label>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn-cancel" onclick="hideAddModal()">取消</button>
+                    <button type="submit" class="btn-submit">创建</button>
+                </div>
+            </form>
+        </div>
+    </div>
+    
+    <div id="editAgentModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>编辑 Agent</h3>
+                <button class="modal-close" onclick="hideEditModal()">&times;</button>
+            </div>
+            <form th:action="@{/agent/update}" method="post">
+                <input type="hidden" name="id" id="editAgentId">
+                <div class="form-group">
+                    <label>名称</label>
+                    <input type="text" name="name" id="editAgentName" placeholder="输入 Agent 名称" required>
+                </div>
+                <div class="form-group">
+                    <label>描述</label>
+                    <textarea name="description" id="editAgentDescription" placeholder="输入 Agent 描述" required></textarea>
+                </div>
+                <div class="form-group">
+                    <label>工具</label>
+                    <div class="checkbox-group" id="editToolList">
+                        <label th:each="tool : ${tools}" class="checkbox-item">
+                            <input type="checkbox" name="tools" th:value="${tool.name}" class="edit-tool-checkbox">
+                            <span th:text="${tool.name}"></span>
+                            <span class="tool-desc" th:text="${tool.description}"></span>
+                        </label>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn-cancel" onclick="hideEditModal()">取消</button>
+                    <button type="submit" class="btn-submit">保存</button>
+                </div>
+            </form>
+        </div>
+    </div>
+    
+    <script th:src="@{/js/main.js}"></script>
+    <script th:inline="javascript">
+        setCurrentAgentId(/*[[${selectedAgentId}]]*/ null);
+    </script>
+</body>
+</html>
