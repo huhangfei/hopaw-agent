@@ -2,6 +2,29 @@ var currentAgentId = null;
 var ws = null;
 var isStreaming = false;
 var currentStreamingMessage = null;
+var streamingMarkdownContent = '';
+
+if (typeof marked !== 'undefined') {
+    marked.setOptions({
+        breaks: true,
+        gfm: true
+    });
+}
+
+function renderMarkdown(content) {
+    if (typeof marked !== 'undefined') {
+        return marked.parse(content);
+    }
+    return content.replace(/\n/g, '<br>');
+}
+
+function renderAllMessages() {
+    var messageContents = document.querySelectorAll('.message-content[data-is-agent="true"]');
+    messageContents.forEach(function(el) {
+        var textContent = el.getAttribute('data-raw-content') || el.textContent;
+        el.innerHTML = renderMarkdown(textContent);
+    });
+}
 
 function setCurrentAgentId(agentId) {
     currentAgentId = agentId;
@@ -43,6 +66,7 @@ function connectWebSocket() {
 
 function handleStreamingChunk(content) {
     if (!currentStreamingMessage) {
+        streamingMarkdownContent = '';
         currentStreamingMessage = document.createElement('div');
         currentStreamingMessage.className = 'message agent';
         
@@ -60,8 +84,19 @@ function handleStreamingChunk(content) {
         messagesDiv.scrollTop = messagesDiv.scrollHeight;
     }
     
+    streamingMarkdownContent += content;
     var contentDiv = currentStreamingMessage.querySelector('.streaming-content');
-    contentDiv.textContent += content;
+    
+    try {
+        if (typeof marked !== 'undefined') {
+            var html = marked.parse(streamingMarkdownContent);
+            contentDiv.innerHTML = html;
+        } else {
+            contentDiv.textContent = streamingMarkdownContent;
+        }
+    } catch (e) {
+        contentDiv.textContent = streamingMarkdownContent;
+    }
     
     var messagesDiv = document.getElementById('chatMessages');
     messagesDiv.scrollTop = messagesDiv.scrollHeight;
@@ -69,6 +104,20 @@ function handleStreamingChunk(content) {
 
 function handleStreamingDone(userMessage, response) {
     if (currentStreamingMessage) {
+        var contentDiv = currentStreamingMessage.querySelector('.streaming-content');
+        contentDiv.setAttribute('data-raw-content', streamingMarkdownContent);
+        contentDiv.className = 'message-content';
+        
+        try {
+            if (typeof marked !== 'undefined') {
+                contentDiv.innerHTML = marked.parse(streamingMarkdownContent);
+            } else {
+                contentDiv.textContent = streamingMarkdownContent;
+            }
+        } catch (e) {
+            contentDiv.textContent = streamingMarkdownContent;
+        }
+        
         var timeDiv = document.createElement('div');
         timeDiv.className = 'message-time';
         var now = new Date();
@@ -78,6 +127,7 @@ function handleStreamingDone(userMessage, response) {
         currentStreamingMessage.appendChild(timeDiv);
         
         currentStreamingMessage = null;
+        streamingMarkdownContent = '';
     }
     
     isStreaming = false;
@@ -224,6 +274,7 @@ document.getElementById('editAgentModal').addEventListener('click', function(e) 
 window.onload = function() {
     var messagesDiv = document.getElementById('chatMessages');
     if (messagesDiv) {
+        renderAllMessages();
         messagesDiv.scrollTop = messagesDiv.scrollHeight;
     }
     var input = document.getElementById('messageInput');

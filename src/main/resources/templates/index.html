@@ -55,16 +55,16 @@
             <div th:if="${selectedAgent != null}" class="chat-messages" id="chatMessages">
                 <div th:each="chat : ${chatHistory}" th:classappend="${chat.role == 'user' ? 'user' : 'agent'}" class="message">
                     <div class="message-label" th:text="${chat.role == 'user' ? '你' : selectedAgent.name}"></div>
-                    <div th:text="${chat.content}"></div>
+                    <div th:text="${chat.content}" class="message-content" th:attr="data-is-agent=${chat.role == 'agent'}"></div>
                     <div class="message-time" th:text="${#temporals.format(chat.createTime, 'HH:mm:ss')}"></div>
                 </div>
                 <div th:if="${message != null}" class="message user">
                     <div class="message-label">你</div>
-                    <div th:text="${message}"></div>
+                    <div th:text="${message}" class="message-content" data-is-agent="false"></div>
                 </div>
                 <div th:if="${response != null}" class="message agent">
                     <div class="message-label" th:text="${selectedAgent.name}"></div>
-                    <div th:text="${response}"></div>
+                    <div th:text="${response}" class="message-content" data-is-agent="true"></div>
                 </div>
             </div>
             <div th:if="${selectedAgent != null}" class="chat-input-area">
@@ -152,6 +152,7 @@
     </div>
     
     <script th:src="@{/js/main.js}"></script>
+    <script th:src="@{/js/marked.min.js}"></script>
     <script th:inline="javascript">
         setCurrentAgentId(/*[[${selectedAgentId}]]*/ null);
     </script>

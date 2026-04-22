@@ -288,6 +288,116 @@ header h1 {
     white-space: pre-wrap;
     word-break: break-word;
 }
+.message-content {
+    word-break: break-word;
+}
+.message-content h1,
+.message-content h2,
+.message-content h3,
+.message-content h4,
+.message-content h5,
+.message-content h6 {
+    margin: 15px 0 10px 0;
+    font-weight: 600;
+}
+.message-content h1:first-child,
+.message-content h2:first-child,
+.message-content h3:first-child,
+.message-content h4:first-child,
+.message-content h5:first-child,
+.message-content h6:first-child {
+    margin-top: 0;
+}
+.message-content p {
+    margin: 10px 0;
+}
+.message-content p:first-child {
+    margin-top: 0;
+}
+.message-content p:last-child {
+    margin-bottom: 0;
+}
+.message-content code {
+    background: rgba(0, 0, 0, 0.06);
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-family: 'Courier New', monospace;
+    font-size: 0.9em;
+}
+.message.user .message-content code {
+    background: rgba(255, 255, 255, 0.2);
+}
+.message-content pre {
+    background: #f6f8fa;
+    padding: 16px;
+    border-radius: 8px;
+    overflow-x: auto;
+    margin: 10px 0;
+}
+.message.user .message-content pre {
+    background: rgba(255, 255, 255, 0.1);
+}
+.message-content pre code {
+    background: none;
+    padding: 0;
+    border-radius: 0;
+}
+.message-content ul,
+.message-content ol {
+    margin: 10px 0;
+    padding-left: 25px;
+}
+.message-content li {
+    margin: 5px 0;
+}
+.message-content blockquote {
+    border-left: 4px solid #667eea;
+    padding: 10px 15px;
+    margin: 10px 0;
+    background: rgba(102, 126, 234, 0.05);
+    border-radius: 4px;
+}
+.message.user .message-content blockquote {
+    border-left-color: white;
+    background: rgba(255, 255, 255, 0.1);
+}
+.message-content table {
+    border-collapse: collapse;
+    width: 100%;
+    margin: 10px 0;
+}
+.message-content th,
+.message-content td {
+    border: 1px solid #ddd;
+    padding: 8px 12px;
+    text-align: left;
+}
+.message-content th {
+    background: #f6f8fa;
+    font-weight: 600;
+}
+.message-content hr {
+    border: none;
+    border-top: 1px solid #ddd;
+    margin: 15px 0;
+}
+.message-content img {
+    max-width: 100%;
+    height: auto;
+    border-radius: 8px;
+    margin: 10px 0;
+}
+.message-content a {
+    color: #667eea;
+    text-decoration: none;
+}
+.message-content a:hover {
+    text-decoration: underline;
+}
+.message.user .message-content a {
+    color: white;
+    text-decoration: underline;
+}
 .empty-state {
     flex: 1;
     display: flex;
