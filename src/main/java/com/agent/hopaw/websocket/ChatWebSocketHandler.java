@@ -3,6 +3,8 @@ package com.agent.hopaw.websocket;
 import com.agent.hopaw.mapper.ChatHistoryMapper;
 import com.agent.hopaw.model.ChatHistory;
 import com.agent.hopaw.service.AgentService;
+import com.alibaba.fastjson2.JSON;
+import com.alibaba.fastjson2.JSONObject;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.stereotype.Component;
 import org.springframework.web.socket.CloseStatus;
@@ -20,13 +22,11 @@ import java.util.concurrent.ConcurrentHashMap;
 public class ChatWebSocketHandler extends TextWebSocketHandler {
 
     private final AgentService agentService;
-    private final ObjectMapper objectMapper;
     private final ChatHistoryMapper chatHistoryMapper;
     private final Map<String, WebSocketSession> sessions = new ConcurrentHashMap<>();
 
-    public ChatWebSocketHandler(AgentService agentService, ObjectMapper objectMapper, ChatHistoryMapper chatHistoryMapper) {
+    public ChatWebSocketHandler(AgentService agentService, ChatHistoryMapper chatHistoryMapper) {
         this.agentService = agentService;
-        this.objectMapper = objectMapper;
         this.chatHistoryMapper = chatHistoryMapper;
     }
 
@@ -38,7 +38,7 @@ public class ChatWebSocketHandler extends TextWebSocketHandler {
     @Override
     protected void handleTextMessage(WebSocketSession session, TextMessage message) {
         try {
-            Map<String, String> payload = objectMapper.readValue(message.getPayload(), Map.class);
+            Map<String, String> payload = JSON.parseObject(message.getPayload(), Map.class);
             String agentIdStr = payload.get("agentId");
             String userMessage = payload.get("message");
 
@@ -75,7 +75,7 @@ public class ChatWebSocketHandler extends TextWebSocketHandler {
                 Map<String, Object> data = new HashMap<>();
                 data.put("type", "chunk");
                 data.put("content", chunk);
-                session.sendMessage(new TextMessage(objectMapper.writeValueAsString(data)));
+                session.sendMessage(new TextMessage(JSON.toJSONString(data)));
             } catch (IOException e) {
             }
         }, toolCallInfo -> {
@@ -83,7 +83,7 @@ public class ChatWebSocketHandler extends TextWebSocketHandler {
                 String toolCallId = (String) toolCallInfo.get("toolCallId");
                 String status = (String) toolCallInfo.get("status");
                 String toolName = (String) toolCallInfo.get("toolName");
-                String arguments = (String) toolCallInfo.get("arguments");
+                JSONObject arguments = (JSONObject) toolCallInfo.get("arguments");
                 String result = (String) toolCallInfo.get("result");
 
                 if ("starting".equals(status)) {
@@ -100,7 +100,7 @@ public class ChatWebSocketHandler extends TextWebSocketHandler {
                 } else if ("executed".equals(status)) {
                     ChatHistory toolChat = new ChatHistory(
                             agentId, "agent", "tool_call",
-                            toolCallId, toolName, arguments, result
+                            toolCallId, toolName, arguments.toJSONString(), result
                     );
                     toolChat.setCreateTime(LocalDateTime.now());
                     chatHistoryMapper.insert(toolChat);
@@ -109,8 +109,7 @@ public class ChatWebSocketHandler extends TextWebSocketHandler {
                     state.currentToolName = null;
                     state.currentToolArguments = null;
                 }
-
-                String payload = objectMapper.writeValueAsString(toolCallInfo);
+                String payload = JSON.toJSONString(toolCallInfo);
                 session.sendMessage(new TextMessage(payload));
             } catch (IOException e) {
             }
@@ -126,14 +125,14 @@ public class ChatWebSocketHandler extends TextWebSocketHandler {
         doneData.put("type", "done");
         doneData.put("message", userMessage);
         doneData.put("response", state.accumulatedText.toString());
-        session.sendMessage(new TextMessage(objectMapper.writeValueAsString(doneData)));
+        session.sendMessage(new TextMessage(JSON.toJSONString(doneData)));
     }
 
     private static class StreamingState {
         StringBuilder accumulatedText = new StringBuilder();
         String currentToolCallId;
         String currentToolName;
-        String currentToolArguments;
+        JSONObject currentToolArguments;
     }
 
     private void sendError(WebSocketSession session, String errorMessage) {
@@ -141,7 +140,7 @@ public class ChatWebSocketHandler extends TextWebSocketHandler {
             Map<String, Object> data = new HashMap<>();
             data.put("type", "error");
             data.put("message", errorMessage);
-            session.sendMessage(new TextMessage(objectMapper.writeValueAsString(data)));
+            session.sendMessage(new TextMessage(JSON.toJSONString(data)));
         } catch (IOException e) {
         }
     }

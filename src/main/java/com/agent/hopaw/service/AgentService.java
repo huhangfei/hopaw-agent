@@ -1,15 +1,17 @@
 package com.agent.hopaw.service;
 
 import com.agent.hopaw.mapper.AgentMapper;
+import com.agent.hopaw.mapper.ChatMemoryMapper;
 import com.agent.hopaw.model.Agent;
 import com.agent.hopaw.tools.AgentTool;
+import com.alibaba.fastjson2.JSON;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import dev.langchain4j.memory.chat.MessageWindowChatMemory;
 import dev.langchain4j.service.AiServices;
 import dev.langchain4j.service.TokenStream;
 import dev.langchain4j.service.UserMessage;
 import dev.langchain4j.model.openai.OpenAiChatModel;
 import dev.langchain4j.model.openai.OpenAiStreamingChatModel;
-import dev.langchain4j.data.message.AiMessage;
-import dev.langchain4j.model.chat.response.StreamingChatResponseHandler;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
@@ -27,8 +29,9 @@ import java.util.stream.Collectors;
 public class AgentService {
     private final Map<String, AgentExecutor> agentExecutors = new HashMap<>();
     private final AgentMapper agentMapper;
+    private final ChatMemoryMapper chatMemoryMapper;
     private final List<AgentTool> allTools;
-
+    private final ObjectMapper objectMapper;
     @Value("${openai.api.key:demo-key}")
     private String openaiApiKey;
 
@@ -38,9 +41,11 @@ public class AgentService {
     @Value("${openai.model.name:gpt-3.5-turbo}")
     private String modelName;
 
-    public AgentService(AgentMapper agentMapper, List<AgentTool> allTools) {
+    public AgentService(AgentMapper agentMapper, ChatMemoryMapper chatMemoryMapper, List<AgentTool> allTools, ObjectMapper objectMapper) {
         this.agentMapper = agentMapper;
+        this.chatMemoryMapper = chatMemoryMapper;
         this.allTools = allTools;
+        this.objectMapper = objectMapper;
     }
 
     public List<Agent> getAllAgents() {
@@ -51,23 +56,26 @@ public class AgentService {
         return agentMapper.findById(id);
     }
 
-    public Agent createAgent(String name, String description, String tools) {
-        Agent agent = new Agent(name, description, tools);
+    public Agent createAgent(String name, String description, String tools, Integer maxMemoryRecords) {
+        Agent agent = new Agent(name, description, tools, maxMemoryRecords);
         agentMapper.insert(agent);
         return agent;
     }
 
     public void deleteAgent(Long id) {
         agentMapper.deleteById(id);
+        chatMemoryMapper.deleteByAgentId(id);
     }
 
-    public void updateAgent(Long id, String name, String description, String tools) {
+    public void updateAgent(Long id, String name, String description, String tools, Integer maxMemoryRecords) {
         Agent agent = agentMapper.findById(id);
         if (agent != null) {
             agent.setName(name);
             agent.setDescription(description);
             agent.setTools(tools);
+            agent.setMaxMemoryRecords(maxMemoryRecords);
             agentMapper.update(agent);
+            agentExecutors.remove(id.toString());
         }
     }
 
@@ -115,9 +123,12 @@ public class AgentService {
                     .filter(t -> selectedToolNames.contains(t.getName()))
                     .collect(Collectors.toList());
 
-            return new AgentExecutor(agent, chatModel, streamingModel, selectedTools);
+            SQLiteChatMemoryStore memoryStore = new SQLiteChatMemoryStore(chatMemoryMapper, agent.getId());
+            int maxRecords = agent.getMaxMemoryRecords() != null ? agent.getMaxMemoryRecords() : 20;
+
+            return new AgentExecutor(agent, chatModel, streamingModel, selectedTools, memoryStore, maxRecords);
         } catch (Exception e) {
-            return new AgentExecutor(agent, null, null, new ArrayList<>());
+            return new AgentExecutor(agent, null, null, new ArrayList<>(), null, 20);
         }
     }
 
@@ -140,39 +151,53 @@ public class AgentService {
         private final Assistant streamingAssistant;
 
         public AgentExecutor(Agent agent, OpenAiChatModel chatModel, OpenAiStreamingChatModel streamingModel,
-                           List<AgentTool> selectedTools) {
+                           List<AgentTool> selectedTools, SQLiteChatMemoryStore memoryStore, int maxMemoryRecords) {
             this.agent = agent;
             String systemMessage = "你是一个智能助手，名字叫" + agent.getName() + "。" +
                     "你的主要工作是" + agent.getDescription() + "。" +
                     "在你判断需要时，你可以调用一系列工具。" +
                     "请认真回答用户问题。";
 
-            if (chatModel != null && !selectedTools.isEmpty()) {
-                this.assistant = AiServices.builder(Assistant.class)
+            if (chatModel != null) {
+                var aiBuilder = AiServices.builder(Assistant.class)
                         .chatModel(chatModel)
-                        .systemMessageProvider(chatMemoryId -> systemMessage)
-                        .tools(selectedTools.toArray())
-                        .build();
-            } else if (chatModel != null) {
-                this.assistant = AiServices.builder(Assistant.class)
-                        .chatModel(chatModel)
-                        .systemMessageProvider(chatMemoryId -> systemMessage)
-                        .build();
+                        .systemMessageProvider(chatMemoryId -> systemMessage);
+                
+                if (memoryStore != null) {
+                    aiBuilder.chatMemory(MessageWindowChatMemory.builder()
+                            .id("agent-" + agent.getId())
+                            .maxMessages(maxMemoryRecords)
+                            .chatMemoryStore(memoryStore)
+                            .build());
+                }
+                
+                if (!selectedTools.isEmpty()) {
+                    aiBuilder.tools(selectedTools.toArray());
+                }
+                
+                this.assistant = aiBuilder.build();
             } else {
                 this.assistant = null;
             }
 
-            if (streamingModel != null && !selectedTools.isEmpty()) {
-                this.streamingAssistant = AiServices.builder(Assistant.class)
+            if (streamingModel != null) {
+                var streamBuilder = AiServices.builder(Assistant.class)
                         .streamingChatModel(streamingModel)
-                        .systemMessageProvider(chatMemoryId -> systemMessage)
-                        .tools(selectedTools.toArray())
-                        .build();
-            } else if (streamingModel != null) {
-                this.streamingAssistant = AiServices.builder(Assistant.class)
-                        .streamingChatModel(streamingModel)
-                        .systemMessageProvider(chatMemoryId -> systemMessage)
-                        .build();
+                        .systemMessageProvider(chatMemoryId -> systemMessage);
+                
+                if (memoryStore != null) {
+                    streamBuilder.chatMemory(MessageWindowChatMemory.builder()
+                            .id("agent-" + agent.getId())
+                            .maxMessages(maxMemoryRecords)
+                            .chatMemoryStore(memoryStore)
+                            .build());
+                }
+                
+                if (!selectedTools.isEmpty()) {
+                    streamBuilder.tools(selectedTools.toArray());
+                }
+                
+                this.streamingAssistant = streamBuilder.build();
             } else {
                 this.streamingAssistant = null;
             }
@@ -216,7 +241,7 @@ public class AgentService {
                             toolInfo.put("status", "starting");
                             toolInfo.put("toolCallId", toolExecution.request().id());
                             toolInfo.put("toolName", toolExecution.request().name());
-                            toolInfo.put("arguments", toolExecution.request().arguments());
+                            toolInfo.put("arguments", JSON.parseObject(toolExecution.request().arguments()));
                             toolCallConsumer.accept(toolInfo);
                         } catch (Exception e) {
                         }
@@ -227,7 +252,7 @@ public class AgentService {
                             toolInfo.put("status", "executed");
                             toolInfo.put("toolCallId", toolExecution.request().id());
                             toolInfo.put("toolName", toolExecution.request().name());
-                            toolInfo.put("arguments", toolExecution.request().arguments());
+                            toolInfo.put("arguments", JSON.parseObject(toolExecution.request().arguments()));
                             toolInfo.put("result", toolExecution.result());
                             toolCallConsumer.accept(toolInfo);
                         } catch (Exception e) {

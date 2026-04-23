@@ -5,6 +5,7 @@ public class Agent {
     private String name;
     private String description;
     private String tools;
+    private Integer maxMemoryRecords;
 
     public Agent() {}
 
@@ -12,6 +13,14 @@ public class Agent {
         this.name = name;
         this.description = description;
         this.tools = tools;
+        this.maxMemoryRecords = 20;
+    }
+
+    public Agent(String name, String description, String tools, Integer maxMemoryRecords) {
+        this.name = name;
+        this.description = description;
+        this.tools = tools;
+        this.maxMemoryRecords = maxMemoryRecords != null ? maxMemoryRecords : 20;
     }
 
     public Long getId() {
@@ -51,5 +60,13 @@ public class Agent {
             return new String[0];
         }
         return tools.split(",");
+    }
+
+    public Integer getMaxMemoryRecords() {
+        return maxMemoryRecords;
+    }
+
+    public void setMaxMemoryRecords(Integer maxMemoryRecords) {
+        this.maxMemoryRecords = maxMemoryRecords;
     }
 }

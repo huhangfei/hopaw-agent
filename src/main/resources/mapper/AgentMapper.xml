@@ -7,30 +7,32 @@
         <result property="name" column="name"/>
         <result property="description" column="description"/>
         <result property="tools" column="tools"/>
+        <result property="maxMemoryRecords" column="max_memory_records"/>
     </resultMap>
     
     <select id="findAll" resultMap="AgentResultMap">
-        SELECT id, name, description, tools 
+        SELECT id, name, description, tools, max_memory_records
         FROM agents 
         ORDER BY id DESC
     </select>
     
     <select id="findById" resultMap="AgentResultMap">
-        SELECT id, name, description, tools 
+        SELECT id, name, description, tools, max_memory_records
         FROM agents 
         WHERE id = #{id}
     </select>
     
     <insert id="insert" parameterType="com.agent.hopaw.model.Agent">
-        INSERT INTO agents (name, description, tools) 
-        VALUES (#{name}, #{description}, #{tools})
+        INSERT INTO agents (name, description, tools, max_memory_records) 
+        VALUES (#{name}, #{description}, #{tools}, #{maxMemoryRecords})
     </insert>
     
     <update id="update" parameterType="com.agent.hopaw.model.Agent">
         UPDATE agents 
         SET name = #{name}, 
             description = #{description}, 
-            tools = #{tools} 
+            tools = #{tools},
+            max_memory_records = #{maxMemoryRecords}
         WHERE id = #{id}
     </update>
     

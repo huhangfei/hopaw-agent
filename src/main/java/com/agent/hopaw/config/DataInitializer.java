@@ -32,8 +32,14 @@ public class DataInitializer implements CommandLineRunner {
                     "id INTEGER PRIMARY KEY AUTOINCREMENT, " +
                     "name TEXT NOT NULL, " +
                     "description TEXT, " +
-                    "tools TEXT" +
+                    "tools TEXT, " +
+                    "max_memory_records INTEGER DEFAULT 20" +
                     ")");
+            
+            try {
+                stmt.execute("ALTER TABLE agents ADD COLUMN max_memory_records INTEGER DEFAULT 20");
+            } catch (Exception e) {
+            }
             
             stmt.execute("CREATE TABLE IF NOT EXISTS chat_history (" +
                     "id INTEGER PRIMARY KEY AUTOINCREMENT, " +
@@ -63,14 +69,25 @@ public class DataInitializer implements CommandLineRunner {
                 stmt.execute("ALTER TABLE chat_history ADD COLUMN tool_arguments TEXT");
             } catch (Exception e) {
             }
+            
+            stmt.execute("CREATE TABLE IF NOT EXISTS chat_memory (" +
+                    "id INTEGER PRIMARY KEY AUTOINCREMENT, " +
+                    "agent_id INTEGER NOT NULL, " +
+                    "message_id TEXT NOT NULL, " +
+                    "message_json TEXT NOT NULL, " +
+                    "create_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP" +
+                    ")");
+            
+            stmt.execute("CREATE INDEX IF NOT EXISTS idx_chat_memory_agent ON chat_memory(agent_id)");
+            stmt.execute("CREATE INDEX IF NOT EXISTS idx_chat_memory_message_id ON chat_memory(message_id)");
         }
 
         List<Agent> agents = agentMapper.findAll();
         if (agents.isEmpty()) {
-            agentMapper.insert(new Agent("通用助手", "可以回答各种问题，使用多种工具", "calculator,weather,search"));
-            agentMapper.insert(new Agent("数学助手", "专门解决数学问题", "calculator"));
-            agentMapper.insert(new Agent("天气助手", "专门提供天气信息", "weather"));
-            agentMapper.insert(new Agent("搜索助手", "专门进行网页搜索", "search"));
+            agentMapper.insert(new Agent("通用助手", "可以回答各种问题，使用多种工具", "calculator,weather,search", 20));
+            agentMapper.insert(new Agent("数学助手", "专门解决数学问题", "calculator", 20));
+            agentMapper.insert(new Agent("天气助手", "专门提供天气信息", "weather", 20));
+            agentMapper.insert(new Agent("搜索助手", "专门进行网页搜索", "search", 20));
         }
     }
 }

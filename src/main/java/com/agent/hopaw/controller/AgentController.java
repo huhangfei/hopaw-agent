@@ -52,9 +52,10 @@ public class AgentController {
     @PostMapping("/agent/create")
     public String createAgent(@RequestParam String name,
                              @RequestParam String description,
-                             @RequestParam(required = false) String tools) {
+                             @RequestParam(required = false) String tools,
+                             @RequestParam(required = false, defaultValue = "20") Integer maxMemoryRecords) {
         String toolsStr = tools != null ? tools : "";
-        agentService.createAgent(name, description, toolsStr);
+        agentService.createAgent(name, description, toolsStr, maxMemoryRecords);
         return "redirect:/";
     }
 
@@ -69,9 +70,10 @@ public class AgentController {
     public String updateAgent(@RequestParam Long id,
                              @RequestParam String name,
                              @RequestParam String description,
-                             @RequestParam(required = false) String tools) {
+                             @RequestParam(required = false) String tools,
+                             @RequestParam(required = false, defaultValue = "20") Integer maxMemoryRecords) {
         String toolsStr = tools != null ? tools : "";
-        agentService.updateAgent(id, name, description, toolsStr);
+        agentService.updateAgent(id, name, description, toolsStr, maxMemoryRecords);
         return "redirect:/";
     }
 

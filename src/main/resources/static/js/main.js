@@ -367,10 +367,11 @@ function hideAddModal() {
     document.getElementById('addAgentModal').classList.remove('active');
 }
 
-function showEditModal(id, name, description, tools) {
+function showEditModal(id, name, description, tools, maxMemoryRecords) {
     document.getElementById('editAgentId').value = id;
     document.getElementById('editAgentName').value = name;
     document.getElementById('editAgentDescription').value = description;
+    document.getElementById('editMaxMemoryRecords').value = maxMemoryRecords || 20;
     
     var checkboxes = document.querySelectorAll('.edit-tool-checkbox');
     checkboxes.forEach(function(checkbox) {
