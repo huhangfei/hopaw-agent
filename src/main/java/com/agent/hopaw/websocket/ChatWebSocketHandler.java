@@ -6,6 +6,8 @@ import com.agent.hopaw.service.AgentService;
 import com.alibaba.fastjson2.JSON;
 import com.alibaba.fastjson2.JSONObject;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
 import org.springframework.web.socket.CloseStatus;
 import org.springframework.web.socket.TextMessage;
@@ -21,6 +23,7 @@ import java.util.concurrent.ConcurrentHashMap;
 @Component
 public class ChatWebSocketHandler extends TextWebSocketHandler {
 
+    private static final Logger logger= LoggerFactory.getLogger(ChatWebSocketHandler.class);
     private final AgentService agentService;
     private final ChatHistoryMapper chatHistoryMapper;
     private final Map<String, WebSocketSession> sessions = new ConcurrentHashMap<>();
@@ -77,6 +80,7 @@ public class ChatWebSocketHandler extends TextWebSocketHandler {
                 data.put("content", chunk);
                 session.sendMessage(new TextMessage(JSON.toJSONString(data)));
             } catch (IOException e) {
+                logger.error("error",e);
             }
         }, toolCallInfo -> {
             try {
@@ -112,6 +116,7 @@ public class ChatWebSocketHandler extends TextWebSocketHandler {
                 String payload = JSON.toJSONString(toolCallInfo);
                 session.sendMessage(new TextMessage(payload));
             } catch (IOException e) {
+                logger.error("error",e);
             }
         });
 
@@ -142,6 +147,7 @@ public class ChatWebSocketHandler extends TextWebSocketHandler {
             data.put("message", errorMessage);
             session.sendMessage(new TextMessage(JSON.toJSONString(data)));
         } catch (IOException e) {
+            logger.error("error",e);
         }
     }
 

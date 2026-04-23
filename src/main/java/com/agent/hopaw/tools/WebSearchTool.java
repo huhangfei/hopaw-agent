@@ -20,7 +20,7 @@ public class WebSearchTool implements AgentTool {
     private static final int MAX_RESULTS = 10;
 
     @Tool("搜索互联网网页信息，返回相关的网页标题和摘要内容。搜索源为百度或必应。")
-    public String search(String query) {
+    public String webSearch(String query) {
         if (query == null || query.trim().isEmpty()) {
             return "错误: 搜索关键词不能为空";
         }

@@ -42,7 +42,7 @@ public class LongTermMemoryTask {
         this.memoryProcessLogMapper = memoryProcessLogMapper;
     }
 
-    @Scheduled(fixedRate = 60000)
+    @Scheduled(fixedDelay = 60000)
     public void processGlobalMemory() {
         try {
             processMemoryForIdentity(LongTermMemoryService.GLOBAL_IDENTITY, null);

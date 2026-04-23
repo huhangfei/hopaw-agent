@@ -23,14 +23,17 @@ public class CommandExecutorTool implements AgentTool {
 
     @Tool("执行本地系统命令并返回输出结果。支持 Windows 和 Unix/Linux/macOS 系统。使用前最好先获取操作系统类型，" +
           "以确保命令在目标系统上执行。" +
-          "请谨慎使用，避免执行危险命令如格式化磁盘、删除系统文件等。")
-    public String executeCommand(String command) {
+          "请谨慎使用，避免执行危险命令如格式化磁盘、删除系统文件等。timeout 可以指定超时时间，默认30秒")
+    public String executeCommand(String command,Integer timeout) {
         if (command == null || command.trim().isEmpty()) {
             return "错误: 命令不能为空";
         }
 
         if (isDangerousCommand(command)) {
             return "错误: 检测到危险命令，已拒绝执行。出于安全考虑，不允许执行可能破坏系统的命令。";
+        }
+        if(timeout==null){
+            timeout=TIMEOUT_SECONDS;
         }
 
         try {
@@ -46,7 +49,7 @@ public class CommandExecutorTool implements AgentTool {
             processBuilder.redirectErrorStream(true);
 
             Process process = processBuilder.start();
-            boolean completed = process.waitFor(TIMEOUT_SECONDS, TimeUnit.SECONDS);
+            boolean completed = process.waitFor(timeout, TimeUnit.SECONDS);
 
             StringBuilder output = new StringBuilder();
             try (BufferedReader reader = new BufferedReader(
@@ -65,7 +68,7 @@ public class CommandExecutorTool implements AgentTool {
 
             if (!completed) {
                 process.destroyForcibly();
-                return "错误: 命令执行超时 (超过 " + TIMEOUT_SECONDS + " 秒)，已强制终止";
+                return "错误: 命令执行超时 (超过 " + timeout + " 秒)，已强制终止";
             }
 
             int exitCode = process.exitValue();
