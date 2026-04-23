@@ -3,6 +3,7 @@ package com.agent.hopaw.config;
 import com.agent.hopaw.mapper.AgentMapper;
 import com.agent.hopaw.mapper.ChatHistoryMapper;
 import com.agent.hopaw.model.Agent;
+import com.agent.hopaw.tools.AgentTool;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.stereotype.Component;
 
@@ -10,6 +11,7 @@ import javax.sql.DataSource;
 import java.sql.Connection;
 import java.sql.Statement;
 import java.util.List;
+import java.util.stream.Collectors;
 
 @Component
 public class DataInitializer implements CommandLineRunner {
@@ -17,11 +19,12 @@ public class DataInitializer implements CommandLineRunner {
     private final AgentMapper agentMapper;
     private final ChatHistoryMapper chatHistoryMapper;
     private final DataSource dataSource;
-
-    public DataInitializer(AgentMapper agentMapper, ChatHistoryMapper chatHistoryMapper, DataSource dataSource) {
+    private final List<AgentTool> allTools;
+    public DataInitializer(AgentMapper agentMapper, ChatHistoryMapper chatHistoryMapper, DataSource dataSource, List<AgentTool> allTools) {
         this.agentMapper = agentMapper;
         this.chatHistoryMapper = chatHistoryMapper;
         this.dataSource = dataSource;
+        this.allTools = allTools;
     }
 
     @Override
@@ -112,10 +115,9 @@ public class DataInitializer implements CommandLineRunner {
 
         List<Agent> agents = agentMapper.findAll();
         if (agents.isEmpty()) {
-            agentMapper.insert(new Agent("通用助手", "可以回答各种问题，使用多种工具", "calculator,weather,search", 20));
-            agentMapper.insert(new Agent("数学助手", "专门解决数学问题", "calculator", 20));
-            agentMapper.insert(new Agent("天气助手", "专门提供天气信息", "weather", 20));
-            agentMapper.insert(new Agent("搜索助手", "专门进行网页搜索", "search", 20));
+            String tools = allTools.stream().map(x -> x.getName()).collect(Collectors.joining(","));
+            agentMapper.insert(new Agent("通用助手", "可以回答各种问题，使用多种工具", tools, 20));
+
         }
     }
 }
