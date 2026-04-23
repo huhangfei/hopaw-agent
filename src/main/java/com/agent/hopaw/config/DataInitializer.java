@@ -39,9 +39,30 @@ public class DataInitializer implements CommandLineRunner {
                     "id INTEGER PRIMARY KEY AUTOINCREMENT, " +
                     "agent_id INTEGER NOT NULL, " +
                     "role TEXT NOT NULL, " +
-                    "content TEXT NOT NULL, " +
+                    "message_type TEXT NOT NULL DEFAULT 'text', " +
+                    "content TEXT, " +
+                    "tool_call_id TEXT, " +
+                    "tool_name TEXT, " +
+                    "tool_arguments TEXT, " +
                     "create_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP" +
                     ")");
+            
+            try {
+                stmt.execute("ALTER TABLE chat_history ADD COLUMN message_type TEXT NOT NULL DEFAULT 'text'");
+            } catch (Exception e) {
+            }
+            try {
+                stmt.execute("ALTER TABLE chat_history ADD COLUMN tool_call_id TEXT");
+            } catch (Exception e) {
+            }
+            try {
+                stmt.execute("ALTER TABLE chat_history ADD COLUMN tool_name TEXT");
+            } catch (Exception e) {
+            }
+            try {
+                stmt.execute("ALTER TABLE chat_history ADD COLUMN tool_arguments TEXT");
+            } catch (Exception e) {
+            }
         }
 
         List<Agent> agents = agentMapper.findAll();

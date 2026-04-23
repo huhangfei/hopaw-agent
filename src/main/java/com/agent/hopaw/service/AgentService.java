@@ -8,6 +8,8 @@ import dev.langchain4j.service.TokenStream;
 import dev.langchain4j.service.UserMessage;
 import dev.langchain4j.model.openai.OpenAiChatModel;
 import dev.langchain4j.model.openai.OpenAiStreamingChatModel;
+import dev.langchain4j.data.message.AiMessage;
+import dev.langchain4j.model.chat.response.StreamingChatResponseHandler;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
@@ -189,6 +191,10 @@ public class AgentService {
         }
 
         public void executeStreaming(String message, Consumer<String> chunkConsumer) {
+            executeStreaming(message, chunkConsumer, null);
+        }
+
+        public void executeStreaming(String message, Consumer<String> chunkConsumer, Consumer<Map<String, Object>> toolCallConsumer) {
             if (streamingAssistant == null) {
                 String response = execute(message);
                 chunkConsumer.accept(response);
@@ -197,12 +203,39 @@ public class AgentService {
 
             try {
                 CountDownLatch latch = new CountDownLatch(1);
-                streamingAssistant.streamingChat(message)
+                TokenStream tokenStream = streamingAssistant.streamingChat(message)
                         .onPartialResponse(chunkConsumer::accept)
                         .onCompleteResponse(r -> latch.countDown())
-                        .onError(e -> latch.countDown())
-                        .start();
+                        .onError(e -> latch.countDown());
 
+                if (toolCallConsumer != null) {
+                    tokenStream = tokenStream.beforeToolExecution(toolExecution -> {
+                        try {
+                            Map<String, Object> toolInfo = new HashMap<>();
+                            toolInfo.put("type", "tool_call");
+                            toolInfo.put("status", "starting");
+                            toolInfo.put("toolCallId", toolExecution.request().id());
+                            toolInfo.put("toolName", toolExecution.request().name());
+                            toolInfo.put("arguments", toolExecution.request().arguments());
+                            toolCallConsumer.accept(toolInfo);
+                        } catch (Exception e) {
+                        }
+                    }).onToolExecuted(toolExecution -> {
+                        try {
+                            Map<String, Object> toolInfo = new HashMap<>();
+                            toolInfo.put("type", "tool_call");
+                            toolInfo.put("status", "executed");
+                            toolInfo.put("toolCallId", toolExecution.request().id());
+                            toolInfo.put("toolName", toolExecution.request().name());
+                            toolInfo.put("arguments", toolExecution.request().arguments());
+                            toolInfo.put("result", toolExecution.result());
+                            toolCallConsumer.accept(toolInfo);
+                        } catch (Exception e) {
+                        }
+                    });
+                }
+
+                tokenStream.start();
                 latch.await(60, TimeUnit.SECONDS);
             } catch (Exception e) {
                 chunkConsumer.accept("\n(注: 流式响应失败: " + e.getMessage() + ")");

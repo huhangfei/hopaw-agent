@@ -53,18 +53,33 @@
                 </div>
             </div>
             <div th:if="${selectedAgent != null}" class="chat-messages" id="chatMessages">
-                <div th:each="chat : ${chatHistory}" th:classappend="${chat.role == 'user' ? 'user' : 'agent'}" class="message">
-                    <div class="message-label" th:text="${chat.role == 'user' ? '你' : selectedAgent.name}"></div>
-                    <div th:text="${chat.content}" class="message-content" th:attr="data-is-agent=${chat.role == 'agent'}"></div>
-                    <div class="message-time" th:text="${#temporals.format(chat.createTime, 'HH:mm:ss')}"></div>
-                </div>
-                <div th:if="${message != null}" class="message user">
-                    <div class="message-label">你</div>
-                    <div th:text="${message}" class="message-content" data-is-agent="false"></div>
-                </div>
-                <div th:if="${response != null}" class="message agent">
-                    <div class="message-label" th:text="${selectedAgent.name}"></div>
-                    <div th:text="${response}" class="message-content" data-is-agent="true"></div>
+                <div th:each="chat : ${chatHistory}" th:switch="${chat.messageType}" th:classappend="${chat.role == 'user' ? 'user' : 'agent'}" class="message">
+                    <div th:case="'text'">
+                        <div class="message-label" th:text="${chat.role == 'user' ? '你' : selectedAgent.name}"></div>
+                        <div th:text="${chat.content}" class="message-content" th:attr="data-is-agent=${chat.role == 'agent'}"></div>
+                        <div class="message-time" th:text="${chat.createTime.toLocalDate().equals(T(java.time.LocalDate).now()) ? #temporals.format(chat.createTime, 'HH:mm:ss') : #temporals.format(chat.createTime, 'yyyy-MM-dd HH:mm:ss')}"></div>
+                    </div>
+                    <div th:case="'tool_call'" class="tool-call-message-content">
+                        <div class="message-label" th:text="${selectedAgent.name}"></div>
+                        <div class="tool-call-container-static">
+                            <div class="tool-call" th:attr="data-tool-call-id=${chat.toolCallId}, data-status='executed'">
+                                <div class="tool-call-header">
+                                    <span class="tool-call-icon" style="animation: auto ease 0s 1 normal none running none;">✅</span>
+                                    <span class="tool-call-name" th:text="${chat.toolName}"></span>
+                                    <span class="tool-call-status completed">执行完成</span>
+                                </div>
+                                <div class="tool-call-args" th:if="${chat.toolArguments}">
+                                    <div class="args-label">参数:</div>
+                                    <pre class="args-content" th:text="${chat.toolArguments}"></pre>
+                                </div>
+                                <div class="tool-call-result" th:if="${chat.content}">
+                                    <div class="result-label">结果:</div>
+                                    <pre class="result-content" th:text="${chat.content}"></pre>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="message-time" th:text="${chat.createTime.toLocalDate().equals(T(java.time.LocalDate).now()) ? #temporals.format(chat.createTime, 'HH:mm:ss') : #temporals.format(chat.createTime, 'yyyy-MM-dd HH:mm:ss')}"></div>
+                    </div>
                 </div>
             </div>
             <div th:if="${selectedAgent != null}" class="chat-input-area">

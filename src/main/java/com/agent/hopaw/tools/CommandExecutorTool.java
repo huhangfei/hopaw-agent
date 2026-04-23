@@ -7,6 +7,7 @@ import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.nio.charset.Charset;
+import java.nio.charset.StandardCharsets;
 import java.util.concurrent.TimeUnit;
 
 @Service("commandExecutor")
@@ -32,11 +33,8 @@ public class CommandExecutorTool implements AgentTool {
 
             if (os.contains("win")) {
                 processBuilder = new ProcessBuilder("cmd.exe", "/c", command);
-                processBuilder.environment().put("LANG", "zh_CN.GBK");
             } else {
                 processBuilder = new ProcessBuilder("/bin/sh", "-c", command);
-                processBuilder.environment().put("LANG", "zh_CN.UTF-8");
-                processBuilder.environment().put("LC_ALL", "zh_CN.UTF-8");
             }
 
             processBuilder.redirectErrorStream(true);
@@ -46,7 +44,7 @@ public class CommandExecutorTool implements AgentTool {
 
             StringBuilder output = new StringBuilder();
             try (BufferedReader reader = new BufferedReader(
-                    new InputStreamReader(process.getInputStream(), Charset.defaultCharset()))) {
+                    new InputStreamReader(process.getInputStream(), determineEncoding(os)))) {
                 String line;
                 int lineCount = 0;
                 while ((line = reader.readLine()) != null) {
@@ -80,6 +78,18 @@ public class CommandExecutorTool implements AgentTool {
             return "错误: 命令执行被中断";
         } catch (Exception e) {
             return "错误: 未知错误 - " + e.getMessage();
+        }
+    }
+
+    private Charset determineEncoding(String os) {
+        if (os.contains("win")) {
+            String codepage = System.getenv("LANG");
+            if (codepage != null && codepage.toLowerCase().contains("utf")) {
+                return StandardCharsets.UTF_8;
+            }
+            return Charset.forName("GBK");
+        } else {
+            return StandardCharsets.UTF_8;
         }
     }
 

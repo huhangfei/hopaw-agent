@@ -63,38 +63,77 @@ public class ChatWebSocketHandler extends TextWebSocketHandler {
 
     private void sendStreamingResponse(WebSocketSession session, Long agentId, String userMessage,
                                        AgentService.AgentExecutor executor) throws IOException {
-        ChatHistory userChat = new ChatHistory(agentId, "user", userMessage);
+        ChatHistory userChat = new ChatHistory(agentId, "user", "text", userMessage);
         userChat.setCreateTime(LocalDateTime.now());
         chatHistoryMapper.insert(userChat);
 
-        StringBuilder fullResponse = new StringBuilder();
+        StreamingState state = new StreamingState();
 
         executor.executeStreaming(userMessage, chunk -> {
             try {
-                fullResponse.append(chunk);
+                state.accumulatedText.append(chunk);
                 Map<String, Object> data = new HashMap<>();
                 data.put("type", "chunk");
                 data.put("content", chunk);
                 session.sendMessage(new TextMessage(objectMapper.writeValueAsString(data)));
             } catch (IOException e) {
-                // ignore
+            }
+        }, toolCallInfo -> {
+            try {
+                String toolCallId = (String) toolCallInfo.get("toolCallId");
+                String status = (String) toolCallInfo.get("status");
+                String toolName = (String) toolCallInfo.get("toolName");
+                String arguments = (String) toolCallInfo.get("arguments");
+                String result = (String) toolCallInfo.get("result");
+
+                if ("starting".equals(status)) {
+                    if (state.accumulatedText.length() > 0) {
+                        ChatHistory textChat = new ChatHistory(agentId, "agent", "text", state.accumulatedText.toString());
+                        textChat.setCreateTime(LocalDateTime.now());
+                        chatHistoryMapper.insert(textChat);
+                        state.accumulatedText.setLength(0);
+                    }
+
+                    state.currentToolCallId = toolCallId;
+                    state.currentToolName = toolName;
+                    state.currentToolArguments = arguments;
+                } else if ("executed".equals(status)) {
+                    ChatHistory toolChat = new ChatHistory(
+                            agentId, "agent", "tool_call",
+                            toolCallId, toolName, arguments, result
+                    );
+                    toolChat.setCreateTime(LocalDateTime.now());
+                    chatHistoryMapper.insert(toolChat);
+
+                    state.currentToolCallId = null;
+                    state.currentToolName = null;
+                    state.currentToolArguments = null;
+                }
+
+                String payload = objectMapper.writeValueAsString(toolCallInfo);
+                session.sendMessage(new TextMessage(payload));
+            } catch (IOException e) {
             }
         });
 
-        String responseText = fullResponse.toString();
-        if (responseText.isEmpty()) {
-            responseText = executor.execute(userMessage);
+        if (state.accumulatedText.length() > 0) {
+            ChatHistory textChat = new ChatHistory(agentId, "agent", "text", state.accumulatedText.toString());
+            textChat.setCreateTime(LocalDateTime.now());
+            chatHistoryMapper.insert(textChat);
         }
-
-        ChatHistory agentChat = new ChatHistory(agentId, "agent", responseText);
-        agentChat.setCreateTime(LocalDateTime.now());
-        chatHistoryMapper.insert(agentChat);
 
         Map<String, Object> doneData = new HashMap<>();
         doneData.put("type", "done");
         doneData.put("message", userMessage);
-        doneData.put("response", responseText);
+        doneData.put("response", state.accumulatedText.toString());
         session.sendMessage(new TextMessage(objectMapper.writeValueAsString(doneData)));
+    }
+
+    private static class StreamingState {
+        StringBuilder accumulatedText = new StringBuilder();
+        String currentToolCallId;
+        String currentToolName;
+        String currentToolArguments;
     }
 
     private void sendError(WebSocketSession session, String errorMessage) {
@@ -104,7 +143,6 @@ public class ChatWebSocketHandler extends TextWebSocketHandler {
             data.put("message", errorMessage);
             session.sendMessage(new TextMessage(objectMapper.writeValueAsString(data)));
         } catch (IOException e) {
-            // ignore
         }
     }
 

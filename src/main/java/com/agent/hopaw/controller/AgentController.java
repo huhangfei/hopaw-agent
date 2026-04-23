@@ -28,8 +28,6 @@ public class AgentController {
 
     @GetMapping("/")
     public String index(@RequestParam(required = false) Long agentId,
-                       @RequestParam(required = false) String message,
-                       @RequestParam(required = false) String response,
                        Model model) {
         List<Agent> agents = agentService.getAllAgents();
         model.addAttribute("agents", agents);
@@ -46,14 +44,6 @@ public class AgentController {
 
             List<ChatHistory> chatHistory = chatHistoryMapper.findByAgentId(agentId);
             model.addAttribute("chatHistory", chatHistory);
-
-            if (message != null && !message.trim().isEmpty()) {
-                model.addAttribute("message", message);
-                model.addAttribute("response", response);
-
-                ChatHistory chat = new ChatHistory(agentId, message, response);
-                chatHistoryMapper.insert(chat);
-            }
         }
 
         return "index";

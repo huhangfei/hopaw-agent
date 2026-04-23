@@ -3,6 +3,27 @@ var ws = null;
 var isStreaming = false;
 var currentStreamingMessage = null;
 var streamingMarkdownContent = '';
+var lastMessageType = null;
+
+function formatMessageTime(date) {
+    var now = new Date();
+    var isToday = date.getFullYear() === now.getFullYear() &&
+                  date.getMonth() === now.getMonth() &&
+                  date.getDate() === now.getDate();
+    
+    var hours = date.getHours().toString().padStart(2, '0');
+    var minutes = date.getMinutes().toString().padStart(2, '0');
+    var seconds = date.getSeconds().toString().padStart(2, '0');
+    
+    if (isToday) {
+        return hours + ':' + minutes + ':' + seconds;
+    } else {
+        var year = date.getFullYear();
+        var month = (date.getMonth() + 1).toString().padStart(2, '0');
+        var day = date.getDate().toString().padStart(2, '0');
+        return year + '-' + month + '-' + day + ' ' + hours + ':' + minutes + ':' + seconds;
+    }
+}
 
 if (typeof marked !== 'undefined') {
     marked.setOptions({
@@ -45,6 +66,8 @@ function connectWebSocket() {
         
         if (data.type === 'chunk') {
             handleStreamingChunk(data.content);
+        } else if (data.type === 'tool_call') {
+            handleToolCall(data);
         } else if (data.type === 'done') {
             handleStreamingDone(data.message, data.response);
         } else if (data.type === 'error') {
@@ -64,28 +87,137 @@ function connectWebSocket() {
     };
 }
 
-function handleStreamingChunk(content) {
-    if (!currentStreamingMessage) {
+function handleToolCall(data) {
+    var messagesDiv = document.getElementById('chatMessages');
+    var agentName = document.querySelector('.chat-header h2') ? document.querySelector('.chat-header h2').textContent : 'Agent';
+    
+    if (data.status === 'starting') {
         streamingMarkdownContent = '';
+        lastMessageType = 'tool_call';
+        
+        currentStreamingMessage = document.createElement('div');
+        currentStreamingMessage.className = 'message agent tool-call-message';
+        
+        var label = document.createElement('div');
+        label.className = 'message-label';
+        label.textContent = agentName;
+        currentStreamingMessage.appendChild(label);
+        
+        var toolCallContainer = document.createElement('div');
+        toolCallContainer.className = 'tool-call-container';
+        currentStreamingMessage.appendChild(toolCallContainer);
+        
+        var toolCallDiv = document.createElement('div');
+        toolCallDiv.className = 'tool-call';
+        toolCallDiv.setAttribute('data-tool-call-id', data.toolCallId);
+        toolCallDiv.setAttribute('data-status', 'starting');
+        
+        var toolCallHeader = document.createElement('div');
+        toolCallHeader.className = 'tool-call-header';
+        
+        var toolIcon = document.createElement('span');
+        toolIcon.className = 'tool-call-icon';
+        toolIcon.textContent = '🔧';
+        toolCallHeader.appendChild(toolIcon);
+        
+        var toolName = document.createElement('span');
+        toolName.className = 'tool-call-name';
+        toolName.textContent = data.toolName || 'Unknown Tool';
+        toolCallHeader.appendChild(toolName);
+        
+        var toolCallStatus = document.createElement('span');
+        toolCallStatus.className = 'tool-call-status';
+        toolCallStatus.textContent = '执行中...';
+        toolCallHeader.appendChild(toolCallStatus);
+        
+        toolCallDiv.appendChild(toolCallHeader);
+        
+        if (data.arguments) {
+            var argsDiv = document.createElement('div');
+            argsDiv.className = 'tool-call-args';
+            argsDiv.innerHTML = '<div class="args-label">参数:</div><pre class="args-content">' + 
+                escapeHtml(JSON.stringify(data.arguments, null, 2)) + '</pre>';
+            toolCallDiv.appendChild(argsDiv);
+        }
+        
+        toolCallContainer.appendChild(toolCallDiv);
+        messagesDiv.appendChild(currentStreamingMessage);
+        messagesDiv.scrollTop = messagesDiv.scrollHeight;
+    } else if (data.status === 'executed') {
+        var toolCallDiv = document.querySelector('.tool-call[data-tool-call-id="' + data.toolCallId + '"]');
+        if (toolCallDiv) {
+            toolCallDiv.setAttribute('data-status', 'executed');
+            
+            var statusEl = toolCallDiv.querySelector('.tool-call-status');
+            if (statusEl) {
+                statusEl.textContent = '执行完成';
+                statusEl.classList.add('completed');
+            }
+            
+            var iconEl = toolCallDiv.querySelector('.tool-call-icon');
+            if (iconEl) {
+                iconEl.style.animation = 'none';
+                iconEl.textContent = '✅';
+            }
+            
+            if (data.result) {
+                var resultDiv = document.createElement('div');
+                resultDiv.className = 'tool-call-result';
+                resultDiv.innerHTML = '<div class="result-label">结果:</div><pre class="result-content">' + 
+                    escapeHtml(data.result) + '</pre>';
+                toolCallDiv.appendChild(resultDiv);
+            }
+        }
+        
+        if (currentStreamingMessage) {
+            var timeDiv = document.createElement('div');
+            timeDiv.className = 'message-time';
+            timeDiv.textContent = formatMessageTime(new Date());
+            currentStreamingMessage.appendChild(timeDiv);
+            currentStreamingMessage = null;
+        }
+        
+        messagesDiv.scrollTop = messagesDiv.scrollHeight;
+    }
+}
+
+function escapeHtml(text) {
+    var div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+}
+
+function handleStreamingChunk(content) {
+    var messagesDiv = document.getElementById('chatMessages');
+    var agentName = document.querySelector('.chat-header h2') ? document.querySelector('.chat-header h2').textContent : 'Agent';
+    
+    if (!currentStreamingMessage || lastMessageType !== 'text') {
+        streamingMarkdownContent = '';
+        lastMessageType = 'text';
+        
         currentStreamingMessage = document.createElement('div');
         currentStreamingMessage.className = 'message agent';
         
         var label = document.createElement('div');
         label.className = 'message-label';
-        label.textContent = document.querySelector('.chat-header h2') ? document.querySelector('.chat-header h2').textContent : 'Agent';
+        label.textContent = agentName;
         currentStreamingMessage.appendChild(label);
         
         var contentDiv = document.createElement('div');
-        contentDiv.className = 'streaming-content';
+        contentDiv.className = 'message-content';
         currentStreamingMessage.appendChild(contentDiv);
         
-        var messagesDiv = document.getElementById('chatMessages');
         messagesDiv.appendChild(currentStreamingMessage);
-        messagesDiv.scrollTop = messagesDiv.scrollHeight;
+    }
+    
+    var contentDiv = currentStreamingMessage.querySelector('.message-content:last-of-type');
+    if (!contentDiv) {
+        contentDiv = document.createElement('div');
+        contentDiv.className = 'message-content';
+        currentStreamingMessage.appendChild(contentDiv);
     }
     
     streamingMarkdownContent += content;
-    var contentDiv = currentStreamingMessage.querySelector('.streaming-content');
     
     try {
         if (typeof marked !== 'undefined') {
@@ -98,36 +230,34 @@ function handleStreamingChunk(content) {
         contentDiv.textContent = streamingMarkdownContent;
     }
     
-    var messagesDiv = document.getElementById('chatMessages');
     messagesDiv.scrollTop = messagesDiv.scrollHeight;
 }
 
 function handleStreamingDone(userMessage, response) {
     if (currentStreamingMessage) {
-        var contentDiv = currentStreamingMessage.querySelector('.streaming-content');
-        contentDiv.setAttribute('data-raw-content', streamingMarkdownContent);
-        contentDiv.className = 'message-content';
-        
-        try {
-            if (typeof marked !== 'undefined') {
-                contentDiv.innerHTML = marked.parse(streamingMarkdownContent);
-            } else {
+        var contentDiv = currentStreamingMessage.querySelector('.message-content:last-of-type');
+        if (contentDiv) {
+            contentDiv.setAttribute('data-raw-content', streamingMarkdownContent);
+            
+            try {
+                if (typeof marked !== 'undefined') {
+                    contentDiv.innerHTML = marked.parse(streamingMarkdownContent);
+                } else {
+                    contentDiv.textContent = streamingMarkdownContent;
+                }
+            } catch (e) {
                 contentDiv.textContent = streamingMarkdownContent;
             }
-        } catch (e) {
-            contentDiv.textContent = streamingMarkdownContent;
         }
         
         var timeDiv = document.createElement('div');
         timeDiv.className = 'message-time';
-        var now = new Date();
-        timeDiv.textContent = now.getHours().toString().padStart(2, '0') + ':' + 
-                              now.getMinutes().toString().padStart(2, '0') + ':' + 
-                              now.getSeconds().toString().padStart(2, '0');
+        timeDiv.textContent = formatMessageTime(new Date());
         currentStreamingMessage.appendChild(timeDiv);
         
         currentStreamingMessage = null;
         streamingMarkdownContent = '';
+        lastMessageType = null;
     }
     
     isStreaming = false;
@@ -171,10 +301,7 @@ function sendMessage() {
     
     var userTime = document.createElement('div');
     userTime.className = 'message-time';
-    var now = new Date();
-    userTime.textContent = now.getHours().toString().padStart(2, '0') + ':' + 
-                           now.getMinutes().toString().padStart(2, '0') + ':' + 
-                           now.getSeconds().toString().padStart(2, '0');
+    userTime.textContent = formatMessageTime(new Date());
     userMessageDiv.appendChild(userTime);
     
     var messagesDiv = document.getElementById('chatMessages');

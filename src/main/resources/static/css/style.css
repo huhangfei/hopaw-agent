@@ -288,6 +288,116 @@ header h1 {
     white-space: pre-wrap;
     word-break: break-word;
 }
+.tool-call-container {
+    margin: 10px 0;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+.tool-call-container-static {
+    margin: 10px 0;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+.message.tool-call-message {
+    max-width: 80%;
+}
+.tool-call {
+    background: rgba(102, 126, 234, 0.08);
+    border: 1px solid rgba(102, 126, 234, 0.2);
+    border-radius: 8px;
+    padding: 12px;
+    animation: toolCallSlideIn 0.3s ease-out;
+}
+@keyframes toolCallSlideIn {
+    from {
+        opacity: 0;
+        transform: translateY(-10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+.tool-call-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 8px;
+}
+.tool-call-icon {
+    font-size: 16px;
+    animation: toolCallSpin 2s linear infinite;
+}
+@keyframes toolCallSpin {
+    from {
+        transform: rotate(0deg);
+    }
+    to {
+        transform: rotate(360deg);
+    }
+}
+.tool-call-name {
+    font-weight: 600;
+    color: #667eea;
+    font-size: 14px;
+}
+.tool-call-status {
+    margin-left: auto;
+    font-size: 12px;
+    color: #999;
+}
+.tool-call-status.completed {
+    color: #4CAF50;
+    font-weight: 500;
+}
+.tool-call[data-status="executed"] {
+    border-color: rgba(76, 175, 80, 0.3);
+    background: rgba(76, 175, 80, 0.05);
+}
+.tool-call-args {
+    margin-top: 8px;
+}
+.args-label {
+    font-size: 12px;
+    color: #666;
+    margin-bottom: 4px;
+    font-weight: 500;
+}
+.args-content {
+    background: rgba(0, 0, 0, 0.05);
+    padding: 8px;
+    border-radius: 4px;
+    font-family: 'Courier New', monospace;
+    font-size: 12px;
+    margin: 0;
+    overflow-x: auto;
+    max-height: 150px;
+}
+.tool-call-result {
+    margin-top: 8px;
+    padding-top: 8px;
+    border-top: 1px solid rgba(0, 0, 0, 0.1);
+}
+.result-label {
+    font-size: 12px;
+    color: #666;
+    margin-bottom: 4px;
+    font-weight: 500;
+}
+.result-content {
+    background: rgba(76, 175, 80, 0.05);
+    padding: 8px;
+    border-radius: 4px;
+    font-family: 'Courier New', monospace;
+    font-size: 12px;
+    margin: 0;
+    overflow-x: auto;
+    max-height: 200px;
+    white-space: pre-wrap;
+    word-break: break-word;
+}
 .message-content {
     word-break: break-word;
 }
