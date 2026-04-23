@@ -5,21 +5,16 @@ import com.agent.hopaw.mapper.ChatMemoryMapper;
 import com.agent.hopaw.model.Agent;
 import com.agent.hopaw.tools.AgentTool;
 import com.alibaba.fastjson2.JSON;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import dev.langchain4j.memory.chat.MessageWindowChatMemory;
+import dev.langchain4j.model.openai.OpenAiChatModel;
+import dev.langchain4j.model.openai.OpenAiStreamingChatModel;
 import dev.langchain4j.service.AiServices;
 import dev.langchain4j.service.TokenStream;
 import dev.langchain4j.service.UserMessage;
-import dev.langchain4j.model.openai.OpenAiChatModel;
-import dev.langchain4j.model.openai.OpenAiStreamingChatModel;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
@@ -31,7 +26,6 @@ public class AgentService {
     private final AgentMapper agentMapper;
     private final ChatMemoryMapper chatMemoryMapper;
     private final List<AgentTool> allTools;
-    private final ObjectMapper objectMapper;
     @Value("${openai.api.key:demo-key}")
     private String openaiApiKey;
 
@@ -41,11 +35,10 @@ public class AgentService {
     @Value("${openai.model.name:gpt-3.5-turbo}")
     private String modelName;
 
-    public AgentService(AgentMapper agentMapper, ChatMemoryMapper chatMemoryMapper, List<AgentTool> allTools, ObjectMapper objectMapper) {
+    public AgentService(AgentMapper agentMapper, ChatMemoryMapper chatMemoryMapper, List<AgentTool> allTools) {
         this.agentMapper = agentMapper;
         this.chatMemoryMapper = chatMemoryMapper;
         this.allTools = allTools;
-        this.objectMapper = objectMapper;
     }
 
     public List<Agent> getAllAgents() {
