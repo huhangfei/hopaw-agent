@@ -1,0 +1,62 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.agent.hopaw.mapper.LongTermMemoryMapper">
+
+    <resultMap id="LongTermMemoryResultMap" type="com.agent.hopaw.model.LongTermMemory">
+        <id property="id" column="id"/>
+        <result property="identity" column="identity"/>
+        <result property="memory" column="memory"/>
+        <result property="parentId" column="parent_id"/>
+        <result property="createTime" column="create_time"/>
+        <result property="updateTime" column="update_time"/>
+    </resultMap>
+
+    <select id="findByIdentity" resultMap="LongTermMemoryResultMap">
+        SELECT id, identity, memory, parent_id, create_time, update_time
+        FROM long_term_memory
+        WHERE identity = #{identity}
+        ORDER BY parent_id ASC NULLS FIRST, id ASC
+    </select>
+
+
+    <select id="findByIdentityAndParentId" resultMap="LongTermMemoryResultMap">
+        SELECT id, identity, memory, parent_id, create_time, update_time
+        FROM long_term_memory
+        WHERE identity = #{identity} AND parent_id = #{parentId}
+        ORDER BY id ASC
+    </select>
+    <select id="findByIdentityAndMemory" resultMap="LongTermMemoryResultMap">
+        SELECT id, identity, memory, parent_id, create_time, update_time
+        FROM long_term_memory
+        WHERE identity = #{identity} AND memory = #{memory}
+        limit 1
+    </select>
+
+    <select id="findById" resultMap="LongTermMemoryResultMap">
+        SELECT id, identity, memory, parent_id, create_time, update_time
+        FROM long_term_memory
+        WHERE id = #{id}
+    </select>
+
+    <insert id="insert" parameterType="com.agent.hopaw.model.LongTermMemory">
+        INSERT INTO long_term_memory (identity, memory, parent_id, create_time, update_time)
+        VALUES (#{identity}, #{memory}, #{parentId}, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+    </insert>
+
+    <update id="update" parameterType="com.agent.hopaw.model.LongTermMemory">
+        UPDATE long_term_memory
+        SET memory = #{memory},
+            parent_id = #{parentId},
+            update_time = CURRENT_TIMESTAMP
+        WHERE id = #{id}
+    </update>
+
+    <delete id="deleteById">
+        DELETE FROM long_term_memory WHERE id = #{id}
+    </delete>
+
+    <delete id="deleteByIdentity">
+        DELETE FROM long_term_memory WHERE identity = #{identity}
+    </delete>
+
+</mapper>

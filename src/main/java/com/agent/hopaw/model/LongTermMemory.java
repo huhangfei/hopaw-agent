@@ -1,0 +1,70 @@
+package com.agent.hopaw.model;
+
+import java.time.LocalDateTime;
+
+public class LongTermMemory {
+    private Long id;
+    private String identity;
+    private String memory;
+    private Long parentId;
+    private LocalDateTime createTime;
+    private LocalDateTime updateTime;
+
+    public LongTermMemory() {}
+
+    public LongTermMemory(String identity, String memory, Long parentId) {
+        this.identity = identity;
+        this.memory = memory;
+        this.parentId = parentId;
+        this.createTime = LocalDateTime.now();
+        this.updateTime = LocalDateTime.now();
+    }
+
+    public Long getId() {
+        return id;
+    }
+
+    public void setId(Long id) {
+        this.id = id;
+    }
+
+    public String getIdentity() {
+        return identity;
+    }
+
+    public void setIdentity(String identity) {
+        this.identity = identity;
+    }
+
+    public String getMemory() {
+        return memory;
+    }
+
+    public void setMemory(String memory) {
+        this.memory = memory;
+    }
+
+    public Long getParentId() {
+        return parentId;
+    }
+
+    public void setParentId(Long parentId) {
+        this.parentId = parentId;
+    }
+
+    public LocalDateTime getCreateTime() {
+        return createTime;
+    }
+
+    public void setCreateTime(LocalDateTime createTime) {
+        this.createTime = createTime;
+    }
+
+    public LocalDateTime getUpdateTime() {
+        return updateTime;
+    }
+
+    public void setUpdateTime(LocalDateTime updateTime) {
+        this.updateTime = updateTime;
+    }
+}

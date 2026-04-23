@@ -80,6 +80,34 @@ public class DataInitializer implements CommandLineRunner {
             
             stmt.execute("CREATE INDEX IF NOT EXISTS idx_chat_memory_agent ON chat_memory(agent_id)");
             stmt.execute("CREATE INDEX IF NOT EXISTS idx_chat_memory_message_id ON chat_memory(message_id)");
+
+            stmt.execute("CREATE TABLE IF NOT EXISTS long_term_memory (" +
+                    "id INTEGER PRIMARY KEY AUTOINCREMENT, " +
+                    "identity TEXT NOT NULL, " +
+                    "memory TEXT, " +
+                    "parent_id INTEGER, " +
+                    "create_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP, " +
+                    "update_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP" +
+                    ")");
+
+            stmt.execute("CREATE INDEX IF NOT EXISTS idx_long_term_memory_identity ON long_term_memory(identity)");
+            stmt.execute("CREATE INDEX IF NOT EXISTS idx_long_term_memory_parent ON long_term_memory(parent_id)");
+
+            stmt.execute("CREATE TABLE IF NOT EXISTS memory_process_log (" +
+                    "id INTEGER PRIMARY KEY AUTOINCREMENT, " +
+                    "identity TEXT NOT NULL UNIQUE, " +
+                    "last_processed_chat_id INTEGER DEFAULT 0, " +
+                    "last_processed_time TIMESTAMP" +
+                    ")");
+
+            try {
+                stmt.execute("ALTER TABLE memory_process_log ADD COLUMN last_processed_chat_id INTEGER DEFAULT 0");
+            } catch (Exception e) {
+            }
+            try {
+                stmt.execute("ALTER TABLE memory_process_log ADD COLUMN last_processed_time TIMESTAMP");
+            } catch (Exception e) {
+            }
         }
 
         List<Agent> agents = agentMapper.findAll();

@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8" ?>
 <!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
 <mapper namespace="com.agent.hopaw.mapper.ChatHistoryMapper">
-    
+
     <resultMap id="ChatHistoryResultMap" type="com.agent.hopaw.model.ChatHistory">
         <id property="id" column="id"/>
         <result property="agentId" column="agent_id"/>
@@ -13,21 +13,41 @@
         <result property="toolArguments" column="tool_arguments"/>
         <result property="createTime" column="create_time"/>
     </resultMap>
-    
+
     <select id="findByAgentId" resultMap="ChatHistoryResultMap">
-        SELECT id, agent_id, role, message_type, content, tool_call_id, tool_name, tool_arguments, create_time 
-        FROM chat_history 
-        WHERE agent_id = #{agentId} 
+        SELECT id, agent_id, role, message_type, content, tool_call_id, tool_name, tool_arguments, create_time
+        FROM chat_history
+        WHERE agent_id = #{agentId}
         ORDER BY create_time ASC
     </select>
-    
+
+    <select id="findByAgentIdAfterId" resultMap="ChatHistoryResultMap">
+        SELECT id, agent_id, role, message_type, content, tool_call_id, tool_name, tool_arguments, create_time
+        FROM chat_history
+        WHERE agent_id = #{agentId} AND id > #{afterId}
+        ORDER BY id ASC
+        LIMIT 50
+    </select>
+
+    <select id="findAllAfterId" resultMap="ChatHistoryResultMap">
+        SELECT id, agent_id, role, message_type, content, tool_call_id, tool_name, tool_arguments, create_time
+        FROM chat_history
+        WHERE id > #{afterId}
+        ORDER BY id ASC
+        LIMIT 50
+    </select>
+
+    <select id="findDistinctAgentIds" resultType="java.lang.Long">
+        SELECT DISTINCT agent_id FROM chat_history
+    </select>
+
     <insert id="insert" parameterType="com.agent.hopaw.model.ChatHistory">
-        INSERT INTO chat_history (agent_id, role, message_type, content, tool_call_id, tool_name, tool_arguments, create_time) 
+        INSERT INTO chat_history (agent_id, role, message_type, content, tool_call_id, tool_name, tool_arguments, create_time)
         VALUES (#{agentId}, #{role}, #{messageType}, #{content}, #{toolCallId}, #{toolName}, #{toolArguments}, #{createTime})
     </insert>
-    
+
     <delete id="deleteByAgentId">
         DELETE FROM chat_history WHERE agent_id = #{agentId}
     </delete>
-    
+
 </mapper>
