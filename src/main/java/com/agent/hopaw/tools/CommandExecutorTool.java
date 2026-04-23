@@ -16,7 +16,13 @@ public class CommandExecutorTool implements AgentTool {
     private static final int TIMEOUT_SECONDS = 30;
     private static final int MAX_OUTPUT_LINES = 500;
 
-    @Tool("执行本地系统命令并返回输出结果。支持 Windows 和 Unix/Linux/macOS 系统。" +
+    @Tool("获取操作系统的名称，例如 Windows 10 或 Ubuntu 20.04")
+    public String getOsName() {
+        return System.getProperty("os.name");
+    }
+
+    @Tool("执行本地系统命令并返回输出结果。支持 Windows 和 Unix/Linux/macOS 系统。使用前最好先获取操作系统类型，" +
+          "以确保命令在目标系统上执行。" +
           "请谨慎使用，避免执行危险命令如格式化磁盘、删除系统文件等。")
     public String executeCommand(String command) {
         if (command == null || command.trim().isEmpty()) {
@@ -120,6 +126,6 @@ public class CommandExecutorTool implements AgentTool {
 
     @Override
     public String getDescription() {
-        return "执行本地系统命令并返回输出结果，支持 Windows 和 Unix/Linux/macOS 系统";
+        return "可以获取运行的系统类型、执行本地系统命令并返回输出结果，支持 Windows 和 Unix/Linux/macOS 系统";
     }
 }
