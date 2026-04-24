@@ -31,13 +31,18 @@ public class LangChain4jMonitoringService implements ChatModelListener {
         if (chatRequest.messages() != null) {
             for (ChatMessage message : chatRequest.messages()) {
                 if (message instanceof UserMessage) {
-                    logger.info("用户消息 [User]: {}", ((UserMessage) message).singleText());
+                    UserMessage userMessage=((UserMessage) message);
+
+                    logger.info("用户消息 [User][{}]: {}", userMessage.name(),userMessage.singleText());
                 } else if (message instanceof AiMessage) {
-                    logger.info("助手消息 [Ai]: {}", ((AiMessage) message).text());
+                    AiMessage aiMessage = (AiMessage) message;
+                    logger.info("助手消息 [Ai thinking]: {}", aiMessage.thinking());
+                    logger.info("助手消息 [Ai text]: {}", aiMessage.text());
                 } else if (message instanceof SystemMessage) {
                     logger.info("系统消息 [System]: {}", ((SystemMessage) message).text());
                 } else if (message instanceof ToolExecutionResultMessage) {
-                    logger.info("工具执行结果 [Tool]: {}", ((ToolExecutionResultMessage) message).text());
+                    ToolExecutionResultMessage toolExecutionResultMessage = (ToolExecutionResultMessage) message;
+                    logger.info("工具执行结果 [Tool][{}][{}]: {}",toolExecutionResultMessage.toolName(),toolExecutionResultMessage.id(), toolExecutionResultMessage.text());
                 } else {
                     logger.info("其他消息 [{}]: {}", message.getClass().getSimpleName(), message);
                 }
