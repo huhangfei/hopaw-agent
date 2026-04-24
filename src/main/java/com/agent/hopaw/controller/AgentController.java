@@ -53,9 +53,10 @@ public class AgentController {
     public String createAgent(@RequestParam String name,
                              @RequestParam String description,
                              @RequestParam(required = false) String tools,
-                             @RequestParam(required = false, defaultValue = "20") Integer maxMemoryRecords) {
+                             @RequestParam(required = false, defaultValue = "20") Integer maxMemoryRecords,
+                             @RequestParam(required = false, defaultValue = "10") Integer maxToolInvocations) {
         String toolsStr = tools != null ? tools : "";
-        agentService.createAgent(name, description, toolsStr, maxMemoryRecords);
+        agentService.createAgent(name, description, toolsStr, maxMemoryRecords, maxToolInvocations);
         return "redirect:/";
     }
 
@@ -71,9 +72,10 @@ public class AgentController {
                              @RequestParam String name,
                              @RequestParam String description,
                              @RequestParam(required = false) String tools,
-                             @RequestParam(required = false, defaultValue = "20") Integer maxMemoryRecords) {
+                             @RequestParam(required = false, defaultValue = "20") Integer maxMemoryRecords,
+                             @RequestParam(required = false, defaultValue = "10") Integer maxToolInvocations) {
         String toolsStr = tools != null ? tools : "";
-        agentService.updateAgent(id, name, description, toolsStr, maxMemoryRecords);
+        agentService.updateAgent(id, name, description, toolsStr, maxMemoryRecords, maxToolInvocations);
         return "redirect:/";
     }
 

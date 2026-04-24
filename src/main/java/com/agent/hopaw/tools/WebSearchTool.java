@@ -19,21 +19,17 @@ public class WebSearchTool implements AgentTool {
     private static final int TIMEOUT_MS = 10000;
     private static final int MAX_RESULTS = 10;
 
-    @Tool("搜索互联网网页信息，返回相关的网页标题和摘要内容。搜索源为百度或必应。")
-    public String webSearch(String query) {
+    @Tool("搜索互联网网页信息，返回相关的网页标题和摘要内容。搜索源为百度或必应。(query: 搜索关键词, source: 搜索源，可选值有 baidu，bing)")
+    public String webSearch(String query,String source) {
         if (query == null || query.trim().isEmpty()) {
             return "错误: 搜索关键词不能为空";
         }
 
         try {
-            List<SearchResult> results = searchBing(query);
+            List<SearchResult> results = source.equalsIgnoreCase("bing") ? searchBing(query) : searchBaidu(query);
 
             if (results.isEmpty()) {
-                results = searchBaidu(query);
-            }
-
-            if (results.isEmpty()) {
-                return "未找到关于\"" + query + "\"的搜索结果";
+                return "从搜索源" + source + "未找到关于\"" + query + "\"的搜索结果";
             }
 
             StringBuilder sb = new StringBuilder();

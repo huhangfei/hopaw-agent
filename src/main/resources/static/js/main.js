@@ -367,19 +367,20 @@ function hideAddModal() {
     document.getElementById('addAgentModal').classList.remove('active');
 }
 
-function showEditModal(id, name, description, tools, maxMemoryRecords) {
+function showEditModal(id, name, description, tools, maxMemoryRecords, maxToolInvocations) {
     document.getElementById('editAgentId').value = id;
     document.getElementById('editAgentName').value = name;
     document.getElementById('editAgentDescription').value = description;
     document.getElementById('editMaxMemoryRecords').value = maxMemoryRecords || 20;
-    
+    document.getElementById('editMaxToolInvocations').value = maxToolInvocations || 10;
+
     var checkboxes = document.querySelectorAll('.edit-tool-checkbox');
     checkboxes.forEach(function(checkbox) {
         checkbox.checked = tools && tools.indexOf(checkbox.value) !== -1;
     });
-    
+
     document.getElementById('editAgentModal').classList.add('active');
-    
+
     event.stopPropagation();
 }
 

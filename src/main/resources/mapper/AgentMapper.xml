@@ -1,43 +1,45 @@
 <?xml version="1.0" encoding="UTF-8" ?>
 <!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
 <mapper namespace="com.agent.hopaw.mapper.AgentMapper">
-    
+
     <resultMap id="AgentResultMap" type="com.agent.hopaw.model.Agent">
         <id property="id" column="id"/>
         <result property="name" column="name"/>
         <result property="description" column="description"/>
         <result property="tools" column="tools"/>
         <result property="maxMemoryRecords" column="max_memory_records"/>
+        <result property="maxToolInvocations" column="max_tool_invocations"/>
     </resultMap>
-    
+
     <select id="findAll" resultMap="AgentResultMap">
-        SELECT id, name, description, tools, max_memory_records
-        FROM agents 
+        SELECT id, name, description, tools, max_memory_records, max_tool_invocations
+        FROM agents
         ORDER BY id DESC
     </select>
-    
+
     <select id="findById" resultMap="AgentResultMap">
-        SELECT id, name, description, tools, max_memory_records
-        FROM agents 
+        SELECT id, name, description, tools, max_memory_records, max_tool_invocations
+        FROM agents
         WHERE id = #{id}
     </select>
-    
+
     <insert id="insert" parameterType="com.agent.hopaw.model.Agent">
-        INSERT INTO agents (name, description, tools, max_memory_records) 
-        VALUES (#{name}, #{description}, #{tools}, #{maxMemoryRecords})
+        INSERT INTO agents (name, description, tools, max_memory_records, max_tool_invocations)
+        VALUES (#{name}, #{description}, #{tools}, #{maxMemoryRecords}, #{maxToolInvocations})
     </insert>
-    
+
     <update id="update" parameterType="com.agent.hopaw.model.Agent">
-        UPDATE agents 
-        SET name = #{name}, 
-            description = #{description}, 
+        UPDATE agents
+        SET name = #{name},
+            description = #{description},
             tools = #{tools},
-            max_memory_records = #{maxMemoryRecords}
+            max_memory_records = #{maxMemoryRecords},
+            max_tool_invocations = #{maxToolInvocations}
         WHERE id = #{id}
     </update>
-    
+
     <delete id="deleteById">
         DELETE FROM agents WHERE id = #{id}
     </delete>
-    
+
 </mapper>

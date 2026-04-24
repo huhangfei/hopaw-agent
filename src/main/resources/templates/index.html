@@ -41,7 +41,7 @@
                     <p th:text="${selectedAgent.description}"></p>
                 </div>
                 <div class="header-actions">
-                    <button class="btn-edit" th:attr="onclick=|showEditModal(${selectedAgent.id}, '${selectedAgent.name}', '${selectedAgent.description}', '${selectedAgent.tools}', ${selectedAgent.maxMemoryRecords != null ? selectedAgent.maxMemoryRecords : 20})|" title="编辑">
+                    <button class="btn-edit" th:attr="onclick=|showEditModal(${selectedAgent.id}, '${selectedAgent.name}', '${selectedAgent.description}', '${selectedAgent.tools}', ${selectedAgent.maxMemoryRecords != null ? selectedAgent.maxMemoryRecords : 20}, ${selectedAgent.maxToolInvocations != null ? selectedAgent.maxToolInvocations : 10})|" title="编辑">
                         <svg viewBox="0 0 24 24" fill="currentColor"><path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/></svg>
                     </button>
                     <button class="btn-delete" th:attr="onclick=|deleteAgent(${selectedAgent.id})|" title="删除">
@@ -105,34 +105,42 @@
                 <h3>添加新 Agent</h3>
                 <button class="modal-close" onclick="hideAddModal()">&times;</button>
             </div>
-            <form th:action="@{/agent/create}" method="post">
-                <div class="form-group">
-                    <label>名称</label>
-                    <input type="text" name="name" placeholder="输入 Agent 名称" required>
-                </div>
-                <div class="form-group">
-                    <label>描述</label>
-                    <textarea name="description" placeholder="输入 Agent 描述" required></textarea>
-                </div>
-                <div class="form-group">
-                    <label>最大记忆记录数</label>
-                    <input type="number" name="maxMemoryRecords" value="20" min="1" max="100" placeholder="默认 20">
-                </div>
-                <div class="form-group">
-                    <label>工具</label>
-                    <div class="checkbox-group">
-                        <label th:each="tool : ${tools}" class="checkbox-item">
-                            <input type="checkbox" name="tools" th:value="${tool.name}">
-                            <span th:text="${tool.name}"></span>
-                            <span class="tool-desc" th:text="${tool.description}"></span>
-                        </label>
+            <form th:action="@{/agent/create}" method="post" class="modal-form" id="addAgentForm">
+                <div class="form-left">
+                    <div class="form-group">
+                        <label>名称</label>
+                        <input type="text" name="name" placeholder="输入 Agent 名称" required>
+                    </div>
+                    <div class="form-group">
+                        <label>描述</label>
+                        <textarea name="description" placeholder="输入 Agent 描述" required></textarea>
+                    </div>
+                    <div class="form-group">
+                        <label>最大记忆记录数</label>
+                        <input type="number" name="maxMemoryRecords" value="20" min="1" max="100" placeholder="默认 20">
+                    </div>
+                    <div class="form-group">
+                        <label>最大工具调用次数</label>
+                        <input type="number" name="maxToolInvocations" value="10" min="1" max="50" placeholder="默认 10">
                     </div>
                 </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn-cancel" onclick="hideAddModal()">取消</button>
-                    <button type="submit" class="btn-submit">创建</button>
+                <div class="form-right">
+                    <div class="form-group">
+                        <label>工具</label>
+                        <div class="checkbox-group">
+                            <label th:each="tool : ${tools}" class="checkbox-item">
+                                <input type="checkbox" name="tools" th:value="${tool.name}">
+                                <span th:text="${tool.name}"></span>
+                                <span class="tool-desc" th:text="${tool.description}"></span>
+                            </label>
+                        </div>
+                    </div>
                 </div>
             </form>
+            <div class="modal-footer">
+                <button type="button" class="btn-cancel" onclick="hideAddModal()">取消</button>
+                <button type="submit" form="addAgentForm" class="btn-submit">创建</button>
+            </div>
         </div>
     </div>
     
@@ -142,35 +150,43 @@
                 <h3>编辑 Agent</h3>
                 <button class="modal-close" onclick="hideEditModal()">&times;</button>
             </div>
-            <form th:action="@{/agent/update}" method="post">
+            <form th:action="@{/agent/update}" method="post" class="modal-form" id="editAgentForm">
                 <input type="hidden" name="id" id="editAgentId">
-                <div class="form-group">
-                    <label>名称</label>
-                    <input type="text" name="name" id="editAgentName" placeholder="输入 Agent 名称" required>
-                </div>
-                <div class="form-group">
-                    <label>描述</label>
-                    <textarea name="description" id="editAgentDescription" placeholder="输入 Agent 描述" required></textarea>
-                </div>
-                <div class="form-group">
-                    <label>最大记忆记录数</label>
-                    <input type="number" name="maxMemoryRecords" id="editMaxMemoryRecords" value="20" min="1" max="100" placeholder="默认 20">
-                </div>
-                <div class="form-group">
-                    <label>工具</label>
-                    <div class="checkbox-group" id="editToolList">
-                        <label th:each="tool : ${tools}" class="checkbox-item">
-                            <input type="checkbox" name="tools" th:value="${tool.name}" class="edit-tool-checkbox">
-                            <span th:text="${tool.name}"></span>
-                            <span class="tool-desc" th:text="${tool.description}"></span>
-                        </label>
+                <div class="form-left">
+                    <div class="form-group">
+                        <label>名称</label>
+                        <input type="text" name="name" id="editAgentName" placeholder="输入 Agent 名称" required>
+                    </div>
+                    <div class="form-group">
+                        <label>描述</label>
+                        <textarea name="description" id="editAgentDescription" placeholder="输入 Agent 描述" required></textarea>
+                    </div>
+                    <div class="form-group">
+                        <label>最大记忆记录数</label>
+                        <input type="number" name="maxMemoryRecords" id="editMaxMemoryRecords" value="20" min="1" max="100" placeholder="默认 20">
+                    </div>
+                    <div class="form-group">
+                        <label>最大工具调用次数</label>
+                        <input type="number" name="maxToolInvocations" id="editMaxToolInvocations" value="10" min="1" max="50" placeholder="默认 10">
                     </div>
                 </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn-cancel" onclick="hideEditModal()">取消</button>
-                    <button type="submit" class="btn-submit">保存</button>
+                <div class="form-right">
+                    <div class="form-group">
+                        <label>工具</label>
+                        <div class="checkbox-group" id="editToolList">
+                            <label th:each="tool : ${tools}" class="checkbox-item">
+                                <input type="checkbox" name="tools" th:value="${tool.name}" class="edit-tool-checkbox">
+                                <span th:text="${tool.name}"></span>
+                                <span class="tool-desc" th:text="${tool.description}"></span>
+                            </label>
+                        </div>
+                    </div>
                 </div>
             </form>
+            <div class="modal-footer">
+                <button type="button" class="btn-cancel" onclick="hideEditModal()">取消</button>
+                <button type="submit" form="editAgentForm" class="btn-submit">保存</button>
+            </div>
         </div>
     </div>
     

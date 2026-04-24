@@ -5,6 +5,7 @@ import com.agent.hopaw.mapper.MemoryProcessLogMapper;
 import com.agent.hopaw.model.ChatHistory;
 import com.agent.hopaw.model.LongTermMemory;
 import com.agent.hopaw.service.AgentService;
+import com.agent.hopaw.service.LangChain4jMonitoringService;
 import com.agent.hopaw.service.LongTermMemoryService;
 import dev.langchain4j.model.openai.OpenAiChatModel;
 import dev.langchain4j.service.AiServices;
@@ -33,16 +34,19 @@ public class LongTermMemoryTask {
     private final LongTermMemoryService longTermMemoryService;
     private final ChatHistoryMapper chatHistoryMapper;
     private final MemoryProcessLogMapper memoryProcessLogMapper;
+    private final LangChain4jMonitoringService monitoringService;
 
     public LongTermMemoryTask(LongTermMemoryService longTermMemoryService,
                               ChatHistoryMapper chatHistoryMapper,
-                              MemoryProcessLogMapper memoryProcessLogMapper) {
+                              MemoryProcessLogMapper memoryProcessLogMapper,
+                              LangChain4jMonitoringService monitoringService) {
         this.longTermMemoryService = longTermMemoryService;
         this.chatHistoryMapper = chatHistoryMapper;
         this.memoryProcessLogMapper = memoryProcessLogMapper;
+        this.monitoringService = monitoringService;
     }
 
-    @Scheduled(fixedDelay = 60000)
+    //@Scheduled(fixedDelay = 60000)
     public void processGlobalMemory() {
         try {
             processMemoryForIdentity(LongTermMemoryService.GLOBAL_IDENTITY, null);
@@ -110,7 +114,8 @@ public class LongTermMemoryTask {
         var builder = OpenAiChatModel.builder()
                 .apiKey(openaiApiKey)
                 .modelName(modelName)
-                .temperature(0.7);
+                .temperature(0.7)
+                .listeners(List.of(monitoringService));
 
         if (openaiBaseUrl != null && !openaiBaseUrl.isEmpty()) {
             builder.baseUrl(openaiBaseUrl);

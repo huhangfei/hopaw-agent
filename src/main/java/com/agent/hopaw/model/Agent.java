@@ -6,6 +6,7 @@ public class Agent {
     private String description;
     private String tools;
     private Integer maxMemoryRecords;
+    private Integer maxToolInvocations;
 
     public Agent() {}
 
@@ -14,6 +15,7 @@ public class Agent {
         this.description = description;
         this.tools = tools;
         this.maxMemoryRecords = 20;
+        this.maxToolInvocations = 10;
     }
 
     public Agent(String name, String description, String tools, Integer maxMemoryRecords) {
@@ -21,6 +23,15 @@ public class Agent {
         this.description = description;
         this.tools = tools;
         this.maxMemoryRecords = maxMemoryRecords != null ? maxMemoryRecords : 20;
+        this.maxToolInvocations = 10;
+    }
+
+    public Agent(String name, String description, String tools, Integer maxMemoryRecords, Integer maxToolInvocations) {
+        this.name = name;
+        this.description = description;
+        this.tools = tools;
+        this.maxMemoryRecords = maxMemoryRecords != null ? maxMemoryRecords : 20;
+        this.maxToolInvocations = maxToolInvocations != null ? maxToolInvocations : 10;
     }
 
     public Long getId() {
@@ -68,5 +79,13 @@ public class Agent {
 
     public void setMaxMemoryRecords(Integer maxMemoryRecords) {
         this.maxMemoryRecords = maxMemoryRecords;
+    }
+
+    public Integer getMaxToolInvocations() {
+        return maxToolInvocations;
+    }
+
+    public void setMaxToolInvocations(Integer maxToolInvocations) {
+        this.maxToolInvocations = maxToolInvocations;
     }
 }
