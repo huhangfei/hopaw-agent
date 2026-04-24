@@ -1,17 +1,18 @@
 package com.agent.hopaw.service;
 
+import com.agent.hopaw.config.ChatModelFactoryConfig;
 import com.agent.hopaw.mapper.AgentMapper;
 import com.agent.hopaw.mapper.ChatMemoryMapper;
 import com.agent.hopaw.model.Agent;
+import com.agent.hopaw.model.ChatModelFactory;
 import com.agent.hopaw.tools.AgentTool;
 import com.alibaba.fastjson2.JSON;
 import dev.langchain4j.memory.chat.MessageWindowChatMemory;
-import dev.langchain4j.model.openai.OpenAiChatModel;
-import dev.langchain4j.model.openai.OpenAiStreamingChatModel;
+import dev.langchain4j.model.chat.ChatModel;
+import dev.langchain4j.model.chat.StreamingChatModel;
 import dev.langchain4j.service.AiServices;
 import dev.langchain4j.service.TokenStream;
 import dev.langchain4j.service.UserMessage;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 import java.util.*;
@@ -26,23 +27,14 @@ public class AgentService {
     private final AgentMapper agentMapper;
     private final ChatMemoryMapper chatMemoryMapper;
     private final List<AgentTool> allTools;
-    private final LangChain4jMonitoringService monitoringService;
-
-    @Value("${openai.api.key:demo-key}")
-    private String openaiApiKey;
-
-    @Value("${openai.base.url:}")
-    private String openaiBaseUrl;
-
-    @Value("${openai.model.name:gpt-3.5-turbo}")
-    private String modelName;
+    private final ChatModelFactory chatModelFactory;
 
     public AgentService(AgentMapper agentMapper, ChatMemoryMapper chatMemoryMapper,
-                       List<AgentTool> allTools, LangChain4jMonitoringService monitoringService) {
+                       List<AgentTool> allTools, ChatModelFactoryConfig chatModelFactoryConfig) {
         this.agentMapper = agentMapper;
         this.chatMemoryMapper = chatMemoryMapper;
         this.allTools = allTools;
-        this.monitoringService = monitoringService;
+        this.chatModelFactory = chatModelFactoryConfig.getFactory();
     }
 
     public List<Agent> getAllAgents() {
@@ -89,31 +81,11 @@ public class AgentService {
 
     private AgentExecutor createAgentExecutor(Agent agent) {
         try {
-            var builder = OpenAiChatModel.builder()
-                    .apiKey(openaiApiKey)
-                    .modelName(modelName)
-                    .temperature(0.7)
-                    .listeners(List.of(monitoringService));
-
-            if (openaiBaseUrl != null && !openaiBaseUrl.isEmpty()) {
-                builder.baseUrl(openaiBaseUrl);
-            }
-
-            OpenAiChatModel chatModel = builder.build();
-
-            OpenAiStreamingChatModel streamingModel = null;
+            ChatModel chatModel = null;
+            StreamingChatModel streamingModel = null;
             try {
-                var streamBuilder = OpenAiStreamingChatModel.builder()
-                        .apiKey(openaiApiKey)
-                        .modelName(modelName)
-                        .temperature(0.7)
-                        .listeners(List.of(monitoringService));
-
-                if (openaiBaseUrl != null && !openaiBaseUrl.isEmpty()) {
-                    streamBuilder.baseUrl(openaiBaseUrl);
-                }
-
-                streamingModel = streamBuilder.build();
+                chatModel = chatModelFactory.createChatModel();
+                streamingModel = chatModelFactory.createStreamingChatModel();
             } catch (Exception e) {
             }
 
@@ -150,9 +122,9 @@ public class AgentService {
         private final Assistant assistant;
         private final Assistant streamingAssistant;
 
-        public AgentExecutor(Agent agent, OpenAiChatModel chatModel, OpenAiStreamingChatModel streamingModel,
-                           List<AgentTool> selectedTools, SQLiteChatMemoryStore memoryStore,
-                           int maxMemoryRecords, int maxToolInvocations) {
+        public AgentExecutor(Agent agent, ChatModel chatModel, StreamingChatModel streamingModel,
+                             List<AgentTool> selectedTools, SQLiteChatMemoryStore memoryStore,
+                             int maxMemoryRecords, int maxToolInvocations) {
             this.agent = agent;
             String systemMessage = "你是一个智能助手，名字叫" + agent.getName() + "。" +
                     "你的主要工作是" + agent.getDescription() + "。" +
