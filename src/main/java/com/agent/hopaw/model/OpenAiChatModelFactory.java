@@ -42,26 +42,14 @@ public class OpenAiChatModelFactory implements ChatModelFactory {
     @Override
     public ChatModel createChatModel() {
         Map<String, String> extraParams = new HashMap<>();
-        if (enableThinking) {
-            extraParams.put("enable_thinking", "true");
-        }
-        if (returnReasoning) {
-            extraParams.put("return_reasoning", "true");
-        }
-
         var builder = OpenAiChatModel.builder()
+                .sendThinking(enableThinking,"reasoning_content")
+                .returnThinking(returnReasoning)
+                .reasoningEffort("high/max")
                 .apiKey(apiKey)
                 .modelName(modelName)
                 .temperature(temperature)
                 .customHeaders(extraParams);
-
-        if (baseUrl != null && !baseUrl.isEmpty()) {
-            builder.baseUrl(baseUrl);
-        }
-        if (monitoringService != null) {
-            builder.listeners(List.of(monitoringService));
-        }
-
         return builder.build();
     }
 
