@@ -13,6 +13,8 @@ import dev.langchain4j.model.chat.StreamingChatModel;
 import dev.langchain4j.service.AiServices;
 import dev.langchain4j.service.TokenStream;
 import dev.langchain4j.service.UserMessage;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 
 import java.util.*;
@@ -23,6 +25,7 @@ import java.util.stream.Collectors;
 
 @Service
 public class AgentService {
+    private final static Logger logger = LoggerFactory.getLogger(AgentService.class);
     private final Map<String, AgentExecutor> agentExecutors = new HashMap<>();
     private final AgentMapper agentMapper;
     private final ChatMemoryMapper chatMemoryMapper;
@@ -238,6 +241,7 @@ public class AgentService {
                 tokenStream.start();
                 latch.await(60, TimeUnit.SECONDS);
             } catch (Exception e) {
+                logger.error("\n(注: 流式响应失败: " + e.getMessage() + ")",e);
                 chunkConsumer.accept("\n(注: 流式响应失败: " + e.getMessage() + ")");
             }
         }

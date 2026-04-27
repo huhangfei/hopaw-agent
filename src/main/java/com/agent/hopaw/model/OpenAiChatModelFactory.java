@@ -20,6 +20,8 @@ public class OpenAiChatModelFactory implements ChatModelFactory {
     private final Double temperature;
     private final boolean enableThinking;
     private final boolean returnReasoning;
+    private final String reasoningEffort;
+    private final String thinkingContentKey;
     private final LangChain4jMonitoringService monitoringService;
 
     public OpenAiChatModelFactory(
@@ -29,6 +31,8 @@ public class OpenAiChatModelFactory implements ChatModelFactory {
             @Value("${openai.temperature:0.7}") Double temperature,
             @Value("${openai.enable-thinking:true}") boolean enableThinking,
             @Value("${openai.return-reasoning:true}") boolean returnReasoning,
+            @Value("${openai.reasoning-effort:high}") String reasoningEffort,
+            @Value("${openai.thinking-content-key:reasoning_content}") String thinkingContentKey,
             LangChain4jMonitoringService monitoringService) {
         this.apiKey = apiKey;
         this.baseUrl = baseUrl;
@@ -36,6 +40,8 @@ public class OpenAiChatModelFactory implements ChatModelFactory {
         this.temperature = temperature;
         this.enableThinking = enableThinking;
         this.returnReasoning = returnReasoning;
+        this.reasoningEffort = reasoningEffort;
+        this.thinkingContentKey = thinkingContentKey;
         this.monitoringService = monitoringService;
     }
 
@@ -43,22 +49,35 @@ public class OpenAiChatModelFactory implements ChatModelFactory {
     public ChatModel createChatModel() {
         Map<String, String> extraParams = new HashMap<>();
         var builder = OpenAiChatModel.builder()
-                .sendThinking(enableThinking,"reasoning_content")
+                .sendThinking(enableThinking, thinkingContentKey)
                 .returnThinking(returnReasoning)
-                .reasoningEffort("high/max")
+                .reasoningEffort(reasoningEffort)
                 .apiKey(apiKey)
                 .modelName(modelName)
                 .temperature(temperature)
                 .customHeaders(extraParams);
+
+        if (baseUrl != null && !baseUrl.isEmpty()) {
+            builder.baseUrl(baseUrl);
+        }
+        if (monitoringService != null) {
+            builder.listeners(List.of(monitoringService));
+        }
+
         return builder.build();
     }
 
     @Override
     public StreamingChatModel createStreamingChatModel() {
+        Map<String, String> extraParams = new HashMap<>();
         var builder = OpenAiStreamingChatModel.builder()
+                .sendThinking(enableThinking, thinkingContentKey)
+                .returnThinking(returnReasoning)
+                .reasoningEffort(reasoningEffort)
                 .apiKey(apiKey)
                 .modelName(modelName)
-                .temperature(temperature);
+                .temperature(temperature)
+                .customHeaders(extraParams);
 
         if (baseUrl != null && !baseUrl.isEmpty()) {
             builder.baseUrl(baseUrl);
