@@ -5,6 +5,7 @@ import com.agent.hopaw.mapper.AgentMapper;
 import com.agent.hopaw.mapper.ChatMemoryMapper;
 import com.agent.hopaw.model.Agent;
 import com.agent.hopaw.model.ChatModelFactory;
+import com.agent.hopaw.model.ToolCallInfo;
 import com.agent.hopaw.tools.AgentTool;
 import com.alibaba.fastjson2.JSON;
 import dev.langchain4j.memory.chat.MessageWindowChatMemory;
@@ -197,7 +198,7 @@ public class AgentService {
             executeStreaming(message, chunkConsumer, null);
         }
 
-        public void executeStreaming(String message, Consumer<String> chunkConsumer, Consumer<Map<String, Object>> toolCallConsumer) {
+        public void executeStreaming(String message, Consumer<String> chunkConsumer, Consumer<ToolCallInfo> toolCallConsumer) {
             if (streamingAssistant == null) {
                 String response = execute(message);
                 chunkConsumer.accept(response);
@@ -225,25 +226,21 @@ public class AgentService {
                 if (toolCallConsumer != null) {
                     tokenStream = tokenStream.beforeToolExecution(toolExecution -> {
                         try {
-                            Map<String, Object> toolInfo = new HashMap<>();
-                            toolInfo.put("type", "tool_call");
-                            toolInfo.put("status", "starting");
-                            toolInfo.put("toolCallId", toolExecution.request().id());
-                            toolInfo.put("toolName", toolExecution.request().name());
-                            toolInfo.put("arguments", JSON.parseObject(toolExecution.request().arguments()));
-                            toolCallConsumer.accept(toolInfo);
+                            toolCallConsumer.accept(ToolCallInfo.starting(
+                                    toolExecution.request().id(),
+                                    toolExecution.request().name(),
+                                    JSON.parseObject(toolExecution.request().arguments())
+                            ));
                         } catch (Exception e) {
                         }
                     }).onToolExecuted(toolExecution -> {
                         try {
-                            Map<String, Object> toolInfo = new HashMap<>();
-                            toolInfo.put("type", "tool_call");
-                            toolInfo.put("status", "executed");
-                            toolInfo.put("toolCallId", toolExecution.request().id());
-                            toolInfo.put("toolName", toolExecution.request().name());
-                            toolInfo.put("arguments", JSON.parseObject(toolExecution.request().arguments()));
-                            toolInfo.put("result", toolExecution.result());
-                            toolCallConsumer.accept(toolInfo);
+                            toolCallConsumer.accept(ToolCallInfo.executed(
+                                    toolExecution.request().id(),
+                                    toolExecution.request().name(),
+                                    JSON.parseObject(toolExecution.request().arguments()),
+                                    toolExecution.result()
+                            ));
                         } catch (Exception e) {
                         }
                     });

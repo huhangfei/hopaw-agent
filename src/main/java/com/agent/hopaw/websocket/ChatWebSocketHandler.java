@@ -2,6 +2,7 @@ package com.agent.hopaw.websocket;
 
 import com.agent.hopaw.mapper.ChatHistoryMapper;
 import com.agent.hopaw.model.ChatHistory;
+import com.agent.hopaw.model.ToolCallInfo;
 import com.agent.hopaw.service.AgentService;
 import com.alibaba.fastjson2.JSON;
 import com.alibaba.fastjson2.JSONObject;
@@ -84,13 +85,7 @@ public class ChatWebSocketHandler extends TextWebSocketHandler {
             }
         }, toolCallInfo -> {
             try {
-                String toolCallId = (String) toolCallInfo.get("toolCallId");
-                String status = (String) toolCallInfo.get("status");
-                String toolName = (String) toolCallInfo.get("toolName");
-                JSONObject arguments = (JSONObject) toolCallInfo.get("arguments");
-                String result = (String) toolCallInfo.get("result");
-
-                if ("starting".equals(status)) {
+                if (ToolCallInfo.STATUS_STARTING.equals(toolCallInfo.getStatus())) {
                     if (state.accumulatedText.length() > 0) {
                         ChatHistory textChat = new ChatHistory(agentId, "agent", "text", state.accumulatedText.toString());
                         textChat.setCreateTime(LocalDateTime.now());
@@ -98,13 +93,14 @@ public class ChatWebSocketHandler extends TextWebSocketHandler {
                         state.accumulatedText.setLength(0);
                     }
 
-                    state.currentToolCallId = toolCallId;
-                    state.currentToolName = toolName;
-                    state.currentToolArguments = arguments;
-                } else if ("executed".equals(status)) {
+                    state.currentToolCallId = toolCallInfo.getToolCallId();
+                    state.currentToolName = toolCallInfo.getToolName();
+                    state.currentToolArguments = (JSONObject) toolCallInfo.getArguments();
+                } else if (ToolCallInfo.STATUS_EXECUTED.equals(toolCallInfo.getStatus())) {
                     ChatHistory toolChat = new ChatHistory(
                             agentId, "agent", "tool_call",
-                            toolCallId, toolName, arguments.toJSONString(), result
+                            toolCallInfo.getToolCallId(), toolCallInfo.getToolName(),
+                            toolCallInfo.getArguments().toString(), (String) toolCallInfo.getResult()
                     );
                     toolChat.setCreateTime(LocalDateTime.now());
                     chatHistoryMapper.insert(toolChat);
@@ -113,8 +109,7 @@ public class ChatWebSocketHandler extends TextWebSocketHandler {
                     state.currentToolName = null;
                     state.currentToolArguments = null;
                 }
-                String payload = JSON.toJSONString(toolCallInfo);
-                session.sendMessage(new TextMessage(payload));
+                session.sendMessage(new TextMessage(JSON.toJSONString(toolCallInfo)));
             } catch (IOException e) {
                 logger.error("error",e);
             }
