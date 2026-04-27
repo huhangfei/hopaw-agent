@@ -35,6 +35,9 @@ public class SQLiteChatMemoryStore implements ChatMemoryStore {
             if (messageJson != null) {
                 try {
                     ChatMessage message = ChatMessageDeserializer.messageFromJson(messageJson);
+//                    if (message instanceof ToolExecutionResultMessage){
+//                        continue;
+//                    }
                     messages.add(message);
                 } catch (Exception e) {
                 }

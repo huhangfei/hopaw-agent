@@ -207,7 +207,18 @@ public class AgentService {
             try {
                 CountDownLatch latch = new CountDownLatch(1);
                 TokenStream tokenStream = streamingAssistant.streamingChat(message)
-                        .onPartialResponse(chunkConsumer::accept)
+                        .onPartialResponse(r -> chunkConsumer.accept(r))
+                        .onPartialThinking(thinking -> {
+                            try {
+//                            Map<String, Object> toolInfo = new HashMap<>();
+//                            toolInfo.put("type", "thinking");
+//                            toolInfo.put("status", "partial");
+//                            toolInfo.put("thinking", thinking.text());
+//                            toolCallConsumer.accept(toolInfo);
+                                chunkConsumer.accept(thinking.text());
+                            } catch (Exception e) {
+                            }
+                        })
                         .onCompleteResponse(r -> latch.countDown())
                         .onError(e -> latch.countDown());
 
