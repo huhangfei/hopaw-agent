@@ -1,6 +1,7 @@
 package com.agent.hopaw.controller;
 
 import com.agent.hopaw.mapper.ChatHistoryMapper;
+import com.agent.hopaw.mapper.ChatMemoryMapper;
 import com.agent.hopaw.model.Agent;
 import com.agent.hopaw.model.ChatHistory;
 import com.agent.hopaw.service.AgentService;
@@ -18,11 +19,13 @@ public class AgentController {
 
     private final AgentService agentService;
     private final ChatHistoryMapper chatHistoryMapper;
+    private final ChatMemoryMapper chatMemoryMapper;
     private final List<AgentTool> allTools;
 
-    public AgentController(AgentService agentService, ChatHistoryMapper chatHistoryMapper, List<AgentTool> allTools) {
+    public AgentController(AgentService agentService, ChatHistoryMapper chatHistoryMapper, ChatMemoryMapper chatMemoryMapper, List<AgentTool> allTools) {
         this.agentService = agentService;
         this.chatHistoryMapper = chatHistoryMapper;
+        this.chatMemoryMapper = chatMemoryMapper;
         this.allTools = allTools;
     }
 
@@ -63,6 +66,7 @@ public class AgentController {
     @PostMapping("/agent/delete")
     public String deleteAgent(@RequestParam Long id) {
         chatHistoryMapper.deleteByAgentId(id);
+        chatMemoryMapper.deleteByAgentId(id);
         agentService.deleteAgent(id);
         return "redirect:/";
     }
@@ -99,6 +103,7 @@ public class AgentController {
     @GetMapping("/chat/clear")
     public String clearChat(@RequestParam Long agentId) {
         chatHistoryMapper.deleteByAgentId(agentId);
+        chatMemoryMapper.deleteByAgentId(agentId);
         return "redirect:/?agentId=" + agentId;
     }
 }
