@@ -76,7 +76,7 @@ public class ChatWebSocketHandler extends TextWebSocketHandler {
         executor.executeStreaming(userMessage, chunk -> {
             try {
                 state.accumulatedText.append(chunk);
-                Map<String, Object> data = new HashMap<>();
+                Map<String, Object> data = new HashMap<>(2);
                 data.put("type", "chunk");
                 data.put("content", chunk);
                 session.sendMessage(new TextMessage(JSON.toJSONString(data)));
@@ -121,7 +121,7 @@ public class ChatWebSocketHandler extends TextWebSocketHandler {
             chatHistoryMapper.insert(textChat);
         }
 
-        Map<String, Object> doneData = new HashMap<>();
+        Map<String, Object> doneData = new HashMap<>(3);
         doneData.put("type", "done");
         doneData.put("message", userMessage);
         doneData.put("response", state.accumulatedText.toString());
