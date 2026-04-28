@@ -26,7 +26,7 @@ header h1 {
     overflow: hidden;
 }
 .sidebar {
-    width: 350px;
+    width: 30%;
     background: white;
     border-right: 1px solid #e0e0e0;
     display: flex;
@@ -34,7 +34,7 @@ header h1 {
     overflow: hidden;
 }
 .sidebar-header {
-    padding: 20px;
+    padding: 10px;
     border-bottom: 1px solid #e0e0e0;
     display: flex;
     justify-content: space-between;
@@ -154,7 +154,7 @@ header h1 {
 }
 .chat-header {
     flex-shrink: 0;
-    padding: 20px;
+    padding: 10px;
     border-bottom: 1px solid #e0e0e0;
     background: #fafafa;
     display: flex;
@@ -164,11 +164,16 @@ header h1 {
 .chat-header h2 {
     font-size: 20px;
     color: #333;
+    margin: 0;
 }
-.chat-header p {
+.chat-header-title {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+.chat-header-desc {
     font-size: 14px;
     color: #666;
-    margin-top: 5px;
 }
 .header-actions {
     display: flex;
@@ -216,10 +221,12 @@ header h1 {
     gap: 15px;
 }
 .message {
-    max-width: 70%;
+    max-width: 100%;
     padding: 15px 20px;
     border-radius: 15px;
     line-height: 1.5;
+    font-size: 14px;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
 }
 .message.user {
     align-self: flex-end;
@@ -644,9 +651,7 @@ header h1 {
     display: flex;
     justify-content: center;
     gap: 15px;
-    padding-top: 20px;
     border-top: 1px solid #eee;
-    margin-top: 20px;
 }
 .btn-cancel {
     padding: 12px 24px;

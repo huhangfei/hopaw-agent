@@ -19,7 +19,9 @@ import java.io.IOException;
 import java.time.LocalDateTime;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.atomic.AtomicLong;
 
 @Component
 public class ChatWebSocketHandler extends TextWebSocketHandler {
@@ -28,6 +30,7 @@ public class ChatWebSocketHandler extends TextWebSocketHandler {
     private final AgentService agentService;
     private final ChatHistoryMapper chatHistoryMapper;
     private final Map<String, WebSocketSession> sessions = new ConcurrentHashMap<>();
+    private final AtomicLong conversationSequence = new AtomicLong(0);
 
     public ChatWebSocketHandler(AgentService agentService, ChatHistoryMapper chatHistoryMapper) {
         this.agentService = agentService;
@@ -59,26 +62,29 @@ public class ChatWebSocketHandler extends TextWebSocketHandler {
                 return;
             }
 
-            sendStreamingResponse(session, agentId, userMessage, executor);
+            String responseId = UUID.randomUUID().toString();
+            sendStreamingResponse(session, agentId, userMessage, executor, responseId);
         } catch (Exception e) {
             sendError(session, "处理消息失败: " + e.getMessage());
         }
     }
 
     private void sendStreamingResponse(WebSocketSession session, Long agentId, String userMessage,
-                                       AgentService.AgentExecutor executor) throws IOException {
+                                       AgentService.AgentExecutor executor, String responseId) throws IOException {
         ChatHistory userChat = new ChatHistory(agentId, "user", "text", userMessage);
         userChat.setCreateTime(LocalDateTime.now());
         chatHistoryMapper.insert(userChat);
 
         StreamingState state = new StreamingState();
+        state.responseId = responseId;
 
         executor.executeStreaming(userMessage, chunk -> {
             try {
                 state.accumulatedText.append(chunk);
-                Map<String, Object> data = new HashMap<>(2);
+                Map<String, Object> data = new HashMap<>(3);
                 data.put("type", "chunk");
                 data.put("content", chunk);
+                data.put("responseId", responseId);
                 session.sendMessage(new TextMessage(JSON.toJSONString(data)));
             } catch (IOException e) {
                 logger.error("error",e);
@@ -109,6 +115,7 @@ public class ChatWebSocketHandler extends TextWebSocketHandler {
                     state.currentToolName = null;
                     state.currentToolArguments = null;
                 }
+                toolCallInfo.setResponseId(responseId);
                 session.sendMessage(new TextMessage(JSON.toJSONString(toolCallInfo)));
             } catch (IOException e) {
                 logger.error("error",e);
@@ -121,14 +128,16 @@ public class ChatWebSocketHandler extends TextWebSocketHandler {
             chatHistoryMapper.insert(textChat);
         }
 
-        Map<String, Object> doneData = new HashMap<>(3);
+        Map<String, Object> doneData = new HashMap<>(4);
         doneData.put("type", "done");
         doneData.put("message", userMessage);
         doneData.put("response", state.accumulatedText.toString());
+        doneData.put("responseId", responseId);
         session.sendMessage(new TextMessage(JSON.toJSONString(doneData)));
     }
 
     private static class StreamingState {
+        String responseId;
         StringBuilder accumulatedText = new StringBuilder();
         String currentToolCallId;
         String currentToolName;

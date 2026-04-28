@@ -11,6 +11,7 @@ public class ToolCallInfo {
     private String toolName;
     private Object arguments;
     private Object result;
+    private String responseId;
 
     public ToolCallInfo() {
     }
@@ -82,5 +83,13 @@ public class ToolCallInfo {
 
     public void setResult(Object result) {
         this.result = result;
+    }
+
+    public String getResponseId() {
+        return responseId;
+    }
+
+    public void setResponseId(String responseId) {
+        this.responseId = responseId;
     }
 }

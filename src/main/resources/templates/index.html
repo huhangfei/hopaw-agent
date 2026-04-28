@@ -2,12 +2,12 @@
 <html xmlns:th="http://www.thymeleaf.org">
 <head>
     <meta charset="UTF-8">
-    <title>智能 Agent 平台</title>
+    <title>🤖 HoPaw</title>
     <link rel="stylesheet" th:href="@{/css/style.css}">
 </head>
 <body>
     <header>
-        <h1>🤖 智能 Agent 平台</h1>
+        <h1>🤖 HoPaw</h1>
     </header>
     
     <div class="main-container">
@@ -36,9 +36,9 @@
         
         <main class="chat-area">
             <div th:if="${selectedAgent != null}" class="chat-header">
-                <div>
+                <div class="chat-header-title">
                     <h2 th:text="${selectedAgent.name}"></h2>
-                    <p th:text="${selectedAgent.description}"></p>
+                    <span class="chat-header-desc" th:text="${selectedAgent.description}"></span>
                 </div>
                 <div class="header-actions">
                     <button class="btn-edit" th:attr="onclick=|showEditModal(${selectedAgent.id}, '${selectedAgent.name}', '${selectedAgent.description}', '${selectedAgent.tools}', ${selectedAgent.maxMemoryRecords != null ? selectedAgent.maxMemoryRecords : 20}, ${selectedAgent.maxToolInvocations != null ? selectedAgent.maxToolInvocations : 10})|" title="编辑">

@@ -4,6 +4,7 @@ var isStreaming = false;
 var currentStreamingMessage = null;
 var streamingMarkdownContent = '';
 var lastMessageType = null;
+var streamingMessages = {};
 
 function formatMessageTime(date) {
     var now = new Date();
@@ -63,13 +64,14 @@ function connectWebSocket() {
     
     ws.onmessage = function(event) {
         var data = JSON.parse(event.data);
+        var responseId = data.responseId;
         
         if (data.type === 'chunk') {
-            handleStreamingChunk(data.content);
+            handleStreamingChunk(data.content, responseId);
         } else if (data.type === 'tool_call') {
-            handleToolCall(data);
+            handleToolCall(data, responseId);
         } else if (data.type === 'done') {
-            handleStreamingDone(data.message, data.response);
+            handleStreamingDone(data.message, data.response, responseId);
         } else if (data.type === 'error') {
             handleStreamingError(data.message);
         }
@@ -87,25 +89,32 @@ function connectWebSocket() {
     };
 }
 
-function handleToolCall(data) {
+function handleToolCall(data, responseId) {
     var messagesDiv = document.getElementById('chatMessages');
     var agentName = document.querySelector('.chat-header h2') ? document.querySelector('.chat-header h2').textContent : 'Agent';
     
+    var msgState = streamingMessages[responseId];
+    if (!msgState) {
+        msgState = { currentStreamingMessage: null, streamingMarkdownContent: '', lastMessageType: null };
+        streamingMessages[responseId] = msgState;
+    }
+    
     if (data.status === 'starting') {
-        streamingMarkdownContent = '';
-        lastMessageType = 'tool_call';
+        msgState.streamingMarkdownContent = '';
+        msgState.lastMessageType = 'tool_call';
         
-        currentStreamingMessage = document.createElement('div');
-        currentStreamingMessage.className = 'message agent tool-call-message';
+        msgState.currentStreamingMessage = document.createElement('div');
+        msgState.currentStreamingMessage.className = 'message agent tool-call-message';
+        msgState.currentStreamingMessage.setAttribute('data-response-id', responseId);
         
         var label = document.createElement('div');
         label.className = 'message-label';
         label.textContent = agentName;
-        currentStreamingMessage.appendChild(label);
+        msgState.currentStreamingMessage.appendChild(label);
         
         var toolCallContainer = document.createElement('div');
         toolCallContainer.className = 'tool-call-container';
-        currentStreamingMessage.appendChild(toolCallContainer);
+        msgState.currentStreamingMessage.appendChild(toolCallContainer);
         
         var toolCallDiv = document.createElement('div');
         toolCallDiv.className = 'tool-call';
@@ -141,7 +150,7 @@ function handleToolCall(data) {
         }
         
         toolCallContainer.appendChild(toolCallDiv);
-        messagesDiv.appendChild(currentStreamingMessage);
+        messagesDiv.appendChild(msgState.currentStreamingMessage);
         messagesDiv.scrollTop = messagesDiv.scrollHeight;
     } else if (data.status === 'executed') {
         var toolCallDiv = document.querySelector('.tool-call[data-tool-call-id="' + data.toolCallId + '"]');
@@ -169,12 +178,12 @@ function handleToolCall(data) {
             }
         }
         
-        if (currentStreamingMessage) {
+        if (msgState.currentStreamingMessage) {
             var timeDiv = document.createElement('div');
             timeDiv.className = 'message-time';
             timeDiv.textContent = formatMessageTime(new Date());
-            currentStreamingMessage.appendChild(timeDiv);
-            currentStreamingMessage = null;
+            msgState.currentStreamingMessage.appendChild(timeDiv);
+            msgState.currentStreamingMessage = null;
         }
         
         messagesDiv.scrollTop = messagesDiv.scrollHeight;
@@ -187,79 +196,88 @@ function escapeHtml(text) {
     return div.innerHTML;
 }
 
-function handleStreamingChunk(content) {
+function handleStreamingChunk(content, responseId) {
     var messagesDiv = document.getElementById('chatMessages');
     var agentName = document.querySelector('.chat-header h2') ? document.querySelector('.chat-header h2').textContent : 'Agent';
     
-    if (!currentStreamingMessage || lastMessageType !== 'text') {
-        streamingMarkdownContent = '';
-        lastMessageType = 'text';
+    var msgState = streamingMessages[responseId];
+    if (!msgState) {
+        msgState = { currentStreamingMessage: null, streamingMarkdownContent: '', lastMessageType: null };
+        streamingMessages[responseId] = msgState;
+    }
+    
+    if (!msgState.currentStreamingMessage || msgState.lastMessageType !== 'text') {
+        msgState.streamingMarkdownContent = '';
+        msgState.lastMessageType = 'text';
         
-        currentStreamingMessage = document.createElement('div');
-        currentStreamingMessage.className = 'message agent';
+        msgState.currentStreamingMessage = document.createElement('div');
+        msgState.currentStreamingMessage.className = 'message agent';
+        msgState.currentStreamingMessage.setAttribute('data-response-id', responseId);
         
         var label = document.createElement('div');
         label.className = 'message-label';
         label.textContent = agentName;
-        currentStreamingMessage.appendChild(label);
+        msgState.currentStreamingMessage.appendChild(label);
         
         var contentDiv = document.createElement('div');
         contentDiv.className = 'message-content';
-        currentStreamingMessage.appendChild(contentDiv);
+        msgState.currentStreamingMessage.appendChild(contentDiv);
         
-        messagesDiv.appendChild(currentStreamingMessage);
+        messagesDiv.appendChild(msgState.currentStreamingMessage);
     }
     
-    var contentDiv = currentStreamingMessage.querySelector('.message-content:last-of-type');
+    var contentDiv = msgState.currentStreamingMessage.querySelector('.message-content:last-of-type');
     if (!contentDiv) {
         contentDiv = document.createElement('div');
         contentDiv.className = 'message-content';
-        currentStreamingMessage.appendChild(contentDiv);
+        msgState.currentStreamingMessage.appendChild(contentDiv);
     }
     
-    streamingMarkdownContent += content;
+    msgState.streamingMarkdownContent += content;
     
     try {
         if (typeof marked !== 'undefined') {
-            var html = marked.parse(streamingMarkdownContent);
+            var html = marked.parse(msgState.streamingMarkdownContent);
             contentDiv.innerHTML = html;
         } else {
-            contentDiv.textContent = streamingMarkdownContent;
+            contentDiv.textContent = msgState.streamingMarkdownContent;
         }
     } catch (e) {
-        contentDiv.textContent = streamingMarkdownContent;
+        contentDiv.textContent = msgState.streamingMarkdownContent;
     }
     
     messagesDiv.scrollTop = messagesDiv.scrollHeight;
 }
 
-function handleStreamingDone(userMessage, response) {
-    if (currentStreamingMessage) {
-        var contentDiv = currentStreamingMessage.querySelector('.message-content:last-of-type');
-        if (contentDiv) {
-            contentDiv.setAttribute('data-raw-content', streamingMarkdownContent);
-            
-            try {
-                if (typeof marked !== 'undefined') {
-                    contentDiv.innerHTML = marked.parse(streamingMarkdownContent);
-                } else {
-                    contentDiv.textContent = streamingMarkdownContent;
-                }
-            } catch (e) {
-                contentDiv.textContent = streamingMarkdownContent;
-            }
-        }
-        
-        var timeDiv = document.createElement('div');
-        timeDiv.className = 'message-time';
-        timeDiv.textContent = formatMessageTime(new Date());
-        currentStreamingMessage.appendChild(timeDiv);
-        
-        currentStreamingMessage = null;
-        streamingMarkdownContent = '';
-        lastMessageType = null;
+function handleStreamingDone(userMessage, response, responseId) {
+    var msgState = streamingMessages[responseId];
+    if (!msgState || !msgState.currentStreamingMessage) {
+        isStreaming = false;
+        enableInput();
+        return;
     }
     
+    var contentDiv = msgState.currentStreamingMessage.querySelector('.message-content:last-of-type');
+    if (contentDiv) {
+        contentDiv.setAttribute('data-raw-content', msgState.streamingMarkdownContent);
+        
+        try {
+            if (typeof marked !== 'undefined') {
+                contentDiv.innerHTML = marked.parse(msgState.streamingMarkdownContent);
+            } else {
+                contentDiv.textContent = msgState.streamingMarkdownContent;
+            }
+        } catch (e) {
+            contentDiv.textContent = msgState.streamingMarkdownContent;
+        }
+    }
+    
+    var timeDiv = document.createElement('div');
+    timeDiv.className = 'message-time';
+    timeDiv.textContent = formatMessageTime(new Date());
+    msgState.currentStreamingMessage.appendChild(timeDiv);
+    
+    delete streamingMessages[responseId];
     isStreaming = false;
     enableInput();
 }
