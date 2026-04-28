@@ -20,7 +20,8 @@
         SELECT id, agent_id, role, message_type, content, tool_call_id, tool_name, tool_arguments, tool_call_status, create_time, thinking_content
         FROM chat_history
         WHERE agent_id = #{agentId}
-        ORDER BY create_time ASC
+        ORDER BY create_time DESC
+        LIMIT #{limit}
     </select>
     <select id="findByAgentIdAndToolCallId" resultMap="ChatHistoryResultMap">
         SELECT id, agent_id, role, message_type, content, tool_call_id, tool_name, tool_arguments, tool_call_status, create_time, thinking_content

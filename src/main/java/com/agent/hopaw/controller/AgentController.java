@@ -10,6 +10,7 @@ import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -45,7 +46,8 @@ public class AgentController {
             model.addAttribute("selectedAgent", agent);
             model.addAttribute("selectedAgentId", agentId);
 
-            List<ChatHistory> chatHistory = chatHistoryMapper.findByAgentId(agentId);
+            List<ChatHistory> chatHistory = chatHistoryMapper.findByAgentId(agentId, 100);
+            Collections.reverse(chatHistory);
             model.addAttribute("chatHistory", chatHistory);
         }
 
