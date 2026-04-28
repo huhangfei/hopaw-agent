@@ -136,7 +136,7 @@ public class AgentService {
         public AgentExecutor(Agent agent, ChatModel chatModel, StreamingChatModel streamingModel,
                              List<AgentTool> selectedTools, SQLiteChatMemoryStore memoryStore,
                              int maxMemoryRecords, int maxToolInvocations, Consumer<String> messageConsumer, Consumer<ChatHistory> chatHistoryConsumer) {
-            this.agentMessageHandler = new AgentMessageHandler(messageConsumer, chatHistoryConsumer);
+            this.agentMessageHandler = new AgentMessageHandler();
             this.agent = agent;
             String systemMessage = "你是一个智能助手，名字叫" + agent.getName() + "。" +
                     "你的主要工作是" + agent.getDescription() + "。" +
@@ -204,7 +204,9 @@ public class AgentService {
 
 
 
-        public void executeStreaming(String userMessage) {
+        public void executeStreaming(String userMessage,Consumer<String> messageConsumer, Consumer<ChatHistory> chatHistoryConsumer) {
+            agentMessageHandler.setMessageConsumer(messageConsumer);
+            agentMessageHandler.setChatHistoryConsumer(chatHistoryConsumer);
             if (streamingAssistant == null) {
                 String response = execute(userMessage);
                 agentMessageHandler.partialResponseHandler(response);
@@ -239,16 +241,21 @@ public class AgentService {
         }
         public class AgentMessageHandler {
             private Consumer<String> messageConsumer;
+            public void setMessageConsumer(Consumer<String> messageConsumer) {
+                this.messageConsumer = messageConsumer;
+            }
             private Consumer<ChatHistory> chatHistoryConsumer;
+            public void setChatHistoryConsumer(Consumer<ChatHistory> chatHistoryConsumer) {
+                this.chatHistoryConsumer = chatHistoryConsumer;
+            }
+
             private String lastMessageType="";
             private String currentMessageType="";
             private String responseId;
             private StringBuilder messageBuilder = new StringBuilder();
             private StringBuilder thinkingBuilder = new StringBuilder();
             private ToolCallInfo toolCallInfo;
-            public AgentMessageHandler(Consumer<String> messageConsumer, Consumer<ChatHistory> chatHistoryConsumer) {
-                this.messageConsumer = messageConsumer;
-                this.chatHistoryConsumer = chatHistoryConsumer;
+            public AgentMessageHandler() {
                 this.responseId = UUID.randomUUID().toString();
             }
             public void down(){

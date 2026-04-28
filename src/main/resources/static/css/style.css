@@ -518,6 +518,10 @@ header h1 {
     color: white;
     text-decoration: underline;
 }
+.thinking-content {
+    color: #999;
+    font-style: italic;
+}
 .empty-state {
     flex: 1;
     display: flex;

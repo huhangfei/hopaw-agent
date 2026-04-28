@@ -56,7 +56,17 @@ public class ChatWebSocketHandler extends TextWebSocketHandler {
             }
 
             Long agentId = Long.parseLong(agentIdStr);
-            AgentService.AgentExecutor executor = agentService.getAgentExecutor(agentId,aiMessageJson->{
+            AgentService.AgentExecutor executor = agentService.getAgentExecutor(agentId);
+
+            if (executor == null) {
+                sendError(session, "Agent 不存在");
+                return;
+            }
+            ChatHistory userChat = new ChatHistory(agentId, "user", "text", userMessage);
+            userChat.setCreateTime(LocalDateTime.now());
+            chatHistoryMapper.insert(userChat);
+
+            executor.executeStreaming(userMessage,aiMessageJson->{
                 try {
                     session.sendMessage(new TextMessage(aiMessageJson));
                 } catch (IOException e) {
@@ -75,16 +85,6 @@ public class ChatWebSocketHandler extends TextWebSocketHandler {
                     chatHistoryMapper.insert(chatHistory);
                 }
             });
-
-            if (executor == null) {
-                sendError(session, "Agent 不存在");
-                return;
-            }
-            ChatHistory userChat = new ChatHistory(agentId, "user", "text", userMessage);
-            userChat.setCreateTime(LocalDateTime.now());
-            chatHistoryMapper.insert(userChat);
-
-            executor.executeStreaming(userMessage);
         } catch (Exception e) {
             sendError(session, "处理消息失败: " + e.getMessage());
         }

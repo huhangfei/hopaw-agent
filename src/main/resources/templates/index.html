@@ -59,6 +59,11 @@
                         <div th:text="${chat.content}" class="message-content" th:attr="data-is-agent=${chat.role == 'agent'}"></div>
                         <div class="message-time" th:text="${chat.createTime.toLocalDate().equals(T(java.time.LocalDate).now()) ? #temporals.format(chat.createTime, 'HH:mm:ss') : #temporals.format(chat.createTime, 'yyyy-MM-dd HH:mm:ss')}"></div>
                     </div>
+                    <div th:case="'thinking'">
+                        <div class="message-label" th:text="${selectedAgent.name} + ' (思考)'"></div>
+                        <div th:text="${chat.content}" class="message-content thinking-content"></div>
+                        <div class="message-time" th:text="${chat.createTime.toLocalDate().equals(T(java.time.LocalDate).now()) ? #temporals.format(chat.createTime, 'HH:mm:ss') : #temporals.format(chat.createTime, 'yyyy-MM-dd HH:mm:ss')}"></div>
+                    </div>
                     <div th:case="'tool_call'" class="tool-call-message-content">
                         <div class="message-label" th:text="${selectedAgent.name}"></div>
                         <div class="tool-call-container-static">

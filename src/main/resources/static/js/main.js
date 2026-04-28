@@ -219,7 +219,7 @@ function handleThinking(data, responseId) {
             
             var label = document.createElement('div');
             label.className = 'message-label';
-            label.textContent = agentName + ' (思考中)';
+            label.textContent = agentName + ' (思考)';
             msgState.currentStreamingMessage.appendChild(label);
             
             var contentDiv = document.createElement('div');
