@@ -13,7 +13,7 @@ body {
 header {
     background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
     color: white;
-    padding: 20px 30px;
+    padding: 10px 30px;
     box-shadow: 0 2px 10px rgba(0,0,0,0.1);
 }
 header h1 {
@@ -26,7 +26,7 @@ header h1 {
     overflow: hidden;
 }
 .sidebar {
-    width: 30%;
+    width: 25%;
     background: white;
     border-right: 1px solid #e0e0e0;
     display: flex;
