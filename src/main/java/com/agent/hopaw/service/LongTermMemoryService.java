@@ -85,28 +85,33 @@ public class LongTermMemoryService {
         buildMemoryTreeRecursive(sb, rootMemories, 0, true);
         return sb.toString();
     }
+
     public String getMemoryTree(String identity, Long parentId) {
         LongTermMemory rootMemory = getMemoryById(parentId);
         StringBuilder sb = new StringBuilder();
-        buildMemoryTreeRecursive(sb, Arrays.asList(rootMemory), 0,true);
-        return sb.toString();
-    }
-    public String getRootMemory(String identity) {
-        List<LongTermMemory> rootMemories = getRootMemories(identity);
-        StringBuilder sb = new StringBuilder();
-        buildMemoryTreeRecursive(sb, rootMemories, 0,false);
+        buildMemoryTreeRecursive(sb, Arrays.asList(rootMemory), 0, true);
         return sb.toString();
     }
 
-    private void buildMemoryTreeRecursive(StringBuilder sb, List<LongTermMemory> memories, int level,boolean includeChildren) {
+    public String getRootMemory(String identity) {
+        List<LongTermMemory> rootMemories = getRootMemories(identity);
+        StringBuilder sb = new StringBuilder();
+        buildMemoryTreeRecursive(sb, rootMemories, 0, false);
+        return sb.toString();
+    }
+
+    private void buildMemoryTreeRecursive(StringBuilder sb, List<LongTermMemory> memories, int level, boolean includeChildren) {
         for (LongTermMemory memory : memories) {
             for (int i = 0; i < level; i++) {
                 sb.append("  ");
             }
             sb.append("- ").append(memory.getMemory()).append(" 记忆编号[").append(memory.getId()).append("]\n");
-            List<LongTermMemory> children = getChildMemories(memory.getIdentity(), memory.getId());
-            if (!children.isEmpty()) {
-                buildMemoryTreeRecursive(sb, children, level + 1, includeChildren);
+            if (includeChildren) {
+
+                List<LongTermMemory> children = getChildMemories(memory.getIdentity(), memory.getId());
+                if (!children.isEmpty()) {
+                    buildMemoryTreeRecursive(sb, children, level + 1, includeChildren);
+                }
             }
         }
     }
@@ -145,9 +150,10 @@ public class LongTermMemoryService {
     public void updateLastProcessedChatId(String identity, Long chatId) {
         memoryProcessLogMapper.upsert(identity, chatId);
     }
+
     @Tool("保存智能体记忆，identity 智能体身份（global是全局，智能体内部记忆是agentId ），memory 记忆内容，parentId 父记忆ID")
-    public String saveMemory(String identity,String memory,Long parentId) {
-        LongTermMemory memoryEntity  = longTermMemoryMapper.findByIdentityAndMemory(identity, memory);
+    public String saveMemory(String identity, String memory, Long parentId) {
+        LongTermMemory memoryEntity = longTermMemoryMapper.findByIdentityAndMemory(identity, memory);
         if (memoryEntity == null) {
             memoryEntity = new LongTermMemory();
             memoryEntity.setIdentity(identity);
@@ -160,6 +166,6 @@ public class LongTermMemoryService {
             memoryEntity.setUpdateTime(LocalDateTime.now());
             longTermMemoryMapper.update(memoryEntity);
         }
-        return "记忆保存成功：" + memory+"的编号为"+memoryEntity.getId();
+        return "记忆保存成功：" + memory + "的编号为" + memoryEntity.getId();
     }
 }
