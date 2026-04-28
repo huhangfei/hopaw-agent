@@ -522,6 +522,9 @@ header h1 {
     color: #999;
     font-style: italic;
 }
+.thinking-content{
+    font-size: 12px;
+}
 .empty-state {
     flex: 1;
     display: flex;
