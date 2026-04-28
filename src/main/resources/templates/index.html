@@ -62,11 +62,21 @@
                     <div th:case="'tool_call'" class="tool-call-message-content">
                         <div class="message-label" th:text="${selectedAgent.name}"></div>
                         <div class="tool-call-container-static">
-                            <div class="tool-call" th:attr="data-tool-call-id=${chat.toolCallId}, data-status='executed'">
+                            <div class="tool-call" th:attr="data-tool-call-id=${chat.toolCallId}, data-status=${chat.toolCallStatus}">
                                 <div class="tool-call-header">
-                                    <span class="tool-call-icon" style="animation: auto ease 0s 1 normal none running none;">✅</span>
+                                    <span class="tool-call-icon" th:switch="${chat.toolCallStatus}" th:classappend="${chat.toolCallStatus == 'tool_call_end' ? 'completed' : ''}">
+                                        <span th:case="'tool_call_start'">🔧</span>
+                                        <span th:case="'tool_call_end'">✅</span>
+                                        <span th:case="'tool_call_failed'">❌</span>
+                                        <span th:case="*">🔧</span>
+                                    </span>
                                     <span class="tool-call-name" th:text="${chat.toolName}"></span>
-                                    <span class="tool-call-status completed">执行完成</span>
+                                    <span class="tool-call-status" th:switch="${chat.toolCallStatus}" th:classappend="${chat.toolCallStatus == 'tool_call_end' ? 'completed' : ''}">
+                                        <span th:case="'tool_call_start'">执行中...</span>
+                                        <span th:case="'tool_call_end'">执行完成</span>
+                                        <span th:case="'tool_call_failed'">执行失败</span>
+                                        <span th:case="*" th:text="${chat.toolCallStatus}">执行完成</span>
+                                    </span>
                                 </div>
                                 <div class="tool-call-args" th:if="${chat.toolArguments}">
                                     <div class="args-label">参数:</div>
