@@ -19,14 +19,20 @@ public class WebSearchTool implements AgentTool {
     private static final int TIMEOUT_MS = 10000;
     private static final int MAX_RESULTS = 10;
 
-    @Tool("搜索互联网网页信息，返回相关的网页标题和摘要内容。搜索源为百度或必应。(query: 搜索关键词, source: 搜索源，可选值有 baidu，bing)")
-    public String webSearch(String query,String source) {
+    @Tool("搜索互联网网页信息，返回相关的网页标题和摘要内容。搜索源为百度或必应。(query: 搜索关键词, source: 搜索源，可选值有 baidu，bing，maxResults: 最大结果数,默认10，timeout: 超时时间（毫秒，默认10000）)")
+    public String webSearch(String query,String source,Integer maxResults,Integer timeout) {
         if (query == null || query.trim().isEmpty()) {
             return "错误: 搜索关键词不能为空";
         }
 
+        if(maxResults==null){
+            maxResults=MAX_RESULTS;
+        }
+        if(timeout==null){
+            timeout=TIMEOUT_MS;
+        }
         try {
-            List<SearchResult> results = source.equalsIgnoreCase("bing") ? searchBing(query) : searchBaidu(query);
+            List<SearchResult> results = source.equalsIgnoreCase("bing") ? searchBing(query, timeout) : searchBaidu(query, timeout);
 
             if (results.isEmpty()) {
                 return "从搜索源" + source + "未找到关于\"" + query + "\"的搜索结果";
@@ -37,7 +43,7 @@ public class WebSearchTool implements AgentTool {
 
             int count = 0;
             for (SearchResult result : results) {
-                if (count >= MAX_RESULTS) {
+                if (count >= maxResults) {
                     break;
                 }
                 sb.append("[").append(count + 1).append("] ").append(result.title).append("\n");
@@ -56,7 +62,7 @@ public class WebSearchTool implements AgentTool {
         }
     }
 
-    private List<SearchResult> searchBing(String query) {
+    private List<SearchResult> searchBing(String query, Integer timeout) {
         List<SearchResult> results = new ArrayList<>();
         try {
             String encodedQuery = URLEncoder.encode(query, StandardCharsets.UTF_8.toString());
@@ -64,7 +70,7 @@ public class WebSearchTool implements AgentTool {
 
             Document doc = Jsoup.connect(url)
                     .userAgent("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36")
-                    .timeout(TIMEOUT_MS)
+                    .timeout(timeout)
                     .get();
 
             Elements searchResults = doc.select("#b_results .b_algo");
@@ -88,7 +94,7 @@ public class WebSearchTool implements AgentTool {
         return results;
     }
 
-    private List<SearchResult> searchBaidu(String query) {
+    private List<SearchResult> searchBaidu(String query, Integer timeout) {
         List<SearchResult> results = new ArrayList<>();
         try {
             String encodedQuery = URLEncoder.encode(query, StandardCharsets.UTF_8.toString());
@@ -96,7 +102,7 @@ public class WebSearchTool implements AgentTool {
 
             Document doc = Jsoup.connect(url)
                     .userAgent("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36")
-                    .timeout(TIMEOUT_MS)
+                    .timeout(timeout)
                     .get();
 
             Elements searchResults = doc.select(".result.c-container");
