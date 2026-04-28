@@ -100,6 +100,7 @@ public class DataInitializer implements CommandLineRunner {
                     "id INTEGER PRIMARY KEY AUTOINCREMENT, " +
                     "identity TEXT NOT NULL, " +
                     "memory TEXT, " +
+                    "memory_hash TEXT, " +
                     "parent_id INTEGER, " +
                     "create_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP, " +
                     "update_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP" +
@@ -107,6 +108,11 @@ public class DataInitializer implements CommandLineRunner {
 
             stmt.execute("CREATE INDEX IF NOT EXISTS idx_long_term_memory_identity ON long_term_memory(identity)");
             stmt.execute("CREATE INDEX IF NOT EXISTS idx_long_term_memory_parent ON long_term_memory(parent_id)");
+
+            try {
+                stmt.execute("ALTER TABLE long_term_memory ADD COLUMN memory_hash TEXT");
+            } catch (Exception e) {
+            }
 
             stmt.execute("CREATE TABLE IF NOT EXISTS memory_process_log (" +
                     "id INTEGER PRIMARY KEY AUTOINCREMENT, " +

@@ -13,7 +13,7 @@ public interface LongTermMemoryMapper {
 
     List<LongTermMemory> findByIdentityAndParentId(@Param("identity") String identity, @Param("parentId") Long parentId);
 
-    LongTermMemory findByIdentityAndMemory(@Param("identity") String identity, @Param("memory") String memory);
+    LongTermMemory findByIdentityAndHash(@Param("identity") String identity, @Param("hash") String hash);
 
     LongTermMemory findById(@Param("id") Long id);
 

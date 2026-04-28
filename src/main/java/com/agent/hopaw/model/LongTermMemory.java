@@ -6,6 +6,7 @@ public class LongTermMemory {
     private Long id;
     private String identity;
     private String memory;
+    private String memoryHash;
     private Long parentId;
     private LocalDateTime createTime;
     private LocalDateTime updateTime;
@@ -15,6 +16,7 @@ public class LongTermMemory {
     public LongTermMemory(String identity, String memory, Long parentId) {
         this.identity = identity;
         this.memory = memory;
+        this.memoryHash = String.valueOf(memory.hashCode());
         this.parentId = parentId;
         this.createTime = LocalDateTime.now();
         this.updateTime = LocalDateTime.now();
@@ -42,6 +44,14 @@ public class LongTermMemory {
 
     public void setMemory(String memory) {
         this.memory = memory;
+    }
+
+    public String getMemoryHash() {
+        return memoryHash;
+    }
+
+    public void setMemoryHash(String memoryHash) {
+        this.memoryHash = memoryHash;
     }
 
     public Long getParentId() {

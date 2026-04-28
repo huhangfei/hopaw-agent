@@ -6,13 +6,14 @@
         <id property="id" column="id"/>
         <result property="identity" column="identity"/>
         <result property="memory" column="memory"/>
+        <result property="memoryHash" column="memory_hash"/>
         <result property="parentId" column="parent_id"/>
         <result property="createTime" column="create_time"/>
         <result property="updateTime" column="update_time"/>
     </resultMap>
 
     <select id="findByIdentity" resultMap="LongTermMemoryResultMap">
-        SELECT id, identity, memory, parent_id, create_time, update_time
+        SELECT id, identity, memory, memory_hash, parent_id, create_time, update_time
         FROM long_term_memory
         WHERE identity = #{identity}
         ORDER BY parent_id ASC NULLS FIRST, id ASC
@@ -20,32 +21,36 @@
 
 
     <select id="findByIdentityAndParentId" resultMap="LongTermMemoryResultMap">
-        SELECT id, identity, memory, parent_id, create_time, update_time
+        SELECT id, identity, memory, memory_hash, parent_id, create_time, update_time
         FROM long_term_memory
         WHERE identity = #{identity} AND parent_id = #{parentId}
         ORDER BY id ASC
     </select>
-    <select id="findByIdentityAndMemory" resultMap="LongTermMemoryResultMap">
-        SELECT id, identity, memory, parent_id, create_time, update_time
+    <select id="findByIdentityAndHash" resultMap="LongTermMemoryResultMap">
+        SELECT id, identity, memory, memory_hash, parent_id, create_time, update_time
         FROM long_term_memory
-        WHERE identity = #{identity} AND memory = #{memory}
+        WHERE identity = #{identity} AND memory_hash = #{hash}
         limit 1
     </select>
 
     <select id="findById" resultMap="LongTermMemoryResultMap">
-        SELECT id, identity, memory, parent_id, create_time, update_time
+        SELECT id, identity, memory, memory_hash, parent_id, create_time, update_time
         FROM long_term_memory
         WHERE id = #{id}
     </select>
 
     <insert id="insert" parameterType="com.agent.hopaw.model.LongTermMemory">
-        INSERT INTO long_term_memory (identity, memory, parent_id, create_time, update_time)
-        VALUES (#{identity}, #{memory}, #{parentId}, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+        INSERT INTO long_term_memory (identity, memory, memory_hash, parent_id, create_time, update_time)
+        VALUES (#{identity}, #{memory}, #{memoryHash}, #{parentId}, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+        <selectKey resultType="long" keyProperty="id" order="AFTER">
+            SELECT last_insert_rowid()
+        </selectKey>
     </insert>
 
     <update id="update" parameterType="com.agent.hopaw.model.LongTermMemory">
         UPDATE long_term_memory
         SET memory = #{memory},
+            memory_hash = #{memoryHash},
             parent_id = #{parentId},
             update_time = CURRENT_TIMESTAMP
         WHERE id = #{id}

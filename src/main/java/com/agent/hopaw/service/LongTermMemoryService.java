@@ -153,11 +153,13 @@ public class LongTermMemoryService {
 
     @Tool("保存智能体记忆，identity 智能体身份（global是全局，智能体内部记忆是agentId ），memory 记忆内容，parentId 父记忆ID")
     public String saveMemory(String identity, String memory, Long parentId) {
-        LongTermMemory memoryEntity = longTermMemoryMapper.findByIdentityAndMemory(identity, memory);
+        String memoryHash = String.valueOf(memory.hashCode());
+        LongTermMemory memoryEntity = longTermMemoryMapper.findByIdentityAndHash(identity, memoryHash);
         if (memoryEntity == null) {
             memoryEntity = new LongTermMemory();
             memoryEntity.setIdentity(identity);
             memoryEntity.setMemory(memory);
+            memoryEntity.setMemoryHash(memoryHash);
             memoryEntity.setParentId(parentId);
             memoryEntity.setCreateTime(LocalDateTime.now());
             longTermMemoryMapper.insert(memoryEntity);
