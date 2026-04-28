@@ -11,10 +11,18 @@ public class ChatHistory {
     private String toolCallId;
     private String toolName;
     private String toolArguments;
+    private String toolCallStatus;
+    private String thinkingContent;
     private LocalDateTime createTime;
 
     public ChatHistory() {}
 
+    public ChatHistory(Long agentId, String role, String messageType) {
+        this.agentId = agentId;
+        this.role = role;
+        this.messageType = messageType;
+        this.createTime = LocalDateTime.now();
+    }
     public ChatHistory(Long agentId, String role, String messageType, String content) {
         this.agentId = agentId;
         this.role = role;
@@ -97,6 +105,14 @@ public class ChatHistory {
 
     public void setToolArguments(String toolArguments) {
         this.toolArguments = toolArguments;
+    }
+
+    public String getToolCallStatus() {
+        return toolCallStatus;
+    }
+
+    public void setToolCallStatus(String toolCallStatus) {
+        this.toolCallStatus = toolCallStatus;
     }
 
     public LocalDateTime getCreateTime() {

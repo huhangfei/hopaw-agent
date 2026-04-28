@@ -70,6 +70,8 @@ function connectWebSocket() {
             handleStreamingChunk(data.content, responseId);
         } else if (data.type === 'tool_call') {
             handleToolCall(data, responseId);
+        } else if (data.type === 'thinking') {
+            handleThinking(data, responseId);
         } else if (data.type === 'done') {
             handleStreamingDone(data.message, data.response, responseId);
         } else if (data.type === 'error') {
@@ -194,6 +196,55 @@ function escapeHtml(text) {
     var div = document.createElement('div');
     div.textContent = text;
     return div.innerHTML;
+}
+
+function handleThinking(data, responseId) {
+    var messagesDiv = document.getElementById('chatMessages');
+    var agentName = document.querySelector('.chat-header h2') ? document.querySelector('.chat-header h2').textContent : 'Agent';
+    
+    var msgState = streamingMessages[responseId];
+    if (!msgState) {
+        msgState = { currentStreamingMessage: null, streamingMarkdownContent: '', lastMessageType: null, thinkingContent: '', thinkingDiv: null };
+        streamingMessages[responseId] = msgState;
+    }
+    
+    if (data.status === 'partial') {
+        if (!msgState.currentStreamingMessage || msgState.lastMessageType !== 'thinking') {
+            msgState.thinkingContent = '';
+            msgState.lastMessageType = 'thinking';
+            
+            msgState.currentStreamingMessage = document.createElement('div');
+            msgState.currentStreamingMessage.className = 'message agent thinking-message';
+            msgState.currentStreamingMessage.setAttribute('data-response-id', responseId);
+            
+            var label = document.createElement('div');
+            label.className = 'message-label';
+            label.textContent = agentName + ' (思考中)';
+            msgState.currentStreamingMessage.appendChild(label);
+            
+            var contentDiv = document.createElement('div');
+            contentDiv.className = 'message-content thinking-content';
+            msgState.currentStreamingMessage.appendChild(contentDiv);
+            msgState.thinkingDiv = contentDiv;
+            
+            messagesDiv.appendChild(msgState.currentStreamingMessage);
+        }
+        
+        msgState.thinkingContent += data.content;
+        msgState.thinkingDiv.innerHTML = renderMarkdown(msgState.thinkingContent);
+        messagesDiv.scrollTop = messagesDiv.scrollHeight;
+    } else if (data.status === 'done') {
+        if (msgState.currentStreamingMessage && msgState.lastMessageType === 'thinking') {
+            var timeDiv = document.createElement('div');
+            timeDiv.className = 'message-time';
+            timeDiv.textContent = formatMessageTime(new Date());
+            msgState.currentStreamingMessage.appendChild(timeDiv);
+            msgState.currentStreamingMessage = null;
+            msgState.thinkingContent = '';
+            msgState.thinkingDiv = null;
+            msgState.lastMessageType = null;
+        }
+    }
 }
 
 function handleStreamingChunk(content, responseId) {

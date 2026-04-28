@@ -11,18 +11,26 @@
         <result property="toolCallId" column="tool_call_id"/>
         <result property="toolName" column="tool_name"/>
         <result property="toolArguments" column="tool_arguments"/>
+        <result property="toolCallStatus" column="tool_call_status"/>
         <result property="createTime" column="create_time"/>
+        <result property="thinkingContent" column="thinking_content"/>
     </resultMap>
 
     <select id="findByAgentId" resultMap="ChatHistoryResultMap">
-        SELECT id, agent_id, role, message_type, content, tool_call_id, tool_name, tool_arguments, create_time
+        SELECT id, agent_id, role, message_type, content, tool_call_id, tool_name, tool_arguments, tool_call_status, create_time, thinking_content
         FROM chat_history
         WHERE agent_id = #{agentId}
         ORDER BY create_time ASC
     </select>
+    <select id="findByAgentIdAndToolCallId" resultMap="ChatHistoryResultMap">
+        SELECT id, agent_id, role, message_type, content, tool_call_id, tool_name, tool_arguments, tool_call_status, create_time, thinking_content
+        FROM chat_history
+        WHERE agent_id = #{agentId} and tool_call_id = #{toolCallId}
+        limit 1;
+    </select>
 
     <select id="findByAgentIdAfterId" resultMap="ChatHistoryResultMap">
-        SELECT id, agent_id, role, message_type, content, tool_call_id, tool_name, tool_arguments, create_time
+        SELECT id, agent_id, role, message_type, content, tool_call_id, tool_name, tool_arguments, tool_call_status, create_time, thinking_content
         FROM chat_history
         WHERE agent_id = #{agentId} AND id > #{afterId}
         ORDER BY id ASC
@@ -30,7 +38,7 @@
     </select>
 
     <select id="findAllAfterId" resultMap="ChatHistoryResultMap">
-        SELECT id, agent_id, role, message_type, content, tool_call_id, tool_name, tool_arguments, create_time
+        SELECT id, agent_id, role, message_type, content, tool_call_id, tool_name, tool_arguments, tool_call_status, create_time, thinking_content
         FROM chat_history
         WHERE id > #{afterId}
         ORDER BY id ASC
@@ -42,12 +50,17 @@
     </select>
 
     <insert id="insert" parameterType="com.agent.hopaw.model.ChatHistory">
-        INSERT INTO chat_history (agent_id, role, message_type, content, tool_call_id, tool_name, tool_arguments, create_time)
-        VALUES (#{agentId}, #{role}, #{messageType}, #{content}, #{toolCallId}, #{toolName}, #{toolArguments}, #{createTime})
+        INSERT INTO chat_history (agent_id, role, message_type, content, tool_call_id, tool_name, tool_arguments, tool_call_status, create_time, thinking_content)
+        VALUES (#{agentId}, #{role}, #{messageType}, #{content}, #{toolCallId}, #{toolName}, #{toolArguments}, #{toolCallStatus}, #{createTime}, #{thinkingContent})
     </insert>
 
     <delete id="deleteByAgentId">
         DELETE FROM chat_history WHERE agent_id = #{agentId}
     </delete>
 
+    <update id="updateToolCallStatusAndContent">
+        UPDATE chat_history
+        SET tool_call_status = #{toolCallStatus}, content = #{content}
+        WHERE id = #{id}
+    </update>
 </mapper>

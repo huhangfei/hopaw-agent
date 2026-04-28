@@ -3,17 +3,19 @@ package com.agent.hopaw.service;
 import com.agent.hopaw.config.ChatModelFactoryConfig;
 import com.agent.hopaw.mapper.AgentMapper;
 import com.agent.hopaw.mapper.ChatMemoryMapper;
-import com.agent.hopaw.model.Agent;
-import com.agent.hopaw.model.ChatModelFactory;
-import com.agent.hopaw.model.ToolCallInfo;
+import com.agent.hopaw.model.*;
 import com.agent.hopaw.tools.AgentTool;
 import com.alibaba.fastjson2.JSON;
 import dev.langchain4j.memory.chat.MessageWindowChatMemory;
 import dev.langchain4j.model.chat.ChatModel;
 import dev.langchain4j.model.chat.StreamingChatModel;
+import dev.langchain4j.model.chat.response.ChatResponse;
+import dev.langchain4j.model.chat.response.PartialThinking;
 import dev.langchain4j.service.AiServices;
 import dev.langchain4j.service.TokenStream;
 import dev.langchain4j.service.UserMessage;
+import dev.langchain4j.service.tool.BeforeToolExecution;
+import dev.langchain4j.service.tool.ToolExecution;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
@@ -73,17 +75,20 @@ public class AgentService {
         }
     }
 
-    public AgentExecutor getAgentExecutor(Long agentId) {
+    public AgentExecutor getAgentExecutor(Long agentId, Consumer<String> stringConsumer, Consumer<ChatHistory> chatHistoryConsumer) {
         return agentExecutors.computeIfAbsent(agentId.toString(), id -> {
             Agent agent = agentMapper.findById(agentId);
             if (agent == null) {
                 return null;
             }
-            return createAgentExecutor(agent);
+            return createAgentExecutor(agent, stringConsumer, chatHistoryConsumer);
         });
     }
+    public AgentExecutor getAgentExecutor(Long agentId) {
+        return getAgentExecutor(agentId, null, null);
+    }
 
-    private AgentExecutor createAgentExecutor(Agent agent) {
+    private AgentExecutor createAgentExecutor(Agent agent, Consumer<String> messageConsumer, Consumer<ChatHistory> chatHistoryConsumer) {
         try {
             ChatModel chatModel = null;
             StreamingChatModel streamingModel = null;
@@ -102,9 +107,10 @@ public class AgentService {
             int maxRecords = agent.getMaxMemoryRecords() != null ? agent.getMaxMemoryRecords() : 20;
             int maxToolInvocations = agent.getMaxToolInvocations() != null ? agent.getMaxToolInvocations() : 10;
 
-            return new AgentExecutor(agent, chatModel, streamingModel, selectedTools, memoryStore, maxRecords, maxToolInvocations);
+            return new AgentExecutor(agent, chatModel, streamingModel, selectedTools, memoryStore, maxRecords, maxToolInvocations, messageConsumer, chatHistoryConsumer);
         } catch (Exception e) {
-            return new AgentExecutor(agent, null, null, new ArrayList<>(), null, 20, 10);
+           logger.error("Error creating agent executor: ", e);
+           return null;
         }
     }
 
@@ -125,10 +131,12 @@ public class AgentService {
         private final Agent agent;
         private final Assistant assistant;
         private final Assistant streamingAssistant;
+        private final AgentMessageHandler agentMessageHandler;
 
         public AgentExecutor(Agent agent, ChatModel chatModel, StreamingChatModel streamingModel,
                              List<AgentTool> selectedTools, SQLiteChatMemoryStore memoryStore,
-                             int maxMemoryRecords, int maxToolInvocations) {
+                             int maxMemoryRecords, int maxToolInvocations, Consumer<String> messageConsumer, Consumer<ChatHistory> chatHistoryConsumer) {
+            this.agentMessageHandler = new AgentMessageHandler(messageConsumer, chatHistoryConsumer);
             this.agent = agent;
             String systemMessage = "你是一个智能助手，名字叫" + agent.getName() + "。" +
                     "你的主要工作是" + agent.getDescription() + "。" +
@@ -194,68 +202,157 @@ public class AgentService {
             }
         }
 
-        public void executeStreaming(String message, Consumer<String> chunkConsumer) {
-            executeStreaming(message, chunkConsumer, null);
-        }
 
-        public void executeStreaming(String message, Consumer<String> chunkConsumer, Consumer<ToolCallInfo> toolCallConsumer) {
+
+        public void executeStreaming(String userMessage) {
             if (streamingAssistant == null) {
-                String response = execute(message);
-                chunkConsumer.accept(response);
+                String response = execute(userMessage);
+                agentMessageHandler.partialResponseHandler(response);
+                agentMessageHandler.down();
                 return;
             }
-
             try {
                 CountDownLatch latch = new CountDownLatch(1);
-                TokenStream tokenStream = streamingAssistant.streamingChat(message)
-                        .onPartialResponse(r -> chunkConsumer.accept(r))
-                        .onPartialThinking(thinking -> {
-                            try {
-//                            Map<String, Object> toolInfo = new HashMap<>();
-//                            toolInfo.put("type", "thinking");
-//                            toolInfo.put("status", "partial");
-//                            toolInfo.put("thinking", thinking.text());
-//                            toolCallConsumer.accept(toolInfo);
-                                chunkConsumer.accept(thinking.text());
-                            } catch (Exception e) {
-                            }
+                TokenStream tokenStream = streamingAssistant.streamingChat(userMessage)
+                        .onError(e -> {
+                            agentMessageHandler.onErrorHandler(e);
+                            latch.countDown();
                         })
-                        .onCompleteResponse(r -> latch.countDown())
-                        .onError(e -> latch.countDown());
-
-                if (toolCallConsumer != null) {
-                    tokenStream = tokenStream.beforeToolExecution(toolExecution -> {
-                        try {
-                            toolCallConsumer.accept(ToolCallInfo.starting(
-                                    toolExecution.request().id(),
-                                    toolExecution.request().name(),
-                                    JSON.parseObject(toolExecution.request().arguments())
-                            ));
-                        } catch (Exception e) {
-                        }
-                    }).onToolExecuted(toolExecution -> {
-                        try {
-                            toolCallConsumer.accept(ToolCallInfo.executed(
-                                    toolExecution.request().id(),
-                                    toolExecution.request().name(),
-                                    JSON.parseObject(toolExecution.request().arguments()),
-                                    toolExecution.result()
-                            ));
-                        } catch (Exception e) {
-                        }
-                    });
-                }
-
+                        .onCompleteResponse(response -> {
+                            agentMessageHandler.onCompleteResponseHandler(response);
+                            latch.countDown();
+                        })
+                        .onPartialResponse(r -> agentMessageHandler.partialResponseHandler(r))
+                        .onPartialThinking(thinking -> agentMessageHandler.thinkingHandler(thinking))
+                        .beforeToolExecution(toolExecution -> agentMessageHandler.beforeToolExecutionHandler(toolExecution))
+                        .onToolExecuted(toolExecution -> agentMessageHandler.toolExecutionHandler(toolExecution));
                 tokenStream.start();
                 latch.await(60, TimeUnit.SECONDS);
             } catch (Exception e) {
                 logger.error("\n(注: 流式响应失败: " + e.getMessage() + ")",e);
-                chunkConsumer.accept("\n(注: 流式响应失败: " + e.getMessage() + ")");
+                agentMessageHandler.onErrorHandler(e);
             }
         }
 
         private String getSimulatedResponse(String message) {
             return agent.getName() + ": " + message + "\n这是一个模拟响应，因为API密钥未配置或请求失败。";
         }
+        public class AgentMessageHandler {
+            private Consumer<String> messageConsumer;
+            private Consumer<ChatHistory> chatHistoryConsumer;
+            private String lastMessageType="";
+            private String currentMessageType="";
+            private String responseId;
+            private StringBuilder messageBuilder = new StringBuilder();
+            private StringBuilder thinkingBuilder = new StringBuilder();
+            private ToolCallInfo toolCallInfo;
+            public AgentMessageHandler(Consumer<String> messageConsumer, Consumer<ChatHistory> chatHistoryConsumer) {
+                this.messageConsumer = messageConsumer;
+                this.chatHistoryConsumer = chatHistoryConsumer;
+                this.responseId = UUID.randomUUID().toString();
+            }
+            public void down(){
+                Map<String, Object> data = new HashMap<>(3);
+                data.put("type", "down");
+                data.put("responseId", responseId);
+                messageConsumer.accept(JSON.toJSONString(data));
+                messageTypeChangedChatHistoryHandler("down");
+            }
+            private void onErrorHandler(Throwable ex) {
+                //发送
+                Map<String, Object> data = new HashMap<>(3);
+                data.put("type", "error");
+                data.put("content", "发生异常："+ex.getMessage());
+                data.put("responseId", responseId);
+                messageConsumer.accept(JSON.toJSONString(data));
+                messageTypeChangedChatHistoryHandler("error");
+            }
+            private void onCompleteResponseHandler(ChatResponse response) {
+                //发送
+                down();
+            }
+            private void beforeToolExecutionHandler(BeforeToolExecution toolExecution) {
+
+                this.toolCallInfo = ToolCallInfo.starting(
+                        toolExecution.request().id(),
+                        toolExecution.request().name(),
+                        JSON.parseObject(toolExecution.request().arguments())
+                );
+                toolCallInfo.setResponseId(responseId);
+                messageTypeChangedChatHistoryHandler("tool_call_start");
+            }
+            private void toolExecutionHandler(ToolExecution toolExecution) {
+
+                this.toolCallInfo = ToolCallInfo.executed(
+                        toolExecution.request().id(),
+                        toolExecution.request().name(),
+                        JSON.parseObject(toolExecution.request().arguments()),
+                        toolExecution.result()
+                );
+                toolCallInfo.setResponseId(responseId);
+
+                messageTypeChangedChatHistoryHandler("tool_call_end");
+            }
+            private void thinkingHandler(PartialThinking thinking) {
+                messageTypeChangedChatHistoryHandler("thinking");
+                thinkingBuilder.append(thinking.text());
+                //发送
+                ThinkingInfo thinkingInfo = ThinkingInfo.partial(thinking.text(), responseId);
+                thinkingInfo.setResponseId(responseId);
+                messageConsumer.accept(JSON.toJSONString(thinkingInfo));
+
+
+            }
+            private void partialResponseHandler(String partialResponse) {
+                messageTypeChangedChatHistoryHandler("message");
+                messageBuilder.append(partialResponse);
+                //发送
+                Map<String, Object> data = new HashMap<>(3);
+                data.put("type", "chunk");
+                data.put("content", partialResponse);
+                data.put("responseId", responseId);
+                messageConsumer.accept(JSON.toJSONString(data));
+            }
+            private boolean messageTypeChanged() {
+                boolean messageTypeChanged = !lastMessageType.equals(currentMessageType);
+                return messageTypeChanged;
+            }
+
+            /**
+             * 处理历史消息
+             * @param currentMessageType
+             */
+            private void messageTypeChangedChatHistoryHandler(String currentMessageType) {
+                this.currentMessageType=currentMessageType;
+
+                if(messageTypeChanged()){
+                    //需要处理上个类型的消息
+                    if(lastMessageType.equals("message")){
+                        ChatHistory textChat = new ChatHistory(agent.getId(), "agent", "text", messageBuilder.toString());
+                        chatHistoryConsumer.accept(textChat);
+                        messageBuilder=new StringBuilder(100);
+                    }else if(lastMessageType.equals("thinking")){
+                        ChatHistory textChat = new ChatHistory(agent.getId(), "agent", "thinking", thinkingBuilder.toString());
+                        chatHistoryConsumer.accept(textChat);
+                        thinkingBuilder=new StringBuilder(100);
+                    }
+                    lastMessageType=currentMessageType;
+                }
+                //开始调用 和 结束调用
+                if(currentMessageType.equals("tool_call_start") || currentMessageType.equals("tool_call_end")){
+                    messageConsumer.accept(JSON.toJSONString(toolCallInfo));
+                    //入库
+                    ChatHistory toolChat = new ChatHistory(
+                            agent.getId(), "agent", "tool_call",
+                            toolCallInfo.getToolCallId(), toolCallInfo.getToolName(),
+                            toolCallInfo.getArguments().toString(), toolCallInfo.getResult()!=null? (String) toolCallInfo.getResult() : null
+                    );
+                    toolChat.setToolCallStatus(currentMessageType);
+                    chatHistoryConsumer.accept(toolChat);
+                }
+            }
+        }
     }
+
+
 }

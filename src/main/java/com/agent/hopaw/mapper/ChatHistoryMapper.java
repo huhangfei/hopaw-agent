@@ -9,6 +9,7 @@ import java.util.List;
 @Mapper
 public interface ChatHistoryMapper {
     List<ChatHistory> findByAgentId(@Param("agentId") Long agentId);
+    ChatHistory findByAgentIdAndToolCallId(@Param("agentId") Long agentId, @Param("toolCallId") String toolCallId);
 
     List<ChatHistory> findByAgentIdAfterId(@Param("agentId") Long agentId, @Param("afterId") Long afterId);
 
@@ -19,4 +20,6 @@ public interface ChatHistoryMapper {
     int insert(ChatHistory chat);
 
     int deleteByAgentId(@Param("agentId") Long agentId);
+
+    int updateToolCallStatusAndContent(@Param("id") Long id, @Param("toolCallStatus") String toolCallStatus, @Param("content") String content);
 }

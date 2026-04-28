@@ -58,6 +58,8 @@ public class DataInitializer implements CommandLineRunner {
                     "tool_call_id TEXT, " +
                     "tool_name TEXT, " +
                     "tool_arguments TEXT, " +
+                    "tool_call_status TEXT, " +
+                    "thinking_content TEXT, " +
                     "create_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP" +
                     ")");
             
@@ -70,13 +72,18 @@ public class DataInitializer implements CommandLineRunner {
             } catch (Exception e) {
             }
             try {
-                stmt.execute("ALTER TABLE chat_history ADD COLUMN tool_name TEXT");
-            } catch (Exception e) {
-            }
-            try {
                 stmt.execute("ALTER TABLE chat_history ADD COLUMN tool_arguments TEXT");
             } catch (Exception e) {
             }
+            try {
+                stmt.execute("ALTER TABLE chat_history ADD COLUMN tool_call_status TEXT");
+            } catch (Exception e) {
+            }
+            try {
+                stmt.execute("ALTER TABLE chat_history ADD COLUMN thinking_content TEXT");
+            } catch (Exception e) {
+            }
+
             
             stmt.execute("CREATE TABLE IF NOT EXISTS chat_memory (" +
                     "id INTEGER PRIMARY KEY AUTOINCREMENT, " +
