@@ -16,6 +16,8 @@ import dev.langchain4j.service.TokenStream;
 import dev.langchain4j.service.UserMessage;
 import dev.langchain4j.service.tool.BeforeToolExecution;
 import dev.langchain4j.service.tool.ToolExecution;
+import dev.langchain4j.store.memory.chat.ChatMemoryStore;
+import dev.langchain4j.store.memory.chat.InMemoryChatMemoryStore;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
@@ -75,20 +77,17 @@ public class AgentService {
         }
     }
 
-    public AgentExecutor getAgentExecutor(Long agentId, Consumer<String> stringConsumer, Consumer<ChatHistory> chatHistoryConsumer) {
+    public AgentExecutor getAgentExecutor(Long agentId) {
         return agentExecutors.computeIfAbsent(agentId.toString(), id -> {
             Agent agent = agentMapper.findById(agentId);
             if (agent == null) {
                 return null;
             }
-            return createAgentExecutor(agent, stringConsumer, chatHistoryConsumer);
+            return createAgentExecutor(agent);
         });
     }
-    public AgentExecutor getAgentExecutor(Long agentId) {
-        return getAgentExecutor(agentId, null, null);
-    }
 
-    private AgentExecutor createAgentExecutor(Agent agent, Consumer<String> messageConsumer, Consumer<ChatHistory> chatHistoryConsumer) {
+    private AgentExecutor createAgentExecutor(Agent agent) {
         try {
             ChatModel chatModel = null;
             StreamingChatModel streamingModel = null;
@@ -104,10 +103,7 @@ public class AgentService {
                     .collect(Collectors.toList());
 
             SQLiteChatMemoryStore memoryStore = new SQLiteChatMemoryStore(chatMemoryMapper, agent.getId());
-            int maxRecords = agent.getMaxMemoryRecords() != null ? agent.getMaxMemoryRecords() : 20;
-            int maxToolInvocations = agent.getMaxToolInvocations() != null ? agent.getMaxToolInvocations() : 10;
-
-            return new AgentExecutor(agent, chatModel, streamingModel, selectedTools, memoryStore, maxRecords, maxToolInvocations, messageConsumer, chatHistoryConsumer);
+            return new AgentExecutor(agent, chatModel, streamingModel, selectedTools, memoryStore);
         } catch (Exception e) {
            logger.error("Error creating agent executor: ", e);
            return null;
@@ -134,56 +130,57 @@ public class AgentService {
         private final AgentMessageHandler agentMessageHandler;
 
         public AgentExecutor(Agent agent, ChatModel chatModel, StreamingChatModel streamingModel,
-                             List<AgentTool> selectedTools, SQLiteChatMemoryStore memoryStore,
-                             int maxMemoryRecords, int maxToolInvocations, Consumer<String> messageConsumer, Consumer<ChatHistory> chatHistoryConsumer) {
+                             List<AgentTool> selectedTools, SQLiteChatMemoryStore memoryStore) {
             this.agentMessageHandler = new AgentMessageHandler();
             this.agent = agent;
+
+            int maxMemoryRecords = agent.getMaxMemoryRecords() != null ? agent.getMaxMemoryRecords() : 20;
+            int maxToolInvocations = agent.getMaxToolInvocations() != null ? agent.getMaxToolInvocations() : 10;
             String systemMessage = "你是一个智能助手，名字叫" + agent.getName() + "。" +
                     "你的主要工作是" + agent.getDescription() + "。" +
-                    "在你判断需要时，你可以调用一系列工具。" +
-                    "请认真回答用户问题。";
+                    "在你判断需要时，你可以调用一系列工具完成任务。";
 
             if (chatModel != null) {
                 var aiBuilder = AiServices.builder(Assistant.class)
                         .chatModel(chatModel)
-                        .maxSequentialToolsInvocations(maxToolInvocations)
                         .systemMessageProvider(chatMemoryId -> systemMessage);
 
+                MessageWindowChatMemory.Builder memoryBuilder = MessageWindowChatMemory.builder()
+                        .id("agent-" + agent.getId())
+                        .maxMessages(maxMemoryRecords);
                 if (memoryStore != null) {
-                    aiBuilder.chatMemory(MessageWindowChatMemory.builder()
-                            .id("agent-" + agent.getId())
-                            .maxMessages(maxMemoryRecords)
-                            .chatMemoryStore(memoryStore)
-                            .build());
+                    memoryBuilder.chatMemoryStore(memoryStore);
+                }else {
+                    memoryBuilder.chatMemoryStore(new InMemoryChatMemoryStore());
                 }
-
+                aiBuilder.chatMemory(memoryBuilder.build());
                 if (!selectedTools.isEmpty()) {
-                    aiBuilder.tools(selectedTools.toArray());
+                    aiBuilder.maxSequentialToolsInvocations(maxToolInvocations)
+                            .tools(selectedTools.toArray());
                 }
-
                 this.assistant = aiBuilder.build();
             } else {
                 this.assistant = null;
             }
-
             if (streamingModel != null) {
                 var streamBuilder = AiServices.builder(Assistant.class)
                         .streamingChatModel(streamingModel)
-                        .maxSequentialToolsInvocations(maxToolInvocations)
                         .systemMessageProvider(chatMemoryId -> systemMessage);
-
+                MessageWindowChatMemory.Builder memoryBuilder = MessageWindowChatMemory.builder()
+                        .id("agent-" + agent.getId())
+                        .maxMessages(maxMemoryRecords);
                 if (memoryStore != null) {
-                    streamBuilder.chatMemory(MessageWindowChatMemory.builder()
-                            .id("agent-" + agent.getId())
-                            .maxMessages(maxMemoryRecords)
-                            .chatMemoryStore(memoryStore)
-                            .build());
+                    memoryBuilder.chatMemoryStore(memoryStore);
+                }else {
+                    memoryBuilder.chatMemoryStore(new InMemoryChatMemoryStore());
                 }
+                streamBuilder.chatMemory(memoryBuilder.build());
 
                 if (!selectedTools.isEmpty()) {
-                    streamBuilder.tools(selectedTools.toArray());
+                    streamBuilder
+                            .maxSequentialToolsInvocations(maxToolInvocations)
+                            .tools(selectedTools.toArray());
                 }
-
                 this.streamingAssistant = streamBuilder.build();
             } else {
                 this.streamingAssistant = null;
@@ -194,15 +191,12 @@ public class AgentService {
             if (assistant == null) {
                 return getSimulatedResponse(message);
             }
-
             try {
                 return assistant.chat(message);
             } catch (Exception e) {
                 return getSimulatedResponse(message) + "\n(注: " + e.getMessage() + ")";
             }
         }
-
-
 
         public void executeStreaming(String userMessage,Consumer<String> messageConsumer, Consumer<ChatHistory> chatHistoryConsumer) {
             agentMessageHandler.setMessageConsumer(messageConsumer);
@@ -229,7 +223,7 @@ public class AgentService {
                         .beforeToolExecution(toolExecution -> agentMessageHandler.beforeToolExecutionHandler(toolExecution))
                         .onToolExecuted(toolExecution -> agentMessageHandler.toolExecutionHandler(toolExecution));
                 tokenStream.start();
-                latch.await(60, TimeUnit.SECONDS);
+                latch.await(300, TimeUnit.SECONDS);
             } catch (Exception e) {
                 logger.error("\n(注: 流式响应失败: " + e.getMessage() + ")",e);
                 agentMessageHandler.onErrorHandler(e);
@@ -239,14 +233,18 @@ public class AgentService {
         private String getSimulatedResponse(String message) {
             return agent.getName() + ": " + message + "\n这是一个模拟响应，因为API密钥未配置或请求失败。";
         }
+
+        /**
+         * 智能体消息处理器
+         */
         public class AgentMessageHandler {
             private Consumer<String> messageConsumer;
             public void setMessageConsumer(Consumer<String> messageConsumer) {
-                this.messageConsumer = messageConsumer;
+                this.messageConsumer = messageConsumer==null?(r)->{}:messageConsumer;
             }
             private Consumer<ChatHistory> chatHistoryConsumer;
             public void setChatHistoryConsumer(Consumer<ChatHistory> chatHistoryConsumer) {
-                this.chatHistoryConsumer = chatHistoryConsumer;
+                this.chatHistoryConsumer = chatHistoryConsumer==null?(h)->{}:chatHistoryConsumer;
             }
 
             private String lastMessageType="";
