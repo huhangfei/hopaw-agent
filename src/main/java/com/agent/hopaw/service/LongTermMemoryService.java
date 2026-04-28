@@ -7,6 +7,7 @@ import dev.langchain4j.agent.tool.Tool;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
+import java.util.Arrays;
 import java.util.List;
 
 @Service
@@ -78,14 +79,26 @@ public class LongTermMemoryService {
         longTermMemoryMapper.deleteByIdentity(identity);
     }
 
-    public String buildMemoryTree(String identity) {
+    public String getMemoryTree(String identity) {
         List<LongTermMemory> rootMemories = getRootMemories(identity);
         StringBuilder sb = new StringBuilder();
-        buildMemoryTreeRecursive(sb, rootMemories, 0);
+        buildMemoryTreeRecursive(sb, rootMemories, 0, true);
+        return sb.toString();
+    }
+    public String getMemoryTree(String identity, Long parentId) {
+        LongTermMemory rootMemory = getMemoryById(parentId);
+        StringBuilder sb = new StringBuilder();
+        buildMemoryTreeRecursive(sb, Arrays.asList(rootMemory), 0,true);
+        return sb.toString();
+    }
+    public String getRootMemory(String identity) {
+        List<LongTermMemory> rootMemories = getRootMemories(identity);
+        StringBuilder sb = new StringBuilder();
+        buildMemoryTreeRecursive(sb, rootMemories, 0,false);
         return sb.toString();
     }
 
-    private void buildMemoryTreeRecursive(StringBuilder sb, List<LongTermMemory> memories, int level) {
+    private void buildMemoryTreeRecursive(StringBuilder sb, List<LongTermMemory> memories, int level,boolean includeChildren) {
         for (LongTermMemory memory : memories) {
             for (int i = 0; i < level; i++) {
                 sb.append("  ");
@@ -93,7 +106,7 @@ public class LongTermMemoryService {
             sb.append("- ").append(memory.getMemory()).append(" 记忆编号[").append(memory.getId()).append("]\n");
             List<LongTermMemory> children = getChildMemories(memory.getIdentity(), memory.getId());
             if (!children.isEmpty()) {
-                buildMemoryTreeRecursive(sb, children, level + 1);
+                buildMemoryTreeRecursive(sb, children, level + 1, includeChildren);
             }
         }
     }

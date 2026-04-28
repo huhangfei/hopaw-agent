@@ -4,7 +4,6 @@ import com.agent.hopaw.mapper.ChatHistoryMapper;
 import com.agent.hopaw.mapper.MemoryProcessLogMapper;
 import com.agent.hopaw.model.ChatHistory;
 import com.agent.hopaw.model.LongTermMemory;
-import com.agent.hopaw.service.AgentService;
 import com.agent.hopaw.service.LangChain4jMonitoringService;
 import com.agent.hopaw.service.LongTermMemoryService;
 import dev.langchain4j.model.openai.OpenAiChatModel;
@@ -13,7 +12,6 @@ import dev.langchain4j.service.UserMessage;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
 import java.util.Arrays;
@@ -92,7 +90,7 @@ public class LongTermMemoryTask {
         }
 
         String newConversation = conversationBuilder.toString();
-        String existingMemory = longTermMemoryService.buildMemoryTree(identity);
+        String existingMemory = longTermMemoryService.getMemoryTree(identity);
 
         String memory = buildMemorySummary(existingMemory, newConversation);
         handle(identity,memory);
