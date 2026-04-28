@@ -32,7 +32,7 @@ public class MemoryTool implements AgentTool {
         return longTermMemoryService.getRootMemory(LongTermMemoryService.GLOBAL_IDENTITY);
     }
     @Tool("此方法查询指定父记忆ID的记忆内容。")
-    public String queryGlobalMemory(Long parentId){
+    public String queryGlobalMemoryByParentId(Long parentId){
         return longTermMemoryService.getMemoryTree(LongTermMemoryService.GLOBAL_IDENTITY,parentId);
     }
     @Tool("保存智能体记忆内容，要先拿到所有记忆内容，找到最适合的分类进行存储，如果没有适合分类，先新增一个分类。(memory 记忆内容，parentId 父记忆ID)")
