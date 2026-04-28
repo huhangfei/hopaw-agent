@@ -210,7 +210,7 @@ public class AgentService {
             if (streamingAssistant == null) {
                 String response = execute(userMessage);
                 agentMessageHandler.partialResponseHandler(response);
-                agentMessageHandler.down();
+                agentMessageHandler.done();
                 return;
             }
             try {
@@ -258,12 +258,12 @@ public class AgentService {
             public AgentMessageHandler() {
                 this.responseId = UUID.randomUUID().toString();
             }
-            public void down(){
+            public void done(){
                 Map<String, Object> data = new HashMap<>(3);
-                data.put("type", "down");
+                data.put("type", "done");
                 data.put("responseId", responseId);
                 messageConsumer.accept(JSON.toJSONString(data));
-                messageTypeChangedChatHistoryHandler("down");
+                messageTypeChangedChatHistoryHandler("done");
             }
             private void onErrorHandler(Throwable ex) {
                 //发送
@@ -276,7 +276,7 @@ public class AgentService {
             }
             private void onCompleteResponseHandler(ChatResponse response) {
                 //发送
-                down();
+                done();
             }
             private void beforeToolExecutionHandler(BeforeToolExecution toolExecution) {
 
