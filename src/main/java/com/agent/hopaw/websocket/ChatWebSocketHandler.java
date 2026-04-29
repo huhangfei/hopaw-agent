@@ -2,12 +2,8 @@ package com.agent.hopaw.websocket;
 
 import com.agent.hopaw.mapper.ChatHistoryMapper;
 import com.agent.hopaw.model.ChatHistory;
-import com.agent.hopaw.model.ThinkingInfo;
-import com.agent.hopaw.model.ToolCallInfo;
 import com.agent.hopaw.service.AgentService;
 import com.alibaba.fastjson2.JSON;
-import com.alibaba.fastjson2.JSONObject;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
@@ -20,9 +16,7 @@ import java.io.IOException;
 import java.time.LocalDateTime;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.atomic.AtomicLong;
 
 @Component
 public class ChatWebSocketHandler extends TextWebSocketHandler {
@@ -30,13 +24,8 @@ public class ChatWebSocketHandler extends TextWebSocketHandler {
     private static final Logger logger = LoggerFactory.getLogger(ChatWebSocketHandler.class);
     private final AgentService agentService;
     private final ChatHistoryMapper chatHistoryMapper;
-    private static final Map<Long, AgentService.AgentExecutor> agentExecutors = new ConcurrentHashMap<>();
     private static final Map<Long, String> sessionAgentMap = new ConcurrentHashMap<>();
     private static final Map<String, WebSocketSession> sessionMap = new ConcurrentHashMap<>();
-
-    public AgentService.AgentExecutor getAgentExecutor(Long agentId) {
-        return agentExecutors.get(agentId);
-    }
 
     public ChatWebSocketHandler(AgentService agentService, ChatHistoryMapper chatHistoryMapper) {
         this.agentService = agentService;
@@ -81,7 +70,6 @@ public class ChatWebSocketHandler extends TextWebSocketHandler {
                 sendError(session, "Agent 不存在");
                 return;
             }
-            agentExecutors.put(agentId, executor);
             ChatHistory userChat = new ChatHistory(agentId, "user", "text", userMessage);
             userChat.setCreateTime(LocalDateTime.now());
             chatHistoryMapper.insert(userChat);

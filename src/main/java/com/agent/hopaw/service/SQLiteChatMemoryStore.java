@@ -19,29 +19,24 @@ public class SQLiteChatMemoryStore implements ChatMemoryStore {
 
     private final ChatMemoryMapper chatMemoryMapper;
     private final Long agentId;
-    private final LongTermMemoryService longTermMemoryService;
-
-    public SQLiteChatMemoryStore(ChatMemoryMapper chatMemoryMapper, Long agentId, LongTermMemoryService longTermMemoryService) {
+    public SQLiteChatMemoryStore(ChatMemoryMapper chatMemoryMapper, Long agentId) {
         this.chatMemoryMapper = chatMemoryMapper;
         this.agentId = agentId;
-        this.longTermMemoryService = longTermMemoryService;
     }
 
     @Override
     public List<ChatMessage> getMessages(Object memoryId) {
         List<ChatMemory> records = chatMemoryMapper.findByAgentId(agentId);
-        Map<String, ChatMessage> messages = new LinkedHashMap<>(records.size());
-        String rootMemory = longTermMemoryService.getRootMemory(agentId.toString());
-        if(StringUtils.hasLength(rootMemory)){
-            SystemMessage longTermMemoryMessage = new SystemMessage("这是所有记忆分类，如果需要详细的记忆内容可以根据记忆编号查询所有子记忆：" + rootMemory);
-            messages.put(generateMessageId(longTermMemoryMessage), longTermMemoryMessage);
-        }
+        LinkedHashMap<String, ChatMessage> messages = new LinkedHashMap<>(records.size());
         for (ChatMemory record : records) {
             String messageJson = record.getMessageJson();
             if (messageJson != null) {
                 try {
                     ChatMessage message = ChatMessageDeserializer.messageFromJson(messageJson);
-                    String messageId = generateMessageId(message);
+                    if (record.getCleaned().equals(1) && message instanceof SystemMessage) {
+                        continue;
+                    }
+                    String messageId = record.getMessageId();
                     if(messages.containsKey(messageId)){
                         messages.remove(messageId);
                     }
@@ -81,17 +76,7 @@ public class SQLiteChatMemoryStore implements ChatMemoryStore {
     }
 
     private String generateMessageId(ChatMessage message) {
-        String content = "";
-        if (message instanceof UserMessage) {
-            content = ((UserMessage) message).toString();
-        } else if (message instanceof AiMessage) {
-            content = ((AiMessage) message).toString();
-        } else if (message instanceof SystemMessage) {
-            content = ((SystemMessage) message).toString();
-        } else if (message instanceof ToolExecutionResultMessage) {
-            content = ((ToolExecutionResultMessage) message).toString();
-        }
-
+        String content = message.toString();
         return UUID.nameUUIDFromBytes((content).getBytes()).toString();
     }
 }

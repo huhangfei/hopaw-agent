@@ -20,12 +20,14 @@ import dev.langchain4j.store.memory.chat.InMemoryChatMemoryStore;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
+import org.springframework.util.StringUtils;
 
 import java.util.*;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.Consumer;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 
 @Service
@@ -110,8 +112,8 @@ public class AgentService {
                     .filter(t -> selectedToolNames.contains(t.getName()))
                     .collect(Collectors.toList());
 
-            SQLiteChatMemoryStore memoryStore = new SQLiteChatMemoryStore(chatMemoryMapper, agent.getId(),longTermMemoryService);
-            return new AgentExecutor(agent, chatModel, streamingModel, selectedTools, memoryStore);
+            SQLiteChatMemoryStore memoryStore = new SQLiteChatMemoryStore(chatMemoryMapper, agent.getId());
+            return new AgentExecutor(agent, chatModel, streamingModel, selectedTools, memoryStore, a->this.getSystemMessage(a));
         } catch (Exception e) {
            logger.error("Error creating agent executor: ", e);
            return null;
@@ -131,33 +133,48 @@ public class AgentService {
         TokenStream streamingChat(@UserMessage String userMessage);
     }
 
+    public String getSystemMessage(Agent agent){
+        String systemMessage = "你是一个智能助手，名字叫" + agent.getName() + "," +
+                "你的主要工作是" + agent.getDescription() + "," +
+                "你的agentId是" + agent.getId() + "。" +
+                "在遇到需要用户提供的信息不正确的时候，不要一直猜，首先去查询记忆，如果记忆中没有就赶紧询问用户。"+
+                "在你判断需要时，你可以调用一系列工具完成任务。\n";
+                String rootMemory = longTermMemoryService.getRootMemory(agent.getId().toString());
+        if(StringUtils.hasLength(rootMemory)){
+            systemMessage+="这是所有记忆分类：\n" + rootMemory+"\n如果需要详细的记忆内容可以根据记忆编号查询所有子记忆。";
+        }
+        return systemMessage;
+    }
+
     public static class AgentExecutor {
         private final Agent agent;
         private final Assistant assistant;
         private final Assistant streamingAssistant;
         private final AgentMessageHandler agentMessageHandler;
         private final AtomicBoolean cancelTask = new AtomicBoolean(false);
+        private final Function<Agent, String> systemMessageProvider;
         CountDownLatch latch = new CountDownLatch(0);
-        public AgentExecutor(Agent agent, ChatModel chatModel, StreamingChatModel streamingModel,
-                             List<AgentTool> selectedTools, SQLiteChatMemoryStore memoryStore) {
+        public AgentExecutor(Agent agent,
+                             ChatModel chatModel,
+                             StreamingChatModel streamingModel,
+                             List<AgentTool> selectedTools,
+                             SQLiteChatMemoryStore memoryStore,
+                             Function<Agent, String> systemMessageProvider) {
+            this.systemMessageProvider = systemMessageProvider;
             this.agentMessageHandler = new AgentMessageHandler();
             this.agent = agent;
 
             int maxMemoryRecords = agent.getMaxMemoryRecords() != null ? agent.getMaxMemoryRecords() : 20;
             int maxToolInvocations = agent.getMaxToolInvocations() != null ? agent.getMaxToolInvocations() : 10;
-            String systemMessage = "你是一个智能助手，名字叫" + agent.getName() + "," +
-                    "你的主要工作是" + agent.getDescription() + "," +
-                    "你的agentId是" + agent.getId() + "。" +
-                    "在遇到需要用户提供的信息不正确的时候，不要一直猜，首先去查询记忆，如果记忆中没有就赶紧询问用户。"+
-                    "在你判断需要时，你可以调用一系列工具完成任务。";
+
 
             if (chatModel != null) {
                 var aiBuilder = AiServices.builder(Assistant.class)
                         .chatModel(chatModel)
-                        .systemMessageProvider(chatMemoryId -> systemMessage);
+                        .systemMessageProvider(chatMemoryId -> systemMessageProvider.apply(agent));
 
                 MessageWindowChatMemory.Builder memoryBuilder = MessageWindowChatMemory.builder()
-                        .id("agent-" + agent.getId())
+                        .id(agent.getId().toString())
                         .maxMessages(maxMemoryRecords);
                 if (memoryStore != null) {
                     memoryBuilder.chatMemoryStore(memoryStore);
@@ -176,9 +193,9 @@ public class AgentService {
             if (streamingModel != null) {
                 var streamBuilder = AiServices.builder(Assistant.class)
                         .streamingChatModel(streamingModel)
-                        .systemMessageProvider(chatMemoryId -> systemMessage);
+                        .systemMessageProvider(chatMemoryId -> systemMessageProvider.apply(agent));
                 MessageWindowChatMemory.Builder memoryBuilder = MessageWindowChatMemory.builder()
-                        .id("agent-" + agent.getId())
+                        .id(agent.getId().toString())
                         .maxMessages(maxMemoryRecords);
                 if (memoryStore != null) {
                     memoryBuilder.chatMemoryStore(memoryStore);

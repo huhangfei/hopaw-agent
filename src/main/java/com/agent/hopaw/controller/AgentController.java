@@ -7,10 +7,12 @@ import com.agent.hopaw.model.ChatHistory;
 import com.agent.hopaw.model.ResponseBean;
 import com.agent.hopaw.service.AgentService;
 import com.agent.hopaw.tools.AgentTool;
-import com.agent.hopaw.websocket.ChatWebSocketHandler;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.ResponseBody;
 
 import java.util.Collections;
 import java.util.List;
@@ -24,14 +26,12 @@ public class AgentController {
     private final ChatHistoryMapper chatHistoryMapper;
     private final ChatMemoryMapper chatMemoryMapper;
     private final List<AgentTool> allTools;
-    private final ChatWebSocketHandler chatWebSocketHandler;
 
-    public AgentController(AgentService agentService, ChatHistoryMapper chatHistoryMapper, ChatMemoryMapper chatMemoryMapper, List<AgentTool> allTools, ChatWebSocketHandler chatWebSocketHandler) {
+    public AgentController(AgentService agentService, ChatHistoryMapper chatHistoryMapper, ChatMemoryMapper chatMemoryMapper, List<AgentTool> allTools) {
         this.agentService = agentService;
         this.chatHistoryMapper = chatHistoryMapper;
         this.chatMemoryMapper = chatMemoryMapper;
         this.allTools = allTools;
-        this.chatWebSocketHandler = chatWebSocketHandler;
     }
 
     @GetMapping("/")
@@ -53,7 +53,7 @@ public class AgentController {
             List<ChatHistory> chatHistory = chatHistoryMapper.findByAgentId(agentId, 100);
             Collections.reverse(chatHistory);
             model.addAttribute("chatHistory", chatHistory);
-            AgentService.AgentExecutor agentExecutor = chatWebSocketHandler.getAgentExecutor(agentId);
+            AgentService.AgentExecutor agentExecutor = agentService.getAgentExecutor(agentId);
             model.addAttribute("agentExecutorState", agentExecutor == null ? false : agentExecutor.running());
         }
 
@@ -81,7 +81,7 @@ public class AgentController {
     @PostMapping("/agent/stop")
     @ResponseBody
     public ResponseBean stopAgent(@RequestParam Long id) {
-        AgentService.AgentExecutor agentExecutor = chatWebSocketHandler.getAgentExecutor(id);
+        AgentService.AgentExecutor agentExecutor = agentService.getAgentExecutor(id);
         if(agentExecutor!=null){
             agentExecutor.stop();
         }
