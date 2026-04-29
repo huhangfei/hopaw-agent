@@ -25,6 +25,7 @@ import org.springframework.stereotype.Service;
 import java.util.*;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.Consumer;
 import java.util.stream.Collectors;
 
@@ -62,6 +63,7 @@ public class AgentService {
     public void deleteAgent(Long id) {
         agentMapper.deleteById(id);
         chatMemoryMapper.deleteByAgentId(id);
+        agentExecutors.remove(id.toString());
     }
 
     public void updateAgent(Long id, String name, String description, String tools, Integer maxMemoryRecords, Integer maxToolInvocations) {
@@ -85,6 +87,11 @@ public class AgentService {
             }
             return createAgentExecutor(agent);
         });
+    }
+
+    public AgentExecutor resetAgentExecutor(Long agentId) {
+        agentExecutors.remove(agentId.toString());
+        return createAgentExecutor(agentMapper.findById(agentId));
     }
 
     private AgentExecutor createAgentExecutor(Agent agent) {
@@ -128,7 +135,8 @@ public class AgentService {
         private final Assistant assistant;
         private final Assistant streamingAssistant;
         private final AgentMessageHandler agentMessageHandler;
-
+        private final AtomicBoolean cancelTask = new AtomicBoolean(false);
+        CountDownLatch latch = new CountDownLatch(0);
         public AgentExecutor(Agent agent, ChatModel chatModel, StreamingChatModel streamingModel,
                              List<AgentTool> selectedTools, SQLiteChatMemoryStore memoryStore) {
             this.agentMessageHandler = new AgentMessageHandler();
@@ -138,6 +146,7 @@ public class AgentService {
             int maxToolInvocations = agent.getMaxToolInvocations() != null ? agent.getMaxToolInvocations() : 10;
             String systemMessage = "你是一个智能助手，名字叫" + agent.getName() + "。" +
                     "你的主要工作是" + agent.getDescription() + "。" +
+                    "在遇到需要用户提供的信息不正确的时候，不要一直猜，首先去查询记忆，如果记忆中没有就赶紧询问用户。"+
                     "在你判断需要时，你可以调用一系列工具完成任务。";
 
             if (chatModel != null) {
@@ -187,6 +196,18 @@ public class AgentService {
             }
         }
 
+
+        public void stop(){
+            cancelTask.set(true);
+            if(!running()){
+                agentMessageHandler.done();
+            }
+        }
+
+        public boolean running(){
+            return latch.getCount()>0;
+        }
+
         public String execute(String message) {
             if (assistant == null) {
                 return getSimulatedResponse(message);
@@ -199,6 +220,7 @@ public class AgentService {
         }
 
         public void executeStreaming(String userMessage,Consumer<String> messageConsumer, Consumer<ChatHistory> chatHistoryConsumer) {
+            cancelTask.set(false);
             agentMessageHandler.setMessageConsumer(messageConsumer);
             agentMessageHandler.setChatHistoryConsumer(chatHistoryConsumer);
             if (streamingAssistant == null) {
@@ -208,22 +230,48 @@ public class AgentService {
                 return;
             }
             try {
-                CountDownLatch latch = new CountDownLatch(1);
+                this.latch = new CountDownLatch(1);
                 TokenStream tokenStream = streamingAssistant.streamingChat(userMessage)
                         .onError(e -> {
                             agentMessageHandler.onErrorHandler(e);
                             latch.countDown();
-                        })
-                        .onCompleteResponse(response -> {
+                        }).onCompleteResponse(response -> {
                             agentMessageHandler.onCompleteResponseHandler(response);
                             latch.countDown();
+                        }).onPartialResponseWithContext((r, ctx) -> {
+                            if (cancelTask.get()) {
+                                agentMessageHandler.partialResponseHandler(r.text());
+                                agentMessageHandler.done();
+                                ctx.streamingHandle().cancel(); // ✅ 真正中断：关闭流、停止LLM、省token
+                                latch.countDown();
+                                return;
+                            }
+                            agentMessageHandler.partialResponseHandler(r.text());
                         })
-                        .onPartialResponse(r -> agentMessageHandler.partialResponseHandler(r))
-                        .onPartialThinking(thinking -> agentMessageHandler.thinkingHandler(thinking))
+                        .onPartialThinkingWithContext((thinking,ctx) -> {
+                            if (cancelTask.get()) {
+                                agentMessageHandler.thinkingHandler(thinking);
+                                agentMessageHandler.done();
+                                ctx.streamingHandle().cancel(); // ✅ 真正中断：关闭流、停止LLM、省token
+                                latch.countDown();
+                                return;
+                            }
+                            agentMessageHandler.thinkingHandler(thinking);
+                        })
+                        .onPartialToolCallWithContext((toolCall, ctx) -> {
+                            //logger.info("Tool call: {}", toolCall.toString());
+                            if (cancelTask.get()) {
+                                agentMessageHandler.done();
+                                ctx.streamingHandle().cancel(); // ✅ 真正中断：关闭流、停止LLM、省token
+                                latch.countDown();
+                                return;
+                            }
+                        })
                         .beforeToolExecution(toolExecution -> agentMessageHandler.beforeToolExecutionHandler(toolExecution))
                         .onToolExecuted(toolExecution -> agentMessageHandler.toolExecutionHandler(toolExecution));
                 tokenStream.start();
                 latch.await(300, TimeUnit.SECONDS);
+                agentMessageHandler.done();
             } catch (Exception e) {
                 logger.error("\n(注: 流式响应失败: " + e.getMessage() + ")",e);
                 agentMessageHandler.onErrorHandler(e);
@@ -337,6 +385,12 @@ public class AgentService {
                         chatHistoryConsumer.accept(textChat);
                         messageBuilder=new StringBuilder(100);
                     }else if(lastMessageType.equals("thinking")){
+
+                        //发送
+                        ThinkingInfo thinkingInfo = ThinkingInfo.done("", responseId);
+                        thinkingInfo.setResponseId(responseId);
+                        messageConsumer.accept(JSON.toJSONString(thinkingInfo));
+
                         ChatHistory textChat = new ChatHistory(agent.getId(), "agent", "thinking", thinkingBuilder.toString());
                         chatHistoryConsumer.accept(textChat);
                         thinkingBuilder=new StringBuilder(100);

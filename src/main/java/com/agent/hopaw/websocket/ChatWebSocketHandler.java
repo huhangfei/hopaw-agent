@@ -30,8 +30,13 @@ public class ChatWebSocketHandler extends TextWebSocketHandler {
     private static final Logger logger = LoggerFactory.getLogger(ChatWebSocketHandler.class);
     private final AgentService agentService;
     private final ChatHistoryMapper chatHistoryMapper;
-    private final Map<String, WebSocketSession> sessions = new ConcurrentHashMap<>();
-    private final AtomicLong conversationSequence = new AtomicLong(0);
+    private static final Map<Long, AgentService.AgentExecutor> agentExecutors = new ConcurrentHashMap<>();
+    private static final Map<Long, String> sessionAgentMap = new ConcurrentHashMap<>();
+    private static final Map<String, WebSocketSession> sessionMap = new ConcurrentHashMap<>();
+
+    public AgentService.AgentExecutor getAgentExecutor(Long agentId) {
+        return agentExecutors.get(agentId);
+    }
 
     public ChatWebSocketHandler(AgentService agentService, ChatHistoryMapper chatHistoryMapper) {
         this.agentService = agentService;
@@ -39,8 +44,22 @@ public class ChatWebSocketHandler extends TextWebSocketHandler {
     }
 
     @Override
-    public void afterConnectionEstablished(WebSocketSession session) {
-        sessions.put(session.getId(), session);
+    public void afterConnectionEstablished(WebSocketSession session) throws Exception {
+        logger.info("Session opened: {}", session.getId());
+        sessionMap.put(session.getId(), session);
+        Long agentId = getAgentIdFromSession(session);
+        if (agentId != null) {
+            sessionAgentMap.put(agentId,session.getId());
+            logger.info("Session {} initialized with agentId from URL: {}", session.getId(), agentId);
+        }
+    }
+    private Long getAgentIdFromSession(WebSocketSession session) {
+        Map<String, Object> attributes = session.getAttributes();
+        Object agentIdObj = attributes.get("agentId");
+        if (agentIdObj != null) {
+            return Long.parseLong(agentIdObj.toString());
+        }
+        return null;
     }
 
     @Override
@@ -62,13 +81,24 @@ public class ChatWebSocketHandler extends TextWebSocketHandler {
                 sendError(session, "Agent 不存在");
                 return;
             }
+            agentExecutors.put(agentId, executor);
             ChatHistory userChat = new ChatHistory(agentId, "user", "text", userMessage);
             userChat.setCreateTime(LocalDateTime.now());
             chatHistoryMapper.insert(userChat);
 
             executor.executeStreaming(userMessage,aiMessageJson->{
                 try {
-                    session.sendMessage(new TextMessage(aiMessageJson));
+                    String sessionId = sessionAgentMap.get(agentId);
+                    if(sessionId == null){
+                        return;
+                    }
+                    WebSocketSession currentSession = sessionMap.get(sessionId);
+                    if(currentSession == null){
+                        return;
+                    }
+                   if(currentSession.isOpen()){
+                       currentSession.sendMessage(new TextMessage(aiMessageJson));
+                   }
                 } catch (IOException e) {
                     logger.error("error", e);
                 }
@@ -103,6 +133,12 @@ public class ChatWebSocketHandler extends TextWebSocketHandler {
 
     @Override
     public void afterConnectionClosed(WebSocketSession session, CloseStatus status) {
-        sessions.remove(session.getId());
+        Long agentId = getAgentIdFromSession(session);
+        if (agentId != null) {
+            sessionAgentMap.remove(agentId);
+            logger.info("Session {} closed, removed agentId: {}", session.getId(), agentId);
+        }
+        sessionMap.remove(session.getId());
+        logger.info("Session closed: {}", session.getId());
     }
 }

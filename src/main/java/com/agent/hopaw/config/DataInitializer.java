@@ -45,7 +45,7 @@ public class DataInitializer implements CommandLineRunner {
             }
 
             try {
-                stmt.execute("ALTER TABLE agents ADD COLUMN max_tool_invocations INTEGER DEFAULT 10");
+                stmt.execute("ALTER TABLE agents ADD COLUMN max_tool_invocations INTEGER DEFAULT 20");
             } catch (Exception e) {
             }
             
@@ -134,7 +134,7 @@ public class DataInitializer implements CommandLineRunner {
         List<Agent> agents = agentMapper.findAll();
         if (agents.isEmpty()) {
             String tools = allTools.stream().map(x -> x.getName()).collect(Collectors.joining(","));
-            agentMapper.insert(new Agent("通用助手", "可以回答各种问题，使用多种工具", tools, 20, 10));
+            agentMapper.insert(new Agent("通用助手", "可以回答各种问题，使用多种工具", tools, 20, 20));
 
         }
     }

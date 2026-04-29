@@ -16,7 +16,7 @@ public class CommandExecutorTool implements AgentTool {
     private static final int TIMEOUT_SECONDS = 30;
     private static final int MAX_OUTPUT_LINES = 500;
 
-    @Tool("获取操作系统的名称，例如 Windows 10 或 Ubuntu 20.04")
+    @Tool("获取本地操作系统的名称，例如 Windows 10 或 Ubuntu 20.04")
     public String getOsName() {
         return System.getProperty("os.name");
     }

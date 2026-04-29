@@ -26,9 +26,11 @@ public class SshTool implements AgentTool {
         return "SSH远程连接工具。";
     }
 
-    @Tool(name = "ssh", value = "SSH remote connection tool. " +
+    @Tool(name = "ssh", value = "SSH remote connection tool. Passwords are highly sensitive. If the account password is incorrect, don't make guesses on your own. Either search your memory or ask the user. " +
             "Connect: {\"action\":\"connect\",\"host\":\"IP\",\"port\":22,\"username\":\"user\",\"password\":\"pass\"} " +
             "Exec: {\"action\":\"exec\",\"sessionKey\":\"host:port\",\"command\":\"ls -la\"} " +
+            "Upload: {\"action\":\"upload\",\"sessionKey\":\"host:port\",\"localPath\":\"/local/file\",\"remotePath\":\"/remote/file\"} " +
+            "Download: {\"action\":\"download\",\"sessionKey\":\"host:port\",\"remotePath\":\"/remote/file\",\"localPath\":\"/local/file\"} " +
             "Disconnect: {\"action\":\"disconnect\",\"sessionKey\":\"host:port\"}")
     public String execute(String paramsJson) {
         try {
@@ -39,6 +41,10 @@ public class SshTool implements AgentTool {
                 return connect(params);
             } else if ("exec".equals(action)) {
                 return exec(params);
+            } else if ("upload".equals(action)) {
+                return upload(params);
+            } else if ("download".equals(action)) {
+                return download(params);
             } else if ("disconnect".equals(action)) {
                 return disconnect(params);
             } else {
@@ -125,6 +131,62 @@ public class SshTool implements AgentTool {
         } catch (Exception e) {
             logger.error("SSH exec failed", e);
             return "{\"error\":\"Exec failed: " + e.getMessage() + "\"}";
+        }
+    }
+
+    private String upload(JSONObject params) {
+        String sessionKey = params.getString("sessionKey");
+        String localPath = params.getString("localPath");
+        String remotePath = params.getString("remotePath");
+
+        if (sessionKey == null || localPath == null || remotePath == null) {
+            return "{\"error\":\"Missing required parameters: sessionKey, localPath, remotePath\"}";
+        }
+
+        Session session = sessionCache.get(sessionKey);
+        if (session == null || !session.isConnected()) {
+            return "{\"error\":\"Session not found or not connected: " + sessionKey + "\"}";
+        }
+
+        try {
+            ChannelSftp sftp = (ChannelSftp) session.openChannel("sftp");
+            sftp.connect(30000);
+
+            sftp.put(localPath, remotePath);
+            sftp.disconnect();
+
+            return "{\"success\":\"Uploaded\",\"localPath\":\"" + localPath + "\",\"remotePath\":\"" + remotePath + "\"}";
+        } catch (Exception e) {
+            logger.error("SSH upload failed", e);
+            return "{\"error\":\"Upload failed: " + e.getMessage() + "\"}";
+        }
+    }
+
+    private String download(JSONObject params) {
+        String sessionKey = params.getString("sessionKey");
+        String remotePath = params.getString("remotePath");
+        String localPath = params.getString("localPath");
+
+        if (sessionKey == null || remotePath == null || localPath == null) {
+            return "{\"error\":\"Missing required parameters: sessionKey, remotePath, localPath\"}";
+        }
+
+        Session session = sessionCache.get(sessionKey);
+        if (session == null || !session.isConnected()) {
+            return "{\"error\":\"Session not found or not connected: " + sessionKey + "\"}";
+        }
+
+        try {
+            ChannelSftp sftp = (ChannelSftp) session.openChannel("sftp");
+            sftp.connect(30000);
+
+            sftp.get(remotePath, localPath);
+            sftp.disconnect();
+
+            return "{\"success\":\"Downloaded\",\"remotePath\":\"" + remotePath + "\",\"localPath\":\"" + localPath + "\"}";
+        } catch (Exception e) {
+            logger.error("SSH download failed", e);
+            return "{\"error\":\"Download failed: " + e.getMessage() + "\"}";
         }
     }
 

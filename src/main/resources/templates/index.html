@@ -108,8 +108,12 @@
             <div th:if="${selectedAgent != null}" class="chat-input-area">
                 <form th:action="@{/chat}" method="post" class="chat-form" id="chatForm">
                     <input type="hidden" name="agentId" th:value="${selectedAgent.id}">
-                    <input type="text" name="message" id="messageInput" placeholder="输入消息..." required>
-                    <button type="submit" id="sendBtn">发送</button>
+                    <input type="text" name="message" id="messageInput" placeholder="输入消息..." required th:disabled="${agentExecutorState}">
+                    <button type="submit" id="sendBtn" th:classappend="${agentExecutorState  ? 'hide' : ''}">发送</button>
+                    <button type="button" id="runningBtn" class="running-btn" th:classappend="${agentExecutorState  ? '' : 'hide'}"  onclick="showStopConfirm()">
+                        <span class="running-dot"></span>
+                        运行中...
+                    </button>
                 </form>
             </div>
             
@@ -212,7 +216,23 @@
             </div>
         </div>
     </div>
-    
+
+    <div id="stopConfirmModal" class="modal">
+        <div class="modal-content" style="max-width: 400px;">
+            <div class="modal-header">
+                <h3>停止智能体</h3>
+                <button class="modal-close" onclick="hideStopConfirm()">&times;</button>
+            </div>
+            <div class="modal-body" style="padding: 20px 0; color: #e0e6ed;">
+                确定要停止智能体运行吗？
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn-cancel" onclick="hideStopConfirm()">取消</button>
+                <button type="button" class="btn-submit" onclick="confirmStop()">确定停止</button>
+            </div>
+        </div>
+    </div>
+
     <script th:src="@{/js/main.js}"></script>
     <script th:src="@{/js/marked.min.js}"></script>
     <script th:inline="javascript">

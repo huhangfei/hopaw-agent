@@ -52,14 +52,14 @@ function setCurrentAgentId(agentId) {
     currentAgentId = agentId;
 }
 
-function connectWebSocket() {
+function connectWebSocket(agentId) {
     var protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-    var wsUrl = protocol + '//' + window.location.host + '/ws/chat';
-    
+    var wsUrl = protocol + '//' + window.location.host + '/ws/chat/' + agentId;
+
     ws = new WebSocket(wsUrl);
-    
+
     ws.onopen = function() {
-        console.log('WebSocket 连接已建立');
+        console.log('WebSocket 连接已建立, agentId:', agentId);
     };
     
     ws.onmessage = function(event) {
@@ -75,14 +75,14 @@ function connectWebSocket() {
         } else if (data.type === 'done') {
             handleStreamingDone(data.message, data.response, responseId);
         } else if (data.type === 'error') {
-            handleStreamingError(data.message);
+            handleStreamingError(data.content || data.message, responseId);
         }
     };
     
     ws.onclose = function() {
         console.log('WebSocket 连接已关闭');
         setTimeout(function() {
-            connectWebSocket();
+            connectWebSocket(currentAgentId);
         }, 3000);
     };
     
@@ -333,13 +333,34 @@ function handleStreamingDone(userMessage, response, responseId) {
     enableInput();
 }
 
-function handleStreamingError(errorMessage) {
-    if (currentStreamingMessage) {
-        var contentDiv = currentStreamingMessage.querySelector('.streaming-content');
-        contentDiv.textContent += '\n(错误: ' + errorMessage + ')';
-        currentStreamingMessage = null;
+function handleStreamingError(errorMessage, responseId) {
+    var messagesDiv = document.getElementById('chatMessages');
+    var agentName = document.querySelector('.chat-header h2') ? document.querySelector('.chat-header h2').textContent : 'Agent';
+
+    var errorDiv = document.createElement('div');
+    errorDiv.className = 'message agent error-message';
+    if (responseId) {
+        errorDiv.setAttribute('data-response-id', responseId);
     }
-    
+
+    var label = document.createElement('div');
+    label.className = 'message-label';
+    label.textContent = agentName + ' (错误)';
+    errorDiv.appendChild(label);
+
+    var contentDiv = document.createElement('div');
+    contentDiv.className = 'message-content error-content';
+    contentDiv.textContent = errorMessage;
+    errorDiv.appendChild(contentDiv);
+
+    var timeDiv = document.createElement('div');
+    timeDiv.className = 'message-time';
+    timeDiv.textContent = formatMessageTime(new Date());
+    errorDiv.appendChild(timeDiv);
+
+    messagesDiv.appendChild(errorDiv);
+    messagesDiv.scrollTop = messagesDiv.scrollHeight;
+
     isStreaming = false;
     enableInput();
 }
@@ -387,16 +408,20 @@ function sendMessage() {
 
 function disableInput() {
     var input = document.getElementById('messageInput');
-    var button = document.getElementById('sendBtn');
+    var sendBtn = document.getElementById('sendBtn');
+    var runningBtn = document.getElementById('runningBtn');
     if (input) input.disabled = true;
-    if (button) button.disabled = true;
+    if (sendBtn) sendBtn.classList.add('hide');
+    if (runningBtn) runningBtn.classList.remove('hide');
 }
 
 function enableInput() {
     var input = document.getElementById('messageInput');
-    var button = document.getElementById('sendBtn');
+    var sendBtn = document.getElementById('sendBtn');
+    var runningBtn = document.getElementById('runningBtn');
     if (input) input.disabled = false;
-    if (button) button.disabled = false;
+    if (sendBtn) sendBtn.classList.remove('hide');
+    if (runningBtn) runningBtn.classList.add('hide');
     if (input) input.focus();
 }
 
@@ -457,6 +482,42 @@ function hideEditModal() {
     document.getElementById('editAgentModal').classList.remove('active');
 }
 
+/**
+ * 显示停止智能体确认对话框
+ */
+function showStopConfirm() {
+    document.getElementById('stopConfirmModal').classList.add('active');
+}
+
+/**
+ * 隐藏停止智能体确认对话框
+ */
+function hideStopConfirm() {
+    document.getElementById('stopConfirmModal').classList.remove('active');
+}
+
+/**
+ * 确认停止智能体
+ * 异步调用 /agent/stop 接口，停止成功后刷新页面
+ */
+function confirmStop() {
+    var agentId = document.querySelector('input[name="agentId"]').value;
+    hideStopConfirm();
+    fetch('/agent/stop', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/x-www-form-urlencoded',
+        },
+        body: 'id=' + agentId
+    }).then(function(response) {
+        return response.text();
+    }).then(function(data) {
+        if (data === 'ok') {
+            //location.reload();
+        }
+    });
+}
+
 document.getElementById('addAgentModal').addEventListener('click', function(e) {
     if (e.target === this) {
         hideAddModal();
@@ -479,9 +540,9 @@ window.onload = function() {
     if (input) {
         input.focus();
     }
-    
+
     if (currentAgentId) {
-        connectWebSocket();
+        connectWebSocket(currentAgentId);
     }
     
     var form = document.getElementById('chatForm');
