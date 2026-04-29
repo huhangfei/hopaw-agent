@@ -234,6 +234,9 @@ function handleThinking(data, responseId) {
         msgState.thinkingDiv.innerHTML = renderMarkdown(msgState.thinkingContent);
         messagesDiv.scrollTop = messagesDiv.scrollHeight;
     } else if (data.status === 'done') {
+        msgState.thinkingContent += data.content;
+        msgState.thinkingDiv.innerHTML = renderMarkdown(msgState.thinkingContent);
+        messagesDiv.scrollTop = messagesDiv.scrollHeight;
         if (msgState.currentStreamingMessage && msgState.lastMessageType === 'thinking') {
             var timeDiv = document.createElement('div');
             timeDiv.className = 'message-time';
@@ -308,20 +311,20 @@ function handleStreamingDone(userMessage, response, responseId) {
         return;
     }
     
-    var contentDiv = msgState.currentStreamingMessage.querySelector('.message-content:last-of-type');
-    if (contentDiv) {
-        contentDiv.setAttribute('data-raw-content', msgState.streamingMarkdownContent);
-        
-        try {
-            if (typeof marked !== 'undefined') {
-                contentDiv.innerHTML = marked.parse(msgState.streamingMarkdownContent);
-            } else {
-                contentDiv.textContent = msgState.streamingMarkdownContent;
-            }
-        } catch (e) {
-            contentDiv.textContent = msgState.streamingMarkdownContent;
-        }
-    }
+    // var contentDiv = msgState.currentStreamingMessage.querySelector('.message-content:last-of-type');
+    // if (contentDiv) {
+    //     contentDiv.setAttribute('data-raw-content', msgState.streamingMarkdownContent);
+    //
+    //     try {
+    //         if (typeof marked !== 'undefined') {
+    //             contentDiv.innerHTML = marked.parse(msgState.streamingMarkdownContent);
+    //         } else {
+    //             contentDiv.textContent = msgState.streamingMarkdownContent;
+    //         }
+    //     } catch (e) {
+    //         contentDiv.textContent = msgState.streamingMarkdownContent;
+    //     }
+    // }
     
     var timeDiv = document.createElement('div');
     timeDiv.className = 'message-time';
