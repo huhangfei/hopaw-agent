@@ -1,7 +1,6 @@
 package com.agent.hopaw.service;
 
 import com.agent.hopaw.mapper.LongTermMemoryMapper;
-import com.agent.hopaw.mapper.MemoryProcessLogMapper;
 import com.agent.hopaw.model.LongTermMemory;
 import dev.langchain4j.agent.tool.Tool;
 import org.springframework.stereotype.Service;
@@ -9,19 +8,15 @@ import org.springframework.stereotype.Service;
 import java.time.LocalDateTime;
 import java.util.Arrays;
 import java.util.List;
+import java.util.UUID;
 
 @Service
 public class LongTermMemoryService {
 
-    public static final String GLOBAL_IDENTITY = "global";
-
     private final LongTermMemoryMapper longTermMemoryMapper;
-    private final MemoryProcessLogMapper memoryProcessLogMapper;
 
-    public LongTermMemoryService(LongTermMemoryMapper longTermMemoryMapper,
-                                 MemoryProcessLogMapper memoryProcessLogMapper) {
+    public LongTermMemoryService(LongTermMemoryMapper longTermMemoryMapper) {
         this.longTermMemoryMapper = longTermMemoryMapper;
-        this.memoryProcessLogMapper = memoryProcessLogMapper;
     }
 
     public List<LongTermMemory> getMemoriesByIdentity(String identity) {
@@ -123,7 +118,7 @@ public class LongTermMemoryService {
         }
 
         StringBuilder sb = new StringBuilder();
-        sb.append("【").append(GLOBAL_IDENTITY.equals(identity) ? "全局记忆" : "智能体 " + identity + " 记忆").append("】\n");
+        sb.append("【").append("智能体 " + identity + " 记忆").append("】\n");
 
         List<LongTermMemory> rootMemories = getRootMemories(identity);
         for (LongTermMemory root : rootMemories) {
@@ -143,17 +138,9 @@ public class LongTermMemoryService {
         return sb.toString();
     }
 
-    public Long getLastProcessedChatId(String identity) {
-        return memoryProcessLogMapper.getLastProcessedChatId(identity);
-    }
-
-    public void updateLastProcessedChatId(String identity, Long chatId) {
-        memoryProcessLogMapper.upsert(identity, chatId);
-    }
-
-    @Tool("保存智能体记忆，identity 智能体身份（global是全局，智能体内部记忆是agentId ），memory 记忆内容，parentId 父记忆ID")
+    @Tool("保存智能体记忆(identity:传入agentId ，memory:记忆内容，parentId:父记忆ID)")
     public String saveMemory(String identity, String memory, Long parentId) {
-        String memoryHash = String.valueOf(memory.hashCode());
+        String memoryHash = UUID.nameUUIDFromBytes((memory  ).getBytes()).toString();
         LongTermMemory memoryEntity = longTermMemoryMapper.findByIdentityAndHash(identity, memoryHash);
         if (memoryEntity == null) {
             memoryEntity = new LongTermMemory();

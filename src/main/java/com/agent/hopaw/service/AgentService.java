@@ -16,7 +16,6 @@ import dev.langchain4j.service.TokenStream;
 import dev.langchain4j.service.UserMessage;
 import dev.langchain4j.service.tool.BeforeToolExecution;
 import dev.langchain4j.service.tool.ToolExecution;
-import dev.langchain4j.store.memory.chat.ChatMemoryStore;
 import dev.langchain4j.store.memory.chat.InMemoryChatMemoryStore;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -37,13 +36,15 @@ public class AgentService {
     private final ChatMemoryMapper chatMemoryMapper;
     private final List<AgentTool> allTools;
     private final ChatModelFactory chatModelFactory;
+    private final LongTermMemoryService longTermMemoryService;
 
     public AgentService(AgentMapper agentMapper, ChatMemoryMapper chatMemoryMapper,
-                       List<AgentTool> allTools, ChatModelFactoryConfig chatModelFactoryConfig) {
+                        List<AgentTool> allTools, ChatModelFactoryConfig chatModelFactoryConfig, LongTermMemoryService longTermMemoryService) {
         this.agentMapper = agentMapper;
         this.chatMemoryMapper = chatMemoryMapper;
         this.allTools = allTools;
         this.chatModelFactory = chatModelFactoryConfig.getFactory();
+        this.longTermMemoryService = longTermMemoryService;
     }
 
     public List<Agent> getAllAgents() {
@@ -109,7 +110,7 @@ public class AgentService {
                     .filter(t -> selectedToolNames.contains(t.getName()))
                     .collect(Collectors.toList());
 
-            SQLiteChatMemoryStore memoryStore = new SQLiteChatMemoryStore(chatMemoryMapper, agent.getId());
+            SQLiteChatMemoryStore memoryStore = new SQLiteChatMemoryStore(chatMemoryMapper, agent.getId(),longTermMemoryService);
             return new AgentExecutor(agent, chatModel, streamingModel, selectedTools, memoryStore);
         } catch (Exception e) {
            logger.error("Error creating agent executor: ", e);
@@ -144,8 +145,9 @@ public class AgentService {
 
             int maxMemoryRecords = agent.getMaxMemoryRecords() != null ? agent.getMaxMemoryRecords() : 20;
             int maxToolInvocations = agent.getMaxToolInvocations() != null ? agent.getMaxToolInvocations() : 10;
-            String systemMessage = "你是一个智能助手，名字叫" + agent.getName() + "。" +
-                    "你的主要工作是" + agent.getDescription() + "。" +
+            String systemMessage = "你是一个智能助手，名字叫" + agent.getName() + "," +
+                    "你的主要工作是" + agent.getDescription() + "," +
+                    "你的agentId是" + agent.getId() + "。" +
                     "在遇到需要用户提供的信息不正确的时候，不要一直猜，首先去查询记忆，如果记忆中没有就赶紧询问用户。"+
                     "在你判断需要时，你可以调用一系列工具完成任务。";
 

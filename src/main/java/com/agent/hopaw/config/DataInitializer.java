@@ -84,12 +84,17 @@ public class DataInitializer implements CommandLineRunner {
             } catch (Exception e) {
             }
 
-            
+            try {
+                stmt.execute("ALTER TABLE chat_memory ADD COLUMN cleaned INTEGER DEFAULT 0");
+            } catch (Exception e) {
+            }
+
             stmt.execute("CREATE TABLE IF NOT EXISTS chat_memory (" +
                     "id INTEGER PRIMARY KEY AUTOINCREMENT, " +
                     "agent_id INTEGER NOT NULL, " +
                     "message_id TEXT NOT NULL, " +
                     "message_json TEXT NOT NULL, " +
+                    "cleaned INTEGER DEFAULT 0, " +
                     "create_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP" +
                     ")");
             
@@ -111,22 +116,6 @@ public class DataInitializer implements CommandLineRunner {
 
             try {
                 stmt.execute("ALTER TABLE long_term_memory ADD COLUMN memory_hash TEXT");
-            } catch (Exception e) {
-            }
-
-            stmt.execute("CREATE TABLE IF NOT EXISTS memory_process_log (" +
-                    "id INTEGER PRIMARY KEY AUTOINCREMENT, " +
-                    "identity TEXT NOT NULL UNIQUE, " +
-                    "last_processed_chat_id INTEGER DEFAULT 0, " +
-                    "last_processed_time TIMESTAMP" +
-                    ")");
-
-            try {
-                stmt.execute("ALTER TABLE memory_process_log ADD COLUMN last_processed_chat_id INTEGER DEFAULT 0");
-            } catch (Exception e) {
-            }
-            try {
-                stmt.execute("ALTER TABLE memory_process_log ADD COLUMN last_processed_time TIMESTAMP");
             } catch (Exception e) {
             }
         }

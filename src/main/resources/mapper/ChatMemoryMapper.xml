@@ -1,33 +1,69 @@
 <?xml version="1.0" encoding="UTF-8" ?>
 <!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
 <mapper namespace="com.agent.hopaw.mapper.ChatMemoryMapper">
-    
-    <select id="findByAgentId" resultType="java.util.HashMap">
-        SELECT message_id, message_json 
-        FROM chat_memory 
-        WHERE agent_id = #{agentId} 
+
+    <resultMap id="ChatMemoryResultMap" type="com.agent.hopaw.model.ChatMemory">
+        <id property="id" column="id"/>
+        <result property="agentId" column="agent_id"/>
+        <result property="messageId" column="message_id"/>
+        <result property="messageJson" column="message_json"/>
+        <result property="cleaned" column="cleaned"/>
+        <result property="createTime" column="create_time"/>
+    </resultMap>
+
+    <select id="findByAgentId" resultMap="ChatMemoryResultMap">
+        SELECT id, agent_id, message_id, message_json, cleaned, create_time
+        FROM chat_memory
+        WHERE agent_id = #{agentId}
         ORDER BY create_time ASC
     </select>
-    
+
+    <select id="findByAgentIdAndCleaned" resultMap="ChatMemoryResultMap">
+        SELECT id, agent_id, message_id, message_json, cleaned, create_time
+        FROM chat_memory
+        WHERE agent_id = #{agentId} AND cleaned = #{cleaned}
+        ORDER BY create_time ASC
+    </select>
+
     <insert id="insert">
-        INSERT INTO chat_memory (agent_id, message_id, message_json, create_time) 
-        VALUES (#{agentId}, #{messageId}, #{messageJson}, CURRENT_TIMESTAMP)
+        INSERT INTO chat_memory (agent_id, message_id, message_json, cleaned, create_time)
+        VALUES (#{agentId}, #{messageId}, #{messageJson}, 0, CURRENT_TIMESTAMP)
     </insert>
-    
-    <update id="updateByMessageId">
-        UPDATE chat_memory 
-        SET message_json = #{messageJson} 
+
+    <update id="markCleaned">
+        UPDATE chat_memory
+        SET cleaned = 1
         WHERE agent_id = #{agentId} AND message_id = #{messageId}
     </update>
-    
+
+    <update id="unmarkCleaned">
+        UPDATE chat_memory
+        SET cleaned = 0
+        WHERE agent_id = #{agentId} AND message_id = #{messageId}
+    </update>
+
+    <update id="updateByMessageId">
+        UPDATE chat_memory
+        SET message_json = #{messageJson}
+        WHERE agent_id = #{agentId} AND message_id = #{messageId}
+    </update>
+
     <delete id="deleteByMessageId">
-        DELETE FROM chat_memory 
+        DELETE FROM chat_memory
         WHERE agent_id = #{agentId} AND message_id = #{messageId}
     </delete>
-    
+
+    <delete id="deleteByIds">
+        DELETE FROM chat_memory
+        WHERE  id IN
+        <foreach collection="ids" item="id" open="(" separator="," close=")">
+            #{id}
+        </foreach>
+    </delete>
+
     <delete id="deleteByAgentId">
-        DELETE FROM chat_memory 
+        DELETE FROM chat_memory
         WHERE agent_id = #{agentId}
     </delete>
-    
+
 </mapper>

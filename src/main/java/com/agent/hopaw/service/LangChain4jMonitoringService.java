@@ -76,7 +76,7 @@ public class LangChain4jMonitoringService implements ChatModelListener {
     @Override
     public void onError(ChatModelErrorContext errorContext) {
         logger.error("========== LangChain4j 请求错误 ==========");
-        logger.error("错误: {}", errorContext.error().getMessage());
+        logger.error("错误: "+ errorContext.error().getMessage(),errorContext.error());
         logger.error("==========================================");
     }
 }
