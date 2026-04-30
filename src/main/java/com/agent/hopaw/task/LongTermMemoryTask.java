@@ -116,7 +116,7 @@ public class LongTermMemoryTask {
                     "归类后先保存分类作为父级记忆得到编号，再保存概要内容作为子级记忆，子级记忆的parentId是父级记忆的编号。\n" +
                     "本次记忆的identity是" + identity;
 
-            ChatModel chatModel = chatModelFactory.createChatModel();
+            ChatModel chatModel = chatModelFactory.createChatModel(null, null, false);
 
             MemoryAssistant assistant = AiServices.builder(MemoryAssistant.class)
                     .chatModel(chatModel)

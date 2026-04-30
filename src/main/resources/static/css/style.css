@@ -686,7 +686,56 @@ header h1 {
 }
 .form-group textarea {
     resize: vertical;
-    min-height: 80px;
+    min-height: 60px;
+}
+
+.form-row {
+    display: flex;
+    gap: 12px;
+}
+
+.form-row .form-group {
+    flex: 1;
+}
+
+.model-select-row {
+    display: flex;
+    gap: 8px;
+}
+
+.model-select {
+    flex: 1;
+    padding: 10px 12px;
+    border: 1px solid rgba(0, 212, 255, 0.3);
+    border-radius: 8px;
+    font-size: 13px;
+    outline: none;
+    background: rgba(0, 0, 0, 0.3);
+    color: #fff;
+    cursor: pointer;
+    transition: all 0.25s ease;
+    -webkit-appearance: none;
+    appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%238899aa' stroke-width='2'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 10px center;
+    padding-right: 30px;
+}
+
+.model-select:focus {
+    border-color: #00d4ff;
+    background-color: rgba(0, 0, 0, 0.4);
+    box-shadow: 0 0 15px rgba(0, 212, 255, 0.3);
+}
+
+.model-select option {
+    background: #1a2744;
+    color: #fff;
+}
+
+.model-select:invalid,
+.model-select option[value=""] {
+    color: #8899aa;
 }
 .modal-form {
     display: flex;

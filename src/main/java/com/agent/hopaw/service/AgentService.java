@@ -39,14 +39,17 @@ public class AgentService {
     private final List<AgentTool> allTools;
     private final ChatModelFactory chatModelFactory;
     private final LongTermMemoryService longTermMemoryService;
-
+    private final AiModelProviderService aiModelProviderService;
+    private final AiModelService aiModelService;
     public AgentService(AgentMapper agentMapper, ChatMemoryMapper chatMemoryMapper,
-                        List<AgentTool> allTools, ChatModelFactoryConfig chatModelFactoryConfig, LongTermMemoryService longTermMemoryService) {
+                        List<AgentTool> allTools, ChatModelFactoryConfig chatModelFactoryConfig, LongTermMemoryService longTermMemoryService, AiModelProviderService aiModelProviderService, AiModelService aiModelService) {
         this.agentMapper = agentMapper;
         this.chatMemoryMapper = chatMemoryMapper;
         this.allTools = allTools;
         this.chatModelFactory = chatModelFactoryConfig.getFactory();
+        this.aiModelProviderService = aiModelProviderService;
         this.longTermMemoryService = longTermMemoryService;
+        this.aiModelService = aiModelService;
     }
 
     public List<Agent> getAllAgents() {
@@ -57,8 +60,9 @@ public class AgentService {
         return agentMapper.findById(id);
     }
 
-    public Agent createAgent(String name, String description, String tools, Integer maxMemoryRecords, Integer maxToolInvocations) {
+    public Agent createAgent(String name, String description, String tools, Integer maxMemoryRecords, Integer maxToolInvocations, Long aiModelId) {
         Agent agent = new Agent(name, description, tools, maxMemoryRecords, maxToolInvocations);
+        agent.setAiModelId(aiModelId);
         agentMapper.insert(agent);
         return agent;
     }
@@ -69,7 +73,7 @@ public class AgentService {
         agentExecutors.remove(id.toString());
     }
 
-    public void updateAgent(Long id, String name, String description, String tools, Integer maxMemoryRecords, Integer maxToolInvocations) {
+    public void updateAgent(Long id, String name, String description, String tools, Integer maxMemoryRecords, Integer maxToolInvocations, Long aiModelId) {
         Agent agent = agentMapper.findById(id);
         if (agent != null) {
             agent.setName(name);
@@ -77,6 +81,7 @@ public class AgentService {
             agent.setTools(tools);
             agent.setMaxMemoryRecords(maxMemoryRecords);
             agent.setMaxToolInvocations(maxToolInvocations);
+            agent.setAiModelId(aiModelId);
             agentMapper.update(agent);
             agentExecutors.remove(id.toString());
         }
@@ -102,8 +107,10 @@ public class AgentService {
             ChatModel chatModel = null;
             StreamingChatModel streamingModel = null;
             try {
-                chatModel = chatModelFactory.createChatModel();
-                streamingModel = chatModelFactory.createStreamingChatModel();
+                AiModel aiModel = aiModelService.findById(agent.getAiModelId());
+                AiModelProvider aiModelProvider = aiModelProviderService.findById(aiModel.getProviderId());
+                chatModel = chatModelFactory.createChatModel(aiModelProvider, aiModel, agent.getEnableThinking());
+                streamingModel = chatModelFactory.createStreamingChatModel(aiModelProvider, aiModel, agent.getEnableThinking());
             } catch (Exception e) {
             }
 

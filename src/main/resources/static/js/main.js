@@ -456,15 +456,64 @@ function deleteAgent(agentId) {
     form.submit();
 }
 
+function loadProviders(providerSelect, modelSelect, selectedAiModelId) {
+    fetch('/api/providers')
+        .then(function(r) { return r.json(); })
+        .then(function(providers) {
+            providerSelect.innerHTML = '<option value="">选择提供商</option>';
+            providers.forEach(function(p) {
+                var opt = document.createElement('option');
+                opt.value = p.id;
+                opt.textContent = p.name;
+                providerSelect.appendChild(opt);
+            });
+            if (selectedAiModelId) {
+                fetch('/api/models/' + selectedAiModelId)
+                    .then(function(r) { return r.json(); })
+                    .then(function(model) {
+                        providerSelect.value = model.providerId;
+                        var changeEvent = new Event('change');
+                        providerSelect.dispatchEvent(changeEvent);
+                        setTimeout(function() {
+                            modelSelect.value = selectedAiModelId;
+                        }, 100);
+                    });
+            }
+        });
+}
+
+function setupCascading(providerSelect, modelSelect) {
+    providerSelect.addEventListener('change', function() {
+        var providerId = this.value;
+        modelSelect.innerHTML = '<option value="">选择模型</option>';
+        modelSelect.disabled = !providerId;
+        if (!providerId) return;
+        fetch('/api/providers/' + providerId + '/models')
+            .then(function(r) { return r.json(); })
+            .then(function(models) {
+                models.forEach(function(m) {
+                    var opt = document.createElement('option');
+                    opt.value = m.id;
+                    opt.textContent = m.modelName;
+                    modelSelect.appendChild(opt);
+                });
+            });
+    });
+}
+
 function showAddModal() {
     document.getElementById('addAgentModal').classList.add('active');
+    var providerSelect = document.getElementById('addProviderSelect');
+    var modelSelect = document.getElementById('addModelSelect');
+    modelSelect.disabled = true;
+    loadProviders(providerSelect, modelSelect, null);
 }
 
 function hideAddModal() {
     document.getElementById('addAgentModal').classList.remove('active');
 }
 
-function showEditModal(id, name, description, tools, maxMemoryRecords, maxToolInvocations) {
+function showEditModal(id, name, description, tools, maxMemoryRecords, maxToolInvocations, aiModelId) {
     document.getElementById('editAgentId').value = id;
     document.getElementById('editAgentName').value = name;
     document.getElementById('editAgentDescription').value = description;
@@ -475,6 +524,11 @@ function showEditModal(id, name, description, tools, maxMemoryRecords, maxToolIn
     checkboxes.forEach(function(checkbox) {
         checkbox.checked = tools && tools.indexOf(checkbox.value) !== -1;
     });
+
+    var providerSelect = document.getElementById('editProviderSelect');
+    var modelSelect = document.getElementById('editModelSelect');
+    modelSelect.disabled = true;
+    loadProviders(providerSelect, modelSelect, aiModelId);
 
     document.getElementById('editAgentModal').classList.add('active');
 
@@ -532,6 +586,9 @@ document.getElementById('editAgentModal').addEventListener('click', function(e) 
         hideEditModal();
     }
 });
+
+setupCascading(document.getElementById('addProviderSelect'), document.getElementById('addModelSelect'));
+setupCascading(document.getElementById('editProviderSelect'), document.getElementById('editModelSelect'));
 
 window.onload = function() {
     var messagesDiv = document.getElementById('chatMessages');

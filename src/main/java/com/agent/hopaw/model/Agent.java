@@ -7,6 +7,8 @@ public class Agent {
     private String tools;
     private Integer maxMemoryRecords;
     private Integer maxToolInvocations;
+    private Long aiModelId;
+    private Boolean enableThinking;
 
     public Agent() {}
 
@@ -87,5 +89,21 @@ public class Agent {
 
     public void setMaxToolInvocations(Integer maxToolInvocations) {
         this.maxToolInvocations = maxToolInvocations;
+    }
+
+    public Long getAiModelId() {
+        return aiModelId;
+    }
+
+    public void setAiModelId(Long aiModelId) {
+        this.aiModelId = aiModelId;
+    }
+
+    public Boolean getEnableThinking() {
+        return enableThinking;
+    }
+
+    public void setEnableThinking(Boolean enableThinking) {
+        this.enableThinking = enableThinking;
     }
 }

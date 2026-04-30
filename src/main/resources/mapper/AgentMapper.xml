@@ -9,23 +9,28 @@
         <result property="tools" column="tools"/>
         <result property="maxMemoryRecords" column="max_memory_records"/>
         <result property="maxToolInvocations" column="max_tool_invocations"/>
+        <result property="aiModelId" column="ai_model_id"/>
+        <result property="enableThinking" column="enable_thinking"/>
     </resultMap>
 
     <select id="findAll" resultMap="AgentResultMap">
-        SELECT id, name, description, tools, max_memory_records, max_tool_invocations
+        SELECT id, name, description, tools, max_memory_records, max_tool_invocations, ai_model_id, enable_thinking
         FROM agents
         ORDER BY id DESC
     </select>
 
     <select id="findById" resultMap="AgentResultMap">
-        SELECT id, name, description, tools, max_memory_records, max_tool_invocations
+        SELECT id, name, description, tools, max_memory_records, max_tool_invocations, ai_model_id, enable_thinking
         FROM agents
         WHERE id = #{id}
     </select>
 
     <insert id="insert" parameterType="com.agent.hopaw.model.Agent">
-        INSERT INTO agents (name, description, tools, max_memory_records, max_tool_invocations)
-        VALUES (#{name}, #{description}, #{tools}, #{maxMemoryRecords}, #{maxToolInvocations})
+        INSERT INTO agents (name, description, tools, max_memory_records, max_tool_invocations, ai_model_id, enable_thinking)
+        VALUES (#{name}, #{description}, #{tools}, #{maxMemoryRecords}, #{maxToolInvocations}, #{aiModelId}, #{enableThinking})
+        <selectKey resultType="long" keyProperty="id" order="AFTER">
+            SELECT last_insert_rowid()
+        </selectKey>
     </insert>
 
     <update id="update" parameterType="com.agent.hopaw.model.Agent">
@@ -34,7 +39,9 @@
             description = #{description},
             tools = #{tools},
             max_memory_records = #{maxMemoryRecords},
-            max_tool_invocations = #{maxToolInvocations}
+            max_tool_invocations = #{maxToolInvocations},
+            ai_model_id = #{aiModelId},
+            enable_thinking = #{enableThinking}
         WHERE id = #{id}
     </update>
 

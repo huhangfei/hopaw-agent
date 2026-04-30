@@ -53,6 +53,9 @@
     <insert id="insert" parameterType="com.agent.hopaw.model.ChatHistory">
         INSERT INTO chat_history (agent_id, role, message_type, content, tool_call_id, tool_name, tool_arguments, tool_call_status, create_time, thinking_content)
         VALUES (#{agentId}, #{role}, #{messageType}, #{content}, #{toolCallId}, #{toolName}, #{toolArguments}, #{toolCallStatus}, #{createTime}, #{thinkingContent})
+        <selectKey resultType="long" keyProperty="id" order="AFTER">
+            SELECT last_insert_rowid()
+        </selectKey>
     </insert>
 
     <delete id="deleteByAgentId">

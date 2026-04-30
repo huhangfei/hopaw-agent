@@ -1,0 +1,511 @@
+.models-container {
+    flex: 1;
+    padding: 20px;
+    overflow-y: auto;
+    background: #f5f5f5;
+}
+
+.models-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+}
+
+.models-header h2 {
+    font-size: 20px;
+    color: #333;
+}
+
+.btn-add-provider {
+    background: #4CAF50;
+    color: white;
+    border: none;
+    padding: 10px 20px;
+    border-radius: 8px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 14px;
+    transition: background 0.2s;
+}
+
+.btn-add-provider:hover {
+    background: #45a049;
+}
+
+.btn-add-provider svg {
+    width: 20px;
+    height: 20px;
+}
+
+.providers-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 15px;
+    margin-bottom: 30px;
+}
+
+.provider-card {
+    background: white;
+    border-radius: 12px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+    overflow: hidden;
+    transition: transform 0.2s, box-shadow 0.2s;
+    border: 2px solid transparent;
+}
+
+.provider-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
+}
+
+.provider-card-header {
+    display: flex;
+    align-items: center;
+    padding: 15px;
+    background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+    border-bottom: 1px solid #e0e0e0;
+}
+
+.provider-icon {
+    width: 40px;
+    height: 40px;
+    border-radius: 8px;
+    margin-right: 12px;
+    object-fit: contain;
+    background: white;
+    padding: 4px;
+}
+
+.provider-header-info {
+    flex: 1;
+}
+
+.provider-name {
+    font-size: 16px;
+    font-weight: 600;
+    color: #333;
+}
+
+.provider-code {
+    font-size: 12px;
+    color: #888;
+    margin-top: 2px;
+}
+
+.provider-card-body {
+    padding: 15px;
+}
+
+.provider-url {
+    font-size: 12px;
+    color: #666;
+    margin-bottom: 10px;
+    word-break: break-all;
+}
+
+.model-count {
+    font-size: 13px;
+    color: #555;
+}
+
+.model-count-label {
+    color: #888;
+}
+
+.model-count-value {
+    font-weight: 600;
+    color: #4CAF50;
+}
+
+.provider-card-footer {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 10px 15px;
+    background: #fafafa;
+    border-top: 1px solid #e0e0e0;
+}
+
+.provider-actions-left {
+    display: flex;
+    gap: 6px;
+}
+
+.btn-config {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    background: #4CAF50;
+    color: white;
+    border: none;
+    padding: 5px 10px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 12px;
+    transition: background 0.2s;
+}
+
+.btn-config:hover {
+    background: #45a049;
+}
+
+.btn-config svg {
+    width: 14px;
+    height: 14px;
+}
+
+.provider-time {
+    font-size: 11px;
+    color: #999;
+}
+
+.provider-actions {
+    display: flex;
+    gap: 8px;
+}
+
+.btn-icon {
+    width: 32px;
+    height: 32px;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: transparent;
+    transition: background 0.2s;
+}
+
+.btn-icon svg {
+    width: 18px;
+    height: 18px;
+}
+
+.btn-edit-provider {
+    color: #1976d2;
+}
+
+.btn-edit-provider:hover {
+    background: #e3f2fd;
+}
+
+.btn-delete-provider {
+    color: #d32f2f;
+}
+
+.btn-delete-provider:hover {
+    background: #ffebee;
+}
+
+.btn-add-model {
+    background: #4CAF50;
+    color: white;
+    border: none;
+    padding: 8px 16px;
+    border-radius: 8px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 14px;
+    transition: background 0.2s;
+}
+
+.btn-add-model:hover {
+    background: #45a049;
+}
+
+.btn-add-model svg {
+    width: 18px;
+    height: 18px;
+}
+
+.models-table-container {
+    overflow-x: auto;
+}
+
+.models-table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.models-table thead {
+    background: #f8f9fa;
+}
+
+.models-table th {
+    padding: 12px 15px;
+    text-align: left;
+    font-size: 13px;
+    color: #666;
+    font-weight: 600;
+    border-bottom: 2px solid #e0e0e0;
+}
+
+.models-table td {
+    padding: 0px 15px;
+    font-size: 14px;
+    color: #333;
+    border-bottom: 1px solid #f0f0f0;
+}
+
+.models-table tbody tr:hover {
+    background: #f8f9fa;
+}
+
+.capability-tag {
+    display: inline-block;
+    background: #e3f2fd;
+    color: #1976d2;
+    padding: 3px 8px;
+    border-radius: 4px;
+    font-size: 12px;
+    margin-right: 5px;
+    margin-bottom: 3px;
+}
+
+.verified-yes {
+    color: #4CAF50;
+    font-weight: 600;
+}
+
+.verified-no {
+    color: #999;
+}
+
+.models-table .btn-icon {
+    width: 28px;
+    height: 28px;
+}
+
+.models-table .btn-icon svg {
+    width: 16px;
+    height: 16px;
+}
+
+.empty-state {
+    text-align: center;
+    padding: 40px;
+    color: #999;
+    background: white;
+    border-radius: 12px;
+}
+
+.modal-wide {
+    width: 900px;
+    max-width: 95%;
+    display: flex;
+    flex-direction: column;
+    max-height: 80vh;
+    overflow: hidden;
+}
+
+.models-modal-toolbar {
+    display: flex;
+    justify-content: flex-end;
+    padding: 12px 20px;
+    border-bottom: 1px solid #e0e0e0;
+    flex-shrink: 0;
+}
+
+.models-table-scroll {
+    overflow-y: auto;
+    overflow-x: auto;
+    flex: 1;
+    min-height: 0;
+}
+
+.models-table-scroll .empty-state {
+    margin: 20px;
+}
+
+.checkbox-group {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 15px;
+}
+
+.checkbox-label {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    cursor: pointer;
+    font-weight: normal !important;
+    margin-bottom: 0 !important;
+}
+
+.checkbox-label input[type="checkbox"] {
+    width: auto;
+    margin: 0;
+}
+
+.modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.5);
+    display: none;
+    align-items: center;
+    justify-content: center;
+    z-index: 9999;
+}
+
+.modal {
+    display: block;
+    background: white;
+    border-radius: 12px;
+    width: 700px;
+    max-width: 90%;
+    max-height: 90vh;
+    overflow-y: auto;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+    position: relative;
+    z-index: 10000;
+}
+
+.modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 15px 20px;
+    border-bottom: 1px solid #e0e0e0;
+}
+
+.modal-header h3 {
+    font-size: 18px;
+    color: #333;
+}
+
+.modal-close {
+    background: transparent;
+    border: none;
+    font-size: 24px;
+    cursor: pointer;
+    color: #666;
+    width: 32px;
+    height: 32px;
+    border-radius: 6px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.modal-close:hover {
+    background: #f0f0f0;
+}
+
+.modal-body {
+    padding: 20px;
+}
+
+.form-group {
+    margin-bottom: 15px;
+}
+
+.form-group label {
+    display: block;
+    font-size: 14px;
+    color: #555;
+    margin-bottom: 6px;
+    font-weight: 500;
+}
+
+.form-group input,
+.form-group textarea {
+    width: 100%;
+    padding: 10px 12px;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    font-size: 14px;
+    transition: border-color 0.2s;
+}
+
+.form-group input:focus,
+.form-group textarea:focus {
+    outline: none;
+    border-color: #667eea;
+}
+
+.form-group textarea {
+    resize: vertical;
+    font-family: monospace;
+}
+
+.modal-footer {
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+    padding: 15px 20px;
+    border-top: 1px solid #e0e0e0;
+}
+
+.toast-container {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    z-index: 99999;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.toast {
+    padding: 12px 20px;
+    border-radius: 8px;
+    color: white;
+    font-size: 14px;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2);
+    animation: toast-in 0.3s ease;
+    min-width: 200px;
+}
+
+.toast-success {
+    background: #4CAF50;
+}
+
+.toast-error {
+    background: #f44336;
+}
+
+.toast-info {
+    background: #2196F3;
+}
+
+@keyframes toast-in {
+    from { transform: translateX(100%); opacity: 0; }
+    to { transform: translateX(0); opacity: 1; }
+}
+
+.btn-cancel {
+    background: #f0f0f0;
+    color: #666;
+    border: none;
+    padding: 10px 20px;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 14px;
+}
+
+.btn-cancel:hover {
+    background: #e0e0e0;
+}
+
+.btn-submit {
+    background: #4CAF50;
+    color: white;
+    border: none;
+    padding: 10px 20px;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 14px;
+}
+
+.btn-submit:hover {
+    background: #45a049;
+}
