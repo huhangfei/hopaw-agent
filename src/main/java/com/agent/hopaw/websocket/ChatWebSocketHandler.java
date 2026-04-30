@@ -4,6 +4,7 @@ import com.agent.hopaw.mapper.ChatHistoryMapper;
 import com.agent.hopaw.model.ChatHistory;
 import com.agent.hopaw.service.AgentService;
 import com.alibaba.fastjson2.JSON;
+import dev.langchain4j.data.message.UserMessage;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
@@ -74,7 +75,7 @@ public class ChatWebSocketHandler extends TextWebSocketHandler {
             userChat.setCreateTime(LocalDateTime.now());
             chatHistoryMapper.insert(userChat);
 
-            executor.executeStreaming(userMessage,aiMessageJson->{
+            executor.executeStreaming(new UserMessage("userId",userMessage), aiMessageJson->{
                 try {
                     String sessionId = sessionAgentMap.get(agentId);
                     if(sessionId == null){

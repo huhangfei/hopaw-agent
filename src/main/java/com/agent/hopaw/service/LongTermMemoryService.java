@@ -2,6 +2,7 @@ package com.agent.hopaw.service;
 
 import com.agent.hopaw.mapper.LongTermMemoryMapper;
 import com.agent.hopaw.model.LongTermMemory;
+import dev.langchain4j.agent.tool.P;
 import dev.langchain4j.agent.tool.Tool;
 import org.springframework.stereotype.Service;
 
@@ -24,7 +25,7 @@ public class LongTermMemoryService {
     }
 
     public List<LongTermMemory> getRootMemories(String identity) {
-        return longTermMemoryMapper.findByIdentityAndParentId(identity, 0L);
+        return longTermMemoryMapper.findRootsByIdentity(identity);
     }
 
     public List<LongTermMemory> getChildMemories(String identity, Long parentId) {
@@ -83,6 +84,9 @@ public class LongTermMemoryService {
 
     public String getMemoryTree(String identity, Long parentId) {
         LongTermMemory rootMemory = getMemoryById(parentId);
+        if (rootMemory == null) {
+            return "未找到ID为 " + parentId + " 的记忆";
+        }
         StringBuilder sb = new StringBuilder();
         buildMemoryTreeRecursive(sb, Arrays.asList(rootMemory), 0, true);
         return sb.toString();
@@ -100,7 +104,7 @@ public class LongTermMemoryService {
             for (int i = 0; i < level; i++) {
                 sb.append("  ");
             }
-            sb.append("- ").append(memory.getMemory()).append(" 记忆编号[").append(memory.getId()).append("]\n");
+            sb.append("- ").append(memory.getMemory()).append(" 编号[").append(memory.getId()).append("]\n");
             if (includeChildren) {
 
                 List<LongTermMemory> children = getChildMemories(memory.getIdentity(), memory.getId());
@@ -137,12 +141,28 @@ public class LongTermMemoryService {
         }
         return sb.toString();
     }
-
-    @Tool("保存智能体记忆(identity:传入agentId ，memory:记忆内容，parentId:父记忆ID)")
-    public String saveMemory(String identity, String memory, Long parentId) {
-        String memoryHash = UUID.nameUUIDFromBytes((memory  ).getBytes()).toString();
-        LongTermMemory memoryEntity = longTermMemoryMapper.findByIdentityAndHash(identity, memoryHash);
-        if (memoryEntity == null) {
+    @Tool("删除智能体记忆内容，此方法删除指定id的记忆内容。")
+    public String deleteAgentMemory(@P(description="记忆ID") Long id){
+        deleteMemory(id);
+        return "成功";
+    }
+    @Tool("保存智能体记忆,如果有记忆Id则为更新，如果记忆Id不存在则为新增。")
+    public String saveMemory(@P(description = "智能体标识,传入agentId") String identity,
+                             @P(description = "记忆内容") String memory,
+                             @P(description = "父记忆ID",required = false) Long parentId,
+                             @P(description = "记忆Id",required = false) Long id) {
+        LongTermMemory memoryEntity =null;
+        String memoryHash = UUID.nameUUIDFromBytes((memory).getBytes()).toString();
+        if(id != null){
+            // 根据id查询记忆
+            memoryEntity = longTermMemoryMapper.findById(id);
+            memoryEntity.setIdentity(identity);
+            memoryEntity.setMemory(memory);
+            memoryEntity.setMemoryHash(memoryHash);
+            memoryEntity.setParentId(parentId);
+            memoryEntity.setUpdateTime(LocalDateTime.now());
+            longTermMemoryMapper.update(memoryEntity);
+        }else{
             memoryEntity = new LongTermMemory();
             memoryEntity.setIdentity(identity);
             memoryEntity.setMemory(memory);
@@ -150,11 +170,8 @@ public class LongTermMemoryService {
             memoryEntity.setParentId(parentId);
             memoryEntity.setCreateTime(LocalDateTime.now());
             longTermMemoryMapper.insert(memoryEntity);
-        } else {
-            memoryEntity.setParentId(parentId);
-            memoryEntity.setUpdateTime(LocalDateTime.now());
-            longTermMemoryMapper.update(memoryEntity);
         }
-        return "记忆保存成功：" + memory + "的编号为" + memoryEntity.getId();
+
+        return "保存成功：记忆编号为" + memoryEntity.getId();
     }
 }

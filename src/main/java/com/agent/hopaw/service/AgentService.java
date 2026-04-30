@@ -6,6 +6,7 @@ import com.agent.hopaw.mapper.ChatMemoryMapper;
 import com.agent.hopaw.model.*;
 import com.agent.hopaw.tools.AgentTool;
 import com.alibaba.fastjson2.JSON;
+import dev.langchain4j.data.message.UserMessage;
 import dev.langchain4j.memory.chat.MessageWindowChatMemory;
 import dev.langchain4j.model.chat.ChatModel;
 import dev.langchain4j.model.chat.StreamingChatModel;
@@ -13,7 +14,6 @@ import dev.langchain4j.model.chat.response.ChatResponse;
 import dev.langchain4j.model.chat.response.PartialThinking;
 import dev.langchain4j.service.AiServices;
 import dev.langchain4j.service.TokenStream;
-import dev.langchain4j.service.UserMessage;
 import dev.langchain4j.service.tool.BeforeToolExecution;
 import dev.langchain4j.service.tool.ToolExecution;
 import dev.langchain4j.store.memory.chat.InMemoryChatMemoryStore;
@@ -128,17 +128,17 @@ public class AgentService {
     }
 
     public interface Assistant {
-        String chat(@UserMessage String userMessage);
+        String chat(UserMessage userMessage);
 
-        TokenStream streamingChat(@UserMessage String userMessage);
+        TokenStream streamingChat(UserMessage userMessage);
     }
 
     public String getSystemMessage(Agent agent){
         String systemMessage = "你是一个智能助手，名字叫" + agent.getName() + "," +
-                "你的主要工作是" + agent.getDescription() + "," +
+                "主要工作是" + agent.getDescription() + "," +
                 "你的agentId是" + agent.getId() + "。" +
-                "在遇到需要用户提供的信息不正确的时候，不要一直猜，首先去查询记忆，如果记忆中没有就赶紧询问用户。"+
-                "在你判断需要时，你可以调用一系列工具完成任务。\n";
+                "在遇到需要用户提供信息或最新信息不正确的时候，不要一直猜，先查询记忆，记忆中没有就问用户。"+
+                "在判断有需要调用工具就去调用，遇到危险操作，立刻停止操作，询问用户。\n";
                 String rootMemory = longTermMemoryService.getRootMemory(agent.getId().toString());
         if(StringUtils.hasLength(rootMemory)){
             systemMessage+="这是所有记忆分类：\n" + rootMemory+"\n如果需要详细的记忆内容可以根据记忆编号查询所有子记忆。";
@@ -227,7 +227,7 @@ public class AgentService {
             return latch.getCount()>0;
         }
 
-        public String execute(String message) {
+        public String execute(UserMessage message) {
             if (assistant == null) {
                 return getSimulatedResponse(message);
             }
@@ -238,7 +238,7 @@ public class AgentService {
             }
         }
 
-        public void executeStreaming(String userMessage,Consumer<String> messageConsumer, Consumer<ChatHistory> chatHistoryConsumer) {
+        public void executeStreaming(UserMessage userMessage, Consumer<String> messageConsumer, Consumer<ChatHistory> chatHistoryConsumer) {
             cancelTask.set(false);
             agentMessageHandler.setMessageConsumer(messageConsumer);
             agentMessageHandler.setChatHistoryConsumer(chatHistoryConsumer);
@@ -297,8 +297,8 @@ public class AgentService {
             }
         }
 
-        private String getSimulatedResponse(String message) {
-            return agent.getName() + ": " + message + "\n这是一个模拟响应，因为API密钥未配置或请求失败。";
+        private String getSimulatedResponse(UserMessage message) {
+            return agent.getName() + ": " + message.singleText() + "\n这是一个模拟响应，因为API密钥未配置或请求失败。";
         }
 
         /**

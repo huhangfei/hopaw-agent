@@ -1,5 +1,6 @@
 package com.agent.hopaw.tools;
 
+import dev.langchain4j.agent.tool.P;
 import dev.langchain4j.agent.tool.Tool;
 import org.springframework.stereotype.Service;
 
@@ -23,14 +24,16 @@ public class CommandExecutorTool implements AgentTool {
 
     @Tool("执行本地系统命令并返回输出结果。支持 Windows 和 Unix/Linux/macOS 系统。使用前最好先获取操作系统类型，" +
           "以确保命令在目标系统上执行。" +
-          "请谨慎使用，避免执行危险命令如格式化磁盘、删除系统文件等。timeout 可以指定超时时间，默认30秒")
-    public String executeCommand(String command,Integer timeout) {
+          "请谨慎使用，避免执行危险命令如格式化磁盘、删除系统文件等。")
+    public String executeCommand(@P(description="要执行的命令") String command, @P(description = "超时时间（秒）",required = false) Integer timeout, @P(description = "用户是否已授权",required = false) Boolean userPermission) {
         if (command == null || command.trim().isEmpty()) {
             return "错误: 命令不能为空";
         }
 
-        if (isDangerousCommand(command)) {
-            return "错误: 检测到危险命令，已拒绝执行。出于安全考虑，不允许执行可能破坏系统的命令。";
+        userPermission = userPermission == null ? false : userPermission;
+
+        if (userPermission.equals(false) && isDangerousCommand(command)) {
+            return "错误: 检测到危险命令，已拒绝执行。出于安全考虑，不允许在用户未授权的情况下执行可能破坏系统的命令。请询问用户是否可以执行。";
         }
         if(timeout==null){
             timeout=TIMEOUT_SECONDS;
@@ -109,8 +112,7 @@ public class CommandExecutorTool implements AgentTool {
             "format", "del /f", "del /s", "rd /s", "rmdir /s",
             "rm -rf /", "rm -rf /*", "mkfs", "dd if=",
             "shutdown -s", "shutdown -r", "init 0", "init 6",
-            ":(){:|:&};:", "> /dev/sda", "chmod -R 777 /",
-            "wget", "curl", "powershell -enc", "certutil"
+            ":(){:|:&};:", "> /dev/sda", "chmod -R 777 /"
         };
 
         for (String pattern : dangerousPatterns) {

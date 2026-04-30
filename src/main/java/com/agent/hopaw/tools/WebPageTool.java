@@ -1,5 +1,6 @@
 package com.agent.hopaw.tools;
 
+import dev.langchain4j.agent.tool.P;
 import dev.langchain4j.agent.tool.Tool;
 import org.jsoup.Jsoup;
 import org.jsoup.safety.Safelist;
@@ -28,7 +29,7 @@ public class WebPageTool implements AgentTool {
     }
 
     @Tool("获取网页内容，输入URL地址，返回网页的纯文本内容")
-    public String fetchWebPage(String url) {
+    public String fetchWebPage(@P(description = "URL地址") String url) {
         BrowserContext context = null;
         Page page = null;
         try {

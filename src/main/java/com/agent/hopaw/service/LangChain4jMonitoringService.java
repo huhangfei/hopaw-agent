@@ -1,5 +1,6 @@
 package com.agent.hopaw.service;
 
+import com.alibaba.fastjson2.JSON;
 import dev.langchain4j.data.message.AiMessage;
 import dev.langchain4j.data.message.ChatMessage;
 import dev.langchain4j.data.message.SystemMessage;
@@ -16,6 +17,8 @@ import dev.langchain4j.model.output.TokenUsage;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
+
+import java.util.stream.Collectors;
 
 @Service
 public class LangChain4jMonitoringService implements ChatModelListener {
@@ -36,8 +39,14 @@ public class LangChain4jMonitoringService implements ChatModelListener {
                     logger.info("用户消息 [User][{}]: {}", userMessage.name(),userMessage.singleText());
                 } else if (message instanceof AiMessage) {
                     AiMessage aiMessage = (AiMessage) message;
-                    logger.info("助手消息 [Ai thinking]: {}", aiMessage.thinking());
-                    logger.info("助手消息 [Ai text]: {}", aiMessage.text());
+                    if(aiMessage.thinking()!=null){
+                        logger.info("助手消息 [Ai thinking]: {}", aiMessage.thinking());
+                    } if(aiMessage.text()!=null){
+                        logger.info("助手消息 [Ai text]: {}", aiMessage.text());
+                    }
+                    if(aiMessage.toolExecutionRequests()!=null && !aiMessage.toolExecutionRequests().isEmpty()){
+                        logger.info("助手消息 [Ai toolExecutionRequests]: {}", JSON.toJSONString(aiMessage.toolExecutionRequests().stream().map(x->x.id()+" "+x.name()+" "+x.arguments()).collect(Collectors.toList())));
+                    }
                 } else if (message instanceof SystemMessage) {
                     logger.info("系统消息 [System]: {}", ((SystemMessage) message).text());
                 } else if (message instanceof ToolExecutionResultMessage) {
@@ -60,7 +69,9 @@ public class LangChain4jMonitoringService implements ChatModelListener {
         logger.info("模型: {}", metadata.modelName());
 
         if (response.aiMessage() != null) {
-            logger.info("助手回复: {}", response.aiMessage().text());
+            logger.info("助手回复:thinking {}", response.aiMessage().thinking());
+            logger.info("助手回复:text {}", response.aiMessage().text());
+            logger.info("助手回复:toolExecutionRequests {}", JSON.toJSONString(response.aiMessage().toolExecutionRequests()));
         }
 
         TokenUsage tokenUsage = metadata.tokenUsage();

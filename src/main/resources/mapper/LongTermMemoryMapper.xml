@@ -26,6 +26,12 @@
         WHERE identity = #{identity} AND parent_id = #{parentId}
         ORDER BY id ASC
     </select>
+    <select id="findRootsByIdentity" resultMap="LongTermMemoryResultMap">
+        SELECT id, identity, memory, memory_hash, parent_id, create_time, update_time
+        FROM long_term_memory
+        WHERE identity = #{identity} AND parent_id is NULL
+        ORDER BY id ASC
+    </select>
     <select id="findByIdentityAndHash" resultMap="LongTermMemoryResultMap">
         SELECT id, identity, memory, memory_hash, parent_id, create_time, update_time
         FROM long_term_memory

@@ -32,7 +32,7 @@ public class SshTool implements AgentTool {
             "Upload: {\"action\":\"upload\",\"sessionKey\":\"host:port\",\"localPath\":\"/local/file\",\"remotePath\":\"/remote/file\"} " +
             "Download: {\"action\":\"download\",\"sessionKey\":\"host:port\",\"remotePath\":\"/remote/file\",\"localPath\":\"/local/file\"} " +
             "Disconnect: {\"action\":\"disconnect\",\"sessionKey\":\"host:port\"}")
-    public String execute(String paramsJson) {
+    public String executeRemoteCmd(String paramsJson) {
         try {
             JSONObject params = JSON.parseObject(paramsJson);
             String action = params.getString("action");

@@ -1,9 +1,11 @@
 package com.agent.hopaw.tools;
 
+import dev.langchain4j.agent.tool.P;
 import dev.langchain4j.agent.tool.Tool;
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
 import org.jsoup.nodes.Element;
+import org.jsoup.safety.Safelist;
 import org.jsoup.select.Elements;
 import org.springframework.stereotype.Service;
 
@@ -19,12 +21,12 @@ public class WebSearchTool implements AgentTool {
     private static final int TIMEOUT_MS = 10000;
     private static final int MAX_RESULTS = 10;
 
-    @Tool("搜索互联网网页信息，返回相关的网页标题和摘要内容。搜索源为百度或必应。(query: 搜索关键词, source: 搜索源，可选值有 baidu，bing，maxResults: 最大结果数,默认10，timeout: 超时时间（毫秒，默认10000）)")
-    public String webSearch(String query,String source,Integer maxResults,Integer timeout) {
+    @Tool("搜索互联网网页信息，返回相关的网页标题和摘要内容。搜索源为百度或必应。")
+    public String webSearch(@P(description = "搜索关键词") String query, @P(description = "搜索源（可选值有 baidu，bing）默认baidu",required = false) String source, @P(description = "最大结果数，默认10",required = false) Integer maxResults, @P(description = "超时时间（毫秒），默认10000毫秒",required = false) Integer timeout) {
         if (query == null || query.trim().isEmpty()) {
             return "错误: 搜索关键词不能为空";
         }
-
+        source=source==null?"baidu":source;
         if(maxResults==null){
             maxResults=MAX_RESULTS;
         }
@@ -32,104 +34,46 @@ public class WebSearchTool implements AgentTool {
             timeout=TIMEOUT_MS;
         }
         try {
-            List<SearchResult> results = source.equalsIgnoreCase("bing") ? searchBing(query, timeout) : searchBaidu(query, timeout);
-
-            if (results.isEmpty()) {
-                return "从搜索源" + source + "未找到关于\"" + query + "\"的搜索结果";
-            }
-
-            StringBuilder sb = new StringBuilder();
-            sb.append("搜索结果 (").append(results.size()).append(" 条):\n\n");
-
-            int count = 0;
-            for (SearchResult result : results) {
-                if (count >= maxResults) {
-                    break;
-                }
-                sb.append("[").append(count + 1).append("] ").append(result.title).append("\n");
-                sb.append("链接: ").append(result.url).append("\n");
-                if (result.snippet != null && !result.snippet.isEmpty()) {
-                    sb.append("摘要: ").append(result.snippet).append("\n");
-                }
-                sb.append("\n");
-                count++;
-            }
-
-            return sb.toString().trim();
-
+            String result = source.equalsIgnoreCase("bing") ?
+                    searchBing(query, timeout, maxResults) :
+                    searchBaidu(query, timeout, maxResults);
+            return result==null?"未找到相关内容" : result.trim();
         } catch (Exception e) {
             return "搜索失败: " + e.getMessage();
         }
     }
 
-    private List<SearchResult> searchBing(String query, Integer timeout) {
-        List<SearchResult> results = new ArrayList<>();
+    private String searchBing(String query, Integer timeout, Integer maxResults) {
         try {
             String encodedQuery = URLEncoder.encode(query, StandardCharsets.UTF_8.toString());
-            String url = "https://www.bing.com/search?q=" + encodedQuery + "&count=10";
+            String url = "https://www.bing.com/search?q=" + encodedQuery + "&count="+maxResults;
 
             Document doc = Jsoup.connect(url)
                     .userAgent("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36")
                     .timeout(timeout)
                     .get();
+            String text = Jsoup.clean(doc.html(), Safelist.none());
+            return text;
 
-            Elements searchResults = doc.select("#b_results .b_algo");
-
-            for (Element result : searchResults) {
-                Element titleElement = result.selectFirst("h2 a");
-                Element snippetElement = result.selectFirst(".b_caption p, .b_algoSlug");
-
-                if (titleElement != null) {
-                    SearchResult sr = new SearchResult();
-                    sr.title = titleElement.text();
-                    sr.url = titleElement.absUrl("href");
-                    if (snippetElement != null) {
-                        sr.snippet = Jsoup.parse(snippetElement.text()).text();
-                    }
-                    results.add(sr);
-                }
-            }
         } catch (IOException e) {
         }
-        return results;
+        return null;
     }
 
-    private List<SearchResult> searchBaidu(String query, Integer timeout) {
-        List<SearchResult> results = new ArrayList<>();
+    private String searchBaidu(String query, Integer timeout, Integer maxResults) {
         try {
             String encodedQuery = URLEncoder.encode(query, StandardCharsets.UTF_8.toString());
-            String url = "https://www.baidu.com/s?wd=" + encodedQuery + "&rn=10";
+            String url = "https://www.baidu.com/s?wd=" + encodedQuery + "&rn="+maxResults;
 
             Document doc = Jsoup.connect(url)
                     .userAgent("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36")
                     .timeout(timeout)
                     .get();
-
-            Elements searchResults = doc.select(".result.c-container");
-
-            for (Element result : searchResults) {
-                Element titleElement = result.selectFirst("h3 a, .t a");
-                Element snippetElement = result.selectFirst(".c-abstract, .content-right_8Zs40");
-
-                if (titleElement != null) {
-                    SearchResult sr = new SearchResult();
-                    sr.title = titleElement.text();
-                    sr.url = titleElement.absUrl("href");
-                    if (snippetElement != null) {
-                        sr.snippet = Jsoup.parse(snippetElement.text()).text();
-                    }
-                    results.add(sr);
-                }
-            }
+            String text = Jsoup.clean(doc.html(), Safelist.none());
+            return text;
         } catch (IOException e) {
         }
-        return results;
-    }
-
-    private static class SearchResult {
-        String title;
-        String url;
-        String snippet;
+        return null;
     }
 
     @Override
