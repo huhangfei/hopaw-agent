@@ -9,30 +9,31 @@
         <result property="capabilities" column="capabilities"/>
         <result property="verified" column="verified"/>
         <result property="createTime" column="create_time"/>
+        <result property="extParams" column="ext_params"/>
     </resultMap>
 
     <select id="findAll" resultMap="AiModelResultMap">
-        SELECT id, provider_id, model_name, capabilities, verified, create_time
+        SELECT id, provider_id, model_name, capabilities, verified, create_time, ext_params
         FROM ai_models
         ORDER BY id DESC
     </select>
 
     <select id="findByProviderId" resultMap="AiModelResultMap">
-        SELECT id, provider_id, model_name, capabilities, verified, create_time
+        SELECT id, provider_id, model_name, capabilities, verified, create_time, ext_params
         FROM ai_models
         WHERE provider_id = #{providerId}
         ORDER BY id DESC
     </select>
 
     <select id="findById" resultMap="AiModelResultMap">
-        SELECT id, provider_id, model_name, capabilities, verified, create_time
+        SELECT id, provider_id, model_name, capabilities, verified, create_time, ext_params
         FROM ai_models
         WHERE id = #{id}
     </select>
 
     <insert id="insert" parameterType="com.agent.hopaw.model.AiModel">
-        INSERT INTO ai_models (provider_id, model_name, capabilities, verified)
-        VALUES (#{providerId}, #{modelName}, #{capabilities}, #{verified})
+        INSERT INTO ai_models (provider_id, model_name, capabilities, verified, ext_params)
+        VALUES (#{providerId}, #{modelName}, #{capabilities}, #{verified}, #{extParams})
         <selectKey resultType="long" keyProperty="id" order="AFTER">
             SELECT last_insert_rowid()
         </selectKey>
@@ -43,7 +44,8 @@
         SET provider_id = #{providerId},
             model_name = #{modelName},
             capabilities = #{capabilities},
-            verified = #{verified}
+            verified = #{verified},
+            ext_params = #{extParams}
         WHERE id = #{id}
     </update>
 

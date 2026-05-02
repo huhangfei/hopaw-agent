@@ -10,6 +10,7 @@ public class AiModelProvider {
     private String url;
     private String apiKey;
     private String icon;
+    private String sdkName;
     private String extParams;
     private String createTime;
 
@@ -79,6 +80,14 @@ public class AiModelProvider {
         this.icon = icon;
     }
 
+    public String getSdkName() {
+        return sdkName;
+    }
+
+    public void setSdkName(String sdkName) {
+        this.sdkName = sdkName;
+    }
+
     public String getExtParams() {
         return extParams;
     }
@@ -95,9 +104,9 @@ public class AiModelProvider {
         this.createTime = createTime;
     }
 
-    public AiModelProviderExtParams getExtParamsObj() {
+    public AiModelExtParams getAiModelExtParamsObj() {
         try {
-            return JSON.parseObject(extParams, AiModelProviderExtParams.class);
+            return JSON.parseObject(extParams, AiModelExtParams.class);
         } catch (Exception e) {
             return null;
         }

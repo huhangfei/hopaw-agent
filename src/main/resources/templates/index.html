@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <title>🤖 HoPaw - 你的智能小帮手</title>
     <link rel="stylesheet" th:href="@{/css/style.css}">
+    <link rel="stylesheet" th:href="@{/css/confirm-dialog.css}">
 </head>
 <body>
     <header>
@@ -52,7 +53,7 @@
                     <span class="chat-header-desc" th:text="${selectedAgent.description}"></span>
                 </div>
                 <div class="header-actions">
-                    <button class="btn-edit" th:attr="onclick=|showEditModal(${selectedAgent.id}, '${#strings.escapeJava(selectedAgent.name)}', '${#strings.escapeJava(selectedAgent.description)}', '${#strings.escapeJava(selectedAgent.tools)}', ${selectedAgent.maxMemoryRecords != null ? selectedAgent.maxMemoryRecords : 20}, ${selectedAgent.maxToolInvocations != null ? selectedAgent.maxToolInvocations : 10}, ${selectedAgent.aiModelId})|" title="编辑">
+                    <button class="btn-edit" th:attr="onclick=|showEditModal(${selectedAgent.id}, '${#strings.escapeJava(selectedAgent.name)}', '${#strings.escapeJava(selectedAgent.description)}', '${#strings.escapeJava(selectedAgent.tools)}', ${selectedAgent.maxMemoryRecords != null ? selectedAgent.maxMemoryRecords : 20}, ${selectedAgent.maxToolInvocations != null ? selectedAgent.maxToolInvocations : 10}, ${selectedAgent.aiModelId}, ${selectedAgent.enableThinking != null ? selectedAgent.enableThinking : true})|" title="编辑">
                         <svg viewBox="0 0 24 24" fill="currentColor"><path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/></svg>
                     </button>
                     <button class="btn-delete" th:attr="onclick=|deleteAgent(${selectedAgent.id})|" title="删除">
@@ -138,11 +139,11 @@
             <form th:action="@{/agent/create}" method="post" class="modal-form" id="addAgentForm">
                 <div class="form-left">
                     <div class="form-group">
-                        <label>名称</label>
+                        <label>名称 *</label>
                         <input type="text" name="name" placeholder="输入 Agent 名称" required>
                     </div>
                     <div class="form-group">
-                        <label>描述</label>
+                        <label>描述 *</label>
                         <textarea name="description" placeholder="输入 Agent 描述" required></textarea>
                     </div>
                     <div class="form-group">
@@ -164,6 +165,15 @@
                         <div class="form-group">
                             <label>最大工具调用</label>
                             <input type="number" name="maxToolInvocations" value="10" min="1" max="50" placeholder="10">
+                        </div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>
+                                <input type="hidden" name="enableThinking" id="addEnableThinking" value="true">
+                                <input type="checkbox" checked onchange="document.getElementById('addEnableThinking').value=this.checked?'true':'false'">
+                                启用思考（Thinking）
+                            </label>
                         </div>
                     </div>
                 </div>
@@ -225,6 +235,15 @@
                             <input type="number" name="maxToolInvocations" id="editMaxToolInvocations" value="10" min="1" max="50" placeholder="10">
                         </div>
                     </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>
+                                <input type="hidden" name="enableThinking" id="editEnableThinking" value="true">
+                                <input type="checkbox" id="editEnableThinkingCheckbox" onchange="document.getElementById('editEnableThinking').value=this.checked?'true':'false'">
+                                启用思考（Thinking）
+                            </label>
+                        </div>
+                    </div>
                 </div>
                 <div class="form-right">
                     <div class="form-group">
@@ -262,6 +281,7 @@
         </div>
     </div>
 
+    <script th:src="@{/js/confirm-dialog.js}"></script>
     <script th:src="@{/js/main.js}"></script>
     <script th:src="@{/js/marked.min.js}"></script>
     <script th:inline="javascript">

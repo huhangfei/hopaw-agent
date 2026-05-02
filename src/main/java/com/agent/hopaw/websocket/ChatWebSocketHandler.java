@@ -68,7 +68,7 @@ public class ChatWebSocketHandler extends TextWebSocketHandler {
             AgentService.AgentExecutor executor = agentService.getAgentExecutor(agentId);
 
             if (executor == null) {
-                sendError(session, "Agent 不存在");
+                sendError(session, "Agent 初始化执行失败，请检查相关配置。");
                 return;
             }
             ChatHistory userChat = new ChatHistory(agentId, "user", "text", userMessage);

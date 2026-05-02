@@ -5,6 +5,7 @@
     <title>模型管理 - HoPaw</title>
     <link rel="stylesheet" th:href="@{/css/style.css}">
     <link rel="stylesheet" th:href="@{/css/models.css}">
+    <link rel="stylesheet" th:href="@{/css/confirm-dialog.css}">
 </head>
 <body>
     <header>
@@ -60,7 +61,7 @@
                             <button class="btn-icon btn-edit-provider" th:attr="onclick=|event.stopPropagation();showEditProviderModal(${provider.id})|" title="编辑">
                                 <svg viewBox="0 0 24 24" fill="currentColor"><path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/></svg>
                             </button>
-                            <button class="btn-icon btn-delete-provider" th:attr="onclick=|event.stopPropagation();deleteProvider(${provider.id})|" title="删除">
+                            <button class="btn-icon btn-delete-provider" th:if="${provider.type != 'builtin'}" th:attr="onclick=|event.stopPropagation();deleteProvider(${provider.id})|" title="删除">
                                 <svg viewBox="0 0 24 24" fill="currentColor"><path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/></svg>
                             </button>
                         </div>
@@ -123,9 +124,17 @@
                         <label for="providerCode">提供商编号 *</label>
                         <input type="text" id="providerCode" required placeholder="例如：openai">
                     </div>
+                    <div class="form-group" id="providerSdkNameGroup">
+                        <label for="providerSdkName">API兼容类型 *</label>
+                        <select id="providerSdkName" required>
+                            <option value="">请选择</option>
+                            <option value="openai">OpenAI</option>
+                            <option value="anthropic">Anthropic</option>
+                        </select>
+                    </div>
                     <div class="form-group">
                         <label for="providerUrl">API 地址</label>
-                        <input type="url" id="providerUrl" placeholder="例如：https://api.openai.com/v1">
+                        <input type="url" id="providerUrl"  placeholder="例如：https://api.openai.com/v1">
                     </div>
                     <div class="form-group">
                         <label for="providerApiKey">API 密钥</label>
@@ -135,9 +144,10 @@
                         <label for="providerIcon">图标路径</label>
                         <input type="text" id="providerIcon" placeholder="例如：/icons/openai.svg">
                     </div>
+
                     <div class="form-group">
                         <label for="providerExtParams">扩展参数 (JSON)</label>
-                        <textarea id="providerExtParams" rows="4" placeholder='{"thinkingContentKey":"reasoning_content","returnReasoning":true}'></textarea>
+                        <textarea id="providerExtParams" rows="4" placeholder='{"thinkingContentKey":"reasoning_content","returnReasoning":true,"reasoningEffort":"high","temperature":0.5}'></textarea>
                     </div>
                 </form>
             </div>
@@ -163,29 +173,20 @@
                         <input type="text" id="modelName" required placeholder="例如：gpt-4o">
                     </div>
                     <div class="form-group">
-                        <label>模型能力 *</label>
-                        <div class="checkbox-group">
-                            <label class="checkbox-label">
-                                <input type="checkbox" name="capabilities" value="text"> 文本
-                            </label>
-                            <label class="checkbox-label">
-                                <input type="checkbox" name="capabilities" value="image"> 图片
-                            </label>
-                            <label class="checkbox-label">
-                                <input type="checkbox" name="capabilities" value="audio"> 音频
-                            </label>
-                            <label class="checkbox-label">
-                                <input type="checkbox" name="capabilities" value="video"> 视频
-                            </label>
-                            <label class="checkbox-label">
-                                <input type="checkbox" name="capabilities" value="document"> 文档
-                            </label>
+                        <label>模型能力</label>
+                        <div id="modelCapabilitiesDisplay" class="capabilities-display">
+                            <span class="capability-hint">保存后将自动检测</span>
                         </div>
                     </div>
                     <div class="form-group">
-                        <label>
-                            <input type="checkbox" id="modelVerified"> 已验证
-                        </label>
+                        <label>验证状态</label>
+                        <div id="modelVerifiedDisplay" class="verified-display">
+                            <span class="capability-hint">保存后将自动验证</span>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label for="modelExtParams">扩展参数 (JSON)</label>
+                        <textarea id="modelExtParams" rows="4" placeholder='{"temperature":0.7,"topP":0.9}'></textarea>
                     </div>
                 </form>
             </div>
@@ -198,6 +199,8 @@
 
     <div class="toast-container" id="toastContainer"></div>
 
+    <script th:src="@{/js/toast.js}"></script>
+    <script th:src="@{/js/confirm-dialog.js}"></script>
     <script th:src="@{/js/models.js}"></script>
 </body>
 </html>

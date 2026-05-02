@@ -433,27 +433,30 @@ function selectAgent(agentId) {
 }
 
 function clearHistory(agentId) {
-    if (confirm('确定要清空对话历史吗？')) {
-        window.location.href = '/chat/clear?agentId=' + agentId;
-    }
+    showConfirm('确定要清空对话历史吗？').then(function(confirmed) {
+        if (confirmed) {
+            window.location.href = '/chat/clear?agentId=' + agentId;
+        }
+    });
 }
 
 function deleteAgent(agentId) {
-    if (!confirm('确定要删除这个 Agent 吗？')) {
-        return;
-    }
-    var form = document.createElement('form');
-    form.method = 'POST';
-    form.action = '/agent/delete';
-    
-    var input = document.createElement('input');
-    input.type = 'hidden';
-    input.name = 'id';
-    input.value = agentId;
-    form.appendChild(input);
-    
-    document.body.appendChild(form);
-    form.submit();
+    showConfirm('确定要删除这个 Agent 吗？').then(function(confirmed) {
+        if (confirmed) {
+         var form = document.createElement('form');
+            form.method = 'POST';
+            form.action = '/agent/delete';
+
+            var input = document.createElement('input');
+            input.type = 'hidden';
+            input.name = 'id';
+            input.value = agentId;
+            form.appendChild(input);
+
+            document.body.appendChild(form);
+            form.submit();
+      }
+    });
 }
 
 function loadProviders(providerSelect, modelSelect, selectedAiModelId) {
@@ -462,6 +465,7 @@ function loadProviders(providerSelect, modelSelect, selectedAiModelId) {
         .then(function(providers) {
             providerSelect.innerHTML = '<option value="">选择提供商</option>';
             providers.forEach(function(p) {
+                if (!p.apiKey || !p.url) return;
                 var opt = document.createElement('option');
                 opt.value = p.id;
                 opt.textContent = p.name;
@@ -513,12 +517,15 @@ function hideAddModal() {
     document.getElementById('addAgentModal').classList.remove('active');
 }
 
-function showEditModal(id, name, description, tools, maxMemoryRecords, maxToolInvocations, aiModelId) {
+function showEditModal(id, name, description, tools, maxMemoryRecords, maxToolInvocations, aiModelId, enableThinking) {
     document.getElementById('editAgentId').value = id;
     document.getElementById('editAgentName').value = name;
     document.getElementById('editAgentDescription').value = description;
     document.getElementById('editMaxMemoryRecords').value = maxMemoryRecords || 20;
     document.getElementById('editMaxToolInvocations').value = maxToolInvocations || 10;
+    var editEnableCb = document.getElementById('editEnableThinkingCheckbox');
+    editEnableCb.checked = enableThinking !== false;
+    document.getElementById('editEnableThinking').value = editEnableCb.checked ? 'true' : 'false';
 
     var checkboxes = document.querySelectorAll('.edit-tool-checkbox');
     checkboxes.forEach(function(checkbox) {

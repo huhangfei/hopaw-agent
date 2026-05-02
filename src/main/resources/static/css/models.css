@@ -253,6 +253,13 @@
     border-bottom: 1px solid #f0f0f0;
 }
 
+.models-table td:last-child {
+    display: flex;
+    gap: 4px;
+    align-items: center;
+    min-height: 44px;
+}
+
 .models-table tbody tr:hover {
     background: #f8f9fa;
 }
@@ -417,7 +424,8 @@
 }
 
 .form-group input,
-.form-group textarea {
+.form-group textarea,
+.form-group select {
     width: 100%;
     padding: 10px 12px;
     border: 1px solid #ddd;
@@ -426,8 +434,30 @@
     transition: border-color 0.2s;
 }
 
+.form-group select {
+    appearance: none;
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    background: #fff url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='%23666'%3E%3Cpath d='M7 10l5 5 5-5z'/%3E%3C/svg%3E") no-repeat right 12px center;
+    padding-right: 36px;
+    cursor: pointer;
+    color: #333;
+}
+
+.form-group select:hover {
+    border-color: #bbb;
+}
+
+.form-group select:disabled {
+    background-color: #f5f5f5;
+    color: #999;
+    cursor: not-allowed;
+    opacity: 0.7;
+}
+
 .form-group input:focus,
-.form-group textarea:focus {
+.form-group textarea:focus,
+.form-group select:focus {
     outline: none;
     border-color: #667eea;
 }
@@ -477,6 +507,10 @@
     background: #2196F3;
 }
 
+.toast-warning {
+    background: #ff9800;
+}
+
 @keyframes toast-in {
     from { transform: translateX(100%); opacity: 0; }
     to { transform: translateX(0); opacity: 1; }
@@ -508,4 +542,29 @@
 
 .btn-submit:hover {
     background: #45a049;
+}
+
+.btn-test-model {
+    color: #ff9800;
+}
+
+.btn-test-model:hover {
+    background: #fff3e0;
+}
+
+.capabilities-display,
+.verified-display {
+    padding: 8px 12px;
+    background: #f8f9fa;
+    border-radius: 8px;
+    min-height: 36px;
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 4px;
+}
+
+.capability-hint {
+    color: #999;
+    font-size: 13px;
 }

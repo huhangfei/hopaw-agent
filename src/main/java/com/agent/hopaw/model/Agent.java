@@ -9,6 +9,8 @@ public class Agent {
     private Integer maxToolInvocations;
     private Long aiModelId;
     private Boolean enableThinking;
+    private String extParams;
+
 
     public Agent() {}
 
@@ -105,5 +107,13 @@ public class Agent {
 
     public void setEnableThinking(Boolean enableThinking) {
         this.enableThinking = enableThinking;
+    }
+
+    public String getExtParams() {
+        return extParams;
+    }
+
+    public void setExtParams(String extParams) {
+        this.extParams = extParams;
     }
 }

@@ -1,19 +1,7 @@
-function showToast(message, type) {
-    const container = document.getElementById('toastContainer');
-    const toast = document.createElement('div');
-    toast.className = 'toast toast-' + (type || 'info');
-    toast.textContent = message;
-    container.appendChild(toast);
-    setTimeout(function() {
-        toast.style.opacity = '0';
-        toast.style.transition = 'opacity 0.3s';
-        setTimeout(function() { toast.remove(); }, 300);
-    }, 2500);
-}
-
 let currentProviderId = null;
 let currentModelId = null;
 let currentProviderData = null;
+let currentProviderType = null;
 
 document.addEventListener('DOMContentLoaded', function() {
     loadModelCounts();
@@ -84,6 +72,9 @@ function loadModels() {
                         '<td>' + verified + '</td>' +
                         '<td>' + (model.createTime || '') + '</td>' +
                         '<td>' +
+                            '<button class="btn-icon btn-test-model" onclick="testModel(' + model.id + ')" title="检测能力">' +
+                                '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M19.07 4.93a10 10 0 0 0-14.14 0l1.41 1.41a8 8 0 0 1 11.32 0l1.41-1.41z"/><path d="M17.66 7.34a6 6 0 0 0-8.48 0l1.41 1.41a4 4 0 0 1 5.66 0l1.41-1.41z"/><path d="M12 10a2 2 0 1 0 0 4 2 2 0 0 0 0-4z"/></svg>' +
+                            '</button>' +
                             '<button class="btn-icon btn-edit-model" onclick="showEditModelModal(' + model.id + ')" title="编辑">' +
                                 '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/></svg>' +
                             '</button>' +
@@ -102,16 +93,21 @@ function loadModels() {
 
 function showAddProviderModal() {
     currentProviderId = null;
+    currentProviderType = 'custom';
     document.getElementById('providerModalTitle').textContent = '添加提供商';
     document.getElementById('providerForm').reset();
     document.getElementById('providerId').value = '';
+    document.getElementById('providerSdkNameGroup').style.display = 'block';
+    document.getElementById('providerSdkName').required = true;
+    document.getElementById('providerSdkName').disabled = false;
+    document.getElementById('providerSdkName').value = '';
     document.getElementById('providerModal').style.display = 'flex';
 }
 
 function showEditProviderModal(id) {
     currentProviderId = id;
     document.getElementById('providerModalTitle').textContent = '编辑提供商';
-    
+
     fetch('/api/providers/' + id)
         .then(response => response.json())
         .then(provider => {
@@ -122,6 +118,18 @@ function showEditProviderModal(id) {
             document.getElementById('providerApiKey').value = provider.apiKey || '';
             document.getElementById('providerIcon').value = provider.icon || '';
             document.getElementById('providerExtParams').value = provider.extParams || '';
+
+            // 内置提供商隐藏 sdkName 选项（值不可变）
+            currentProviderType = provider.type;
+            if (provider.type === 'builtin') {
+                document.getElementById('providerSdkNameGroup').style.display = 'none';
+                document.getElementById('providerSdkName').required = false;
+            } else {
+                document.getElementById('providerSdkNameGroup').style.display = 'block';
+                document.getElementById('providerSdkName').required = true;
+                document.getElementById('providerSdkName').value = provider.sdkName || '';
+            }
+
             document.getElementById('providerModal').style.display = 'flex';
         })
         .catch(error => {
@@ -137,20 +145,29 @@ function closeProviderModal() {
 function submitProvider() {
     const name = document.getElementById('providerName').value.trim();
     const provider = document.getElementById('providerCode').value.trim();
-    
+    const providerUrl = document.getElementById('providerUrl').value.trim();
+    const isBuiltin = currentProviderType === 'builtin';
+
     if (!name || !provider) {
         showToast('请填写必填字段', 'error');
         return;
     }
-    
+    if (!isBuiltin && !document.getElementById('providerSdkName').value) {
+        showToast('请选择 API 兼容类型', 'error');
+        return;
+    }
+
     const data = {
         name: name,
         provider: provider,
-        url: document.getElementById('providerUrl').value.trim(),
+        url: providerUrl,
         apiKey: document.getElementById('providerApiKey').value.trim(),
         icon: document.getElementById('providerIcon').value.trim(),
         extParams: document.getElementById('providerExtParams').value.trim()
     };
+    if (!isBuiltin) {
+        data.sdkName = document.getElementById('providerSdkName').value;
+    }
     
     let url, method;
     if (currentProviderId) {
@@ -173,9 +190,13 @@ function submitProvider() {
         if (response.ok) {
             showToast(currentProviderId ? '更新成功' : '添加成功', 'success');
             closeProviderModal();
-            location.reload();
+            setTimeout(function() { location.reload(); }, 800);
         } else {
-            showToast('操作失败', 'error');
+            response.json().then(function(err) {
+                showToast(err.message || '操作失败', 'error');
+            }).catch(function() {
+                showToast('操作失败', 'error');
+            });
         }
     })
     .catch(error => {
@@ -185,24 +206,24 @@ function submitProvider() {
 }
 
 function deleteProvider(id) {
-    if (!confirm('确定要删除此提供商及其所有模型吗？')) {
-        return;
-    }
+    showConfirm('确定要删除此提供商及其所有模型吗？').then(function(confirmed) {
+        if (!confirmed) return;
 
-    fetch('/api/providers/' + id, {
-        method: 'DELETE'
-    })
-    .then(response => {
-        if (response.ok) {
-            showToast('删除成功', 'success');
-            location.reload();
-        } else {
+        fetch('/api/providers/' + id, {
+            method: 'DELETE'
+        })
+        .then(response => {
+            if (response.ok) {
+                showToast('删除成功', 'success');
+                location.reload();
+            } else {
+                showToast('删除失败', 'error');
+            }
+        })
+        .catch(error => {
+            console.error('删除失败:', error);
             showToast('删除失败', 'error');
-        }
-    })
-    .catch(error => {
-        console.error('删除失败:', error);
-        showToast('删除失败', 'error');
+        });
     });
 }
 
@@ -211,40 +232,46 @@ function showAddModelModal() {
         showToast('请先选择一个提供商', 'error');
         return;
     }
-    
+
     currentModelId = null;
     document.getElementById('modelModalTitle').textContent = '添加模型';
     document.getElementById('modelForm').reset();
     document.getElementById('modelId').value = '';
     document.getElementById('modelProviderId').value = currentProviderId;
+    document.getElementById('modelCapabilitiesDisplay').innerHTML = '<span class="capability-hint">保存后将自动检测</span>';
+    document.getElementById('modelVerifiedDisplay').innerHTML = '<span class="capability-hint">保存后将自动验证</span>';
+    document.getElementById('modelExtParams').value = '';
     document.getElementById('modelModal').style.display = 'flex';
 }
 
 function showEditModelModal(id) {
     currentModelId = id;
     document.getElementById('modelModalTitle').textContent = '编辑模型';
-    
+
     fetch('/api/models/' + id)
         .then(response => response.json())
         .then(model => {
             document.getElementById('modelId').value = model.id;
             document.getElementById('modelProviderId').value = model.providerId;
             document.getElementById('modelName').value = model.modelName;
-            document.getElementById('modelVerified').checked = model.verified;
-            
-            document.querySelectorAll('input[name="capabilities"]').forEach(cb => {
-                cb.checked = false;
-            });
-            
+
+            // 显示模型能力（只读）
+            const capNames = {text: '文本', image: '图片', audio: '音频', video: '视频', document: '文档'};
             if (model.capabilities) {
                 const caps = model.capabilities.split(',');
-                document.querySelectorAll('input[name="capabilities"]').forEach(cb => {
-                    if (caps.includes(cb.value)) {
-                        cb.checked = true;
-                    }
-                });
+                const html = caps.map(c => '<span class="capability-tag">' + (capNames[c] || c) + '</span>').join('');
+                document.getElementById('modelCapabilitiesDisplay').innerHTML = html;
+            } else {
+                document.getElementById('modelCapabilitiesDisplay').innerHTML = '<span class="capability-hint">无</span>';
             }
-            
+
+            // 显示验证状态（只读）
+            const verifiedHtml = model.verified
+                ? '<span class="verified-yes">已验证</span>'
+                : '<span class="verified-no">未验证</span>';
+            document.getElementById('modelVerifiedDisplay').innerHTML = verifiedHtml;
+
+            document.getElementById('modelExtParams').value = model.extParams || '';
             document.getElementById('modelModal').style.display = 'flex';
         })
         .catch(error => {
@@ -259,18 +286,16 @@ function closeModelModal() {
 
 function submitModel() {
     const modelName = document.getElementById('modelName').value.trim();
-    const capabilities = Array.from(document.querySelectorAll('input[name="capabilities"]:checked')).map(cb => cb.value).join(',');
 
-    if (!modelName || !capabilities) {
-        showToast('请填写必填字段', 'error');
+    if (!modelName) {
+        showToast('请输入模型名称', 'error');
         return;
     }
     
     const data = {
         providerId: parseInt(document.getElementById('modelProviderId').value),
         modelName: modelName,
-        capabilities: capabilities,
-        verified: document.getElementById('modelVerified').checked
+        extParams: document.getElementById('modelExtParams').value.trim() || null
     };
     
     let url, method;
@@ -297,7 +322,11 @@ function submitModel() {
             loadModels();
             loadModelCounts();
         } else {
-            showToast('操作失败', 'error');
+            response.json().then(function(err) {
+                showToast(err.message || '操作失败', 'error');
+            }).catch(function() {
+                showToast('操作失败', 'error');
+            });
         }
     })
     .catch(error => {
@@ -306,26 +335,43 @@ function submitModel() {
     });
 }
 
-function deleteModel(id) {
-    if (!confirm('确定要删除此模型吗？')) {
-        return;
-    }
+function testModel(id) {
+    showToast('正在检测模型能力...', 'info');
 
-    fetch('/api/models/' + id, {
-        method: 'DELETE'
+    fetch('/api/models/' + id + '/test', {
+        method: 'POST'
     })
-    .then(response => {
-        if (response.ok) {
-            showToast('删除成功', 'success');
-            loadModels();
-            loadModelCounts();
-        } else {
-            showToast('删除失败', 'error');
-        }
+    .then(response => response.json())
+    .then(result => {
+        showToast(result.message || '检测完成', result.verified ? 'success' : 'warning');
+        loadModels();
     })
     .catch(error => {
-        console.error('删除失败:', error);
-        showToast('删除失败', 'error');
+        console.error('检测失败:', error);
+        showToast('检测请求失败', 'error');
+    });
+}
+
+function deleteModel(id) {
+    showConfirm('确定要删除此模型吗？').then(function(confirmed) {
+        if (!confirmed) return;
+
+        fetch('/api/models/' + id, {
+            method: 'DELETE'
+        })
+        .then(response => {
+            if (response.ok) {
+                showToast('删除成功', 'success');
+                loadModels();
+                loadModelCounts();
+            } else {
+                showToast('删除失败', 'error');
+            }
+        })
+        .catch(error => {
+            console.error('删除失败:', error);
+            showToast('删除失败', 'error');
+        });
     });
 }
 

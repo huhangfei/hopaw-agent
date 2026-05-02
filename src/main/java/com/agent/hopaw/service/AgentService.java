@@ -1,6 +1,5 @@
 package com.agent.hopaw.service;
 
-import com.agent.hopaw.config.ChatModelFactoryConfig;
 import com.agent.hopaw.mapper.AgentMapper;
 import com.agent.hopaw.mapper.ChatMemoryMapper;
 import com.agent.hopaw.model.*;
@@ -37,17 +36,13 @@ public class AgentService {
     private final AgentMapper agentMapper;
     private final ChatMemoryMapper chatMemoryMapper;
     private final List<AgentTool> allTools;
-    private final ChatModelFactory chatModelFactory;
     private final LongTermMemoryService longTermMemoryService;
-    private final AiModelProviderService aiModelProviderService;
     private final AiModelService aiModelService;
     public AgentService(AgentMapper agentMapper, ChatMemoryMapper chatMemoryMapper,
-                        List<AgentTool> allTools, ChatModelFactoryConfig chatModelFactoryConfig, LongTermMemoryService longTermMemoryService, AiModelProviderService aiModelProviderService, AiModelService aiModelService) {
+                        List<AgentTool> allTools, LongTermMemoryService longTermMemoryService, AiModelService aiModelService) {
         this.agentMapper = agentMapper;
         this.chatMemoryMapper = chatMemoryMapper;
         this.allTools = allTools;
-        this.chatModelFactory = chatModelFactoryConfig.getFactory();
-        this.aiModelProviderService = aiModelProviderService;
         this.longTermMemoryService = longTermMemoryService;
         this.aiModelService = aiModelService;
     }
@@ -60,9 +55,10 @@ public class AgentService {
         return agentMapper.findById(id);
     }
 
-    public Agent createAgent(String name, String description, String tools, Integer maxMemoryRecords, Integer maxToolInvocations, Long aiModelId) {
+    public Agent createAgent(String name, String description, String tools, Integer maxMemoryRecords, Integer maxToolInvocations, Long aiModelId, Boolean enableThinking) {
         Agent agent = new Agent(name, description, tools, maxMemoryRecords, maxToolInvocations);
         agent.setAiModelId(aiModelId);
+        agent.setEnableThinking(enableThinking);
         agentMapper.insert(agent);
         return agent;
     }
@@ -70,10 +66,10 @@ public class AgentService {
     public void deleteAgent(Long id) {
         agentMapper.deleteById(id);
         chatMemoryMapper.deleteByAgentId(id);
-        agentExecutors.remove(id.toString());
+        stopAndRemoveAgentExecutor(id);
     }
 
-    public void updateAgent(Long id, String name, String description, String tools, Integer maxMemoryRecords, Integer maxToolInvocations, Long aiModelId) {
+    public void updateAgent(Long id, String name, String description, String tools, Integer maxMemoryRecords, Integer maxToolInvocations, Long aiModelId, Boolean enableThinking) {
         Agent agent = agentMapper.findById(id);
         if (agent != null) {
             agent.setName(name);
@@ -82,8 +78,11 @@ public class AgentService {
             agent.setMaxMemoryRecords(maxMemoryRecords);
             agent.setMaxToolInvocations(maxToolInvocations);
             agent.setAiModelId(aiModelId);
+            if (enableThinking != null) {
+                agent.setEnableThinking(enableThinking);
+            }
             agentMapper.update(agent);
-            agentExecutors.remove(id.toString());
+            stopAndRemoveAgentExecutor(id);
         }
     }
 
@@ -102,16 +101,33 @@ public class AgentService {
         return createAgentExecutor(agentMapper.findById(agentId));
     }
 
+    public void stopAgentExecutor(Long agentId) {
+        AgentExecutor agentExecutor = agentExecutors.get(agentId.toString());
+        if (agentExecutor != null) {
+            agentExecutor.stop();
+        }
+    }
+
+    public void stopAndRemoveAgentExecutor(Long agentId) {
+        stopAgentExecutor(agentId);
+        agentExecutors.remove(agentId.toString());
+    }
+
+    public boolean isAgentExecutorRunning(Long agentId) {
+        AgentExecutor agentExecutor = agentExecutors.get(agentId.toString());
+        return agentExecutor != null && agentExecutor.running();
+    }
+
     private AgentExecutor createAgentExecutor(Agent agent) {
         try {
             ChatModel chatModel = null;
             StreamingChatModel streamingModel = null;
             try {
-                AiModel aiModel = aiModelService.findById(agent.getAiModelId());
-                AiModelProvider aiModelProvider = aiModelProviderService.findById(aiModel.getProviderId());
-                chatModel = chatModelFactory.createChatModel(aiModelProvider, aiModel, agent.getEnableThinking());
-                streamingModel = chatModelFactory.createStreamingChatModel(aiModelProvider, aiModel, agent.getEnableThinking());
+                chatModel = aiModelService.createChatModel(agent.getAiModelId(), agent.getEnableThinking());
+                streamingModel = aiModelService.createStreamingChatModel(agent.getAiModelId(), agent.getEnableThinking());
             } catch (Exception e) {
+                logger.error("Error creating chat model: ", e);
+                return null;
             }
 
             List<String> selectedToolNames = parseToolNames(agent.getTools());

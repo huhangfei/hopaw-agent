@@ -53,8 +53,7 @@ public class AgentController {
             List<ChatHistory> chatHistory = chatHistoryMapper.findByAgentId(agentId, 100);
             Collections.reverse(chatHistory);
             model.addAttribute("chatHistory", chatHistory);
-            AgentService.AgentExecutor agentExecutor = agentService.getAgentExecutor(agentId);
-            model.addAttribute("agentExecutorState", agentExecutor == null ? false : agentExecutor.running());
+            model.addAttribute("agentExecutorState", agentService.isAgentExecutorRunning(agentId));
         }
 
         return "index";
@@ -66,9 +65,10 @@ public class AgentController {
                              @RequestParam(required = false) String tools,
                              @RequestParam(required = false, defaultValue = "20") Integer maxMemoryRecords,
                              @RequestParam(required = false, defaultValue = "10") Integer maxToolInvocations,
-                             @RequestParam Long aiModelId) {
+                             @RequestParam Long aiModelId,
+                             @RequestParam(required = false, defaultValue = "true") Boolean enableThinking) {
         String toolsStr = tools != null ? tools : "";
-        agentService.createAgent(name, description, toolsStr, maxMemoryRecords, maxToolInvocations, aiModelId);
+        agentService.createAgent(name, description, toolsStr, maxMemoryRecords, maxToolInvocations, aiModelId, enableThinking);
         return "redirect:/";
     }
 
@@ -96,9 +96,10 @@ public class AgentController {
                              @RequestParam(required = false) String tools,
                              @RequestParam(required = false, defaultValue = "20") Integer maxMemoryRecords,
                              @RequestParam(required = false, defaultValue = "10") Integer maxToolInvocations,
-                             @RequestParam Long aiModelId) {
+                             @RequestParam Long aiModelId,
+                             @RequestParam(required = false) Boolean enableThinking) {
         String toolsStr = tools != null ? tools : "";
-        agentService.updateAgent(id, name, description, toolsStr, maxMemoryRecords, maxToolInvocations, aiModelId);
+        agentService.updateAgent(id, name, description, toolsStr, maxMemoryRecords, maxToolInvocations, aiModelId, enableThinking);
         return "redirect:/?agentId=" + id;
     }
 

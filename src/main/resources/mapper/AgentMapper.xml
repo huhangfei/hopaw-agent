@@ -11,23 +11,24 @@
         <result property="maxToolInvocations" column="max_tool_invocations"/>
         <result property="aiModelId" column="ai_model_id"/>
         <result property="enableThinking" column="enable_thinking"/>
+        <result property="extParams" column="ext_params"/>
     </resultMap>
 
     <select id="findAll" resultMap="AgentResultMap">
-        SELECT id, name, description, tools, max_memory_records, max_tool_invocations, ai_model_id, enable_thinking
+        SELECT id, name, description, tools, max_memory_records, max_tool_invocations, ai_model_id, enable_thinking, ext_params
         FROM agents
         ORDER BY id DESC
     </select>
 
     <select id="findById" resultMap="AgentResultMap">
-        SELECT id, name, description, tools, max_memory_records, max_tool_invocations, ai_model_id, enable_thinking
+        SELECT id, name, description, tools, max_memory_records, max_tool_invocations, ai_model_id, enable_thinking, ext_params
         FROM agents
         WHERE id = #{id}
     </select>
 
     <insert id="insert" parameterType="com.agent.hopaw.model.Agent">
-        INSERT INTO agents (name, description, tools, max_memory_records, max_tool_invocations, ai_model_id, enable_thinking)
-        VALUES (#{name}, #{description}, #{tools}, #{maxMemoryRecords}, #{maxToolInvocations}, #{aiModelId}, #{enableThinking})
+        INSERT INTO agents (name, description, tools, max_memory_records, max_tool_invocations, ai_model_id, enable_thinking, ext_params)
+        VALUES (#{name}, #{description}, #{tools}, #{maxMemoryRecords}, #{maxToolInvocations}, #{aiModelId}, #{enableThinking}, #{extParams})
         <selectKey resultType="long" keyProperty="id" order="AFTER">
             SELECT last_insert_rowid()
         </selectKey>
@@ -41,7 +42,8 @@
             max_memory_records = #{maxMemoryRecords},
             max_tool_invocations = #{maxToolInvocations},
             ai_model_id = #{aiModelId},
-            enable_thinking = #{enableThinking}
+            enable_thinking = #{enableThinking},
+            ext_params = #{extParams}
         WHERE id = #{id}
     </update>
 

@@ -6,7 +6,11 @@ public class AiModel {
     private String modelName;
     private String capabilities;
     private Boolean verified;
+    private String extParams;
+
     private String createTime;
+
+
 
     public AiModel() {}
 
@@ -70,5 +74,13 @@ public class AiModel {
 
     public void setCreateTime(String createTime) {
         this.createTime = createTime;
+    }
+
+    public String getExtParams() {
+        return extParams;
+    }
+
+    public void setExtParams(String extParams) {
+        this.extParams = extParams;
     }
 }

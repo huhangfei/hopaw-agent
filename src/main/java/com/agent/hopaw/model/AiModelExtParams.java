@@ -1,14 +1,14 @@
 package com.agent.hopaw.model;
 
-public class AiModelProviderExtParams {
+public class AiModelExtParams {
     private String thinkingContentKey;
     private Boolean returnReasoning;
     private String reasoningEffort;
     private Double temperature;
 
-    public AiModelProviderExtParams() {}
+    public AiModelExtParams() {}
 
-    public AiModelProviderExtParams(String thinkingContentKey, Boolean returnReasoning, String reasoningEffort, Double temperature) {
+    public AiModelExtParams(String thinkingContentKey, Boolean returnReasoning, String reasoningEffort, Double temperature) {
         this.thinkingContentKey = thinkingContentKey;
         this.returnReasoning = returnReasoning;
         this.reasoningEffort = reasoningEffort;

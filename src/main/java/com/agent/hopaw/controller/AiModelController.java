@@ -2,6 +2,7 @@ package com.agent.hopaw.controller;
 
 import com.agent.hopaw.model.AiModel;
 import com.agent.hopaw.model.AiModelProvider;
+import com.agent.hopaw.model.ModelCapabilityTestResult;
 import com.agent.hopaw.service.AiModelProviderService;
 import com.agent.hopaw.service.AiModelService;
 import org.springframework.stereotype.Controller;
@@ -46,6 +47,7 @@ public class AiModelController {
     @ResponseBody
     public AiModelProvider createProvider(@RequestBody AiModelProvider aiModelProvider) {
         aiModelProvider.setType("custom");
+        validateCustomSdkName(aiModelProvider);
         aiModelProviderService.insert(aiModelProvider);
         return aiModelProvider;
     }
@@ -53,9 +55,29 @@ public class AiModelController {
     @PutMapping("/api/providers/{id}")
     @ResponseBody
     public AiModelProvider updateProvider(@PathVariable Long id, @RequestBody AiModelProvider aiModelProvider) {
+        AiModelProvider existing = aiModelProviderService.findById(id);
+        if (existing != null) {
+            aiModelProvider.setType(existing.getType());
+            if ("builtin".equals(existing.getType())) {
+                // 内置提供商不能修改 sdkName
+                aiModelProvider.setSdkName(existing.getSdkName());
+            } else {
+                validateCustomSdkName(aiModelProvider);
+            }
+        }
         aiModelProvider.setId(id);
         aiModelProviderService.update(aiModelProvider);
         return aiModelProvider;
+    }
+
+    private void validateCustomSdkName(AiModelProvider provider) {
+        String sdkName = provider.getSdkName();
+        if (sdkName == null || sdkName.isBlank()) {
+            throw new IllegalArgumentException("自定义提供商必须指定 sdkName");
+        }
+        if (!"openai".equals(sdkName) && !"anthropic".equals(sdkName)) {
+            throw new IllegalArgumentException("自定义提供商的 sdkName 只能为 'openai' 或 'anthropic'");
+        }
     }
 
     @DeleteMapping("/api/providers/{id}")
@@ -89,6 +111,12 @@ public class AiModelController {
         aiModel.setId(id);
         aiModelService.update(aiModel);
         return aiModel;
+    }
+
+    @PostMapping("/api/models/{id}/test")
+    @ResponseBody
+    public ModelCapabilityTestResult testModel(@PathVariable Long id) {
+        return aiModelService.testModel(id);
     }
 
     @DeleteMapping("/api/models/{id}")

@@ -35,6 +35,7 @@ public class DataInitializer implements CommandLineRunner {
         this.chatHistoryMapper = chatHistoryMapper;
         this.dataSource = dataSource;
         this.allTools = allTools;
+
     }
 
     @Override
@@ -50,7 +51,8 @@ public class DataInitializer implements CommandLineRunner {
                     "max_tool_invocations INTEGER DEFAULT 20, " +
                     "ai_model_id INTEGER, " +
                     "model_name TEXT, " +
-                    "enable_thinking INTEGER DEFAULT 1" +
+                    "enable_thinking INTEGER DEFAULT 1," +
+                    "ext_params TEXT" +
                     ")");
             
             stmt.execute("CREATE TABLE IF NOT EXISTS chat_history (" +
@@ -100,6 +102,7 @@ public class DataInitializer implements CommandLineRunner {
                     "url TEXT, " +
                     "api_key TEXT, " +
                     "icon TEXT, " +
+                    "sdk_name TEXT, " +
                     "ext_params TEXT, " +
                     "create_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP" +
                     ")");
@@ -110,10 +113,18 @@ public class DataInitializer implements CommandLineRunner {
                     "model_name TEXT NOT NULL, " +
                     "capabilities TEXT, " +
                     "verified INTEGER DEFAULT 0, " +
+                    "ext_params TEXT, " +
                     "create_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP" +
                     ")");
 
             stmt.execute("CREATE INDEX IF NOT EXISTS idx_ai_models_provider ON ai_models(provider_id)");
+
+            // 兼容旧表：添加 sdk_name 列（如果不存在）
+            try {
+                stmt.execute("ALTER TABLE ai_model_providers ADD COLUMN sdk_name TEXT");
+            } catch (Exception ignored) {
+                // 列已存在，忽略
+            }
         }
 
         List<AiModelProvider> aiModelProviders = aiModelProviderMapper.findAll();
@@ -121,9 +132,21 @@ public class DataInitializer implements CommandLineRunner {
             for (ModelProviderEnum providerEnum : ModelProviderEnum.values()) {
                 AiModelProvider provider = new AiModelProvider(providerEnum.getName(), providerEnum.getCode(), "builtin", providerEnum.getDefaultUrl(), null);
                 provider.setIcon(providerEnum.getIcon());
+                provider.setSdkName(providerEnum.getSdkName());
                 aiModelProviderMapper.insert(provider);
             }
             aiModelProviders = aiModelProviderMapper.findAll();
+        } else {
+            // 兼容旧数据：为已存在的内置提供商补充 sdkName
+            for (AiModelProvider provider : aiModelProviders) {
+                if ("builtin".equals(provider.getType()) && (provider.getSdkName() == null || provider.getSdkName().isBlank())) {
+                    ModelProviderEnum providerEnum = ModelProviderEnum.fromCode(provider.getProvider());
+                    if (providerEnum != null) {
+                        provider.setSdkName(providerEnum.getSdkName());
+                        aiModelProviderMapper.update(provider);
+                    }
+                }
+            }
         }
 
         List<AiModel> aiModels = aiModelMapper.findAll();
@@ -131,47 +154,49 @@ public class DataInitializer implements CommandLineRunner {
             for (AiModelProvider provider : aiModelProviders) {
                 switch (provider.getProvider()) {
                     case "openai":
-                        aiModelMapper.insert(new AiModel(provider.getId(), "gpt-4o", joinCapabilities(ModelCapabilityEnum.TEXT, ModelCapabilityEnum.IMAGE), true));
-                        aiModelMapper.insert(new AiModel(provider.getId(), "gpt-4o-mini", joinCapabilities(ModelCapabilityEnum.TEXT, ModelCapabilityEnum.IMAGE), true));
-                        aiModelMapper.insert(new AiModel(provider.getId(), "gpt-4-turbo", ModelCapabilityEnum.TEXT.getCode(), true));
-                        aiModelMapper.insert(new AiModel(provider.getId(), "gpt-3.5-turbo", ModelCapabilityEnum.TEXT.getCode(), true));
+                        aiModelMapper.insert(new AiModel(provider.getId(), "gpt-4o", joinCapabilities(ModelCapabilityEnum.TEXT, ModelCapabilityEnum.IMAGE), false));
+                        aiModelMapper.insert(new AiModel(provider.getId(), "gpt-4o-mini", joinCapabilities(ModelCapabilityEnum.TEXT, ModelCapabilityEnum.IMAGE), false));
+                        aiModelMapper.insert(new AiModel(provider.getId(), "gpt-4-turbo", ModelCapabilityEnum.TEXT.getCode(), false));
+                        aiModelMapper.insert(new AiModel(provider.getId(), "gpt-3.5-turbo", ModelCapabilityEnum.TEXT.getCode(), false));
                         break;
                     case "anthropic":
-                        aiModelMapper.insert(new AiModel(provider.getId(), "claude-sonnet-4-20250514", ModelCapabilityEnum.TEXT.getCode(), true));
-                        aiModelMapper.insert(new AiModel(provider.getId(), "claude-opus-4-20250514", ModelCapabilityEnum.TEXT.getCode(), true));
-                        aiModelMapper.insert(new AiModel(provider.getId(), "claude-3-5-sonnet-20241022", ModelCapabilityEnum.TEXT.getCode(), true));
-                        aiModelMapper.insert(new AiModel(provider.getId(), "claude-3-haiku-20240307", ModelCapabilityEnum.TEXT.getCode(), true));
+//                        aiModelMapper.insert(new AiModel(provider.getId(), "claude-sonnet-4-20250514", ModelCapabilityEnum.TEXT.getCode(), false));
+//                        aiModelMapper.insert(new AiModel(provider.getId(), "claude-opus-4-20250514", ModelCapabilityEnum.TEXT.getCode(), false));
+//                        aiModelMapper.insert(new AiModel(provider.getId(), "claude-3-5-sonnet-20241022", ModelCapabilityEnum.TEXT.getCode(), false));
+//                        aiModelMapper.insert(new AiModel(provider.getId(), "claude-3-haiku-20240307", ModelCapabilityEnum.TEXT.getCode(), false));
                         break;
                     case "google":
-                        aiModelMapper.insert(new AiModel(provider.getId(), "gemini-2.5-pro", joinCapabilities(ModelCapabilityEnum.TEXT, ModelCapabilityEnum.IMAGE, ModelCapabilityEnum.AUDIO, ModelCapabilityEnum.VIDEO), true));
-                        aiModelMapper.insert(new AiModel(provider.getId(), "gemini-2.5-flash", joinCapabilities(ModelCapabilityEnum.TEXT, ModelCapabilityEnum.IMAGE, ModelCapabilityEnum.AUDIO, ModelCapabilityEnum.VIDEO), true));
-                        aiModelMapper.insert(new AiModel(provider.getId(), "gemini-2.0-flash", joinCapabilities(ModelCapabilityEnum.TEXT, ModelCapabilityEnum.IMAGE), true));
+//                        aiModelMapper.insert(new AiModel(provider.getId(), "gemini-2.5-pro", joinCapabilities(ModelCapabilityEnum.TEXT, ModelCapabilityEnum.IMAGE, ModelCapabilityEnum.AUDIO, ModelCapabilityEnum.VIDEO), true));
+//                        aiModelMapper.insert(new AiModel(provider.getId(), "gemini-2.5-flash", joinCapabilities(ModelCapabilityEnum.TEXT, ModelCapabilityEnum.IMAGE, ModelCapabilityEnum.AUDIO, ModelCapabilityEnum.VIDEO), true));
+//                        aiModelMapper.insert(new AiModel(provider.getId(), "gemini-2.0-flash", joinCapabilities(ModelCapabilityEnum.TEXT, ModelCapabilityEnum.IMAGE), true));
                         break;
                     case "deepseek":
-                        aiModelMapper.insert(new AiModel(provider.getId(), "deepseek-chat", ModelCapabilityEnum.TEXT.getCode(), true));
-                        aiModelMapper.insert(new AiModel(provider.getId(), "deepseek-reasoner", ModelCapabilityEnum.TEXT.getCode(), true));
+                        aiModelMapper.insert(new AiModel(provider.getId(), "deepseek-chat", ModelCapabilityEnum.TEXT.getCode(), false));
+                        aiModelMapper.insert(new AiModel(provider.getId(), "deepseek-reasoner", ModelCapabilityEnum.TEXT.getCode(), false));
+                        aiModelMapper.insert(new AiModel(provider.getId(), "deepseek-v4-flash", ModelCapabilityEnum.TEXT.getCode(), false));
+                        aiModelMapper.insert(new AiModel(provider.getId(), "deepseek-v4-pro", ModelCapabilityEnum.TEXT.getCode(), false));
                         break;
                     case "qwen":
-                        aiModelMapper.insert(new AiModel(provider.getId(), "qwen-max", ModelCapabilityEnum.TEXT.getCode(), true));
-                        aiModelMapper.insert(new AiModel(provider.getId(), "qwen-plus", ModelCapabilityEnum.TEXT.getCode(), true));
-                        aiModelMapper.insert(new AiModel(provider.getId(), "qwen-turbo", ModelCapabilityEnum.TEXT.getCode(), true));
-                        aiModelMapper.insert(new AiModel(provider.getId(), "qwen-vl-max", joinCapabilities(ModelCapabilityEnum.TEXT, ModelCapabilityEnum.IMAGE), true));
-                        aiModelMapper.insert(new AiModel(provider.getId(), "qwen-long", joinCapabilities(ModelCapabilityEnum.TEXT, ModelCapabilityEnum.DOCUMENT), true));
+                        aiModelMapper.insert(new AiModel(provider.getId(), "qwen-max", ModelCapabilityEnum.TEXT.getCode(), false));
+                        aiModelMapper.insert(new AiModel(provider.getId(), "qwen-plus", ModelCapabilityEnum.TEXT.getCode(), false));
+                        aiModelMapper.insert(new AiModel(provider.getId(), "qwen-turbo", ModelCapabilityEnum.TEXT.getCode(), false));
+                        aiModelMapper.insert(new AiModel(provider.getId(), "qwen-vl-max", joinCapabilities(ModelCapabilityEnum.TEXT, ModelCapabilityEnum.IMAGE), false));
+                        aiModelMapper.insert(new AiModel(provider.getId(), "qwen-long", joinCapabilities(ModelCapabilityEnum.TEXT, ModelCapabilityEnum.DOCUMENT), false));
                         break;
                     case "zhipu":
-                        aiModelMapper.insert(new AiModel(provider.getId(), "glm-4-plus", ModelCapabilityEnum.TEXT.getCode(), true));
-                        aiModelMapper.insert(new AiModel(provider.getId(), "glm-4", ModelCapabilityEnum.TEXT.getCode(), true));
-                        aiModelMapper.insert(new AiModel(provider.getId(), "glm-4v", joinCapabilities(ModelCapabilityEnum.TEXT, ModelCapabilityEnum.IMAGE), true));
-                        aiModelMapper.insert(new AiModel(provider.getId(), "glm-4-flash", ModelCapabilityEnum.TEXT.getCode(), true));
+                        aiModelMapper.insert(new AiModel(provider.getId(), "glm-4-plus", ModelCapabilityEnum.TEXT.getCode(), false));
+                        aiModelMapper.insert(new AiModel(provider.getId(), "glm-4", ModelCapabilityEnum.TEXT.getCode(), false));
+                        aiModelMapper.insert(new AiModel(provider.getId(), "glm-4v", joinCapabilities(ModelCapabilityEnum.TEXT, ModelCapabilityEnum.IMAGE), false));
+                        aiModelMapper.insert(new AiModel(provider.getId(), "glm-4-flash", ModelCapabilityEnum.TEXT.getCode(), false));
                         break;
                     case "moonshot":
-                        aiModelMapper.insert(new AiModel(provider.getId(), "moonshot-v1-8k", ModelCapabilityEnum.TEXT.getCode(), true));
-                        aiModelMapper.insert(new AiModel(provider.getId(), "moonshot-v1-32k", ModelCapabilityEnum.TEXT.getCode(), true));
-                        aiModelMapper.insert(new AiModel(provider.getId(), "moonshot-v1-128k", ModelCapabilityEnum.TEXT.getCode(), true));
+                        aiModelMapper.insert(new AiModel(provider.getId(), "moonshot-v1-8k", ModelCapabilityEnum.TEXT.getCode(), false));
+                        aiModelMapper.insert(new AiModel(provider.getId(), "moonshot-v1-32k", ModelCapabilityEnum.TEXT.getCode(), false));
+                        aiModelMapper.insert(new AiModel(provider.getId(), "moonshot-v1-128k", ModelCapabilityEnum.TEXT.getCode(), false));
                         break;
                     case "minimax":
-                        aiModelMapper.insert(new AiModel(provider.getId(), "MiniMax-M1", ModelCapabilityEnum.TEXT.getCode(), true));
-                        aiModelMapper.insert(new AiModel(provider.getId(), "MiniMax-Text-01", ModelCapabilityEnum.TEXT.getCode(), true));
+                        aiModelMapper.insert(new AiModel(provider.getId(), "MiniMax-M1", ModelCapabilityEnum.TEXT.getCode(), false));
+                        aiModelMapper.insert(new AiModel(provider.getId(), "MiniMax-Text-01", ModelCapabilityEnum.TEXT.getCode(), false));
                         break;
                 }
             }

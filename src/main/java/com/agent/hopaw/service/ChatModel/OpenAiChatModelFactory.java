@@ -1,20 +1,19 @@
-package com.agent.hopaw.service;
+package com.agent.hopaw.service.ChatModel;
 
-import com.agent.hopaw.model.AiModel;
+import com.agent.hopaw.constant.ModelProviderEnum;
 import com.agent.hopaw.model.AiModelProvider;
-import com.agent.hopaw.model.ChatModelFactory;
+import com.agent.hopaw.model.AiModelVO;
 import com.agent.hopaw.service.LangChain4jMonitoringService;
 import dev.langchain4j.model.chat.ChatModel;
 import dev.langchain4j.model.chat.StreamingChatModel;
 import dev.langchain4j.model.openai.OpenAiChatModel;
 import dev.langchain4j.model.openai.OpenAiStreamingChatModel;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-@Service
+
 public class OpenAiChatModelFactory extends  BaseChatModelFactory {
 
     private final LangChain4jMonitoringService monitoringService;
@@ -23,20 +22,22 @@ public class OpenAiChatModelFactory extends  BaseChatModelFactory {
         this.monitoringService = monitoringService;
     }
 
-
     @Override
-    public ChatModel createChatModel(AiModelProvider aiModelProvider, AiModel aiModel, boolean enableThinking) {
+    public ChatModel createChatModel(AiModelVO aiModel, boolean enableThinking) {
+        AiModelProvider aiModelProvider=aiModel.getAiModelProvider();
         Map<String, String> extraParams = new HashMap<>();
         var builder = OpenAiChatModel.builder()
-                .sendThinking(enableThinking, super.getThinkingContentKey(aiModelProvider))
-                .returnThinking(super.getReturnReasoning(aiModelProvider))
-                .reasoningEffort(super.getReasoningEffort(aiModelProvider))
                 .apiKey(aiModelProvider.getApiKey())
                 .modelName(aiModel.getModelName())
                 .baseUrl(aiModelProvider.getUrl())
                 .temperature(super.getTemperature(aiModelProvider))
                 .customHeaders(extraParams);
 
+        if(enableThinking){
+            builder.sendThinking(true, super.getThinkingContentKey(aiModelProvider))
+                    .returnThinking(super.getReturnReasoning(aiModelProvider))
+                    .reasoningEffort(super.getReasoningEffort(aiModelProvider));
+        }
         if (monitoringService != null) {
             builder.listeners(List.of(monitoringService));
         }
@@ -45,17 +46,21 @@ public class OpenAiChatModelFactory extends  BaseChatModelFactory {
     }
 
     @Override
-    public StreamingChatModel createStreamingChatModel(AiModelProvider aiModelProvider,AiModel aiModel,boolean enableThinking) {
+    public StreamingChatModel createStreamingChatModel(AiModelVO aiModel,boolean enableThinking) {
+        AiModelProvider aiModelProvider=aiModel.getAiModelProvider();
         Map<String, String> extraParams = new HashMap<>();
         var builder = OpenAiStreamingChatModel.builder()
-                .sendThinking(enableThinking, super.getThinkingContentKey(aiModelProvider))
-                .returnThinking(super.getReturnReasoning(aiModelProvider))
-                .reasoningEffort(super.getReasoningEffort(aiModelProvider))
                 .apiKey(aiModelProvider.getApiKey())
                 .modelName(aiModel.getModelName())
                 .baseUrl(aiModelProvider.getUrl())
                 .temperature(super.getTemperature(aiModelProvider))
                 .customHeaders(extraParams);
+
+        if(enableThinking){
+            builder.sendThinking(true, super.getThinkingContentKey(aiModelProvider))
+                    .returnThinking(super.getReturnReasoning(aiModelProvider))
+                    .reasoningEffort(super.getReasoningEffort(aiModelProvider));
+        }
 
         if (monitoringService != null) {
             builder.listeners(List.of(monitoringService));
@@ -65,6 +70,6 @@ public class OpenAiChatModelFactory extends  BaseChatModelFactory {
 
     @Override
     public String getProviderName() {
-        return "openai";
+        return ModelProviderEnum.OPENAI.getSdkName();
     }
 }

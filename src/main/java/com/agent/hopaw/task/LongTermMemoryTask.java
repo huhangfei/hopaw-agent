@@ -1,17 +1,15 @@
 package com.agent.hopaw.task;
 
-import com.agent.hopaw.config.ChatModelFactoryConfig;
 import com.agent.hopaw.mapper.AgentMapper;
 import com.agent.hopaw.mapper.ChatMemoryMapper;
 import com.agent.hopaw.model.Agent;
 import com.agent.hopaw.model.ChatMemory;
-import com.agent.hopaw.model.ChatModelFactory;
+import com.agent.hopaw.service.AiModelService;
 import com.agent.hopaw.service.LangChain4jMonitoringService;
 import com.agent.hopaw.service.LongTermMemoryService;
 import dev.langchain4j.data.message.ChatMessage;
 import dev.langchain4j.data.message.ChatMessageDeserializer;
 import dev.langchain4j.model.chat.ChatModel;
-import dev.langchain4j.model.openai.OpenAiChatModel;
 import dev.langchain4j.service.AiServices;
 import dev.langchain4j.service.UserMessage;
 import org.slf4j.Logger;
@@ -24,7 +22,7 @@ import java.util.List;
 
 @Component
 public class LongTermMemoryTask {
-    private final ChatModelFactory chatModelFactory;
+    private final AiModelService aiModelService;
     private static final Logger logger = LoggerFactory.getLogger(LongTermMemoryTask.class);
 
     private final LongTermMemoryService longTermMemoryService;
@@ -32,10 +30,10 @@ public class LongTermMemoryTask {
     private final ChatMemoryMapper chatMemoryMapper;
     private final AgentMapper agentMapper;
 
-    public LongTermMemoryTask(ChatModelFactoryConfig chatModelFactoryConfig, LongTermMemoryService longTermMemoryService,
+    public LongTermMemoryTask(AiModelService aiModelService, LongTermMemoryService longTermMemoryService,
                               ChatMemoryMapper chatMemoryMapper,
                               LangChain4jMonitoringService monitoringService, AgentMapper agentMapper) {
-        this.chatModelFactory = chatModelFactoryConfig.getFactory();
+        this.aiModelService = aiModelService;
         this.longTermMemoryService = longTermMemoryService;
         this.chatMemoryMapper = chatMemoryMapper;
         this.monitoringService = monitoringService;
@@ -90,6 +88,7 @@ public class LongTermMemoryTask {
     private boolean handle(String identity, String content) {
         try {
 
+            ChatModel chatModel = aiModelService.createChatModel(null, false);
 
             String systemMessage = "你是一个记忆整理助手。善于根据聊天记录提取关键的用户记忆信息。" +
                     "请根据内容总结出用户的关键记忆信息，并按以下格式进行分类，分类不够可以自己添加，但是分类要精简。记忆内容不能胡编乱造信息，要完全从内容中来：" +
@@ -116,7 +115,6 @@ public class LongTermMemoryTask {
                     "归类后先保存分类作为父级记忆得到编号，再保存概要内容作为子级记忆，子级记忆的parentId是父级记忆的编号。\n" +
                     "本次记忆的identity是" + identity;
 
-            ChatModel chatModel = chatModelFactory.createChatModel(null, null, false);
 
             MemoryAssistant assistant = AiServices.builder(MemoryAssistant.class)
                     .chatModel(chatModel)
