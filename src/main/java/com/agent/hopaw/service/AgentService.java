@@ -56,7 +56,7 @@ public class AgentService {
     }
 
     public Agent createAgent(String name, String description, String tools, Integer maxMemoryRecords, Integer maxToolInvocations, Long aiModelId, Boolean enableThinking) {
-        Agent agent = new Agent(name, description, tools, maxMemoryRecords, maxToolInvocations);
+        Agent agent = new Agent(name, description, tools, maxMemoryRecords, maxToolInvocations, enableThinking);
         agent.setAiModelId(aiModelId);
         agent.setEnableThinking(enableThinking);
         agentMapper.insert(agent);
@@ -119,28 +119,18 @@ public class AgentService {
     }
 
     private AgentExecutor createAgentExecutor(Agent agent) {
-        try {
-            ChatModel chatModel = null;
-            StreamingChatModel streamingModel = null;
-            try {
-                chatModel = aiModelService.createChatModel(agent.getAiModelId(), agent.getEnableThinking());
-                streamingModel = aiModelService.createStreamingChatModel(agent.getAiModelId(), agent.getEnableThinking());
-            } catch (Exception e) {
-                logger.error("Error creating chat model: ", e);
-                return null;
-            }
+        ChatModel chatModel = null;
+        StreamingChatModel streamingModel = null;
+        chatModel = aiModelService.createChatModel(agent.getAiModelId(), agent.getEnableThinking());
+        streamingModel = aiModelService.createStreamingChatModel(agent.getAiModelId(), agent.getEnableThinking());
 
-            List<String> selectedToolNames = parseToolNames(agent.getTools());
-            List<AgentTool> selectedTools = allTools.stream()
-                    .filter(t -> selectedToolNames.contains(t.getName()))
-                    .collect(Collectors.toList());
+        List<String> selectedToolNames = parseToolNames(agent.getTools());
+        List<AgentTool> selectedTools = allTools.stream()
+                .filter(t -> selectedToolNames.contains(t.getName()))
+                .collect(Collectors.toList());
 
-            SQLiteChatMemoryStore memoryStore = new SQLiteChatMemoryStore(chatMemoryMapper, agent.getId());
-            return new AgentExecutor(agent, chatModel, streamingModel, selectedTools, memoryStore, a->this.getSystemMessage(a));
-        } catch (Exception e) {
-           logger.error("Error creating agent executor: ", e);
-           return null;
-        }
+        SQLiteChatMemoryStore memoryStore = new SQLiteChatMemoryStore(chatMemoryMapper, agent.getId());
+        return new AgentExecutor(agent, chatModel, streamingModel, selectedTools, memoryStore, a->this.getSystemMessage(a));
     }
 
     private List<String> parseToolNames(String toolsStr) {

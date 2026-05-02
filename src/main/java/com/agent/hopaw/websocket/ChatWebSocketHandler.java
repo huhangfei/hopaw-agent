@@ -105,6 +105,7 @@ public class ChatWebSocketHandler extends TextWebSocketHandler {
                 }
             });
         } catch (Exception e) {
+            logger.error("handleTextMessage error", e);
             sendError(session, "处理消息失败: " + e.getMessage());
         }
     }

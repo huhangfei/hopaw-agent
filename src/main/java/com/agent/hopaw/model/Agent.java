@@ -30,12 +30,13 @@ public class Agent {
         this.maxToolInvocations = 10;
     }
 
-    public Agent(String name, String description, String tools, Integer maxMemoryRecords, Integer maxToolInvocations) {
+    public Agent(String name, String description, String tools, Integer maxMemoryRecords, Integer maxToolInvocations,Boolean enableThinking) {
         this.name = name;
         this.description = description;
         this.tools = tools;
         this.maxMemoryRecords = maxMemoryRecords != null ? maxMemoryRecords : 20;
         this.maxToolInvocations = maxToolInvocations != null ? maxToolInvocations : 10;
+        this.enableThinking = enableThinking != null ? enableThinking : false;
     }
 
     public Long getId() {
