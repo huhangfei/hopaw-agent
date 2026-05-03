@@ -32,13 +32,13 @@ function selectProvider(btn) {
     };
 
     document.getElementById('modelsModalTitle').textContent = currentProviderData.name + ' - 模型列表';
-    document.getElementById('modelsModal').style.display = 'flex';
+    Modal.open('modelsModal');
 
     loadModels();
 }
 
 function closeModelsModal() {
-    document.getElementById('modelsModal').style.display = 'none';
+    Modal.close('modelsModal');
 }
 
 function loadModels() {
@@ -101,7 +101,7 @@ function showAddProviderModal() {
     document.getElementById('providerSdkName').required = true;
     document.getElementById('providerSdkName').disabled = false;
     document.getElementById('providerSdkName').value = '';
-    document.getElementById('providerModal').style.display = 'flex';
+    Modal.open('providerModal');
 }
 
 function showEditProviderModal(id) {
@@ -130,7 +130,7 @@ function showEditProviderModal(id) {
                 document.getElementById('providerSdkName').value = provider.sdkName || '';
             }
 
-            document.getElementById('providerModal').style.display = 'flex';
+            Modal.open('providerModal');
         })
         .catch(error => {
             console.error('获取提供商信息失败:', error);
@@ -139,7 +139,7 @@ function showEditProviderModal(id) {
 }
 
 function closeProviderModal() {
-    document.getElementById('providerModal').style.display = 'none';
+    Modal.close('providerModal');
 }
 
 function submitProvider() {
@@ -241,7 +241,7 @@ function showAddModelModal() {
     document.getElementById('modelCapabilitiesDisplay').innerHTML = '<span class="capability-hint">保存后将自动检测</span>';
     document.getElementById('modelVerifiedDisplay').innerHTML = '<span class="capability-hint">保存后将自动验证</span>';
     document.getElementById('modelExtParams').value = '';
-    document.getElementById('modelModal').style.display = 'flex';
+    Modal.open('modelModal');
 }
 
 function showEditModelModal(id) {
@@ -272,7 +272,7 @@ function showEditModelModal(id) {
             document.getElementById('modelVerifiedDisplay').innerHTML = verifiedHtml;
 
             document.getElementById('modelExtParams').value = model.extParams || '';
-            document.getElementById('modelModal').style.display = 'flex';
+            Modal.open('modelModal');
         })
         .catch(error => {
             console.error('获取模型信息失败:', error);
@@ -281,7 +281,7 @@ function showEditModelModal(id) {
 }
 
 function closeModelModal() {
-    document.getElementById('modelModal').style.display = 'none';
+    Modal.close('modelModal');
 }
 
 function submitModel() {
@@ -375,20 +375,3 @@ function deleteModel(id) {
     });
 }
 
-document.getElementById('providerModal').addEventListener('click', function(e) {
-    if (e.target === this) {
-        closeProviderModal();
-    }
-});
-
-document.getElementById('modelModal').addEventListener('click', function(e) {
-    if (e.target === this) {
-        closeModelModal();
-    }
-});
-
-document.getElementById('modelsModal').addEventListener('click', function(e) {
-    if (e.target === this) {
-        closeModelsModal();
-    }
-});

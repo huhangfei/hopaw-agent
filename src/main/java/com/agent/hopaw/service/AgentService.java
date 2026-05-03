@@ -21,6 +21,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 
+import java.time.LocalDateTime;
 import java.util.*;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
@@ -38,13 +39,15 @@ public class AgentService {
     private final List<AgentTool> allTools;
     private final LongTermMemoryService longTermMemoryService;
     private final AiModelService aiModelService;
+    private final ChatHistoryStorageService chatHistoryStorageService;
     public AgentService(AgentMapper agentMapper, ChatMemoryMapper chatMemoryMapper,
-                        List<AgentTool> allTools, LongTermMemoryService longTermMemoryService, AiModelService aiModelService) {
+                        List<AgentTool> allTools, LongTermMemoryService longTermMemoryService, AiModelService aiModelService, ChatHistoryStorageService chatHistoryStorageService) {
         this.agentMapper = agentMapper;
         this.chatMemoryMapper = chatMemoryMapper;
         this.allTools = allTools;
         this.longTermMemoryService = longTermMemoryService;
         this.aiModelService = aiModelService;
+        this.chatHistoryStorageService = chatHistoryStorageService;
     }
 
     public List<Agent> getAllAgents() {
@@ -130,7 +133,7 @@ public class AgentService {
                 .collect(Collectors.toList());
 
         SQLiteChatMemoryStore memoryStore = new SQLiteChatMemoryStore(chatMemoryMapper, agent.getId());
-        return new AgentExecutor(agent, chatModel, streamingModel, selectedTools, memoryStore, a->this.getSystemMessage(a));
+        return new AgentExecutor(agent, chatModel, streamingModel, selectedTools, memoryStore, a->this.getSystemMessage(a), chatHistoryStorageService);
     }
 
     private List<String> parseToolNames(String toolsStr) {
@@ -167,13 +170,15 @@ public class AgentService {
         private final AtomicBoolean cancelTask = new AtomicBoolean(false);
         private final Function<Agent, String> systemMessageProvider;
         CountDownLatch latch = new CountDownLatch(0);
+        private final ChatHistoryStorageService chatHistoryStorageService;
         public AgentExecutor(Agent agent,
                              ChatModel chatModel,
                              StreamingChatModel streamingModel,
                              List<AgentTool> selectedTools,
                              SQLiteChatMemoryStore memoryStore,
-                             Function<Agent, String> systemMessageProvider) {
+                             Function<Agent, String> systemMessageProvider, ChatHistoryStorageService chatHistoryStorageService) {
             this.systemMessageProvider = systemMessageProvider;
+            this.chatHistoryStorageService = chatHistoryStorageService;
             this.agentMessageHandler = new AgentMessageHandler();
             this.agent = agent;
 
@@ -251,10 +256,14 @@ public class AgentService {
             }
         }
 
-        public void executeStreaming(UserMessage userMessage, Consumer<String> messageConsumer, Consumer<ChatHistory> chatHistoryConsumer) {
+        public void executeStreaming(UserMessage userMessage, Consumer<String> messageConsumer) {
+
+            ChatHistory userChat = new ChatHistory(agent.getId(), "user", "text", userMessage.singleText());
+            chatHistoryStorageService.saveChatHistory(userChat);
+
             cancelTask.set(false);
             agentMessageHandler.setMessageConsumer(messageConsumer);
-            agentMessageHandler.setChatHistoryConsumer(chatHistoryConsumer);
+            agentMessageHandler.setChatHistoryConsumer(chatHistory -> chatHistoryStorageService.saveChatHistory(chatHistory));
             if (streamingAssistant == null) {
                 String response = execute(userMessage);
                 agentMessageHandler.partialResponseHandler(response);

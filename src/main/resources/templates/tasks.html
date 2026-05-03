@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head th:replace="fragments/layout::head('定时任务管理', 'tasks.css')"></head>
+<body>
+    <header th:replace="fragments/layout::header('🤖 HoPaw - 定时任务管理')"></header>
+
+    <div class="main-container">
+        <nav th:replace="fragments/layout::menuSidebar('tasks')"></nav>
+
+        <main class="tasks-container">
+            <div class="tasks-header">
+                <h2>定时任务管理</h2>
+            </div>
+
+            <div class="tasks-card">
+                <table class="tasks-table">
+                    <thead>
+                        <tr>
+                            <th>名称</th>
+                            <th>类型</th>
+                            <th>Cron 表达式</th>
+                            <th>状态</th>
+                            <th>创建者</th>
+                            <th>操作</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tasksTableBody">
+                    </tbody>
+                </table>
+            </div>
+            <div class="empty-state" id="emptyState" style="display:none;">
+                <p>暂无定时任务，点击"添加任务"按钮开始创建</p>
+            </div>
+        </main>
+    </div>
+
+    <div th:replace="fragments/layout::toastContainer"></div>
+
+    <div class="modal-overlay" id="taskModal">
+        <div class="modal">
+            <div class="modal-header">
+                <h3 id="modalTitle">添加任务</h3>
+                <button class="modal-close" onclick="closeModal()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <form id="taskForm">
+                    <input type="hidden" id="taskId">
+                    <div class="form-group">
+                        <label for="taskName">任务名称 *</label>
+                        <input type="text" id="taskName" required placeholder="例如：日志测试">
+                    </div>
+                    <div class="form-group">
+                        <label for="taskType">任务类型 *</label>
+                        <select id="taskType" required>
+                            <option value="">请选择</option>
+                            <option value="log">日志测试</option>
+                            <option value="memory">记忆整理</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="taskCron">Cron 表达式 *</label>
+                        <input type="text" id="taskCron" required placeholder="例如：0 */5 * * * *">
+                    </div>
+                    <div class="form-group">
+                        <label for="taskIdentity">创建者</label>
+                        <input type="text" id="taskIdentity" placeholder="空表示系统任务">
+                    </div>
+                    <input type="hidden" id="taskBuiltin" value="0">
+                    <div class="form-group">
+                        <label>启用</label>
+                        <div class="toggle-wrapper" style="display:flex;align-items:center;gap:12px;">
+                            <label class="toggle" style="position:relative;width:44px;height:24px;flex-shrink:0;">
+                                <input type="checkbox" id="taskEnabled" style="opacity:0;width:0;height:0;">
+                                <span class="slider" style="position:absolute;cursor:pointer;top:0;left:0;right:0;bottom:0;background:#ccc;border-radius:24px;transition:background 0.3s;"></span>
+                            </label>
+                            <span class="toggle-label" id="taskEnabledLabel" style="font-size:14px;color:#333;">关闭</span>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label for="taskDescription">描述</label>
+                        <textarea id="taskDescription" rows="3" placeholder="任务描述"></textarea>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button class="btn-cancel" onclick="closeModal()">取消</button>
+                <button class="btn-submit" onclick="submitTask()">保存</button>
+            </div>
+        </div>
+    </div>
+
+    <th:block th:replace="fragments/layout::commonScripts('tasks.js')"></th:block>
+</body>
+</html>

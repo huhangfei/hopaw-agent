@@ -1,0 +1,136 @@
+/* ========== Overlay (shared by modal and confirm-dialog) ========== */
+.modal-overlay,
+.confirm-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.5);
+    align-items: center;
+    justify-content: center;
+    z-index: 9999;
+}
+
+.modal-overlay {
+    display: none;
+}
+
+.modal-overlay.active {
+    display: flex;
+}
+
+.confirm-overlay {
+    display: flex;
+    z-index: 99999;
+}
+
+/* ========== Modal Card ========== */
+.modal {
+    display: block;
+    background: white;
+    border-radius: 12px;
+    width: 60%;
+    max-width: 90%;
+    max-height: 90vh;
+    overflow-y: auto;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+    position: relative;
+    z-index: 10000;
+}
+
+.modal-wide {
+    width: 900px;
+    max-width: 95%;
+    display: flex;
+    flex-direction: column;
+    max-height: 80vh;
+    overflow: hidden;
+}
+
+.modal-header {
+    height: 65px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 15px 20px;
+    border-bottom: 1px solid #e0e0e0;
+}
+
+.modal-body {
+    padding: 20px;
+}
+
+.modal-footer {
+    height: 75px;
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+    padding: 15px 20px;
+    border-top: 1px solid #e0e0e0;
+}
+.modal-header h3 {
+    font-size: 18px;
+    color: #333;
+}
+
+.modal-close {
+    background: transparent;
+    border: none;
+    font-size: 24px;
+    cursor: pointer;
+    color: #666;
+    width: 32px;
+    height: 32px;
+    border-radius: 6px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: color 0.2s;
+}
+
+.modal-close:hover {
+    background: #f0f0f0;
+}
+
+/* ========== Animation ========== */
+.modal-overlay.active .modal,
+.confirm-overlay .confirm-dialog {
+    animation: modal-in 0.2s ease;
+}
+
+@keyframes modal-in {
+    from { transform: scale(0.95); opacity: 0; }
+    to { transform: scale(1); opacity: 1; }
+}
+
+/* ========== Standardised Footer Buttons ========== */
+.modal-footer .btn-cancel {
+    background: #f0f0f0;
+    color: #666;
+    border: none;
+    padding: 10px 20px;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 14px;
+    transition: background 0.2s;
+}
+
+.modal-footer .btn-cancel:hover {
+    background: #e0e0e0;
+}
+
+.modal-footer .btn-submit {
+    background: #4CAF50;
+    color: white;
+    border: none;
+    padding: 10px 20px;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 14px;
+    transition: background 0.2s;
+}
+
+.modal-footer .btn-submit:hover {
+    background: #45a049;
+}

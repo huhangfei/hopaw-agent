@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head th:replace="fragments/layout::head('设置 - HoPaw', 'settings.css')"></head>
+<body>
+    <header th:replace="fragments/layout::header('🤖 HoPaw - 设置')"></header>
+
+    <div class="main-container">
+        <nav th:replace="fragments/layout::menuSidebar('settings')"></nav>
+
+        <main class="settings-content">
+            <h2 style="font-size:20px;color:#333;margin-bottom:16px;">系统设置</h2>
+
+            <div class="settings-tabs">
+                <button class="settings-tab active" data-tab="memory" onclick="switchTab('memory')">记忆设置</button>
+            </div>
+
+            <div class="settings-panel active" id="tab-memory">
+                <div class="settings-form">
+                    <div class="form-group">
+                        <label>是否开启记忆整理</label>
+                        <div class="toggle-wrapper">
+                            <label class="toggle">
+                                <input type="checkbox" id="memoryEnabled">
+                                <span class="slider"></span>
+                            </label>
+                            <span class="toggle-label" id="memoryEnabledLabel">关闭</span>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label>记忆整理使用模型</label>
+                        <div class="flex-container">
+                            <select id="memoryProviderSelect" class="model-select">
+                                <option value="">选择提供商</option>
+                            </select>
+                            <select id="memoryModelSelect" class="model-select">
+                                <option value="">选择模型</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="memoryFrequency">记忆整理频率</label>
+                        <input type="number" id="memoryFrequency" min="1" max="1440" placeholder="5">
+                        <span class="freq-hint">分钟</span>
+                    </div>
+
+                    <div class="settings-actions">
+                        <button class="btn-save-settings" onclick="saveSettings()">保存设置</button>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <div th:replace="fragments/layout::toastContainer"></div>
+
+    <th:block th:replace="fragments/layout::commonScripts('settings.js')"></th:block>
+</body>
+</html>

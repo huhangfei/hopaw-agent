@@ -25,16 +25,13 @@ public class CommandExecutorTool implements AgentTool {
     @Tool("执行本地系统命令并返回输出结果。支持 Windows 和 Unix/Linux/macOS 系统。使用前最好先获取操作系统类型，" +
           "以确保命令在目标系统上执行。" +
           "请谨慎使用，避免执行危险命令如格式化磁盘、删除系统文件等。")
-    public String executeCommand(@P(description="要执行的命令") String command, @P(description = "超时时间（秒）",required = false) Integer timeout, @P(description = "用户是否已授权",required = false) Boolean userPermission) {
+    public String executeCommand(@P(description="要执行的命令") String command, @P(description = "超时时间（秒）",required = false) Integer timeout) {
         if (command == null || command.trim().isEmpty()) {
             return "错误: 命令不能为空";
         }
-
-        userPermission = userPermission == null ? false : userPermission;
-
-        if (userPermission.equals(false) && isDangerousCommand(command)) {
-            return "错误: 检测到危险命令，已拒绝执行。出于安全考虑，不允许在用户未授权的情况下执行可能破坏系统的命令。请询问用户是否可以执行。";
-        }
+//        if (isDangerousCommand(command)) {
+//            return "错误: 检测到危险命令，已拒绝执行。出于安全考虑，不允许在用户未授权的情况下执行可能破坏系统的命令。";
+//        }
         if(timeout==null){
             timeout=TIMEOUT_SECONDS;
         }

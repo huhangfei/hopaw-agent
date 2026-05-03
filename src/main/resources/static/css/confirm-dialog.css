@@ -1,28 +1,9 @@
-.confirm-overlay {
-    position: fixed;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    background: rgba(0, 0, 0, 0.5);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    z-index: 99999;
-}
-
 .confirm-dialog {
     background: white;
     border-radius: 12px;
     width: 400px;
     max-width: 90%;
     box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
-    animation: confirm-in 0.2s ease;
-}
-
-@keyframes confirm-in {
-    from { transform: scale(0.9); opacity: 0; }
-    to { transform: scale(1); opacity: 1; }
 }
 
 .confirm-body {
@@ -58,22 +39,4 @@
     cursor: pointer;
     border: none;
     transition: background 0.2s;
-}
-
-.confirm-footer .btn-cancel {
-    background: #f0f0f0;
-    color: #666;
-}
-
-.confirm-footer .btn-cancel:hover {
-    background: #e0e0e0;
-}
-
-.confirm-footer .btn-submit {
-    background: #4CAF50;
-    color: white;
-}
-
-.confirm-footer .btn-submit:hover {
-    background: #45a049;
 }

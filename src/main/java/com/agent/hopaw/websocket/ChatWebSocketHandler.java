@@ -24,13 +24,11 @@ public class ChatWebSocketHandler extends TextWebSocketHandler {
 
     private static final Logger logger = LoggerFactory.getLogger(ChatWebSocketHandler.class);
     private final AgentService agentService;
-    private final ChatHistoryMapper chatHistoryMapper;
     private static final Map<Long, String> sessionAgentMap = new ConcurrentHashMap<>();
     private static final Map<String, WebSocketSession> sessionMap = new ConcurrentHashMap<>();
 
-    public ChatWebSocketHandler(AgentService agentService, ChatHistoryMapper chatHistoryMapper) {
+    public ChatWebSocketHandler(AgentService agentService) {
         this.agentService = agentService;
-        this.chatHistoryMapper = chatHistoryMapper;
     }
 
     @Override
@@ -71,9 +69,6 @@ public class ChatWebSocketHandler extends TextWebSocketHandler {
                 sendError(session, "Agent 初始化执行失败，请检查相关配置。");
                 return;
             }
-            ChatHistory userChat = new ChatHistory(agentId, "user", "text", userMessage);
-            userChat.setCreateTime(LocalDateTime.now());
-            chatHistoryMapper.insert(userChat);
 
             executor.executeStreaming(new UserMessage("userId",userMessage), aiMessageJson->{
                 try {
@@ -90,18 +85,6 @@ public class ChatWebSocketHandler extends TextWebSocketHandler {
                    }
                 } catch (IOException e) {
                     logger.error("error", e);
-                }
-            }, chatHistory -> {
-                if(chatHistory.getMessageType().equals("tool_call")){
-                    ChatHistory old = chatHistoryMapper.findByAgentIdAndToolCallId(agentId, chatHistory.getToolCallId());
-                    if(old != null){
-                        chatHistory.setId(old.getId());
-                        chatHistoryMapper.updateToolCallStatusAndContent(chatHistory.getId(), chatHistory.getToolCallStatus(), chatHistory.getContent());
-                    }else{
-                        chatHistoryMapper.insert(chatHistory);
-                    }
-                }else{
-                    chatHistoryMapper.insert(chatHistory);
                 }
             });
         } catch (Exception e) {

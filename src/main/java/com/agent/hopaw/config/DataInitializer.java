@@ -9,6 +9,8 @@ import com.agent.hopaw.mapper.ChatHistoryMapper;
 import com.agent.hopaw.model.Agent;
 import com.agent.hopaw.model.AiModel;
 import com.agent.hopaw.model.AiModelProvider;
+import com.agent.hopaw.model.SysConfig;
+import com.agent.hopaw.mapper.SysConfigMapper;
 import com.agent.hopaw.tools.AgentTool;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.stereotype.Component;
@@ -28,13 +30,15 @@ public class DataInitializer implements CommandLineRunner {
     private final ChatHistoryMapper chatHistoryMapper;
     private final DataSource dataSource;
     private final List<AgentTool> allTools;
-    public DataInitializer(AgentMapper agentMapper, AiModelProviderMapper aiModelProviderMapper, AiModelMapper aiModelMapper, ChatHistoryMapper chatHistoryMapper, DataSource dataSource, List<AgentTool> allTools) {
+    private final SysConfigMapper sysConfigMapper;
+    public DataInitializer(AgentMapper agentMapper, AiModelProviderMapper aiModelProviderMapper, AiModelMapper aiModelMapper, ChatHistoryMapper chatHistoryMapper, DataSource dataSource, List<AgentTool> allTools, SysConfigMapper sysConfigMapper) {
         this.agentMapper = agentMapper;
         this.aiModelProviderMapper = aiModelProviderMapper;
         this.aiModelMapper = aiModelMapper;
         this.chatHistoryMapper = chatHistoryMapper;
         this.dataSource = dataSource;
         this.allTools = allTools;
+        this.sysConfigMapper = sysConfigMapper;
 
     }
 
@@ -125,6 +129,62 @@ public class DataInitializer implements CommandLineRunner {
             } catch (Exception ignored) {
                 // 列已存在，忽略
             }
+
+            stmt.execute("CREATE TABLE IF NOT EXISTS sys_config (" +
+                    "id INTEGER PRIMARY KEY AUTOINCREMENT, " +
+                    "config_key TEXT NOT NULL UNIQUE, " +
+                    "config_value TEXT, " +
+                    "description TEXT, " +
+                    "create_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP, " +
+                    "update_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP" +
+                    ")");
+
+            stmt.execute("CREATE INDEX IF NOT EXISTS idx_sys_config_key ON sys_config(config_key)");
+
+            // 兼容旧表：添加 update_time 列（如果不存在）
+            try {
+                stmt.execute("ALTER TABLE sys_config ADD COLUMN update_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP");
+            } catch (Exception ignored) {
+            }
+
+            stmt.execute("CREATE TABLE IF NOT EXISTS scheduled_tasks (" +
+                    "id INTEGER PRIMARY KEY AUTOINCREMENT, " +
+                    "task_name TEXT NOT NULL, " +
+                    "task_type TEXT NOT NULL, " +
+                    "cron_expression TEXT NOT NULL, " +
+                    "enabled INTEGER DEFAULT 1, " +
+                    "description TEXT, " +
+                    "ext_params TEXT, " +
+                    "identity TEXT, " +
+                    "builtin INTEGER DEFAULT 0, " +
+                    "create_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP, " +
+                    "update_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP" +
+                    ")");
+
+            stmt.execute("CREATE INDEX IF NOT EXISTS idx_scheduled_tasks_type ON scheduled_tasks(task_type)");
+
+            // 兼容旧表：添加 identity 和 builtin 列（如果不存在）
+            try {
+                stmt.execute("ALTER TABLE scheduled_tasks ADD COLUMN identity TEXT");
+            } catch (Exception ignored) {
+            }
+            try {
+                stmt.execute("ALTER TABLE scheduled_tasks ADD COLUMN builtin INTEGER DEFAULT 0");
+            } catch (Exception ignored) {
+            }
+
+            // 插入默认定时任务（如果表为空）
+            try {
+                stmt.execute("INSERT INTO scheduled_tasks (task_name, task_type, cron_expression, enabled, description, builtin) " +
+                        "SELECT '日志测试', 'testLog', '0 */5 * * * *', 0, '每5分钟打印一条日志，用于测试定时任务', 1 " +
+                        "WHERE NOT EXISTS (SELECT 1 FROM scheduled_tasks where task_type = 'testLog')");
+            } catch (Exception ignored) {
+            }try {
+                stmt.execute("INSERT INTO scheduled_tasks (task_name, task_type, cron_expression, enabled, description, builtin) " +
+                        "SELECT '长时记忆整理', 'longTermMemory', '0/10 * * * * *', 0, '每10秒钟执行一次长时记忆整理', 1 " +
+                        "WHERE NOT EXISTS (SELECT 1 FROM scheduled_tasks where task_type = 'longTermMemory')");
+            } catch (Exception ignored) {
+            }
         }
 
         List<AiModelProvider> aiModelProviders = aiModelProviderMapper.findAll();
@@ -207,6 +267,12 @@ public class DataInitializer implements CommandLineRunner {
             String tools = allTools.stream().map(x -> x.getName()).collect(Collectors.joining(","));
             agentMapper.insert(new Agent("通用助手", "可以回答各种问题，使用多种工具", tools, 20, 20, true));
 
+        }
+
+        if (sysConfigMapper.findByKey("memory_enabled") == null) {
+            sysConfigMapper.insert(new SysConfig("memory_enabled", "false", "是否开启记忆整理"));
+            sysConfigMapper.insert(new SysConfig("memory_ai_model_id", "", "记忆整理使用模型"));
+            sysConfigMapper.insert(new SysConfig("memory_frequency", "5", "记忆整理频率（分钟）"));
         }
     }
 

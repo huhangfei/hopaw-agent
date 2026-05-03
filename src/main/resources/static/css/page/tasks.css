@@ -1,0 +1,130 @@
+.tasks-container {
+    flex: 1;
+    padding: 20px;
+    overflow-y: auto;
+    background: #f5f5f5;
+}
+
+.tasks-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+}
+
+.tasks-header h2 {
+    font-size: 20px;
+    color: #333;
+}
+
+.tasks-card {
+    background: white;
+    border-radius: 12px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+    overflow: hidden;
+}
+
+.tasks-table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.tasks-table thead {
+    background: #f8f9fa;
+}
+
+.tasks-table th {
+    padding: 12px 15px;
+    text-align: left;
+    font-size: 13px;
+    color: #666;
+    font-weight: 600;
+    border-bottom: 2px solid #e0e0e0;
+}
+
+.tasks-table td {
+    padding: 12px 15px;
+    font-size: 14px;
+    color: #333;
+    border-bottom: 1px solid #f0f0f0;
+}
+
+.tasks-table tbody tr:hover {
+    background: #f8f9fa;
+}
+
+.task-status-badge {
+    display: inline-block;
+    padding: 3px 10px;
+    border-radius: 12px;
+    font-size: 12px;
+    font-weight: 500;
+}
+
+.task-status-badge.enabled {
+    background: #e8f5e9;
+    color: #2e7d32;
+}
+
+.task-status-badge.disabled {
+    background: #f5f5f5;
+    color: #999;
+}
+
+.task-type-tag {
+    display: inline-block;
+    padding: 2px 8px;
+    border-radius: 4px;
+    font-size: 12px;
+    background: #e3f2fd;
+    color: #1976d2;
+}
+
+.builtin-badge {
+    display: inline-block;
+    padding: 1px 6px;
+    border-radius: 4px;
+    font-size: 11px;
+    background: #fff3e0;
+    color: #e65100;
+    font-weight: 500;
+    vertical-align: middle;
+    margin-left: 4px;
+}
+
+.task-actions {
+    display: flex;
+    gap: 6px;
+    align-items: center;
+}
+
+.btn-toggle {
+    padding: 4px 10px;
+    border: 1px solid #ddd;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 12px;
+    background: white;
+    color: #666;
+    transition: all 0.2s;
+}
+
+.btn-toggle:hover {
+    border-color: #667eea;
+    color: #667eea;
+}
+
+.btn-toggle.enabled {
+    background: #e8f5e9;
+    border-color: #4CAF50;
+    color: #2e7d32;
+}
+
+.empty-state {
+    text-align: center;
+    padding: 40px;
+    color: #999;
+    background: white;
+    border-radius: 12px;
+    margin-top: 20px;
+}

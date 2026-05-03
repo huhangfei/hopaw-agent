@@ -4,9 +4,10 @@ import com.agent.hopaw.mapper.AgentMapper;
 import com.agent.hopaw.mapper.ChatMemoryMapper;
 import com.agent.hopaw.model.Agent;
 import com.agent.hopaw.model.ChatMemory;
+import com.agent.hopaw.model.ScheduledTask;
 import com.agent.hopaw.service.AiModelService;
 import com.agent.hopaw.service.LangChain4jMonitoringService;
-import com.agent.hopaw.service.LongTermMemoryService;
+import com.agent.hopaw.service.SysConfigService;
 import dev.langchain4j.data.message.ChatMessage;
 import dev.langchain4j.data.message.ChatMessageDeserializer;
 import dev.langchain4j.model.chat.ChatModel;
@@ -14,35 +15,43 @@ import dev.langchain4j.service.AiServices;
 import dev.langchain4j.service.UserMessage;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
 import java.util.Arrays;
 import java.util.List;
 
 @Component
-public class LongTermMemoryTask {
+public class LongTermMemoryTask implements TaskHandler {
     private final AiModelService aiModelService;
     private static final Logger logger = LoggerFactory.getLogger(LongTermMemoryTask.class);
 
-    private final LongTermMemoryService longTermMemoryService;
+    private final com.agent.hopaw.service.LongTermMemoryService longTermMemoryService;
     private final LangChain4jMonitoringService monitoringService;
     private final ChatMemoryMapper chatMemoryMapper;
     private final AgentMapper agentMapper;
+    private final SysConfigService sysConfigService;
 
-    public LongTermMemoryTask(AiModelService aiModelService, LongTermMemoryService longTermMemoryService,
+    private String lastMemoryModelId = null;
+    private int counter = 0;
+
+    public LongTermMemoryTask(AiModelService aiModelService, com.agent.hopaw.service.LongTermMemoryService longTermMemoryService,
                               ChatMemoryMapper chatMemoryMapper,
-                              LangChain4jMonitoringService monitoringService, AgentMapper agentMapper) {
+                              LangChain4jMonitoringService monitoringService, AgentMapper agentMapper,
+                              SysConfigService sysConfigService) {
         this.aiModelService = aiModelService;
         this.longTermMemoryService = longTermMemoryService;
         this.chatMemoryMapper = chatMemoryMapper;
         this.monitoringService = monitoringService;
         this.agentMapper = agentMapper;
+        this.sysConfigService = sysConfigService;
     }
 
-    @Scheduled(fixedDelay = 5000)
     public void processAgentMemories() {
         try {
+            String enabled = getConfig("memory_enabled", "false");
+            if (!"true".equals(enabled)) {
+                return;
+            }
             List<Agent> allAgents = agentMapper.findAll();
             for (Agent agent : allAgents) {
                 try {
@@ -51,11 +60,14 @@ public class LongTermMemoryTask {
                     logger.error("Error processing memory for agent {}", agent.getId(), e);
                 }
             }
-
-
         } catch (Exception e) {
             logger.error("Error fetching agent ids for memory processing", e);
         }
+    }
+
+    private String getConfig(String key, String defaultValue) {
+        var config = sysConfigService.getByKey(key);
+        return config != null ? config.getConfigValue() : defaultValue;
     }
 
     private void processMemoryForIdentity(Agent agent) {
@@ -87,8 +99,15 @@ public class LongTermMemoryTask {
 
     private boolean handle(String identity, String content) {
         try {
+            String modelIdStr = getConfig("memory_ai_model_id", "");
+            Long modelId = null;
+            if (!modelIdStr.isBlank()) {
+                try {
+                    modelId = Long.parseLong(modelIdStr);
+                } catch (NumberFormatException ignored) {}
+            }
 
-            ChatModel chatModel = aiModelService.createChatModel(null, false);
+            ChatModel chatModel = aiModelService.createChatModel(modelId, false);
 
             String systemMessage = "你是一个记忆整理助手。善于根据聊天记录提取关键的用户记忆信息。" +
                     "请根据内容总结出用户的关键记忆信息，并按以下格式进行分类，分类不够可以自己添加，但是分类要精简。记忆内容不能胡编乱造信息，要完全从内容中来：" +
@@ -128,6 +147,21 @@ public class LongTermMemoryTask {
         }catch (Exception ex){
             logger.error("Error processing memory for identity {}", identity, ex);
             return false;
+        }
+    }
+
+    @Override
+    public String getType() {
+        return "longTermMemory";
+    }
+
+    @Override
+    public void execute(ScheduledTask task) {
+        logger.info("定时记忆整理任务执行 [{}]", task.getId());
+        try {
+            processAgentMemories();
+        } catch (Exception e) {
+            logger.error("记忆整理任务执行失败", e);
         }
     }
 

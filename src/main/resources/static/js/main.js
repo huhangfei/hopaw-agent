@@ -506,7 +506,7 @@ function setupCascading(providerSelect, modelSelect) {
 }
 
 function showAddModal() {
-    document.getElementById('addAgentModal').classList.add('active');
+    Modal.open('addAgentModal');
     var providerSelect = document.getElementById('addProviderSelect');
     var modelSelect = document.getElementById('addModelSelect');
     modelSelect.disabled = true;
@@ -514,7 +514,7 @@ function showAddModal() {
 }
 
 function hideAddModal() {
-    document.getElementById('addAgentModal').classList.remove('active');
+    Modal.close('addAgentModal');
 }
 
 function showEditModal(id, name, description, tools, maxMemoryRecords, maxToolInvocations, aiModelId, enableThinking) {
@@ -537,27 +537,22 @@ function showEditModal(id, name, description, tools, maxMemoryRecords, maxToolIn
     modelSelect.disabled = true;
     loadProviders(providerSelect, modelSelect, aiModelId);
 
-    document.getElementById('editAgentModal').classList.add('active');
-
-    event.stopPropagation();
-}
-
-function hideEditModal() {
-    document.getElementById('editAgentModal').classList.remove('active');
+    Modal.open('editAgentModal');
 }
 
 /**
  * 显示停止智能体确认对话框
  */
-function showStopConfirm() {
-    document.getElementById('stopConfirmModal').classList.add('active');
+function hideEditModal() {
+    Modal.close('editAgentModal');
 }
 
-/**
- * 隐藏停止智能体确认对话框
- */
+function showStopConfirm() {
+    Modal.open('stopConfirmModal');
+}
+
 function hideStopConfirm() {
-    document.getElementById('stopConfirmModal').classList.remove('active');
+    Modal.close('stopConfirmModal');
 }
 
 /**
