@@ -104,53 +104,58 @@ function handleToolCall(data, responseId) {
     if (data.status === 'starting') {
         msgState.streamingMarkdownContent = '';
         msgState.lastMessageType = 'tool_call';
-        
+
         msgState.currentStreamingMessage = document.createElement('div');
         msgState.currentStreamingMessage.className = 'message agent tool-call-message';
         msgState.currentStreamingMessage.setAttribute('data-response-id', responseId);
-        
+
         var label = document.createElement('div');
         label.className = 'message-label';
         label.textContent = agentName;
         msgState.currentStreamingMessage.appendChild(label);
-        
+
         var toolCallContainer = document.createElement('div');
         toolCallContainer.className = 'tool-call-container';
         msgState.currentStreamingMessage.appendChild(toolCallContainer);
-        
+
         var toolCallDiv = document.createElement('div');
         toolCallDiv.className = 'tool-call';
         toolCallDiv.setAttribute('data-tool-call-id', data.toolCallId);
         toolCallDiv.setAttribute('data-status', 'starting');
-        
+
         var toolCallHeader = document.createElement('div');
         toolCallHeader.className = 'tool-call-header';
-        
+
         var toolIcon = document.createElement('span');
         toolIcon.className = 'tool-call-icon';
         toolIcon.textContent = '🔧';
         toolCallHeader.appendChild(toolIcon);
-        
+
         var toolName = document.createElement('span');
         toolName.className = 'tool-call-name';
         toolName.textContent = data.toolName || 'Unknown Tool';
         toolCallHeader.appendChild(toolName);
-        
+
         var toolCallStatus = document.createElement('span');
         toolCallStatus.className = 'tool-call-status';
         toolCallStatus.textContent = '执行中...';
         toolCallHeader.appendChild(toolCallStatus);
-        
+
         toolCallDiv.appendChild(toolCallHeader);
-        
+
+        // Create collapsible body wrapper (open during execution)
+        var bodyDiv = document.createElement('div');
+        bodyDiv.className = 'tool-call-body open';
+        toolCallDiv.appendChild(bodyDiv);
+
         if (data.arguments) {
             var argsDiv = document.createElement('div');
             argsDiv.className = 'tool-call-args';
-            argsDiv.innerHTML = '<div class="args-label">参数:</div><pre class="args-content">' + 
+            argsDiv.innerHTML = '<div class="args-label">参数:</div><pre class="args-content">' +
                 escapeHtml(JSON.stringify(data.arguments, null, 2)) + '</pre>';
-            toolCallDiv.appendChild(argsDiv);
+            bodyDiv.appendChild(argsDiv);
         }
-        
+
         toolCallContainer.appendChild(toolCallDiv);
         messagesDiv.appendChild(msgState.currentStreamingMessage);
         messagesDiv.scrollTop = messagesDiv.scrollHeight;
@@ -158,28 +163,48 @@ function handleToolCall(data, responseId) {
         var toolCallDiv = document.querySelector('.tool-call[data-tool-call-id="' + data.toolCallId + '"]');
         if (toolCallDiv) {
             toolCallDiv.setAttribute('data-status', 'executed');
-            
+
             var statusEl = toolCallDiv.querySelector('.tool-call-status');
             if (statusEl) {
                 statusEl.textContent = '执行完成';
                 statusEl.classList.add('completed');
             }
-            
+
             var iconEl = toolCallDiv.querySelector('.tool-call-icon');
             if (iconEl) {
                 iconEl.style.animation = 'none';
                 iconEl.textContent = '✅';
             }
-            
+
+            // Find or create collapsible body
+            var bodyDiv = toolCallDiv.querySelector('.tool-call-body');
+            if (!bodyDiv) {
+                bodyDiv = document.createElement('div');
+                bodyDiv.className = 'tool-call-body';
+                toolCallDiv.appendChild(bodyDiv);
+            }
+
             if (data.result) {
                 var resultDiv = document.createElement('div');
                 resultDiv.className = 'tool-call-result';
-                resultDiv.innerHTML = '<div class="result-label">结果:</div><pre class="result-content">' + 
+                resultDiv.innerHTML = '<div class="result-label">结果:</div><pre class="result-content">' +
                     escapeHtml(data.result) + '</pre>';
-                toolCallDiv.appendChild(resultDiv);
+                bodyDiv.appendChild(resultDiv);
+            }
+
+            // Add toggle button if body has any content
+            if (bodyDiv.children.length > 0) {
+                var toggleBtn = document.createElement('span');
+                toggleBtn.className = 'tool-call-toggle';
+                toggleBtn.textContent = '▼';
+                statusEl.parentNode.appendChild(toggleBtn);
+
+                // Collapse body by default after execution
+                bodyDiv.classList.remove('open');
+                bodyDiv.classList.add('collapsed');
             }
         }
-        
+
         if (msgState.currentStreamingMessage) {
             var timeDiv = document.createElement('div');
             timeDiv.className = 'message-time';
@@ -187,7 +212,7 @@ function handleToolCall(data, responseId) {
             msgState.currentStreamingMessage.appendChild(timeDiv);
             msgState.currentStreamingMessage = null;
         }
-        
+
         messagesDiv.scrollTop = messagesDiv.scrollHeight;
     }
 }
@@ -623,4 +648,20 @@ window.onload = function() {
             }
         });
     }
+
+    // Event delegation: toggle collapsible tool-call-body on ▼ click
+    document.addEventListener('click', function(e) {
+        var toggle = e.target.closest('.tool-call-toggle');
+        if (toggle) {
+            var toolCall = toggle.closest('.tool-call');
+            if (toolCall) {
+                var body = toolCall.querySelector('.tool-call-body');
+                if (body) {
+                    body.classList.toggle('collapsed');
+                    body.classList.toggle('open');
+                    toggle.classList.toggle('open');
+                }
+            }
+        }
+    });
 };

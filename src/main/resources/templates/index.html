@@ -97,14 +97,19 @@
                                         <span th:case="'tool_call_failed'">执行失败</span>
                                         <span th:case="*" th:text="${chat.toolCallStatus}">执行完成</span>
                                     </span>
+                                <span th:if="${chat.toolCallStatus == 'tool_call_end' or chat.toolCallStatus == 'tool_call_failed'}"
+                                      class="tool-call-toggle">▼</span>
                             </div>
-                            <div class="tool-call-args" th:if="${chat.toolArguments}">
-                                <div class="args-label">参数:</div>
-                                <pre class="args-content" th:text="${chat.toolArguments}"></pre>
-                            </div>
-                            <div class="tool-call-result" th:if="${chat.content}">
-                                <div class="result-label">结果:</div>
-                                <pre class="result-content" th:text="${chat.content}"></pre>
+                            <div class="tool-call-body"
+                                 th:classappend="${chat.toolCallStatus == 'tool_call_start' ? '' : 'collapsed'}">
+                                <div class="tool-call-args" th:if="${chat.toolArguments}">
+                                    <div class="args-label">参数:</div>
+                                    <pre class="args-content" th:text="${chat.toolArguments}"></pre>
+                                </div>
+                                <div class="tool-call-result" th:if="${chat.content}">
+                                    <div class="result-label">结果:</div>
+                                    <pre class="result-content" th:text="${chat.content}"></pre>
+                                </div>
                             </div>
                         </div>
                     </div>

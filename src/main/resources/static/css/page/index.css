@@ -545,6 +545,35 @@
     opacity: 0.5;
 }
 
+/* Tool call toggle button */
+.tool-call-toggle {
+    margin-left: 4px;
+    cursor: pointer;
+    font-size: 11px;
+    transition: transform 0.3s ease;
+    user-select: none;
+    color: #999;
+    padding: 2px 5px;
+    border-radius: 4px;
+    line-height: 1;
+}
+.tool-call-toggle:hover {
+    background: rgba(102, 126, 234, 0.1);
+    color: #667eea;
+}
+.tool-call-toggle.open {
+    transform: rotate(180deg);
+}
+/* Tool call collapsible body */
+.tool-call-body {
+    overflow: hidden;
+    max-height: 800px;
+    transition: max-height 0.3s ease;
+}
+.tool-call-body.collapsed {
+    max-height: 0;
+}
+
 /* ========== Tool checkbox items ========== */
 .checkbox-group{
     max-height: 380px;
