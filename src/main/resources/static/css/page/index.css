@@ -92,17 +92,6 @@
     margin-top: 10px;
     float: right;
 }
-.btn-edit, .btn-delete {
-    width: 28px;
-    height: 28px;
-    border: none;
-    border-radius: 4px;
-    cursor: pointer;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    transition: opacity 0.2s;
-}
 .btn-edit {
     background: #2196F3;
     color: white;
@@ -113,10 +102,6 @@
 }
 .btn-edit:hover, .btn-delete:hover {
     opacity: 0.8;
-}
-.btn-edit svg, .btn-delete svg {
-    width: 14px;
-    height: 14px;
 }
 .chat-area {
     flex: 1;
@@ -154,35 +139,41 @@
     gap: 8px;
 }
 .header-actions button {
-    width: 32px;
     height: 32px;
     border: none;
-    border-radius: 4px;
+    border-radius: 6px;
     cursor: pointer;
     display: flex;
     align-items: center;
-    justify-content: center;
+    gap: 4px;
+    padding: 0 10px;
+    font-size: 13px;
+    white-space: nowrap;
+    flex-shrink: 0;
 }
 .header-actions button svg {
     width: 16px;
     height: 16px;
 }
-.btn-edit {
+.header-actions .btn-edit {
     background: #2196F3;
     color: white;
 }
-.btn-delete {
+.header-actions .btn-delete {
     background: #f44336;
     color: white;
 }
-.btn-clear {
+.header-actions .btn-clear {
     background: #9c27b0;
     color: white;
 }
-.btn-edit:hover, .btn-delete:hover, .btn-clear:hover {
-    opacity: 0.8;
+.header-actions .btn-edit:hover {
+    background: #1976D2;
 }
-.btn-clear:hover {
+.header-actions .btn-delete:hover {
+    background: #d32f2f;
+}
+.header-actions .btn-clear:hover {
     background: #7b1fa2;
 }
 .chat-messages {
@@ -554,7 +545,75 @@
     opacity: 0.5;
 }
 
-.tool-desc {
+/* ========== Tool checkbox items ========== */
+.checkbox-group{
+    max-height: 380px;
+    overflow-y: auto;
+}
+.checkbox-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 12px;
+    border: 1px solid #e0e0e0;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.2s;
+    background: #fafafa;
+    width: 100%;
+    box-sizing: border-box;
+}
+
+.checkbox-item:hover {
+    border-color: #667eea;
+    background: #f0f2ff;
+}
+
+.checkbox-item input[type="checkbox"] {
+    width: 16px;
+    height: 16px;
+    accent-color: #667eea;
+    flex-shrink: 0;
+}
+
+.checkbox-item {
+    flex-wrap: wrap;
+}
+
+.checkbox-item > span {
+    font-size: 14px;
+    font-weight: 500;
+    color: #333;
+    margin-right: auto;
+}
+
+.checkbox-item .tool-desc {
     font-size: 12px;
+    font-weight: normal;
     color: #8899aa;
+    width: 100%;
+    padding-left: 24px;
+}
+
+.checkbox-item:has(input:checked) {
+    border-color: #667eea;
+    background: #eef0ff;
+}
+
+/* ========== Modal form left/right layout ========== */
+.modal-form {
+    display: flex;
+    gap: 24px;
+}
+
+.modal-form .form-left {
+    flex: 2;
+    min-width: 0;
+}
+
+.modal-form .form-right {
+    flex: 3;
+    min-width: 0;
+    border-left: 1px solid #e0e0e0;
+    padding-left: 24px;
 }

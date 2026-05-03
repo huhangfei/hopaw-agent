@@ -15,6 +15,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseBody;
 
 import java.util.Collections;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -41,6 +42,7 @@ public class AgentController {
         model.addAttribute("agents", agents);
 
         List<Map<String, String>> tools = allTools.stream()
+                .sorted(Comparator.comparing(AgentTool::getName))
                 .map(t -> Map.of("name", t.getName(), "description", t.getDescription()))
                 .collect(Collectors.toList());
         model.addAttribute("tools", tools);
