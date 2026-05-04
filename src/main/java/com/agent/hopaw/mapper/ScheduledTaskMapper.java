@@ -9,6 +9,7 @@ import java.util.List;
 public interface ScheduledTaskMapper {
     List<ScheduledTask> findAll();
     ScheduledTask findById(Long id);
+    ScheduledTask findByTaskType(String taskType);
     void insert(ScheduledTask task);
     void update(ScheduledTask task);
     void deleteById(Long id);

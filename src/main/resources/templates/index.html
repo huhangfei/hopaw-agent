@@ -127,7 +127,7 @@
                         th:classappend="${agentExecutorState  ? 'hide' : ''}">发送
                 </button>
                 <button type="button" id="runningBtn" class="chat-form-running-btn"
-                        th:classappend="${agentExecutorState  ? '' : 'hide'}" onclick="showStopConfirm()">
+                        th:classappend="${agentExecutorState  ? '' : 'hide'}" onclick="stopAgent()">
                     <span class="chat-form-running-btn-dot"></span>
                     运行中...
                 </button>
@@ -287,24 +287,7 @@
     </div>
 </div>
 
-<div id="stopConfirmModal" class="modal-overlay">
-    <div class="modal" style="max-width: 400px;">
-        <div class="modal-header">
-            <h3>停止智能体</h3>
-            <button class="modal-close" onclick="hideStopConfirm()">&times;</button>
-        </div>
-        <div class="modal-body">
-            确定要停止智能体运行吗？
-        </div>
-        <div class="modal-footer">
-            <button type="button" class="btn-cancel" onclick="hideStopConfirm()">取消</button>
-            <button type="button" class="btn-submit" onclick="confirmStop()">确定停止</button>
-        </div>
-    </div>
-</div>
-
-<th:block th:replace="fragments/layout::commonScripts(null)"></th:block>
-<script th:src="@{/js/main.js}"></script>
+<th:block th:replace="fragments/layout::commonScripts('index.js')"></th:block>
 <script th:src="@{/js/marked.min.js}"></script>
 <script th:inline="javascript">
         setCurrentAgentId(/*[[${selectedAgentId}]]*/ null);

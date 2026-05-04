@@ -115,9 +115,13 @@
 }
 
 .btn-toggle.enabled {
-    background: #e8f5e9;
-    border-color: #4CAF50;
-    color: #2e7d32;
+    background: #fbe9e7;
+    border-color: #e53935;
+    color: #c62828;
+}
+.btn-toggle.enabled:hover {
+    border-color: #c62828;
+    color: #c62828;
 }
 
 .empty-state {
@@ -127,4 +131,15 @@
     background: white;
     border-radius: 12px;
     margin-top: 20px;
+}
+
+.form-input:disabled {
+    background: #f9f9f9;
+    color: #333;
+    cursor: default;
+    border: 1px solid #e0e0e0;
+    border-radius: 6px;
+    padding: 8px 12px;
+    font-size: 14px;
+    width: 100%;
 }

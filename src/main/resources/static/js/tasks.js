@@ -27,10 +27,9 @@ function loadTasks() {
                 var statusHtml = t.enabled === 1
                     ? '<span class="task-status-badge enabled">运行中</span>'
                     : '<span class="task-status-badge disabled">已关闭</span>';
-                var typeNames = { log: '日志测试', memory: '记忆整理' };
-                var typeName = typeNames[t.taskType] || t.taskType;
+                var typeName = t.taskType;
                 var builtinBadge = t.builtin === 1 ? '<span class="builtin-badge">内置</span>' : '';
-                var identity = t.identity || '-';
+                var identity = t.identity || '系统';
                 return '<tr>' +
                     '<td><strong>' + escapeHtml(t.taskName) + '</strong> ' + builtinBadge + '</td>' +
                     '<td><span class="task-type-tag">' + typeName + '</span></td>' +
@@ -65,8 +64,11 @@ function showAddModal() {
     document.getElementById('taskId').value = '';
     document.getElementById('taskName').value = '';
     document.getElementById('taskType').value = '';
+    document.getElementById('taskType').style.display = '';
+    document.getElementById('taskTypeDisplay').style.display = 'none';
     document.getElementById('taskCron').value = '';
     document.getElementById('taskIdentity').value = '';
+    document.getElementById('taskIdentity').disabled = false;
     document.getElementById('taskBuiltin').value = '0';
     document.getElementById('taskEnabled').checked = true;
     document.getElementById('taskEnabledLabel').textContent = '开启';
@@ -87,8 +89,12 @@ function showEditModal(id) {
             document.getElementById('taskId').value = task.id;
             document.getElementById('taskName').value = task.taskName || '';
             document.getElementById('taskType').value = task.taskType || '';
+            document.getElementById('taskType').style.display = 'none';
+            document.getElementById('taskTypeDisplay').value = task.taskType || '';
+            document.getElementById('taskTypeDisplay').style.display = '';
             document.getElementById('taskCron').value = task.cronExpression || '';
             document.getElementById('taskIdentity').value = task.identity || '';
+            document.getElementById('taskIdentity').disabled = true;
             document.getElementById('taskBuiltin').value = task.builtin || 0;
             document.getElementById('taskEnabled').checked = task.enabled === 1;
             document.getElementById('taskEnabledLabel').textContent = task.enabled === 1 ? '开启' : '关闭';

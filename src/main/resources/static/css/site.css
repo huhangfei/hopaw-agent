@@ -1,0 +1,112 @@
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+body {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    background-color: #f0f2f5;
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+}
+header {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    padding: 10px 30px;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+}
+header h1 {
+    font-size: 24px;
+    font-weight: 600;
+}
+.main-container {
+    display: flex;
+    flex: 1;
+    overflow: hidden;
+}
+.menu-sidebar {
+    width: 140px;
+    background: #f5f5f5;
+    border-right: 1px solid #e0e0e0;
+    display: flex;
+    flex-direction: column;
+    padding: 10px 0;
+    gap: 2px;
+    overflow: hidden;
+}
+.menu-sidebar.with-anim {
+    transition: width 0.3s ease;
+}
+.menu-btn {
+    background: transparent;
+    border: none;
+    width: 100%;
+    height: 44px;
+    padding: 0 12px;
+    border-radius: 0;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    transition: background 0.2s;
+    font-size: 14px;
+    color: #555;
+}
+.menu-btn:hover {
+    background: #e0e0e0;
+}
+.menu-btn.active {
+    background: #d0d7ef;
+    color: #4a66d6;
+    font-weight: 500;
+}
+.menu-btn.active svg {
+    color: #4a66d6;
+}
+.menu-btn svg {
+    width: 22px;
+    height: 22px;
+    color: #666;
+    flex-shrink: 0;
+}
+.menu-btn .menu-label {
+    white-space: nowrap;
+    transition: opacity 0.3s ease, width 0.3s ease, margin 0.3s ease, padding 0.3s ease;
+    overflow: hidden;
+}
+.menu-spacer {
+    flex: 1;
+}
+
+/* Collapsed state */
+.menu-sidebar.collapsed {
+    width: 50px;
+}
+.menu-sidebar.collapsed .menu-btn {
+    padding: 0;
+    justify-content: center;
+}
+.menu-sidebar.collapsed .menu-label {
+    opacity: 0;
+    width: 0;
+    margin: 0;
+    padding: 0;
+}
+.menu-sidebar.collapsed .menu-btn svg {
+    width: 24px;
+    height: 24px;
+}
+.menu-sidebar.collapsed .menu-collapse-btn {
+    border-top: 1px solid #e0e0e0;
+    margin-top: 4px;
+    padding-top: 8px;
+}
+.hide{
+    display: none !important;
+}
+
+.flex-container {
+    display: flex;
+    gap: 8px;
+}

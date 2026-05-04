@@ -4,7 +4,7 @@ document.addEventListener('DOMContentLoaded', function() {
     loadAllSettings();
     loadProviders();
     setupCascading();
-    setupToggleLabel();
+    loadMemoryTaskStatus();
 });
 
 function switchTab(name) {
@@ -18,13 +18,6 @@ function switchTab(name) {
     document.getElementById('tab-' + name).classList.add('active');
 }
 
-function setupToggleLabel() {
-    var checkbox = document.getElementById('memoryEnabled');
-    checkbox.addEventListener('change', function() {
-        document.getElementById('memoryEnabledLabel').textContent = this.checked ? '开启' : '关闭';
-    });
-}
-
 function loadAllSettings() {
     fetch('/api/config')
         .then(function(r) { return r.json(); })
@@ -33,14 +26,11 @@ function loadAllSettings() {
             (resp.data || []).forEach(function(c) {
                 settingsCache[c.configKey] = c.configValue;
             });
-            document.getElementById('memoryEnabled').checked = settingsCache['memory_enabled'] === 'true';
-            document.getElementById('memoryEnabledLabel').textContent = settingsCache['memory_enabled'] === 'true' ? '开启' : '关闭';
-            document.getElementById('memoryFrequency').value = settingsCache['memory_frequency'] || '5';
-
             var savedModelId = settingsCache['memory_ai_model_id'];
             if (savedModelId) {
                 selectModelById(savedModelId);
             }
+            document.getElementById('memoryPrompt').value = settingsCache['memory_prompt'] || '';
         })
         .catch(function(e) {
             console.error('加载设置失败:', e);
@@ -106,20 +96,13 @@ function selectModelById(modelId) {
 }
 
 function saveSettings() {
-    var enabled = document.getElementById('memoryEnabled').checked ? 'true' : 'false';
     var modelId = document.getElementById('memoryModelSelect').value;
-    var frequency = document.getElementById('memoryFrequency').value.trim();
-
-    if (!frequency || parseInt(frequency) < 1) {
-        showToast('请输入有效的整理频率', 'error');
-        return;
-    }
+    var prompt = document.getElementById('memoryPrompt').value.trim();
 
     var saves = [];
 
-    saves.push(saveConfig('memory_enabled', enabled, '是否开启记忆整理'));
     saves.push(saveConfig('memory_ai_model_id', modelId, '记忆整理使用模型'));
-    saves.push(saveConfig('memory_frequency', frequency, '记忆整理频率（分钟）'));
+    saves.push(saveConfig('memory_prompt', prompt, '记忆整理提示词'));
 
     Promise.all(saves).then(function(results) {
         var allOk = results.every(function(r) { return r; });
@@ -128,6 +111,67 @@ function saveSettings() {
         } else {
             showToast('部分设置保存失败', 'error');
         }
+    });
+}
+
+function loadMemoryTaskStatus() {
+    fetch('/api/tasks/type/longTermMemory')
+        .then(function(r) { return r.json(); })
+        .then(function(resp) {
+            if (resp.msg !== 'success' || !resp.data) {
+                setTaskStatusUI('error', '获取失败');
+                return;
+            }
+            var running = resp.data.running;
+            var task = resp.data.task;
+            setTaskStatusUI(running, running ? '运行中' : '已关闭', task.id, task.enabled);
+        })
+        .catch(function() {
+            setTaskStatusUI('error', '获取失败');
+        });
+}
+
+function setTaskStatusUI(running, label, taskId, enabled) {
+    var badge = document.getElementById('memoryTaskStatus');
+    var btn = document.getElementById('memoryTaskToggleBtn');
+    badge.className = 'task-status-badge ' + (running ? 'running' : 'stopped');
+    badge.textContent = label;
+    if (taskId) {
+        btn.style.display = '';
+        btn.textContent = running ? '禁用' : '启用';
+        btn.className = 'btn-toggle-task' + (running ? ' running' : '');
+        btn._taskId = taskId;
+        btn._newEnabled = running ? 0 : 1;
+    } else {
+        btn.style.display = 'none';
+    }
+}
+
+function toggleMemoryTask() {
+    var btn = document.getElementById('memoryTaskToggleBtn');
+    var taskId = btn._taskId;
+    var newEnabled = btn._newEnabled;
+    var action = newEnabled === 1 ? '启用' : '禁用';
+
+    showConfirm('确定要' + action + '记忆整理定时任务吗？').then(function(confirmed) {
+        if (!confirmed) return;
+        fetch('/api/tasks/' + taskId + '/enabled', {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ enabled: newEnabled })
+        })
+        .then(function(r) { return r.json(); })
+        .then(function(resp) {
+            if (resp.msg === 'success') {
+                showToast(action + '成功', 'success');
+                loadMemoryTaskStatus();
+            } else {
+                showToast(action + '失败', 'error');
+            }
+        })
+        .catch(function() {
+            showToast(action + '失败', 'error');
+        });
     });
 }
 

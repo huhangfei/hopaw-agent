@@ -32,6 +32,32 @@ public class ScheduledTaskController {
         return ResponseBean.success(task);
     }
 
+    @GetMapping("/type/{taskType}")
+    public ResponseBean getByTaskType(@PathVariable String taskType) {
+        ScheduledTask task = scheduledTaskService.findByTaskType(taskType);
+        if (task == null) {
+            return ResponseBean.fail("任务不存在");
+        }
+        var map = new java.util.HashMap<String, Object>();
+        map.put("task", task);
+        map.put("running", scheduledTaskService.isTaskRunning(task.getId()));
+        return ResponseBean.success(map);
+    }
+
+    @PutMapping("/{id}/enabled")
+    public ResponseBean setEnabled(@PathVariable Long id, @RequestBody java.util.Map<String, Integer> body) {
+        ScheduledTask existing = scheduledTaskService.findById(id);
+        if (existing == null) {
+            return ResponseBean.fail("任务不存在");
+        }
+        Integer enabled = body.get("enabled");
+        if (enabled == null || (enabled != 0 && enabled != 1)) {
+            return ResponseBean.fail("参数错误");
+        }
+        scheduledTaskService.setEnabled(id, enabled);
+        return ResponseBean.success();
+    }
+
     @PostMapping
     public ResponseBean create(@RequestBody ScheduledTask task) {
         if (task.getTaskName() == null || task.getTaskName().isBlank()) {

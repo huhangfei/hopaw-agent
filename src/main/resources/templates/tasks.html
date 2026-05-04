@@ -54,8 +54,9 @@
                         <select id="taskType" required>
                             <option value="">请选择</option>
                             <option value="log">日志测试</option>
-                            <option value="memory">记忆整理</option>
+                            <option value="longTermMemory">记忆整理</option>
                         </select>
+                        <input type="text" id="taskTypeDisplay" class="form-input" disabled style="display:none;">
                     </div>
                     <div class="form-group">
                         <label for="taskCron">Cron 表达式 *</label>
@@ -68,12 +69,12 @@
                     <input type="hidden" id="taskBuiltin" value="0">
                     <div class="form-group">
                         <label>启用</label>
-                        <div class="toggle-wrapper" style="display:flex;align-items:center;gap:12px;">
-                            <label class="toggle" style="position:relative;width:44px;height:24px;flex-shrink:0;">
-                                <input type="checkbox" id="taskEnabled" style="opacity:0;width:0;height:0;">
-                                <span class="slider" style="position:absolute;cursor:pointer;top:0;left:0;right:0;bottom:0;background:#ccc;border-radius:24px;transition:background 0.3s;"></span>
+                        <div class="toggle-wrapper">
+                            <label class="toggle">
+                                <input type="checkbox" id="taskEnabled" >
+                                <span class="slider"></span>
                             </label>
-                            <span class="toggle-label" id="taskEnabledLabel" style="font-size:14px;color:#333;">关闭</span>
+                            <span class="toggle-label" id="taskEnabledLabel" >关闭</span>
                         </div>
                     </div>
                     <div class="form-group">

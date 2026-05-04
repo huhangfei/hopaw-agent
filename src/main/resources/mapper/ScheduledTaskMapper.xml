@@ -24,6 +24,10 @@
         SELECT * FROM scheduled_tasks WHERE id = #{id}
     </select>
 
+    <select id="findByTaskType" resultMap="BaseResultMap">
+        SELECT * FROM scheduled_tasks WHERE task_type = #{taskType} LIMIT 1
+    </select>
+
     <insert id="insert">
         <selectKey keyProperty="id" resultType="long" order="AFTER">
             SELECT last_insert_rowid()

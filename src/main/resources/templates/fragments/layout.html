@@ -4,7 +4,7 @@
     <th:block th:fragment="head(title, pageCss)">
         <meta charset="UTF-8">
         <title th:text="${title}">HoPaw</title>
-        <link rel="stylesheet" th:href="@{/css/style.css}">
+        <link rel="stylesheet" th:href="@{/css/site.css}">
         <link rel="stylesheet" th:href="@{/css/form.css}">
         <link rel="stylesheet" th:href="@{/css/modal.css}">
         <link rel="stylesheet" th:href="@{/css/confirm-dialog.css}">
@@ -16,24 +16,71 @@
         <h1 th:text="${title}">🤖 HoPaw</h1>
     </header>
 
-    <nav class="menu-sidebar" th:fragment="menuSidebar(activePage)">
+    <nav class="menu-sidebar collapsed" id="mainMenu" th:fragment="menuSidebar(activePage)">
         <button class="menu-btn" th:classappend="${activePage == 'home' ? 'active' : ''}" title="首页" onclick="location.href='/'">
             <svg viewBox="0 0 24 24" fill="currentColor"><path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z"/></svg>
+            <span class="menu-label">首页</span>
         </button>
         <button class="menu-btn" th:classappend="${activePage == 'models' ? 'active' : ''}" title="模型管理" onclick="location.href='/models'">
             <svg viewBox="0 0 24 24" fill="currentColor"><path d="M21 3H3c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h18c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm0 16H3V5h18v14zM5 15h14v3H5z"/></svg>
+            <span class="menu-label">模型管理</span>
         </button>
         <button class="menu-btn" th:classappend="${activePage == 'tasks' ? 'active' : ''}" title="定时任务" onclick="location.href='/tasks'">
             <svg viewBox="0 0 24 24" fill="currentColor"><path d="M11.99 2C6.47 2 2 6.48 2 12s4.47 10 9.99 10C17.52 22 22 17.52 22 12S17.52 2 11.99 2zM12 20c-4.42 0-8-3.58-8-8s3.58-8 8-8 8 3.58 8 8-3.58 8-8 8zm.5-13H11v6l5.25 3.15.75-1.23-4.5-2.67z"/></svg>
+            <span class="menu-label">定时任务</span>
         </button>
         <button class="menu-btn" th:classappend="${activePage == 'settings' ? 'active' : ''}" title="设置" onclick="location.href='/settings'">
             <svg viewBox="0 0 24 24" fill="currentColor"><path d="M19.14 12.94c.04-.31.06-.63.06-.94 0-.31-.02-.63-.06-.94l2.03-1.58c.18-.14.23-.41.12-.61l-1.92-3.32c-.12-.22-.37-.29-.59-.22l-2.39.96c-.5-.38-1.03-.7-1.62-.94l-.36-2.54c-.04-.24-.24-.41-.48-.41h-3.84c-.24 0-.43.17-.47.41l-.36 2.54c-.59.24-1.13.57-1.62.94l-2.39-.96c-.22-.08-.47 0-.59.22L2.74 8.87c-.12.21-.08.47.12.61l2.03 1.58c-.04.31-.06.63-.06.94s.02.63.06.94l-2.03 1.58c-.18.14-.23.41-.12.61l1.92 3.32c.12.22.37.29.59.22l2.39-.96c.5.38 1.03.7 1.62.94l.36 2.54c.05.24.24.41.48.41h3.84c.24 0 .44-.17.47-.41l.36-2.54c.59-.24 1.13-.56 1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32c.12-.22.07-.47-.12-.61l-2.01-1.58zM12 15.6c-1.98 0-3.6-1.62-3.6-3.6s1.62-3.6 3.6-3.6 3.6 1.62 3.6 3.6-1.62 3.6-3.6 3.6z"/></svg>
+            <span class="menu-label">设置</span>
+        </button>
+        <div class="menu-spacer"></div>
+        <button class="menu-btn menu-collapse-btn" onclick="toggleMenu()" title="收缩菜单">
+            <svg class="collapse-icon" viewBox="0 0 24 24" fill="currentColor"><path d="M15.41 7.41L14 6l-6 6 6 6 1.41-1.41L10.83 12z"/></svg>
+            <span class="menu-label">收缩菜单</span>
         </button>
     </nav>
 
     <div class="toast-container" id="toastContainer" th:fragment="toastContainer"></div>
 
     <th:block th:fragment="commonScripts(pageJs)">
+        <script>
+            /***侧边栏菜单隐藏和显示控制****/
+            function toggleMenu() {
+                var menu = document.getElementById('mainMenu');
+                menu.classList.add('with-anim');
+                menu.classList.toggle('collapsed');
+                updateMenuUI(menu);
+                localStorage.setItem('menuCollapsed', menu.classList.contains('collapsed'));
+            }
+
+            function updateMenuUI(menu) {
+                var btn = menu.querySelector('.menu-collapse-btn');
+                var icon = btn.querySelector('.collapse-icon');
+                var label = btn.querySelector('.menu-label');
+                if (menu.classList.contains('collapsed')) {
+                    btn.title = '展开菜单';
+                    label.textContent = '展开菜单';
+                    icon.innerHTML = '<path d="M8.59 16.59L10 18l6-6-6-6-1.41 1.41L13.17 12z"/>';
+                } else {
+                    btn.title = '收缩菜单';
+                    label.textContent = '收缩菜单';
+                    icon.innerHTML = '<path d="M15.41 7.41L14 6l-6 6 6 6 1.41-1.41L10.83 12z"/>';
+                }
+            }
+
+            (function initMenu() {
+                var menu = document.getElementById('mainMenu');
+                if (!menu) return;
+                var collapsed = localStorage.getItem('menuCollapsed');
+                if (collapsed === 'true') {
+                    menu.classList.add('collapsed');
+                }else if (collapsed === 'false') {
+                    menu.classList.remove('collapsed');
+                }
+                updateMenuUI(menu);
+            })();
+        </script>
+        <script th:src="@{/js/site.js}"></script>
         <script th:src="@{/js/toast.js}"></script>
         <script th:src="@{/js/modal.js}"></script>
         <script th:src="@{/js/confirm-dialog.js}"></script>

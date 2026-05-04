@@ -26,6 +26,26 @@ public class ScheduledTaskService {
         return taskMapper.findById(id);
     }
 
+    public ScheduledTask findByTaskType(String taskType) {
+        return taskMapper.findByTaskType(taskType);
+    }
+
+    public boolean isTaskRunning(Long id) {
+        return dynamicTaskService.isRunning(id);
+    }
+
+    @Transactional
+    public void setEnabled(Long id, Integer enabled) {
+        ScheduledTask task = taskMapper.findById(id);
+        if (task == null) return;
+        task.setEnabled(enabled);
+        dynamicTaskService.cancelTask(task.getId());
+        taskMapper.update(task);
+        if (enabled == 1) {
+            dynamicTaskService.scheduleTask(task);
+        }
+    }
+
     @Transactional
     public void insert(ScheduledTask task) {
         if (task.getEnabled() == null) {

@@ -572,33 +572,23 @@ function hideEditModal() {
     Modal.close('editAgentModal');
 }
 
-function showStopConfirm() {
-    Modal.open('stopConfirmModal');
-}
-
-function hideStopConfirm() {
-    Modal.close('stopConfirmModal');
-}
-
-/**
- * 确认停止智能体
- * 异步调用 /agent/stop 接口，停止成功后刷新页面
- */
-function confirmStop() {
-    var agentId = document.querySelector('input[name="agentId"]').value;
-    hideStopConfirm();
-    fetch('/agent/stop', {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/x-www-form-urlencoded',
-        },
-        body: 'id=' + agentId
-    }).then(function(response) {
-        return response.text();
-    }).then(function(data) {
-        if (data === 'ok') {
-            //location.reload();
-        }
+function stopAgent() {
+    showConfirm('确定要停止智能体运行吗？').then(function(confirmed) {
+        if (!confirmed) return;
+        var agentId = document.querySelector('input[name="agentId"]').value;
+        fetch('/agent/stop', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/x-www-form-urlencoded',
+            },
+            body: 'id=' + agentId
+        }).then(function(response) {
+            return response.text();
+        }).then(function(data) {
+            if (data === 'ok') {
+                //location.reload();
+            }
+        });
     });
 }
 
