@@ -543,6 +543,11 @@ function hideAddModal() {
 }
 
 function showEditModal(id, name, description, tools, maxMemoryRecords, maxToolInvocations, aiModelId, enableThinking) {
+    // 以深度思考按钮的实时状态为准，而非页面加载时的固化值
+    var deepBtn = document.getElementById('deepThinkBtn');
+    if (deepBtn) {
+        enableThinking = deepBtn.getAttribute('data-enabled') === 'true';
+    }
     document.getElementById('editAgentId').value = id;
     document.getElementById('editAgentName').value = name;
     document.getElementById('editAgentDescription').value = description;
