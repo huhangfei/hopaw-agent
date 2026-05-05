@@ -8,8 +8,8 @@ import com.agent.hopaw.model.ScheduledTask;
 import com.agent.hopaw.service.AiModelService;
 import com.agent.hopaw.service.LangChain4jMonitoringService;
 import com.agent.hopaw.service.SysConfigService;
-import dev.langchain4j.data.message.ChatMessage;
-import dev.langchain4j.data.message.ChatMessageDeserializer;
+import com.alibaba.fastjson2.JSON;
+import dev.langchain4j.data.message.*;
 import dev.langchain4j.model.chat.ChatModel;
 import dev.langchain4j.service.AiServices;
 import dev.langchain4j.service.UserMessage;
@@ -17,8 +17,11 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
 
+import java.time.LocalDateTime;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Objects;
+import java.util.stream.Collectors;
 
 @Component
 public class LongTermMemoryTask implements TaskHandler {
@@ -70,21 +73,91 @@ public class LongTermMemoryTask implements TaskHandler {
 
         //已标记清理的消息
         List<ChatMemory> cleanedMessages = chatMemoryMapper.findByAgentIdAndCleaned(agent.getId(), 1);
-
+        if (cleanedMessages.isEmpty()){
+            return;
+        }
         int batchSize = agent.getMaxMemoryRecords()/2;
 
         if(batchSize<=0){
             batchSize=5;
         }
-
-        if (cleanedMessages.isEmpty() || cleanedMessages.size() < batchSize) {
+        LocalDateTime latestTime = cleanedMessages.stream()
+                .map(ChatMemory::getCreateTime)
+                .filter(Objects::nonNull)
+                .max(LocalDateTime::compareTo)
+                .orElse(LocalDateTime.now());
+        LocalDateTime fiveMinutesAgo = LocalDateTime.now().minusMinutes(5);
+        if (cleanedMessages.size() < batchSize && latestTime.isAfter(fiveMinutesAgo)) {
             return;
         }
 
         StringBuilder conversationBuilder = new StringBuilder();
         for (ChatMemory chat : cleanedMessages) {
+            if (chat == null || chat.getMessageJson() == null) {
+                continue;
+            }
+            
             ChatMessage message = ChatMessageDeserializer.messageFromJson(chat.getMessageJson());
-            conversationBuilder.append(message.toString());
+            if (message == null) {
+                continue;
+            }
+            
+            if (message instanceof dev.langchain4j.data.message.UserMessage) {
+                dev.langchain4j.data.message.UserMessage userMessage = ((dev.langchain4j.data.message.UserMessage) message);
+                String userText = userMessage.singleText();
+                if (userText != null) {
+                    conversationBuilder.append("User:").append(userText);
+                } else {
+                    conversationBuilder.append("User:(no text)");
+                }
+            } else if (message instanceof AiMessage) {
+                AiMessage aiMessage = (AiMessage) message;
+                if (aiMessage.thinking() != null) {
+                    conversationBuilder.append("Ai thinking:").append(aiMessage.thinking()).append("\n");
+                }
+                if (aiMessage.text() != null) {
+                    conversationBuilder.append("Ai:").append(aiMessage.text()).append("\n");
+                }
+                if (aiMessage.toolExecutionRequests() != null && !aiMessage.toolExecutionRequests().isEmpty()) {
+                    logger.info("Ai tool call:", JSON.toJSONString(aiMessage.toolExecutionRequests().stream().map(x -> "id:" + x.id() + ",name:" + x.name() + ",arguments:" + x.arguments()).collect(Collectors.toList())));
+                }
+            } else if (message instanceof SystemMessage) {
+                SystemMessage systemMessage = (SystemMessage) message;
+                String systemText = systemMessage.text();
+                if (systemText != null) {
+                    conversationBuilder.append("System:").append(systemText).append("\n");
+                } else {
+                    conversationBuilder.append("System:(no text)").append("\n");
+                }
+            } else if (message instanceof ToolExecutionResultMessage) {
+                ToolExecutionResultMessage toolExecutionResultMessage = (ToolExecutionResultMessage) message;
+                String toolName = toolExecutionResultMessage.toolName();
+                String toolId = toolExecutionResultMessage.id();
+                String toolText = toolExecutionResultMessage.text();
+                
+                conversationBuilder.append("Ai tool call:");
+                if (toolName != null) {
+                    conversationBuilder.append("toolName:").append(toolName);
+                } else {
+                    conversationBuilder.append("toolName:(null)");
+                }
+                conversationBuilder.append(",id:");
+                if (toolId != null) {
+                    conversationBuilder.append(toolId);
+                } else {
+                    conversationBuilder.append("(null)");
+                }
+                conversationBuilder.append(",text:");
+                if (toolText != null) {
+                    conversationBuilder.append(toolText);
+                } else {
+                    conversationBuilder.append("(null)");
+                }
+                conversationBuilder.append("\n");
+            } else {
+                conversationBuilder.append("Other: ").append(message.getClass().getSimpleName()).append(": ").append(message).append("\n");
+            }
+            conversationBuilder.append("\n");
         }
 
         String identity=agent.getId().toString();
