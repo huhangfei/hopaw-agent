@@ -162,3 +162,42 @@
     border-color: #e53935;
 }
 
+/* ========== 邮件配置表单 ========== */
+.settings-input {
+    width: 100%;
+    padding: 10px 12px;
+    border: 1px solid #e0e0e0;
+    border-radius: 8px;
+    font-size: 14px;
+    font-family: inherit;
+    outline: none;
+    transition: border-color 0.2s;
+    box-sizing: border-box;
+}
+
+.settings-input:focus {
+    border-color: #667eea;
+}
+
+.btn-test-mail {
+    background: white;
+    color: #667eea;
+    border: 1px solid #667eea;
+    padding: 10px 24px;
+    border-radius: 8px;
+    font-size: 14px;
+    cursor: pointer;
+    transition: background 0.2s, color 0.2s;
+    margin-left: 12px;
+}
+
+.btn-test-mail:hover {
+    background: #667eea;
+    color: white;
+}
+
+.btn-test-mail:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
