@@ -13,6 +13,9 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseBody;
+import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.RequestBody;
 
 import java.util.Collections;
 import java.util.Comparator;
@@ -88,6 +91,17 @@ public class AgentController {
         if(agentExecutor!=null){
             agentExecutor.stop();
         }
+        return ResponseBean.success();
+    }
+
+    @PutMapping("/api/agents/{id}/thinking")
+    @ResponseBody
+    public ResponseBean updateThinking(@PathVariable Long id, @RequestBody Map<String, Boolean> body) {
+        Boolean enabled = body.get("enabled");
+        if (enabled == null) {
+            return ResponseBean.fail("参数错误");
+        }
+        agentService.updateThinking(id, enabled);
         return ResponseBean.success();
     }
 

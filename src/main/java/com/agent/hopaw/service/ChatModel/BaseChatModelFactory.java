@@ -4,6 +4,8 @@ import com.agent.hopaw.constant.ModelCapabilityEnum;
 import com.agent.hopaw.model.AiModelProvider;
 import com.agent.hopaw.model.AiModelVO;
 import com.agent.hopaw.model.ModelCapabilityTestResult;
+import com.alibaba.fastjson2.JSON;
+import com.alibaba.fastjson2.JSONObject;
 import dev.langchain4j.data.message.ImageContent;
 import dev.langchain4j.data.message.TextContent;
 import dev.langchain4j.data.message.UserMessage;
@@ -19,33 +21,78 @@ public abstract class BaseChatModelFactory implements ChatModelFactory {
 
     private final Logger logger = org.slf4j.LoggerFactory.getLogger(BaseChatModelFactory.class);
 
-    public String getThinkingContentKey(AiModelProvider aiModelProvider) {
-        if (aiModelProvider.getAiModelExtParamsObj() == null || aiModelProvider.getAiModelExtParamsObj().getThinkingContentKey() == null) {
+    public String getThinkingContentKey(AiModelVO aiModelVO) {
+        Object thinkingContentKey = getExtParams(aiModelVO, "thinkingContentKey");
+        if (thinkingContentKey == null) {
             return "reasoning_content";
         }
-        return aiModelProvider.getAiModelExtParamsObj().getThinkingContentKey();
+        return (String) thinkingContentKey;
     }
 
-    public Boolean getReturnReasoning(AiModelProvider aiModelProvider) {
-        if (aiModelProvider.getAiModelExtParamsObj() == null || aiModelProvider.getAiModelExtParamsObj().getReturnReasoning() == null) {
+    public Boolean getSendThinking(AiModelVO aiModelVO) {
+        Object sendThinking = getExtParams(aiModelVO, "sendThinking");
+        if (sendThinking == null) {
             return true;
         }
-        return aiModelProvider.getAiModelExtParamsObj().getReturnReasoning();
+        return (Boolean) sendThinking;
     }
 
-    public String getReasoningEffort(AiModelProvider aiModelProvider) {
-        if (aiModelProvider.getAiModelExtParamsObj() == null || aiModelProvider.getAiModelExtParamsObj().getReasoningEffort() == null) {
-            return "high";
-        }
-        return aiModelProvider.getAiModelExtParamsObj().getReasoningEffort();
+    public Boolean getReturnThinking(AiModelVO aiModelVO) {
+        Object val = getExtParams(aiModelVO, "returnThinking");
+        return val != null ? (Boolean) val : true;
     }
 
-    public Double getTemperature(AiModelProvider aiModelProvider) {
-        if (aiModelProvider.getAiModelExtParamsObj() == null || aiModelProvider.getAiModelExtParamsObj().getTemperature() == null) {
-            return 0.7;
-        }
-        return aiModelProvider.getAiModelExtParamsObj().getTemperature();
+    public String getReasoningEffort(AiModelVO aiModelVO) {
+        Object val = getExtParams(aiModelVO, "reasoningEffort");
+        return val != null ? (String) val : "medium";
     }
+
+    public Double getTemperature(AiModelVO aiModelVO) {
+        Object val = getExtParams(aiModelVO, "temperature");
+        if (val instanceof Number) {
+            return ((Number) val).doubleValue();
+        }
+        return null;
+    }
+
+    public Long getTimeoutSeconds(AiModelVO aiModelVO) {
+        Object val = getExtParams(aiModelVO, "timeoutSeconds");
+        if (val instanceof Number) {
+            return ((Number) val).longValue();
+        }
+        return 60L;
+    }
+
+    public Boolean getLogRequests(AiModelVO aiModelVO) {
+        Object val = getExtParams(aiModelVO, "logRequests");
+        return val != null ? (Boolean) val : false;
+    }
+
+    public Boolean getLogResponses(AiModelVO aiModelVO) {
+        Object val = getExtParams(aiModelVO, "logResponses");
+        return val != null ? (Boolean) val : false;
+    }
+    public Boolean getAccumulateToolCallId(AiModelVO aiModelVO) {
+        Object val = getExtParams(aiModelVO, "accumulateToolCallId");
+        return val != null ? (Boolean) val : false;
+    }
+
+    private Object getExtParams(AiModelVO aiModelVO, String paramName) {
+        if(aiModelVO.getExtParams()!=null){
+            JSONObject jsonObject = JSON.parseObject(aiModelVO.getExtParams());
+            if(jsonObject!=null && jsonObject.containsKey(paramName)){
+                return jsonObject.get(paramName);
+            }
+        }
+        if(aiModelVO.getAiModelProvider()!=null && aiModelVO.getAiModelProvider().getExtParams()!=null){
+            JSONObject jsonObject = JSON.parseObject(aiModelVO.getAiModelProvider().getExtParams());
+            if(jsonObject!=null && jsonObject.containsKey(paramName)){
+                return jsonObject.get(paramName);
+            }
+        }
+        return null;
+    }
+
 
     @Override
     public ModelCapabilityTestResult testModelCapability(ChatModel chatModel) {

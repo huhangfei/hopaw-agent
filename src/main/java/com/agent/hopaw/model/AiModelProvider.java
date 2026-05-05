@@ -104,11 +104,4 @@ public class AiModelProvider {
         this.createTime = createTime;
     }
 
-    public AiModelExtParams getAiModelExtParamsObj() {
-        try {
-            return JSON.parseObject(extParams, AiModelExtParams.class);
-        } catch (Exception e) {
-            return null;
-        }
-    }
 }

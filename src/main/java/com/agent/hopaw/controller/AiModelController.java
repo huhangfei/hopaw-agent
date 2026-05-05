@@ -28,6 +28,7 @@ public class AiModelController {
     public String modelsPage(Model model) {
         List<AiModelProvider> providers = aiModelProviderService.findAll();
         model.addAttribute("providers", providers);
+        model.addAttribute("defaultAiModelExtParamsJson", aiModelService.getDefaultAiModelExtParamsJson());
         return "models";
     }
 

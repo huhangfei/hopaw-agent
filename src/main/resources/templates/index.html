@@ -121,8 +121,21 @@
         <div th:if="${selectedAgent != null}" class="chat-input-area">
             <form th:action="@{/chat}" method="post" class="chat-form" id="chatForm">
                 <input type="hidden" name="agentId" th:value="${selectedAgent.id}">
-                <input type="text" name="message" id="messageInput" placeholder="输入消息..." required
-                       th:disabled="${agentExecutorState}">
+                <div class="chat-input-wrapper">
+                    <textarea name="message" id="messageInput" placeholder="输入消息..." required
+                           th:disabled="${agentExecutorState}" rows="2"></textarea>
+                    <div class="chat-input-tools">
+<!--                        <button type="button" class="chat-btn-plus" title="添加附件">-->
+<!--                            <svg viewBox="0 0 24 24" fill="currentColor"><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/></svg>-->
+<!--                        </button>-->
+                        <button type="button" class="chat-btn-deep" id="deepThinkBtn"
+                                th:attr="data-agent-id=${selectedAgent.id}, data-enabled=${selectedAgent.enableThinking}"
+                                th:classappend="${selectedAgent.enableThinking ? 'active' : ''}">
+                            <svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg>
+                            深度思考
+                        </button>
+                    </div>
+                </div>
                 <button type="submit" id="sendBtn" class="chat-form-send-button"
                         th:classappend="${agentExecutorState  ? 'hide' : ''}">发送
                 </button>

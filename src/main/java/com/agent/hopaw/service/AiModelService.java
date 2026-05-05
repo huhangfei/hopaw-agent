@@ -1,11 +1,9 @@
 package com.agent.hopaw.service;
 
 import com.agent.hopaw.mapper.AiModelMapper;
-import com.agent.hopaw.model.AiModel;
-import com.agent.hopaw.model.AiModelProvider;
-import com.agent.hopaw.model.AiModelVO;
-import com.agent.hopaw.model.ModelCapabilityTestResult;
+import com.agent.hopaw.model.*;
 import com.agent.hopaw.service.ChatModel.ChatModelFactory;
+import com.alibaba.fastjson2.JSON;
 import dev.langchain4j.model.chat.ChatModel;
 import dev.langchain4j.model.chat.StreamingChatModel;
 import org.slf4j.Logger;
@@ -140,6 +138,10 @@ public class AiModelService {
 
 
 
+    public String getDefaultAiModelExtParamsJson(){
+        AiModelExtParams aiModelExtParams = new AiModelExtParams("reasoning_content", true, true, "high", 0.5, 30L, false, false,false);
+        return JSON.toJSONString(aiModelExtParams);
+    }
 
 
 }

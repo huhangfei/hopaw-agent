@@ -220,15 +220,15 @@ public class DataInitializer implements CommandLineRunner {
                         aiModelMapper.insert(new AiModel(provider.getId(), "gpt-3.5-turbo", ModelCapabilityEnum.TEXT.getCode(), false));
                         break;
                     case "anthropic":
-//                        aiModelMapper.insert(new AiModel(provider.getId(), "claude-sonnet-4-20250514", ModelCapabilityEnum.TEXT.getCode(), false));
-//                        aiModelMapper.insert(new AiModel(provider.getId(), "claude-opus-4-20250514", ModelCapabilityEnum.TEXT.getCode(), false));
-//                        aiModelMapper.insert(new AiModel(provider.getId(), "claude-3-5-sonnet-20241022", ModelCapabilityEnum.TEXT.getCode(), false));
-//                        aiModelMapper.insert(new AiModel(provider.getId(), "claude-3-haiku-20240307", ModelCapabilityEnum.TEXT.getCode(), false));
+                        aiModelMapper.insert(new AiModel(provider.getId(), "claude-sonnet-4-20250514", ModelCapabilityEnum.TEXT.getCode(), false));
+                        aiModelMapper.insert(new AiModel(provider.getId(), "claude-opus-4-20250514", ModelCapabilityEnum.TEXT.getCode(), false));
+                        aiModelMapper.insert(new AiModel(provider.getId(), "claude-3-5-sonnet-20241022", ModelCapabilityEnum.TEXT.getCode(), false));
+                        aiModelMapper.insert(new AiModel(provider.getId(), "claude-3-haiku-20240307", ModelCapabilityEnum.TEXT.getCode(), false));
                         break;
                     case "google":
-//                        aiModelMapper.insert(new AiModel(provider.getId(), "gemini-2.5-pro", joinCapabilities(ModelCapabilityEnum.TEXT, ModelCapabilityEnum.IMAGE, ModelCapabilityEnum.AUDIO, ModelCapabilityEnum.VIDEO), true));
-//                        aiModelMapper.insert(new AiModel(provider.getId(), "gemini-2.5-flash", joinCapabilities(ModelCapabilityEnum.TEXT, ModelCapabilityEnum.IMAGE, ModelCapabilityEnum.AUDIO, ModelCapabilityEnum.VIDEO), true));
-//                        aiModelMapper.insert(new AiModel(provider.getId(), "gemini-2.0-flash", joinCapabilities(ModelCapabilityEnum.TEXT, ModelCapabilityEnum.IMAGE), true));
+                        aiModelMapper.insert(new AiModel(provider.getId(), "gemini-2.5-pro", joinCapabilities(ModelCapabilityEnum.TEXT, ModelCapabilityEnum.IMAGE, ModelCapabilityEnum.AUDIO, ModelCapabilityEnum.VIDEO), false));
+                        aiModelMapper.insert(new AiModel(provider.getId(), "gemini-2.5-flash", joinCapabilities(ModelCapabilityEnum.TEXT, ModelCapabilityEnum.IMAGE, ModelCapabilityEnum.AUDIO, ModelCapabilityEnum.VIDEO), false));
+                        aiModelMapper.insert(new AiModel(provider.getId(), "gemini-2.0-flash", joinCapabilities(ModelCapabilityEnum.TEXT, ModelCapabilityEnum.IMAGE), false));
                         break;
                     case "deepseek":
                         aiModelMapper.insert(new AiModel(provider.getId(), "deepseek-chat", ModelCapabilityEnum.TEXT.getCode(), false));

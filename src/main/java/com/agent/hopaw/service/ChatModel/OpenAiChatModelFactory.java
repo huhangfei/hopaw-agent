@@ -8,7 +8,6 @@ import dev.langchain4j.model.chat.ChatModel;
 import dev.langchain4j.model.chat.StreamingChatModel;
 import dev.langchain4j.model.openai.OpenAiChatModel;
 import dev.langchain4j.model.openai.OpenAiStreamingChatModel;
-import org.springframework.stereotype.Service;
 
 import java.util.HashMap;
 import java.util.List;
@@ -25,42 +24,40 @@ public class OpenAiChatModelFactory extends  BaseChatModelFactory {
     @Override
     public ChatModel createChatModel(AiModelVO aiModel, boolean enableThinking) {
         AiModelProvider aiModelProvider=aiModel.getAiModelProvider();
-        Map<String, String> extraParams = new HashMap<>();
+        Map<String, Object> extraParams = new HashMap<>();
         var builder = OpenAiChatModel.builder()
                 .apiKey(aiModelProvider.getApiKey())
                 .modelName(aiModel.getModelName())
                 .baseUrl(aiModelProvider.getUrl())
-                .temperature(super.getTemperature(aiModelProvider))
-                .customHeaders(extraParams);
-
-        if(enableThinking){
-            builder.sendThinking(true, super.getThinkingContentKey(aiModelProvider))
-                    .returnThinking(super.getReturnReasoning(aiModelProvider))
-                    .reasoningEffort(super.getReasoningEffort(aiModelProvider));
-        }
+                .temperature(super.getTemperature(aiModel))
+                .customParameters(extraParams)
+                .reasoningEffort(super.getReasoningEffort(aiModel))
+                .sendThinking(super.getSendThinking(aiModel), super.getThinkingContentKey(aiModel))
+                .returnThinking(super.getReturnThinking(aiModel)).logRequests(super.getLogRequests(aiModel))
+                .logResponses(super.getLogResponses(aiModel))
+                .timeout(java.time.Duration.ofSeconds(super.getTimeoutSeconds(aiModel)));
         if (monitoringService != null) {
             builder.listeners(List.of(monitoringService));
         }
-
         return builder.build();
     }
 
     @Override
     public StreamingChatModel createStreamingChatModel(AiModelVO aiModel,boolean enableThinking) {
         AiModelProvider aiModelProvider=aiModel.getAiModelProvider();
-        Map<String, String> extraParams = new HashMap<>();
+        Map<String, Object> extraParams = new HashMap<>();
         var builder = OpenAiStreamingChatModel.builder()
+                .accumulateToolCallId(true)
                 .apiKey(aiModelProvider.getApiKey())
                 .modelName(aiModel.getModelName())
                 .baseUrl(aiModelProvider.getUrl())
-                .temperature(super.getTemperature(aiModelProvider))
-                .customHeaders(extraParams);
-
-        if(enableThinking){
-            builder.sendThinking(true, super.getThinkingContentKey(aiModelProvider))
-                    .returnThinking(super.getReturnReasoning(aiModelProvider))
-                    .reasoningEffort(super.getReasoningEffort(aiModelProvider));
-        }
+                .temperature(super.getTemperature(aiModel))
+                .customParameters(extraParams)
+                .sendThinking(super.getSendThinking(aiModel), super.getThinkingContentKey(aiModel))
+                .returnThinking(super.getReturnThinking(aiModel))
+                .logRequests(super.getLogRequests(aiModel))
+                .logResponses(super.getLogResponses(aiModel))
+                .timeout(java.time.Duration.ofSeconds(super.getTimeoutSeconds(aiModel)));
 
         if (monitoringService != null) {
             builder.listeners(List.of(monitoringService));

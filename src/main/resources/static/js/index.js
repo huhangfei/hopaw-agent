@@ -639,6 +639,27 @@ window.onload = function() {
         });
     }
 
+    var deepBtn = document.getElementById('deepThinkBtn');
+    if (deepBtn) {
+        deepBtn.addEventListener('click', function() {
+            var agentId = this.getAttribute('data-agent-id');
+            var current = this.getAttribute('data-enabled') === 'true';
+            var newEnabled = !current;
+            fetch('/api/agents/' + agentId + '/thinking', {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ enabled: newEnabled })
+            })
+            .then(function(r) { return r.json(); })
+            .then(function(resp) {
+                if (resp.msg === 'success') {
+                    deepBtn.setAttribute('data-enabled', newEnabled);
+                    deepBtn.classList.toggle('active', newEnabled);
+                }
+            });
+        });
+    }
+
     // Event delegation: toggle collapsible tool-call-body on ▼ click
     document.addEventListener('click', function(e) {
         var toggle = e.target.closest('.tool-call-toggle');

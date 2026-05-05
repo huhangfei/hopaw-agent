@@ -48,10 +48,6 @@ public class LongTermMemoryTask implements TaskHandler {
 
     public void processAgentMemories() {
         try {
-            String enabled = getConfig("memory_enabled", "false");
-            if (!"true".equals(enabled)) {
-                return;
-            }
             List<Agent> allAgents = agentMapper.findAll();
             for (Agent agent : allAgents) {
                 try {
@@ -113,7 +109,7 @@ public class LongTermMemoryTask implements TaskHandler {
                 } catch (NumberFormatException ignored) {}
             }
 
-            ChatModel chatModel = aiModelService.createChatModel(modelId, false);
+            ChatModel chatModel = aiModelService.createChatModel(modelId, true);
 
             String systemMessage = buildSystemMessage(identity);
 

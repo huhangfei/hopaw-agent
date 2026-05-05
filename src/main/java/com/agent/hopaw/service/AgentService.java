@@ -111,6 +111,15 @@ public class AgentService {
         }
     }
 
+    public void updateThinking(Long id, Boolean enabled) {
+        Agent agent = agentMapper.findById(id);
+        if (agent != null) {
+            agent.setEnableThinking(enabled);
+            agentMapper.update(agent);
+            stopAndRemoveAgentExecutor(id);
+        }
+    }
+
     public void stopAndRemoveAgentExecutor(Long agentId) {
         stopAgentExecutor(agentId);
         agentExecutors.remove(agentId.toString());
@@ -126,7 +135,6 @@ public class AgentService {
         StreamingChatModel streamingModel = null;
         chatModel = aiModelService.createChatModel(agent.getAiModelId(), agent.getEnableThinking());
         streamingModel = aiModelService.createStreamingChatModel(agent.getAiModelId(), agent.getEnableThinking());
-
         List<String> selectedToolNames = parseToolNames(agent.getTools());
         List<AgentTool> selectedTools = allTools.stream()
                 .filter(t -> selectedToolNames.contains(t.getName()))
