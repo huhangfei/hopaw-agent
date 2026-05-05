@@ -6,7 +6,6 @@ import com.agent.hopaw.model.Agent;
 import com.agent.hopaw.model.ChatMemory;
 import com.agent.hopaw.model.ScheduledTask;
 import com.agent.hopaw.service.AiModelService;
-import com.agent.hopaw.service.LangChain4jMonitoringService;
 import com.agent.hopaw.service.SysConfigService;
 import com.alibaba.fastjson2.JSON;
 import dev.langchain4j.data.message.*;
@@ -24,12 +23,11 @@ import java.util.Objects;
 import java.util.stream.Collectors;
 
 @Component
-public class LongTermMemoryTask implements TaskHandler {
+public class LongTermMemoryTaskHandler implements TaskHandler {
     private final AiModelService aiModelService;
-    private static final Logger logger = LoggerFactory.getLogger(LongTermMemoryTask.class);
+    private static final Logger logger = LoggerFactory.getLogger(LongTermMemoryTaskHandler.class);
 
     private final com.agent.hopaw.service.LongTermMemoryService longTermMemoryService;
-    private final LangChain4jMonitoringService monitoringService;
     private final ChatMemoryMapper chatMemoryMapper;
     private final AgentMapper agentMapper;
     private final SysConfigService sysConfigService;
@@ -37,14 +35,12 @@ public class LongTermMemoryTask implements TaskHandler {
     private String lastMemoryModelId = null;
     private int counter = 0;
 
-    public LongTermMemoryTask(AiModelService aiModelService, com.agent.hopaw.service.LongTermMemoryService longTermMemoryService,
-                              ChatMemoryMapper chatMemoryMapper,
-                              LangChain4jMonitoringService monitoringService, AgentMapper agentMapper,
-                              SysConfigService sysConfigService) {
+    public LongTermMemoryTaskHandler(AiModelService aiModelService, com.agent.hopaw.service.LongTermMemoryService longTermMemoryService,
+                                     ChatMemoryMapper chatMemoryMapper, AgentMapper agentMapper,
+                                     SysConfigService sysConfigService) {
         this.aiModelService = aiModelService;
         this.longTermMemoryService = longTermMemoryService;
         this.chatMemoryMapper = chatMemoryMapper;
-        this.monitoringService = monitoringService;
         this.agentMapper = agentMapper;
         this.sysConfigService = sysConfigService;
     }

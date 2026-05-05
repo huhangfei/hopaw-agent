@@ -10,7 +10,16 @@ public class ScheduledTask {
     private Integer enabled;
     private String description;
     private String extParams;
+    /**
+     * 任务执行的标识
+     * 为空的时候是系统任务，不为空的时候是agentId
+     */
     private String identity;
+    /**
+     * 是否是内置任务
+     * 0: 否
+     * 1: 内置
+     */
     private Integer builtin;
     private LocalDateTime createTime;
     private LocalDateTime updateTime;

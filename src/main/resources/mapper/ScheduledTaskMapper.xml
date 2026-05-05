@@ -28,6 +28,10 @@
         SELECT * FROM scheduled_tasks WHERE task_type = #{taskType} LIMIT 1
     </select>
 
+    <select id="findByIdentity" resultMap="BaseResultMap">
+        SELECT * FROM scheduled_tasks WHERE identity = #{identity} ORDER BY create_time ASC
+    </select>
+
     <insert id="insert">
         <selectKey keyProperty="id" resultType="long" order="AFTER">
             SELECT last_insert_rowid()

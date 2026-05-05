@@ -10,6 +10,7 @@ public interface ScheduledTaskMapper {
     List<ScheduledTask> findAll();
     ScheduledTask findById(Long id);
     ScheduledTask findByTaskType(String taskType);
+    List<ScheduledTask> findByIdentity(String identity);
     void insert(ScheduledTask task);
     void update(ScheduledTask task);
     void deleteById(Long id);

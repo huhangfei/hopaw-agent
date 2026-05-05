@@ -30,6 +30,10 @@ public class ScheduledTaskService {
         return taskMapper.findByTaskType(taskType);
     }
 
+    public List<ScheduledTask> findByIdentity(String identity) {
+        return taskMapper.findByIdentity(identity);
+    }
+
     public boolean isTaskRunning(Long id) {
         return dynamicTaskService.isRunning(id);
     }
