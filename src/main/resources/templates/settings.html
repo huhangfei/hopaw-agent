@@ -12,6 +12,7 @@
 
             <div class="settings-tabs">
                 <button class="settings-tab active" data-tab="memory" onclick="switchTab('memory')">记忆设置</button>
+                <button class="settings-tab" data-tab="search" onclick="switchTab('search')">搜索配置</button>
                 <button class="settings-tab" data-tab="mail" onclick="switchTab('mail')">邮件配置</button>
             </div>
 
@@ -44,6 +45,27 @@
 
                     <div class="settings-actions">
                         <button class="btn-save-settings" onclick="saveSettings()">保存设置</button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="settings-panel" id="tab-search">
+                <div class="settings-form">
+                    <div class="form-group">
+                        <label>百度千帆 API 密钥</label>
+                        <div id="searchKeyContainer"></div>
+                        <button type="button" class="btn-add-key" onclick="addKeyInput()">+ 添加密钥</button>
+                        <p class="form-hint">多个密钥将自动轮询使用，减少单个密钥频率限制。以英文逗号分隔存储。</p>
+                    </div>
+                    <div class="form-group">
+                        <label>百度千帆 搜索参数</label>
+                        <select id="searchEdition" class="settings-input">
+                            <option value="standard">standard - 完整版（默认）</option>
+                            <option value="lite">lite - 轻量版（更低时延）</option>
+                        </select>
+                    </div>
+                    <div class="settings-actions">
+                        <button class="btn-save-settings" onclick="saveSearchSettings()">保存设置</button>
                     </div>
                 </div>
             </div>
