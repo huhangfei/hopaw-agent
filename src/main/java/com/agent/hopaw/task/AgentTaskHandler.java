@@ -66,7 +66,8 @@ public class AgentTaskHandler implements TaskHandler {
             AgentTaskAssistant assistant = AiServices.builder(AgentTaskAssistant.class)
                     .chatModel(chatModel)
                     .systemMessageProvider(chatMemoryId -> "这是一个定时执行的任务，你根据任务描述认真执行任务")
-                    .tools(selectedTools)
+                    .tools(selectedTools.toArray())
+                    .maxSequentialToolsInvocations(agent.getMaxToolInvocations())
                     .build();
             String result = assistant.chat(task.getDescription());
             logger.info("定时任务执行结果 [{}] - {}: {}", task.getId(), task.getTaskName(), result);

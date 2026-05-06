@@ -65,7 +65,6 @@ function showAddModal() {
     document.getElementById('taskName').value = '';
     document.getElementById('taskType').value = '';
     document.getElementById('taskType').style.display = '';
-    document.getElementById('taskTypeDisplay').style.display = 'none';
     document.getElementById('taskCron').value = '';
     document.getElementById('taskIdentity').value = '';
     document.getElementById('taskIdentity').disabled = false;
@@ -90,8 +89,6 @@ function showEditModal(id) {
             document.getElementById('taskName').value = task.taskName || '';
             document.getElementById('taskType').value = task.taskType || '';
             document.getElementById('taskType').style.display = 'none';
-            document.getElementById('taskTypeDisplay').value = task.taskType || '';
-            document.getElementById('taskTypeDisplay').style.display = '';
             document.getElementById('taskCron').value = task.cronExpression || '';
             document.getElementById('taskIdentity').value = task.identity || '';
             document.getElementById('taskIdentity').disabled = true;

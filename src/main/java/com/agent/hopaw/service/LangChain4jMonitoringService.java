@@ -1,11 +1,7 @@
 package com.agent.hopaw.service;
 
 import com.alibaba.fastjson2.JSON;
-import dev.langchain4j.data.message.AiMessage;
-import dev.langchain4j.data.message.ChatMessage;
-import dev.langchain4j.data.message.SystemMessage;
-import dev.langchain4j.data.message.ToolExecutionResultMessage;
-import dev.langchain4j.data.message.UserMessage;
+import dev.langchain4j.data.message.*;
 import dev.langchain4j.model.chat.listener.ChatModelErrorContext;
 import dev.langchain4j.model.chat.listener.ChatModelListener;
 import dev.langchain4j.model.chat.listener.ChatModelRequestContext;
@@ -36,7 +32,21 @@ public class LangChain4jMonitoringService implements ChatModelListener {
                 if (message instanceof UserMessage) {
                     UserMessage userMessage=((UserMessage) message);
 
-                    logger.info("用户消息 [User][{}]: {}", userMessage.name(),userMessage.singleText());
+                    for (Content content : userMessage.contents()) {
+                        if(content instanceof TextContent){
+                            logger.info("用户消息 [User][{}]: {}", userMessage.name(),((TextContent)content).text());
+                        }else  if(content instanceof ImageContent){
+                            logger.info("用户消息 [User][{}]: {}", userMessage.name(),"Image");
+                        }else  if(content instanceof VideoContent){
+                            logger.info("用户消息 [User][{}]: {}", userMessage.name(),"Video");
+                        }else  if(content instanceof AudioContent){
+                            logger.info("用户消息 [User][{}]: {}", userMessage.name(),"Audio");
+                        }else  if(content instanceof PdfFileContent){
+                            logger.info("用户消息 [User][{}]: {}", userMessage.name(),"PdfFile");
+                        }else{
+                            logger.info("用户消息 [User][{}]: {}", userMessage.name(),"未知");
+                        }
+                    }
                 } else if (message instanceof AiMessage) {
                     AiMessage aiMessage = (AiMessage) message;
                     if(aiMessage.thinking()!=null){
