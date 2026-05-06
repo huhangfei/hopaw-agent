@@ -24,7 +24,7 @@ public class DeepSeekChatModelFactory extends  BaseChatModelFactory {
     }
 
     @Override
-    public ChatModel createChatModel(AiModelVO aiModel, boolean enableThinking) {
+    public ChatModel createChatModel(AiModelVO aiModel, boolean enableThinking, Map<String, String> metadata) {
         AiModelProvider aiModelProvider=aiModel.getAiModelProvider();
         Map<String, Object> extraParams = new HashMap<>();
         extraParams.put("thinking",new HashMap(){{
@@ -35,6 +35,7 @@ public class DeepSeekChatModelFactory extends  BaseChatModelFactory {
                 .modelName(aiModel.getModelName())
                 .baseUrl(aiModelProvider.getUrl())
                 .temperature(super.getTemperature(aiModel))
+                .metadata(metadata)
                 .customParameters(extraParams)
                 .reasoningEffort(super.getReasoningEffort(aiModel))
                 .sendThinking(super.getSendThinking(aiModel), super.getThinkingContentKey(aiModel))
@@ -51,18 +52,20 @@ public class DeepSeekChatModelFactory extends  BaseChatModelFactory {
     }
 
     @Override
-    public StreamingChatModel createStreamingChatModel(AiModelVO aiModel, boolean enableThinking) {
+    public StreamingChatModel createStreamingChatModel(AiModelVO aiModel, boolean enableThinking,Map<String, String> metadata) {
         AiModelProvider aiModelProvider=aiModel.getAiModelProvider();
         Map<String, Object> extraParams = new HashMap<>();
         extraParams.put("thinking",new HashMap(){{
             put("type", enableThinking ? "enabled" : "disabled");
         }});
+
         var builder = OpenAiStreamingChatModel.builder()
                 .accumulateToolCallId(super.getAccumulateToolCallId(aiModel))
                 .apiKey(aiModelProvider.getApiKey())
                 .modelName(aiModel.getModelName())
                 .baseUrl(aiModelProvider.getUrl())
                 .temperature(super.getTemperature(aiModel))
+                .metadata(metadata)
                 .customParameters(extraParams)
                 .sendThinking(super.getSendThinking(aiModel), super.getThinkingContentKey(aiModel))
                 .returnThinking(super.getReturnThinking(aiModel))

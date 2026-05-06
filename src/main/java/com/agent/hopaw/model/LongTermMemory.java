@@ -4,17 +4,18 @@ import java.time.LocalDateTime;
 
 public class LongTermMemory {
     private Long id;
-    private String identity;
+    private String agentId;
     private String memory;
     private String memoryHash;
     private Long parentId;
+    private String userId;
     private LocalDateTime createTime;
     private LocalDateTime updateTime;
 
     public LongTermMemory() {}
 
-    public LongTermMemory(String identity, String memory, Long parentId) {
-        this.identity = identity;
+    public LongTermMemory(String agentId, String memory, Long parentId) {
+        this.agentId = agentId;
         this.memory = memory;
         this.memoryHash = String.valueOf(memory.hashCode());
         this.parentId = parentId;
@@ -30,12 +31,12 @@ public class LongTermMemory {
         this.id = id;
     }
 
-    public String getIdentity() {
-        return identity;
+    public String getAgentId() {
+        return agentId;
     }
 
-    public void setIdentity(String identity) {
-        this.identity = identity;
+    public void setAgentId(String agentId) {
+        this.agentId = agentId;
     }
 
     public String getMemory() {
@@ -60,6 +61,14 @@ public class LongTermMemory {
 
     public void setParentId(Long parentId) {
         this.parentId = parentId;
+    }
+
+    public String getUserId() {
+        return userId;
+    }
+
+    public void setUserId(String userId) {
+        this.userId = userId;
     }
 
     public LocalDateTime getCreateTime() {

@@ -1,9 +1,11 @@
 package com.agent.hopaw.websocket;
 
+import com.agent.hopaw.constant.DefaultUser;
 import com.agent.hopaw.mapper.ChatHistoryMapper;
 import com.agent.hopaw.model.ChatHistory;
 import com.agent.hopaw.service.AgentService;
 import com.alibaba.fastjson2.JSON;
+import dev.langchain4j.data.message.TextContent;
 import dev.langchain4j.data.message.UserMessage;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -15,6 +17,7 @@ import org.springframework.web.socket.handler.TextWebSocketHandler;
 
 import java.io.IOException;
 import java.time.LocalDateTime;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
@@ -63,14 +66,15 @@ public class ChatWebSocketHandler extends TextWebSocketHandler {
             }
 
             Long agentId = Long.parseLong(agentIdStr);
-            AgentService.AgentExecutor executor = agentService.getAgentExecutor(agentId);
+            AgentService.AgentExecutor executor = agentService.getAgentExecutor(agentId, DefaultUser.USER);
 
             if (executor == null) {
                 sendError(session, "Agent 初始化执行失败，请检查相关配置。");
                 return;
             }
 
-            executor.executeStreaming(new UserMessage("userId",userMessage), aiMessageJson->{
+
+            executor.executeStreaming(Arrays.asList(new TextContent(userMessage)), aiMessageJson->{
                 try {
                     String sessionId = sessionAgentMap.get(agentId);
                     if(sessionId == null){

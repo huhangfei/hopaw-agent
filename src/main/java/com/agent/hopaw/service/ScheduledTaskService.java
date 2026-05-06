@@ -30,8 +30,16 @@ public class ScheduledTaskService {
         return taskMapper.findByTaskType(taskType);
     }
 
-    public List<ScheduledTask> findByIdentity(String identity) {
-        return taskMapper.findByIdentity(identity);
+    public List<ScheduledTask> findByUserId(String userId) {
+        return taskMapper.findByUserId(userId);
+    }
+
+    public List<ScheduledTask> findByAgentId(String agentId) {
+        return taskMapper.findByAgentId(agentId);
+    }
+
+    public List<ScheduledTask> findByUserIdAndAgentId(String userId, String agentId) {
+        return taskMapper.findByUserIdAndAgentId(userId, agentId);
     }
 
     public boolean isTaskRunning(Long id) {

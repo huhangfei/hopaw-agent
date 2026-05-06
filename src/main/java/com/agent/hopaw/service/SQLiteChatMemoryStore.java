@@ -15,25 +15,33 @@ import org.springframework.util.StringUtils;
 import java.util.*;
 import java.util.stream.Collectors;
 
+/**
+ * 
+ */
 public class SQLiteChatMemoryStore implements ChatMemoryStore {
 
     private final ChatMemoryMapper chatMemoryMapper;
     private final Long agentId;
-    public SQLiteChatMemoryStore(ChatMemoryMapper chatMemoryMapper, Long agentId) {
+    private final String userId;
+    public SQLiteChatMemoryStore(ChatMemoryMapper chatMemoryMapper, Long agentId, String userId) {
         this.chatMemoryMapper = chatMemoryMapper;
         this.agentId = agentId;
+        this.userId = userId;
     }
 
     @Override
     public List<ChatMessage> getMessages(Object memoryId) {
-        List<ChatMemory> records = chatMemoryMapper.findByAgentId(agentId);
+        List<ChatMemory> records = chatMemoryMapper.findByAgentIdAndUserId(agentId, userId);
         LinkedHashMap<String, ChatMessage> messages = new LinkedHashMap<>(records.size());
         for (ChatMemory record : records) {
+            if (record.getStatus().equals(2)){
+                continue;
+            }
             String messageJson = record.getMessageJson();
             if (messageJson != null) {
                 try {
                     ChatMessage message = ChatMessageDeserializer.messageFromJson(messageJson);
-                    if (record.getCleaned().equals(1) && message instanceof SystemMessage) {
+                    if (record.getStatus().equals(1) && message instanceof SystemMessage) {
                         continue;
                     }
                     String messageId = record.getMessageId();
@@ -50,7 +58,7 @@ public class SQLiteChatMemoryStore implements ChatMemoryStore {
 
     @Override
     public void updateMessages(Object memoryId, List<ChatMessage> messages) {
-        List<ChatMemory> existingRecords = chatMemoryMapper.findByAgentId(agentId);
+        List<ChatMemory> existingRecords = chatMemoryMapper.findByAgentIdAndUserId(agentId, userId);
         Map<String, ChatMemory> memoryMap = existingRecords.stream()
                 .collect(Collectors.toMap(ChatMemory::getMessageId, record -> record));
 
@@ -60,19 +68,19 @@ public class SQLiteChatMemoryStore implements ChatMemoryStore {
             String messageJson = ChatMessageSerializer.messageToJson(message);
             messageIds.add(messageId);
             if (!memoryMap.containsKey(messageId)) {
-                chatMemoryMapper.insert(agentId, messageId, messageJson);
+                chatMemoryMapper.insert(agentId, userId, messageId, messageJson);
             }
         }
         for (String messageId : memoryMap.keySet()) {
             if (!messageIds.contains(messageId)) {
-                chatMemoryMapper.markCleaned(agentId, messageId);
+                chatMemoryMapper.updateStatus(agentId, userId, messageId, 1);
             }
         }
     }
 
     @Override
     public void deleteMessages(Object memoryId) {
-        chatMemoryMapper.deleteByAgentId(agentId);
+        chatMemoryMapper.deleteByAgentIdAndUserId(agentId, userId);
     }
 
     private String generateMessageId(ChatMessage message) {

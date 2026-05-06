@@ -10,7 +10,8 @@
         <result property="enabled" column="enabled"/>
         <result property="description" column="description"/>
         <result property="extParams" column="ext_params"/>
-        <result property="identity" column="identity"/>
+        <result property="userId" column="user_id"/>
+        <result property="agentId" column="agent_id"/>
         <result property="builtin" column="builtin"/>
         <result property="createTime" column="create_time"/>
         <result property="updateTime" column="update_time"/>
@@ -28,16 +29,26 @@
         SELECT * FROM scheduled_tasks WHERE task_type = #{taskType} LIMIT 1
     </select>
 
-    <select id="findByIdentity" resultMap="BaseResultMap">
-        SELECT * FROM scheduled_tasks WHERE identity = #{identity} ORDER BY create_time ASC
+    <select id="findByUserId" resultMap="BaseResultMap">
+        SELECT * FROM scheduled_tasks WHERE user_id = #{userId} ORDER BY create_time ASC
+    </select>
+
+    <select id="findByAgentId" resultMap="BaseResultMap">
+        SELECT * FROM scheduled_tasks WHERE agent_id = #{agentId} ORDER BY create_time ASC
+    </select>
+
+    <select id="findByUserIdAndAgentId" resultMap="BaseResultMap">
+        SELECT * FROM scheduled_tasks
+        WHERE user_id = #{userId} AND agent_id = #{agentId}
+        ORDER BY create_time ASC
     </select>
 
     <insert id="insert">
         <selectKey keyProperty="id" resultType="long" order="AFTER">
             SELECT last_insert_rowid()
         </selectKey>
-        INSERT INTO scheduled_tasks (task_name, task_type, cron_expression, enabled, description, ext_params, identity, builtin)
-        VALUES (#{taskName}, #{taskType}, #{cronExpression}, #{enabled}, #{description}, #{extParams}, #{identity}, #{builtin})
+        INSERT INTO scheduled_tasks (task_name, task_type, cron_expression, enabled, description, ext_params, user_id, agent_id, builtin)
+        VALUES (#{taskName}, #{taskType}, #{cronExpression}, #{enabled}, #{description}, #{extParams}, #{userId}, #{agentId}, #{builtin})
     </insert>
 
     <update id="update">
@@ -48,7 +59,8 @@
             enabled = #{enabled},
             description = #{description},
             ext_params = #{extParams},
-            identity = #{identity},
+            user_id = #{userId},
+            agent_id = #{agentId},
             builtin = #{builtin},
             update_time = CURRENT_TIMESTAMP
         WHERE id = #{id}

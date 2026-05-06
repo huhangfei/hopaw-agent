@@ -83,7 +83,9 @@ public class AiModelService {
             org.springframework.beans.BeanUtils.copyProperties(aiModel, aiModelVO);
             aiModelVO.setAiModelProvider(provider);
             ChatModelFactory factory = factories.get(aiModelVO.getAiModelProvider().getSdkName().toLowerCase());
-            ChatModel chatModel = factory.createChatModel(aiModelVO, false);
+            ChatModel chatModel = factory.createChatModel(aiModelVO, false,new HashMap<>(1){{
+                put("source","model-test");
+            }});
             ModelCapabilityTestResult result = factory.testModelCapability(chatModel);
 
             log.info("模型能力测试结果 [{}]: {}", aiModel.getModelName(), result.getMessage());
@@ -120,16 +122,16 @@ public class AiModelService {
         return aiModelVO;
     }
 
-    public ChatModel createChatModel(Long aiModelId,boolean enableThinking) {
+    public ChatModel createChatModel(Long aiModelId,boolean enableThinking, Map<String, String> metadata) {
         AiModelVO aiModelVO = findAiModelVOById(aiModelId);
         ChatModelFactory chatModelFactory = factories.get(aiModelVO.getAiModelProvider().getSdkName().toLowerCase());
-        return chatModelFactory.createChatModel(aiModelVO, enableThinking);
+        return chatModelFactory.createChatModel(aiModelVO, enableThinking, metadata);
     }
 
-    public StreamingChatModel createStreamingChatModel(Long aiModelId,boolean enableThinking) {
+    public StreamingChatModel createStreamingChatModel(Long aiModelId,boolean enableThinking, Map<String, String> metadata) {
         AiModelVO aiModelVO = findAiModelVOById(aiModelId);
         ChatModelFactory chatModelFactory = factories.get(aiModelVO.getAiModelProvider().getSdkName().toLowerCase());
-        return chatModelFactory.createStreamingChatModel(aiModelVO, enableThinking);
+        return chatModelFactory.createStreamingChatModel(aiModelVO, enableThinking,metadata);
     }
 
     public Map<String, ChatModelFactory> getAllFactories() {

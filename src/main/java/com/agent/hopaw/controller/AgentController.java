@@ -1,5 +1,6 @@
 package com.agent.hopaw.controller;
 
+import com.agent.hopaw.constant.DefaultUser;
 import com.agent.hopaw.mapper.ChatHistoryMapper;
 import com.agent.hopaw.mapper.ChatMemoryMapper;
 import com.agent.hopaw.model.Agent;
@@ -58,7 +59,7 @@ public class AgentController {
             List<ChatHistory> chatHistory = chatHistoryMapper.findByAgentId(agentId, 100);
             Collections.reverse(chatHistory);
             model.addAttribute("chatHistory", chatHistory);
-            model.addAttribute("agentExecutorState", agentService.isAgentExecutorRunning(agentId));
+            model.addAttribute("agentExecutorState", agentService.isAgentExecutorRunning(agentId,DefaultUser.USER));
         }
 
         return "index";
@@ -73,7 +74,7 @@ public class AgentController {
                              @RequestParam Long aiModelId,
                              @RequestParam(required = false, defaultValue = "true") Boolean enableThinking) {
         String toolsStr = tools != null ? tools : "";
-        agentService.createAgent(name, description, toolsStr, maxMemoryRecords, maxToolInvocations, aiModelId, enableThinking);
+        agentService.createAgent(name, description, toolsStr, maxMemoryRecords, maxToolInvocations, aiModelId, enableThinking, DefaultUser.USER);
         return "redirect:/";
     }
 
@@ -81,13 +82,13 @@ public class AgentController {
     public String deleteAgent(@RequestParam Long id) {
         chatHistoryMapper.deleteByAgentId(id);
         chatMemoryMapper.deleteByAgentId(id);
-        agentService.deleteAgent(id);
+        agentService.deleteAgent(id,DefaultUser.USER);
         return "redirect:/";
     }
     @PostMapping("/agent/stop")
     @ResponseBody
     public ResponseBean stopAgent(@RequestParam Long id) {
-        AgentService.AgentExecutor agentExecutor = agentService.getAgentExecutor(id);
+        AgentService.AgentExecutor agentExecutor = agentService.getAgentExecutor(id,DefaultUser.USER);
         if(agentExecutor!=null){
             agentExecutor.stop();
         }
@@ -101,7 +102,7 @@ public class AgentController {
         if (enabled == null) {
             return ResponseBean.fail("参数错误");
         }
-        agentService.updateThinking(id, enabled);
+        agentService.updateThinking(id, enabled,DefaultUser.USER);
         return ResponseBean.success();
     }
 
@@ -115,7 +116,7 @@ public class AgentController {
                              @RequestParam Long aiModelId,
                              @RequestParam(required = false) Boolean enableThinking) {
         String toolsStr = tools != null ? tools : "";
-        agentService.updateAgent(id, name, description, toolsStr, maxMemoryRecords, maxToolInvocations, aiModelId, enableThinking);
+        agentService.updateAgent(DefaultUser.USER,id, name, description, toolsStr, maxMemoryRecords, maxToolInvocations, aiModelId, enableThinking);
         return "redirect:/?agentId=" + id;
     }
 
@@ -129,7 +130,7 @@ public class AgentController {
     @GetMapping("/chat/clear")
     public String clearChat(@RequestParam Long agentId) {
         chatHistoryMapper.deleteByAgentId(agentId);
-        chatMemoryMapper.deleteByAgentId(agentId);
+        chatMemoryMapper.updateStatusByAgentId(agentId,2);
         return "redirect:/?agentId=" + agentId;
     }
 }

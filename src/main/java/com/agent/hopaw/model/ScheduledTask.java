@@ -11,10 +11,13 @@ public class ScheduledTask {
     private String description;
     private String extParams;
     /**
-     * 任务执行的标识
-     * 为空的时候是系统任务，不为空的时候是agentId
+     * 用户ID
      */
-    private String identity;
+    private String userId;
+    /**
+     * 智能体ID
+     */
+    private String agentId;
     /**
      * 是否是内置任务
      * 0: 否
@@ -48,8 +51,10 @@ public class ScheduledTask {
     public void setDescription(String description) { this.description = description; }
     public String getExtParams() { return extParams; }
     public void setExtParams(String extParams) { this.extParams = extParams; }
-    public String getIdentity() { return identity; }
-    public void setIdentity(String identity) { this.identity = identity; }
+    public String getUserId() { return userId; }
+    public void setUserId(String userId) { this.userId = userId; }
+    public String getAgentId() { return agentId; }
+    public void setAgentId(String agentId) { this.agentId = agentId; }
     public Integer getBuiltin() { return builtin; }
     public void setBuiltin(Integer builtin) { this.builtin = builtin; }
     public LocalDateTime getCreateTime() { return createTime; }

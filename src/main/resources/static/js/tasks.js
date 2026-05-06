@@ -29,7 +29,7 @@ function loadTasks() {
                     : '<span class="task-status-badge disabled">已关闭</span>';
                 var typeName = t.taskType;
                 var builtinBadge = t.builtin === 1 ? '<span class="builtin-badge">内置</span>' : '';
-                var identity = t.identity || '系统';
+                var identity = t.userId || '系统';
                 return '<tr>' +
                     '<td><strong>' + escapeHtml(t.taskName) + '</strong> ' + builtinBadge + '</td>' +
                     '<td><span class="task-type-tag">' + typeName + '</span></td>' +
@@ -90,7 +90,7 @@ function showEditModal(id) {
             document.getElementById('taskType').value = task.taskType || '';
             document.getElementById('taskType').style.display = 'none';
             document.getElementById('taskCron').value = task.cronExpression || '';
-            document.getElementById('taskIdentity').value = task.identity || '';
+            document.getElementById('taskIdentity').value = task.userId || '';
             document.getElementById('taskIdentity').disabled = true;
             document.getElementById('taskBuiltin').value = task.builtin || 0;
             document.getElementById('taskEnabled').checked = task.enabled === 1;
@@ -120,7 +120,7 @@ function submitTask() {
     if (!type) { showToast('请选择任务类型', 'error'); return; }
     if (!cron) { showToast('请输入Cron表达式', 'error'); return; }
 
-    var identity = document.getElementById('taskIdentity').value.trim();
+    var agentId = document.getElementById('taskIdentity').value.trim();
     var builtin = parseInt(document.getElementById('taskBuiltin').value) || 0;
 
     var body = JSON.stringify({
@@ -129,7 +129,7 @@ function submitTask() {
         cronExpression: cron,
         enabled: enabled,
         description: desc,
-        identity: identity || null,
+        agentId: agentId || null,
         builtin: builtin
     });
 

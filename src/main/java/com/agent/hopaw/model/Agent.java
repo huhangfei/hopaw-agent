@@ -10,6 +10,7 @@ public class Agent {
     private Long aiModelId;
     private Boolean enableThinking;
     private String extParams;
+    private String userId;
 
 
     public Agent() {}
@@ -116,5 +117,13 @@ public class Agent {
 
     public void setExtParams(String extParams) {
         this.extParams = extParams;
+    }
+
+    public String getUserId() {
+        return userId;
+    }
+
+    public void setUserId(String userId) {
+        this.userId = userId;
     }
 }

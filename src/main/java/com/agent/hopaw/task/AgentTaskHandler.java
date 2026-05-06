@@ -15,6 +15,7 @@ import org.springframework.stereotype.Component;
 
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.HashMap;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -50,11 +51,15 @@ public class AgentTaskHandler implements TaskHandler {
         logger.info("定时任务执行 [{}] - {}: {}", task.getId(), task.getTaskName(), task.getDescription());
 
         try {
-        String identity = task.getIdentity();
-        if(identity != null && !identity.isEmpty() && task.getDescription() != null && !task.getDescription().isEmpty()){
-            Long agentId = Long.parseLong(identity);
-            Agent agent =    agentMapper.findById(agentId);
-            ChatModel chatModel = aiModelService.createChatModel(agent.getAiModelId(), agent.getEnableThinking());
+        String agentIdStr = task.getAgentId();
+        if(agentIdStr != null && !agentIdStr.isEmpty() && task.getDescription() != null && !task.getDescription().isEmpty()){
+            Long agentId = Long.parseLong(agentIdStr);
+            Agent agent =agentMapper.findById(agentId);
+            ChatModel chatModel = aiModelService.createChatModel(agent.getAiModelId(), agent.getEnableThinking(),new HashMap<>(1){{
+                put("agentId",agentIdStr);
+                put("userId",task.getUserId());
+                put("source","agent-task");
+            }});
             List<String> selectTools = parseToolNames(agent.getTools());
 
             List<AgentTool> selectedTools = allTools.stream()

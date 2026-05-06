@@ -1,5 +1,6 @@
 package com.agent.hopaw.config;
 
+import com.agent.hopaw.constant.DefaultUser;
 import com.agent.hopaw.constant.ModelCapabilityEnum;
 import com.agent.hopaw.constant.ModelProviderEnum;
 import com.agent.hopaw.mapper.AgentMapper;
@@ -56,7 +57,8 @@ public class DataInitializer implements CommandLineRunner {
                     "ai_model_id INTEGER, " +
                     "model_name TEXT, " +
                     "enable_thinking INTEGER DEFAULT 1," +
-                    "ext_params TEXT" +
+                    "ext_params TEXT," +
+                    "user_id TEXT DEFAULT 'user1'" +
                     ")");
             
             stmt.execute("CREATE TABLE IF NOT EXISTS chat_history (" +
@@ -70,33 +72,66 @@ public class DataInitializer implements CommandLineRunner {
                     "tool_arguments TEXT, " +
                     "tool_call_status TEXT, " +
                     "thinking_content TEXT, " +
+                    "user_id TEXT, " +
                     "create_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP" +
                     ")");
+
+            // 兼容旧表：添加 user_id 列（如果不存在）
+            try {
+                stmt.execute("ALTER TABLE chat_history ADD COLUMN user_id TEXT");
+            } catch (Exception ignored) {
+            }
 
             stmt.execute("CREATE TABLE IF NOT EXISTS chat_memory (" +
                     "id INTEGER PRIMARY KEY AUTOINCREMENT, " +
                     "agent_id INTEGER NOT NULL, " +
+                    "user_id TEXT DEFAULT 'user1', " +
                     "message_id TEXT NOT NULL, " +
                     "message_json TEXT NOT NULL, " +
-                    "cleaned INTEGER DEFAULT 0, " +
+                    "status INTEGER DEFAULT 0, " +
                     "create_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP" +
                     ")");
-            
+
             stmt.execute("CREATE INDEX IF NOT EXISTS idx_chat_memory_agent ON chat_memory(agent_id)");
+            stmt.execute("CREATE INDEX IF NOT EXISTS idx_chat_memory_agent_user ON chat_memory(agent_id, user_id)");
             stmt.execute("CREATE INDEX IF NOT EXISTS idx_chat_memory_message_id ON chat_memory(message_id)");
+
+            // 兼容旧表：添加 user_id 列（如果不存在）
+            try {
+                stmt.execute("ALTER TABLE chat_memory ADD COLUMN user_id TEXT DEFAULT 'user1'");
+            } catch (Exception ignored) {
+            }
+
+            // 兼容旧表：将 cleaned 列重命名为 status（如果 cleaned 列存在）
+            try {
+                stmt.execute("ALTER TABLE chat_memory RENAME COLUMN cleaned TO status");
+            } catch (Exception ignored) {
+            }
 
             stmt.execute("CREATE TABLE IF NOT EXISTS long_term_memory (" +
                     "id INTEGER PRIMARY KEY AUTOINCREMENT, " +
-                    "identity TEXT NOT NULL, " +
+                    "agent_id TEXT NOT NULL, " +
                     "memory TEXT, " +
                     "memory_hash TEXT, " +
                     "parent_id INTEGER, " +
+                    "user_id TEXT, " +
                     "create_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP, " +
                     "update_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP" +
                     ")");
 
-            stmt.execute("CREATE INDEX IF NOT EXISTS idx_long_term_memory_identity ON long_term_memory(identity)");
+            stmt.execute("CREATE INDEX IF NOT EXISTS idx_long_term_memory_agent ON long_term_memory(agent_id)");
             stmt.execute("CREATE INDEX IF NOT EXISTS idx_long_term_memory_parent ON long_term_memory(parent_id)");
+
+            // 兼容旧表：将 identity 重命名为 agent_id
+            try {
+                stmt.execute("ALTER TABLE long_term_memory RENAME COLUMN identity TO agent_id");
+            } catch (Exception ignored) {
+            }
+            // 兼容旧表：添加 user_id 列（如果不存在）
+            try {
+                stmt.execute("ALTER TABLE long_term_memory ADD COLUMN user_id TEXT");
+            } catch (Exception ignored) {
+            }
 
             stmt.execute("CREATE TABLE IF NOT EXISTS ai_model_providers (" +
                     "id INTEGER PRIMARY KEY AUTOINCREMENT, " +
@@ -155,21 +190,38 @@ public class DataInitializer implements CommandLineRunner {
                     "enabled INTEGER DEFAULT 1, " +
                     "description TEXT, " +
                     "ext_params TEXT, " +
-                    "identity TEXT, " +
+                    "user_id TEXT, " +
+                    "agent_id TEXT, " +
                     "builtin INTEGER DEFAULT 0, " +
                     "create_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP, " +
                     "update_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP" +
                     ")");
 
+            // 兼容旧表：添加 user_id 列（如果不存在）
+            try {
+                stmt.execute("ALTER TABLE agents ADD COLUMN user_id TEXT DEFAULT 'user1'");
+            } catch (Exception ignored) {
+            }
+
             stmt.execute("CREATE INDEX IF NOT EXISTS idx_scheduled_tasks_type ON scheduled_tasks(task_type)");
 
-            // 兼容旧表：添加 identity 和 builtin 列（如果不存在）
+            // 兼容旧表：将 identity 重命名为 user_id，添加 agent_id 列（如果不存在）
             try {
-                stmt.execute("ALTER TABLE scheduled_tasks ADD COLUMN identity TEXT");
+                stmt.execute("ALTER TABLE scheduled_tasks RENAME COLUMN identity TO user_id");
+            } catch (Exception ignored) {
+            }
+            try {
+                stmt.execute("ALTER TABLE scheduled_tasks ADD COLUMN agent_id TEXT");
             } catch (Exception ignored) {
             }
             try {
                 stmt.execute("ALTER TABLE scheduled_tasks ADD COLUMN builtin INTEGER DEFAULT 0");
+            } catch (Exception ignored) {
+            }
+
+            // 兼容旧表：添加 user_id 列（如果不存在）
+            try {
+                stmt.execute("ALTER TABLE token_usage ADD COLUMN user_id TEXT");
             } catch (Exception ignored) {
             }
 
@@ -265,7 +317,9 @@ public class DataInitializer implements CommandLineRunner {
         List<Agent> agents = agentMapper.findAll();
         if (agents.isEmpty()) {
             String tools = allTools.stream().map(x -> x.getName()).collect(Collectors.joining(","));
-            agentMapper.insert(new Agent("通用助手", "可以回答各种问题，使用多种工具", tools, 20, 20, true));
+            Agent agent = new Agent("通用助手", "可以回答各种问题，使用多种工具", tools, 20, 20, true);
+            agent.setUserId(DefaultUser.USER);
+            agentMapper.insert(agent);
 
         }
 

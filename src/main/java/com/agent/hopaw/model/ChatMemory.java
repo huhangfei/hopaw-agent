@@ -5,18 +5,23 @@ import java.time.LocalDateTime;
 public class ChatMemory {
     private Long id;
     private Long agentId;
+    private String userId;
     private String messageId;
     private String messageJson;
-    private Integer cleaned;
+    /**
+     * 状态 0 未清理，1 已过期等待整理记忆和删除，2 主动丢弃和待整理记忆后删除
+     */
+    private Integer status;
     private LocalDateTime createTime;
 
     public ChatMemory() {}
 
-    public ChatMemory(Long agentId, String messageId, String messageJson) {
+    public ChatMemory(Long agentId, String userId, String messageId, String messageJson) {
         this.agentId = agentId;
+        this.userId = userId;
         this.messageId = messageId;
         this.messageJson = messageJson;
-        this.cleaned = 0;
+        this.status = 0;
         this.createTime = LocalDateTime.now();
     }
 
@@ -36,6 +41,14 @@ public class ChatMemory {
         this.agentId = agentId;
     }
 
+    public String getUserId() {
+        return userId;
+    }
+
+    public void setUserId(String userId) {
+        this.userId = userId;
+    }
+
     public String getMessageId() {
         return messageId;
     }
@@ -52,12 +65,12 @@ public class ChatMemory {
         this.messageJson = messageJson;
     }
 
-    public Integer getCleaned() {
-        return cleaned;
+    public Integer getStatus() {
+        return status;
     }
 
-    public void setCleaned(Integer cleaned) {
-        this.cleaned = cleaned;
+    public void setStatus(Integer status) {
+        this.status = status;
     }
 
     public LocalDateTime getCreateTime() {

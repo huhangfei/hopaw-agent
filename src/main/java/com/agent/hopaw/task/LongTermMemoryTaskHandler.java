@@ -1,5 +1,6 @@
 package com.agent.hopaw.task;
 
+import com.agent.hopaw.constant.DefaultUser;
 import com.agent.hopaw.mapper.AgentMapper;
 import com.agent.hopaw.mapper.ChatMemoryMapper;
 import com.agent.hopaw.model.Agent;
@@ -7,8 +8,10 @@ import com.agent.hopaw.model.ChatMemory;
 import com.agent.hopaw.model.ScheduledTask;
 import com.agent.hopaw.service.AiModelService;
 import com.agent.hopaw.service.SysConfigService;
+import com.agent.hopaw.util.InvocationParametersUtil;
 import com.alibaba.fastjson2.JSON;
 import dev.langchain4j.data.message.*;
+import dev.langchain4j.invocation.InvocationParameters;
 import dev.langchain4j.model.chat.ChatModel;
 import dev.langchain4j.service.AiServices;
 import dev.langchain4j.service.UserMessage;
@@ -17,9 +20,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
 
 import java.time.LocalDateTime;
-import java.util.Arrays;
-import java.util.List;
-import java.util.Objects;
+import java.util.*;
 import java.util.stream.Collectors;
 
 @Component
@@ -32,10 +33,8 @@ public class LongTermMemoryTaskHandler implements TaskHandler {
     private final AgentMapper agentMapper;
     private final SysConfigService sysConfigService;
 
-    private String lastMemoryModelId = null;
-    private int counter = 0;
-
-    public LongTermMemoryTaskHandler(AiModelService aiModelService, com.agent.hopaw.service.LongTermMemoryService longTermMemoryService,
+    public LongTermMemoryTaskHandler(AiModelService aiModelService,
+                                     com.agent.hopaw.service.LongTermMemoryService longTermMemoryService,
                                      ChatMemoryMapper chatMemoryMapper, AgentMapper agentMapper,
                                      SysConfigService sysConfigService) {
         this.aiModelService = aiModelService;
@@ -45,16 +44,19 @@ public class LongTermMemoryTaskHandler implements TaskHandler {
         this.sysConfigService = sysConfigService;
     }
 
-    public void processAgentMemories() {
+    public void processAgentMemories(){
         try {
             List<Agent> allAgents = agentMapper.findAll();
-            for (Agent agent : allAgents) {
-                try {
-                    processMemoryForIdentity(agent);
-                } catch (Exception e) {
-                    logger.error("Error processing memory for agent {}", agent.getId(), e);
+            for (String userId : Arrays.asList(DefaultUser.USER)) {
+                for (Agent agent : allAgents) {
+                    try {
+                        processMemoryForIdentity(agent,userId);
+                    } catch (Exception e) {
+                        logger.error("Error processing memory for agent {} userId {}", agent.getId(),userId, e);
+                    }
                 }
             }
+
         } catch (Exception e) {
             logger.error("Error fetching agent ids for memory processing", e);
         }
@@ -65,10 +67,15 @@ public class LongTermMemoryTaskHandler implements TaskHandler {
         return config != null ? config.getConfigValue() : defaultValue;
     }
 
-    private void processMemoryForIdentity(Agent agent) {
+    private void processMemoryForIdentity(Agent agent,String userId) {
 
         //已标记清理的消息
-        List<ChatMemory> cleanedMessages = chatMemoryMapper.findByAgentIdAndCleaned(agent.getId(), 1);
+        List<ChatMemory> cleanedMessages = chatMemoryMapper.findByAgentIdAndUserIdAndStatus(agent.getId(), userId,1);
+        List<ChatMemory> cleanedMessages1 = chatMemoryMapper.findByAgentIdAndUserIdAndStatus(agent.getId(), userId,2);
+        if(!cleanedMessages1.isEmpty()){
+            cleanedMessages.addAll(cleanedMessages1);
+            cleanedMessages=cleanedMessages.stream().sorted(Comparator.comparing(ChatMemory::getCreateTime)).collect(Collectors.toList());
+        }
         if (cleanedMessages.isEmpty()){
             return;
         }
@@ -156,19 +163,19 @@ public class LongTermMemoryTaskHandler implements TaskHandler {
             conversationBuilder.append("\n");
         }
 
-        String identity=agent.getId().toString();
+        String agentIdStr = String.valueOf(agent.getId());
         String newConversation = conversationBuilder.toString();
-        String existingMemory = longTermMemoryService.getMemoryTree(identity);
+        String existingMemory = longTermMemoryService.getMemoryTree(agentIdStr,userId);
 
         String memory = buildMemorySummary(existingMemory, newConversation);
-        boolean handle = handle(identity, memory);
+        boolean handle = handle(agentIdStr,userId, memory);
         if (handle) {
             chatMemoryMapper.deleteByIds(cleanedMessages.stream().map(ChatMemory::getId).toList());
         }
-        logger.info("Processing memory for identity: {}, cleaned messages count: {}", identity, cleanedMessages.size());
+        logger.info("Processing memory for agentId: {}, cleaned messages count: {}", agentIdStr, cleanedMessages.size());
     }
 
-    private boolean handle(String identity, String content) {
+    private boolean handle(String agentId,String userId, String content) {
         try {
             String modelIdStr = getConfig("memory_ai_model_id", "");
             Long modelId = null;
@@ -178,10 +185,16 @@ public class LongTermMemoryTaskHandler implements TaskHandler {
                 } catch (NumberFormatException ignored) {}
             }
 
-            ChatModel chatModel = aiModelService.createChatModel(modelId, true);
+            ChatModel chatModel = aiModelService.createChatModel(modelId, true,new HashMap<>(1){{
+                put("source","memory-task");
+                put("agentId",agentId);
+                put("userId",userId);
+            }});
 
-            String systemMessage = buildSystemMessage(identity);
-
+            String systemMessage = buildSystemMessage(agentId);
+            InvocationParameters invocationParameters=new InvocationParameters();
+            InvocationParametersUtil.setAgentId(invocationParameters,agentId);
+            InvocationParametersUtil.setUserId(invocationParameters,userId);
 
             MemoryAssistant assistant = AiServices.builder(MemoryAssistant.class)
                     .chatModel(chatModel)
@@ -189,11 +202,11 @@ public class LongTermMemoryTaskHandler implements TaskHandler {
                     .tools(Arrays.asList(longTermMemoryService))
                     .build();
             logger.info("开始汇总记忆 \n {}", content);
-            String result = assistant.chat(content);
+            String result = assistant.chat(content,invocationParameters);
             logger.info("记忆汇总完毕：{}", result);
             return true;
         }catch (Exception ex){
-            logger.error("Error processing memory for identity {}", identity, ex);
+            logger.error("Error processing memory for agentId {}", agentId, ex);
             return false;
         }
     }
@@ -213,7 +226,7 @@ public class LongTermMemoryTaskHandler implements TaskHandler {
         }
     }
 
-    private String buildSystemMessage(String identity) {
+    private String buildSystemMessage(String agentId) {
         String customPrompt = getConfig("memory_prompt", "");
         if (customPrompt.isBlank()) {
             customPrompt="你是一个记忆整理助手。善于根据聊天记录提取关键的用户记忆信息。" +
@@ -240,12 +253,12 @@ public class LongTermMemoryTaskHandler implements TaskHandler {
                     "在完成记忆总结后，你可以调用保存智能体记忆工具。\n" +
                     "归类后先保存分类作为父级记忆得到编号，再保存概要内容作为子级记忆，子级记忆的parentId是父级记忆的编号。" ;
         }
-        return customPrompt+ "\n本次记忆的identity是" + identity;
+        return customPrompt+ "\n本次记忆的agentId是" + agentId;
     }
 
     public interface MemoryAssistant {
         @UserMessage("{{content}}")
-        String chat(String content);
+        String chat(String content, InvocationParameters invocationParameters);
     }
 
     private String buildMemorySummary(String existingMemory, String newConversation) {

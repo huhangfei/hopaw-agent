@@ -4,15 +4,20 @@ import com.agent.hopaw.mapper.AgentMapper;
 import com.agent.hopaw.mapper.ChatMemoryMapper;
 import com.agent.hopaw.model.*;
 import com.agent.hopaw.tools.AgentTool;
+import com.agent.hopaw.util.InvocationParametersUtil;
 import com.alibaba.fastjson2.JSON;
 import dev.langchain4j.data.image.Image;
 import dev.langchain4j.data.message.*;
+import dev.langchain4j.invocation.InvocationParameters;
 import dev.langchain4j.memory.chat.MessageWindowChatMemory;
 import dev.langchain4j.model.chat.ChatModel;
 import dev.langchain4j.model.chat.StreamingChatModel;
+import dev.langchain4j.model.chat.request.ChatRequestParameters;
+import dev.langchain4j.model.chat.request.DefaultChatRequestParameters;
 import dev.langchain4j.model.chat.response.ChatResponse;
 import dev.langchain4j.model.chat.response.PartialThinking;
 import dev.langchain4j.service.AiServices;
+import dev.langchain4j.service.MemoryId;
 import dev.langchain4j.service.TokenStream;
 import dev.langchain4j.service.tool.BeforeToolExecution;
 import dev.langchain4j.service.tool.ToolExecution;
@@ -30,6 +35,8 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.stream.Collectors;
+
+import static org.springframework.http.RequestEntity.put;
 
 @Service
 public class AgentService {
@@ -59,21 +66,22 @@ public class AgentService {
         return agentMapper.findById(id);
     }
 
-    public Agent createAgent(String name, String description, String tools, Integer maxMemoryRecords, Integer maxToolInvocations, Long aiModelId, Boolean enableThinking) {
+    public Agent createAgent(String name, String description, String tools, Integer maxMemoryRecords, Integer maxToolInvocations, Long aiModelId, Boolean enableThinking, String userId) {
         Agent agent = new Agent(name, description, tools, maxMemoryRecords, maxToolInvocations, enableThinking);
         agent.setAiModelId(aiModelId);
         agent.setEnableThinking(enableThinking);
+        agent.setUserId(userId);
         agentMapper.insert(agent);
         return agent;
     }
 
-    public void deleteAgent(Long id) {
+    public void deleteAgent(Long id,String userId) {
         agentMapper.deleteById(id);
         chatMemoryMapper.deleteByAgentId(id);
-        stopAndRemoveAgentExecutor(id);
+        stopAndRemoveAgentExecutor(id,userId);
     }
 
-    public void updateAgent(Long id, String name, String description, String tools, Integer maxMemoryRecords, Integer maxToolInvocations, Long aiModelId, Boolean enableThinking) {
+    public void updateAgent(String userId,Long id, String name, String description, String tools, Integer maxMemoryRecords, Integer maxToolInvocations, Long aiModelId, Boolean enableThinking) {
         Agent agent = agentMapper.findById(id);
         if (agent != null) {
             agent.setName(name);
@@ -86,63 +94,64 @@ public class AgentService {
                 agent.setEnableThinking(enableThinking);
             }
             agentMapper.update(agent);
-            stopAndRemoveAgentExecutor(id);
+            stopAndRemoveAgentExecutor(id,userId);
         }
     }
 
-    public AgentExecutor getAgentExecutor(Long agentId) {
-        return agentExecutors.computeIfAbsent(agentId.toString(), id -> {
+    public AgentExecutor getAgentExecutor(Long agentId,String userId) {
+        return agentExecutors.computeIfAbsent(agentId+"_"+userId, id -> {
             Agent agent = agentMapper.findById(agentId);
             if (agent == null) {
                 return null;
             }
-            return createAgentExecutor(agent);
+            return createAgentExecutor(agent,userId);
         });
     }
 
-    public AgentExecutor resetAgentExecutor(Long agentId) {
-        agentExecutors.remove(agentId.toString());
-        return createAgentExecutor(agentMapper.findById(agentId));
-    }
-
-    public void stopAgentExecutor(Long agentId) {
-        AgentExecutor agentExecutor = agentExecutors.get(agentId.toString());
+    public void stopAgentExecutor(Long agentId,String userId) {
+        AgentExecutor agentExecutor = agentExecutors.get(agentId+"_"+userId);
         if (agentExecutor != null) {
             agentExecutor.stop();
         }
     }
 
-    public void updateThinking(Long id, Boolean enabled) {
+    public void updateThinking(Long id, Boolean enabled,String userId) {
         Agent agent = agentMapper.findById(id);
         if (agent != null) {
             agent.setEnableThinking(enabled);
             agentMapper.update(agent);
-            stopAndRemoveAgentExecutor(id);
+            stopAndRemoveAgentExecutor(id,userId);
         }
     }
 
-    public void stopAndRemoveAgentExecutor(Long agentId) {
-        stopAgentExecutor(agentId);
+    public void stopAndRemoveAgentExecutor(Long agentId,String userId) {
+        stopAgentExecutor(agentId,userId);
         agentExecutors.remove(agentId.toString());
     }
 
-    public boolean isAgentExecutorRunning(Long agentId) {
-        AgentExecutor agentExecutor = agentExecutors.get(agentId.toString());
+    public boolean isAgentExecutorRunning(Long agentId,String userId) {
+        AgentExecutor agentExecutor = agentExecutors.get(agentId+"_"+userId);
         return agentExecutor != null && agentExecutor.running();
     }
 
-    private AgentExecutor createAgentExecutor(Agent agent) {
+    private AgentExecutor createAgentExecutor(Agent agent,String userId) {
         ChatModel chatModel = null;
         StreamingChatModel streamingModel = null;
-        chatModel = aiModelService.createChatModel(agent.getAiModelId(), agent.getEnableThinking());
-        streamingModel = aiModelService.createStreamingChatModel(agent.getAiModelId(), agent.getEnableThinking());
+        Map<String, String> metadata=new HashMap<>(){{
+           put("agentId",agent.getId().toString());
+           put("userId",userId);
+           put("source","chat");
+        }};
+
+        chatModel = aiModelService.createChatModel(agent.getAiModelId(), agent.getEnableThinking(),metadata);
+        streamingModel = aiModelService.createStreamingChatModel(agent.getAiModelId(), agent.getEnableThinking(),metadata);
         List<String> selectedToolNames = parseToolNames(agent.getTools());
         List<AgentTool> selectedTools = allTools.stream()
                 .filter(t -> selectedToolNames.contains(t.getName()))
                 .collect(Collectors.toList());
 
-        SQLiteChatMemoryStore memoryStore = new SQLiteChatMemoryStore(chatMemoryMapper, agent.getId());
-        return new AgentExecutor(agent, chatModel, streamingModel, selectedTools, memoryStore, a->this.getSystemMessage(a), chatHistoryStorageService);
+        SQLiteChatMemoryStore memoryStore = new SQLiteChatMemoryStore(chatMemoryMapper, agent.getId(), userId);
+        return new AgentExecutor(agent,userId, chatModel, streamingModel, selectedTools, memoryStore, a->this.getSystemMessage(a,userId), chatHistoryStorageService);
     }
 
     private List<String> parseToolNames(String toolsStr) {
@@ -153,18 +162,22 @@ public class AgentService {
     }
 
     public interface Assistant {
-        String chat(UserMessage userMessage);
+        String chat(@dev.langchain4j.service.UserMessage List<Content> contents,
+                   // ChatRequestParameters requestParameters, // 模型参数
+                    InvocationParameters invocationParameters);
 
-        TokenStream streamingChat(UserMessage userMessage);
+        TokenStream streamingChat(@dev.langchain4j.service.UserMessage List<Content> contents,
+                                 // ChatRequestParameters requestParameters, // 模型参数
+                                  InvocationParameters invocationParameters);
     }
 
-    public String getSystemMessage(Agent agent){
+    public String getSystemMessage(Agent agent,String userId){
         String systemMessage = "你是一个智能助手，名字叫" + agent.getName() + "," +
                 "主要工作是" + agent.getDescription() + "," +
                 "你的agentId是" + agent.getId() + "。" +
                 "在遇到需要用户提供信息或最新信息不正确的时候，不要一直猜，先查询记忆，记忆中没有就问用户。"+
                 "在判断有需要调用工具就去调用，遇到危险操作，立刻停止操作，询问用户。\n";
-                String rootMemory = longTermMemoryService.getRootMemory(agent.getId().toString());
+                String rootMemory = longTermMemoryService.getRootMemory(String.valueOf(agent.getId()),userId);
         if(StringUtils.hasLength(rootMemory)){
             systemMessage+="这是所有记忆分类：\n" + rootMemory+"\n如果需要详细的记忆内容可以根据记忆编号查询所有子记忆。";
         }
@@ -173,6 +186,7 @@ public class AgentService {
 
     public static class AgentExecutor {
         private final Agent agent;
+        private final String userId;
         private final Assistant assistant;
         private final Assistant streamingAssistant;
         private final AgentMessageHandler agentMessageHandler;
@@ -180,7 +194,7 @@ public class AgentService {
         private final Function<Agent, String> systemMessageProvider;
         CountDownLatch latch = new CountDownLatch(0);
         private final ChatHistoryStorageService chatHistoryStorageService;
-        public AgentExecutor(Agent agent,
+        public AgentExecutor(Agent agent,String userId,
                              ChatModel chatModel,
                              StreamingChatModel streamingModel,
                              List<AgentTool> selectedTools,
@@ -190,18 +204,19 @@ public class AgentService {
             this.chatHistoryStorageService = chatHistoryStorageService;
             this.agentMessageHandler = new AgentMessageHandler();
             this.agent = agent;
-
+            this.userId=userId;
             int maxMemoryRecords = agent.getMaxMemoryRecords() != null ? agent.getMaxMemoryRecords() : 20;
             int maxToolInvocations = agent.getMaxToolInvocations() != null ? agent.getMaxToolInvocations() : 10;
 
-
+            String memoryId="window_"+agent.getId()+"_"+userId;
             if (chatModel != null) {
+
                 var aiBuilder = AiServices.builder(Assistant.class)
                         .chatModel(chatModel)
                         .systemMessageProvider(chatMemoryId -> systemMessageProvider.apply(agent));
 
                 MessageWindowChatMemory.Builder memoryBuilder = MessageWindowChatMemory.builder()
-                        .id(agent.getId().toString())
+                        .id(memoryId)
                         .maxMessages(maxMemoryRecords);
                 if (memoryStore != null) {
                     memoryBuilder.chatMemoryStore(memoryStore);
@@ -222,7 +237,7 @@ public class AgentService {
                         .streamingChatModel(streamingModel)
                         .systemMessageProvider(chatMemoryId -> systemMessageProvider.apply(agent));
                 MessageWindowChatMemory.Builder memoryBuilder = MessageWindowChatMemory.builder()
-                        .id(agent.getId().toString())
+                        .id(memoryId)
                         .maxMessages(maxMemoryRecords);
                 if (memoryStore != null) {
                     memoryBuilder.chatMemoryStore(memoryStore);
@@ -254,21 +269,26 @@ public class AgentService {
             return latch.getCount()>0;
         }
 
-        public String execute(UserMessage message) {
+        public String execute(List<Content> contents) {
             if (assistant == null) {
-                return getSimulatedResponse(message);
+                return getSimulatedResponse();
             }
             try {
-                return assistant.chat(message);
+                String memoryId=agent.getId()+"_"+userId;
+                InvocationParameters invocationParameters = InvocationParameters.from(new HashMap<>());
+                InvocationParametersUtil.setUserId(invocationParameters, userId);
+                InvocationParametersUtil.setAgentId(invocationParameters, String.valueOf(agent.getId()));
+                InvocationParametersUtil.setMemoryId(invocationParameters, memoryId);
+                return assistant.chat(contents,invocationParameters);
             } catch (Exception e) {
-                return getSimulatedResponse(message) + "\n(注: " + e.getMessage() + ")";
+                return getSimulatedResponse() + "\n(注: " + e.getMessage() + ")";
             }
         }
 
-        public void executeStreaming(UserMessage userMessage, Consumer<String> messageConsumer) {
+        public void executeStreaming(List<Content> contents, Consumer<String> messageConsumer) {
             List<ChatHistory> chatHistoryList = new ArrayList<ChatHistory>();
             //todo:等支持多种消息类型后完善存储
-            for (Content content : userMessage.contents()) {
+            for (Content content : contents) {
                 if(content instanceof TextContent){
                     ChatHistory userChat = new ChatHistory(agent.getId(), "user", "text", ((TextContent)content).text());
                     chatHistoryList.add(userChat);
@@ -285,23 +305,33 @@ public class AgentService {
                     ChatHistory userChat = new ChatHistory(agent.getId(), "user", "pdf", "[一个PDF文件]");
                     chatHistoryList.add(userChat);
                 }else{
-                    logger.info("用户消息 [User][{}]: {}", userMessage.name(),"未知");
+                    logger.info("用户消息 user[{}] agent[{}]: {}", userId,agent.getId(),"未知");
                 }
+            }
+            for (ChatHistory chatHistory : chatHistoryList) {
+                chatHistory.setUserId(userId);
             }
             chatHistoryStorageService.saveChatHistoryBatch(chatHistoryList);
 
             cancelTask.set(false);
             agentMessageHandler.setMessageConsumer(messageConsumer);
             agentMessageHandler.setChatHistoryConsumer(chatHistory -> chatHistoryStorageService.saveChatHistory(chatHistory));
-            if (streamingAssistant == null) {
-                String response = execute(userMessage);
-                agentMessageHandler.partialResponseHandler(response);
-                agentMessageHandler.done();
-                return;
-            }
+
             try {
+                if (streamingAssistant == null) {
+                    String response = execute(contents);
+                    agentMessageHandler.partialResponseHandler(response);
+                    agentMessageHandler.done();
+                    return;
+                }
                 this.latch = new CountDownLatch(1);
-                TokenStream tokenStream = streamingAssistant.streamingChat(userMessage)
+                String memoryId=agent.getId()+"_"+userId;
+                InvocationParameters invocationParameters = InvocationParameters.from(new HashMap<>());
+                InvocationParametersUtil.setUserId(invocationParameters, userId);
+                InvocationParametersUtil.setAgentId(invocationParameters, String.valueOf(agent.getId()));
+                InvocationParametersUtil.setMemoryId(invocationParameters, memoryId);
+
+                TokenStream tokenStream = streamingAssistant.streamingChat(contents,invocationParameters)
                         .onError(e -> {
                             agentMessageHandler.onErrorHandler(e);
                             latch.countDown();
@@ -340,7 +370,8 @@ public class AgentService {
                         .beforeToolExecution(toolExecution -> agentMessageHandler.beforeToolExecutionHandler(toolExecution))
                         .onToolExecuted(toolExecution -> agentMessageHandler.toolExecutionHandler(toolExecution));
                 tokenStream.start();
-                latch.await(300, TimeUnit.SECONDS);
+
+                latch.await(60, TimeUnit.SECONDS);
                 agentMessageHandler.done();
             } catch (Exception e) {
                 logger.error("\n(注: 流式响应失败: " + e.getMessage() + ")",e);
@@ -348,8 +379,8 @@ public class AgentService {
             }
         }
 
-        private String getSimulatedResponse(UserMessage message) {
-            return agent.getName() + ": " + message.singleText() + "\n这是一个模拟响应，因为API密钥未配置或请求失败。";
+        private String getSimulatedResponse() {
+            return agent.getName() + ": \n这是一个模拟响应，因为API密钥未配置或请求失败。";
         }
 
         /**

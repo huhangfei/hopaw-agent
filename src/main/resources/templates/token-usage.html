@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head th:replace="fragments/layout::head('Token 用量统计', 'token-usage.css')"></head>
+<body>
+    <header th:replace="fragments/layout::header('🤖 HoPaw - Token 用量统计')"></header>
+
+    <div class="main-container">
+        <nav th:replace="fragments/layout::menuSidebar('token-usage')"></nav>
+
+        <main class="usage-container">
+            <div class="usage-header">
+                <h2>Token 用量统计</h2>
+            </div>
+
+            <div class="filter-card">
+                <div class="filter-row">
+                    <div class="filter-group">
+                        <label for="startTime">开始时间</label>
+                        <input type="datetime-local" id="startTime">
+                    </div>
+                    <div class="filter-group">
+                        <label for="endTime">结束时间</label>
+                        <input type="datetime-local" id="endTime">
+                    </div>
+                    <div class="filter-group">
+                        <label for="filterUser">用户</label>
+                        <select id="filterUser">
+                            <option value="">全部</option>
+                            <option value="user1">user1</option>
+                        </select>
+                    </div>
+                    <div class="filter-group">
+                        <label for="filterAgent">智能体</label>
+                        <select id="filterAgent">
+                            <option value="">全部</option>
+                            <option th:each="a : ${agents}" th:value="${a.id}" th:text="${a.name}"></option>
+                        </select>
+                    </div>
+                    <button class="btn-query" onclick="queryData()">查询</button>
+                </div>
+            </div>
+
+            <div class="summary-cards" id="summaryCards">
+                <div class="summary-card">
+                    <div class="summary-label">请求次数</div>
+                    <div class="summary-value" id="summaryCount">0</div>
+                </div>
+                <div class="summary-card">
+                    <div class="summary-label">输入 Tokens</div>
+                    <div class="summary-value" id="summaryInput">0</div>
+                </div>
+                <div class="summary-card">
+                    <div class="summary-label">输出 Tokens</div>
+                    <div class="summary-value" id="summaryOutput">0</div>
+                </div>
+                <div class="summary-card">
+                    <div class="summary-label">总 Tokens</div>
+                    <div class="summary-value total" id="summaryTotal">0</div>
+                </div>
+            </div>
+
+            <div class="usage-card">
+                <table class="usage-table">
+                    <thead>
+                        <tr>
+                            <th>时间</th>
+                            <th>用户</th>
+                            <th>智能体</th>
+                            <th>模型</th>
+                            <th>输入 Tokens</th>
+                            <th>输出 Tokens</th>
+                            <th>总 Tokens</th>
+                        </tr>
+                    </thead>
+                    <tbody id="usageTableBody">
+                    </tbody>
+                </table>
+            </div>
+
+            <div class="empty-state" id="emptyState" style="display:none;">
+                <p>暂无数据，请选择时间范围后查询</p>
+            </div>
+
+            <div class="pagination" id="pagination" style="display:none;">
+                <button class="page-btn" id="prevPage" onclick="goPage(currentPage - 1)">上一页</button>
+                <span class="page-info" id="pageInfo"></span>
+                <button class="page-btn" id="nextPage" onclick="goPage(currentPage + 1)">下一页</button>
+            </div>
+        </main>
+    </div>
+
+    <div th:replace="fragments/layout::toastContainer"></div>
+    <script th:inline="javascript">
+        var AGENTS = /*[[${agents}]]*/ [];
+    </script>
+    <th:block th:replace="fragments/layout::commonScripts('token-usage.js')"></th:block>
+</body>
+</html>

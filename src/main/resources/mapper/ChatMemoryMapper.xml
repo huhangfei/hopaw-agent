@@ -5,55 +5,68 @@
     <resultMap id="ChatMemoryResultMap" type="com.agent.hopaw.model.ChatMemory">
         <id property="id" column="id"/>
         <result property="agentId" column="agent_id"/>
+        <result property="userId" column="user_id"/>
         <result property="messageId" column="message_id"/>
         <result property="messageJson" column="message_json"/>
-        <result property="cleaned" column="cleaned"/>
+        <result property="status" column="status"/>
         <result property="createTime" column="create_time"/>
     </resultMap>
 
     <select id="findByAgentId" resultMap="ChatMemoryResultMap">
-        SELECT id, agent_id, message_id, message_json, cleaned, create_time
+        SELECT id, agent_id, user_id, message_id, message_json, status, create_time
         FROM chat_memory
         WHERE agent_id = #{agentId}
         ORDER BY create_time ASC
     </select>
 
-    <select id="findByAgentIdAndCleaned" resultMap="ChatMemoryResultMap">
-        SELECT id, agent_id, message_id, message_json, cleaned, create_time
+    <select id="findByAgentIdAndUserId" resultMap="ChatMemoryResultMap">
+        SELECT id, agent_id, user_id, message_id, message_json, status, create_time
         FROM chat_memory
-        WHERE agent_id = #{agentId} AND cleaned = #{cleaned}
+        WHERE agent_id = #{agentId} AND user_id = #{userId}
+        ORDER BY create_time ASC
+    </select>
+
+    <select id="findByAgentIdAndUserIdAndStatus" resultMap="ChatMemoryResultMap">
+        SELECT id, agent_id, user_id, message_id, message_json, status, create_time
+        FROM chat_memory
+        WHERE agent_id = #{agentId} AND user_id = #{userId} AND status = #{status}
         ORDER BY create_time ASC
     </select>
 
     <insert id="insert">
-        INSERT INTO chat_memory (agent_id, message_id, message_json, cleaned, create_time)
-        VALUES (#{agentId}, #{messageId}, #{messageJson}, 0, CURRENT_TIMESTAMP)
+        INSERT INTO chat_memory (agent_id, user_id, message_id, message_json, status, create_time)
+        VALUES (#{agentId}, #{userId}, #{messageId}, #{messageJson}, 0, CURRENT_TIMESTAMP)
         <selectKey resultType="long" keyProperty="id" order="AFTER">
             SELECT last_insert_rowid()
         </selectKey>
     </insert>
 
-    <update id="markCleaned">
+    <update id="updateStatus">
         UPDATE chat_memory
-        SET cleaned = 1
-        WHERE agent_id = #{agentId} AND message_id = #{messageId}
-    </update>
-
-    <update id="unmarkCleaned">
-        UPDATE chat_memory
-        SET cleaned = 0
-        WHERE agent_id = #{agentId} AND message_id = #{messageId}
+        SET status = #{status}
+        WHERE agent_id = #{agentId} AND user_id = #{userId} AND message_id = #{messageId}
     </update>
 
     <update id="updateByMessageId">
         UPDATE chat_memory
         SET message_json = #{messageJson}
-        WHERE agent_id = #{agentId} AND message_id = #{messageId}
+        WHERE agent_id = #{agentId} AND user_id = #{userId} AND message_id = #{messageId}
+    </update>
+
+    <update id="updateStatusByAgentId">
+        UPDATE chat_memory
+        SET status = #{status}
+        WHERE agent_id = #{agentId}
     </update>
 
     <delete id="deleteByMessageId">
         DELETE FROM chat_memory
-        WHERE agent_id = #{agentId} AND message_id = #{messageId}
+        WHERE agent_id = #{agentId} AND user_id = #{userId} AND message_id = #{messageId}
+    </delete>
+
+    <delete id="deleteByAgentIdAndUserId">
+        DELETE FROM chat_memory
+        WHERE agent_id = #{agentId} AND user_id = #{userId}
     </delete>
 
     <delete id="deleteByIds">

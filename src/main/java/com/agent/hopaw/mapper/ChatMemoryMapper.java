@@ -10,19 +10,23 @@ import java.util.List;
 public interface ChatMemoryMapper {
     List<ChatMemory> findByAgentId(@Param("agentId") Long agentId);
 
-    List<ChatMemory> findByAgentIdAndCleaned(@Param("agentId") Long agentId, @Param("cleaned") Integer cleaned);
+    List<ChatMemory> findByAgentIdAndUserId(@Param("agentId") Long agentId, @Param("userId") String userId);
 
-    int insert(@Param("agentId") Long agentId, @Param("messageId") String messageId, @Param("messageJson") String messageJson);
+    List<ChatMemory> findByAgentIdAndUserIdAndStatus(@Param("agentId") Long agentId, @Param("userId") String userId, @Param("status") Integer status);
 
-    int updateByMessageId(@Param("agentId") Long agentId, @Param("messageId") String messageId, @Param("messageJson") String messageJson);
+    int insert(@Param("agentId") Long agentId, @Param("userId") String userId, @Param("messageId") String messageId, @Param("messageJson") String messageJson);
 
-    int deleteByMessageId(@Param("agentId") Long agentId, @Param("messageId") String messageId);
+    int updateByMessageId(@Param("agentId") Long agentId, @Param("userId") String userId, @Param("messageId") String messageId, @Param("messageJson") String messageJson);
+
+    int updateStatusByAgentId(@Param("agentId") Long agentId, @Param("status") Integer status);
+
+    int deleteByMessageId(@Param("agentId") Long agentId, @Param("userId") String userId, @Param("messageId") String messageId);
 
     int deleteByAgentId(@Param("agentId") Long agentId);
 
+    int deleteByAgentIdAndUserId(@Param("agentId") Long agentId, @Param("userId") String userId);
+
     int deleteByIds(@Param("ids") List<Long> ids);
 
-    int markCleaned(@Param("agentId") Long agentId, @Param("messageId") String messageId);
-
-    int unmarkCleaned(@Param("agentId") Long agentId, @Param("messageId") String messageId);
+    int updateStatus(@Param("agentId") Long agentId, @Param("userId") String userId, @Param("messageId") String messageId, @Param("status") Integer status);
 }

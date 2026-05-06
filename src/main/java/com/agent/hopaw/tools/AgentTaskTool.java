@@ -3,8 +3,10 @@ package com.agent.hopaw.tools;
 
 import com.agent.hopaw.model.ScheduledTask;
 import com.agent.hopaw.service.ScheduledTaskService;
+import com.agent.hopaw.util.InvocationParametersUtil;
 import dev.langchain4j.agent.tool.P;
 import dev.langchain4j.agent.tool.Tool;
+import dev.langchain4j.invocation.InvocationParameters;
 import org.springframework.stereotype.Service;
 
 import java.time.format.DateTimeFormatter;
@@ -26,18 +28,18 @@ public class AgentTaskTool implements AgentTool {
     }
 
     @Tool("创建定时执行的任务")
-    public String createAgentTask(@P(description="智能体ID")Long agentId,@P("任务的简要名称") String taskName, @P("任务的cron表达式") String cron, @P("任务具体要做的事情描述") String taskDescription) {
-
+    public String createAgentTask(@P("任务的简要名称") String taskName, @P("任务的cron表达式") String cron, @P("任务具体要做的事情描述") String taskDescription, InvocationParameters invocationParameters) {
         ScheduledTask agentTask = new ScheduledTask(taskName, "agentTask", cron, 1, taskDescription);
-        agentTask.setIdentity(agentId.toString());
+        agentTask.setAgentId(InvocationParametersUtil.getAgentId(invocationParameters));
+        agentTask.setUserId(InvocationParametersUtil.getUserId(invocationParameters));
         agentTask.setBuiltin(0);
         scheduledTaskService.insert(agentTask);
         return "定时任务创建成功";
     }
 
     @Tool("查询定时执行的任务")
-    public String findAgentTask(@P(description="智能体ID")Long agentId) {
-        List<ScheduledTask> tasks = scheduledTaskService.findByIdentity(agentId.toString());
+    public String findAgentTask(InvocationParameters invocationParameters) {
+        List<ScheduledTask> tasks = scheduledTaskService.findByUserIdAndAgentId(InvocationParametersUtil.getUserId(invocationParameters), InvocationParametersUtil.getAgentId(invocationParameters));
         if (tasks != null && !tasks.isEmpty()){
             //循环 tasks 构建 字符串 拼接主要字段
             StringBuilder sb = new StringBuilder();
@@ -56,10 +58,10 @@ public class AgentTaskTool implements AgentTool {
     }
 
     @Tool("停止启动中的定时执行的任务")
-    public String stopAgentTask(@P(description="智能体ID")Long agentId, @P("任务ID") Long taskId) {
+    public String stopAgentTask(@P("任务ID") Long taskId,InvocationParameters invocationParameters) {
         //先查询，判断是否与agentId相等
         ScheduledTask task = scheduledTaskService.findById(taskId);
-        if (task.getIdentity()!=null && !task.getIdentity().equals(agentId.toString())) {
+        if (task.getAgentId()!=null && !task.getAgentId().equals(InvocationParametersUtil.getAgentId(invocationParameters))) {
             return "失败：该任务非该智能体创建，无法停止";
         }
         scheduledTaskService.setEnabled(taskId, 0);
@@ -67,20 +69,20 @@ public class AgentTaskTool implements AgentTool {
     }
 
     @Tool("启动停止中的定时执行的任务")
-    public String startAgentTask(@P(description="智能体ID")Long agentId, @P("任务ID") Long taskId) {
+    public String startAgentTask(@P("任务ID") Long taskId,InvocationParameters invocationParameters) {
         //先查询，判断是否与agentId相等
         ScheduledTask task = scheduledTaskService.findById(taskId);
-        if (task.getIdentity()!=null && !task.getIdentity().equals(agentId.toString())) {
+        if (task.getAgentId()!=null && !task.getAgentId().equals(InvocationParametersUtil.getAgentId(invocationParameters))) {
             return "失败：该任务非该智能体创建，无法启动";
         }
         scheduledTaskService.setEnabled(taskId, 1);
         return "定时任务启动成功";
     }
     @Tool("删除定时执行的任务")
-    public String deleteAgentTask(@P(description="智能体ID")Long agentId, @P("任务ID") Long taskId) {
+    public String deleteAgentTask(@P("任务ID") Long taskId,InvocationParameters invocationParameters) {
         //先查询，判断是否与agentId相等
         ScheduledTask task = scheduledTaskService.findById(taskId);
-        if (task.getIdentity()!=null && !task.getIdentity().equals(agentId.toString())) {
+        if (task.getAgentId()!=null && !task.getAgentId().equals(InvocationParametersUtil.getAgentId(invocationParameters))) {
             return "失败：该任务非该智能体创建，无法删除";
         }
         scheduledTaskService.deleteById(taskId);
