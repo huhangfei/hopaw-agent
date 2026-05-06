@@ -19,6 +19,8 @@ public interface ChatHistoryMapper {
 
     int insert(ChatHistory chat);
 
+    int insertBatch(List<ChatHistory> list);
+
     int deleteByAgentId(@Param("agentId") Long agentId);
 
     int updateToolCallStatusAndContent(@Param("id") Long id, @Param("toolCallStatus") String toolCallStatus, @Param("content") String content);

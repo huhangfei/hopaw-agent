@@ -5,7 +5,8 @@ import com.agent.hopaw.mapper.ChatMemoryMapper;
 import com.agent.hopaw.model.*;
 import com.agent.hopaw.tools.AgentTool;
 import com.alibaba.fastjson2.JSON;
-import dev.langchain4j.data.message.UserMessage;
+import dev.langchain4j.data.image.Image;
+import dev.langchain4j.data.message.*;
 import dev.langchain4j.memory.chat.MessageWindowChatMemory;
 import dev.langchain4j.model.chat.ChatModel;
 import dev.langchain4j.model.chat.StreamingChatModel;
@@ -265,9 +266,29 @@ public class AgentService {
         }
 
         public void executeStreaming(UserMessage userMessage, Consumer<String> messageConsumer) {
-
-            ChatHistory userChat = new ChatHistory(agent.getId(), "user", "text", userMessage.singleText());
-            chatHistoryStorageService.saveChatHistory(userChat);
+            List<ChatHistory> chatHistoryList = new ArrayList<ChatHistory>();
+            //todo:等支持多种消息类型后完善存储
+            for (Content content : userMessage.contents()) {
+                if(content instanceof TextContent){
+                    ChatHistory userChat = new ChatHistory(agent.getId(), "user", "text", ((TextContent)content).text());
+                    chatHistoryList.add(userChat);
+                }else  if(content instanceof ImageContent){
+                    ChatHistory userChat = new ChatHistory(agent.getId(), "user", "image", "[一张图片]");
+                    chatHistoryList.add(userChat);
+                }else  if(content instanceof VideoContent){
+                    ChatHistory userChat = new ChatHistory(agent.getId(), "user", "video", "[一段视频]");
+                    chatHistoryList.add(userChat);
+                }else  if(content instanceof AudioContent){
+                    ChatHistory userChat = new ChatHistory(agent.getId(), "user", "audio", "[一段音频]");
+                    chatHistoryList.add(userChat);
+                }else  if(content instanceof PdfFileContent){
+                    ChatHistory userChat = new ChatHistory(agent.getId(), "user", "pdf", "[一个PDF文件]");
+                    chatHistoryList.add(userChat);
+                }else{
+                    logger.info("用户消息 [User][{}]: {}", userMessage.name(),"未知");
+                }
+            }
+            chatHistoryStorageService.saveChatHistoryBatch(chatHistoryList);
 
             cancelTask.set(false);
             agentMessageHandler.setMessageConsumer(messageConsumer);

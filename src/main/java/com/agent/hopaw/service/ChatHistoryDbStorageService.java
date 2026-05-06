@@ -4,6 +4,8 @@ import com.agent.hopaw.mapper.ChatHistoryMapper;
 import com.agent.hopaw.model.ChatHistory;
 import org.springframework.stereotype.Service;
 
+import java.util.List;
+
 @Service
 public class ChatHistoryDbStorageService implements ChatHistoryStorageService{
 
@@ -26,5 +28,13 @@ public class ChatHistoryDbStorageService implements ChatHistoryStorageService{
         }else{
             chatHistoryMapper.insert(chatHistory);
         }
+    }
+
+    @Override
+    public void saveChatHistoryBatch(List<ChatHistory> chatHistories) {
+        if (chatHistories == null || chatHistories.isEmpty()) {
+            return;
+        }
+        chatHistoryMapper.insertBatch(chatHistories);
     }
 }

@@ -58,6 +58,14 @@
         </selectKey>
     </insert>
 
+    <insert id="insertBatch" parameterType="java.util.List">
+        INSERT INTO chat_history (agent_id, role, message_type, content, tool_call_id, tool_name, tool_arguments, tool_call_status, create_time, thinking_content)
+        VALUES
+        <foreach collection="list" item="item" separator=",">
+            (#{item.agentId}, #{item.role}, #{item.messageType}, #{item.content}, #{item.toolCallId}, #{item.toolName}, #{item.toolArguments}, #{item.toolCallStatus}, #{item.createTime}, #{item.thinkingContent})
+        </foreach>
+    </insert>
+
     <delete id="deleteByAgentId">
         DELETE FROM chat_history WHERE agent_id = #{agentId}
     </delete>
