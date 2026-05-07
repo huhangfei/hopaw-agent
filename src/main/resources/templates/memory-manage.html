@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head th:replace="fragments/layout::head('记忆管理', 'memory-manage.css')"></head>
+<body>
+    <header th:replace="fragments/layout::header('记忆管理')"></header>
+    <div class="main-container">
+        <nav th:replace="fragments/layout::menuSidebar('memory-manage')"></nav>
+        <main class="memory-manage-container">
+            <div class="toolbar">
+                <div class="toolbar-group">
+                    <label>智能体</label>
+                    <select id="agentSelect">
+                        <option value="">请选择智能体</option>
+                        <option th:each="agent : ${agents}" th:value="${agent.id}" th:text="${agent.name}"></option>
+                    </select>
+                </div>
+                <button class="btn btn-primary" onclick="loadTree()">查询</button>
+                <button class="btn btn-outline" onclick="addRootMemory()">+ 新增根记忆</button>
+            </div>
+            <div class="memory-panels">
+                <div class="tree-panel">
+                    <div class="panel-header">记忆树</div>
+                    <div class="tree-container" id="treeContainer">
+                        <div class="empty-state">请选择智能体并点击查询</div>
+                    </div>
+                </div>
+                <div class="editor-panel">
+                    <div class="panel-header">记忆详情</div>
+                    <div class="editor-content" id="editorContent">
+                        <div class="empty-state">请在左侧选择一条记忆</div>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+    <div th:replace="fragments/layout::toastContainer"></div>
+
+    <!-- 新增/编辑记忆弹窗 -->
+    <div class="modal-overlay" id="memoryModal" style="display:none;">
+        <div class="modal-box">
+            <div class="modal-header">
+                <span id="modalTitle">新增记忆</span>
+                <button class="modal-close" onclick="closeModal()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label>记忆内容</label>
+                    <textarea id="modalMemoryContent" rows="6" placeholder="请输入记忆内容"></textarea>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-outline" onclick="closeModal()">取消</button>
+                <button class="btn btn-primary" id="modalSaveBtn" onclick="saveModalMemory()">保存</button>
+            </div>
+        </div>
+    </div>
+
+    <th:block th:replace="fragments/layout::commonScripts('memory-manage.js')"></th:block>
+</body>
+</html>

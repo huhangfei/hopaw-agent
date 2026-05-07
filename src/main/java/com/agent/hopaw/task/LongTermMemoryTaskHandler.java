@@ -15,6 +15,7 @@ import dev.langchain4j.invocation.InvocationParameters;
 import dev.langchain4j.model.chat.ChatModel;
 import dev.langchain4j.service.AiServices;
 import dev.langchain4j.service.UserMessage;
+import dev.langchain4j.service.V;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
@@ -248,7 +249,7 @@ public class LongTermMemoryTaskHandler implements TaskHandler {
                     "高频咨询问题、专属认知观点、常用资料 / 规则、成功处理任务经验等\n" +
                     "========\n" +
                     "请认真总结记忆得到清单后进行检查，不要有重复的记忆或分类,记忆内容不能胡编乱造信息，要完全从内容中来。\n" +
-                    "在完成记忆总结后，你可以调用保存智能体记忆工具。\n" +
+                    "在完成记忆总结后，你可以调用记忆操作相关工具，其他未列出的工具都不能用。\n" +
                     "归类后先保存分类作为父级记忆得到编号，再保存概要内容作为子级记忆，子级记忆的parentId是父级记忆的编号。" ;
         }
         return customPrompt+ "\n本次记忆的agentId是" + agentId;
@@ -256,7 +257,7 @@ public class LongTermMemoryTaskHandler implements TaskHandler {
 
     public interface MemoryAssistant {
         @UserMessage("{{content}}")
-        String chat(String content, InvocationParameters invocationParameters);
+        String chat(@V("content") String content, InvocationParameters invocationParameters);
     }
 
     private String buildMemorySummary(String existingMemory, String newConversation) {

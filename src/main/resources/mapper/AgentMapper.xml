@@ -53,4 +53,11 @@
         DELETE FROM agents WHERE id = #{id}
     </delete>
 
+    <select id="findByUserId" resultMap="AgentResultMap">
+        SELECT id, name, description, tools, max_memory_records, max_tool_invocations, ai_model_id, enable_thinking, ext_params, user_id
+        FROM agents
+        WHERE user_id = #{userId}
+        ORDER BY id DESC
+    </select>
+
 </mapper>

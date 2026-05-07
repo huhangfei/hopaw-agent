@@ -10,6 +10,7 @@ import java.util.List;
 public interface LongTermMemoryMapper {
     List<LongTermMemory> findByAgentId(@Param("agentId") String agentId);
 
+    List<LongTermMemory> findByAgentIdAndUserId(@Param("agentId") String agentId, @Param("userId") String userId);
 
     List<LongTermMemory> findByAgentIdAndParentId(@Param("agentId") String agentId, @Param("parentId") Long parentId);
     List<LongTermMemory> findRootsByAgentIdAndUserId(@Param("agentId") String agentId,@Param("userId") String userId);
@@ -25,4 +26,6 @@ public interface LongTermMemoryMapper {
     int deleteById(@Param("id") Long id);
 
     int deleteByAgentId(@Param("agentId") String agentId);
+
+    int updateParentId(@Param("id") Long id, @Param("parentId") Long parentId);
 }

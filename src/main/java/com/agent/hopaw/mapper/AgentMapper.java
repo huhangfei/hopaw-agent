@@ -17,4 +17,6 @@ public interface AgentMapper {
     int update(Agent agent);
     
     int deleteById(@Param("id") Long id);
+
+    List<Agent> findByUserId(@Param("userId") String userId);
 }

@@ -38,15 +38,44 @@ public class LongTermMemoryService {
         return longTermMemoryMapper.findById(id);
     }
 
-    public LongTermMemory createMemory(String agentId, String memory, Long parentId) {
+    public LongTermMemory createMemory(String agentId, String memory, Long parentId, String userId) {
         LongTermMemory entity = new LongTermMemory(agentId, memory, parentId);
+        entity.setUserId(userId);
         longTermMemoryMapper.insert(entity);
         return entity;
     }
 
+    public LongTermMemory createMemory(String agentId, String memory, Long parentId) {
+        return createMemory(agentId, memory, parentId, null);
+    }
+
 
     public void deleteMemory(Long id) {
+        LongTermMemory memory = longTermMemoryMapper.findById(id);
+        if (memory != null) {
+            List<LongTermMemory> children = longTermMemoryMapper.findByAgentIdAndParentId(memory.getAgentId(), id);
+            for (LongTermMemory child : children) {
+                longTermMemoryMapper.updateParentId(child.getId(), null);
+            }
+        }
         longTermMemoryMapper.deleteById(id);
+    }
+
+    public void updateMemory(Long id, String memory) {
+        LongTermMemory entity = longTermMemoryMapper.findById(id);
+        if (entity != null) {
+            entity.setMemory(memory);
+            entity.setMemoryHash(String.valueOf(memory.hashCode()));
+            longTermMemoryMapper.update(entity);
+        }
+    }
+
+    public void moveMemory(Long id, Long newParentId) {
+        longTermMemoryMapper.updateParentId(id, newParentId);
+    }
+
+    public List<LongTermMemory> getAllMemoriesByAgentId(String agentId, String userId) {
+        return longTermMemoryMapper.findByAgentIdAndUserId(agentId, userId);
     }
 
 

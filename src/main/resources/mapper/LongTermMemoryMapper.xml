@@ -20,6 +20,13 @@
         ORDER BY parent_id ASC NULLS FIRST, id ASC
     </select>
 
+    <select id="findByAgentIdAndUserId" resultMap="LongTermMemoryResultMap">
+        SELECT id, agent_id, memory, memory_hash, parent_id, create_time, update_time, user_id
+        FROM long_term_memory
+        WHERE agent_id = #{agentId} AND user_id = #{userId}
+        ORDER BY parent_id ASC NULLS FIRST, id ASC
+    </select>
+
 
     <select id="findByAgentIdAndParentId" resultMap="LongTermMemoryResultMap">
         SELECT id, agent_id, memory, memory_hash, parent_id, create_time, update_time, user_id
@@ -70,5 +77,11 @@
     <delete id="deleteByAgentId">
         DELETE FROM long_term_memory WHERE agent_id = #{agentId}
     </delete>
+
+    <update id="updateParentId">
+        UPDATE long_term_memory
+        SET parent_id = #{parentId}, update_time = CURRENT_TIMESTAMP
+        WHERE id = #{id}
+    </update>
 
 </mapper>
