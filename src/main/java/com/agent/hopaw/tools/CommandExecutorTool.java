@@ -128,6 +128,11 @@ public class CommandExecutorTool implements AgentTool {
 
     @Override
     public String getDescription() {
-        return "可以获取运行的系统类型、执行本地系统命令并返回输出结果，支持 Windows 和 Unix/Linux/macOS 系统";
+        return "执行本地系统命令";
+    }
+
+    @Override
+    public String getIcon() {
+        return "command-executor-tool";
     }
 }

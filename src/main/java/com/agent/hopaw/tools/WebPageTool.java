@@ -28,6 +28,11 @@ public class WebPageTool implements AgentTool {
         return "获取网页内容，输入URL地址，返回网页的纯文本内容。适用于获取网页文章、文档等文本内容。";
     }
 
+    @Override
+    public String getIcon() {
+        return "web-page-tool";
+    }
+
     @Tool("获取网页内容，输入URL地址，返回网页的纯文本内容")
     public String fetchWebPage(@P(description = "URL地址") String url) {
         BrowserContext context = null;

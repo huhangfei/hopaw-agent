@@ -54,17 +54,16 @@
     width: 32px;
     height: 32px;
     border-radius: 8px;
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
     display: flex;
     align-items: center;
     justify-content: center;
     flex-shrink: 0;
 }
 
-.tool-list-icon svg {
-    width: 16px;
-    height: 16px;
-    color: white;
+.tool-list-icon img {
+    width: 32px;
+    height: 32px;
+    border-radius: 8px;
 }
 
 .tool-list-info {
@@ -132,17 +131,16 @@
     width: 44px;
     height: 44px;
     border-radius: 12px;
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
     display: flex;
     align-items: center;
     justify-content: center;
     flex-shrink: 0;
 }
 
-.detail-header-icon svg {
-    width: 24px;
-    height: 24px;
-    color: white;
+.detail-header-icon img {
+    width: 44px;
+    height: 44px;
+    border-radius: 12px;
 }
 
 .detail-header-info {

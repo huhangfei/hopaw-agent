@@ -28,6 +28,11 @@ public class MailTool implements AgentTool {
         return "发送邮件，支持纯文本和HTML格式";
     }
 
+    @Override
+    public String getIcon() {
+        return "mail-tool";
+    }
+
     @Tool("发送纯文本邮件。")
     public String sendTextMail(
             @P(description = "收件人邮箱地址") String to,

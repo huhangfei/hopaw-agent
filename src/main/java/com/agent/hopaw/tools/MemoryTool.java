@@ -26,6 +26,11 @@ public class MemoryTool implements AgentTool {
         return "查询、保存智能体的记忆内容";
     }
 
+    @Override
+    public String getIcon() {
+        return "memory-tool";
+    }
+
     @Tool("查询智能体所有记忆内容，此方法一次性查询所有记忆内容，可能内容较多，可以先查询记忆分类，再查询具体记忆内容。")
     public String queryAgentMemory(InvocationParameters invocationParameters){
         return longTermMemoryService.getMemoryTree(InvocationParametersUtil.getAgentId(invocationParameters),InvocationParametersUtil.getUserId(invocationParameters));

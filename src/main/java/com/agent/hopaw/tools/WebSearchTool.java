@@ -61,4 +61,9 @@ public class WebSearchTool implements AgentTool {
     public String getDescription() {
         return "搜索网页信息，返回相关的网页标题和摘要内容";
     }
+
+    @Override
+    public String getIcon() {
+        return "web-search-tool";
+    }
 }

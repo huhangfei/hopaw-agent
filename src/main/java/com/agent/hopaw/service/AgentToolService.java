@@ -66,6 +66,6 @@ public class AgentToolService {
 
             tools.add(new ToolInfo(toolName, toolAnn.value()[0], params));
         }
-        return new ToolSetInfo(agentTool.getName(), agentTool.getDescription(), tools);
+        return new ToolSetInfo(agentTool.getName(), agentTool.getDescription(), agentTool.getIcon(), tools);
     }
 }

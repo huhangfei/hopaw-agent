@@ -27,6 +27,11 @@ public class AgentTaskTool implements AgentTool {
         return "智能体内创建定时任务的工具";
     }
 
+    @Override
+    public String getIcon() {
+        return "agent-task-tool";
+    }
+
     @Tool("创建定时执行的任务")
     public String createAgentTask(@P("任务的简要名称") String taskName, @P("任务的cron表达式") String cron, @P("任务具体要做的事情描述") String taskDescription, InvocationParameters invocationParameters) {
         ScheduledTask agentTask = new ScheduledTask(taskName, "agentTask", cron, 1, taskDescription);
