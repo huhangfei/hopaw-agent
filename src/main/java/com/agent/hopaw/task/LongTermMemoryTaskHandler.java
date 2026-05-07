@@ -109,19 +109,27 @@ public class LongTermMemoryTaskHandler implements TaskHandler {
             
             if (message instanceof dev.langchain4j.data.message.UserMessage) {
                 dev.langchain4j.data.message.UserMessage userMessage = ((dev.langchain4j.data.message.UserMessage) message);
-                String userText = userMessage.singleText();
-                if (userText != null) {
-                    conversationBuilder.append("User:").append(userText);
-                } else {
-                    conversationBuilder.append("User:(no text)");
+
+                for (Content content : userMessage.contents()) {
+                    if(content instanceof TextContent){
+                        conversationBuilder.append("User:").append("\n").append(((TextContent)content).text()).append("\n");
+                    }else  if(content instanceof ImageContent){
+                        conversationBuilder.append("User:").append("\n").append("[Image]").append("\n");
+                    }else  if(content instanceof VideoContent){
+                        conversationBuilder.append("User:").append("\n").append("[Video]").append("\n");
+                    }else  if(content instanceof AudioContent){
+                        conversationBuilder.append("User:").append("\n").append("[Audio]").append("\n");
+                    }else  if(content instanceof PdfFileContent){
+                        conversationBuilder.append("User:").append("\n").append("[PdfFile]").append("\n");
+                    }
                 }
             } else if (message instanceof AiMessage) {
                 AiMessage aiMessage = (AiMessage) message;
                 if (aiMessage.thinking() != null) {
-                    conversationBuilder.append("Ai thinking:").append(aiMessage.thinking()).append("\n");
+                    conversationBuilder.append("Ai thinking:").append("\n").append(aiMessage.thinking()).append("\n");
                 }
                 if (aiMessage.text() != null) {
-                    conversationBuilder.append("Ai:").append(aiMessage.text()).append("\n");
+                    conversationBuilder.append("Ai:").append("\n").append(aiMessage.text()).append("\n");
                 }
                 if (aiMessage.toolExecutionRequests() != null && !aiMessage.toolExecutionRequests().isEmpty()) {
                     logger.info("Ai tool call:", JSON.toJSONString(aiMessage.toolExecutionRequests().stream().map(x -> "id:" + x.id() + ",name:" + x.name() + ",arguments:" + x.arguments()).collect(Collectors.toList())));
@@ -130,17 +138,18 @@ public class LongTermMemoryTaskHandler implements TaskHandler {
                 SystemMessage systemMessage = (SystemMessage) message;
                 String systemText = systemMessage.text();
                 if (systemText != null) {
-                    conversationBuilder.append("System:").append(systemText).append("\n");
+                    conversationBuilder.append("System:").append("\n").append(systemText).append("\n");
                 } else {
-                    conversationBuilder.append("System:(no text)").append("\n");
+                    conversationBuilder.append("System: (no text)").append("\n");
                 }
             } else if (message instanceof ToolExecutionResultMessage) {
                 ToolExecutionResultMessage toolExecutionResultMessage = (ToolExecutionResultMessage) message;
                 String toolName = toolExecutionResultMessage.toolName();
                 String toolId = toolExecutionResultMessage.id();
                 String toolText = toolExecutionResultMessage.text();
-                
-                conversationBuilder.append("Ai tool call:");
+                Boolean error = toolExecutionResultMessage.isError();
+
+                conversationBuilder.append("Ai tool call:").append("\n");
                 if (toolName != null) {
                     conversationBuilder.append("toolName:").append(toolName);
                 } else {
@@ -152,15 +161,22 @@ public class LongTermMemoryTaskHandler implements TaskHandler {
                 } else {
                     conversationBuilder.append("(null)");
                 }
-                conversationBuilder.append(",text:");
-                if (toolText != null) {
-                    conversationBuilder.append(toolText);
-                } else {
-                    conversationBuilder.append("(null)");
+                conversationBuilder.append(",state:");
+                if (error != null && error) {
+                    conversationBuilder.append("error");
+                }else{
+                    conversationBuilder.append("success");
                 }
+                //工具的结果不进行记忆整理
+//                conversationBuilder.append(",text:");
+//                if (toolText != null) {
+//                    conversationBuilder.append(toolText);
+//                } else {
+//                    conversationBuilder.append("(null)");
+//                }
                 conversationBuilder.append("\n");
             } else {
-                conversationBuilder.append("Other: ").append(message.getClass().getSimpleName()).append(": ").append(message).append("\n");
+                conversationBuilder.append("Other: ").append("\n").append(message.getClass().getSimpleName()).append(": ").append(message).append("\n");
             }
             conversationBuilder.append("\n");
         }
