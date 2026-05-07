@@ -73,6 +73,16 @@ public class AgentService {
         return agent;
     }
 
+    public void clearAndStopAgentExecutorByAiModel(Long aiModelId) {
+        List<AgentExecutor> list = agentExecutors.values().stream().collect(Collectors.toList());
+        for (AgentExecutor agentExecutor : list) {
+            Agent agent1 = agentExecutor.agent;
+            if (agent1.getAiModelId()!=null && agent1.getAiModelId().equals(aiModelId)) {
+                stopAndRemoveAgentExecutor(agent1.getId(),agent1.getUserId());
+            }
+        }
+    }
+
     public void deleteAgent(Long id,String userId) {
         agentMapper.deleteById(id);
         chatMemoryMapper.deleteByAgentId(id);

@@ -6,6 +6,7 @@ import org.apache.ibatis.annotations.Param;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Map;
 
 @Mapper
 public interface TokenUsageMapper {
@@ -30,4 +31,10 @@ public interface TokenUsageMapper {
                                   @Param("userId") String userId,
                                   @Param("agentId") Long agentId,
                                   @Param("source") String source);
+
+    List<Map<String, Object>> dailyStatsByTimeRange(@Param("startTime") LocalDateTime startTime,
+                                                     @Param("endTime") LocalDateTime endTime,
+                                                     @Param("userId") String userId,
+                                                     @Param("agentId") Long agentId,
+                                                     @Param("source") String source);
 }

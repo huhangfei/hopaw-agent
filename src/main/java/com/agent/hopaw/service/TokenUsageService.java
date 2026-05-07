@@ -40,4 +40,8 @@ public class TokenUsageService {
     public TokenUsage summary(LocalDateTime startTime, LocalDateTime endTime, String userId, Long agentId, String source) {
         return tokenUsageMapper.summaryByTimeRange(startTime, endTime, userId, agentId, source);
     }
+
+    public List<Map<String, Object>> dailyStats(LocalDateTime startTime, LocalDateTime endTime, String userId, Long agentId, String source) {
+        return tokenUsageMapper.dailyStatsByTimeRange(startTime, endTime, userId, agentId, source);
+    }
 }

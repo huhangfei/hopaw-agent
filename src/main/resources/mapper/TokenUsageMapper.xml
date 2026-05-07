@@ -59,4 +59,18 @@
         <include refid="timeRangeFilter"/>
         <include refid="searchFilter"/>
     </select>
+
+    <select id="dailyStatsByTimeRange" resultType="java.util.HashMap">
+        SELECT
+            strftime('%Y-%m-%d', create_time) AS date,
+            COALESCE(SUM(input_tokens), 0) AS inputTokens,
+            COALESCE(SUM(output_tokens), 0) AS outputTokens,
+            COALESCE(SUM(total_tokens), 0) AS totalTokens
+        FROM token_usage
+        WHERE 1=1
+        <include refid="timeRangeFilter"/>
+        <include refid="searchFilter"/>
+        GROUP BY strftime('%Y-%m-%d', create_time)
+        ORDER BY date ASC
+    </select>
 </mapper>

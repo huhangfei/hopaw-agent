@@ -1,5 +1,5 @@
 var currentPage = 1;
-var pageSize = 15;
+var pageSize = 10;
 var currentStartTime = '';
 var currentEndTime = '';
 
@@ -7,7 +7,7 @@ document.addEventListener('DOMContentLoaded', function() {
     var now = new Date();
     var endOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59);
     var endStr = formatDateTime(endOfDay);
-    var start = new Date(now.getTime() - 24 * 60 * 60 * 1000);
+    var start = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
     var startStr = formatDateTime(start);
     document.getElementById('startTime').value = startStr;
     document.getElementById('endTime').value = endStr;
@@ -41,6 +41,7 @@ function queryData() {
     currentEndTime = toStandardStr(document.getElementById('endTime').value);
     currentPage = 1;
     fetchSummary();
+    fetchChart();
     fetchList();
 }
 
@@ -72,6 +73,98 @@ function fetchSummary() {
         })
         .catch(function(e) {
             console.error('加载汇总失败:', e);
+        });
+}
+
+var dailyChart = null;
+
+function fetchChart() {
+    var params = new URLSearchParams(getFilterParams());
+    fetch('/api/token-usage/daily-stats?' + params.toString())
+        .then(function(r) { return r.json(); })
+        .then(function(resp) {
+            if (resp.msg !== 'success') return;
+            var data = resp.data || [];
+            var chartCard = document.getElementById('chartCard');
+            var chartEmpty = document.getElementById('chartEmpty');
+            var canvas = document.getElementById('dailyChart');
+
+            if (data.length === 0) {
+                chartCard.style.display = 'none';
+                return;
+            }
+            chartCard.style.display = 'block';
+
+            var labels = data.map(function(d) { return d.date; });
+            var inputData = data.map(function(d) { return d.inputTokens; });
+            var outputData = data.map(function(d) { return d.outputTokens; });
+            var totalData = data.map(function(d) { return d.totalTokens; });
+
+            if (dailyChart) {
+                dailyChart.destroy();
+            }
+
+            dailyChart = new Chart(canvas, {
+                type: 'bar',
+                data: {
+                    labels: labels,
+                    datasets: [
+                        {
+                            label: '输入 Tokens',
+                            data: inputData,
+                            backgroundColor: 'rgba(102, 126, 234, 0.7)',
+                            borderColor: '#667eea',
+                            borderWidth: 1
+                        },
+                        {
+                            label: '输出 Tokens',
+                            data: outputData,
+                            backgroundColor: 'rgba(118, 75, 162, 0.7)',
+                            borderColor: '#764ba2',
+                            borderWidth: 1
+                        },
+                        {
+                            label: '总 Tokens',
+                            data: totalData,
+                            backgroundColor: 'rgba(240, 147, 66, 0.7)',
+                            borderColor: '#f09342',
+                            borderWidth: 1
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: 'top'
+                        },
+                        tooltip: {
+                            callbacks: {
+                                label: function(ctx) {
+                                    return ctx.dataset.label + ': ' + ctx.raw.toLocaleString();
+                                }
+                            }
+                        }
+                    },
+                    scales: {
+                        x: {
+                            grid: { display: false }
+                        },
+                        y: {
+                            beginAtZero: true,
+                            ticks: {
+                                callback: function(v) {
+                                    return v >= 1000 ? (v / 1000).toFixed(0) + 'k' : v;
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+        })
+        .catch(function(e) {
+            console.error('加载每日统计失败:', e);
         });
 }
 

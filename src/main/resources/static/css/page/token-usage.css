@@ -119,6 +119,34 @@
     color: #667eea;
 }
 
+.chart-card {
+    background: white;
+    border-radius: 12px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+    padding: 20px;
+    margin-bottom: 20px;
+}
+
+.chart-header {
+    margin-bottom: 16px;
+}
+
+.chart-header h3 {
+    font-size: 16px;
+    color: #333;
+}
+
+.chart-wrapper {
+    height: 320px;
+    position: relative;
+}
+
+.chart-empty {
+    text-align: center;
+    padding: 40px;
+    color: #999;
+}
+
 .usage-card {
     background: white;
     border-radius: 12px;
