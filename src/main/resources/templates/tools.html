@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head th:replace="fragments/layout::head('工具管理 - HoPaw', 'tools.css')"></head>
+<body>
+    <header th:replace="fragments/layout::header('🤖 HoPaw - 工具管理')"></header>
+
+    <div class="main-container">
+        <nav th:replace="fragments/layout::menuSidebar('tools')"></nav>
+
+        <div class="tools-split">
+            <div class="tools-list-panel">
+                <div class="tools-list-header">
+                    <h3>工具集列表</h3>
+                </div>
+                <div class="tools-list-body">
+                    <div th:each="toolSet, iter : ${toolSets}"
+                         class="tool-list-item"
+                         th:classappend="${iter.first ? 'active' : ''}"
+                         th:attr="data-index=${iter.index}"
+                         onclick="selectToolSet(this)">
+                        <div class="tool-list-icon">
+                            <svg viewBox="0 0 24 24" fill="currentColor">
+                                <path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/>
+                            </svg>
+                        </div>
+                        <div class="tool-list-info">
+                            <div class="tool-list-name" th:text="${toolSet.name}"></div>
+                            <div class="tool-list-desc" th:text="${toolSet.description}"></div>
+                            <div class="tool-list-count" th:text="${#lists.size(toolSet.tools)} + ' 个工具方法'"></div>
+                        </div>
+                    </div>
+                    <div th:if="${#lists.isEmpty(toolSets)}" class="tools-list-empty">
+                        暂无工具数据
+                    </div>
+                </div>
+            </div>
+
+            <div class="tools-detail-panel">
+                <div th:each="toolSet, iter : ${toolSets}"
+                     class="tool-detail"
+                     th:classappend="${iter.first ? 'active' : ''}"
+                     th:attr="data-index=${iter.index}">
+                    <div class="detail-header">
+                        <div class="detail-header-icon">
+                            <svg viewBox="0 0 24 24" fill="currentColor">
+                                <path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/>
+                            </svg>
+                        </div>
+                        <div class="detail-header-info">
+                            <div class="detail-name" th:text="${toolSet.name}"></div>
+                            <div class="detail-desc" th:text="${toolSet.description}"></div>
+                        </div>
+                        <span class="detail-count-badge" th:if="${not #lists.isEmpty(toolSet.tools)}" th:text="${#lists.size(toolSet.tools)} + ' 个方法'"></span>
+                    </div>
+
+                    <div class="detail-body" th:if="${not #lists.isEmpty(toolSet.tools)}">
+                        <div th:each="tool : ${toolSet.tools}" class="detail-tool-item">
+                            <div class="detail-tool-header">
+                                <span class="detail-tool-name" th:text="${tool.name}"></span>
+                                <span class="detail-tool-desc" th:text="${tool.description}"></span>
+                            </div>
+                            <div th:if="${not #lists.isEmpty(tool.parameters)}" class="detail-tool-params">
+                                <table class="detail-param-table">
+                                    <thead>
+                                        <tr>
+                                            <th>参数名</th>
+                                            <th>类型</th>
+                                            <th>说明</th>
+                                            <th>必填</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <tr th:each="p : ${tool.parameters}">
+                                            <td class="dp-name" th:text="${p.name}"></td>
+                                            <td class="dp-type" th:text="${p.type}"></td>
+                                            <td class="dp-desc" th:text="${p.description}"></td>
+                                            <td class="dp-required">
+                                                <span th:if="${p.required}" class="tag-required">是</span>
+                                                <span th:unless="${p.required}" class="tag-optional">否</span>
+                                            </td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                            <div th:if="${#lists.isEmpty(tool.parameters)}" class="detail-no-params">
+                                无参数
+                            </div>
+                        </div>
+                    </div>
+
+                    <div th:if="${#lists.isEmpty(toolSet.tools)}" class="detail-empty-state">
+                        该工具集下没有工具方法
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div th:replace="fragments/layout::toastContainer"></div>
+    <th:block th:replace="fragments/layout::commonScripts('tools.js')"></th:block>
+</body>
+</html>
