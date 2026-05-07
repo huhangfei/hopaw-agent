@@ -91,8 +91,17 @@ public class AgentController {
         AgentService.AgentExecutor agentExecutor = agentService.getAgentExecutor(id,DefaultUser.USER);
         if(agentExecutor!=null){
             agentExecutor.stop();
+            return ResponseBean.success();
+        }else{
+            return ResponseBean.fail("Agent Executor not found");
         }
-        return ResponseBean.success();
+    }
+
+    @GetMapping("/api/agent/{id}/running")
+    @ResponseBody
+    public ResponseBean isRunning(@PathVariable Long id) {
+        boolean running = agentService.isAgentExecutorRunning(id, DefaultUser.USER);
+        return ResponseBean.success(running);
     }
 
     @PutMapping("/api/agents/{id}/thinking")

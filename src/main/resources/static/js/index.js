@@ -396,42 +396,55 @@ function handleStreamingError(errorMessage, responseId) {
 function sendMessage() {
     var input = document.getElementById('messageInput');
     var message = input.value.trim();
-    
+
     if (!message || !currentAgentId || isStreaming) {
         return;
     }
-    
-    input.value = '';
-    disableInput();
-    isStreaming = true;
-    
-    var userMessageDiv = document.createElement('div');
-    userMessageDiv.className = 'message user';
-    
-    var userLabel = document.createElement('div');
-    userLabel.className = 'message-label';
-    userLabel.textContent = '你';
-    userMessageDiv.appendChild(userLabel);
-    
-    var userContent = document.createElement('div');
-    userContent.textContent = message;
-    userMessageDiv.appendChild(userContent);
-    
-    var userTime = document.createElement('div');
-    userTime.className = 'message-time';
-    userTime.textContent = formatMessageTime(new Date());
-    userMessageDiv.appendChild(userTime);
-    
-    var messagesDiv = document.getElementById('chatMessages');
-    messagesDiv.appendChild(userMessageDiv);
-    messagesDiv.scrollTop = messagesDiv.scrollHeight;
-    
-    var payload = {
-        agentId: currentAgentId.toString(),
-        message: message
-    };
-    
-    ws.send(JSON.stringify(payload));
+
+    fetch('/api/agent/' + currentAgentId + '/running')
+        .then(function(r) { return r.json(); })
+        .then(function(res) {
+            if (res.code === 200 && res.data === true) {
+                showToast('智能体正在运行中，请先停止', 'warning');
+                disableInput();
+                return;
+            }
+
+            input.value = '';
+            disableInput();
+            isStreaming = true;
+
+            var userMessageDiv = document.createElement('div');
+            userMessageDiv.className = 'message user';
+
+            var userLabel = document.createElement('div');
+            userLabel.className = 'message-label';
+            userLabel.textContent = '你';
+            userMessageDiv.appendChild(userLabel);
+
+            var userContent = document.createElement('div');
+            userContent.textContent = message;
+            userMessageDiv.appendChild(userContent);
+
+            var userTime = document.createElement('div');
+            userTime.className = 'message-time';
+            userTime.textContent = formatMessageTime(new Date());
+            userMessageDiv.appendChild(userTime);
+
+            var messagesDiv = document.getElementById('chatMessages');
+            messagesDiv.appendChild(userMessageDiv);
+            messagesDiv.scrollTop = messagesDiv.scrollHeight;
+
+            var payload = {
+                agentId: currentAgentId.toString(),
+                message: message
+            };
+
+            ws.send(JSON.stringify(payload));
+        })
+        .catch(function(err) {
+            showToast('检查运行状态失败: ' + err.message, 'error');
+        });
 }
 
 function disableInput() {
@@ -588,11 +601,17 @@ function stopAgent() {
             },
             body: 'id=' + agentId
         }).then(function(response) {
-            return response.text();
-        }).then(function(data) {
-            if (data === 'ok') {
-                //location.reload();
+            return response.json();
+        }).then(function(res) {
+            if (res.code === 200) {
+                enableInput();
+            } else {
+                showToast(res.msg || '停止失败', 'warning');
+                enableInput();
             }
+        }).catch(function(err) {
+            showToast('请求失败: ' + err.message, 'error');
+            enableInput();
         });
     });
 }
