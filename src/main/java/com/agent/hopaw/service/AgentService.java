@@ -124,7 +124,7 @@ public class AgentService {
 
     public void stopAndRemoveAgentExecutor(Long agentId,String userId) {
         stopAgentExecutor(agentId,userId);
-        agentExecutors.remove(agentId.toString());
+        agentExecutors.remove(agentId+"_"+userId);
     }
 
     public boolean isAgentExecutorRunning(Long agentId,String userId) {
