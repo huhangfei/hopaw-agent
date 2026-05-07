@@ -30,7 +30,11 @@
             <span class="menu-label">定时任务</span>
         </button>
         <button class="menu-btn" th:classappend="${activePage == 'token-usage' ? 'active' : ''}" title="Token用量" onclick="location.href='/token-usage'">
-            <svg viewBox="0 0 24 24" fill="currentColor"><path d="M3.5 18.5l6-6 4 4 4.5-5.5V18h2v-5l-4.75-5.75L12 10l-4.5 3.5L5 8.5l-1.5 10z"/></svg>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <polyline points="3 17 8 11 12 14 16 7 21 4"/>
+                <polyline points="3 20 3 17"/>
+                <polyline points="21 20 21 4"/>
+            </svg>
             <span class="menu-label">Token用量</span>
         </button>
         <button class="menu-btn" th:classappend="${activePage == 'memory-manage' ? 'active' : ''}" title="记忆管理" onclick="location.href='/memory-manage'">

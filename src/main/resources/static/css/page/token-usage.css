@@ -57,7 +57,7 @@
     border-color: #667eea;
 }
 
-.filter-group input[type="datetime-local"] {
+.filter-group input {
     padding: 8px 12px;
     border: 1px solid #ddd;
     border-radius: 6px;
@@ -66,9 +66,10 @@
     background: white;
     outline: none;
     transition: border-color 0.2s;
+    min-width: 140px;
 }
 
-.filter-group input[type="datetime-local"]:focus {
+.filter-group input:focus {
     border-color: #667eea;
 }
 

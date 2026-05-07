@@ -27,6 +27,7 @@
     <sql id="searchFilter">
         <if test="userId != null and userId != ''">AND user_id = #{userId}</if>
         <if test="agentId != null">AND agent_id = #{agentId}</if>
+        <if test="modelName != null and modelName != ''">AND model_name = #{modelName}</if>
         <if test="source != null and source != ''">AND source = #{source}</if>
     </sql>
 

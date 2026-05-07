@@ -16,6 +16,7 @@ public interface TokenUsageMapper {
                                      @Param("endTime") LocalDateTime endTime,
                                      @Param("userId") String userId,
                                      @Param("agentId") Long agentId,
+                                     @Param("modelName") String modelName,
                                      @Param("source") String source,
                                      @Param("limit") int limit,
                                      @Param("offset") int offset);
@@ -24,17 +25,20 @@ public interface TokenUsageMapper {
                           @Param("endTime") LocalDateTime endTime,
                           @Param("userId") String userId,
                           @Param("agentId") Long agentId,
+                          @Param("modelName") String modelName,
                           @Param("source") String source);
 
     TokenUsage summaryByTimeRange(@Param("startTime") LocalDateTime startTime,
                                   @Param("endTime") LocalDateTime endTime,
                                   @Param("userId") String userId,
                                   @Param("agentId") Long agentId,
+                                  @Param("modelName") String modelName,
                                   @Param("source") String source);
 
     List<Map<String, Object>> dailyStatsByTimeRange(@Param("startTime") LocalDateTime startTime,
                                                      @Param("endTime") LocalDateTime endTime,
                                                      @Param("userId") String userId,
                                                      @Param("agentId") Long agentId,
+                                                     @Param("modelName") String modelName,
                                                      @Param("source") String source);
 }

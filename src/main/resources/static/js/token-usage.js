@@ -52,9 +52,11 @@ function getFilterParams() {
     };
     var userId = document.getElementById('filterUser').value;
     var agentId = document.getElementById('filterAgent').value;
+    var modelName = document.getElementById('filterModel').value.trim();
     var source = document.getElementById('filterSource').value;
     if (userId) params.userId = userId;
     if (agentId) params.agentId = agentId;
+    if (modelName) params.modelName = modelName;
     if (source) params.source = source;
     return params;
 }

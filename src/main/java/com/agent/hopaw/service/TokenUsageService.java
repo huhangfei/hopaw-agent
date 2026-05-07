@@ -24,10 +24,10 @@ public class TokenUsageService {
         tokenUsageMapper.insert(tokenUsage);
     }
 
-    public Map<String, Object> queryPage(LocalDateTime startTime, LocalDateTime endTime, String userId, Long agentId, String source, int page, int size) {
+    public Map<String, Object> queryPage(LocalDateTime startTime, LocalDateTime endTime, String userId, Long agentId, String modelName, String source, int page, int size) {
         int offset = (page - 1) * size;
-        List<TokenUsage> list = tokenUsageMapper.findByTimeRange(startTime, endTime, userId, agentId, source, size, offset);
-        long total = tokenUsageMapper.countByTimeRange(startTime, endTime, userId, agentId, source);
+        List<TokenUsage> list = tokenUsageMapper.findByTimeRange(startTime, endTime, userId, agentId, modelName, source, size, offset);
+        long total = tokenUsageMapper.countByTimeRange(startTime, endTime, userId, agentId, modelName, source);
 
         Map<String, Object> result = new HashMap<>();
         result.put("list", list);
@@ -37,11 +37,11 @@ public class TokenUsageService {
         return result;
     }
 
-    public TokenUsage summary(LocalDateTime startTime, LocalDateTime endTime, String userId, Long agentId, String source) {
-        return tokenUsageMapper.summaryByTimeRange(startTime, endTime, userId, agentId, source);
+    public TokenUsage summary(LocalDateTime startTime, LocalDateTime endTime, String userId, Long agentId, String modelName, String source) {
+        return tokenUsageMapper.summaryByTimeRange(startTime, endTime, userId, agentId, modelName, source);
     }
 
-    public List<Map<String, Object>> dailyStats(LocalDateTime startTime, LocalDateTime endTime, String userId, Long agentId, String source) {
-        return tokenUsageMapper.dailyStatsByTimeRange(startTime, endTime, userId, agentId, source);
+    public List<Map<String, Object>> dailyStats(LocalDateTime startTime, LocalDateTime endTime, String userId, Long agentId, String modelName, String source) {
+        return tokenUsageMapper.dailyStatsByTimeRange(startTime, endTime, userId, agentId, modelName, source);
     }
 }
