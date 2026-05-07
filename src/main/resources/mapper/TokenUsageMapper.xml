@@ -10,12 +10,13 @@
         <result property="outputTokens" column="output_tokens"/>
         <result property="totalTokens" column="total_tokens"/>
         <result property="userId" column="user_id"/>
+        <result property="source" column="source"/>
         <result property="createTime" column="create_time"/>
     </resultMap>
 
     <insert id="insert" parameterType="com.agent.hopaw.model.TokenUsage">
-        INSERT INTO token_usage (agent_id, model_name, input_tokens, output_tokens, total_tokens, user_id, create_time)
-        VALUES (#{agentId}, #{modelName}, #{inputTokens}, #{outputTokens}, #{totalTokens}, #{userId}, #{createTime})
+        INSERT INTO token_usage (agent_id, model_name, input_tokens, output_tokens, total_tokens, user_id, source, create_time)
+        VALUES (#{agentId}, #{modelName}, #{inputTokens}, #{outputTokens}, #{totalTokens}, #{userId}, #{source}, #{createTime})
     </insert>
 
     <sql id="timeRangeFilter">
@@ -26,10 +27,11 @@
     <sql id="searchFilter">
         <if test="userId != null and userId != ''">AND user_id = #{userId}</if>
         <if test="agentId != null">AND agent_id = #{agentId}</if>
+        <if test="source != null and source != ''">AND source = #{source}</if>
     </sql>
 
     <select id="findByTimeRange" resultMap="TokenUsageResultMap">
-        SELECT id, agent_id, model_name, input_tokens, output_tokens, total_tokens, user_id, create_time
+        SELECT id, agent_id, model_name, input_tokens, output_tokens, total_tokens, user_id, source, create_time
         FROM token_usage
         WHERE 1=1
         <include refid="timeRangeFilter"/>

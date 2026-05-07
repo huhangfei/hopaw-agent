@@ -3,7 +3,7 @@ package com.agent.hopaw.service.ChatModel;
 import com.agent.hopaw.constant.ModelProviderEnum;
 import com.agent.hopaw.model.AiModelProvider;
 import com.agent.hopaw.model.AiModelVO;
-import com.agent.hopaw.service.LangChain4jMonitoringService;
+import com.agent.hopaw.service.LangChain4jMonitor;
 import dev.langchain4j.model.chat.ChatModel;
 import dev.langchain4j.model.chat.StreamingChatModel;
 import dev.langchain4j.model.openai.OpenAiChatModel;
@@ -16,17 +16,11 @@ import java.util.Map;
 @Service
 public class OpenAiChatModelFactory extends  BaseChatModelFactory {
 
-    private final LangChain4jMonitoringService monitoringService;
-
-    public OpenAiChatModelFactory(LangChain4jMonitoringService monitoringService) {
-        this.monitoringService = monitoringService;
-    }
-
     @Override
-    public ChatModel createChatModel(AiModelVO aiModel, boolean enableThinking, Map<String, String> metadata) {
+    public ChatModel createChatModel(AiModelVO aiModel, boolean enableThinking, LangChain4jMonitor monitoringService) {
         AiModelProvider aiModelProvider=aiModel.getAiModelProvider();
-        Map<String, Object> extraParams = new HashMap<>();
-        extraParams.put("thinking",new HashMap(){{
+        Map<String, Object> extraParams = new HashMap<>(0);
+        extraParams.put("thinking",new HashMap(1){{
             put("type", enableThinking ? "enabled" : "disabled");
         }});
         var builder = OpenAiChatModel.builder()
@@ -34,7 +28,6 @@ public class OpenAiChatModelFactory extends  BaseChatModelFactory {
                 .modelName(aiModel.getModelName())
                 .baseUrl(aiModelProvider.getUrl())
                 .temperature(super.getTemperature(aiModel))
-                .metadata(metadata)
                 .customParameters(extraParams)
                 .sendThinking(super.getSendThinking(aiModel), super.getThinkingContentKey(aiModel))
                 .returnThinking(super.getReturnThinking(aiModel))
@@ -51,10 +44,10 @@ public class OpenAiChatModelFactory extends  BaseChatModelFactory {
     }
 
     @Override
-    public StreamingChatModel createStreamingChatModel(AiModelVO aiModel,boolean enableThinking, Map<String, String> metadata) {
+    public StreamingChatModel createStreamingChatModel(AiModelVO aiModel,boolean enableThinking, LangChain4jMonitor monitoringService) {
         AiModelProvider aiModelProvider=aiModel.getAiModelProvider();
-        Map<String, Object> extraParams = new HashMap<>();
-        extraParams.put("thinking",new HashMap(){{
+        Map<String, Object> extraParams = new HashMap<>(0);
+        extraParams.put("thinking",new HashMap(1){{
             put("type", enableThinking ? "enabled" : "disabled");
         }});
         var builder = OpenAiStreamingChatModel.builder()
@@ -63,7 +56,6 @@ public class OpenAiChatModelFactory extends  BaseChatModelFactory {
                 .modelName(aiModel.getModelName())
                 .baseUrl(aiModelProvider.getUrl())
                 .temperature(super.getTemperature(aiModel))
-                .metadata(metadata)
                 .customParameters(extraParams)
                 .sendThinking(super.getSendThinking(aiModel), super.getThinkingContentKey(aiModel))
                 .returnThinking(super.getReturnThinking(aiModel))

@@ -10,6 +10,7 @@ public class TokenUsage {
     private Integer outputTokens;
     private Integer totalTokens;
     private String userId;
+    private String source;
     private LocalDateTime createTime;
 
     public Long getId() { return id; }
@@ -26,6 +27,8 @@ public class TokenUsage {
     public void setTotalTokens(Integer totalTokens) { this.totalTokens = totalTokens; }
     public String getUserId() { return userId; }
     public void setUserId(String userId) { this.userId = userId; }
+    public String getSource() { return source; }
+    public void setSource(String source) { this.source = source; }
     public LocalDateTime getCreateTime() { return createTime; }
     public void setCreateTime(LocalDateTime createTime) { this.createTime = createTime; }
 }

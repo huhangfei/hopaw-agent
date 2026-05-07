@@ -1,13 +1,13 @@
 package com.agent.hopaw.task;
 
+import com.agent.hopaw.constant.AiModelCallSourceEnum;
 import com.agent.hopaw.constant.DefaultUser;
 import com.agent.hopaw.mapper.AgentMapper;
 import com.agent.hopaw.mapper.ChatMemoryMapper;
 import com.agent.hopaw.model.Agent;
 import com.agent.hopaw.model.ChatMemory;
 import com.agent.hopaw.model.ScheduledTask;
-import com.agent.hopaw.service.AiModelService;
-import com.agent.hopaw.service.SysConfigService;
+import com.agent.hopaw.service.*;
 import com.agent.hopaw.util.InvocationParametersUtil;
 import com.alibaba.fastjson2.JSON;
 import dev.langchain4j.data.message.*;
@@ -32,16 +32,17 @@ public class LongTermMemoryTaskHandler implements TaskHandler {
     private final ChatMemoryMapper chatMemoryMapper;
     private final AgentMapper agentMapper;
     private final SysConfigService sysConfigService;
-
+    private final TokenUsageService tokenUsageService;
     public LongTermMemoryTaskHandler(AiModelService aiModelService,
-                                     com.agent.hopaw.service.LongTermMemoryService longTermMemoryService,
+                                     LongTermMemoryService longTermMemoryService,
                                      ChatMemoryMapper chatMemoryMapper, AgentMapper agentMapper,
-                                     SysConfigService sysConfigService) {
+                                     SysConfigService sysConfigService, TokenUsageService tokenUsageService) {
         this.aiModelService = aiModelService;
         this.longTermMemoryService = longTermMemoryService;
         this.chatMemoryMapper = chatMemoryMapper;
         this.agentMapper = agentMapper;
         this.sysConfigService = sysConfigService;
+        this.tokenUsageService = tokenUsageService;
     }
 
     public void processAgentMemories(){
@@ -184,12 +185,9 @@ public class LongTermMemoryTaskHandler implements TaskHandler {
                     modelId = Long.parseLong(modelIdStr);
                 } catch (NumberFormatException ignored) {}
             }
+            LangChain4jMonitor langChain4jMonitor = new LangChain4jMonitor(AiModelCallSourceEnum.MEMORYORGANIZE).setAgentId(Long.valueOf(agentId)).setUserId(userId).setTokenUsageService(tokenUsageService);
 
-            ChatModel chatModel = aiModelService.createChatModel(modelId, true,new HashMap<>(1){{
-                put("source","memory-task");
-                put("agentId",agentId);
-                put("userId",userId);
-            }});
+            ChatModel chatModel = aiModelService.createChatModel(modelId, true,langChain4jMonitor);
 
             String systemMessage = buildSystemMessage(agentId);
             InvocationParameters invocationParameters=new InvocationParameters();

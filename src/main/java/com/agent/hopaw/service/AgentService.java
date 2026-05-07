@@ -1,23 +1,20 @@
 package com.agent.hopaw.service;
 
+import com.agent.hopaw.constant.AiModelCallSourceEnum;
 import com.agent.hopaw.mapper.AgentMapper;
 import com.agent.hopaw.mapper.ChatMemoryMapper;
 import com.agent.hopaw.model.*;
 import com.agent.hopaw.tools.AgentTool;
 import com.agent.hopaw.util.InvocationParametersUtil;
 import com.alibaba.fastjson2.JSON;
-import dev.langchain4j.data.image.Image;
 import dev.langchain4j.data.message.*;
 import dev.langchain4j.invocation.InvocationParameters;
 import dev.langchain4j.memory.chat.MessageWindowChatMemory;
 import dev.langchain4j.model.chat.ChatModel;
 import dev.langchain4j.model.chat.StreamingChatModel;
-import dev.langchain4j.model.chat.request.ChatRequestParameters;
-import dev.langchain4j.model.chat.request.DefaultChatRequestParameters;
 import dev.langchain4j.model.chat.response.ChatResponse;
 import dev.langchain4j.model.chat.response.PartialThinking;
 import dev.langchain4j.service.AiServices;
-import dev.langchain4j.service.MemoryId;
 import dev.langchain4j.service.TokenStream;
 import dev.langchain4j.service.tool.BeforeToolExecution;
 import dev.langchain4j.service.tool.ToolExecution;
@@ -27,7 +24,6 @@ import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 
-import java.time.LocalDateTime;
 import java.util.*;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
@@ -48,14 +44,16 @@ public class AgentService {
     private final LongTermMemoryService longTermMemoryService;
     private final AiModelService aiModelService;
     private final ChatHistoryStorageService chatHistoryStorageService;
+    private final TokenUsageService tokenUsageService;
     public AgentService(AgentMapper agentMapper, ChatMemoryMapper chatMemoryMapper,
-                        List<AgentTool> allTools, LongTermMemoryService longTermMemoryService, AiModelService aiModelService, ChatHistoryStorageService chatHistoryStorageService) {
+                        List<AgentTool> allTools, LongTermMemoryService longTermMemoryService, AiModelService aiModelService, ChatHistoryStorageService chatHistoryStorageService, TokenUsageService tokenUsageService) {
         this.agentMapper = agentMapper;
         this.chatMemoryMapper = chatMemoryMapper;
         this.allTools = allTools;
         this.longTermMemoryService = longTermMemoryService;
         this.aiModelService = aiModelService;
         this.chatHistoryStorageService = chatHistoryStorageService;
+        this.tokenUsageService = tokenUsageService;
     }
 
     public List<Agent> getAllAgents() {
@@ -137,14 +135,14 @@ public class AgentService {
     private AgentExecutor createAgentExecutor(Agent agent,String userId) {
         ChatModel chatModel = null;
         StreamingChatModel streamingModel = null;
-        Map<String, String> metadata=new HashMap<>(){{
-           put("agentId",agent.getId().toString());
-           put("userId",userId);
-           put("source","chat");
-        }};
 
-        chatModel = aiModelService.createChatModel(agent.getAiModelId(), agent.getEnableThinking(),metadata);
-        streamingModel = aiModelService.createStreamingChatModel(agent.getAiModelId(), agent.getEnableThinking(),metadata);
+        LangChain4jMonitor langChain4jMonitor=new LangChain4jMonitor(AiModelCallSourceEnum.Chat)
+                .setAgentId(agent.getId())
+                .setUserId(userId)
+                .setTokenUsageService(tokenUsageService);
+
+        chatModel = aiModelService.createChatModel(agent.getAiModelId(), agent.getEnableThinking(),langChain4jMonitor);
+        streamingModel = aiModelService.createStreamingChatModel(agent.getAiModelId(), agent.getEnableThinking(),langChain4jMonitor);
         List<String> selectedToolNames = parseToolNames(agent.getTools());
         List<AgentTool> selectedTools = allTools.stream()
                 .filter(t -> selectedToolNames.contains(t.getName()))

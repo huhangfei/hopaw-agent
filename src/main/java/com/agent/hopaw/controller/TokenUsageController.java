@@ -40,9 +40,10 @@ public class TokenUsageController {
                               @RequestParam("endTime") @DateTimeFormat(pattern = "yyyy-MM-dd HH:mm:ss") LocalDateTime endTime,
                               @RequestParam(required = false) String userId,
                               @RequestParam(required = false) Long agentId,
+                              @RequestParam(required = false) String source,
                               @RequestParam(defaultValue = "1") int page,
                               @RequestParam(defaultValue = "15") int size) {
-        Map<String, Object> data = tokenUsageService.queryPage(startTime, endTime, userId, agentId, page, size);
+        Map<String, Object> data = tokenUsageService.queryPage(startTime, endTime, userId, agentId, source, page, size);
         return ResponseBean.success(data);
     }
 
@@ -51,8 +52,9 @@ public class TokenUsageController {
     public ResponseBean summary(@RequestParam("startTime") @DateTimeFormat(pattern = "yyyy-MM-dd HH:mm:ss") LocalDateTime startTime,
                                 @RequestParam("endTime") @DateTimeFormat(pattern = "yyyy-MM-dd HH:mm:ss") LocalDateTime endTime,
                                 @RequestParam(required = false) String userId,
-                                @RequestParam(required = false) Long agentId) {
-        TokenUsage summary = tokenUsageService.summary(startTime, endTime, userId, agentId);
+                                @RequestParam(required = false) Long agentId,
+                                @RequestParam(required = false) String source) {
+        TokenUsage summary = tokenUsageService.summary(startTime, endTime, userId, agentId, source);
         return ResponseBean.success(summary);
     }
 }

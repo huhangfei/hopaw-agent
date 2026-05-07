@@ -2,10 +2,7 @@ package com.agent.hopaw.service;
 
 import com.agent.hopaw.mapper.TokenUsageMapper;
 import com.agent.hopaw.model.TokenUsage;
-import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
-
-import javax.annotation.PostConstruct;
 import java.time.LocalDateTime;
 import java.util.HashMap;
 import java.util.List;
@@ -15,25 +12,9 @@ import java.util.Map;
 public class TokenUsageService {
 
     private final TokenUsageMapper tokenUsageMapper;
-    private final JdbcTemplate jdbcTemplate;
 
-    public TokenUsageService(TokenUsageMapper tokenUsageMapper, JdbcTemplate jdbcTemplate) {
+    public TokenUsageService(TokenUsageMapper tokenUsageMapper) {
         this.tokenUsageMapper = tokenUsageMapper;
-        this.jdbcTemplate = jdbcTemplate;
-    }
-
-    @PostConstruct
-    public void initTable() {
-        jdbcTemplate.execute("CREATE TABLE IF NOT EXISTS token_usage (" +
-                "id INTEGER PRIMARY KEY AUTOINCREMENT," +
-                "agent_id INTEGER," +
-                "model_name TEXT," +
-                "input_tokens INTEGER DEFAULT 0," +
-                "output_tokens INTEGER DEFAULT 0," +
-                "total_tokens INTEGER DEFAULT 0," +
-                "user_id TEXT," +
-                "create_time DATETIME DEFAULT CURRENT_TIMESTAMP" +
-                ")");
     }
 
     public void save(TokenUsage tokenUsage) {
@@ -43,10 +24,10 @@ public class TokenUsageService {
         tokenUsageMapper.insert(tokenUsage);
     }
 
-    public Map<String, Object> queryPage(LocalDateTime startTime, LocalDateTime endTime, String userId, Long agentId, int page, int size) {
+    public Map<String, Object> queryPage(LocalDateTime startTime, LocalDateTime endTime, String userId, Long agentId, String source, int page, int size) {
         int offset = (page - 1) * size;
-        List<TokenUsage> list = tokenUsageMapper.findByTimeRange(startTime, endTime, userId, agentId, size, offset);
-        long total = tokenUsageMapper.countByTimeRange(startTime, endTime, userId, agentId);
+        List<TokenUsage> list = tokenUsageMapper.findByTimeRange(startTime, endTime, userId, agentId, source, size, offset);
+        long total = tokenUsageMapper.countByTimeRange(startTime, endTime, userId, agentId, source);
 
         Map<String, Object> result = new HashMap<>();
         result.put("list", list);
@@ -56,7 +37,7 @@ public class TokenUsageService {
         return result;
     }
 
-    public TokenUsage summary(LocalDateTime startTime, LocalDateTime endTime, String userId, Long agentId) {
-        return tokenUsageMapper.summaryByTimeRange(startTime, endTime, userId, agentId);
+    public TokenUsage summary(LocalDateTime startTime, LocalDateTime endTime, String userId, Long agentId, String source) {
+        return tokenUsageMapper.summaryByTimeRange(startTime, endTime, userId, agentId, source);
     }
 }

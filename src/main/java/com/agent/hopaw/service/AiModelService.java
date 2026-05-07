@@ -1,5 +1,6 @@
 package com.agent.hopaw.service;
 
+import com.agent.hopaw.constant.AiModelCallSourceEnum;
 import com.agent.hopaw.mapper.AiModelMapper;
 import com.agent.hopaw.model.*;
 import com.agent.hopaw.service.ChatModel.ChatModelFactory;
@@ -22,10 +23,11 @@ public class AiModelService {
     private final AiModelProviderService aiModelProviderService;
 
     private final Map<String, ChatModelFactory> factories = new HashMap<>();
-
-    public AiModelService(AiModelMapper aiModelMapper, AiModelProviderService aiModelProviderService,List<ChatModelFactory> factoryList) {
+    private final TokenUsageService tokenUsageService;
+    public AiModelService(AiModelMapper aiModelMapper, AiModelProviderService aiModelProviderService, List<ChatModelFactory> factoryList, TokenUsageService tokenUsageService) {
         this.aiModelMapper = aiModelMapper;
         this.aiModelProviderService = aiModelProviderService;
+        this.tokenUsageService = tokenUsageService;
         for (ChatModelFactory factory : factoryList) {
             factories.put(factory.getProviderName().toLowerCase(), factory);
         }
@@ -83,9 +85,7 @@ public class AiModelService {
             org.springframework.beans.BeanUtils.copyProperties(aiModel, aiModelVO);
             aiModelVO.setAiModelProvider(provider);
             ChatModelFactory factory = factories.get(aiModelVO.getAiModelProvider().getSdkName().toLowerCase());
-            ChatModel chatModel = factory.createChatModel(aiModelVO, false,new HashMap<>(1){{
-                put("source","model-test");
-            }});
+            ChatModel chatModel = factory.createChatModel(aiModelVO, false, new LangChain4jMonitor(AiModelCallSourceEnum.ModelTEST).setTokenUsageService(tokenUsageService));
             ModelCapabilityTestResult result = factory.testModelCapability(chatModel);
 
             log.info("模型能力测试结果 [{}]: {}", aiModel.getModelName(), result.getMessage());
@@ -122,16 +122,16 @@ public class AiModelService {
         return aiModelVO;
     }
 
-    public ChatModel createChatModel(Long aiModelId,boolean enableThinking, Map<String, String> metadata) {
+    public ChatModel createChatModel(Long aiModelId,boolean enableThinking, LangChain4jMonitor langChain4jMonitor) {
         AiModelVO aiModelVO = findAiModelVOById(aiModelId);
         ChatModelFactory chatModelFactory = factories.get(aiModelVO.getAiModelProvider().getSdkName().toLowerCase());
-        return chatModelFactory.createChatModel(aiModelVO, enableThinking, metadata);
+        return chatModelFactory.createChatModel(aiModelVO, enableThinking, langChain4jMonitor);
     }
 
-    public StreamingChatModel createStreamingChatModel(Long aiModelId,boolean enableThinking, Map<String, String> metadata) {
+    public StreamingChatModel createStreamingChatModel(Long aiModelId,boolean enableThinking, LangChain4jMonitor langChain4jMonitor) {
         AiModelVO aiModelVO = findAiModelVOById(aiModelId);
         ChatModelFactory chatModelFactory = factories.get(aiModelVO.getAiModelProvider().getSdkName().toLowerCase());
-        return chatModelFactory.createStreamingChatModel(aiModelVO, enableThinking,metadata);
+        return chatModelFactory.createStreamingChatModel(aiModelVO, enableThinking, langChain4jMonitor);
     }
 
     public Map<String, ChatModelFactory> getAllFactories() {

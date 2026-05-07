@@ -1,9 +1,12 @@
 package com.agent.hopaw.task;
 
+import com.agent.hopaw.constant.AiModelCallSourceEnum;
 import com.agent.hopaw.mapper.AgentMapper;
 import com.agent.hopaw.model.Agent;
 import com.agent.hopaw.model.ScheduledTask;
 import com.agent.hopaw.service.AiModelService;
+import com.agent.hopaw.service.LangChain4jMonitor;
+import com.agent.hopaw.service.TokenUsageService;
 import com.agent.hopaw.tools.AgentTool;
 import dev.langchain4j.model.chat.ChatModel;
 import dev.langchain4j.service.AiServices;
@@ -15,7 +18,6 @@ import org.springframework.stereotype.Component;
 
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.HashMap;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -25,10 +27,12 @@ public class AgentTaskHandler implements TaskHandler {
     private final AiModelService aiModelService;
     private final AgentMapper agentMapper;
     private final List<AgentTool> allTools;
-    public AgentTaskHandler(AiModelService aiModelService, AgentMapper agentMapper,@Lazy List<AgentTool> allTools) {
+    private final TokenUsageService tokenUsageService;
+    public AgentTaskHandler(AiModelService aiModelService, AgentMapper agentMapper, @Lazy List<AgentTool> allTools, TokenUsageService tokenUsageService) {
         this.aiModelService = aiModelService;
         this.agentMapper = agentMapper;
         this.allTools = allTools;
+        this.tokenUsageService = tokenUsageService;
     }
 
 
@@ -55,11 +59,8 @@ public class AgentTaskHandler implements TaskHandler {
         if(agentIdStr != null && !agentIdStr.isEmpty() && task.getDescription() != null && !task.getDescription().isEmpty()){
             Long agentId = Long.parseLong(agentIdStr);
             Agent agent =agentMapper.findById(agentId);
-            ChatModel chatModel = aiModelService.createChatModel(agent.getAiModelId(), agent.getEnableThinking(),new HashMap<>(1){{
-                put("agentId",agentIdStr);
-                put("userId",task.getUserId());
-                put("source","agent-task");
-            }});
+            LangChain4jMonitor langChain4jMonitor = new LangChain4jMonitor(AiModelCallSourceEnum.AgentTask).setAgentId(agentId).setUserId(task.getUserId()).setTokenUsageService(tokenUsageService);
+            ChatModel chatModel = aiModelService.createChatModel(agent.getAiModelId(), agent.getEnableThinking(),langChain4jMonitor);
             List<String> selectTools = parseToolNames(agent.getTools());
 
             List<AgentTool> selectedTools = allTools.stream()

@@ -36,6 +36,16 @@
                             <option th:each="a : ${agents}" th:value="${a.id}" th:text="${a.name}"></option>
                         </select>
                     </div>
+                    <div class="filter-group">
+                        <label for="filterSource">来源</label>
+                        <select id="filterSource">
+                            <option value="">全部</option>
+                            <option value="chat">会话</option>
+                            <option value="model-test">模型测试</option>
+                            <option value="memory-organize">记忆整理</option>
+                            <option value="agentTask">智能体定时任务</option>
+                        </select>
+                    </div>
                     <button class="btn-query" onclick="queryData()">查询</button>
                 </div>
             </div>
@@ -67,6 +77,7 @@
                             <th>用户</th>
                             <th>智能体</th>
                             <th>模型</th>
+                            <th>来源</th>
                             <th>输入 Tokens</th>
                             <th>输出 Tokens</th>
                             <th>总 Tokens</th>

@@ -165,6 +165,18 @@ public class DataInitializer implements CommandLineRunner {
                 // 列已存在，忽略
             }
 
+            stmt.execute("CREATE TABLE IF NOT EXISTS token_usage (" +
+                    "id INTEGER PRIMARY KEY AUTOINCREMENT, " +
+                    "agent_id INTEGER, " +
+                    "model_name TEXT, " +
+                    "input_tokens INTEGER DEFAULT 0, " +
+                    "output_tokens INTEGER DEFAULT 0, " +
+                    "total_tokens INTEGER DEFAULT 0, " +
+                    "user_id TEXT, " +
+                    "source TEXT, " +
+                    "create_time DATETIME DEFAULT CURRENT_TIMESTAMP" +
+                    ")");
+
             stmt.execute("CREATE TABLE IF NOT EXISTS sys_config (" +
                     "id INTEGER PRIMARY KEY AUTOINCREMENT, " +
                     "config_key TEXT NOT NULL UNIQUE, " +
@@ -222,6 +234,12 @@ public class DataInitializer implements CommandLineRunner {
             // 兼容旧表：添加 user_id 列（如果不存在）
             try {
                 stmt.execute("ALTER TABLE token_usage ADD COLUMN user_id TEXT");
+            } catch (Exception ignored) {
+            }
+
+            // 兼容旧表：添加 source 列（如果不存在）
+            try {
+                stmt.execute("ALTER TABLE token_usage ADD COLUMN source TEXT");
             } catch (Exception ignored) {
             }
 

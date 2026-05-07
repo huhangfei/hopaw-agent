@@ -1,35 +1,60 @@
 package com.agent.hopaw.service;
 
-import com.agent.hopaw.model.TokenUsage;
+import com.agent.hopaw.constant.AiModelCallSourceEnum;
 import com.alibaba.fastjson2.JSON;
 import dev.langchain4j.data.message.*;
-import dev.langchain4j.invocation.InvocationParameters;
 import dev.langchain4j.model.chat.listener.ChatModelErrorContext;
 import dev.langchain4j.model.chat.listener.ChatModelListener;
 import dev.langchain4j.model.chat.listener.ChatModelRequestContext;
 import dev.langchain4j.model.chat.listener.ChatModelResponseContext;
 import dev.langchain4j.model.chat.request.ChatRequest;
-import dev.langchain4j.model.chat.request.ChatRequestParameters;
 import dev.langchain4j.model.chat.response.ChatResponse;
 import dev.langchain4j.model.chat.response.ChatResponseMetadata;
-import dev.langchain4j.model.openai.OpenAiChatRequestParameters;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
-import java.util.Map;
 import java.util.stream.Collectors;
 
-@Service
-public class LangChain4jMonitoringService implements ChatModelListener {
+/**
+ * 监控
+ */
+public class LangChain4jMonitor implements ChatModelListener {
 
-    private static final Logger logger = LoggerFactory.getLogger(LangChain4jMonitoringService.class);
+    private static final Logger logger = LoggerFactory.getLogger(LangChain4jMonitor.class);
 
-    private final TokenUsageService tokenUsageService;
+    public LangChain4jMonitor(AiModelCallSourceEnum source) {
+        this.source = source;
+    }
 
-    public LangChain4jMonitoringService(TokenUsageService tokenUsageService) {
+    /**
+     * 来源
+     */
+    private AiModelCallSourceEnum source;
+    /**
+     * 智能体Id
+     */
+    private Long agentId;
+    /**
+     * 用户编号
+     */
+    private String userId;
+
+    public LangChain4jMonitor setTokenUsageService(TokenUsageService tokenUsageService) {
         this.tokenUsageService = tokenUsageService;
+        return this;
+    }
+
+    private  TokenUsageService tokenUsageService;
+
+    public LangChain4jMonitor setAgentId(Long agentId) {
+        this.agentId = agentId;
+        return this;
+    }
+
+    public LangChain4jMonitor setUserId(String userId) {
+        this.userId = userId;
+        return this;
     }
 
     @Override
@@ -86,16 +111,6 @@ public class LangChain4jMonitoringService implements ChatModelListener {
     public void onResponse(ChatModelResponseContext responseContext) {
         ChatResponse response = responseContext.chatResponse();
         ChatResponseMetadata metadata = response.metadata();
-        ChatRequestParameters parameters = responseContext.chatRequest().parameters();
-
-        String agentId=null;
-        String userId=null;
-
-        if(parameters instanceof OpenAiChatRequestParameters){
-            Map<String, String> metadata1 = ((OpenAiChatRequestParameters) parameters).metadata();
-            agentId=metadata1.get("agentId");
-            userId=metadata1.get("userId");
-        }
         logger.info("========== LangChain4j 响应完成 ==========");
         logger.info("模型: {}", metadata.modelName());
 
@@ -112,18 +127,21 @@ public class LangChain4jMonitoringService implements ChatModelListener {
             logger.info("  - 输出 tokens: {}", tokenUsage.outputTokenCount());
             logger.info("  - 总 tokens: {}", tokenUsage.totalTokenCount());
 
-            try {
-                com.agent.hopaw.model.TokenUsage record = new com.agent.hopaw.model.TokenUsage();
-                record.setAgentId(agentId==null?null:Long.parseLong(agentId));
-                record.setUserId(userId);
-                record.setModelName(metadata.modelName());
-                record.setInputTokens(tokenUsage.inputTokenCount());
-                record.setOutputTokens(tokenUsage.outputTokenCount());
-                record.setTotalTokens(tokenUsage.totalTokenCount());
-                record.setCreateTime(LocalDateTime.now());
-                tokenUsageService.save(record);
-            } catch (Exception e) {
-                logger.error("保存 Token 用量记录失败", e);
+            if(tokenUsageService!=null){
+                try {
+                    com.agent.hopaw.model.TokenUsage record = new com.agent.hopaw.model.TokenUsage();
+                    record.setAgentId(agentId);
+                    record.setUserId(userId);
+                    record.setSource(source.getValue());
+                    record.setModelName(metadata.modelName());
+                    record.setInputTokens(tokenUsage.inputTokenCount());
+                    record.setOutputTokens(tokenUsage.outputTokenCount());
+                    record.setTotalTokens(tokenUsage.totalTokenCount());
+                    record.setCreateTime(LocalDateTime.now());
+                    tokenUsageService.save(record);
+                } catch (Exception e) {
+                    logger.error("保存 Token 用量记录失败", e);
+                }
             }
         }
         logger.info("==========================================");

@@ -5,7 +5,8 @@ var currentEndTime = '';
 
 document.addEventListener('DOMContentLoaded', function() {
     var now = new Date();
-    var endStr = formatDateTime(now);
+    var endOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59);
+    var endStr = formatDateTime(endOfDay);
     var start = new Date(now.getTime() - 24 * 60 * 60 * 1000);
     var startStr = formatDateTime(start);
     document.getElementById('startTime').value = startStr;
@@ -50,8 +51,10 @@ function getFilterParams() {
     };
     var userId = document.getElementById('filterUser').value;
     var agentId = document.getElementById('filterAgent').value;
+    var source = document.getElementById('filterSource').value;
     if (userId) params.userId = userId;
     if (agentId) params.agentId = agentId;
+    if (source) params.source = source;
     return params;
 }
 
@@ -104,6 +107,7 @@ function fetchList() {
                     '<td>' + escapeHtml(item.userId || '-') + '</td>' +
                     '<td>' + escapeHtml(getAgentName(item.agentId)) + '</td>' +
                     '<td>' + escapeHtml(item.modelName || '-') + '</td>' +
+                    '<td>' + escapeHtml(getSourceName(item.source)) + '</td>' +
                     '<td>' + (item.inputTokens || 0).toLocaleString() + '</td>' +
                     '<td>' + (item.outputTokens || 0).toLocaleString() + '</td>' +
                     '<td><strong>' + (item.totalTokens || 0).toLocaleString() + '</strong></td>' +
@@ -130,4 +134,15 @@ function goPage(page) {
 function escapeHtml(str) {
     if (!str) return '';
     return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+}
+
+var SOURCE_MAP = {
+    'chat': '会话',
+    'model-test': '模型测试',
+    'memory-organize': '记忆整理',
+    'agentTask': '智能体定时任务'
+};
+
+function getSourceName(source) {
+    return SOURCE_MAP[source] || source || '-';
 }
