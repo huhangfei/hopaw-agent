@@ -3,7 +3,7 @@ package com.agent.hopaw.tools;
 
 import com.agent.hopaw.model.ScheduledTask;
 import com.agent.hopaw.service.ScheduledTaskService;
-import com.agent.hopaw.util.InvocationParametersUtil;
+import com.agent.hopaw.util.InvocationParametersWrapper;
 import dev.langchain4j.agent.tool.P;
 import dev.langchain4j.agent.tool.Tool;
 import dev.langchain4j.invocation.InvocationParameters;
@@ -34,9 +34,10 @@ public class AgentTaskTool implements AgentTool {
 
     @Tool("创建定时执行的任务")
     public String createAgentTask(@P("任务的简要名称") String taskName, @P("任务的cron表达式") String cron, @P("任务具体要做的事情描述") String taskDescription, InvocationParameters invocationParameters) {
+        InvocationParametersWrapper invocationParametersWrapper = InvocationParametersWrapper.create(invocationParameters);
         ScheduledTask agentTask = new ScheduledTask(taskName, "agentTask", cron, 1, taskDescription);
-        agentTask.setAgentId(InvocationParametersUtil.getAgentId(invocationParameters));
-        agentTask.setUserId(InvocationParametersUtil.getUserId(invocationParameters));
+        agentTask.setAgentId(invocationParametersWrapper.getAgentId());
+        agentTask.setUserId(invocationParametersWrapper.getUserId());
         agentTask.setBuiltin(0);
         scheduledTaskService.insert(agentTask);
         return "定时任务创建成功";
@@ -44,7 +45,8 @@ public class AgentTaskTool implements AgentTool {
 
     @Tool("查询定时执行的任务")
     public String findAgentTask(InvocationParameters invocationParameters) {
-        List<ScheduledTask> tasks = scheduledTaskService.findByUserIdAndAgentId(InvocationParametersUtil.getUserId(invocationParameters), InvocationParametersUtil.getAgentId(invocationParameters));
+        InvocationParametersWrapper invocationParametersWrapper = InvocationParametersWrapper.create(invocationParameters);
+        List<ScheduledTask> tasks = scheduledTaskService.findByUserIdAndAgentId(invocationParametersWrapper.getUserId(), invocationParametersWrapper.getAgentId());
         if (tasks != null && !tasks.isEmpty()){
             //循环 tasks 构建 字符串 拼接主要字段
             StringBuilder sb = new StringBuilder();
@@ -64,9 +66,10 @@ public class AgentTaskTool implements AgentTool {
 
     @Tool("停止启动中的定时执行的任务")
     public String stopAgentTask(@P("任务ID") Long taskId,InvocationParameters invocationParameters) {
+        InvocationParametersWrapper invocationParametersWrapper = InvocationParametersWrapper.create(invocationParameters);
         //先查询，判断是否与agentId相等
         ScheduledTask task = scheduledTaskService.findById(taskId);
-        if (task.getAgentId()!=null && !task.getAgentId().equals(InvocationParametersUtil.getAgentId(invocationParameters))) {
+        if (task.getAgentId()!=null && !task.getAgentId().equals(invocationParametersWrapper.getAgentId())) {
             return "失败：该任务非该智能体创建，无法停止";
         }
         scheduledTaskService.setEnabled(taskId, 0);
@@ -75,9 +78,10 @@ public class AgentTaskTool implements AgentTool {
 
     @Tool("启动停止中的定时执行的任务")
     public String startAgentTask(@P("任务ID") Long taskId,InvocationParameters invocationParameters) {
+        InvocationParametersWrapper invocationParametersWrapper = InvocationParametersWrapper.create(invocationParameters);
         //先查询，判断是否与agentId相等
         ScheduledTask task = scheduledTaskService.findById(taskId);
-        if (task.getAgentId()!=null && !task.getAgentId().equals(InvocationParametersUtil.getAgentId(invocationParameters))) {
+        if (task.getAgentId()!=null && !task.getAgentId().equals(invocationParametersWrapper.getAgentId())) {
             return "失败：该任务非该智能体创建，无法启动";
         }
         scheduledTaskService.setEnabled(taskId, 1);
@@ -85,9 +89,10 @@ public class AgentTaskTool implements AgentTool {
     }
     @Tool("删除定时执行的任务")
     public String deleteAgentTask(@P("任务ID") Long taskId,InvocationParameters invocationParameters) {
+        InvocationParametersWrapper invocationParametersWrapper = InvocationParametersWrapper.create(invocationParameters);
         //先查询，判断是否与agentId相等
         ScheduledTask task = scheduledTaskService.findById(taskId);
-        if (task.getAgentId()!=null && !task.getAgentId().equals(InvocationParametersUtil.getAgentId(invocationParameters))) {
+        if (task.getAgentId()!=null && !task.getAgentId().equals(invocationParametersWrapper.getAgentId())) {
             return "失败：该任务非该智能体创建，无法删除";
         }
         scheduledTaskService.deleteById(taskId);

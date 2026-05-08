@@ -2,7 +2,7 @@ package com.agent.hopaw.service;
 
 import com.agent.hopaw.mapper.LongTermMemoryMapper;
 import com.agent.hopaw.model.LongTermMemory;
-import com.agent.hopaw.util.InvocationParametersUtil;
+import com.agent.hopaw.util.InvocationParametersWrapper;
 import dev.langchain4j.agent.tool.P;
 import dev.langchain4j.agent.tool.Tool;
 import dev.langchain4j.invocation.InvocationParameters;
@@ -157,11 +157,12 @@ public class LongTermMemoryService {
                              InvocationParameters invocationParameters) {
         LongTermMemory memoryEntity =null;
         String memoryHash = UUID.nameUUIDFromBytes((memory).getBytes()).toString();
+        InvocationParametersWrapper invocationParametersWrapper = InvocationParametersWrapper.create(invocationParameters);
         if(id != null){
             // 根据id查询记忆
             memoryEntity = longTermMemoryMapper.findById(id);
-            memoryEntity.setAgentId(InvocationParametersUtil.getAgentId(invocationParameters));
-            memoryEntity.setUserId(InvocationParametersUtil.getUserId(invocationParameters));
+            memoryEntity.setAgentId(invocationParametersWrapper.getAgentId());
+            memoryEntity.setUserId(invocationParametersWrapper.getUserId());
             memoryEntity.setMemory(memory);
             memoryEntity.setMemoryHash(memoryHash);
             memoryEntity.setParentId(parentId);
@@ -169,8 +170,8 @@ public class LongTermMemoryService {
             longTermMemoryMapper.update(memoryEntity);
         }else{
             memoryEntity = new LongTermMemory();
-            memoryEntity.setAgentId(InvocationParametersUtil.getAgentId(invocationParameters));
-            memoryEntity.setUserId(InvocationParametersUtil.getUserId(invocationParameters));
+            memoryEntity.setAgentId(invocationParametersWrapper.getAgentId());
+            memoryEntity.setUserId(invocationParametersWrapper.getUserId());
             memoryEntity.setMemory(memory);
             memoryEntity.setMemoryHash(memoryHash);
             memoryEntity.setParentId(parentId);

@@ -29,6 +29,7 @@ public class WebSearchTool implements AgentTool {
         if (query == null || query.trim().isEmpty()) {
             return "错误: 搜索关键词不能为空";
         }
+
         source = source == null ? "baiduqianfan" : source;
         int mr = maxResults != null ? maxResults : MAX_RESULTS;
         int to = timeout != null ? timeout : TIMEOUT_MS;

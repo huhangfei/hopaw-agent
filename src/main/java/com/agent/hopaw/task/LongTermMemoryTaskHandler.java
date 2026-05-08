@@ -8,7 +8,7 @@ import com.agent.hopaw.model.Agent;
 import com.agent.hopaw.model.ChatMemory;
 import com.agent.hopaw.model.ScheduledTask;
 import com.agent.hopaw.service.*;
-import com.agent.hopaw.util.InvocationParametersUtil;
+import com.agent.hopaw.util.InvocationParametersWrapper;
 import com.alibaba.fastjson2.JSON;
 import dev.langchain4j.data.message.*;
 import dev.langchain4j.invocation.InvocationParameters;
@@ -207,9 +207,9 @@ public class LongTermMemoryTaskHandler implements TaskHandler {
             ChatModel chatModel = aiModelService.createChatModel(modelId, true,langChain4jMonitor);
 
             String systemMessage = buildSystemMessage(agentId);
-            InvocationParameters invocationParameters=new InvocationParameters();
-            InvocationParametersUtil.setAgentId(invocationParameters,agentId);
-            InvocationParametersUtil.setUserId(invocationParameters,userId);
+            InvocationParametersWrapper invocationParametersWrapper = InvocationParametersWrapper.create();
+            invocationParametersWrapper.setAgentId(agentId);
+            invocationParametersWrapper.setUserId(userId);
 
             MemoryAssistant assistant = AiServices.builder(MemoryAssistant.class)
                     .chatModel(chatModel)
@@ -217,7 +217,7 @@ public class LongTermMemoryTaskHandler implements TaskHandler {
                     .tools(Arrays.asList(longTermMemoryService))
                     .build();
             logger.info("开始汇总记忆 \n {}", content);
-            String result = assistant.chat(content,invocationParameters);
+            String result = assistant.chat(content,invocationParametersWrapper.getParameters());
             logger.info("记忆汇总完毕：{}", result);
             return true;
         }catch (Exception ex){
