@@ -14,10 +14,13 @@ import dev.langchain4j.model.chat.ChatModel;
 import dev.langchain4j.model.chat.StreamingChatModel;
 import dev.langchain4j.model.chat.response.ChatResponse;
 import dev.langchain4j.model.chat.response.PartialThinking;
+import dev.langchain4j.model.embedding.EmbeddingModel;
+import dev.langchain4j.model.embedding.onnx.bgesmallzhv15.BgeSmallZhV15EmbeddingModel;
 import dev.langchain4j.service.AiServices;
 import dev.langchain4j.service.TokenStream;
 import dev.langchain4j.service.tool.BeforeToolExecution;
 import dev.langchain4j.service.tool.ToolExecution;
+import dev.langchain4j.service.tool.search.vector.VectorToolSearchStrategy;
 import dev.langchain4j.store.memory.chat.InMemoryChatMemoryStore;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -227,6 +230,15 @@ public class AgentService {
                     .builder(Assistant.class)
                     .systemMessageProvider(chatMemoryId -> systemMessageProvider.apply(agent))
                     .chatMemory(memoryBuilder.build());
+            if (selectedTools != null){
+                EmbeddingModel embeddingModel =new BgeSmallZhV15EmbeddingModel();
+                aiBuilder.toolSearchStrategy(
+                                VectorToolSearchStrategy
+                                .builder()
+                                .embeddingModel(embeddingModel)
+                                .maxResults(5).build()
+                        );
+            }
             if (!selectedTools.isEmpty()) {
                 aiBuilder.maxSequentialToolsInvocations(maxToolInvocations)
                         .tools(selectedTools.toArray());
