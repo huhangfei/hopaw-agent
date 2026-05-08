@@ -187,7 +187,7 @@
 }
 .message {
     max-width: 100%;
-    padding: 15px 20px;
+    padding: 5px 10px;
     border-radius: 15px;
     line-height: 1.5;
     font-size: 14px;
@@ -376,7 +376,7 @@
     background: rgba(102, 126, 234, 0.08);
     border: 1px solid rgba(102, 126, 234, 0.2);
     border-radius: 8px;
-    padding: 12px;
+    padding: 2px;
     animation: toolCallSlideIn 0.3s ease-out;
 }
 @keyframes toolCallSlideIn {
@@ -393,7 +393,6 @@
     display: flex;
     align-items: center;
     gap: 8px;
-    margin-bottom: 8px;
 }
 .tool-call-icon {
     font-size: 16px;
