@@ -45,8 +45,9 @@ public class AgentService {
     private final AiModelService aiModelService;
     private final ChatHistoryStorageService chatHistoryStorageService;
     private final TokenUsageService tokenUsageService;
+    private final SQLiteChatMemoryStore memoryStore;
     public AgentService(AgentMapper agentMapper, ChatMemoryMapper chatMemoryMapper,
-                        List<AgentTool> allTools, LongTermMemoryService longTermMemoryService, AiModelService aiModelService, ChatHistoryStorageService chatHistoryStorageService, TokenUsageService tokenUsageService) {
+                        List<AgentTool> allTools, LongTermMemoryService longTermMemoryService, AiModelService aiModelService, ChatHistoryStorageService chatHistoryStorageService, TokenUsageService tokenUsageService, SQLiteChatMemoryStore memoryStore) {
         this.agentMapper = agentMapper;
         this.chatMemoryMapper = chatMemoryMapper;
         this.allTools = allTools;
@@ -54,6 +55,7 @@ public class AgentService {
         this.aiModelService = aiModelService;
         this.chatHistoryStorageService = chatHistoryStorageService;
         this.tokenUsageService = tokenUsageService;
+        this.memoryStore = memoryStore;
     }
 
     public List<Agent> getAllAgents() {
@@ -158,7 +160,6 @@ public class AgentService {
                 .filter(t -> selectedToolNames.contains(t.getName()))
                 .collect(Collectors.toList());
 
-        SQLiteChatMemoryStore memoryStore = new SQLiteChatMemoryStore(chatMemoryMapper, agent.getId(), userId);
         return new AgentExecutor(agent,userId, chatModel, streamingModel, selectedTools, memoryStore, a->this.getSystemMessage(a,userId), chatHistoryStorageService);
     }
 
@@ -216,7 +217,7 @@ public class AgentService {
             int maxMemoryRecords = agent.getMaxMemoryRecords() != null ? agent.getMaxMemoryRecords() : 20;
             int maxToolInvocations = agent.getMaxToolInvocations() != null ? agent.getMaxToolInvocations() : 10;
 
-            String memoryId="window_"+agent.getId()+"_"+userId;
+            ChatMemoryId memoryId=new ChatMemoryId(agent.getId(), userId);
             if (chatModel != null) {
 
                 var aiBuilder = AiServices.builder(Assistant.class)
@@ -379,7 +380,7 @@ public class AgentService {
                         .onToolExecuted(toolExecution -> agentMessageHandler.toolExecutionHandler(toolExecution));
                 tokenStream.start();
 
-                latch.await(60, TimeUnit.SECONDS);
+                latch.await(300, TimeUnit.SECONDS);
                 agentMessageHandler.done();
             } catch (Exception e) {
                 logger.error("\n(注: 流式响应失败: " + e.getMessage() + ")",e);

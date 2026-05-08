@@ -543,6 +543,18 @@ function setupCascading(providerSelect, modelSelect) {
     });
 }
 
+function selectAllTools(containerSelector) {
+    document.querySelectorAll(containerSelector + ' input[type="checkbox"]').forEach(function(cb) {
+        cb.checked = true;
+    });
+}
+
+function deselectAllTools(containerSelector) {
+    document.querySelectorAll(containerSelector + ' input[type="checkbox"]').forEach(function(cb) {
+        cb.checked = false;
+    });
+}
+
 function showAddModal() {
     Modal.open('addAgentModal');
     var providerSelect = document.getElementById('addProviderSelect');

@@ -12,6 +12,8 @@ public interface ChatMemoryMapper {
 
     List<ChatMemory> findByAgentIdAndUserId(@Param("agentId") Long agentId, @Param("userId") String userId);
 
+    List<ChatMemory> findByAgentIdAndUserIdInStatus(@Param("agentId") Long agentId, @Param("userId") String userId, @Param("status") List<Integer> status);
+
     List<ChatMemory> findByAgentIdAndUserIdAndStatus(@Param("agentId") Long agentId, @Param("userId") String userId, @Param("status") Integer status);
 
     int insert(@Param("agentId") Long agentId, @Param("userId") String userId, @Param("messageId") String messageId, @Param("messageJson") String messageJson);

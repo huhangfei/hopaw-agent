@@ -641,6 +641,33 @@
 }
 
 /* ========== Tool checkbox items ========== */
+.tool-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 10px;
+}
+.tool-header label {
+    margin-bottom: 0;
+}
+.tool-toggle-bar {
+    display: flex;
+    gap: 8px;
+}
+.btn-tool-toggle {
+    padding: 4px 14px;
+    font-size: 12px;
+    border: 1px solid #667eea;
+    border-radius: 4px;
+    background: #fff;
+    color: #667eea;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+.btn-tool-toggle:hover {
+    background: #667eea;
+    color: #fff;
+}
 .checkbox-group{
     max-height: 380px;
     overflow-y: auto;
@@ -648,7 +675,7 @@
 .checkbox-item {
     display: flex;
     align-items: center;
-    gap: 8px;
+    gap: 10px;
     padding: 10px 12px;
     border: 1px solid #e0e0e0;
     border-radius: 8px;
@@ -657,6 +684,7 @@
     background: #fafafa;
     width: 100%;
     box-sizing: border-box;
+    flex-wrap: wrap;
 }
 
 .checkbox-item:hover {
@@ -671,28 +699,53 @@
     flex-shrink: 0;
 }
 
-.checkbox-item {
-    flex-wrap: wrap;
+.tool-item-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    width: 100%;
 }
-
-.checkbox-item > span {
+.tool-item-icon {
+    width: 24px;
+    height: 24px;
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+.tool-item-icon img {
+    width: 20px;
+    height: 20px;
+}
+.tool-item-name {
     font-size: 14px;
     font-weight: 500;
     color: #333;
-    margin-right: auto;
+    flex: 1;
 }
-
-.checkbox-item .tool-desc {
-    font-size: 12px;
-    font-weight: normal;
+.tool-item-desc {
+    font-size: 11px;
     color: #8899aa;
     width: 100%;
-    padding-left: 24px;
+}
+
+.tool-item-count {
+    font-size: 11px;
+    color: #667eea;
+    background: #eef0ff;
+    padding: 2px 8px;
+    border-radius: 10px;
+    flex-shrink: 0;
+    white-space: nowrap;
 }
 
 .checkbox-item:has(input:checked) {
     border-color: #667eea;
     background: #eef0ff;
+}
+.checkbox-item:has(input:checked) .tool-item-count {
+    background: #667eea;
+    color: #fff;
 }
 
 /* ========== Modal form left/right layout ========== */

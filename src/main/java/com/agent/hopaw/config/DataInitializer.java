@@ -343,7 +343,7 @@ public class DataInitializer implements CommandLineRunner {
 
         if (sysConfigMapper.findAll().isEmpty()) {
             String customPrompt="你是一个记忆整理助手。善于根据聊天记录提取关键的用户记忆信息。" +
-                    "请根据内容总结出用户的关键记忆信息，并按以下格式进行分类，分类不够可以自己添加，但是分类要精简：\n" +
+                    "请根据内容总结出用户的关键记忆信息，并按以下格式进行分类，大类下面可以汇总出多级子分类，根据实际情况和约束执行：\n" +
                     "========\n" +
                     "1,基础档案\n" +
                     "个人特质、地域作息、性格、身份角色、核心标签、敏感雷区等\n" +
@@ -362,8 +362,8 @@ public class DataInitializer implements CommandLineRunner {
                     "8,知识沉淀\n" +
                     "高频咨询问题、专属认知观点、常用资料 / 规则、成功处理任务经验等\n" +
                     "========\n" +
-                    "请认真总结记忆得到清单后进行检查，不要有重复的记忆或分类,记忆内容不能胡编乱造信息，要完全从内容中来。\n" +
-                    "在完成记忆总结后，你可以调用保存智能体记忆工具。\n" +
+                    "请认真总结记忆得到清单后进行检查，不要有重复的记忆,记忆内容不能胡编乱造信息，只要关联性强的就汇总出新的分类，将汇总后的内容作为子级内容存储。\n" +
+                    "在完成记忆总结后，请再次认真审视分类层级是否正确，你可以调用记忆操作相关工具，其他未列出的工具都不能用。\n" +
                     "归类后先保存分类作为父级记忆得到编号，再保存概要内容作为子级记忆，子级记忆的parentId是父级记忆的编号。" ;
             sysConfigMapper.insert(new SysConfig("memory_prompt", customPrompt, "记忆整理提示词"));
             sysConfigMapper.insert(new SysConfig("memory_ai_model_id", "", "记忆整理使用模型"));

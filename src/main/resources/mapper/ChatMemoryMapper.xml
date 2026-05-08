@@ -19,13 +19,25 @@
         ORDER BY create_time ASC
     </select>
 
+    <select id="findByAgentIdAndUserIdInStatus" resultMap="ChatMemoryResultMap">
+        SELECT id, agent_id, user_id, message_id, message_json, status, create_time
+        FROM chat_memory
+        WHERE agent_id = #{agentId} AND user_id = #{userId}
+        <if test="status!=null and status.size()>0">
+            AND status in
+            <foreach collection="status" separator="," item="item" close=")" open="(">
+                #{item}
+            </foreach>
+        </if>
+        ORDER BY create_time ASC
+    </select>
+
     <select id="findByAgentIdAndUserId" resultMap="ChatMemoryResultMap">
         SELECT id, agent_id, user_id, message_id, message_json, status, create_time
         FROM chat_memory
         WHERE agent_id = #{agentId} AND user_id = #{userId}
         ORDER BY create_time ASC
     </select>
-
     <select id="findByAgentIdAndUserIdAndStatus" resultMap="ChatMemoryResultMap">
         SELECT id, agent_id, user_id, message_id, message_json, status, create_time
         FROM chat_memory

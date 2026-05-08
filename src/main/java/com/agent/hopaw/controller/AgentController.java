@@ -6,8 +6,9 @@ import com.agent.hopaw.mapper.ChatMemoryMapper;
 import com.agent.hopaw.model.Agent;
 import com.agent.hopaw.model.ChatHistory;
 import com.agent.hopaw.model.ResponseBean;
+import com.agent.hopaw.model.ToolSetInfo;
 import com.agent.hopaw.service.AgentService;
-import com.agent.hopaw.tools.AgentTool;
+import com.agent.hopaw.service.AgentToolService;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -19,24 +20,23 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestBody;
 
 import java.util.Collections;
-import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
-import java.util.stream.Collectors;
 
 @Controller
 public class AgentController {
 
     private final AgentService agentService;
+    private final AgentToolService agentToolService;
     private final ChatHistoryMapper chatHistoryMapper;
     private final ChatMemoryMapper chatMemoryMapper;
-    private final List<AgentTool> allTools;
 
-    public AgentController(AgentService agentService, ChatHistoryMapper chatHistoryMapper, ChatMemoryMapper chatMemoryMapper, List<AgentTool> allTools) {
+    public AgentController(AgentService agentService, AgentToolService agentToolService,
+                           ChatHistoryMapper chatHistoryMapper, ChatMemoryMapper chatMemoryMapper) {
         this.agentService = agentService;
+        this.agentToolService = agentToolService;
         this.chatHistoryMapper = chatHistoryMapper;
         this.chatMemoryMapper = chatMemoryMapper;
-        this.allTools = allTools;
     }
 
     @GetMapping("/")
@@ -45,11 +45,8 @@ public class AgentController {
         List<Agent> agents = agentService.getAllAgents();
         model.addAttribute("agents", agents);
 
-        List<Map<String, String>> tools = allTools.stream()
-                .sorted(Comparator.comparing(AgentTool::getName))
-                .map(t -> Map.of("name", t.getName(), "description", t.getDescription()))
-                .collect(Collectors.toList());
-        model.addAttribute("tools", tools);
+        List<ToolSetInfo> toolSets = agentToolService.getToolSets();
+        model.addAttribute("toolSets", toolSets);
 
         if (agentId != null) {
             Agent agent = agentService.getAgentById(agentId);

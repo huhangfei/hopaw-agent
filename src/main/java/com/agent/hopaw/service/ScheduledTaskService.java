@@ -46,6 +46,14 @@ public class ScheduledTaskService {
         return dynamicTaskService.isRunning(id);
     }
 
+    public boolean isTaskRunning(String type) {
+        ScheduledTask task = taskMapper.findByTaskType(type);
+        if(task==null){
+            return false;
+        }
+        return dynamicTaskService.isRunning(task.getId());
+    }
+
     @Transactional
     public void setEnabled(Long id, Integer enabled) {
         ScheduledTask task = taskMapper.findById(id);

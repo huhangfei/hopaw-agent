@@ -207,12 +207,24 @@
                 </div>
                 <div class="form-right">
                     <div class="form-group">
-                        <label>工具</label>
+                        <div class="tool-header">
+                            <label>工具</label>
+                            <div class="tool-toggle-bar">
+                                <button type="button" class="btn-tool-toggle" onclick="selectAllTools('#addAgentModal .checkbox-group')">全选</button>
+                                <button type="button" class="btn-tool-toggle" onclick="deselectAllTools('#addAgentModal .checkbox-group')">取消</button>
+                            </div>
+                        </div>
                         <div class="checkbox-group">
-                            <label th:each="tool : ${tools}" class="checkbox-item">
-                                <input type="checkbox" name="tools" th:value="${tool.name}">
-                                <span th:text="${tool.name}"></span>
-                                <span class="tool-desc" th:text="${tool.description}"></span>
+                            <label th:each="ts : ${toolSets}" class="checkbox-item">
+                                <div class="tool-item-row">
+                                    <input type="checkbox" name="tools" th:value="${ts.name}">
+                                    <div class="tool-item-icon">
+                                        <img th:src="@{/icons/tools/__${ts.icon}__.svg}" alt="" onerror="this.style.display='none'">
+                                    </div>
+                                    <span class="tool-item-name" th:text="${ts.name}"></span>
+                                    <span class="tool-item-count" th:text="${#lists.size(ts.tools)} + ' 个方法'"></span>
+                                </div>
+                                <span class="tool-item-desc" th:text="${ts.description}"></span>
                             </label>
                         </div>
                     </div>
@@ -281,12 +293,24 @@
                 </div>
                 <div class="form-right">
                     <div class="form-group">
-                        <label>工具</label>
+                        <div class="tool-header">
+                            <label>工具</label>
+                            <div class="tool-toggle-bar">
+                                <button type="button" class="btn-tool-toggle" onclick="selectAllTools('#editToolList')">全选</button>
+                                <button type="button" class="btn-tool-toggle" onclick="deselectAllTools('#editToolList')">取消</button>
+                            </div>
+                        </div>
                         <div class="checkbox-group" id="editToolList">
-                            <label th:each="tool : ${tools}" class="checkbox-item">
-                                <input type="checkbox" name="tools" th:value="${tool.name}" class="edit-tool-checkbox">
-                                <span th:text="${tool.name}"></span>
-                                <span class="tool-desc" th:text="${tool.description}"></span>
+                            <label th:each="ts : ${toolSets}" class="checkbox-item">
+                                <div class="tool-item-row">
+                                    <input type="checkbox" name="tools" th:value="${ts.name}" class="edit-tool-checkbox">
+                                    <div class="tool-item-icon">
+                                        <img th:src="@{/icons/tools/__${ts.icon}__.svg}" alt="" onerror="this.style.display='none'">
+                                    </div>
+                                    <span class="tool-item-name" th:text="${ts.name}"></span>
+                                    <span class="tool-item-count" th:text="${#lists.size(ts.tools)} + ' 个方法'"></span>
+                                </div>
+                                <span class="tool-item-desc" th:text="${ts.description}"></span>
                             </label>
                         </div>
                     </div>

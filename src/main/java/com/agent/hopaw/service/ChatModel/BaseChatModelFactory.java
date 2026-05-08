@@ -60,7 +60,7 @@ public abstract class BaseChatModelFactory implements ChatModelFactory {
         if (val instanceof Number) {
             return ((Number) val).longValue();
         }
-        return 60L;
+        return 120L;
     }
 
     public Boolean getLogRequests(AiModelVO aiModelVO) {
