@@ -54,6 +54,8 @@ public class DataInitializer implements CommandLineRunner {
                     "tools TEXT, " +
                     "max_memory_records INTEGER DEFAULT 20, " +
                     "max_tool_invocations INTEGER DEFAULT 20, " +
+                    "vector_tool_search INTEGER DEFAULT 1, " +
+                    "vector_tool_search_max_results INTEGER DEFAULT 5, " +
                     "ai_model_id INTEGER, " +
                     "model_name TEXT, " +
                     "enable_thinking INTEGER DEFAULT 1," +
@@ -212,6 +214,16 @@ public class DataInitializer implements CommandLineRunner {
             // 兼容旧表：添加 user_id 列（如果不存在）
             try {
                 stmt.execute("ALTER TABLE agents ADD COLUMN user_id TEXT DEFAULT 'user1'");
+            } catch (Exception ignored) {
+            }
+
+            // 兼容旧表：添加 vector_tool_search 和 vector_tool_search_max_results 列
+            try {
+                stmt.execute("ALTER TABLE agents ADD COLUMN vector_tool_search INTEGER DEFAULT 1");
+            } catch (Exception ignored) {
+            }
+            try {
+                stmt.execute("ALTER TABLE agents ADD COLUMN vector_tool_search_max_results INTEGER DEFAULT 5");
             } catch (Exception ignored) {
             }
 

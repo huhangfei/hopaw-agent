@@ -567,7 +567,7 @@ function hideAddModal() {
     Modal.close('addAgentModal');
 }
 
-function showEditModal(id, name, description, tools, maxMemoryRecords, maxToolInvocations, aiModelId, enableThinking) {
+function showEditModal(id, name, description, tools, maxMemoryRecords, maxToolInvocations, aiModelId, enableThinking, vectorToolSearch, vectorToolSearchMaxResults) {
     // 以深度思考按钮的实时状态为准，而非页面加载时的固化值
     var deepBtn = document.getElementById('deepThinkBtn');
     if (deepBtn) {
@@ -581,6 +581,12 @@ function showEditModal(id, name, description, tools, maxMemoryRecords, maxToolIn
     var editEnableCb = document.getElementById('editEnableThinkingCheckbox');
     editEnableCb.checked = enableThinking !== false;
     document.getElementById('editEnableThinking').value = editEnableCb.checked ? 'true' : 'false';
+
+    var editVectorCb = document.getElementById('editVectorToolSearchCheckbox');
+    editVectorCb.checked = vectorToolSearch !== false;
+    document.getElementById('editVectorToolSearch').value = editVectorCb.checked ? 'true' : 'false';
+    document.getElementById('editVectorToolSearchMaxResults').value = vectorToolSearchMaxResults || 5;
+    document.getElementById('editVectorToolSearchResultsGroup').style.display = editVectorCb.checked ? '' : 'none';
 
     var checkboxes = document.querySelectorAll('.edit-tool-checkbox');
     checkboxes.forEach(function(checkbox) {

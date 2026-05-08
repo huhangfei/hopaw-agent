@@ -69,9 +69,11 @@ public class AgentController {
                              @RequestParam(required = false, defaultValue = "20") Integer maxMemoryRecords,
                              @RequestParam(required = false, defaultValue = "10") Integer maxToolInvocations,
                              @RequestParam Long aiModelId,
-                             @RequestParam(required = false, defaultValue = "true") Boolean enableThinking) {
+                             @RequestParam(required = false, defaultValue = "true") Boolean enableThinking,
+                             @RequestParam(required = false, defaultValue = "true") Boolean vectorToolSearch,
+                             @RequestParam(required = false, defaultValue = "5") Integer vectorToolSearchMaxResults) {
         String toolsStr = tools != null ? tools : "";
-        agentService.createAgent(name, description, toolsStr, maxMemoryRecords, maxToolInvocations, aiModelId, enableThinking, DefaultUser.USER);
+        agentService.createAgent(name, description, toolsStr, maxMemoryRecords, maxToolInvocations, aiModelId, enableThinking, vectorToolSearch, vectorToolSearchMaxResults, DefaultUser.USER);
         return "redirect:/";
     }
 
@@ -120,9 +122,11 @@ public class AgentController {
                              @RequestParam(required = false, defaultValue = "20") Integer maxMemoryRecords,
                              @RequestParam(required = false, defaultValue = "10") Integer maxToolInvocations,
                              @RequestParam Long aiModelId,
-                             @RequestParam(required = false) Boolean enableThinking) {
+                             @RequestParam(required = false) Boolean enableThinking,
+                             @RequestParam(required = false, defaultValue = "true") Boolean vectorToolSearch,
+                             @RequestParam(required = false, defaultValue = "5") Integer vectorToolSearchMaxResults) {
         String toolsStr = tools != null ? tools : "";
-        agentService.updateAgent(DefaultUser.USER,id, name, description, toolsStr, maxMemoryRecords, maxToolInvocations, aiModelId, enableThinking);
+        agentService.updateAgent(DefaultUser.USER,id, name, description, toolsStr, maxMemoryRecords, maxToolInvocations, aiModelId, enableThinking, vectorToolSearch, vectorToolSearchMaxResults);
         return "redirect:/?agentId=" + id;
     }
 

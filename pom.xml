@@ -11,8 +11,8 @@
         <relativePath/>
     </parent>
 
-    <groupId>com.agent</groupId>
-    <artifactId>agent-demo</artifactId>
+    <groupId>com.hopaw.agent</groupId>
+    <artifactId>hopaw-agent</artifactId>
     <version>1.0.0</version>
 
     <properties>

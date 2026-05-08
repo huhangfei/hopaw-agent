@@ -70,10 +70,12 @@ public class AgentService {
         return agentMapper.findById(id);
     }
 
-    public Agent createAgent(String name, String description, String tools, Integer maxMemoryRecords, Integer maxToolInvocations, Long aiModelId, Boolean enableThinking, String userId) {
+    public Agent createAgent(String name, String description, String tools, Integer maxMemoryRecords, Integer maxToolInvocations, Long aiModelId, Boolean enableThinking, Boolean vectorToolSearch, Integer vectorToolSearchMaxResults, String userId) {
         Agent agent = new Agent(name, description, tools, maxMemoryRecords, maxToolInvocations, enableThinking);
         agent.setAiModelId(aiModelId);
         agent.setEnableThinking(enableThinking);
+        agent.setVectorToolSearch(vectorToolSearch != null ? vectorToolSearch : true);
+        agent.setVectorToolSearchMaxResults(vectorToolSearchMaxResults != null ? vectorToolSearchMaxResults : 5);
         agent.setUserId(userId);
         agentMapper.insert(agent);
         return agent;
@@ -95,7 +97,7 @@ public class AgentService {
         stopAndRemoveAgentExecutor(id, userId);
     }
 
-    public void updateAgent(String userId, Long id, String name, String description, String tools, Integer maxMemoryRecords, Integer maxToolInvocations, Long aiModelId, Boolean enableThinking) {
+    public void updateAgent(String userId, Long id, String name, String description, String tools, Integer maxMemoryRecords, Integer maxToolInvocations, Long aiModelId, Boolean enableThinking, Boolean vectorToolSearch, Integer vectorToolSearchMaxResults) {
         Agent agent = agentMapper.findById(id);
         if (agent != null) {
             agent.setName(name);
@@ -107,6 +109,8 @@ public class AgentService {
             if (enableThinking != null) {
                 agent.setEnableThinking(enableThinking);
             }
+            agent.setVectorToolSearch(vectorToolSearch != null ? vectorToolSearch : true);
+            agent.setVectorToolSearchMaxResults(vectorToolSearchMaxResults != null ? vectorToolSearchMaxResults : 5);
             agentMapper.update(agent);
             stopAndRemoveAgentExecutor(id, userId);
         }
@@ -230,13 +234,14 @@ public class AgentService {
                     .builder(Assistant.class)
                     .systemMessageProvider(chatMemoryId -> systemMessageProvider.apply(agent))
                     .chatMemory(memoryBuilder.build());
-            if (selectedTools != null){
+            if (selectedTools != null && agent.getVectorToolSearch() != null && agent.getVectorToolSearch()){
                 EmbeddingModel embeddingModel =new BgeSmallZhV15EmbeddingModel();
+                int maxResults = agent.getVectorToolSearchMaxResults() != null ? agent.getVectorToolSearchMaxResults() : 5;
                 aiBuilder.toolSearchStrategy(
                                 VectorToolSearchStrategy
                                 .builder()
                                 .embeddingModel(embeddingModel)
-                                .maxResults(5).build()
+                                .maxResults(maxResults).build()
                         );
             }
             if (!selectedTools.isEmpty()) {

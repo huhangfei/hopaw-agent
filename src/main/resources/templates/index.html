@@ -39,7 +39,7 @@
             </div>
             <div class="header-actions">
                 <button class="btn-edit"
-                        th:attr="onclick=|showEditModal(${selectedAgent.id}, '${#strings.escapeJava(selectedAgent.name)}', '${#strings.escapeJava(selectedAgent.description)}', '${#strings.escapeJava(selectedAgent.tools)}', ${selectedAgent.maxMemoryRecords != null ? selectedAgent.maxMemoryRecords : 20}, ${selectedAgent.maxToolInvocations != null ? selectedAgent.maxToolInvocations : 10}, ${selectedAgent.aiModelId}, ${selectedAgent.enableThinking != null ? selectedAgent.enableThinking : true})|"
+                        th:attr="onclick=|showEditModal(${selectedAgent.id}, '${#strings.escapeJava(selectedAgent.name)}', '${#strings.escapeJava(selectedAgent.description)}', '${#strings.escapeJava(selectedAgent.tools)}', ${selectedAgent.maxMemoryRecords != null ? selectedAgent.maxMemoryRecords : 20}, ${selectedAgent.maxToolInvocations != null ? selectedAgent.maxToolInvocations : 10}, ${selectedAgent.aiModelId}, ${selectedAgent.enableThinking != null ? selectedAgent.enableThinking : true}, ${selectedAgent.vectorToolSearch != null ? selectedAgent.vectorToolSearch : true}, ${selectedAgent.vectorToolSearchMaxResults != null ? selectedAgent.vectorToolSearchMaxResults : 5})|"
                         title="编辑">
                     <svg viewBox="0 0 24 24" fill="currentColor">
                         <path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/>
@@ -196,12 +196,32 @@
                     </div>
                     <div class="form-row">
                         <div class="form-group">
-                            <label>
+                            <div class="toggle-wrapper">
                                 <input type="hidden" name="enableThinking" id="addEnableThinking" value="true">
-                                <input type="checkbox" checked
-                                       onchange="document.getElementById('addEnableThinking').value=this.checked?'true':'false'">
-                                启用思考（Thinking）
-                            </label>
+                                <label class="toggle">
+                                    <input type="checkbox" checked
+                                           onchange="document.getElementById('addEnableThinking').value=this.checked?'true':'false'">
+                                    <span class="slider"></span>
+                                </label>
+                                <span class="toggle-label">启用思考（Thinking）</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <div class="toggle-wrapper">
+                                <input type="hidden" name="vectorToolSearch" id="addVectorToolSearch" value="true">
+                                <label class="toggle">
+                                    <input type="checkbox" checked
+                                           onchange="document.getElementById('addVectorToolSearch').value=this.checked?'true':'false';document.getElementById('addVectorToolSearchResultsGroup').style.display=this.checked?'':'none'">
+                                    <span class="slider"></span>
+                                </label>
+                                <span class="toggle-label">启用搜索工具</span>
+                            </div>
+                        </div>
+                        <div class="form-group form-inline" id="addVectorToolSearchResultsGroup">
+                            <label>最大数量</label>
+                            <input type="number" name="vectorToolSearchMaxResults" value="5" min="1" max="50" placeholder="5">
                         </div>
                     </div>
                 </div>
@@ -282,12 +302,32 @@
                     </div>
                     <div class="form-row">
                         <div class="form-group">
-                            <label>
+                            <div class="toggle-wrapper">
                                 <input type="hidden" name="enableThinking" id="editEnableThinking" value="true">
-                                <input type="checkbox" id="editEnableThinkingCheckbox"
-                                       onchange="document.getElementById('editEnableThinking').value=this.checked?'true':'false'">
-                                启用思考（Thinking）
-                            </label>
+                                <label class="toggle">
+                                    <input type="checkbox" id="editEnableThinkingCheckbox"
+                                           onchange="document.getElementById('editEnableThinking').value=this.checked?'true':'false'">
+                                    <span class="slider"></span>
+                                </label>
+                                <span class="toggle-label">启用思考（Thinking）</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <div class="toggle-wrapper">
+                                <input type="hidden" name="vectorToolSearch" id="editVectorToolSearch" value="true">
+                                <label class="toggle">
+                                    <input type="checkbox" id="editVectorToolSearchCheckbox"
+                                           onchange="document.getElementById('editVectorToolSearch').value=this.checked?'true':'false';document.getElementById('editVectorToolSearchResultsGroup').style.display=this.checked?'':'none'">
+                                    <span class="slider"></span>
+                                </label>
+                                <span class="toggle-label">启用搜索工具</span>
+                            </div>
+                        </div>
+                        <div class="form-group form-inline" id="editVectorToolSearchResultsGroup">
+                            <label>最大数量</label>
+                            <input type="number" name="vectorToolSearchMaxResults" id="editVectorToolSearchMaxResults" value="5" min="1" max="50" placeholder="5">
                         </div>
                     </div>
                 </div>
