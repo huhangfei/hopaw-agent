@@ -12,6 +12,7 @@ import com.agent.hopaw.model.ScheduledTask;
 import com.agent.hopaw.service.*;
 import com.agent.hopaw.util.InvocationParametersWrapper;
 import com.alibaba.fastjson2.JSON;
+import dev.langchain4j.agent.tool.ToolExecutionRequest;
 import dev.langchain4j.data.message.*;
 import dev.langchain4j.invocation.InvocationParameters;
 import dev.langchain4j.model.chat.ChatModel;
@@ -108,7 +109,21 @@ public class LongTermMemoryTaskHandler implements TaskHandler {
                     conversationBuilder.append("Ai:").append("\n").append(aiMessage.text()).append("\n");
                 }
                 if (aiMessage.toolExecutionRequests() != null && !aiMessage.toolExecutionRequests().isEmpty()) {
-                    logger.info("Ai tool call:", JSON.toJSONString(aiMessage.toolExecutionRequests().stream().map(x -> "id:" + x.id() + ",name:" + x.name() + ",arguments:" + x.arguments()).collect(Collectors.toList())));
+                    ToolExecutionRequest toolExecutionRequest = aiMessage.toolExecutionRequests().get(0);
+                    conversationBuilder.append("Ai tool call:").append("\n")
+                            .append("id:").append(toolExecutionRequest.id()).append("\n")
+                            .append("name:").append(toolExecutionRequest.name()).append("\n");
+                            if(toolExecutionRequest.arguments()!=null){
+                                String arguments = toolExecutionRequest.arguments();
+                                //参数作用不大，如果长度大于100进行截取
+                                if(arguments.length()>100){
+                                    arguments = arguments.substring(0, 100);
+                                }
+                                conversationBuilder
+                                        .append("arguments:")
+                                        .append(arguments).append("\n");
+                            }
+                    conversationBuilder.append("\n");
                 }
             } else if (message instanceof SystemMessage) {
                 SystemMessage systemMessage = (SystemMessage) message;
