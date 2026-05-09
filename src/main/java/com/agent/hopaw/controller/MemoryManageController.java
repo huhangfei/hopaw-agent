@@ -55,8 +55,10 @@ public class MemoryManageController {
         String memory = (String) body.get("memory");
         Object parentIdObj = body.get("parentId");
         Long parentId = parentIdObj != null ? Long.valueOf(parentIdObj.toString()) : null;
+        String memoryType = (String) body.get("memoryType");
+        String summary = (String) body.get("summary");
 
-        LongTermMemory entity = longTermMemoryService.createMemory(agentId, memory, parentId, DefaultUser.USER);
+        LongTermMemory entity = longTermMemoryService.createMemory(agentId, memory, parentId, DefaultUser.USER, memoryType, summary);
         return ResponseBean.success(entity);
     }
 

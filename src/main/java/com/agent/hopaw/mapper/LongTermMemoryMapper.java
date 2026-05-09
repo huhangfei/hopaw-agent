@@ -4,6 +4,7 @@ import com.agent.hopaw.model.LongTermMemory;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
 
+import java.time.LocalDateTime;
 import java.util.List;
 
 @Mapper
@@ -13,6 +14,10 @@ public interface LongTermMemoryMapper {
     List<LongTermMemory> findByAgentIdAndUserId(@Param("agentId") String agentId, @Param("userId") String userId);
 
     List<LongTermMemory> findByAgentIdAndParentId(@Param("agentId") String agentId, @Param("parentId") Long parentId);
+
+    List<LongTermMemory> findByAgentIdAndUserIdAndMemoryTypeAndTime(@Param("agentId") String agentId, @Param("userId") String userId, @Param("memoryType") String memoryType, @Param("beginDateTime") LocalDateTime beginDateTime);
+
+    List<LongTermMemory> findByAgentIdAndMemoryType(@Param("agentId") String agentId, @Param("memoryType") String memoryType);
     List<LongTermMemory> findRootsByAgentIdAndUserId(@Param("agentId") String agentId,@Param("userId") String userId);
 
     LongTermMemory findByAgentIdAndHash(@Param("agentId") String agentId, @Param("hash") String hash);

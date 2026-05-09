@@ -668,8 +668,8 @@
     color: #fff;
 }
 .checkbox-group{
-    max-height: 380px;
-    overflow-y: auto;
+    max-height: 425px;
+    overflow-y: scroll;
 }
 .checkbox-item {
     display: flex;

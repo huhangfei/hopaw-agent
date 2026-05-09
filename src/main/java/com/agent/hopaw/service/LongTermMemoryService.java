@@ -1,5 +1,6 @@
 package com.agent.hopaw.service;
 
+import com.agent.hopaw.constant.LongTermMemoryTypeEnum;
 import com.agent.hopaw.mapper.LongTermMemoryMapper;
 import com.agent.hopaw.model.LongTermMemory;
 import com.agent.hopaw.util.InvocationParametersWrapper;
@@ -9,7 +10,7 @@ import dev.langchain4j.invocation.InvocationParameters;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
-import java.util.Arrays;
+import java.time.format.DateTimeFormatter;
 import java.util.List;
 import java.util.UUID;
 
@@ -17,13 +18,11 @@ import java.util.UUID;
 public class LongTermMemoryService {
 
     private final LongTermMemoryMapper longTermMemoryMapper;
+    private final SysConfigService sysConfigService;
 
-    public LongTermMemoryService(LongTermMemoryMapper longTermMemoryMapper) {
+    public LongTermMemoryService(LongTermMemoryMapper longTermMemoryMapper, SysConfigService sysConfigService) {
         this.longTermMemoryMapper = longTermMemoryMapper;
-    }
-
-    public List<LongTermMemory> getMemoriesByAgentId(String agentId) {
-        return longTermMemoryMapper.findByAgentId(agentId);
+        this.sysConfigService = sysConfigService;
     }
 
     public List<LongTermMemory> getRootMemories(String agentId,String userId) {
@@ -39,25 +38,26 @@ public class LongTermMemoryService {
     }
 
     public LongTermMemory createMemory(String agentId, String memory, Long parentId, String userId) {
+        return createMemory(agentId, memory, parentId, userId, null, null);
+    }
+
+    public LongTermMemory createMemory(String agentId, String memory, Long parentId, String userId,
+                                        String memoryType, String summary) {
         LongTermMemory entity = new LongTermMemory(agentId, memory, parentId);
         entity.setUserId(userId);
+        entity.setMemoryType(memoryType);
+        entity.setSummary(summary);
         longTermMemoryMapper.insert(entity);
         return entity;
     }
 
     public LongTermMemory createMemory(String agentId, String memory, Long parentId) {
-        return createMemory(agentId, memory, parentId, null);
+        return createMemory(agentId, memory, parentId, null, null, null);
     }
 
 
     public void deleteMemory(Long id) {
         LongTermMemory memory = longTermMemoryMapper.findById(id);
-        if (memory != null) {
-            List<LongTermMemory> children = longTermMemoryMapper.findByAgentIdAndParentId(memory.getAgentId(), id);
-            for (LongTermMemory child : children) {
-                longTermMemoryMapper.updateParentId(child.getId(), null);
-            }
-        }
         longTermMemoryMapper.deleteById(id);
     }
 
@@ -78,23 +78,77 @@ public class LongTermMemoryService {
         return longTermMemoryMapper.findByAgentIdAndUserId(agentId, userId);
     }
 
-
-    public String getMemoryTree(String agentId,String userId) {
-        List<LongTermMemory> rootMemories = getRootMemories(agentId,userId);
-        StringBuilder sb = new StringBuilder();
-        buildMemoryTreeRecursive(sb, rootMemories, 0, true);
-        return sb.toString();
+    public List<LongTermMemory> getMemoriesByAgentIdAndUserIdAndMemoryType(String agentId, String userId, String memoryType,LocalDateTime beginDateTime) {
+        return longTermMemoryMapper.findByAgentIdAndUserIdAndMemoryTypeAndTime(agentId, userId, memoryType, beginDateTime);
     }
 
-    public String getMemoryTree(String agentId, Long parentId) {
-        LongTermMemory rootMemory = getMemoryById(parentId);
-        if (rootMemory == null) {
-            return "未找到ID为 " + parentId + " 的记忆";
+    public List<LongTermMemory> getMemoriesByAgentIdAndUserId(String agentId, String userId, LocalDateTime beginDateTime) {
+        return getMemoriesByAgentIdAndUserIdAndMemoryType(agentId, userId,null, beginDateTime);
+    }
+    public List<LongTermMemory> getRecentMemoriesByAgentIdAndUserId(String agentId, String userId) {
+        int taskRecordsArrangeTimeoutHour = Integer.parseInt(sysConfigService.getValueByKey("taskRecordsArrangeTimeoutHour", "48"));
+        LocalDateTime beginDateTime = LocalDateTime.now().minusHours(taskRecordsArrangeTimeoutHour);
+        return getMemoriesByAgentIdAndUserIdAndMemoryType(agentId, userId,null, beginDateTime);
+    }
+
+
+    public LongTermMemory getMemoryByAgentIdAndUserIdAndMemoryType(String agentId, String userId, String memoryType, LocalDateTime beginDateTime) {
+        List<LongTermMemory> memories = getMemoriesByAgentIdAndUserIdAndMemoryType(agentId, userId, memoryType, beginDateTime);
+        return memories.isEmpty() ? null : memories.get(0);
+    }
+
+    public LongTermMemory getMemoryByAgentIdAndUserIdAndMemoryType(String agentId, String userId, LongTermMemoryTypeEnum memoryType) {
+        return getMemoryByAgentIdAndUserIdAndMemoryType(agentId, userId, memoryType.getCode(), null);
+    } /**
+     * @param longTermMemories
+     * @return
+     */
+    public String buildMemoryContent(List<LongTermMemory> longTermMemories){
+        return buildMemoryContent(longTermMemories, true);
+    }
+    /**
+     * @param longTermMemories
+     * @return
+     */
+    public String buildMemoryContent(List<LongTermMemory> longTermMemories, Boolean includeDetail){
+        StringBuilder memory = new StringBuilder();
+        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
+        if(!longTermMemories.isEmpty()){
+            longTermMemories.stream().map(LongTermMemory::getMemoryType).forEach(memoryType -> {
+                longTermMemories.stream().filter(x -> x.getMemoryType().equals(memoryType)).forEach(x -> {
+                    memory.append("-------\n")
+                            .append(buildMemoryContent(x, includeDetail))
+                            .append("\n");
+                });
+            });
         }
-        StringBuilder sb = new StringBuilder();
-        buildMemoryTreeRecursive(sb, Arrays.asList(rootMemory), 0, true);
-        return sb.toString();
+        return memory.toString();
     }
+
+
+    /**
+     * @param memory
+     * @return
+     */
+    public String buildMemoryContent(LongTermMemory memory, Boolean includeDetail){
+        if(memory==null){
+            return "";
+        }
+        StringBuilder memorySb = new StringBuilder();
+        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
+        memorySb.append("【").append(LongTermMemoryTypeEnum.fromCode(memory.getMemoryType()).getName()).append("】\n")
+                .append("记忆编号:").append(memory.getId()).append("\n")
+                .append("记忆类型:").append(memory.getMemoryType()).append("\n")
+                .append("记忆概要:").append(memory.getSummary()).append("\n");
+                if(includeDetail!=null && includeDetail) {
+                    memorySb.append("记忆内容:").append(memory.getMemory()).append("\n");
+                }
+        memorySb.append("记忆内容:").append(memory.getMemory()).append("\n")
+                .append("更新时间:").append(memory.getUpdateTime().format(formatter)).append("\n")
+                .append("创建时间:").append(memory.getCreateTime().format(formatter));
+        return memorySb.toString();
+    }
+
 
     public String getRootMemory(String agentId,String userId) {
         List<LongTermMemory> rootMemories = getRootMemories(agentId,userId);
@@ -119,41 +173,16 @@ public class LongTermMemoryService {
         }
     }
 
-    public String getMemorySummary(String agentId,String userId) {
-        List<LongTermMemory> memories = getMemoriesByAgentId(agentId);
-        if (memories.isEmpty()) {
-            return "";
-        }
-
-        StringBuilder sb = new StringBuilder();
-        sb.append("【").append("智能体 " + agentId + " 记忆").append("】\n");
-
-        List<LongTermMemory> rootMemories = getRootMemories(agentId,userId);
-        for (LongTermMemory root : rootMemories) {
-            sb.append(root.getMemory());
-            List<LongTermMemory> children = getChildMemories(agentId, root.getId());
-            if (!children.isEmpty()) {
-                sb.append("：");
-                for (int i = 0; i < children.size(); i++) {
-                    sb.append(children.get(i).getMemory());
-                    if (i < children.size() - 1) {
-                        sb.append("，");
-                    }
-                }
-            }
-            sb.append("\n");
-        }
-        return sb.toString();
-    }
-    @Tool("删除智能体记忆内容，此方法删除指定id的记忆内容。")
-    public String deleteAgentMemory(@P(description="记忆ID") Long id){
+    @Tool("删除记忆内容，根据指定id删除")
+    public String deleteAgentMemory(@P(description="记忆Id") Long id){
         deleteMemory(id);
         return "成功";
     }
-    @Tool("保存智能体记忆,如果有记忆Id则为更新，如果记忆Id不存在则为新增。")
-    public String saveMemory(@P(description = "记忆内容") String memory,
-                             @P(description = "父记忆ID",required = false) Long parentId,
-                             @P(description = "记忆Id",required = false) Long id,
+    @Tool("保存记忆,如果有记忆Id则为更新，如果记忆Id不存在则为新增。")
+    public String saveMemory(@P(description = "记忆类型:userProfile、taskRecords、expandKnowledge",required = false) String memoryType,
+                             @P(description = "记忆概要") String summary,
+                             @P(description = "记忆内容") String memory,
+                             @P(description = "记忆Id，如果传入记忆Id则为更新，如果不传记忆Id则为新增。",required = false) Long id,
                              InvocationParameters invocationParameters) {
         LongTermMemory memoryEntity =null;
         String memoryHash = UUID.nameUUIDFromBytes((memory).getBytes()).toString();
@@ -163,18 +192,20 @@ public class LongTermMemoryService {
             memoryEntity = longTermMemoryMapper.findById(id);
             memoryEntity.setAgentId(invocationParametersWrapper.getAgentId());
             memoryEntity.setUserId(invocationParametersWrapper.getUserId());
+            memoryEntity.setMemoryType(memoryType);
+            memoryEntity.setSummary(summary);
             memoryEntity.setMemory(memory);
             memoryEntity.setMemoryHash(memoryHash);
-            memoryEntity.setParentId(parentId);
             memoryEntity.setUpdateTime(LocalDateTime.now());
             longTermMemoryMapper.update(memoryEntity);
         }else{
             memoryEntity = new LongTermMemory();
             memoryEntity.setAgentId(invocationParametersWrapper.getAgentId());
             memoryEntity.setUserId(invocationParametersWrapper.getUserId());
+            memoryEntity.setMemoryType(memoryType);
+            memoryEntity.setSummary(summary);
             memoryEntity.setMemory(memory);
             memoryEntity.setMemoryHash(memoryHash);
-            memoryEntity.setParentId(parentId);
             memoryEntity.setCreateTime(LocalDateTime.now());
             longTermMemoryMapper.insert(memoryEntity);
         }

@@ -194,9 +194,10 @@ public class AgentService {
                 "你的agentId是" + agent.getId() + "。" +
                 "在遇到需要用户提供信息或最新信息不正确的时候，不要一直猜，先查询记忆，记忆中没有就问用户。" +
                 "在判断有需要调用工具就去调用，遇到危险操作，立刻停止操作，询问用户。\n";
-        String rootMemory = longTermMemoryService.getRootMemory(String.valueOf(agent.getId()), userId);
-        if (StringUtils.hasLength(rootMemory)) {
-            systemMessage += "这是所有记忆分类：\n" + rootMemory + "\n如果需要详细的记忆内容可以根据记忆编号查询所有子记忆。";
+        List<LongTermMemory> memories = longTermMemoryService.getRecentMemoriesByAgentIdAndUserId(String.valueOf(agent.getId()), userId);
+        String memoryContent = longTermMemoryService.buildMemoryContent(memories, false);
+        if (StringUtils.hasLength(memoryContent)) {
+            systemMessage += "这是所有记忆概要：\n" + memoryContent + "\n如果需要详细的记忆内容可以根据记忆编号查询记忆详情。";
         }
         return systemMessage;
     }

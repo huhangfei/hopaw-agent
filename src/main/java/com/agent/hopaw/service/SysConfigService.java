@@ -22,6 +22,10 @@ public class SysConfigService {
     public SysConfig getByKey(String key) {
         return sysConfigMapper.findByKey(key);
     }
+    public String getValueByKey(String key, String defaultValue) {
+        var config = getByKey(key);
+        return config != null ? config.getConfigValue() : defaultValue;
+    }
 
     public int save(SysConfig sysConfig) {
         return sysConfigMapper.insert(sysConfig);

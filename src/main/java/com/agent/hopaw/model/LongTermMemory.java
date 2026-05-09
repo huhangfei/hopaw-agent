@@ -5,6 +5,12 @@ import java.time.LocalDateTime;
 public class LongTermMemory {
     private Long id;
     private String agentId;
+    /**
+     * 记忆类型
+     * LongTermMemoryTypeEnum
+     */
+    private String memoryType;
+    private String summary;
     private String memory;
     private String memoryHash;
     private Long parentId;
@@ -37,6 +43,22 @@ public class LongTermMemory {
 
     public void setAgentId(String agentId) {
         this.agentId = agentId;
+    }
+
+    public String getMemoryType() {
+        return memoryType;
+    }
+
+    public void setMemoryType(String memoryType) {
+        this.memoryType = memoryType;
+    }
+
+    public String getSummary() {
+        return summary;
+    }
+
+    public void setSummary(String summary) {
+        this.summary = summary;
     }
 
     public String getMemory() {

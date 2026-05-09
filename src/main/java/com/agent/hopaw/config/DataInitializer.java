@@ -134,6 +134,16 @@ public class DataInitializer implements CommandLineRunner {
                 stmt.execute("ALTER TABLE long_term_memory ADD COLUMN user_id TEXT");
             } catch (Exception ignored) {
             }
+            // 兼容旧表：添加 memory_type 列（如果不存在）
+            try {
+                stmt.execute("ALTER TABLE long_term_memory ADD COLUMN memory_type TEXT");
+            } catch (Exception ignored) {
+            }
+            // 兼容旧表：添加 summary 列（如果不存在）
+            try {
+                stmt.execute("ALTER TABLE long_term_memory ADD COLUMN summary TEXT");
+            } catch (Exception ignored) {
+            }
 
             stmt.execute("CREATE TABLE IF NOT EXISTS ai_model_providers (" +
                     "id INTEGER PRIMARY KEY AUTOINCREMENT, " +
