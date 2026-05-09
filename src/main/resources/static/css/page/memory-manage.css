@@ -124,6 +124,9 @@
     color: #333;
     border-bottom: 1px solid #eee;
     background: #fafbfc;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
 }
 
 .tree-container {
@@ -220,6 +223,34 @@
     min-width: 0;
 }
 
+/* type node */
+.type-node-content {
+    background: #f8f9fc;
+    border: 1px solid #e8e9f0;
+    cursor: default !important;
+}
+.type-node-content:hover {
+    background: #f0f1f8;
+}
+.tree-type-icon {
+    font-size: 14px;
+    flex-shrink: 0;
+}
+.type-label {
+    font-weight: 600;
+    color: #4a5568;
+}
+.tree-type-count {
+    font-size: 11px;
+    color: #999;
+    flex-shrink: 0;
+}
+.type-node > .tree-children {
+    margin-left: 8px;
+    padding-left: 12px;
+    border-left: 2px solid #e8e9f0;
+}
+
 .tree-children {
     padding-left: 20px;
 }
@@ -288,6 +319,20 @@
 .editor-actions {
     display: flex;
     gap: 8px;
+}
+
+.editor-field {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+.editor-field label {
+    font-size: 13px;
+    color: #555;
+    font-weight: 500;
+}
+.editor-summary {
+    min-height: 60px !important;
 }
 
 /* Modal styles */

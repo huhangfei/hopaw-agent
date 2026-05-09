@@ -43,6 +43,17 @@
                         <textarea id="memoryPrompt" class="memory-prompt-input" rows="8" placeholder="自定义记忆整理的提示词，留空则使用默认提示词"></textarea>
                     </div>
 
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="taskRecordsArrangeTimeoutHour">近期任务记忆过期时间（小时）</label>
+                            <input type="number" id="taskRecordsArrangeTimeoutHour" class="settings-input" min="1" placeholder="48">
+                        </div>
+                        <div class="form-group">
+                            <label for="taskRecordsClearTimeoutDay">任务记忆过期归档时间（天）</label>
+                            <input type="number" id="taskRecordsClearTimeoutDay" class="settings-input" min="1" placeholder="7">
+                        </div>
+                    </div>
+
                     <div class="settings-actions">
                         <button class="btn-save-settings" onclick="saveSettings()">保存设置</button>
                     </div>

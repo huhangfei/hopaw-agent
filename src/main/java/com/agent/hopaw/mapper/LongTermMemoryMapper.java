@@ -13,7 +13,7 @@ public interface LongTermMemoryMapper {
 
     List<LongTermMemory> findByAgentIdAndUserId(@Param("agentId") String agentId, @Param("userId") String userId);
 
-    List<LongTermMemory> findByAgentIdAndParentId(@Param("agentId") String agentId, @Param("parentId") Long parentId);
+    List<LongTermMemory> findByParentId(@Param("parentId") Long parentId);
 
     List<LongTermMemory> findByAgentIdAndUserIdAndMemoryTypeAndTime(@Param("agentId") String agentId, @Param("userId") String userId, @Param("memoryType") String memoryType, @Param("beginDateTime") LocalDateTime beginDateTime);
 

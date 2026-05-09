@@ -31,6 +31,8 @@ function loadAllSettings() {
                 selectModelById(savedModelId);
             }
             document.getElementById('memoryPrompt').value = settingsCache['memory_prompt'] || '';
+            document.getElementById('taskRecordsArrangeTimeoutHour').value = settingsCache['taskRecordsArrangeTimeoutHour'] || '48';
+            document.getElementById('taskRecordsClearTimeoutDay').value = settingsCache['taskRecordsClearTimeoutDay'] || '7';
             loadMailSettings();
             loadSearchSettings();
         })
@@ -100,11 +102,15 @@ function selectModelById(modelId) {
 function saveSettings() {
     var modelId = document.getElementById('memoryModelSelect').value;
     var prompt = document.getElementById('memoryPrompt').value.trim();
+    var arrangeTimeoutHour = document.getElementById('taskRecordsArrangeTimeoutHour').value.trim();
+    var clearTimeoutDay = document.getElementById('taskRecordsClearTimeoutDay').value.trim();
 
     var saves = [];
 
     saves.push(saveConfig('memory_ai_model_id', modelId, '记忆整理使用模型'));
     saves.push(saveConfig('memory_prompt', prompt, '记忆整理提示词'));
+    saves.push(saveConfig('taskRecordsArrangeTimeoutHour', arrangeTimeoutHour, '近期任务记忆过期时间（小时）'));
+    saves.push(saveConfig('taskRecordsClearTimeoutDay', clearTimeoutDay, '任务记忆过期归档时间（天）'));
 
     Promise.all(saves).then(function(results) {
         var allOk = results.every(function(r) { return r; });

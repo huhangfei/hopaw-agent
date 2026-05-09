@@ -39,12 +39,12 @@
         <if test="beginDateTime!=null">
             AND (update_time > #{beginDateTime} ||  memory_type!='taskRecords')
         </if>
-        ORDER BY parent_id ASC NULLS FIRST, id ASC
+        ORDER BY update_time desc
     </select>
-    <select id="findByAgentIdAndParentId" resultMap="LongTermMemoryResultMap">
+    <select id="findByParentId" resultMap="LongTermMemoryResultMap">
         SELECT id, agent_id, memory_type, summary, memory, memory_hash, parent_id, create_time, update_time, user_id
         FROM long_term_memory
-        WHERE agent_id = #{agentId} AND parent_id = #{parentId}
+        WHERE parent_id = #{parentId}
         ORDER BY id ASC
     </select>
 

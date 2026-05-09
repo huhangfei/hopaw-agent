@@ -1,6 +1,7 @@
 package com.agent.hopaw.service;
 
 import com.agent.hopaw.constant.AiModelCallSourceEnum;
+import com.agent.hopaw.constant.LongTermMemoryTypeEnum;
 import com.agent.hopaw.mapper.AgentMapper;
 import com.agent.hopaw.mapper.ChatMemoryMapper;
 import com.agent.hopaw.model.*;
@@ -194,10 +195,15 @@ public class AgentService {
                 "你的agentId是" + agent.getId() + "。" +
                 "在遇到需要用户提供信息或最新信息不正确的时候，不要一直猜，先查询记忆，记忆中没有就问用户。" +
                 "在判断有需要调用工具就去调用，遇到危险操作，立刻停止操作，询问用户。\n";
-        List<LongTermMemory> memories = longTermMemoryService.getRecentMemoriesByAgentIdAndUserId(String.valueOf(agent.getId()), userId);
-        String memoryContent = longTermMemoryService.buildMemoryContent(memories, false);
+        List<LongTermMemory> memories = longTermMemoryService.getRecentActivityMemoriesByAgentIdAndUserId(String.valueOf(agent.getId()), userId);
+        String memoryContent = longTermMemoryService.buildMemoryContent(memories, memory->{
+            if(LongTermMemoryTypeEnum.USER_PROFILE.getCode().equals(memory.getMemoryType())){
+                return true;
+            }
+            return false;
+        });
         if (StringUtils.hasLength(memoryContent)) {
-            systemMessage += "这是所有记忆概要：\n" + memoryContent + "\n如果需要详细的记忆内容可以根据记忆编号查询记忆详情。";
+            systemMessage += "这是所有记忆：\n" + memoryContent + "\n如果需要详细的记忆内容可以根据记忆编号查询记忆详情。";
         }
         return systemMessage;
     }
@@ -237,7 +243,7 @@ public class AgentService {
                     .chatMemory(memoryBuilder.build());
             if (selectedTools != null && agent.getVectorToolSearch() != null && agent.getVectorToolSearch()){
                 EmbeddingModel embeddingModel =new BgeSmallZhV15EmbeddingModel();
-                int maxResults = agent.getVectorToolSearchMaxResults() != null ? agent.getVectorToolSearchMaxResults() : 5;
+                int maxResults = agent.getVectorToolSearchMaxResults() != null ? agent.getVectorToolSearchMaxResults() : 10;
                 aiBuilder.toolSearchStrategy(
                                 VectorToolSearchStrategy
                                 .builder()
@@ -348,10 +354,11 @@ public class AgentService {
                         .onToolExecuted(toolExecution -> agentMessageHandler.toolExecutionHandler(toolExecution));
                 tokenStream.start();
 
-                latch.await(300, TimeUnit.SECONDS);
+                latch.await(600, TimeUnit.SECONDS);
                 agentMessageHandler.done();
             } catch (Exception e) {
                 logger.error("\n(注: 流式响应失败: " + e.getMessage() + ")", e);
+                cancelTask.set(true);
                 agentMessageHandler.onErrorHandler(e);
             }
         }

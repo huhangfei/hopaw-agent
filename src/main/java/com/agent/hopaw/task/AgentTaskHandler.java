@@ -8,7 +8,10 @@ import com.agent.hopaw.service.AiModelService;
 import com.agent.hopaw.service.LangChain4jMonitor;
 import com.agent.hopaw.service.TokenUsageService;
 import com.agent.hopaw.tools.AgentTool;
+import com.agent.hopaw.util.InvocationParametersWrapper;
+import dev.langchain4j.invocation.InvocationParameters;
 import dev.langchain4j.model.chat.ChatModel;
+import dev.langchain4j.model.chat.request.ChatRequestParameters;
 import dev.langchain4j.service.AiServices;
 import dev.langchain4j.service.UserMessage;
 import org.slf4j.Logger;
@@ -19,6 +22,7 @@ import org.springframework.stereotype.Component;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.UUID;
 import java.util.stream.Collectors;
 
 @Component
@@ -42,7 +46,8 @@ public class AgentTaskHandler implements TaskHandler {
     }
     public interface AgentTaskAssistant {
         @UserMessage("{{content}}")
-        String chat(String content);
+        String chat(String content,
+                    ChatRequestParameters chatRequestParameters, InvocationParameters invocationParameters);
     }
     private List<String> parseToolNames(String toolsStr) {
         if (toolsStr == null || toolsStr.isEmpty()) {
@@ -68,6 +73,10 @@ public class AgentTaskHandler implements TaskHandler {
                         return selectTools.contains(t.getName()) && !"agentTaskTool".equals(t.getName());
                     })
                     .collect(Collectors.toList());
+            InvocationParametersWrapper invocationParametersWrapper = InvocationParametersWrapper.create();
+            invocationParametersWrapper.setUserId(task.getUserId());
+            invocationParametersWrapper.setAgentId(agentIdStr);
+            invocationParametersWrapper.setRequestId(UUID.randomUUID().toString());
 
             AgentTaskAssistant assistant = AiServices.builder(AgentTaskAssistant.class)
                     .chatModel(chatModel)
@@ -75,7 +84,10 @@ public class AgentTaskHandler implements TaskHandler {
                     .tools(selectedTools.toArray())
                     .maxSequentialToolsInvocations(agent.getMaxToolInvocations())
                     .build();
-            String result = assistant.chat(task.getDescription());
+            ChatRequestParameters chatRequestParameters=ChatRequestParameters.builder()
+                    .temperature(0.1)
+                    .build();
+            String result = assistant.chat(task.getDescription(), chatRequestParameters, invocationParametersWrapper.getParameters());
             logger.info("定时任务执行结果 [{}] - {}: {}", task.getId(), task.getTaskName(), result);
             }
         } catch (Exception e) {

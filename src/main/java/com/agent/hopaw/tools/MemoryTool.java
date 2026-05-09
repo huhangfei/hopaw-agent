@@ -37,21 +37,28 @@ public class MemoryTool implements AgentTool {
     @Tool("查询用户画像记忆内容")
     public String queryUserProfileMemory(InvocationParameters invocationParameters){
         InvocationParametersWrapper invocationParametersWrapper = InvocationParametersWrapper.create(invocationParameters);
-        LongTermMemory memory = longTermMemoryService.getMemoryByAgentIdAndUserIdAndMemoryType(invocationParametersWrapper.getAgentId(), invocationParametersWrapper.getUserId(), LongTermMemoryTypeEnum.userProfile);
+        LongTermMemory memory = longTermMemoryService.getMemoryByAgentIdAndUserIdAndMemoryType(invocationParametersWrapper.getAgentId(), invocationParametersWrapper.getUserId(), LongTermMemoryTypeEnum.USER_PROFILE);
         return longTermMemoryService.buildMemoryContent(memory, true);
     }
     @Tool("查询所有记忆，如果不是特别需要不要包含详情")
     public String queryAllMemory(@P(description="是否包括详情",required = false) Boolean includeDetail, InvocationParameters invocationParameters){
         InvocationParametersWrapper invocationParametersWrapper = InvocationParametersWrapper.create(invocationParameters);
 
-        List<LongTermMemory> memories = longTermMemoryService.getRecentMemoriesByAgentIdAndUserId(invocationParametersWrapper.getAgentId(), invocationParametersWrapper.getUserId());
+        List<LongTermMemory> memories = longTermMemoryService.getRecentActivityMemoriesByAgentIdAndUserId(invocationParametersWrapper.getAgentId(), invocationParametersWrapper.getUserId());
         return longTermMemoryService.buildMemoryContent(memories,includeDetail);
     }
     @Tool("查询记忆详细内容,根据指定Id查询")
     public String queryMemoryById(@P(description="记忆Id")Long id,InvocationParameters invocationParameters){
         InvocationParametersWrapper invocationParametersWrapper = InvocationParametersWrapper.create(invocationParameters);
         LongTermMemory memory = longTermMemoryService.getMemoryById(id);
-        return longTermMemoryService.buildMemoryContent(memory, true);
+        String memoryContent = longTermMemoryService.buildMemoryContent(memory, true);
+        if(memory!=null){
+            List<LongTermMemory> childMemories = longTermMemoryService.getChildMemories(memory.getId());
+            if(childMemories.isEmpty()){
+                memoryContent+="\n子记忆:\n"+longTermMemoryService.buildMemoryContent(childMemories,false);
+            }
+        }
+        return memoryContent;
     }
     @Tool("删除记忆内容，根据指定id删除")
     public String deleteAgentMemory(@P(description="记忆Id") Long id){

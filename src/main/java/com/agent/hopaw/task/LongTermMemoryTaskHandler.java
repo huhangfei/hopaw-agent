@@ -24,7 +24,6 @@ import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
 
 import java.time.LocalDateTime;
-import java.time.format.DateTimeFormatter;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -184,7 +183,9 @@ public class LongTermMemoryTaskHandler implements TaskHandler {
         String agentIdStr = String.valueOf(agent.getId());
 
         //现有记忆
-        List<LongTermMemory> longTermMemories = longTermMemoryService.getRecentMemoriesByAgentIdAndUserId(agentIdStr, userId);
+        List<LongTermMemory> longTermMemories = longTermMemoryService.getRecentActivityMemoriesByAgentIdAndUserId(agentIdStr, userId);
+        //仅整理预设的两个类型
+        longTermMemories = longTermMemories.stream().filter(x->x.getMemoryType().equals(LongTermMemoryTypeEnum.USER_PROFILE.getCode()) || x.getMemoryType().equals(LongTermMemoryTypeEnum.TASK_RECORDS)).collect(Collectors.toList());
         String content = buildContent(longTermMemories, newConversation);
 
         boolean handle = handle(agentIdStr,userId, content);
