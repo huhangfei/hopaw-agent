@@ -15,6 +15,7 @@ import dev.langchain4j.model.chat.ChatModel;
 import dev.langchain4j.model.chat.StreamingChatModel;
 import dev.langchain4j.model.chat.response.ChatResponse;
 import dev.langchain4j.model.chat.response.PartialThinking;
+import dev.langchain4j.model.chat.response.PartialToolCall;
 import dev.langchain4j.model.embedding.EmbeddingModel;
 import dev.langchain4j.model.embedding.onnx.bgesmallzhv15.BgeSmallZhV15EmbeddingModel;
 import dev.langchain4j.service.AiServices;
@@ -343,6 +344,7 @@ public class AgentService {
                         })
                         .onPartialToolCallWithContext((toolCall, ctx) -> {
                             //logger.info("Tool call: {}", toolCall.toString());
+                            agentMessageHandler.partialToolExecutionHandler(toolCall);
                             if (cancelTask.get()) {
                                 agentMessageHandler.done();
                                 ctx.streamingHandle().cancel(); // ✅ 真正中断：关闭流、停止LLM、省token
@@ -445,6 +447,16 @@ public class AgentService {
                 done();
             }
 
+            private void partialToolExecutionHandler(PartialToolCall toolCall) {
+                this.toolCallInfo = ToolCallInfo.preparing(
+                        toolCall.id(),
+                        toolCall.name(),
+                        toolCall.partialArguments()
+                );
+                toolCallInfo.setResponseId(responseId);
+                messageTypeChangedChatHistoryHandler("tool_call_preparing");
+            }
+
             private void beforeToolExecutionHandler(BeforeToolExecution toolExecution) {
 
                 this.toolCallInfo = ToolCallInfo.starting(
@@ -524,16 +536,18 @@ public class AgentService {
                     lastMessageType = currentMessageType;
                 }
                 //开始调用 和 结束调用
-                if (currentMessageType.equals("tool_call_start") || currentMessageType.equals("tool_call_end")) {
+                if (currentMessageType.startsWith("tool_call")) {
                     messageConsumer.accept(JSON.toJSONString(toolCallInfo));
-                    //入库
-                    ChatHistory toolChat = new ChatHistory(
-                            agent.getId(), "agent", "tool_call",
-                            toolCallInfo.getToolCallId(), toolCallInfo.getToolName(),
-                            toolCallInfo.getArguments().toString(), toolCallInfo.getResult() != null ? (String) toolCallInfo.getResult() : null
-                    );
-                    toolChat.setToolCallStatus(currentMessageType);
-                    chatHistoryConsumer.accept(toolChat);
+                    if(currentMessageType.equals("tool_call_start") || currentMessageType.equals("tool_call_end")){
+                        //入库
+                        ChatHistory toolChat = new ChatHistory(
+                                agent.getId(), "agent", "tool_call",
+                                toolCallInfo.getToolCallId(), toolCallInfo.getToolName(),
+                                toolCallInfo.getArguments().toString(), toolCallInfo.getResult() != null ? (String) toolCallInfo.getResult() : null
+                        );
+                        toolChat.setToolCallStatus(currentMessageType);
+                        chatHistoryConsumer.accept(toolChat);
+                    }
                 }
             }
         }

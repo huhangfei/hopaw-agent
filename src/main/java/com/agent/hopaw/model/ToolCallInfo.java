@@ -2,6 +2,7 @@ package com.agent.hopaw.model;
 
 public class ToolCallInfo {
     public static final String TYPE_TOOL_CALL = "tool_call";
+    public static final String STATUS_PREPARING = "preparing";
     public static final String STATUS_STARTING = "starting";
     public static final String STATUS_EXECUTED = "executed";
 
@@ -16,6 +17,15 @@ public class ToolCallInfo {
     public ToolCallInfo() {
     }
 
+    public static ToolCallInfo preparing(String toolCallId, String toolName, Object arguments) {
+        ToolCallInfo info = new ToolCallInfo();
+        info.type = TYPE_TOOL_CALL;
+        info.status = STATUS_PREPARING;
+        info.toolCallId = toolCallId;
+        info.toolName = toolName;
+        info.arguments = arguments;
+        return info;
+    }
     public static ToolCallInfo starting(String toolCallId, String toolName, Object arguments) {
         ToolCallInfo info = new ToolCallInfo();
         info.type = TYPE_TOOL_CALL;
