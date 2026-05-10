@@ -68,44 +68,36 @@ public class CommandExecutorTool implements AgentTool {
             processBuilder.redirectErrorStream(true);
 
             Process process = processBuilder.start();
-            CompletableFuture<String> outputFuture = CompletableFuture.supplyAsync(() -> {
-                        StringBuilder output = new StringBuilder();
-                        try (BufferedReader reader = new BufferedReader(new InputStreamReader(process.getInputStream(), determineEncoding(os)))) {
-                            String line;
-                            int lineCount = 0;
-                            while ((line = reader.readLine()) != null) {
-                                if (agentExecutorManager.toolIsCancelled(agentId, userId, toolCallId)) {
-                                    process.destroyForcibly();
-                                    throw new RuntimeException("CANCELLED_BY_USER"); // 使用异常跳出，方便主线程捕获
-                                }
-
-                                if (lineCount >= MAX_OUTPUT_LINES) {
-                                    output.append("\n... (输出已截断，超过 ").append(MAX_OUTPUT_LINES).append(" 行)");
-                                    break;
-                                }
-                                agentExecutorManager.sendToolRunningContent(agentId, userId, toolCallId, line + "\n");
-                                output.append(line).append("\n");
-                                lineCount++;
-                            }
-                        }catch (IOException e) {
-                            // 进程被强制杀死时可能会触发 IOException，属于正常现象
-                            if (process.isAlive()) throw new RuntimeException(e);
-                        }
-                        return output.toString();
-                    });
-
-            String result;
+            StringBuilder output = new StringBuilder();
+            try (BufferedReader reader = new BufferedReader(new InputStreamReader(process.getInputStream(), determineEncoding(os)))) {
+                String line;
+                int lineCount = 0;
+                while ((line = reader.readLine()) != null) {
+                    if (agentExecutorManager.toolIsCancelled(agentId, userId, toolCallId)) {
+                        process.destroyForcibly();
+                        throw new RuntimeException("CANCELLED_BY_USER"); // 使用异常跳出，方便主线程捕获
+                    }
+                    if (lineCount >= MAX_OUTPUT_LINES) {
+                        output.append("\n... (输出已截断，超过 ").append(MAX_OUTPUT_LINES).append(" 行)");
+                        break;
+                    }
+                    agentExecutorManager.sendToolRunningContent(agentId, userId, toolCallId, line + "\n");
+                    output.append(line).append("\n");
+                    lineCount++;
+                }
+            }catch (IOException e) {
+                // 进程被强制杀死时可能会触发 IOException，属于正常现象
+                if (process.isAlive()) throw new RuntimeException(e);
+            }
             int exitCode;
             try {
                 // 等待进程退出（带超时）
                 Process exitedProcess = process.onExit().get(timeout, TimeUnit.SECONDS);
-                // 确保输出流读取完毕
-                result = outputFuture.get(5, TimeUnit.SECONDS);
                 exitCode = process.exitValue();
-                if (result.isEmpty()) {
+                if (output.isEmpty()) {
                     return "命令执行成功 (退出码: " + exitCode + ")，无输出";
                 }
-                return "退出码: " + exitCode + "\n\n" + result;
+                return "退出码: " + exitCode + "\n\n" + output;
             }catch (ExecutionException e) {
                 // 捕获异步线程里抛出的 CANCELLED 异常
                 if (e.getCause() instanceof RuntimeException && "CANCELLED_BY_USER".equals(e.getCause().getMessage())) {
@@ -114,9 +106,7 @@ public class CommandExecutorTool implements AgentTool {
                 throw e;
             } catch (TimeoutException e) {
                 process.destroyForcibly();
-                // 尝试获取已经输出的内容
-                result = outputFuture.getNow("... (获取输出超时)");
-                return "错误: 命令执行超时 (超过 " + timeout + " 秒)，已强制终止\n" + result;
+                return "错误: 命令执行超时 (超过 " + timeout + " 秒)，已强制终止\n";
             }
 
         }catch (Exception e) {
