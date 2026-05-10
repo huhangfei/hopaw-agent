@@ -24,7 +24,7 @@ public class WebSearchTool implements AgentTool {
         this.qianfanWebSearchUtil = qianfanWebSearchUtil;
     }
 
-    @Tool("搜索互联网网页信息，返回相关的网页标题和摘要内容。")
+    @Tool("搜索查询互联网最新网络信息，返回相关的网页标题和摘要内容。")
     public String webSearch(@P(description = "搜索关键词") String query, @P(description = "搜索源（可选值有 baiduqianfan）默认 baiduqianfan", required = false) String source, @P(description = "最大结果数，默认10", required = false) Integer maxResults, @P(description = "超时时间（毫秒），默认10000毫秒", required = false) Integer timeout) {
         if (query == null || query.trim().isEmpty()) {
             return "错误: 搜索关键词不能为空";

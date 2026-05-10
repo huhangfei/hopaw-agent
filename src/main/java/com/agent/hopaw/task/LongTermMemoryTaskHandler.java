@@ -10,6 +10,7 @@ import com.agent.hopaw.model.ChatMemory;
 import com.agent.hopaw.model.LongTermMemory;
 import com.agent.hopaw.model.ScheduledTask;
 import com.agent.hopaw.service.*;
+import com.agent.hopaw.tools.MemoryTool;
 import com.agent.hopaw.util.InvocationParametersWrapper;
 import dev.langchain4j.agent.tool.ToolExecutionRequest;
 import dev.langchain4j.data.message.*;
@@ -37,6 +38,9 @@ public class LongTermMemoryTaskHandler implements TaskHandler {
     private final AgentMapper agentMapper;
     private final SysConfigService sysConfigService;
     private final TokenUsageService tokenUsageService;
+    
+    // 运行中标记，防止并发执行
+    private volatile boolean running = false;
 
     public LongTermMemoryTaskHandler(AiModelService aiModelService,
                                      LongTermMemoryService longTermMemoryService,
@@ -249,7 +253,7 @@ public class LongTermMemoryTaskHandler implements TaskHandler {
             MemoryAssistant assistant = AiServices.builder(MemoryAssistant.class)
                     .chatModel(chatModel)
                     .systemMessageProvider(chatMemoryId -> systemMessage)
-                    .tools(Arrays.asList(longTermMemoryService))
+                    .tools(Arrays.asList(new MemoryTool(longTermMemoryService)))
                     .build();
             logger.info("开始汇总记忆 \n {}", content);
             ChatRequestParameters chatRequestParameters = ChatRequestParameters.builder()
@@ -272,10 +276,23 @@ public class LongTermMemoryTaskHandler implements TaskHandler {
     @Override
     public void execute(ScheduledTask task) {
         logger.info("定时记忆整理任务执行 [{}]", task.getId());
+        
+        // 检查是否已经在运行
+        if (running) {
+            logger.warn("记忆整理任务正在运行中，跳过本次执行 [{}]", task.getId());
+            return;
+        }
+        
+        // 标记为运行中
+        running = true;
         try {
             processAgentMemories();
         } catch (Exception e) {
             logger.error("记忆整理任务执行失败", e);
+        } finally {
+            // 任务结束后恢复标记
+            running = false;
+            logger.info("记忆整理任务执行完成 [{}]", task.getId());
         }
     }
 

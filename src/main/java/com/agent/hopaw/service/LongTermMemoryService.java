@@ -4,8 +4,6 @@ import com.agent.hopaw.constant.LongTermMemoryTypeEnum;
 import com.agent.hopaw.mapper.LongTermMemoryMapper;
 import com.agent.hopaw.model.LongTermMemory;
 import com.agent.hopaw.util.InvocationParametersWrapper;
-import dev.langchain4j.agent.tool.P;
-import dev.langchain4j.agent.tool.Tool;
 import dev.langchain4j.invocation.InvocationParameters;
 import org.springframework.stereotype.Service;
 
@@ -200,8 +198,7 @@ public class LongTermMemoryService {
         return buildMemoryContent(memory, includeDetail);
     }
 
-    @Tool("查询用户记忆详细内容,根据指定Id查询")
-    public String getMemoryContentById(@P(description="记忆Id")Long id) {
+    public String getMemoryContentById(Long id) {
         LongTermMemory memory = getMemoryById(id);
         String memoryContent = buildMemoryContent(memory, true);
         if(memory!=null){
@@ -212,17 +209,11 @@ public class LongTermMemoryService {
         }
         return memoryContent;
     }
-    @Tool("删除记忆内容，根据指定id删除")
-    public String deleteAgentMemory(@P(description = "记忆Id") Long id) {
-        deleteMemory(id);
-        return "成功";
-    }
 
-    @Tool("保存记忆,如果有记忆Id则为更新，如果记忆Id不存在则为新增。")
-    public String saveMemory(@P(description = "记忆类型:userProfile、taskRecords、expandKnowledge", required = false) String memoryType,
-                             @P(description = "记忆概要") String summary,
-                             @P(description = "记忆内容") String memory,
-                             @P(description = "记忆Id，如果传入记忆Id则为更新，如果不传记忆Id则为新增。", required = false) Long id,
+    public String saveMemory(String memoryType,
+                             String summary,
+                             String memory,
+                             Long id,
                              InvocationParameters invocationParameters) {
         LongTermMemory memoryEntity = null;
         String memoryHash = UUID.nameUUIDFromBytes((memory).getBytes()).toString();

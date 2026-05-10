@@ -94,14 +94,24 @@ function connectWebSocket(agentId) {
 function handleToolCall(data, responseId) {
     var messagesDiv = document.getElementById('chatMessages');
     var agentName = document.querySelector('.chat-header h2') ? document.querySelector('.chat-header h2').textContent : 'Agent';
-    
+
     var msgState = streamingMessages[responseId];
     if (!msgState) {
-        msgState = { currentStreamingMessage: null, streamingMarkdownContent: '', lastMessageType: null };
+        msgState = { currentStreamingMessage: null, streamingMarkdownContent: '', lastMessageType: null, toolCallArgsBuffer: {}, toolCallResultBuffer: {} };
         streamingMessages[responseId] = msgState;
     }
-    
-    if (data.status === 'starting') {
+    if (msgState.toolCallArgsBuffer == null) {
+        msgState.toolCallArgsBuffer = {};
+    }
+    if (msgState.toolCallResultBuffer == null) {
+        msgState.toolCallResultBuffer = {};
+    }
+
+    // Look up existing tool-call DOM element (may have been created by a prior status)
+    var toolCallDiv = document.querySelector('.tool-call[data-tool-call-id="' + data.toolCallId + '"]');
+
+    // ── create wrapper if nothing exists yet ──
+    if (!toolCallDiv) {
         msgState.streamingMarkdownContent = '';
         msgState.lastMessageType = 'tool_call';
 
@@ -118,10 +128,10 @@ function handleToolCall(data, responseId) {
         toolCallContainer.className = 'tool-call-container';
         msgState.currentStreamingMessage.appendChild(toolCallContainer);
 
-        var toolCallDiv = document.createElement('div');
+        toolCallDiv = document.createElement('div');
         toolCallDiv.className = 'tool-call';
         toolCallDiv.setAttribute('data-tool-call-id', data.toolCallId);
-        toolCallDiv.setAttribute('data-status', 'starting');
+        toolCallContainer.appendChild(toolCallDiv);
 
         var toolCallHeader = document.createElement('div');
         toolCallHeader.className = 'tool-call-header';
@@ -138,73 +148,114 @@ function handleToolCall(data, responseId) {
 
         var toolCallStatus = document.createElement('span');
         toolCallStatus.className = 'tool-call-status';
-        toolCallStatus.textContent = '执行中...';
         toolCallHeader.appendChild(toolCallStatus);
 
         toolCallDiv.appendChild(toolCallHeader);
 
-        // Create collapsible body wrapper (open during execution)
         var bodyDiv = document.createElement('div');
         bodyDiv.className = 'tool-call-body open';
         toolCallDiv.appendChild(bodyDiv);
+
+        messagesDiv.appendChild(msgState.currentStreamingMessage);
+    }
+
+    // ── per-status updates ──
+    var statusEl = toolCallDiv.querySelector('.tool-call-status');
+    var iconEl = toolCallDiv.querySelector('.tool-call-icon');
+    var bodyDiv = toolCallDiv.querySelector('.tool-call-body');
+
+    if (data.status === 'preparing') {
+        toolCallDiv.setAttribute('data-status', 'preparing');
+        if (statusEl) { statusEl.textContent = '准备中...'; statusEl.classList.remove('completed'); }
+        if (iconEl) { iconEl.textContent = '⚙️'; iconEl.style.animation = ''; }
+
+        if (data.argumentsPartial != null) {
+            var key = data.toolCallId;
+            msgState.toolCallArgsBuffer[key] = (msgState.toolCallArgsBuffer[key] || '') + data.argumentsPartial;
+            var argsDiv = bodyDiv.querySelector('.tool-call-args[data-partial-args]');
+            if (!argsDiv) {
+                argsDiv = document.createElement('div');
+                argsDiv.className = 'tool-call-args';
+                argsDiv.setAttribute('data-partial-args', data.toolCallId);
+                argsDiv.innerHTML = '<div class="args-label">参数(准备中):</div><pre class="args-content"></pre>';
+                bodyDiv.appendChild(argsDiv);
+            }
+            var preEl = argsDiv.querySelector('.args-content');
+            preEl.textContent = msgState.toolCallArgsBuffer[key];
+            preEl.scrollTop = preEl.scrollHeight;
+        }
+
+    } else if (data.status === 'starting') {
+        delete msgState.toolCallArgsBuffer[data.toolCallId];
+
+        toolCallDiv.setAttribute('data-status', 'starting');
+        if (statusEl) { statusEl.textContent = '执行中...'; statusEl.classList.remove('completed'); }
+        if (iconEl) { iconEl.textContent = '⚙️'; iconEl.style.animation = ''; }
+
+        // Remove old partial-args if any
+        var oldArgsDiv = bodyDiv.querySelector('.tool-call-args[data-partial-args]');
+        if (oldArgsDiv) oldArgsDiv.remove();
 
         if (data.arguments) {
             var argsDiv = document.createElement('div');
             argsDiv.className = 'tool-call-args';
             argsDiv.innerHTML = '<div class="args-label">参数:</div><pre class="args-content">' +
                 escapeHtml(JSON.stringify(data.arguments, null, 2)) + '</pre>';
-            bodyDiv.appendChild(argsDiv);
+            bodyDiv.insertBefore(argsDiv, bodyDiv.firstChild);
         }
 
-        toolCallContainer.appendChild(toolCallDiv);
-        messagesDiv.appendChild(msgState.currentStreamingMessage);
-        messagesDiv.scrollTop = messagesDiv.scrollHeight;
-    } else if (data.status === 'executed') {
-        var toolCallDiv = document.querySelector('.tool-call[data-tool-call-id="' + data.toolCallId + '"]');
-        if (toolCallDiv) {
-            toolCallDiv.setAttribute('data-status', 'executed');
+    } else if (data.status === 'running') {
+        toolCallDiv.setAttribute('data-status', 'running');
+        if (statusEl) { statusEl.textContent = '运行中...'; statusEl.classList.remove('completed'); }
+        if (iconEl) { iconEl.textContent = '⚙️'; iconEl.style.animation = ''; }
 
-            var statusEl = toolCallDiv.querySelector('.tool-call-status');
-            if (statusEl) {
-                statusEl.textContent = '执行完成';
-                statusEl.classList.add('completed');
-            }
-
-            var iconEl = toolCallDiv.querySelector('.tool-call-icon');
-            if (iconEl) {
-                iconEl.style.animation = 'none';
-                iconEl.textContent = '✅';
-            }
-
-            // Find or create collapsible body
-            var bodyDiv = toolCallDiv.querySelector('.tool-call-body');
-            if (!bodyDiv) {
-                bodyDiv = document.createElement('div');
-                bodyDiv.className = 'tool-call-body';
-                toolCallDiv.appendChild(bodyDiv);
-            }
-
-            if (data.result) {
-                var resultDiv = document.createElement('div');
+        if (data.resultPartial != null) {
+            var key = data.toolCallId;
+            msgState.toolCallResultBuffer[key] = (msgState.toolCallResultBuffer[key] || '') + data.resultPartial;
+            var resultDiv = bodyDiv.querySelector('.tool-call-result[data-partial-result]');
+            if (!resultDiv) {
+                resultDiv = document.createElement('div');
                 resultDiv.className = 'tool-call-result';
-                resultDiv.innerHTML = '<div class="result-label">结果:</div><pre class="result-content">' +
-                    escapeHtml(data.result) + '</pre>';
+                resultDiv.setAttribute('data-partial-result', data.toolCallId);
+                resultDiv.innerHTML = '<div class="result-label">结果(运行中):</div><pre class="result-content"></pre>';
                 bodyDiv.appendChild(resultDiv);
             }
-
-            // Add toggle button if body has any content
-            if (bodyDiv.children.length > 0) {
-                var toggleBtn = document.createElement('span');
-                toggleBtn.className = 'tool-call-toggle';
-                toggleBtn.textContent = '▼';
-                statusEl.parentNode.appendChild(toggleBtn);
-
-                // Collapse body by default after execution
-                bodyDiv.classList.remove('open');
-                bodyDiv.classList.add('collapsed');
-            }
+            var preEl = resultDiv.querySelector('.result-content');
+            preEl.textContent = msgState.toolCallResultBuffer[key];
+            preEl.scrollTop = preEl.scrollHeight;
         }
 
+    } else if (data.status === 'executed') {
+        delete msgState.toolCallArgsBuffer[data.toolCallId];
+        delete msgState.toolCallResultBuffer[data.toolCallId];
+
+        toolCallDiv.setAttribute('data-status', 'executed');
+        if (statusEl) { statusEl.textContent = '执行完成'; statusEl.classList.add('completed'); }
+        if (iconEl) { iconEl.style.animation = 'none'; iconEl.textContent = '✅'; }
+
+        if (data.result) {
+            // Remove old partial-result if running already created one
+            var oldResultDiv = bodyDiv.querySelector('.tool-call-result[data-partial-result]');
+            if (oldResultDiv) oldResultDiv.remove();
+            var resultDiv = document.createElement('div');
+            resultDiv.className = 'tool-call-result';
+            resultDiv.innerHTML = '<div class="result-label">结果:</div><pre class="result-content">' +
+                escapeHtml(data.result) + '</pre>';
+            bodyDiv.appendChild(resultDiv);
+        }
+
+        // Add toggle button if body has content
+        if (bodyDiv.children.length > 0 && !toolCallDiv.querySelector('.tool-call-toggle')) {
+            var toggleBtn = document.createElement('span');
+            toggleBtn.className = 'tool-call-toggle';
+            toggleBtn.textContent = '▼';
+            statusEl.parentNode.appendChild(toggleBtn);
+
+            bodyDiv.classList.remove('open');
+            bodyDiv.classList.add('collapsed');
+        }
+
+        // Finalize message
         if (msgState.currentStreamingMessage) {
             var timeDiv = document.createElement('div');
             timeDiv.className = 'message-time';
@@ -212,9 +263,9 @@ function handleToolCall(data, responseId) {
             msgState.currentStreamingMessage.appendChild(timeDiv);
             msgState.currentStreamingMessage = null;
         }
-
-        messagesDiv.scrollTop = messagesDiv.scrollHeight;
     }
+
+    messagesDiv.scrollTop = messagesDiv.scrollHeight;
 }
 
 function escapeHtml(text) {

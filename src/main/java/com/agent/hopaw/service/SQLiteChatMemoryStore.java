@@ -3,10 +3,8 @@ package com.agent.hopaw.service;
 import com.agent.hopaw.mapper.ChatMemoryMapper;
 import com.agent.hopaw.model.ChatMemory;
 import com.agent.hopaw.model.ChatMemoryId;
-import dev.langchain4j.data.message.ChatMessage;
-import dev.langchain4j.data.message.ChatMessageDeserializer;
-import dev.langchain4j.data.message.ChatMessageSerializer;
-import dev.langchain4j.data.message.SystemMessage;
+import dev.langchain4j.agent.tool.ToolExecutionRequest;
+import dev.langchain4j.data.message.*;
 import dev.langchain4j.store.memory.chat.ChatMemoryStore;
 import org.springframework.stereotype.Service;
 
@@ -36,6 +34,7 @@ public class SQLiteChatMemoryStore implements ChatMemoryStore {
         }
         List<ChatMemory> records = chatMemoryMapper.findByAgentIdAndUserIdInStatus(memoryId.getAgentId(), memoryId.getUserId(), status);
         LinkedHashMap<String, ChatMessage> messages = new LinkedHashMap<>(records.size());
+        HashSet<String> toolExecutionResultToolIds = new HashSet<>();
         for (ChatMemory record : records) {
             String messageJson = record.getMessageJson();
             if (messageJson != null) {
@@ -43,6 +42,9 @@ public class SQLiteChatMemoryStore implements ChatMemoryStore {
                     ChatMessage message = ChatMessageDeserializer.messageFromJson(messageJson);
                     if (record.getStatus().equals(1) && message instanceof SystemMessage) {
                         continue;
+                    }
+                    if(message instanceof ToolExecutionResultMessage){
+                        toolExecutionResultToolIds.add(((ToolExecutionResultMessage) message).id());
                     }
                     String messageId = record.getMessageId();
                     if(messages.containsKey(messageId)){
@@ -53,6 +55,28 @@ public class SQLiteChatMemoryStore implements ChatMemoryStore {
                 }
             }
         }
+//        for (Map.Entry<String, ChatMessage> item : messages.entrySet()) {
+//            //校验工具调用结果是否缺失，缺失消息丢弃
+//            if (item.getValue() instanceof AiMessage) {
+//                AiMessage aiMessage = (AiMessage) item.getValue();
+//                if (aiMessage.toolExecutionRequests() != null && !aiMessage.toolExecutionRequests().isEmpty()) {
+//                    List<ToolExecutionRequest> filteredToolExecutionRequests = new ArrayList<>();
+//                    boolean allToolExecutionResultsPresent = true;
+//                    for (ToolExecutionRequest toolExecutionRequest : aiMessage.toolExecutionRequests()) {
+//                        if (!toolExecutionResultToolIds.contains(toolExecutionRequest.id())) {
+//                            allToolExecutionResultsPresent = false;
+//                        }else{
+//                            filteredToolExecutionRequests.add(toolExecutionRequest);
+//                        }
+//                    }
+//                    if(!allToolExecutionResultsPresent){
+//                        //messages.remove(item.getKey());
+//                        AiMessage.Builder builder = AiMessage.builder().text(aiMessage.text()).toolExecutionRequests(filteredToolExecutionRequests).thinking(aiMessage.thinking());
+//                        messages.put(item.getKey(), builder.build());
+//                    }
+//                }
+//            }
+//        }
         return messages.values().stream().toList();
     }
 
