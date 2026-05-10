@@ -258,9 +258,12 @@ function loadEditor(node) {
     container.innerHTML =
         '<div class="editor-meta">' +
             '<span>ID: ' + node.id + '</span>' +
-            '<span>类型: ' + (node.memoryType || '-') + '</span>' +
             '<span>用户: ' + (node.userId || '-') + '</span>' +
             '<span>更新时间: ' + timeStr + '</span>' +
+        '</div>' +
+        '<div class="editor-field">' +
+            '<label>记忆类型</label>' +
+            renderTypeSelect(node.memoryType || '') +
         '</div>' +
         '<div class="editor-field">' +
             '<label>概要</label>' +
@@ -281,6 +284,7 @@ function saveMemory() {
     if (!currentMemoryId) return;
     var summary = document.getElementById('editorSummary');
     var textarea = document.getElementById('editorTextarea');
+    var memoryTypeSelect = document.getElementById('memoryTypeSelect');
     if (summary && !summary.value.trim()) {
         showToast('请输入概要', 'warning');
         return;
@@ -288,6 +292,7 @@ function saveMemory() {
     var body = {};
     if (summary) body.summary = summary.value.trim();
     if (textarea) body.memory = textarea.value;
+    if (memoryTypeSelect) body.memoryType = memoryTypeSelect.value;
     fetch('/api/memory-manage/' + currentMemoryId, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
@@ -353,7 +358,10 @@ function openAddModal(parentNode) {
     container.innerHTML =
         '<div class="editor-meta">' +
             '<span>父节点: ' + parentSummary + '</span>' +
-            '<span>类型: ' + memoryType + '</span>' +
+        '</div>' +
+        '<div class="editor-field">' +
+            '<label>记忆类型</label>' +
+            renderTypeSelect(memoryType) +
         '</div>' +
         '<div class="editor-field">' +
             '<label>概要</label>' +
@@ -364,7 +372,7 @@ function openAddModal(parentNode) {
             '<textarea class="editor-textarea" id="newMemory" rows="6" placeholder="新增记忆内容"></textarea>' +
         '</div>' +
         '<div class="editor-actions">' +
-            '<button class="btn btn-primary" onclick="saveNewMemory(' + parentNode.id + ', \'' + escapeAttr(memoryType) + '\')">保存</button>' +
+            '<button class="btn btn-primary" onclick="saveNewMemory(' + parentNode.id + ')">保存</button>' +
             '<button class="btn btn-outline" onclick="cancelAdd()">取消</button>' +
         '</div>';
 }
@@ -377,9 +385,10 @@ function cancelAdd() {
     }
 }
 
-function saveNewMemory(parentId, memoryType) {
+function saveNewMemory(parentId) {
     var summary = document.getElementById('newSummary').value.trim();
     var memory = document.getElementById('newMemory').value.trim();
+    var memoryType = document.getElementById('memoryTypeSelect').value;
     if (!summary) {
         showToast('请输入概要', 'warning');
         return;
@@ -420,8 +429,9 @@ function addRootMemory() {
     }
     var container = document.getElementById('editorContent');
     container.innerHTML =
-        '<div class="editor-meta">' +
-            '<span>分类: 扩展知识 (expandKnowledge)</span>' +
+        '<div class="editor-field">' +
+            '<label>记忆类型</label>' +
+            renderTypeSelect('expandKnowledge') +
         '</div>' +
         '<div class="editor-field">' +
             '<label>概要 <span style="color:red">*</span></label>' +
@@ -440,6 +450,7 @@ function addRootMemory() {
 function saveRootMemory() {
     var summary = document.getElementById('newSummary').value.trim();
     var memory = document.getElementById('newMemory').value.trim();
+    var memoryType = document.getElementById('memoryTypeSelect').value;
     if (!summary) {
         showToast('请输入概要', 'warning');
         return;
@@ -449,7 +460,7 @@ function saveRootMemory() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
             agentId: currentAgentId,
-            memoryType: 'expandKnowledge',
+            memoryType: memoryType,
             summary: summary,
             memory: memory,
             parentId: null
@@ -471,6 +482,17 @@ function saveRootMemory() {
 
 function escapeHtml(str) {
     return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+}
+
+function renderTypeSelect(selectedType) {
+    var html = '<select id="memoryTypeSelect" class="form-select">';
+    for (var i = 0; i < memoryTypes.length; i++) {
+        var t = memoryTypes[i];
+        var sel = t.code === selectedType ? ' selected' : '';
+        html += '<option value="' + escapeHtml(t.code) + '"' + sel + '>' + escapeHtml(t.name) + ' (' + escapeHtml(t.code) + ')</option>';
+    }
+    html += '</select>';
+    return html;
 }
 
 function escapeAttr(str) {

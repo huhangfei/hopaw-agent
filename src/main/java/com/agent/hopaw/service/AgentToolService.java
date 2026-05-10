@@ -7,6 +7,7 @@ import com.agent.hopaw.tools.AgentTool;
 import dev.langchain4j.agent.tool.P;
 import dev.langchain4j.agent.tool.Tool;
 import dev.langchain4j.invocation.InvocationParameters;
+import org.springframework.context.ApplicationContext;
 import org.springframework.stereotype.Service;
 
 import java.lang.reflect.Method;
@@ -14,19 +15,25 @@ import java.lang.reflect.Parameter;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
+import java.util.Map;
 
 @Service
 public class AgentToolService {
 
-    private final List<AgentTool> agentTools;
+    private final ApplicationContext applicationContext;
 
-    public AgentToolService(List<AgentTool> agentTools) {
-        this.agentTools = agentTools;
+    public AgentToolService(ApplicationContext applicationContext) {
+        this.applicationContext = applicationContext;
+    }
+
+    public List<AgentTool> getAgentTools() {
+        Map<String, AgentTool> beans = applicationContext.getBeansOfType(AgentTool.class);
+        return new ArrayList<>(beans.values());
     }
 
     public List<ToolSetInfo> getToolSets() {
         List<ToolSetInfo> result = new ArrayList<>();
-        for (AgentTool agentTool : agentTools) {
+        for (AgentTool agentTool : getAgentTools()) {
             result.add(scanToolSet(agentTool));
         }
         return result;

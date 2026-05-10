@@ -25,19 +25,43 @@
     <select id="findByAgentIdAndUserId" resultMap="LongTermMemoryResultMap">
         SELECT id, agent_id, memory_type, summary, memory, memory_hash, parent_id, create_time, update_time, user_id
         FROM long_term_memory
-        WHERE agent_id = #{agentId} AND user_id = #{userId}
+        WHERE user_id = #{userId}
+        <if test="agentId!=null">
+            AND agent_id = #{agentId}
+        </if>
         ORDER BY parent_id ASC NULLS FIRST, id ASC
     </select>
 
     <select id="findByAgentIdAndUserIdAndMemoryTypeAndTime" resultMap="LongTermMemoryResultMap">
         SELECT id, agent_id, memory_type, summary, memory, memory_hash, parent_id, create_time, update_time, user_id
         FROM long_term_memory
-        WHERE agent_id = #{agentId} AND user_id = #{userId}
+        WHERE user_id = #{userId}
+        <if test="agentId!=null">
+            AND agent_id = #{agentId}
+        </if>
           <if test="memoryType!=null">
               AND memory_type = #{memoryType}
           </if>
         <if test="beginDateTime!=null">
             AND (update_time > #{beginDateTime} ||  memory_type!='taskRecords')
+        </if>
+        ORDER BY update_time desc
+    </select>
+    <select id="getRecentActivityMemoriesByUserIdAndTypesAndTime" resultMap="LongTermMemoryResultMap">
+        SELECT id, agent_id, memory_type, summary, memory, memory_hash, parent_id, create_time, update_time, user_id
+        FROM long_term_memory
+        WHERE user_id = #{userId}
+        <if test="agentId!=null">
+            AND agent_id = #{agentId}
+        </if>
+          <if test="memoryTypes!=null and memoryTypes.size()>0">
+              AND memory_type IN
+              <foreach collection="memoryTypes" open="(" close=")" item="item" separator=",">
+                  #{item.getCode()}
+              </foreach>
+          </if>
+        <if test="beginDateTime!=null">
+            AND update_time > #{beginDateTime}
         </if>
         ORDER BY update_time desc
     </select>
@@ -61,11 +85,10 @@
         WHERE agent_id = #{agentId} AND memory_type = #{memoryType}
         ORDER BY parent_id ASC NULLS FIRST, id ASC
     </select>
-    <select id="findByAgentIdAndHash" resultMap="LongTermMemoryResultMap">
+    <select id="findByUserIdAndMemoryType" resultMap="LongTermMemoryResultMap">
         SELECT id, agent_id, memory_type, summary, memory, memory_hash, parent_id, create_time, update_time, user_id
         FROM long_term_memory
-        WHERE agent_id = #{agentId} AND memory_hash = #{hash}
-        limit 1
+        WHERE user_id = #{userId} AND memory_type = #{memoryType}
     </select>
 
     <select id="findById" resultMap="LongTermMemoryResultMap">

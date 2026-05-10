@@ -8,8 +8,17 @@ package com.agent.hopaw.constant;
  * @author hhf
  */
 public enum LongTermMemoryTypeEnum {
+    /**
+     * 用户画像:不区分智能体
+     */
     USER_PROFILE("userProfile", "用户画像"),
+    /**
+     * 任务记录:区分智能体
+     */
     TASK_RECORDS("taskRecords", "任务记录"),
+    /**
+     * 扩展知识:区分智能体
+     */
     EXPAND_KNOWLEDGE("expandKnowledge", "扩展知识");
 
     private final String code;

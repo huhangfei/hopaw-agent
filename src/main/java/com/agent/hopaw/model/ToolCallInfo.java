@@ -4,6 +4,7 @@ public class ToolCallInfo {
     public static final String TYPE_TOOL_CALL = "tool_call";
     public static final String STATUS_PREPARING = "preparing";
     public static final String STATUS_STARTING = "starting";
+    public static final String STATUS_RUNNING = "running";
     public static final String STATUS_EXECUTED = "executed";
 
     private String type;
@@ -11,19 +12,21 @@ public class ToolCallInfo {
     private String toolCallId;
     private String toolName;
     private Object arguments;
+    private Object argumentsPartial;
     private Object result;
+    private Object resultPartial;
     private String responseId;
 
     public ToolCallInfo() {
     }
 
-    public static ToolCallInfo preparing(String toolCallId, String toolName, Object arguments) {
+    public static ToolCallInfo preparing(String toolCallId, String toolName, Object argumentsPartial) {
         ToolCallInfo info = new ToolCallInfo();
         info.type = TYPE_TOOL_CALL;
         info.status = STATUS_PREPARING;
         info.toolCallId = toolCallId;
         info.toolName = toolName;
-        info.arguments = arguments;
+        info.argumentsPartial = argumentsPartial;
         return info;
     }
     public static ToolCallInfo starting(String toolCallId, String toolName, Object arguments) {
@@ -33,6 +36,15 @@ public class ToolCallInfo {
         info.toolCallId = toolCallId;
         info.toolName = toolName;
         info.arguments = arguments;
+        return info;
+    }
+
+    public static ToolCallInfo running(String toolCallId, Object resultPartial) {
+        ToolCallInfo info = new ToolCallInfo();
+        info.type = TYPE_TOOL_CALL;
+        info.status = STATUS_RUNNING;
+        info.toolCallId = toolCallId;
+        info.resultPartial = resultPartial;
         return info;
     }
 
@@ -101,5 +113,21 @@ public class ToolCallInfo {
 
     public void setResponseId(String responseId) {
         this.responseId = responseId;
+    }
+
+    public Object getResultPartial() {
+        return resultPartial;
+    }
+
+    public void setResultPartial(Object resultPartial) {
+        this.resultPartial = resultPartial;
+    }
+
+    public Object getArgumentsPartial() {
+        return argumentsPartial;
+    }
+
+    public void setArgumentsPartial(Object argumentsPartial) {
+        this.argumentsPartial = argumentsPartial;
     }
 }

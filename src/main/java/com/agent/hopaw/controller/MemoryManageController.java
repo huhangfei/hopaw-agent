@@ -34,19 +34,14 @@ public class MemoryManageController {
 
     @GetMapping("/api/memory-manage/types")
     @ResponseBody
-    public ResponseBean memoryTypes(@RequestParam String agentId) {
+    public ResponseBean memoryTypes(@RequestParam Long agentId) {
         List<LongTermMemory> list = longTermMemoryService.getAllMemoriesByAgentId(agentId, DefaultUser.USER);
-        Set<String> types = list.stream()
-                .map(LongTermMemory::getMemoryType)
-                .filter(Objects::nonNull)
-                .collect(Collectors.toCollection(LinkedHashSet::new));
         List<Map<String, Object>> result = new ArrayList<>();
-        for (String type : types) {
+        for (LongTermMemoryTypeEnum typeEnum : LongTermMemoryTypeEnum.values()) {
             Map<String, Object> item = new LinkedHashMap<>();
-            item.put("code", type);
-            LongTermMemoryTypeEnum typeEnum = LongTermMemoryTypeEnum.fromCode(type);
-            item.put("name", typeEnum != null ? typeEnum.getName() : type);
-            item.put("count", list.stream().filter(m -> type.equals(m.getMemoryType())).count());
+            item.put("code", typeEnum.getCode());
+            item.put("name", typeEnum.getName());
+            item.put("count", list.stream().filter(m -> typeEnum.getCode().equals(m.getMemoryType())).count());
             result.add(item);
         }
         return ResponseBean.success(result);
@@ -54,7 +49,7 @@ public class MemoryManageController {
 
     @GetMapping("/api/memory-manage/tree")
     @ResponseBody
-    public ResponseBean tree(@RequestParam String agentId) {
+    public ResponseBean tree(@RequestParam Long agentId) {
         List<LongTermMemory> list = longTermMemoryService.getAllMemoriesByAgentId(agentId, DefaultUser.USER);
         return ResponseBean.success(list);
     }
@@ -100,7 +95,7 @@ public class MemoryManageController {
         if (body.containsKey("memoryType")) {
             entity.setMemoryType(body.get("memoryType"));
         }
-        longTermMemoryService.saveEntity(entity);
+        longTermMemoryService.update(entity);
         return ResponseBean.success(null);
     }
 

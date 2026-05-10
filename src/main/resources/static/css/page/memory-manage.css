@@ -418,3 +418,18 @@
 .form-group textarea:focus {
     border-color: #667eea;
 }
+
+.form-select {
+    padding: 8px 12px;
+    border: 1px solid #ddd;
+    border-radius: 6px;
+    font-size: 14px;
+    outline: none;
+    background: #fff;
+    transition: border-color 0.2s;
+    max-width: 320px;
+}
+
+.form-select:focus {
+    border-color: #667eea;
+}

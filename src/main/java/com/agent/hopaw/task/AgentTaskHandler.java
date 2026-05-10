@@ -75,7 +75,7 @@ public class AgentTaskHandler implements TaskHandler {
                     .collect(Collectors.toList());
             InvocationParametersWrapper invocationParametersWrapper = InvocationParametersWrapper.create();
             invocationParametersWrapper.setUserId(task.getUserId());
-            invocationParametersWrapper.setAgentId(agentIdStr);
+            invocationParametersWrapper.setAgentId(Long.parseLong(agentIdStr));
             invocationParametersWrapper.setRequestId(UUID.randomUUID().toString());
 
             AgentTaskAssistant assistant = AiServices.builder(AgentTaskAssistant.class)

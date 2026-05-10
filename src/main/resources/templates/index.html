@@ -363,12 +363,11 @@
         </div>
     </div>
 </div>
-
+<div th:replace="fragments/layout::toastContainer"></div>
 <th:block th:replace="fragments/layout::commonScripts('index.js')"></th:block>
 <script th:src="@{/js/marked.min.js}"></script>
 <script th:inline="javascript">
         setCurrentAgentId(/*[[${selectedAgentId}]]*/ null);
-
 </script>
 </body>
 </html>

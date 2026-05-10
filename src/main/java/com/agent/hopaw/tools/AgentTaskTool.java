@@ -36,7 +36,7 @@ public class AgentTaskTool implements AgentTool {
     public String createAgentTask(@P("任务的简要名称") String taskName, @P("任务的cron表达式") String cron, @P("任务具体要做的事情描述") String taskDescription, InvocationParameters invocationParameters) {
         InvocationParametersWrapper invocationParametersWrapper = InvocationParametersWrapper.create(invocationParameters);
         ScheduledTask agentTask = new ScheduledTask(taskName, "agentTask", cron, 1, taskDescription);
-        agentTask.setAgentId(invocationParametersWrapper.getAgentId());
+        agentTask.setAgentId(String.valueOf(invocationParametersWrapper.getAgentId()));
         agentTask.setUserId(invocationParametersWrapper.getUserId());
         agentTask.setBuiltin(0);
         scheduledTaskService.insert(agentTask);
@@ -46,7 +46,7 @@ public class AgentTaskTool implements AgentTool {
     @Tool("查询定时执行的任务")
     public String findAgentTask(InvocationParameters invocationParameters) {
         InvocationParametersWrapper invocationParametersWrapper = InvocationParametersWrapper.create(invocationParameters);
-        List<ScheduledTask> tasks = scheduledTaskService.findByUserIdAndAgentId(invocationParametersWrapper.getUserId(), invocationParametersWrapper.getAgentId());
+        List<ScheduledTask> tasks = scheduledTaskService.findByUserIdAndAgentId(invocationParametersWrapper.getUserId(), String.valueOf(invocationParametersWrapper.getAgentId()));
         if (tasks != null && !tasks.isEmpty()){
             //循环 tasks 构建 字符串 拼接主要字段
             StringBuilder sb = new StringBuilder();
@@ -69,7 +69,7 @@ public class AgentTaskTool implements AgentTool {
         InvocationParametersWrapper invocationParametersWrapper = InvocationParametersWrapper.create(invocationParameters);
         //先查询，判断是否与agentId相等
         ScheduledTask task = scheduledTaskService.findById(taskId);
-        if (task.getAgentId()!=null && !task.getAgentId().equals(invocationParametersWrapper.getAgentId())) {
+        if (task.getAgentId()!=null && !task.getAgentId().equals(String.valueOf(invocationParametersWrapper.getAgentId()))) {
             return "失败：该任务非该智能体创建，无法停止";
         }
         scheduledTaskService.setEnabled(taskId, 0);

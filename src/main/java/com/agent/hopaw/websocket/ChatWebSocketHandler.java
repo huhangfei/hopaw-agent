@@ -3,6 +3,7 @@ package com.agent.hopaw.websocket;
 import com.agent.hopaw.constant.DefaultUser;
 import com.agent.hopaw.mapper.ChatHistoryMapper;
 import com.agent.hopaw.model.ChatHistory;
+import com.agent.hopaw.service.AgentExecutor;
 import com.agent.hopaw.service.AgentService;
 import com.alibaba.fastjson2.JSON;
 import dev.langchain4j.data.message.TextContent;
@@ -66,7 +67,7 @@ public class ChatWebSocketHandler extends TextWebSocketHandler {
             }
 
             Long agentId = Long.parseLong(agentIdStr);
-            AgentService.AgentExecutor executor = agentService.getAgentExecutor(agentId, DefaultUser.USER);
+            AgentExecutor executor = agentService.getAgentExecutor(agentId, DefaultUser.USER);
 
             if (executor == null) {
                 sendError(session, "Agent 初始化执行失败，请检查相关配置。");

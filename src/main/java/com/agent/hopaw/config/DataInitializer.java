@@ -288,17 +288,6 @@ public class DataInitializer implements CommandLineRunner {
                 aiModelProviderMapper.insert(provider);
             }
             aiModelProviders = aiModelProviderMapper.findAll();
-        } else {
-            // 兼容旧数据：为已存在的内置提供商补充 sdkName
-            for (AiModelProvider provider : aiModelProviders) {
-                if ("builtin".equals(provider.getType()) && (provider.getSdkName() == null || provider.getSdkName().isBlank())) {
-                    ModelProviderEnum providerEnum = ModelProviderEnum.fromCode(provider.getProvider());
-                    if (providerEnum != null) {
-                        provider.setSdkName(providerEnum.getSdkName());
-                        aiModelProviderMapper.update(provider);
-                    }
-                }
-            }
         }
 
         List<AiModel> aiModels = aiModelMapper.findAll();
@@ -363,31 +352,27 @@ public class DataInitializer implements CommandLineRunner {
 
         }
 
-        if (sysConfigMapper.findAll().isEmpty()) {
+        if (sysConfigMapper.findByKey("memory_prompt")==null) {
             String customPrompt="你是一个记忆整理助手。善于根据聊天记录提取关键的用户记忆信息。" +
-                    "请根据内容总结出用户的关键记忆信息，并按以下格式进行分类，大类下面可以汇总出多级子分类，根据实际情况和约束执行：\n" +
+                    "请根据现有记忆和新会话总结出用户的关键记忆信息，要严格按以下要求进行分类整理：\n" +
                     "========\n" +
-                    "1,基础档案\n" +
-                    "个人特质、地域作息、性格、身份角色、核心标签、敏感雷区等\n" +
-                    "2,工作职场\n" +
-                    "岗位业务、负责项目、技术 / 专业栈、协作习惯、工作痛点、目标规划、常用工具规范等\n" +
-                    "3,生活日常\n" +
-                    "家庭情况、饮食作息、消费偏好、出行习惯、休闲爱好等\n" +
-                    "4,健康状况\n" +
-                    "身体症状、慢病困扰、用药习惯、体质特点、就医相关等\n" +
-                    "5,需求偏好\n" +
-                    "高频诉求、内容输出偏好、功能需求、长期规划（理财 / 生活 / 学习）等\n" +
-                    "6,沟通交互\n" +
-                    "说话风格、回复格式偏好、交互习惯、定制化要求等\n" +
-                    "7,关键事件\n" +
-                    "重要时间节点、过往关键经历、待办长期事项、特殊记录等\n" +
-                    "8,知识沉淀\n" +
-                    "高频咨询问题、专属认知观点、常用资料 / 规则、成功处理任务经验等\n" +
+                    "分类1，用户画像\n" +
+                    "内容包含：姓名、昵称、年龄、地域、职业、收入、常用设备、喜好、交流风格、偏好与厌恶、经常提的要求规则等，只记录简短的用户各种标签。\n" +
+                    "整理限制: 请给出一个简短的标签作为概要(比如，姓名、昵称等)，具体事实作为画像内容，内容要精简；用户画像每条都是最小标签。\n" +
+                    "分类2，任务记录\n" +
+                    "内容包含：正在做的什么事情（开始时间、任务说明、任务过程主要节点、结果、结束时间）。\n" +
+                    "整理限制: 每次可以汇总出一条或多条不同任务记录，要根据具体的对话场景和已有的任务记录做判断，那些是旧任务的延续，哪些是新任务的开始；旧任务就更新内容新任务就新增内容；" +
+                    "每条任务都要汇总出一段简短的任务概要；内容要抓住终点，涵盖完整任务内容但不要啰嗦。\n" +
+                    "分类3，扩展知识\n" +
+                    "内容包含：解决问题的经验、操作指导说明、明确的操作步骤。\n" +
+                    "整理限制: 请给出一个简短的问题对象描述作为概要(比如，安装git经验、docker镜像源超时等);内容：要从对话中总结解决问题的正确经验，汇总出操作指导说明，梳理出明确的操作步骤。过于简单的问题（通过搜索可以快速找到答案的、经过3步以内尝试解决的），请勿记录。\n" +
                     "========\n" +
-                    "请认真总结记忆得到清单后进行检查，不要有重复的记忆,记忆内容不能胡编乱造信息，只要关联性强的就汇总出新的分类，将汇总后的内容作为子级内容存储。\n" +
-                    "在完成记忆总结后，请再次认真审视分类层级是否正确，你可以调用记忆操作相关工具，其他未列出的工具都不能用。\n" +
-                    "归类后先保存分类作为父级记忆得到编号，再保存概要内容作为子级记忆，子级记忆的parentId是父级记忆的编号。" ;
+                    "请认真总结记忆得到清单后进行检查，不要有重复的记忆，发现已有重复记忆请删除,记忆内容不能胡编乱造信息，要完全从内容中来，冲突的记忆以最新的为准。\n" +
+                    "在完成记忆总结后，你可以调用记忆操作相关工具，其他未列出的工具都不能用。\n"+
+                    "你是一个后台助手，做好任务即可不需要回复我任何信息。\n";
             sysConfigMapper.insert(new SysConfig("memory_prompt", customPrompt, "记忆整理提示词"));
+        }
+        if (sysConfigMapper.findByKey("memory_ai_model_id")==null) {
             sysConfigMapper.insert(new SysConfig("memory_ai_model_id", "", "记忆整理使用模型"));
         }
     }

@@ -1,7 +1,12 @@
 package com.agent.hopaw.tools;
 
+import com.agent.hopaw.service.AgentExecutorManager;
+import com.agent.hopaw.util.InvocationParametersWrapper;
 import dev.langchain4j.agent.tool.P;
 import dev.langchain4j.agent.tool.Tool;
+import dev.langchain4j.invocation.InvocationParameters;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 
 import java.io.BufferedReader;
@@ -14,8 +19,14 @@ import java.util.concurrent.TimeUnit;
 @Service("commandExecutor")
 public class CommandExecutorTool implements AgentTool {
 
+    private final AgentExecutorManager agentExecutorManager;
+    private  final Logger logger= LoggerFactory.getLogger(CommandExecutorTool.class);
     private static final int TIMEOUT_SECONDS = 30;
     private static final int MAX_OUTPUT_LINES = 500;
+
+    public CommandExecutorTool(AgentExecutorManager agentExecutorManager) {
+        this.agentExecutorManager = agentExecutorManager;
+    }
 
     @Tool("获取本地操作系统的名称，例如 Windows 10 或 Ubuntu 20.04")
     public String getOsName() {
@@ -25,7 +36,12 @@ public class CommandExecutorTool implements AgentTool {
     @Tool("执行本地系统命令并返回输出结果。支持 Windows 和 Unix/Linux/macOS 系统。使用前最好先获取操作系统类型，" +
           "以确保命令在目标系统上执行。" +
           "请谨慎使用，避免执行危险命令如格式化磁盘、删除系统文件等。")
-    public String executeCommand(@P(description="要执行的命令") String command, @P(description = "超时时间（秒）",required = false) Integer timeout) {
+    public String executeCommand(@P(description="要执行的命令") String command, @P(description = "超时时间（秒）",required = false) Integer timeout, InvocationParameters invocationParameters) {
+        InvocationParametersWrapper invocationParametersWrapper = InvocationParametersWrapper.create(invocationParameters);
+        String toolCallId = invocationParametersWrapper.getToolCallId();
+        String userId = invocationParametersWrapper.getUserId();
+        Long agentId = invocationParametersWrapper.getAgentId();
+        logger.info("Executing command: {} with toolCallId: {}", command, toolCallId);
         if (command == null || command.trim().isEmpty()) {
             return "错误: 命令不能为空";
         }
@@ -49,23 +65,27 @@ public class CommandExecutorTool implements AgentTool {
             processBuilder.redirectErrorStream(true);
 
             Process process = processBuilder.start();
-            boolean completed = process.waitFor(timeout, TimeUnit.SECONDS);
-
             StringBuilder output = new StringBuilder();
             try (BufferedReader reader = new BufferedReader(
                     new InputStreamReader(process.getInputStream(), determineEncoding(os)))) {
                 String line;
                 int lineCount = 0;
                 while ((line = reader.readLine()) != null) {
+                    if(agentExecutorManager.toolIsCancelled(agentId, userId,toolCallId)){
+                        process.destroyForcibly();
+                        return "错误: 命令执行被取消";
+                    }
+
                     if (lineCount >= MAX_OUTPUT_LINES) {
                         output.append("\n... (输出已截断，超过 ").append(MAX_OUTPUT_LINES).append(" 行)");
                         break;
                     }
+                    agentExecutorManager.sendToolRunningContent(agentId, userId,toolCallId, line);
                     output.append(line).append("\n");
                     lineCount++;
                 }
             }
-
+            boolean completed = process.waitFor(timeout, TimeUnit.SECONDS);
             if (!completed) {
                 process.destroyForcibly();
                 return "错误: 命令执行超时 (超过 " + timeout + " 秒)，已强制终止";

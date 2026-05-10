@@ -7,6 +7,7 @@ import com.agent.hopaw.model.Agent;
 import com.agent.hopaw.model.ChatHistory;
 import com.agent.hopaw.model.ResponseBean;
 import com.agent.hopaw.model.ToolSetInfo;
+import com.agent.hopaw.service.AgentExecutorManager;
 import com.agent.hopaw.service.AgentService;
 import com.agent.hopaw.service.AgentToolService;
 import org.springframework.stereotype.Controller;
@@ -87,13 +88,8 @@ public class AgentController {
     @PostMapping("/agent/stop")
     @ResponseBody
     public ResponseBean stopAgent(@RequestParam Long id) {
-        AgentService.AgentExecutor agentExecutor = agentService.getAgentExecutor(id,DefaultUser.USER);
-        if(agentExecutor!=null){
-            agentExecutor.stop();
-            return ResponseBean.success();
-        }else{
-            return ResponseBean.fail("Agent Executor not found");
-        }
+        agentService.stopAgentExecutor(id,DefaultUser.USER);
+        return ResponseBean.success();
     }
 
     @GetMapping("/api/agent/{id}/running")

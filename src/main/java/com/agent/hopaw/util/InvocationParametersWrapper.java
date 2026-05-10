@@ -16,8 +16,11 @@ public class InvocationParametersWrapper {
     public  String getUserId(){
         return this.invocationParameters.get("userId");
     }
-    public  String getAgentId(){
-        return invocationParameters.get("agentId");
+    public  String getToolCallId(){
+        return this.invocationParameters.get("toolCallId");
+    }
+    public  Long getAgentId(){
+        return Long.valueOf(invocationParameters.get("agentId").toString());
     }
     public  String getRequestId(){
         return invocationParameters.get("requestId");
@@ -26,7 +29,11 @@ public class InvocationParametersWrapper {
          invocationParameters.put("userId",userId);
          return this;
     }
-    public  InvocationParametersWrapper setAgentId(String agentId){
+    public  InvocationParametersWrapper setToolCallId(String toolCallId){
+         invocationParameters.put("toolCallId",toolCallId);
+         return this;
+    }
+    public  InvocationParametersWrapper setAgentId(Long agentId){
         invocationParameters.put("agentId",agentId);
         return this;
     }
