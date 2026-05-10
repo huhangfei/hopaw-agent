@@ -6,6 +6,13 @@ var streamingMarkdownContent = '';
 var lastMessageType = null;
 var streamingMessages = {};
 
+if (typeof marked !== 'undefined') {
+    marked.setOptions({
+        breaks: true,
+        gfm: true
+    });
+}
+
 function formatMessageTime(date) {
     var now = new Date();
     var isToday = date.getFullYear() === now.getFullYear() &&
@@ -24,13 +31,6 @@ function formatMessageTime(date) {
         var day = date.getDate().toString().padStart(2, '0');
         return year + '-' + month + '-' + day + ' ' + hours + ':' + minutes + ':' + seconds;
     }
-}
-
-if (typeof marked !== 'undefined') {
-    marked.setOptions({
-        breaks: true,
-        gfm: true
-    });
 }
 
 function renderMarkdown(content) {
@@ -634,22 +634,24 @@ function stopAgent() {
     });
 }
 
-document.getElementById('addAgentModal').addEventListener('click', function(e) {
-    if (e.target === this) {
-        hideAddModal();
-    }
-});
-
-document.getElementById('editAgentModal').addEventListener('click', function(e) {
-    if (e.target === this) {
-        hideEditModal();
-    }
-});
-
-setupCascading(document.getElementById('addProviderSelect'), document.getElementById('addModelSelect'));
-setupCascading(document.getElementById('editProviderSelect'), document.getElementById('editModelSelect'));
-
 window.onload = function() {
+
+    document.getElementById('addAgentModal').addEventListener('click', function(e) {
+        if (e.target === this) {
+            hideAddModal();
+        }
+    });
+
+    document.getElementById('editAgentModal').addEventListener('click', function(e) {
+        if (e.target === this) {
+            hideEditModal();
+        }
+    });
+
+    setupCascading(document.getElementById('addProviderSelect'), document.getElementById('addModelSelect'));
+    setupCascading(document.getElementById('editProviderSelect'), document.getElementById('editModelSelect'));
+
+
     var messagesDiv = document.getElementById('chatMessages');
     if (messagesDiv) {
         renderAllMessages();

@@ -214,6 +214,12 @@ public class LongTermMemoryTaskHandler implements TaskHandler {
         if (handle) {
             chatMemoryMapper.deleteByIds(cleanedMessages.stream().map(ChatMemory::getId).toList());
         }
+
+        //todo: 几天前的任务记录移入向量库
+
+        //移除几天前的任务记录
+        longTermMemoryService.deleteExpiredTaskRecordsMemories(agent.getId(), userId);
+
         logger.info("Processing memory for agentId: {}, cleaned messages count: {}", agentIdStr, cleanedMessages.size());
     }
 

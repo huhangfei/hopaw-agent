@@ -15,13 +15,6 @@
         <result property="updateTime" column="update_time"/>
     </resultMap>
 
-    <select id="findByAgentId" resultMap="LongTermMemoryResultMap">
-        SELECT id, agent_id, memory_type, summary, memory, memory_hash, parent_id, create_time, update_time, user_id
-        FROM long_term_memory
-        WHERE agent_id = #{agentId}
-        ORDER BY parent_id ASC NULLS FIRST, id ASC
-    </select>
-
     <select id="findByAgentIdAndUserId" resultMap="LongTermMemoryResultMap">
         SELECT id, agent_id, memory_type, summary, memory, memory_hash, parent_id, create_time, update_time, user_id
         FROM long_term_memory
@@ -47,24 +40,22 @@
         </if>
         ORDER BY update_time desc
     </select>
-    <select id="getRecentActivityMemoriesByUserIdAndTypesAndTime" resultMap="LongTermMemoryResultMap">
+    <select id="findByAgentIdAndUserIdAndMemoryTypeAndEndDateTime" resultMap="LongTermMemoryResultMap">
         SELECT id, agent_id, memory_type, summary, memory, memory_hash, parent_id, create_time, update_time, user_id
         FROM long_term_memory
         WHERE user_id = #{userId}
         <if test="agentId!=null">
             AND agent_id = #{agentId}
         </if>
-          <if test="memoryTypes!=null and memoryTypes.size()>0">
-              AND memory_type IN
-              <foreach collection="memoryTypes" open="(" close=")" item="item" separator=",">
-                  #{item.getCode()}
-              </foreach>
+          <if test="memoryType!=null">
+              AND memory_type = #{memoryType}
           </if>
-        <if test="beginDateTime!=null">
-            AND update_time > #{beginDateTime}
+        <if test="endDateTime!=null">
+            AND update_time &lt; #{endDateTime}
         </if>
         ORDER BY update_time desc
     </select>
+
     <select id="findByParentId" resultMap="LongTermMemoryResultMap">
         SELECT id, agent_id, memory_type, summary, memory, memory_hash, parent_id, create_time, update_time, user_id
         FROM long_term_memory
@@ -72,19 +63,7 @@
         ORDER BY id ASC
     </select>
 
-    <select id="findRootsByAgentIdAndUserId" resultMap="LongTermMemoryResultMap">
-        SELECT id, agent_id, memory_type, summary, memory, memory_hash, parent_id, create_time, update_time, user_id
-        FROM long_term_memory
-        WHERE agent_id = #{agentId} AND user_id=#{userId} AND parent_id is NULL
-        ORDER BY id ASC
-    </select>
 
-    <select id="findByAgentIdAndMemoryType" resultMap="LongTermMemoryResultMap">
-        SELECT id, agent_id, memory_type, summary, memory, memory_hash, parent_id, create_time, update_time, user_id
-        FROM long_term_memory
-        WHERE agent_id = #{agentId} AND memory_type = #{memoryType}
-        ORDER BY parent_id ASC NULLS FIRST, id ASC
-    </select>
     <select id="findByUserIdAndMemoryType" resultMap="LongTermMemoryResultMap">
         SELECT id, agent_id, memory_type, summary, memory, memory_hash, parent_id, create_time, update_time, user_id
         FROM long_term_memory
@@ -120,14 +99,16 @@
         DELETE FROM long_term_memory WHERE id = #{id}
     </delete>
 
-    <delete id="deleteByAgentId">
-        DELETE FROM long_term_memory WHERE agent_id = #{agentId}
-    </delete>
-
     <update id="updateParentId">
         UPDATE long_term_memory
         SET parent_id = #{parentId}, update_time = CURRENT_TIMESTAMP
         WHERE id = #{id}
     </update>
-
+    <delete id="deleteByAgentIdAndUserIdAndMemoryTypeAndEndDateTime">
+        DELETE FROM long_term_memory
+        WHERE agent_id = #{agentId}
+          AND user_id = #{userId}
+          AND memory_type = #{memoryType}
+          AND update_time &lt; #{endDateTime}
+    </delete>
 </mapper>

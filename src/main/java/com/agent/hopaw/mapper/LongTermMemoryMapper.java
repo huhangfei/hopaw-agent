@@ -10,17 +10,13 @@ import java.util.List;
 
 @Mapper
 public interface LongTermMemoryMapper {
-    List<LongTermMemory> findByAgentId(@Param("agentId") Long agentId);
 
     List<LongTermMemory> findByAgentIdAndUserId(@Param("agentId") Long agentId, @Param("userId") String userId);
 
     List<LongTermMemory> findByParentId(@Param("parentId") Long parentId);
 
     List<LongTermMemory> findByAgentIdAndUserIdAndMemoryTypeAndTime(@Param("agentId") Long agentId, @Param("userId") String userId, @Param("memoryType") String memoryType, @Param("beginDateTime") LocalDateTime beginDateTime);
-    List<LongTermMemory> getRecentActivityMemoriesByUserIdAndTypesAndTime(@Param("agentId") Long agentId,@Param("userId") String userId, @Param("memoryTypes") List<LongTermMemoryTypeEnum> memoryTypes, @Param("beginDateTime") LocalDateTime beginDateTime);
-
-    List<LongTermMemory> findByAgentIdAndMemoryType(@Param("agentId") Long agentId, @Param("memoryType") String memoryType);
-    List<LongTermMemory> findRootsByAgentIdAndUserId(@Param("agentId") Long agentId,@Param("userId") String userId);
+    List<LongTermMemory> findByAgentIdAndUserIdAndMemoryTypeAndEndDateTime(@Param("agentId") Long agentId, @Param("userId") String userId, @Param("memoryType") String memoryType, @Param("endDateTime") LocalDateTime endDateTime);
 
     List<LongTermMemory> findByUserIdAndMemoryType(@Param("userId") String userId, @Param("memoryType") String memoryType);
 
@@ -32,7 +28,7 @@ public interface LongTermMemoryMapper {
 
     int deleteById(@Param("id") Long id);
 
-    int deleteByAgentId(@Param("agentId") Long agentId);
-
     int updateParentId(@Param("id") Long id, @Param("parentId") Long parentId);
+
+    int deleteByAgentIdAndUserIdAndMemoryTypeAndEndDateTime(@Param("agentId") Long agentId, @Param("userId") String userId, @Param("memoryType") String memoryType, @Param("endDateTime") LocalDateTime endDateTime);
 }

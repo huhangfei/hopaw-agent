@@ -9,10 +9,10 @@ import dev.langchain4j.agent.tool.Tool;
 import dev.langchain4j.invocation.InvocationParameters;
 import org.springframework.stereotype.Service;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
 import java.util.UUID;
 import java.util.function.Function;
@@ -64,67 +64,16 @@ public class LongTermMemoryService {
         return longTermMemoryMapper.findByAgentIdAndUserId(agentId, userId);
     }
 
-    public List<LongTermMemory> getMemoriesByAgentIdAndUserIdAndMemoryType(Long agentId, String userId, String memoryType, LocalDateTime beginDateTime) {
-        return longTermMemoryMapper.findByAgentIdAndUserIdAndMemoryTypeAndTime(agentId, userId, memoryType, beginDateTime);
+    public void deleteExpiredTaskRecordsMemories(Long agentId, String userId) {
+        int taskRecordsClearTimeoutDay = Integer.parseInt(sysConfigService.getValueByKey("taskRecordsClearTimeoutDay", "7"));
+        LocalDateTime endDateTime = LocalDate.now().atStartOfDay().minusDays(taskRecordsClearTimeoutDay);
+        longTermMemoryMapper.deleteByAgentIdAndUserIdAndMemoryTypeAndEndDateTime(agentId, userId, LongTermMemoryTypeEnum.TASK_RECORDS.getCode(),endDateTime);
     }
 
-
-    /**
-     * 获取近期活跃所有类型记忆
-     *
-     * @param agentId
-     * @param userId
-     * @return
-     */
-    public List<LongTermMemory> getRecentActivityMemoriesByAgentIdAndUserId(Long agentId, String userId) {
-        int taskRecordsArrangeTimeoutHour = Integer.parseInt(sysConfigService.getValueByKey("taskRecordsArrangeTimeoutHour", "48"));
-        LocalDateTime beginDateTime = LocalDateTime.now().minusHours(taskRecordsArrangeTimeoutHour);
-        return getMemoriesByAgentIdAndUserIdAndMemoryType(agentId, userId, null, beginDateTime);
-    }
-
-    /**
-     * 获取近期活跃所有类型记忆
-     *
-     * @param agentId
-     * @param userId
-     * @return
-     */
-    public List<LongTermMemory> getRecentActivityMemories(Long agentId,String userId) {
-        int taskRecordsArrangeTimeoutHour = Integer.parseInt(sysConfigService.getValueByKey("taskRecordsArrangeTimeoutHour", "48"));
-        LocalDateTime beginDateTime = LocalDateTime.now().minusHours(taskRecordsArrangeTimeoutHour);
-        List<LongTermMemory> result=new ArrayList<>();
-        List<LongTermMemory> userMemories = longTermMemoryMapper.getRecentActivityMemoriesByUserIdAndTypesAndTime(null,userId, Arrays.asList(LongTermMemoryTypeEnum.USER_PROFILE), null);
-        result.addAll(userMemories);
-        List<LongTermMemory> agentAndUserMemories = longTermMemoryMapper.getRecentActivityMemoriesByUserIdAndTypesAndTime(agentId,userId, Arrays.asList(LongTermMemoryTypeEnum.TASK_RECORDS), beginDateTime);
-        result.addAll(agentAndUserMemories);
-        return result;
-    }
-    /**
-     * 获取近期活跃所有类型记忆
-     *
-     * @param agentId
-     * @param userId
-     * @return
-     */
-    public List<LongTermMemory> getRecentActivityAllMemories(Long agentId,String userId) {
-        int taskRecordsArrangeTimeoutHour = Integer.parseInt(sysConfigService.getValueByKey("taskRecordsArrangeTimeoutHour", "48"));
-        LocalDateTime beginDateTime = LocalDateTime.now().minusHours(taskRecordsArrangeTimeoutHour);
-        List<LongTermMemory> result=new ArrayList<>();
-        List<LongTermMemory> userMemories = longTermMemoryMapper.getRecentActivityMemoriesByUserIdAndTypesAndTime(null,userId, Arrays.asList(LongTermMemoryTypeEnum.USER_PROFILE,LongTermMemoryTypeEnum.EXPAND_KNOWLEDGE), null);
-        result.addAll(userMemories);
-        List<LongTermMemory> agentAndUserMemories = longTermMemoryMapper.getRecentActivityMemoriesByUserIdAndTypesAndTime(agentId,userId, Arrays.asList(LongTermMemoryTypeEnum.TASK_RECORDS), beginDateTime);
-        result.addAll(agentAndUserMemories);
-        return result;
-    }
-
-
-    public LongTermMemory getMemoryByAgentIdAndUserIdAndMemoryType(Long agentId, String userId, String memoryType, LocalDateTime beginDateTime) {
-        List<LongTermMemory> memories = getMemoriesByAgentIdAndUserIdAndMemoryType(agentId, userId, memoryType, beginDateTime);
-        return memories.isEmpty() ? null : memories.get(0);
-    }
-
-    public LongTermMemory getMemoryByAgentIdAndUserIdAndMemoryType(Long agentId, String userId, LongTermMemoryTypeEnum memoryType) {
-        return getMemoryByAgentIdAndUserIdAndMemoryType(agentId, userId, memoryType.getCode(), null);
+    public List<LongTermMemory> findExpiredTaskRecordsMemories(Long agentId, String userId) {
+        int taskRecordsClearTimeoutDay = Integer.parseInt(sysConfigService.getValueByKey("taskRecordsClearTimeoutDay", "7"));
+        LocalDateTime endDateTime = LocalDate.now().atStartOfDay().minusDays(taskRecordsClearTimeoutDay);
+        return longTermMemoryMapper.findByAgentIdAndUserIdAndMemoryTypeAndEndDateTime(agentId, userId,LongTermMemoryTypeEnum.TASK_RECORDS.getCode(),endDateTime);
     }
 
     /**
