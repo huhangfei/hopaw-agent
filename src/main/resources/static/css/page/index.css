@@ -555,6 +555,29 @@
 }
 
 /* Tool call toggle button */
+
+.tool-call-stop-btn {
+    background: #ff4757;
+    color: white;
+    border: none;
+    width: 20px;
+    height: 20px;
+    border-radius: 4px;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    margin-left: 6px;
+    flex-shrink: 0;
+    padding: 0;
+    transition: background 0.15s;
+}
+.tool-call-stop-btn:hover {
+    background: #e84118;
+}
+.tool-call-stop-btn svg {
+    display: block;
+}
 .tool-call-toggle {
     margin-left: 4px;
     cursor: pointer;

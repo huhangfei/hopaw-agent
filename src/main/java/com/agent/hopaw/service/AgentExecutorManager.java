@@ -37,6 +37,12 @@ public class AgentExecutorManager {
             agentExecutor.sendToolRunningContent(callId, resultPartial);
         }
     }
+    public void stopTool(Long agentId, String userId,String callId) {
+        AgentExecutor agentExecutor = agentExecutors.get(agentId + "_" + userId);
+        if (agentExecutor != null) {
+            agentExecutor.stopTool(callId);
+        }
+    }
     public boolean toolIsCancelled(Long agentId, String userId,String callId) {
         AgentExecutor agentExecutor = agentExecutors.get(agentId + "_" + userId);
         if (agentExecutor != null) {
