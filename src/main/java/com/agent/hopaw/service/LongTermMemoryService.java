@@ -200,7 +200,7 @@ public class LongTermMemoryService {
         }
 //        memorySb.append("更新时间:").append(memory.getUpdateTime().format(formatter)).append("\n")
 //                .append("创建时间:").append(memory.getCreateTime().format(formatter));
-        return memorySb.toString();
+        return memorySb.append("----------------\n").toString();
     }
 
     public String buildMemoryContent(LongTermMemory memory, Function<LongTermMemory, Boolean> includeDetailFun,Boolean includeType) {

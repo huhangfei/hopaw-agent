@@ -6,9 +6,14 @@ import com.agent.hopaw.model.ChatMemoryId;
 import dev.langchain4j.agent.tool.ToolExecutionRequest;
 import dev.langchain4j.data.message.*;
 import dev.langchain4j.store.memory.chat.ChatMemoryStore;
+import org.slf4j.Logger;
 import org.springframework.stereotype.Service;
 
+import java.time.LocalDateTime;
+import java.time.temporal.ChronoUnit;
+import java.time.temporal.TemporalUnit;
 import java.util.*;
+import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
 /**
@@ -16,7 +21,7 @@ import java.util.stream.Collectors;
  */
 @Service
 public class SQLiteChatMemoryStore implements ChatMemoryStore {
-
+    private final Logger logger = org.slf4j.LoggerFactory.getLogger(SQLiteChatMemoryStore.class);
     private final ChatMemoryMapper chatMemoryMapper;
     private final ScheduledTaskService scheduledTaskService;
     public SQLiteChatMemoryStore(ChatMemoryMapper chatMemoryMapper,  ScheduledTaskService scheduledTaskService) {
@@ -24,15 +29,20 @@ public class SQLiteChatMemoryStore implements ChatMemoryStore {
         this.scheduledTaskService = scheduledTaskService;
     }
 
-    @Override
-    public List<ChatMessage> getMessages(Object memoryIdObj) {
-        ChatMemoryId memoryId = (ChatMemoryId) memoryIdObj;
+    private List<ChatMemory> getChatMemories(ChatMemoryId memoryId) {
         List<Integer> status=new ArrayList<>();
         status.add(0);
         if(scheduledTaskService.isTaskRunning("longTermMemory")){
             status.add(1);
         }
         List<ChatMemory> records = chatMemoryMapper.findByAgentIdAndUserIdInStatus(memoryId.getAgentId(), memoryId.getUserId(), status);
+        return records;
+    }
+
+    @Override
+    public List<ChatMessage> getMessages(Object memoryIdObj) {
+        ChatMemoryId memoryId = (ChatMemoryId) memoryIdObj;
+        List<ChatMemory> records = getChatMemories(memoryId);
         LinkedHashMap<String, ChatMessage> messages = new LinkedHashMap<>(records.size());
         HashSet<String> toolExecutionResultToolIds = new HashSet<>();
         for (ChatMemory record : records) {
@@ -55,28 +65,6 @@ public class SQLiteChatMemoryStore implements ChatMemoryStore {
                 }
             }
         }
-//        for (Map.Entry<String, ChatMessage> item : messages.entrySet()) {
-//            //校验工具调用结果是否缺失，缺失消息丢弃
-//            if (item.getValue() instanceof AiMessage) {
-//                AiMessage aiMessage = (AiMessage) item.getValue();
-//                if (aiMessage.toolExecutionRequests() != null && !aiMessage.toolExecutionRequests().isEmpty()) {
-//                    List<ToolExecutionRequest> filteredToolExecutionRequests = new ArrayList<>();
-//                    boolean allToolExecutionResultsPresent = true;
-//                    for (ToolExecutionRequest toolExecutionRequest : aiMessage.toolExecutionRequests()) {
-//                        if (!toolExecutionResultToolIds.contains(toolExecutionRequest.id())) {
-//                            allToolExecutionResultsPresent = false;
-//                        }else{
-//                            filteredToolExecutionRequests.add(toolExecutionRequest);
-//                        }
-//                    }
-//                    if(!allToolExecutionResultsPresent){
-//                        //messages.remove(item.getKey());
-//                        AiMessage.Builder builder = AiMessage.builder().text(aiMessage.text()).toolExecutionRequests(filteredToolExecutionRequests).thinking(aiMessage.thinking());
-//                        messages.put(item.getKey(), builder.build());
-//                    }
-//                }
-//            }
-//        }
         return messages.values().stream().toList();
     }
 
@@ -112,5 +100,53 @@ public class SQLiteChatMemoryStore implements ChatMemoryStore {
     private String generateMessageId(ChatMessage message) {
         String content = message.toString();
         return UUID.nameUUIDFromBytes((content).getBytes()).toString();
+    }
+
+    /**
+     * 清理历史孤儿信息
+     * @param memoryId
+     */
+    public void orphanCleanup(ChatMemoryId memoryId){
+        List<ChatMemory> original = getChatMemories(memoryId);
+        if (original == null || original.isEmpty()) {
+            return;
+        }
+
+        // 1. 收集所有已完成的 ToolExecutionResultMessage 的 ID
+        Set<String> resolvedCallIds = new HashSet<>();
+        Map<String, LocalDateTime> callToolRequestCreateTime=new HashMap<>();
+        List<ChatMessage> chatMessages = new ArrayList<>();
+        for (ChatMemory memory : original) {
+            ChatMessage msg = ChatMessageDeserializer.messageFromJson(memory.getMessageJson());
+            if (msg instanceof ToolExecutionResultMessage) {
+                resolvedCallIds.add(((ToolExecutionResultMessage) msg).id());
+            }else if(msg instanceof AiMessage aiMsg && aiMsg.hasToolExecutionRequests()){
+                for (ToolExecutionRequest req : aiMsg.toolExecutionRequests()) {
+                    callToolRequestCreateTime.put(req.id(), memory.getCreateTime());
+                }
+            }
+            chatMessages.add(msg);
+        }
+        // 2. 构建清理后的列表
+        for (ChatMessage msg : chatMessages) {
+            if (msg instanceof AiMessage aiMsg && aiMsg.hasToolExecutionRequests()) {
+                // 存在孤儿调用：保留 AiMessage 本身，插入错误结果
+                for (ToolExecutionRequest req : aiMsg.toolExecutionRequests()) {
+                    if (!resolvedCallIds.contains(req.id())) {
+                        ToolExecutionResultMessage errorMsg = new ToolExecutionResultMessage.Builder()
+                                .id(req.id())
+                                .toolName(req.name())
+                                .text("工具调用因服务中断而失败，请重试或向用户说明情况。")
+                                .isError(false)
+                                .build();
+                        String messageId = generateMessageId(errorMsg);
+                        String messageJson = ChatMessageSerializer.messageToJson(errorMsg);
+                        LocalDateTime time = callToolRequestCreateTime.getOrDefault(req.id(), LocalDateTime.now());
+                        chatMemoryMapper.insertCustomCreateTime(memoryId.getAgentId(), memoryId.getUserId(),messageId, messageJson,time.plus(1, ChronoUnit.MILLIS));
+                        logger.info("为tool call {} 创建了错误结果 {}", req.id(), messageId);
+                    }
+                }
+            }
+        }
     }
 }

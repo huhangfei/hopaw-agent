@@ -35,7 +35,7 @@
         UPDATE sys_config
         SET config_value = #{configValue},
             description = #{description},
-            update_time = CURRENT_TIMESTAMP
+            update_time = datetime('now', 'localtime')
         WHERE config_key = #{configKey}
     </update>
 

@@ -62,7 +62,7 @@
             user_id = #{userId},
             agent_id = #{agentId},
             builtin = #{builtin},
-            update_time = CURRENT_TIMESTAMP
+            update_time = datetime('now', 'localtime')
         WHERE id = #{id}
     </update>
 

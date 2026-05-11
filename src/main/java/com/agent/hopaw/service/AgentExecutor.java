@@ -43,10 +43,10 @@ public class AgentExecutor {
     private final AtomicBoolean cancelTask = new AtomicBoolean(false);
     private CountDownLatch taskLatch = new CountDownLatch(0);
     private final ChatHistoryStorageService chatHistoryStorageService;
-
+    private final SQLiteChatMemoryStore memoryStore;
     private final java.util.concurrent.ConcurrentMap<String, AtomicBoolean> toolCancelInvocations = new ConcurrentHashMap<>();
     private final java.util.concurrent.ConcurrentMap<String, CountDownLatch> toolCancelLatch = new ConcurrentHashMap<>();
-
+    private final ChatMemoryId memoryId;
     public AgentExecutor(Agent agent, String userId,
                          ChatModel chatModel,
                          StreamingChatModel streamingModel,
@@ -58,10 +58,11 @@ public class AgentExecutor {
         this.agentMessageHandler = new AgentMessageHandler();
         this.agent = agent;
         this.userId = userId;
+        this.memoryStore = memoryStore;
         int maxMemoryRecords = agent.getMaxMemoryRecords() != null ? agent.getMaxMemoryRecords() : 20;
         int maxToolInvocations = agent.getMaxToolInvocations() != null ? agent.getMaxToolInvocations() : 10;
 
-        ChatMemoryId memoryId = new ChatMemoryId(agent.getId(), userId);
+        memoryId = new ChatMemoryId(agent.getId(), userId);
         MessageWindowChatMemory.Builder memoryBuilder = MessageWindowChatMemory.builder()
                 .id(memoryId)
                 .maxMessages(maxMemoryRecords)
@@ -70,8 +71,7 @@ public class AgentExecutor {
                 .builder(Assistant.class)
                 .systemMessageProvider(chatMemoryId -> systemMessageProvider.apply(agent))
                 .chatMemory(memoryBuilder.build())
-                .executeToolsConcurrently(Executors.newFixedThreadPool(5))
-                .registerListener(new OrphanToolCallCleanupListener());
+                .executeToolsConcurrently(Executors.newFixedThreadPool(5));
         if (selectedTools != null && agent.getVectorToolSearch() != null && agent.getVectorToolSearch()) {
             EmbeddingModel embeddingModel = new BgeSmallZhV15EmbeddingModel();
             int maxResults = agent.getVectorToolSearchMaxResults() != null ? agent.getVectorToolSearchMaxResults() : 10;
@@ -146,6 +146,7 @@ public class AgentExecutor {
     }
 
     public String execute(List<Content> contents) {
+        this.memoryStore.orphanCleanup(memoryId);
         if (assistant == null) {
             return getSimulatedResponse();
         }
@@ -161,6 +162,8 @@ public class AgentExecutor {
     }
 
     public void executeStreaming(List<Content> contents, Consumer<String> messageConsumer) {
+        this.memoryStore.orphanCleanup(memoryId);
+
         List<ChatHistory> chatHistoryList = convertToChatHistory(contents);
         for (ChatHistory chatHistory : chatHistoryList) {
             chatHistory.setUserId(userId);

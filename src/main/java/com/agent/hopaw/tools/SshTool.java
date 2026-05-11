@@ -12,6 +12,7 @@ import org.springframework.stereotype.Service;
 
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.*;
 
 @Service
 public class SshTool implements AgentTool {
@@ -155,7 +156,9 @@ public class SshTool implements AgentTool {
     public String sshUpload(
             @P(description = "会话标识，由sshConnect返回的sessionKey") String sessionKey,
             @P(description = "本地文件路径") String localPath,
-            @P(description = "远程服务器目标路径") String remotePath) {
+            @P(description = "远程服务器目标路径") String remotePath,
+            @P(description = "最大执行时间（秒），默认300秒", required = false) Integer timeout,
+            InvocationParameters invocationParameters) {
         if (sessionKey == null || localPath == null || remotePath == null) {
             return "错误：sessionKey、localPath、remotePath 不能为空";
         }
@@ -165,15 +168,31 @@ public class SshTool implements AgentTool {
             return "错误：会话未连接或不存在，sessionKey=" + sessionKey;
         }
 
+        InvocationParametersWrapper wrapper = InvocationParametersWrapper.create(invocationParameters);
+        Long agentId = wrapper.getAgentId();
+        String userId = wrapper.getUserId();
+        String toolCallId = wrapper.getToolCallId();
+
+        int timeoutSec = (timeout != null && timeout > 0) ? timeout : 300;
+        ExecutorService executor = Executors.newSingleThreadExecutor();
         try {
+            SftpProgressMonitor monitor = new SftpProgressReporter(
+                    agentExecutorManager, agentId, userId, toolCallId, "上传");
+            java.util.concurrent.Future<String> future = executor.submit(() -> {
             ChannelSftp sftp = (ChannelSftp) session.openChannel("sftp");
-            sftp.connect(30000);
-            sftp.put(localPath, remotePath);
+                sftp.connect(Math.min(timeoutSec * 1000, 30000));
+            sftp.put(localPath, remotePath, monitor);
             sftp.disconnect();
             return "成功：文件已上传至 " + remotePath;
+            });
+            return future.get(timeoutSec, TimeUnit.SECONDS);
+        } catch (java.util.concurrent.TimeoutException e) {
+            return "错误：上传超时（" + timeoutSec + "秒）";
         } catch (Exception e) {
             logger.error("SSH upload failed", e);
             return "错误：上传失败 - " + e.getMessage();
+        } finally {
+            executor.shutdownNow();
         }
     }
 
@@ -181,7 +200,9 @@ public class SshTool implements AgentTool {
     public String sshDownload(
             @P(description = "会话标识，由sshConnect返回的sessionKey") String sessionKey,
             @P(description = "远程服务器文件路径") String remotePath,
-            @P(description = "本地保存路径") String localPath) {
+            @P(description = "本地保存路径") String localPath,
+            @P(description = "最大执行时间（秒），默认300秒", required = false) Integer timeout,
+            InvocationParameters invocationParameters) {
         if (sessionKey == null || remotePath == null || localPath == null) {
             return "错误：sessionKey、remotePath、localPath 不能为空";
         }
@@ -191,15 +212,31 @@ public class SshTool implements AgentTool {
             return "错误：会话未连接或不存在，sessionKey=" + sessionKey;
         }
 
+        InvocationParametersWrapper wrapper = InvocationParametersWrapper.create(invocationParameters);
+        Long agentId = wrapper.getAgentId();
+        String userId = wrapper.getUserId();
+        String toolCallId = wrapper.getToolCallId();
+
+        int timeoutSec = (timeout != null && timeout > 0) ? timeout : 300;
+        ExecutorService executor = Executors.newSingleThreadExecutor();
         try {
+            SftpProgressMonitor monitor = new SftpProgressReporter(
+                    agentExecutorManager, agentId, userId, toolCallId, "下载");
+            java.util.concurrent.Future<String> future = executor.submit(() -> {
             ChannelSftp sftp = (ChannelSftp) session.openChannel("sftp");
-            sftp.connect(30000);
-            sftp.get(remotePath, localPath);
+                sftp.connect(Math.min(timeoutSec * 1000, 30000));
+            sftp.get(remotePath, localPath, monitor);
             sftp.disconnect();
             return "成功：文件已下载至 " + localPath;
+            });
+            return future.get(timeoutSec, TimeUnit.SECONDS);
+        } catch (java.util.concurrent.TimeoutException e) {
+            return "错误：下载超时（" + timeoutSec + "秒）";
         } catch (Exception e) {
             logger.error("SSH download failed", e);
             return "错误：下载失败 - " + e.getMessage();
+        } finally {
+            executor.shutdownNow();
         }
     }
 
@@ -232,4 +269,62 @@ public class SshTool implements AgentTool {
         sessionCache.clear();
         return "成功：已断开全部 " + count + " 个连接";
     }
+
+    private static class SftpProgressReporter implements SftpProgressMonitor {
+        private final AgentExecutorManager manager;
+        private final Long agentId;
+        private final String userId;
+        private final String toolCallId;
+        private final String direction;
+        private long max;
+        private long transferred;
+        private int lastPercent = -1;
+
+        SftpProgressReporter(AgentExecutorManager manager, Long agentId, String userId,
+                             String toolCallId, String direction) {
+            this.manager = manager;
+            this.agentId = agentId;
+            this.userId = userId;
+            this.toolCallId = toolCallId;
+            this.direction = direction;
+        }
+
+        @Override
+        public void init(int op, String src, String dest, long max) {
+            this.max = max;
+            if (max > 0) {
+                String msg = "[" + direction + "] 开始传输，文件大小: " + formatSize(max);
+                manager.sendToolRunningContent(agentId, userId, toolCallId, msg);
+            }
+        }
+
+        @Override
+        public boolean count(long delta) {
+            transferred += delta;
+            if (max > 0) {
+                int percent = (int) (transferred * 100 / max);
+                if (percent != lastPercent) {
+                    lastPercent = percent;
+                    String msg = "\n[" + direction + "进度] " + percent + "% ("
+                            + formatSize(transferred) + " / " + formatSize(max) + ")";
+                    manager.sendToolRunningContent(agentId, userId, toolCallId, msg);
+                }
+            }
+            return true;
+        }
+
+        @Override
+        public void end() {
+            String msg = "\n[" + direction + "] 传输完成";
+            manager.sendToolRunningContent(agentId, userId, toolCallId, msg);
+        }
+
+        private String formatSize(long bytes) {
+            if (bytes < 1024) return bytes + "B";
+            if (bytes < 1024 * 1024) return String.format("%.1fKB", bytes / 1024.0);
+            if (bytes < 1024 * 1024 * 1024) return String.format("%.1fMB", bytes / (1024.0 * 1024));
+            return String.format("%.1fGB", bytes / (1024.0 * 1024 * 1024));
+        }
+    }
+
 }

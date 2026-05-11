@@ -4,6 +4,7 @@ import com.agent.hopaw.model.ChatMemory;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
 
+import java.time.LocalDateTime;
 import java.util.List;
 
 @Mapper
@@ -17,6 +18,7 @@ public interface ChatMemoryMapper {
     List<ChatMemory> findByAgentIdAndUserIdAndStatus(@Param("agentId") Long agentId, @Param("userId") String userId, @Param("status") Integer status);
 
     int insert(@Param("agentId") Long agentId, @Param("userId") String userId, @Param("messageId") String messageId, @Param("messageJson") String messageJson);
+    int insertCustomCreateTime(@Param("agentId") Long agentId, @Param("userId") String userId, @Param("messageId") String messageId, @Param("messageJson") String messageJson, @Param("customCreateTime") LocalDateTime customCreateTime);
 
     int updateByMessageId(@Param("agentId") Long agentId, @Param("userId") String userId, @Param("messageId") String messageId, @Param("messageJson") String messageJson);
 
