@@ -25,4 +25,9 @@ public class CurrentDateTimeTool implements AgentTool {
     public String getIcon() {
         return "current-datetime-tool";
     }
+
+    @Override
+    public String getKeyword() {
+        return "时间";
+    }
 }

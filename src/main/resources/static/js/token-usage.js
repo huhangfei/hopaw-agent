@@ -7,7 +7,7 @@ document.addEventListener('DOMContentLoaded', function() {
     var now = new Date();
     var endOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59);
     var endStr = formatDateTime(endOfDay);
-    var start = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+    var start = new Date(now.getFullYear(), now.getMonth(), now.getDate() - 7, 0, 0, 0);
     var startStr = formatDateTime(start);
     document.getElementById('startTime').value = startStr;
     document.getElementById('endTime').value = endStr;

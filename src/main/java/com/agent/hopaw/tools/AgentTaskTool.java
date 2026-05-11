@@ -32,6 +32,11 @@ public class AgentTaskTool implements AgentTool {
         return "agent-task-tool";
     }
 
+    @Override
+    public String getKeyword() {
+        return "定时任务";
+    }
+
     @Tool("创建定时执行的任务")
     public String createAgentTask(@P("任务的简要名称") String taskName, @P("任务的cron表达式") String cron, @P("任务具体要做的事情描述") String taskDescription, InvocationParameters invocationParameters) {
         InvocationParametersWrapper invocationParametersWrapper = InvocationParametersWrapper.create(invocationParameters);

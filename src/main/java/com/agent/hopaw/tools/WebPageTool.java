@@ -33,6 +33,11 @@ public class WebPageTool implements AgentTool {
         return "web-page-tool";
     }
 
+    @Override
+    public String getKeyword() {
+        return "网页,url";
+    }
+
     @Tool("获取网页内容，输入URL地址，返回网页的纯文本内容")
     public String fetchWebPage(@P(description = "URL地址") String url) {
         BrowserContext context = null;

@@ -90,15 +90,18 @@ public class AgentExecutorManager {
                 .filter(t -> selectedToolNames.contains(t.getName()))
                 .collect(Collectors.toList());
 
-        return new AgentExecutor(agent, userId, chatModel, streamingModel, selectedTools, memoryStore, a -> this.getSystemMessage(a, userId), chatHistoryStorageService);
+        return new AgentExecutor(agent, userId, chatModel, streamingModel, selectedTools, memoryStore, a -> this.getSystemMessage(a, userId, selectedTools), chatHistoryStorageService);
     }
 
-    public String getSystemMessage(Agent agent, String userId) {
+    public String getSystemMessage(Agent agent, String userId,List<AgentTool> selectedTools) {
         String systemMessage = "你是一个智能助手，名字叫" + agent.getName() + "," +
                 "主要工作是" + agent.getDescription() + "," +
                 "你的agentId是" + agent.getId() + "。" +
                 "在遇到需要用户提供信息或最新信息不正确的时候，不要一直猜，先查询记忆，记忆中没有就问用户。" +
                 "在判断有需要调用工具就去调用，遇到危险操作，立刻停止操作，询问用户。\n";
+        if(agent.getVectorToolSearch()!=null && agent.getVectorToolSearch() && selectedTools != null && !selectedTools.isEmpty()){
+            systemMessage += "你有拥有的工具有以下能力：" + getToolKeywords(selectedTools) + "。\n";
+        }
         String memoryContent = longTermMemoryService.queryUserAllMemoriesContent(agent.getId(), userId, memory -> {
             if (LongTermMemoryTypeEnum.USER_PROFILE.getCode().equals(memory.getMemoryType())) {
                 return true;
@@ -107,9 +110,13 @@ public class AgentExecutorManager {
         });
 
         if (StringUtils.hasLength(memoryContent)) {
-            systemMessage += "这是所有记忆：\n" + memoryContent + "\n如果需要详细的记忆内容可以根据记忆编号查询记忆详情。";
+            systemMessage += "这是所有用户记忆：\n" + memoryContent + "\n如果需要详细的记忆内容可以根据记忆编号查询记忆详情。";
         }
         return systemMessage;
+    }
+
+    private String getToolKeywords(List<AgentTool> selectedTools){
+        return selectedTools.stream().map(AgentTool::getKeyword).collect(Collectors.joining(" "));
     }
 
     private List<String> parseToolNames(String toolsStr) {

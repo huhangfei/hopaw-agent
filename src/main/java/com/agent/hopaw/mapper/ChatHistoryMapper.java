@@ -23,5 +23,5 @@ public interface ChatHistoryMapper {
 
     int deleteByAgentId(@Param("agentId") Long agentId);
 
-    int updateToolCallStatusAndContent(@Param("id") Long id, @Param("toolCallStatus") String toolCallStatus, @Param("content") String content);
+    int updateToolCallStatusAndContent(@Param("id") Long id, @Param("toolCallStatus") String toolCallStatus, @Param("content") String content, @Param("toolExecutionTime") Long toolExecutionTime);
 }

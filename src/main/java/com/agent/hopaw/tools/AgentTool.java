@@ -6,4 +6,12 @@ public interface AgentTool {
     default String getIcon() {
         return "agent-tool";
     }
+
+    /**
+     * 声明关键字，便于匹配
+     * @return
+     */
+    default String getKeyword(){
+        return "";
+    }
 }

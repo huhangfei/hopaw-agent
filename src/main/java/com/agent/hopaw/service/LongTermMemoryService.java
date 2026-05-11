@@ -155,9 +155,10 @@ public class LongTermMemoryService {
         StringBuilder memory = new StringBuilder();
         if (!longTermMemories.isEmpty()) {
             longTermMemories.stream().map(LongTermMemory::getMemoryType).distinct().forEach(memoryType -> {
+                LongTermMemoryTypeEnum longTermMemoryTypeEnum = LongTermMemoryTypeEnum.fromCode(memoryType);
+                memory.append("----").append(longTermMemoryTypeEnum != null ? longTermMemoryTypeEnum.getName() : memoryType).append("----\n");
                 longTermMemories.stream().filter(x -> x.getMemoryType().equals(memoryType)).forEach(x -> {
-                    memory.append("-------\n")
-                            .append(buildMemoryContent(x, includeDetailFun))
+                    memory.append(buildMemoryContent(x, includeDetailFun,false))
                             .append("\n");
                 });
             });
@@ -165,27 +166,36 @@ public class LongTermMemoryService {
         return memory.toString();
     }
 
-
     /**
      * @param memory
      * @return
      */
     public String buildMemoryContent(LongTermMemory memory, Boolean includeDetail) {
+        return buildMemoryContent(memory, includeDetail, true);
+    }
+
+        /**
+         * @param memory
+         * @return
+         */
+    public String buildMemoryContent(LongTermMemory memory, Boolean includeDetail,Boolean includeType) {
         if (memory == null) {
             return "";
         }
         StringBuilder memorySb = new StringBuilder();
         DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
         LongTermMemoryTypeEnum longTermMemoryTypeEnum = LongTermMemoryTypeEnum.fromCode(memory.getMemoryType());
-        memorySb.append("【").append(longTermMemoryTypeEnum != null ? longTermMemoryTypeEnum.getName() : memory.getMemoryType()).append("】\n")
-                .append("编号:").append(memory.getId()).append("\n")
+        if(includeType!=null && includeType){
+            memorySb.append("【").append(longTermMemoryTypeEnum != null ? longTermMemoryTypeEnum.getName() : memory.getMemoryType()).append("】\n");
+        }
+        memorySb.append("编号:").append(memory.getId()).append("\n")
                 .append("类型:").append(memory.getMemoryType()).append("\n")
                 .append("概要:").append(memory.getSummary()).append("\n");
         if (memory.getMemory() != null && !memory.getMemory().isEmpty()) {
             if (includeDetail != null && includeDetail) {
                 memorySb.append("内容:").append(memory.getMemory()).append("\n");
             } else {
-                memorySb.append("内容:").append("请根据记忆编号调用Tool查看详细内容").append("\n");
+                memorySb.append("内容:").append("已遮挡，调用Tool查看详情").append("\n");
             }
         }
 //        memorySb.append("更新时间:").append(memory.getUpdateTime().format(formatter)).append("\n")
@@ -193,9 +203,12 @@ public class LongTermMemoryService {
         return memorySb.toString();
     }
 
-    public String buildMemoryContent(LongTermMemory memory, Function<LongTermMemory, Boolean> includeDetailFun) {
+    public String buildMemoryContent(LongTermMemory memory, Function<LongTermMemory, Boolean> includeDetailFun,Boolean includeType) {
         Boolean includeDetail = includeDetailFun.apply(memory);
-        return buildMemoryContent(memory, includeDetail);
+        return buildMemoryContent(memory, includeDetail,includeType);
+    }
+    public String buildMemoryContent(LongTermMemory memory, Function<LongTermMemory, Boolean> includeDetailFun ) {
+        return buildMemoryContent(memory, includeDetailFun,false);
     }
 
     public String getMemoryContentById(Long id) {
@@ -243,5 +256,8 @@ public class LongTermMemoryService {
         }
 
         return "保存成功：记忆编号为" + memoryEntity.getId();
+    }
+    public String getMemoryOrganizingRules() {
+        return sysConfigService.getValueByKey("memory_prompt", "");
     }
 }

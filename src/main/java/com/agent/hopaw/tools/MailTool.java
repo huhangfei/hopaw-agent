@@ -33,6 +33,11 @@ public class MailTool implements AgentTool {
         return "mail-tool";
     }
 
+    @Override
+    public String getKeyword() {
+        return "邮件";
+    }
+
     @Tool("发送纯文本邮件。")
     public String sendTextMail(
             @P(description = "收件人邮箱地址") String to,

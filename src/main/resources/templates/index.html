@@ -93,7 +93,7 @@
                                 <span class="tool-call-status" th:switch="${chat.toolCallStatus}"
                                       th:classappend="${chat.toolCallStatus == 'tool_call_end' ? 'completed' : ''}">
                                         <span th:case="'tool_call_start'">执行中...</span>
-                                        <span th:case="'tool_call_end'">执行完成</span>
+                                        <span th:case="'tool_call_end'" th:text="${chat.toolExecutionTime != null ? '执行完成(' + #numbers.formatDecimal(chat.toolExecutionTime / 1000.0, 1, 1) + 's)' : '执行完成'}">执行完成</span>
                                         <span th:case="'tool_call_failed'">执行失败</span>
                                         <span th:case="*" th:text="${chat.toolCallStatus}">执行完成</span>
                                     </span>

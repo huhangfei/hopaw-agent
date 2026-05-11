@@ -297,7 +297,7 @@ public class LongTermMemoryTaskHandler implements TaskHandler {
     }
 
     private String buildSystemMessage() {
-        String customPrompt = getConfig("memory_prompt", "");
+        String customPrompt = longTermMemoryService.getMemoryOrganizingRules();
         return customPrompt;
     }
 

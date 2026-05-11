@@ -73,7 +73,7 @@ public class DataInitializer implements CommandLineRunner {
                     "tool_name TEXT, " +
                     "tool_arguments TEXT, " +
                     "tool_call_status TEXT, " +
-                    "thinking_content TEXT, " +
+                    "tool_execution_time INTEGER, " +
                     "user_id TEXT, " +
                     "create_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP" +
                     ")");
@@ -81,6 +81,12 @@ public class DataInitializer implements CommandLineRunner {
             // 兼容旧表：添加 user_id 列（如果不存在）
             try {
                 stmt.execute("ALTER TABLE chat_history ADD COLUMN user_id TEXT");
+            } catch (Exception ignored) {
+            }
+
+            // 兼容旧表：添加 tool_execution_time 列（如果不存在）
+            try {
+                stmt.execute("ALTER TABLE chat_history ADD COLUMN tool_execution_time INTEGER");
             } catch (Exception ignored) {
             }
 
@@ -358,7 +364,7 @@ public class DataInitializer implements CommandLineRunner {
                     "========\n" +
                     "分类1，用户画像\n" +
                     "内容包含：姓名、昵称、年龄、地域、职业、收入、常用设备、喜好、交流风格、偏好与厌恶、经常提的要求规则等，只记录简短的用户各种标签。\n" +
-                    "整理限制: 请给出一个简短的标签作为概要(比如，姓名、昵称等)，具体事实作为画像内容，内容要精简；用户画像每条都是最小标签。\n" +
+                    "整理限制: 请给出一个简短的标签作为概要(比如：姓名及昵称、爱好及延误、服务器清单、联系方式等)，具体事实作为画像内容，内容要精简；每条画像不宜过细，相同分类的共用一条即可。\n" +
                     "分类2，任务记录\n" +
                     "内容包含：正在做的什么事情（开始时间、任务说明、任务过程主要节点、结果、结束时间）。\n" +
                     "整理限制: 每次可以汇总出一条或多条不同任务记录，要根据具体的对话场景和已有的任务记录做判断，那些是旧任务的延续，哪些是新任务的开始；旧任务就更新内容新任务就新增内容；" +

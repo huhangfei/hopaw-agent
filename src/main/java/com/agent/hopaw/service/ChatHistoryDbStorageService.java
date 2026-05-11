@@ -4,6 +4,8 @@ import com.agent.hopaw.mapper.ChatHistoryMapper;
 import com.agent.hopaw.model.ChatHistory;
 import org.springframework.stereotype.Service;
 
+import java.time.LocalDateTime;
+import java.time.temporal.ChronoUnit;
 import java.util.List;
 
 @Service
@@ -20,9 +22,13 @@ public class ChatHistoryDbStorageService implements ChatHistoryStorageService{
         if(chatHistory.getMessageType().equals("tool_call")){
             ChatHistory old = chatHistoryMapper.findByAgentIdAndToolCallId(chatHistory.getAgentId(), chatHistory.getToolCallId());
             if(old != null){
+                LocalDateTime startTime = old.getCreateTime();
+                long toolExecutionTime = ChronoUnit.MILLIS.between(startTime, LocalDateTime.now());
+                chatHistory.setToolExecutionTime(toolExecutionTime);
                 chatHistory.setId(old.getId());
-                chatHistoryMapper.updateToolCallStatusAndContent(chatHistory.getId(), chatHistory.getToolCallStatus(), chatHistory.getContent());
+                chatHistoryMapper.updateToolCallStatusAndContent(chatHistory.getId(), chatHistory.getToolCallStatus(), chatHistory.getContent(), chatHistory.getToolExecutionTime());
             }else{
+                chatHistory.setToolExecutionTime(0L);
                 chatHistoryMapper.insert(chatHistory);
             }
         }else{

@@ -25,6 +25,8 @@ import java.util.concurrent.ConcurrentHashMap;
 
 @Component
 public class ChatWebSocketHandler extends TextWebSocketHandler {
+    // 每个session绑定一个锁
+    private static final ConcurrentHashMap<String, Object> SESSION_LOCK_MAP = new ConcurrentHashMap<>();
 
     private static final Logger logger = LoggerFactory.getLogger(ChatWebSocketHandler.class);
     private final AgentService agentService;
@@ -85,8 +87,14 @@ public class ChatWebSocketHandler extends TextWebSocketHandler {
                     if(currentSession == null){
                         return;
                     }
-                   if(currentSession.isOpen()){
-                       currentSession.sendMessage(new TextMessage(aiMessageJson));
+                   if(currentSession.isOpen()) {
+
+                       Object lock = SESSION_LOCK_MAP.computeIfAbsent(sessionId, k -> new Object());
+                       // 同一session串行发送
+                       synchronized (lock) {
+                           currentSession.sendMessage(new TextMessage(aiMessageJson));
+
+                       }
                    }
                 } catch (IOException e) {
                     logger.error("error", e);
@@ -117,6 +125,7 @@ public class ChatWebSocketHandler extends TextWebSocketHandler {
             logger.info("Session {} closed, removed agentId: {}", session.getId(), agentId);
         }
         sessionMap.remove(session.getId());
+        SESSION_LOCK_MAP.remove(session.getId());
         logger.info("Session closed: {}", session.getId());
     }
 }

@@ -67,4 +67,9 @@ public class WebSearchTool implements AgentTool {
     public String getIcon() {
         return "web-search-tool";
     }
+
+    @Override
+    public String getKeyword() {
+        return "搜索";
+    }
 }

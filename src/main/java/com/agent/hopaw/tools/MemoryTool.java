@@ -2,6 +2,7 @@ package com.agent.hopaw.tools;
 
 import com.agent.hopaw.constant.LongTermMemoryTypeEnum;
 import com.agent.hopaw.service.LongTermMemoryService;
+import com.agent.hopaw.service.SysConfigService;
 import com.agent.hopaw.util.InvocationParametersWrapper;
 import dev.langchain4j.agent.tool.P;
 import dev.langchain4j.agent.tool.Tool;
@@ -23,12 +24,22 @@ public class MemoryTool implements AgentTool {
 
     @Override
     public String getDescription() {
-        return "查询、保存智能体的记忆内容";
+        return "查询记忆、保存记忆、删除记忆、记忆整理规则等相关操作";
     }
 
     @Override
     public String getIcon() {
         return "memory-tool";
+    }
+
+    @Override
+    public String getKeyword() {
+        return "记忆";
+    }
+
+    @Tool("获取用户记忆整理规则")
+    public String getMemoryOrganizingRules() {
+        return longTermMemoryService.getMemoryOrganizingRules();
     }
 
     @Tool("查询用户画像记忆内容")

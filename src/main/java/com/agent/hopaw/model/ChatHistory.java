@@ -12,7 +12,7 @@ public class ChatHistory {
     private String toolName;
     private String toolArguments;
     private String toolCallStatus;
-    private String thinkingContent;
+    private Long toolExecutionTime;
     private String userId;
     private LocalDateTime createTime;
 
@@ -114,6 +114,14 @@ public class ChatHistory {
 
     public void setToolCallStatus(String toolCallStatus) {
         this.toolCallStatus = toolCallStatus;
+    }
+
+    public Long getToolExecutionTime() {
+        return toolExecutionTime;
+    }
+
+    public void setToolExecutionTime(Long toolExecutionTime) {
+        this.toolExecutionTime = toolExecutionTime;
     }
 
     public String getUserId() {

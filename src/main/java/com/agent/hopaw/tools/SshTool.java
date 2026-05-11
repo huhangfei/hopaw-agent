@@ -31,6 +31,11 @@ public class SshTool implements AgentTool {
         return "ssh-tool";
     }
 
+    @Override
+    public String getKeyword() {
+        return "SSH, SFTP";
+    }
+
     @Tool("SSH远程连接服务器，建立SSH会话。密码属于敏感信息，如果账号密码错误不要自行猜测，请搜索记忆或询问用户。连接成功后会返回sessionKey，后续操作需要使用此sessionKey。")
     public String sshConnect(
             @P(description = "服务器IP地址或域名") String host,

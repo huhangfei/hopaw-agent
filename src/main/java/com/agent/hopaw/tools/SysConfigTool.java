@@ -23,12 +23,17 @@ public class SysConfigTool implements AgentTool {
 
     @Override
     public String getDescription() {
-        return "修改查询系统配置项（SysConfig表）";
+        return "修改查询系统配置项（可能影响系统运行，请谨慎操作）";
     }
 
     @Override
     public String getIcon() {
         return "sys-config-tool";
+    }
+
+    @Override
+    public String getKeyword() {
+        return "配置";
     }
 
     @Tool("根据 Key 查询系统配置项的值")
@@ -56,7 +61,7 @@ public class SysConfigTool implements AgentTool {
         return sb.toString();
     }
 
-    @Tool("保存系统配置项，如果 Key 已存在则更新 Value，否则新增")
+    @Tool("保存系统配置项（可能影响系统运行，请谨慎操作）")
     public String saveSystemConfig(@P(description = "配置项的 Key") String key,
                              @P(description = "配置项的值") String value,
                              @P(description = "配置项的描述", required = false) String description) {

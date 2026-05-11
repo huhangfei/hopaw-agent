@@ -5,6 +5,7 @@ var currentStreamingMessage = null;
 var streamingMarkdownContent = '';
 var lastMessageType = null;
 var streamingMessages = {};
+var toolCallTimers = {};
 
 if (typeof marked !== 'undefined') {
     marked.setOptions({
@@ -192,6 +193,15 @@ function handleToolCall(data, responseId) {
         if (statusEl) { statusEl.textContent = '执行中...'; statusEl.classList.remove('completed'); }
         if (iconEl) { iconEl.textContent = '⚙️'; iconEl.style.animation = ''; }
 
+        // 启动实时计时器
+        var startTime = Date.now();
+        var timerStatusEl = statusEl;
+        var intervalId = setInterval(function() {
+            var elapsed = ((Date.now() - startTime) / 1000).toFixed(1);
+            if (timerStatusEl) { timerStatusEl.textContent = '执行中... (' + elapsed + 's)'; }
+        }, 100);
+        toolCallTimers[data.toolCallId] = {startTime: startTime, intervalId: intervalId};
+
         // Remove old partial-args if any
         var oldArgsDiv = bodyDiv.querySelector('.tool-call-args[data-partial-args]');
         if (oldArgsDiv) oldArgsDiv.remove();
@@ -206,7 +216,6 @@ function handleToolCall(data, responseId) {
 
     } else if (data.status === 'running') {
         toolCallDiv.setAttribute('data-status', 'running');
-        if (statusEl) { statusEl.textContent = '运行中...'; statusEl.classList.remove('completed'); }
         if (iconEl) { iconEl.textContent = '⚙️'; iconEl.style.animation = ''; }
 
         if (data.resultPartial != null) {
@@ -229,8 +238,16 @@ function handleToolCall(data, responseId) {
         delete msgState.toolCallArgsBuffer[data.toolCallId];
         delete msgState.toolCallResultBuffer[data.toolCallId];
 
+        var timerData = toolCallTimers[data.toolCallId];
+        var elapsed = null;
+        if (timerData) {
+            clearInterval(timerData.intervalId);
+            elapsed = ((Date.now() - timerData.startTime) / 1000).toFixed(1);
+            delete toolCallTimers[data.toolCallId];
+        }
+
         toolCallDiv.setAttribute('data-status', 'executed');
-        if (statusEl) { statusEl.textContent = '执行完成'; statusEl.classList.add('completed'); }
+        if (statusEl) { statusEl.textContent = '执行完成' + (elapsed ? ' (' + elapsed + 's)' : ''); statusEl.classList.add('completed'); }
         if (iconEl) { iconEl.style.animation = 'none'; iconEl.textContent = '✅'; }
 
         if (data.result) {
@@ -265,7 +282,9 @@ function handleToolCall(data, responseId) {
         }
     }
 
-    messagesDiv.scrollTop = messagesDiv.scrollHeight;
+    if (data.status !== 'running') {
+        messagesDiv.scrollTop = messagesDiv.scrollHeight;
+    }
 }
 
 function escapeHtml(text) {

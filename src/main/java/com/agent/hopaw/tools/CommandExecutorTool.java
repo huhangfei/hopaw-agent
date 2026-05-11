@@ -64,61 +64,69 @@ public class CommandExecutorTool implements AgentTool {
             } else {
                 processBuilder = new ProcessBuilder("/bin/sh", "-c", command);
             }
-
             processBuilder.redirectErrorStream(true);
-
+            //进程开始
             Process process = processBuilder.start();
             StringBuilder output = new StringBuilder();
             try (BufferedReader reader = new BufferedReader(new InputStreamReader(process.getInputStream(), determineEncoding(os)))) {
-                String line;
-                int lineCount = 0;
-                while ((line = reader.readLine()) != null) {
-                    if (agentExecutorManager.toolIsCancelled(agentId, userId, toolCallId)) {
-                        process.destroyForcibly();
-                        throw new RuntimeException("CANCELLED_BY_USER"); // 使用异常跳出，方便主线程捕获
+                //异步读取
+                CompletableFuture<Void> outputReader = CompletableFuture.runAsync(() -> {
+                    String line;
+                    int lineCount = 0;
+                    try {
+                        while ((line = reader.readLine()) != null) {
+                            if (agentExecutorManager.toolIsCancelled(agentId, userId, toolCallId)) {
+                                output.append("错误: 命令执行被用户取消");
+                                break;
+                            }
+                            if (lineCount >= MAX_OUTPUT_LINES) {
+                                output.append("\n... (输出已截断，超过 ").append(MAX_OUTPUT_LINES).append(" 行)");
+                                break;
+                            }
+                            agentExecutorManager.sendToolRunningContent(agentId, userId, toolCallId, line + "\n");
+                            output.append(line).append("\n");
+                            lineCount++;
+
+                        }
+                    } catch (Exception ex) {
+                        logger.error("Error reading process output: {}", ex.getMessage(), ex);
+                        output.append("错误: ").append(ex.getMessage());
                     }
-                    if (lineCount >= MAX_OUTPUT_LINES) {
-                        output.append("\n... (输出已截断，超过 ").append(MAX_OUTPUT_LINES).append(" 行)");
-                        break;
+                });
+                if (process.waitFor(timeout, TimeUnit.SECONDS)) {
+                    // 进程正常结束等待输出读取完成
+                    outputReader.get(5, TimeUnit.SECONDS);
+                    int exitCode= process.exitValue();
+                    if (output.isEmpty()) {
+                        return "命令执行成功 (退出码: " + exitCode + ")，无输出";
                     }
-                    agentExecutorManager.sendToolRunningContent(agentId, userId, toolCallId, line + "\n");
-                    output.append(line).append("\n");
-                    lineCount++;
+                    return "退出码: " + exitCode + "\n\n" + output;
+                } else {
+                    try {
+                        ProcessHandle processHandle = process.toHandle();
+                        processHandle.descendants()
+                                .forEach(ProcessHandle::destroyForcibly);
+                        processHandle.destroyForcibly();
+                    } catch (Exception e) {
+                        process.destroyForcibly(); // 降级方案
+                    }
+                    return "错误: 超时未执行完成，已强制退出。\n"+ (output.isEmpty() ? "本次无输出" :"输出："+ output);
                 }
-            }catch (IOException e) {
-                // 进程被强制杀死时可能会触发 IOException，属于正常现象
-                if (process.isAlive()) throw new RuntimeException(e);
-            }
-            int exitCode;
-            try {
-                // 等待进程退出（带超时）
-                Process exitedProcess = process.onExit().get(timeout, TimeUnit.SECONDS);
-                exitCode = process.exitValue();
-                if (output.isEmpty()) {
-                    return "命令执行成功 (退出码: " + exitCode + ")，无输出";
-                }
-                return "退出码: " + exitCode + "\n\n" + output;
-            }catch (ExecutionException e) {
-                // 捕获异步线程里抛出的 CANCELLED 异常
-                if (e.getCause() instanceof RuntimeException && "CANCELLED_BY_USER".equals(e.getCause().getMessage())) {
-                    return "错误: 命令执行被用户取消";
-                }
-                throw e;
-            } catch (TimeoutException e) {
+            }catch (TimeoutException e) {
                 process.destroyForcibly();
                 return "错误: 命令执行超时 (超过 " + timeout + " 秒)，已强制终止\n";
+            } catch (IOException e) {
+                // 进程被强制杀死时可能会触发 IOException，属于正常现象
+                if (process.isAlive()){
+                    //线程是活动就不正常
+                    throw new RuntimeException(e);
+                }
             }
-
-        }catch (Exception e) {
-            // 统一异常处理
-            if (e instanceof InterruptedException) {
-                Thread.currentThread().interrupt();
-                logger.error("Command execution interrupted", e);
-                return "错误: 命令执行被系统中断";
-            }
+        } catch (Exception e) {
             logger.error("Error executing command: {}", command, e);
             return "错误: 未知错误 - " + e.getMessage();
         }
+        return "错误: 未知错误";
     }
 
     private Charset determineEncoding(String os) {
@@ -165,5 +173,10 @@ public class CommandExecutorTool implements AgentTool {
     @Override
     public String getIcon() {
         return "command-executor-tool";
+    }
+
+    @Override
+    public String getKeyword() {
+        return "本地命令";
     }
 }
