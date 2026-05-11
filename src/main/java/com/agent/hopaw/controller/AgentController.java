@@ -49,6 +49,9 @@ public class AgentController {
         List<ToolSetInfo> toolSets = agentToolService.getToolSets();
         model.addAttribute("toolSets", toolSets);
 
+        if(agents.size() > 0 && agentId == null){
+            agentId = agents.get(0).getId();
+        }
         if (agentId != null) {
             Agent agent = agentService.getAgentById(agentId);
             model.addAttribute("selectedAgent", agent);
