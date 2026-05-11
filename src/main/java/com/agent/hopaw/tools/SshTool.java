@@ -1,8 +1,11 @@
 package com.agent.hopaw.tools;
 
+import com.agent.hopaw.service.AgentExecutorManager;
+import com.agent.hopaw.util.InvocationParametersWrapper;
 import com.jcraft.jsch.*;
 import dev.langchain4j.agent.tool.P;
 import dev.langchain4j.agent.tool.Tool;
+import dev.langchain4j.invocation.InvocationParameters;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
@@ -12,9 +15,13 @@ import java.util.concurrent.ConcurrentHashMap;
 
 @Service
 public class SshTool implements AgentTool {
-
+    private final AgentExecutorManager agentExecutorManager;
     private static final Logger logger = LoggerFactory.getLogger(SshTool.class);
     private static final Map<String, Session> sessionCache = new ConcurrentHashMap<>();
+
+    public SshTool(AgentExecutorManager agentExecutorManager) {
+        this.agentExecutorManager = agentExecutorManager;
+    }
 
     @Override
     public String getName() {
@@ -73,7 +80,8 @@ public class SshTool implements AgentTool {
     @Tool("在已连接的SSH会话上执行远程命令，需要先通过sshConnect建立连接获取sessionKey")
     public String sshExec(
             @P(description = "会话标识，由sshConnect返回的sessionKey") String sessionKey,
-            @P(description = "要执行的远程命令") String command) {
+            @P(description = "要执行的远程命令") String command,
+            @P(description = "命令最大执行时间（秒），默认60秒", required = false) Integer timeout, InvocationParameters invocationParameters) {
         if (sessionKey == null || sessionKey.trim().isEmpty()) {
             return "错误：sessionKey 不能为空";
         }
@@ -85,6 +93,12 @@ public class SshTool implements AgentTool {
         if (session == null || !session.isConnected()) {
             return "错误：会话未连接或不存在，sessionKey=" + sessionKey;
         }
+        InvocationParametersWrapper invocationParametersWrapper = InvocationParametersWrapper.create(invocationParameters);
+        String toolCallId = invocationParametersWrapper.getToolCallId();
+        String userId = invocationParametersWrapper.getUserId();
+        Long agentId = invocationParametersWrapper.getAgentId();
+        int timeoutSec = (timeout != null && timeout > 0) ? timeout : 60;
+        long deadline = System.currentTimeMillis() + timeoutSec * 1000L;
 
         try {
             ChannelExec channel = (ChannelExec) session.openChannel("exec");
@@ -92,22 +106,44 @@ public class SshTool implements AgentTool {
             channel.setInputStream(null);
 
             java.io.InputStream in = channel.getInputStream();
-            channel.connect(30000);
+            int connectTimeout = Math.min(timeoutSec * 1000, 30000);
+            channel.connect(connectTimeout);
 
             StringBuilder output = new StringBuilder();
             byte[] tmp = new byte[1024];
+            boolean timedOut = false;
             while (true) {
                 while (in.available() > 0) {
+                    if (agentExecutorManager.toolIsCancelled(agentId, userId, toolCallId)) {
+                        output.append("错误: 命令执行被用户取消");
+                        break;
+                    }
+
                     int i = in.read(tmp, 0, 1024);
                     if (i < 0) break;
-                    output.append(new String(tmp, 0, i));
+                    String msg = new String(tmp, 0, i);
+                    output.append(msg);
+                    agentExecutorManager.sendToolRunningContent(agentId, userId, toolCallId, msg);
                 }
-                if (channel.isClosed()) break;
+                if (agentExecutorManager.toolIsCancelled(agentId, userId, toolCallId)) {
+                    output.append("错误: 命令执行被用户取消");
+                    break;
+                }
+                if (channel.isClosed()) {
+                    break;
+                }
+                if (System.currentTimeMillis() >= deadline) {
+                    timedOut = true;
+                    break;
+                }
                 Thread.sleep(100);
             }
 
             int exitCode = channel.getExitStatus();
             channel.disconnect();
+            if (timedOut) {
+                return "退出码: -1 (超时)\n" + output + "\n[命令已超时，已断开连接]";
+            }
             return "退出码: " + exitCode + "\n" + output;
         } catch (Exception e) {
             logger.error("SSH exec failed", e);
@@ -181,5 +217,19 @@ public class SshTool implements AgentTool {
         } else {
             return "成功：会话不存在或已断开，sessionKey=" + sessionKey;
         }
+    }
+
+    @Tool("断开所有SSH远程连接，清理所有会话资源")
+    public String sshDisconnectAll() {
+        int count = 0;
+        for (Map.Entry<String, Session> entry : sessionCache.entrySet()) {
+            Session session = entry.getValue();
+            if (session != null && session.isConnected()) {
+                session.disconnect();
+                count++;
+            }
+        }
+        sessionCache.clear();
+        return "成功：已断开全部 " + count + " 个连接";
     }
 }
