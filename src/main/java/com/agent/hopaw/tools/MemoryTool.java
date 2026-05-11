@@ -47,15 +47,16 @@ public class MemoryTool implements AgentTool {
         InvocationParametersWrapper invocationParametersWrapper = InvocationParametersWrapper.create(invocationParameters);
         return longTermMemoryService.queryUserProfileMemoryContent(invocationParametersWrapper.getUserId());
     }
-    @Tool("查询用户所有记忆，如果不是特别需要不要包含详情")
-    public String queryAllUserMemory(@P(description="是否包括详情",required = false) Boolean includeDetail, InvocationParameters invocationParameters){
+    @Tool("查询用户任务记录记忆，如果不是特别需要不要包含详情")
+    public String queryUserTaskRecordsMemory(@P(description="是否包括详情",required = false) Boolean includeDetail, InvocationParameters invocationParameters){
         InvocationParametersWrapper invocationParametersWrapper = InvocationParametersWrapper.create(invocationParameters);
-        String memory = longTermMemoryService.queryUserAllMemoriesContent(invocationParametersWrapper.getAgentId(), invocationParametersWrapper.getUserId(),m -> {
-            if (LongTermMemoryTypeEnum.USER_PROFILE.getCode().equals(m.getMemoryType())) {
-                return true;
-            }
-            return includeDetail;
-        });
+        String memory = longTermMemoryService.queryUserTaskRecordsMemoryContent(invocationParametersWrapper.getAgentId(), invocationParametersWrapper.getUserId(), includeDetail);
+        return memory;
+    }
+    @Tool("查询用户扩展知识记忆，如果不是特别需要不要包含详情")
+    public String queryUserExpandKnowledgeMemory(@P(description="是否包括详情",required = false) Boolean includeDetail, InvocationParameters invocationParameters){
+        InvocationParametersWrapper invocationParametersWrapper = InvocationParametersWrapper.create(invocationParameters);
+        String memory = longTermMemoryService.queryUserExpandKnowledgeMemoryContent(invocationParametersWrapper.getAgentId(), invocationParametersWrapper.getUserId(), includeDetail);
         return memory;
     }
     @Tool("查询用户记忆详细内容,根据指定Id查询")

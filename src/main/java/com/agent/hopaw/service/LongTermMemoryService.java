@@ -131,6 +131,45 @@ public class LongTermMemoryService {
         }
         return buildMemoryContent(memories,true);
     }
+    /**
+     * 查询用户任务记录记忆
+     * @param userId
+     * @return
+     */
+    public List<LongTermMemory> queryUserTaskRecordsMemory(Long agentId,String userId){
+        int taskRecordsArrangeTimeoutHour = Integer.parseInt(sysConfigService.getValueByKey("taskRecordsArrangeTimeoutHour", "48"));
+        LocalDateTime beginDateTime = LocalDateTime.now().minusHours(taskRecordsArrangeTimeoutHour);
+        List<LongTermMemory> taskRecords = longTermMemoryMapper.findByAgentIdAndUserIdAndMemoryTypeAndTime(agentId, userId, LongTermMemoryTypeEnum.TASK_RECORDS.getCode(), beginDateTime);
+        return taskRecords;
+    }
+    /**
+     * 查询用户任务记录记忆
+     * @param userId
+     * @return
+     */
+    public String queryUserTaskRecordsMemoryContent(Long agentId,String userId,Boolean includeDetail){
+        List<LongTermMemory> taskRecords = queryUserTaskRecordsMemory(agentId, userId);
+        return buildMemoryContent(taskRecords,includeDetail);
+    }
+    /**
+     * 查询用户扩展知识记忆
+     * @param userId
+     * @return
+     */
+    public List<LongTermMemory> queryUserExpandKnowledgeMemory(Long agentId,String userId){
+        List<LongTermMemory> expandKnowledge = longTermMemoryMapper.findByAgentIdAndUserIdAndMemoryTypeAndTime(agentId, userId, LongTermMemoryTypeEnum.EXPAND_KNOWLEDGE.getCode(), null);
+        return expandKnowledge;
+    }
+    /**
+     * 查询用户扩展知识记忆
+     * @param userId
+     * @return
+     */
+    public String queryUserExpandKnowledgeMemoryContent(Long agentId,String userId,Boolean includeDetail){
+        List<LongTermMemory> expandKnowledge = longTermMemoryMapper.findByAgentIdAndUserIdAndMemoryTypeAndTime(agentId, userId, LongTermMemoryTypeEnum.EXPAND_KNOWLEDGE.getCode(), null);
+        return buildMemoryContent(expandKnowledge,includeDetail);
+    }
+
 
     /**
      * @param longTermMemories
