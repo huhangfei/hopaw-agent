@@ -7,13 +7,13 @@ import org.springframework.stereotype.Service;
 public class CurrentDateTimeTool implements AgentTool {
 
     @Tool("获取当前日期和时间")
-    public String currentDateTime() {
+    public String getCurrentTime() {
         return java.time.LocalDateTime.now().toString();
     }
 
     @Override
     public String getName() {
-        return "currentDateTime";
+        return "getCurrentTime";
     }
 
     @Override

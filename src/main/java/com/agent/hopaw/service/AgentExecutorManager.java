@@ -96,11 +96,14 @@ public class AgentExecutorManager {
     public String getSystemMessage(Agent agent, String userId,List<AgentTool> selectedTools) {
         String systemMessage = "你是一个智能助手，名字叫" + agent.getName() + "," +
                 "主要工作是" + agent.getDescription() + "," +
-                "你的agentId是" + agent.getId() + "。" +
-                "在遇到需要用户提供信息或最新信息不正确的时候，不要一直猜，先查询记忆，记忆中没有就问用户。" +
-                "在判断有需要调用工具就去调用，遇到危险操作，立刻停止操作，询问用户。\n";
+                "你的agentId是" + agent.getId() + "。\n" +
+                "在遇到需要用户提供信息或最新信息不正确的时候，不要一直猜，先查询记忆，记忆中没有就问用户。\n" +
+                "在判断有需要调用工具就去调用，遇到危险操作，立刻停止操作，询问用户。\n" +
+                "你必须只使用提供的工具，绝对不能调用不存在的工具。\n" +
+                "如果不知道工具名称，必须拒绝执行并告诉用户无法帮助。\n" +
+                "不要编造工具！\n";
         if(agent.getVectorToolSearch()!=null && agent.getVectorToolSearch() && selectedTools != null && !selectedTools.isEmpty()){
-            systemMessage += "你有拥有的工具有以下能力：" + getToolKeywords(selectedTools) + "。\n";
+            systemMessage += "当需要[" + getToolKeywords(selectedTools) + "]这些能力时，你先使用tool_search搜一下哪些具体的工具详情再做决定使用。\n";
         }
         String memoryContent = longTermMemoryService.queryUserAllMemoriesContent(agent.getId(), userId, memory -> {
             if (LongTermMemoryTypeEnum.USER_PROFILE.getCode().equals(memory.getMemoryType())) {
