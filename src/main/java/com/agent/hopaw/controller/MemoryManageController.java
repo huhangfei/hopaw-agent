@@ -35,7 +35,7 @@ public class MemoryManageController {
     @GetMapping("/api/memory-manage/types")
     @ResponseBody
     public ResponseBean memoryTypes(@RequestParam Long agentId) {
-        List<LongTermMemory> list = longTermMemoryService.getAllMemoriesByAgentId(agentId, DefaultUser.USER);
+        List<LongTermMemory> list = longTermMemoryService.queryUserAllMemories(agentId, DefaultUser.USER);
         List<Map<String, Object>> result = new ArrayList<>();
         for (LongTermMemoryTypeEnum typeEnum : LongTermMemoryTypeEnum.values()) {
             Map<String, Object> item = new LinkedHashMap<>();
@@ -50,7 +50,7 @@ public class MemoryManageController {
     @GetMapping("/api/memory-manage/tree")
     @ResponseBody
     public ResponseBean tree(@RequestParam Long agentId) {
-        List<LongTermMemory> list = longTermMemoryService.getAllMemoriesByAgentId(agentId, DefaultUser.USER);
+        List<LongTermMemory> list = longTermMemoryService.queryUserAllMemories(agentId, DefaultUser.USER);
         return ResponseBean.success(list);
     }
 

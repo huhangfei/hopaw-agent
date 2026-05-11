@@ -457,7 +457,7 @@ public class AgentExecutor {
                     ChatHistory toolChat = new ChatHistory(
                             agent.getId(), "agent", "tool_call",
                             toolCallInfo.getToolCallId(), toolCallInfo.getToolName(),
-                            toolCallInfo.getArguments().toString(), toolCallInfo.getResult() != null ? (String) toolCallInfo.getResult() : null
+                            (toolCallInfo.getArguments()!=null?toolCallInfo.getArguments().toString():null), toolCallInfo.getResult() != null ? (String) toolCallInfo.getResult() : null
                     );
                     toolChat.setToolCallStatus(currentMessageType);
                     chatHistoryConsumer.accept(toolChat);

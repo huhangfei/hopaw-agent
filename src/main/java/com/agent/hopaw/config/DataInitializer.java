@@ -352,7 +352,7 @@ public class DataInitializer implements CommandLineRunner {
         List<Agent> agents = agentMapper.findAll();
         if (agents.isEmpty()) {
             String tools = allTools.stream().map(x -> x.getName()).collect(Collectors.joining(","));
-            Agent agent = new Agent("通用助手", "可以回答各种问题，使用多种工具", tools, 20, 20, true);
+            Agent agent = new Agent("大虾🦐", "回答各种问题，使用多种工具", tools, 20, 20, true);
             agent.setUserId(DefaultUser.USER);
             agentMapper.insert(agent);
 

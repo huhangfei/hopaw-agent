@@ -101,7 +101,7 @@ function connectWebSocket(agentId) {
 
 function handleToolCall(data, responseId) {
     var messagesDiv = document.getElementById('chatMessages');
-    var agentName = document.querySelector('.chat-header h2') ? document.querySelector('.chat-header h2').textContent : 'Agent';
+    var agentName = (function(){ var s = document.querySelector('.chat-header .agent-select'); return s ? s.options[s.selectedIndex].text : 'Agent'; })();
 
     var msgState = streamingMessages[responseId];
     if (!msgState) {
@@ -297,7 +297,7 @@ function handleToolCall(data, responseId) {
 function showLoadingMessage() {
     if (loadingMessageDiv) return;
     var messagesDiv = document.getElementById('chatMessages');
-    var agentName = document.querySelector('.chat-header h2') ? document.querySelector('.chat-header h2').textContent : 'Agent';
+    var agentName = (function(){ var s = document.querySelector('.chat-header .agent-select'); return s ? s.options[s.selectedIndex].text : 'Agent'; })();
 
     loadingMessageDiv = document.createElement('div');
     loadingMessageDiv.className = 'message agent loading-message';
@@ -331,7 +331,7 @@ function escapeHtml(text) {
 
 function handleThinking(data, responseId) {
     var messagesDiv = document.getElementById('chatMessages');
-    var agentName = document.querySelector('.chat-header h2') ? document.querySelector('.chat-header h2').textContent : 'Agent';
+    var agentName = (function(){ var s = document.querySelector('.chat-header .agent-select'); return s ? s.options[s.selectedIndex].text : 'Agent'; })();
     
     var msgState = streamingMessages[responseId];
     if (!msgState) {
@@ -383,7 +383,7 @@ function handleThinking(data, responseId) {
 
 function handleStreamingChunk(content, responseId) {
     var messagesDiv = document.getElementById('chatMessages');
-    var agentName = document.querySelector('.chat-header h2') ? document.querySelector('.chat-header h2').textContent : 'Agent';
+    var agentName = (function(){ var s = document.querySelector('.chat-header .agent-select'); return s ? s.options[s.selectedIndex].text : 'Agent'; })();
     
     var msgState = streamingMessages[responseId];
     if (!msgState) {
@@ -469,7 +469,7 @@ function handleStreamingDone(userMessage, response, responseId) {
 
 function handleStreamingError(errorMessage, responseId) {
     var messagesDiv = document.getElementById('chatMessages');
-    var agentName = document.querySelector('.chat-header h2') ? document.querySelector('.chat-header h2').textContent : 'Agent';
+    var agentName = (function(){ var s = document.querySelector('.chat-header .agent-select'); return s ? s.options[s.selectedIndex].text : 'Agent'; })();
 
     var errorDiv = document.createElement('div');
     errorDiv.className = 'message agent error-message';

@@ -80,7 +80,7 @@ public class AgentTaskHandler implements TaskHandler {
 
             AgentTaskAssistant assistant = AiServices.builder(AgentTaskAssistant.class)
                     .chatModel(chatModel)
-                    .systemMessageProvider(chatMemoryId -> "这是一个定时执行的任务，你根据任务描述认真执行任务")
+                    .systemMessageProvider(chatMemoryId -> "这是一个定时执行的任务，你根据任务描述认真执行任务，有疑问可以尝试查询用户记忆。")
                     .tools(selectedTools.toArray())
                     .maxSequentialToolsInvocations(agent.getMaxToolInvocations())
                     .build();

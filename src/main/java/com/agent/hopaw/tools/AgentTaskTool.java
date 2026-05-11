@@ -38,7 +38,7 @@ public class AgentTaskTool implements AgentTool {
     }
 
     @Tool("创建定时执行的任务")
-    public String createAgentTask(@P("任务的简要名称") String taskName, @P("任务的cron表达式") String cron, @P("任务具体要做的事情描述") String taskDescription, InvocationParameters invocationParameters) {
+    public String createAgentTask(@P("任务的简要名称") String taskName, @P("任务的cron表达式(6位)") String cron, @P("任务具体要做的事情描述") String taskDescription, InvocationParameters invocationParameters) {
         InvocationParametersWrapper invocationParametersWrapper = InvocationParametersWrapper.create(invocationParameters);
         ScheduledTask agentTask = new ScheduledTask(taskName, "agentTask", cron, 1, taskDescription);
         agentTask.setAgentId(String.valueOf(invocationParametersWrapper.getAgentId()));
@@ -97,7 +97,7 @@ public class AgentTaskTool implements AgentTool {
         InvocationParametersWrapper invocationParametersWrapper = InvocationParametersWrapper.create(invocationParameters);
         //先查询，判断是否与agentId相等
         ScheduledTask task = scheduledTaskService.findById(taskId);
-        if (task.getAgentId()!=null && !task.getAgentId().equals(invocationParametersWrapper.getAgentId())) {
+        if (task.getAgentId()!=null && !task.getAgentId().equals(invocationParametersWrapper.getAgentId().toString())) {
             return "失败：该任务非该智能体创建，无法删除";
         }
         scheduledTaskService.deleteById(taskId);

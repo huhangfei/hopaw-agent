@@ -59,7 +59,19 @@ public class LongTermMemoryService {
     }
 
     public List<LongTermMemory> getAllMemoriesByAgentId(Long agentId, String userId) {
-        return longTermMemoryMapper.findByAgentIdAndUserId(agentId, userId);
+        //用户画像
+        List<LongTermMemory> userProfile = longTermMemoryMapper.findByUserIdAndMemoryType(userId, LongTermMemoryTypeEnum.USER_PROFILE.getCode());
+        //任务记录
+        int taskRecordsArrangeTimeoutHour = Integer.parseInt(sysConfigService.getValueByKey("taskRecordsArrangeTimeoutHour", "48"));
+        LocalDateTime beginDateTime = LocalDateTime.now().minusHours(taskRecordsArrangeTimeoutHour);
+        List<LongTermMemory> taskRecords = longTermMemoryMapper.findByAgentIdAndUserIdAndMemoryTypeAndTime(agentId, userId, LongTermMemoryTypeEnum.TASK_RECORDS.getCode(), beginDateTime);
+        //扩展知识
+        List<LongTermMemory> expandKnowledge = longTermMemoryMapper.findByAgentIdAndUserIdAndMemoryTypeAndTime(agentId, userId, LongTermMemoryTypeEnum.EXPAND_KNOWLEDGE.getCode(), null);
+        List<LongTermMemory> result=new ArrayList<>();
+        result.addAll(userProfile);
+        result.addAll(taskRecords);
+        result.addAll(expandKnowledge);
+        return result;
     }
 
     public void deleteExpiredTaskRecordsMemories(Long agentId, String userId) {

@@ -81,7 +81,7 @@ public class SQLiteChatMemoryStore implements ChatMemoryStore {
             String messageJson = ChatMessageSerializer.messageToJson(message);
             messageIds.add(messageId);
             if (!memoryMap.containsKey(messageId)) {
-                chatMemoryMapper.insert(memoryId.getAgentId(), memoryId.getUserId(), messageId, messageJson);
+                chatMemoryMapper.insert(memoryId.getAgentId(), memoryId.getUserId(), messageId, messageJson, LocalDateTime.now());
             }
         }
         for (String messageId : memoryMap.keySet()) {
@@ -142,7 +142,7 @@ public class SQLiteChatMemoryStore implements ChatMemoryStore {
                         String messageId = generateMessageId(errorMsg);
                         String messageJson = ChatMessageSerializer.messageToJson(errorMsg);
                         LocalDateTime time = callToolRequestCreateTime.getOrDefault(req.id(), LocalDateTime.now());
-                        chatMemoryMapper.insertCustomCreateTime(memoryId.getAgentId(), memoryId.getUserId(),messageId, messageJson,time.plus(1, ChronoUnit.MILLIS));
+                        chatMemoryMapper.insert(memoryId.getAgentId(), memoryId.getUserId(),messageId, messageJson,time.plus(1, ChronoUnit.MILLIS));
                         logger.info("为tool call {} 创建了错误结果 {}", req.id(), messageId);
                     }
                 }

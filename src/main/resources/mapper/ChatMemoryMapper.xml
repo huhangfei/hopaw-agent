@@ -47,14 +47,7 @@
 
     <insert id="insert">
         INSERT INTO chat_memory (agent_id, user_id, message_id, message_json, status, create_time)
-        VALUES (#{agentId}, #{userId}, #{messageId}, #{messageJson}, 0, datetime('now', 'localtime'))
-        <selectKey resultType="long" keyProperty="id" order="AFTER">
-            SELECT last_insert_rowid()
-        </selectKey>
-    </insert>
-    <insert id="insertCustomCreateTime">
-        INSERT INTO chat_memory (agent_id, user_id, message_id, message_json, status, create_time)
-        VALUES (#{agentId}, #{userId}, #{messageId}, #{messageJson}, 0, #{customCreateTime})
+        VALUES (#{agentId}, #{userId}, #{messageId}, #{messageJson}, 0, #{createTime})
         <selectKey resultType="long" keyProperty="id" order="AFTER">
             SELECT last_insert_rowid()
         </selectKey>

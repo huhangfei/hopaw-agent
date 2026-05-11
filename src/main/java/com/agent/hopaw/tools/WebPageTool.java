@@ -4,6 +4,8 @@ import dev.langchain4j.agent.tool.P;
 import dev.langchain4j.agent.tool.Tool;
 import org.jsoup.Jsoup;
 import org.jsoup.safety.Safelist;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
 import com.microsoft.playwright.*;
 import com.microsoft.playwright.options.LoadState;
@@ -11,6 +13,7 @@ import com.microsoft.playwright.options.LoadState;
 @Component
 public class WebPageTool implements AgentTool {
 
+    private final Logger logger = LoggerFactory.getLogger(WebPageTool.class);
     private static final Playwright playwright = Playwright.create();
     private static final Browser browser;
 
@@ -75,6 +78,7 @@ public class WebPageTool implements AgentTool {
             return text.length() > 50000 ? text.substring(0, 50000) + "..." : text;
 
         } catch (Exception e) {
+            logger.error("获取网页失败:url="+url, e);
             return "获取网页失败: " + e.getMessage();
         } finally {
             if (page != null) {

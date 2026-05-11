@@ -6,38 +6,25 @@
 
 <div class="main-container">
     <nav th:replace="fragments/layout::menuSidebar('home')"></nav>
-    <aside class="sidebar">
-        <div class="sidebar-header">
-            <h2>Agent 列表</h2>
-            <button class="btn-add" onclick="showAddModal()" title="添加 Agent">
-                <svg viewBox="0 0 24 24" fill="currentColor">
-                    <path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/>
-                </svg>
-            </button>
-        </div>
-        <div class="agent-list">
-            <div th:each="agent : ${agents}"
-                 class="agent-item"
-                 th:classappend="${selectedAgentId == agent.id ? 'selected' : ''}"
-                 th:attr="data-id=${agent.id}, onclick=|selectAgent(${agent.id})|">
-                <div class="agent-name" th:text="${agent.name}"></div>
-                <div class="agent-description" th:text="${agent.description}"></div>
-<!--                <div class="agent-tools">-->
-<!--                        <span th:each="tool : ${agent.getToolsArray()}"-->
-<!--                              class="tool-tag"-->
-<!--                              th:text="${tool}"></span>-->
-<!--                </div>-->
-            </div>
-        </div>
-    </aside>
 
-    <main class="chat-area">
+<main class="chat-area">
         <div th:if="${selectedAgent != null}" class="chat-header">
             <div class="chat-header-title">
-                <h2 th:text="${selectedAgent.name}"></h2>
+                <select class="agent-select" onchange="selectAgent(this.value)">
+                    <option th:each="a : ${agents}"
+                            th:value="${a.id}"
+                            th:text="${a.name}"
+                            th:selected="${selectedAgentId == a.id}"></option>
+                </select>
                 <span class="chat-header-desc" th:text="${selectedAgent.description}"></span>
             </div>
             <div class="header-actions">
+                <button class="btn-add-header" onclick="showAddModal()" title="添加 Agent">
+                    <svg viewBox="0 0 24 24" fill="currentColor">
+                        <path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/>
+                    </svg>
+                    添加
+                </button>
                 <button class="btn-edit"
                         th:attr="onclick=|showEditModal(${selectedAgent.id}, '${#strings.escapeJava(selectedAgent.name)}', '${#strings.escapeJava(selectedAgent.description)}', '${#strings.escapeJava(selectedAgent.tools)}', ${selectedAgent.maxMemoryRecords != null ? selectedAgent.maxMemoryRecords : 20}, ${selectedAgent.maxToolInvocations != null ? selectedAgent.maxToolInvocations : 10}, ${selectedAgent.aiModelId}, ${selectedAgent.enableThinking != null ? selectedAgent.enableThinking : true}, ${selectedAgent.vectorToolSearch != null ? selectedAgent.vectorToolSearch : true}, ${selectedAgent.vectorToolSearchMaxResults != null ? selectedAgent.vectorToolSearchMaxResults : 5})|"
                         title="编辑">
