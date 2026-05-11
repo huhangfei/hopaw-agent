@@ -67,6 +67,8 @@ public class ChatWebSocketHandler extends TextWebSocketHandler {
                 sendError(session, "缺少必要参数");
                 return;
             }
+            //回复一个已收到消息，开始处理
+            sendFirstState(session);
 
             Long agentId = Long.parseLong(agentIdStr);
             AgentExecutor executor = agentService.getAgentExecutor(agentId, DefaultUser.USER);
@@ -106,6 +108,16 @@ public class ChatWebSocketHandler extends TextWebSocketHandler {
         }
     }
 
+    private void sendFirstState(WebSocketSession session) {
+        try {
+            Map<String, Object> data = new HashMap<>(2);
+            data.put("type", "received");
+            data.put("message", "已收到消息，开始处理");
+            session.sendMessage(new TextMessage(JSON.toJSONString(data)));
+        } catch (IOException e) {
+            logger.error("error", e);
+        }
+    }
     private void sendError(WebSocketSession session, String errorMessage) {
         try {
             Map<String, Object> data = new HashMap<>();

@@ -6,6 +6,7 @@ var streamingMarkdownContent = '';
 var lastMessageType = null;
 var streamingMessages = {};
 var toolCallTimers = {};
+var loadingMessageDiv = null;
 
 if (typeof marked !== 'undefined') {
     marked.setOptions({
@@ -66,8 +67,14 @@ function connectWebSocket(agentId) {
     ws.onmessage = function(event) {
         var data = JSON.parse(event.data);
         var responseId = data.responseId;
-        
-        if (data.type === 'chunk') {
+
+        if (data.type !== 'received') {
+            removeLoadingMessage();
+        }
+
+        if (data.type === 'received') {
+            showLoadingMessage();
+        } else if (data.type === 'chunk') {
             handleStreamingChunk(data.content, responseId);
         } else if (data.type === 'tool_call') {
             handleToolCall(data, responseId);
@@ -284,6 +291,35 @@ function handleToolCall(data, responseId) {
 
     if (data.status !== 'running') {
         messagesDiv.scrollTop = messagesDiv.scrollHeight;
+    }
+}
+
+function showLoadingMessage() {
+    if (loadingMessageDiv) return;
+    var messagesDiv = document.getElementById('chatMessages');
+    var agentName = document.querySelector('.chat-header h2') ? document.querySelector('.chat-header h2').textContent : 'Agent';
+
+    loadingMessageDiv = document.createElement('div');
+    loadingMessageDiv.className = 'message agent loading-message';
+
+    var label = document.createElement('div');
+    label.className = 'message-label';
+    label.textContent = agentName;
+    loadingMessageDiv.appendChild(label);
+
+    var loadingContent = document.createElement('div');
+    loadingContent.className = 'message-content loading-content';
+    loadingContent.innerHTML = '<span class="loading-dot"></span><span class="loading-dot"></span><span class="loading-dot"></span>';
+    loadingMessageDiv.appendChild(loadingContent);
+
+    messagesDiv.appendChild(loadingMessageDiv);
+    messagesDiv.scrollTop = messagesDiv.scrollHeight;
+}
+
+function removeLoadingMessage() {
+    if (loadingMessageDiv) {
+        loadingMessageDiv.remove();
+        loadingMessageDiv = null;
     }
 }
 
