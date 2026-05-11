@@ -70,7 +70,8 @@ public class AgentExecutor {
                 .builder(Assistant.class)
                 .systemMessageProvider(chatMemoryId -> systemMessageProvider.apply(agent))
                 .chatMemory(memoryBuilder.build())
-                .executeToolsConcurrently(Executors.newFixedThreadPool(5));
+                .executeToolsConcurrently(Executors.newFixedThreadPool(5))
+                .registerListener(new OrphanToolCallCleanupListener());
         if (selectedTools != null && agent.getVectorToolSearch() != null && agent.getVectorToolSearch()) {
             EmbeddingModel embeddingModel = new BgeSmallZhV15EmbeddingModel();
             int maxResults = agent.getVectorToolSearchMaxResults() != null ? agent.getVectorToolSearchMaxResults() : 10;
