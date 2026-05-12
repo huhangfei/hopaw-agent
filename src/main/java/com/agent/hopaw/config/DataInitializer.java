@@ -279,7 +279,7 @@ public class DataInitializer implements CommandLineRunner {
             } catch (Exception ignored) {
             }try {
                 stmt.execute("INSERT INTO scheduled_tasks (task_name, task_type, cron_expression, enabled, description, builtin) " +
-                        "SELECT '长时记忆整理', 'longTermMemory', '0/10 * * * * *', 0, '每10秒钟执行一次长时记忆整理', 1 " +
+                        "SELECT '长时记忆整理', 'longTermMemory', '0/50 * * * * *', 0, '每50秒钟执行一次长时记忆整理', 1 " +
                         "WHERE NOT EXISTS (SELECT 1 FROM scheduled_tasks where task_type = 'longTermMemory')");
             } catch (Exception ignored) {
             }

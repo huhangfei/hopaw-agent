@@ -93,9 +93,16 @@
     color: #333;
     background: #fff;
     border-bottom: 1px solid #eee;
-    height: 54px;
+    height: 46px;
     align-content: center;
 }
+
+.tool-panel-bottom .tool-panel-title {
+    height: 30px;
+    padding: 4px 14px;
+    font-size: 13px;
+}
+
 
 .tool-panel-body {
     flex: 1;
@@ -114,7 +121,7 @@
     display: flex;
     justify-content: space-between;
     align-items: center;
-    height: 54px;
+    height: 46px;
 }
 .chat-header h2 {
     font-size: 20px;
@@ -618,6 +625,14 @@
     opacity: 0.5;
 }
 
+
+
+#tokenUsage {
+    padding: 4px 2px;
+    overflow: auto;
+}
+#tokenUsage .token-bar-input { background: #2196F3; }
+#tokenUsage .token-bar-output { background: #4CAF50; }
 
 /* Tool calls in sidebar panel */
 .tool-panel-body .tool-call-container-static,

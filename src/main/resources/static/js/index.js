@@ -82,6 +82,8 @@ function connectWebSocket(agentId) {
             handleThinking(data, responseId);
         } else if (data.type === 'done') {
             handleStreamingDone(data.message, data.response, responseId);
+        } else if (data.type === 'task-done') {
+            loadTokenUsage(lastTokenId || undefined);
         } else if (data.type === 'error') {
             handleStreamingError(data.content || data.message, responseId);
         }
@@ -761,6 +763,138 @@ function stopAgent() {
     });
 }
 
+
+var lastTokenId = 0;
+var tokenChartData = [];
+
+function loadTokenUsage(minId) {
+    if (!currentAgentId) return;
+    var url = '/api/token-usage/today?agentId=' + currentAgentId+"&source=chat";
+    if (minId) url += '&minId=' + minId;
+    fetch(url).then(function(r) { return r.json(); }).then(function(res) {
+        if (res.code === 200 && res.data) {
+            if (minId && res.data.length > 0) {
+                // Remove oldest N items, append new N items (sliding window)
+                var newCount = res.data.length;
+                tokenChartData = tokenChartData.slice(newCount).concat(res.data.reverse());
+            } else if (!minId) {
+                tokenChartData = res.data.reverse();
+            }
+            if (tokenChartData.length > 0) {
+                lastTokenId = tokenChartData[tokenChartData.length - 1].id;
+            }
+            renderTokenChart(tokenChartData);
+        }
+    });
+
+    // Fetch daily summary stats
+    var now = new Date();
+    var pad = function(n) { return String(n).padStart(2, '0'); };
+    var startStr = now.getFullYear() + '-' + pad(now.getMonth()+1) + '-' + pad(now.getDate()) + ' 00:00:00';
+    var endStr = now.getFullYear() + '-' + pad(now.getMonth()+1) + '-' + pad(now.getDate()) + ' 23:59:59';
+    var statsUrl = '/api/token-usage/daily-stats?startTime=' + encodeURIComponent(startStr) + '&endTime=' + encodeURIComponent(endStr) + '&agentId=' + currentAgentId;
+    fetch(statsUrl).then(function(r) { return r.json(); }).then(function(sres) {
+        if (sres.code === 200 && sres.data && sres.data.length > 0) {
+            var today = sres.data[0];
+            updateTokenTitle(today.inputTokens || 0, today.outputTokens || 0, today.totalTokens || 0);
+        }
+    });
+}
+
+function renderTokenChart(data) {
+    var container = document.getElementById('tokenUsage');
+    if (!container || !data || data.length === 0) {
+        if (container) container.innerHTML = '<div style="padding:14px;text-align:center;color:#999;font-size:12px;">今日暂无用量</div>';
+        return;
+    }
+    
+    // Find max total for scaling
+    var maxTotal = 0;
+    data.forEach(function(d) { maxTotal = Math.max(maxTotal, d.totalTokens || 0); });
+    if (maxTotal === 0) maxTotal = 1;
+    
+    var html = '<div style="display:flex;align-items:flex-end;gap:3px;height:100%;padding:2px 4px;position:relative;">';
+    
+    // Y-axis labels
+    html += '<div style="display:flex;flex-direction:column;justify-content:space-between;height:100%;font-size:9px;color:#999;padding-right:4px;flex-shrink:0;min-width:32px;text-align:right;">';
+    for (var i = 4; i >= 0; i--) {
+        html += '<span>' + Math.round(maxTotal * i / 4) + '</span>';
+    }
+    html += '</div>';
+    
+    // Bars
+    data.forEach(function(d, idx) {
+        var ratio = maxTotal > 0 ? Math.max((d.totalTokens || 0) / maxTotal, 0.02) : 0.02;
+        var inputH = d.totalTokens > 0 ? ((d.inputTokens || 0) / d.totalTokens * 100) : 50;
+        var outputH = 100 - inputH;
+        var timeStr = d.createTime ? d.createTime.substring(11, 16) : '';
+        
+        html += '<div style="flex:1;min-width:6px;height:100%;display:flex;flex-direction:column;justify-content:flex-end;position:relative;cursor:pointer;"';
+        html += ' onmouseenter="showTokenTooltip(event, ' + (d.inputTokens||0) + ', ' + (d.outputTokens||0) + ', ' + (d.totalTokens||0) + ',\' '+( timeStr )+'\')"';
+        html += ' onmouseleave="hideTokenTooltip()">';
+        html += '<div style="height:' + (ratio * 100) + '%;display:flex;flex-direction:column;justify-content:flex-end;">';
+        html += '<div style="height:' + outputH + '%;background:#4CAF50;border-radius:2px 2px 0 0;min-height:2px;"></div>';
+        html += '<div style="height:' + inputH + '%;background:#2196F3;border-radius:2px 2px 0 0;min-height:2px;"></div>';
+        html += '</div>';
+        // Time label
+        html += '<div style="font-size:8px;color:#999;text-align:center;margin-top:2px;transform:rotate(-45deg);transform-origin:top left;white-space:nowrap;position:absolute;bottom:-14px;left:0;"></div>';
+        html += '</div>';
+    });
+    
+    html += '</div>';
+    // Tooltip
+    
+    // Ensure tooltip exists in body
+    if (!document.getElementById('tokenTooltip')) {
+        var tip = document.createElement('div');
+        tip.id = 'tokenTooltip';
+        tip.style.cssText = 'display:none;position:fixed;background:#333;color:#fff;padding:4px 8px;border-radius:4px;font-size:11px;pointer-events:none;z-index:1000;white-space:nowrap;';
+        document.body.appendChild(tip);
+    }
+    container.innerHTML = html;
+    // Update title with latest record
+    var titleEl = document.getElementById('tokenLastStats');
+    if (titleEl && data.length > 0) {
+        var last = data[data.length - 1];
+        titleEl.innerHTML = '最新:<span style="color:#2196F3;">↑ ' + formatTokenCount(last.inputTokens || 0) + '</span>'
+            + ' <span style="color:#4CAF50;">↓ ' + formatTokenCount(last.outputTokens || 0) + '</span>';
+    }
+}
+
+function updateTokenTitle(input, output, total) {
+    var el = document.getElementById('tokenDailyStats');
+    if (el) {
+        el.innerHTML = '今日:<span style="color:#2196F3;">↑ ' + formatTokenCount(input) + '</span>'
+            + ' <span style="color:#4CAF50;">↓ ' + formatTokenCount(output) + '</span>'
+            + ' <span style="color:#666;margin-left:4px;">| 总 ' + formatTokenCount(total) + '</span>';
+    }
+}
+
+
+function formatTokenCount(n) {
+    if (n >= 1000) return (n / 1000).toFixed(1) + 'K';
+    return n.toString();
+}
+
+function showTokenTooltip(e, input, output, total, timeStr) {
+    var tip = document.getElementById('tokenTooltip');
+    if (!tip) return;
+    tip.innerHTML = '<span style="color:#2196F3">输入: ' + input + '</span> <span style="color:#4CAF50">输出: ' + output + '</span> <span style="color:#fff">总量: ' + total + '</span><br><span style="color:#aaa;font-size:10px;">' + (timeStr || '') + '</span>';
+    tip.style.display = 'block';
+    var left = e.clientX + 10;
+    var top = e.clientY - 40;
+    // Keep tooltip within viewport
+    var tw = tip.offsetWidth || 200;
+    if (left + tw > window.innerWidth) left = e.clientX - tw - 10;
+    if (top < 0) top = e.clientY + 15;
+    tip.style.left = left + 'px';
+    tip.style.top = top + 'px';
+}
+function hideTokenTooltip() {
+    var tip = document.getElementById('tokenTooltip');
+    if (tip) tip.style.display = 'none';
+}
+
 window.onload = function() {
 
     document.getElementById('addAgentModal').addEventListener('click', function(e) {
@@ -792,6 +926,7 @@ window.onload = function() {
 
     if (currentAgentId) {
         connectWebSocket(currentAgentId);
+        loadTokenUsage();
     }
     
     var form = document.getElementById('chatForm');

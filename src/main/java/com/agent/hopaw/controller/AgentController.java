@@ -8,6 +8,8 @@ import com.agent.hopaw.model.ChatHistory;
 import com.agent.hopaw.model.ResponseBean;
 import com.agent.hopaw.model.ToolSetInfo;
 import com.agent.hopaw.service.AgentExecutorManager;
+import com.agent.hopaw.mapper.TokenUsageMapper;
+import com.agent.hopaw.model.TokenUsage;
 import com.agent.hopaw.service.AgentService;
 import com.agent.hopaw.service.AgentToolService;
 import org.springframework.stereotype.Controller;
@@ -146,6 +148,8 @@ public class AgentController {
         Agent agent = agentService.getAgentById(agentId);
         return "redirect:/?agentId=" + agentId;
     }
+
+
 
     @GetMapping("/chat/clear")
     public String clearChat(@RequestParam Long agentId) {

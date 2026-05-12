@@ -263,7 +263,7 @@ public class AgentExecutor {
             tokenStream.start();
 
             taskLatch.await(600, java.util.concurrent.TimeUnit.SECONDS);
-            agentMessageHandler.done();
+            agentMessageHandler.taskDone();
             toolCancelLatch.clear();
             toolCancelInvocations.clear();
         } catch (Exception e) {
@@ -361,6 +361,13 @@ public class AgentExecutor {
             data.put("responseId", responseId);
             messageConsumer.accept(JSON.toJSONString(data));
             messageTypeChangedChatHistoryHandler("done");
+        }
+        public void taskDone() {
+            Map<String, Object> data = new HashMap<>(3);
+            data.put("type", "task-done");
+            data.put("responseId", responseId);
+            messageConsumer.accept(JSON.toJSONString(data));
+            messageTypeChangedChatHistoryHandler("task-done");
         }
 
         private void onErrorHandler(Throwable ex) {

@@ -1,5 +1,6 @@
 package com.agent.hopaw.controller;
 
+import com.agent.hopaw.constant.DefaultUser;
 import com.agent.hopaw.mapper.AgentMapper;
 import com.agent.hopaw.model.Agent;
 import com.agent.hopaw.model.ResponseBean;
@@ -70,5 +71,14 @@ public class TokenUsageController {
                                    @RequestParam(required = false) String source) {
         List<Map<String, Object>> stats = tokenUsageService.dailyStats(startTime, endTime, userId, agentId, modelName, source);
         return ResponseBean.success(stats);
+    }
+
+    @GetMapping("/api/token-usage/today")
+    @ResponseBody
+    public ResponseBean tokenUsageToday(@RequestParam Long agentId,
+                                        @RequestParam(required = false) String source,
+                                        @RequestParam(required = false) Long minId) {
+        java.util.List<TokenUsage> list = tokenUsageService.findTodayByAgentUser(agentId, DefaultUser.USER, source, minId, 30);
+        return ResponseBean.success(list);
     }
 }
