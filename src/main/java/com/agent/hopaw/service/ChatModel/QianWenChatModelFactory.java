@@ -8,6 +8,6 @@ public class QianWenChatModelFactory extends  OpenAiChatModelFactory {
 
     @Override
     public String getProviderName() {
-        return ModelProviderEnum.ANTHROPIC.getSdkName();
+        return ModelProviderEnum.QWEN.getSdkName();
     }
 }

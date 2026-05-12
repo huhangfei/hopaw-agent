@@ -101,6 +101,13 @@ public class AgentController {
         return ResponseBean.success();
     }
 
+    @PostMapping("/agent/force-stop")
+    @ResponseBody
+    public ResponseBean forceStopAgent(@RequestParam Long id) {
+        agentExecutorManager.stopAndRemoveAgentExecutor(id, DefaultUser.USER);
+        return ResponseBean.success();
+    }
+
     @PostMapping("/agent/tool/stop")
     @ResponseBody
     public ResponseBean stopTool(@RequestParam Long agentId, @RequestParam String callId) {

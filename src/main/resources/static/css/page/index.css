@@ -37,6 +37,14 @@
     box-shadow: 0 0 0 2px rgba(33,150,243,0.2);
 }
 
+.btn-stop-header {
+    background: #ff4757;
+    color: white;
+}
+.btn-stop-header:hover {
+    background: #e84118;
+}
+
 .btn-add-header {
     background: #4CAF50;
     color: white;
@@ -44,6 +52,76 @@
 .btn-add-header:hover {
     background: #45a049;
 }
+
+.header-dropdown {
+    position: relative;
+    display: inline-flex;
+}
+.btn-more {
+    height: 32px;
+    width: 32px;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: #e0e0e0;
+    color: #555;
+    padding: 0;
+    transition: background 0.15s;
+}
+.btn-more:hover {
+    background: #bbb;
+}
+.dropdown-menu {
+    display: none;
+    position: absolute;
+    right: 0;
+    top: 100%;
+    padding-top: 4px;
+    z-index: 100;
+}
+.dropdown-menu::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 4px;
+}
+.dropdown-menu-inner {
+    background: #fff;
+    border: 1px solid #e0e0e0;
+    border-radius: 8px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.12);
+    min-width: 140px;
+    padding: 4px 0;
+}
+.header-dropdown:hover .dropdown-menu {
+    display: block;
+}
+.dropdown-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    width: 100%;
+    padding: 8px 14px;
+    border: none;
+    background: none;
+    font-size: 13px;
+    color: #333;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: background 0.15s;
+}
+.dropdown-item:hover {
+    background: #f5f5f5;
+}
+.dropdown-item svg {
+    flex-shrink: 0;
+}
+
 
 .chat-area {
     flex: 1;

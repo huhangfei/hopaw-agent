@@ -737,6 +737,23 @@ function hideEditModal() {
     Modal.close('editAgentModal');
 }
 
+function forceStopAgent(agentId) {
+    showConfirm('确定要强停智能体吗？强停后将移除执行器并刷新页面。').then(function(confirmed) {
+        if (!confirmed) return;
+        fetch('/agent/force-stop', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+            body: 'id=' + agentId
+        }).then(function(r) { return r.json(); }).then(function(res) {
+            if (res.code === 200) {
+                window.location.href = '/?agentId=' + agentId;
+            } else {
+                showToast(res.msg || '强停失败', 'warning');
+            }
+        });
+    });
+}
+
 function stopAgent() {
     showConfirm('确定要停止智能体运行吗？').then(function(confirmed) {
         if (!confirmed) return;

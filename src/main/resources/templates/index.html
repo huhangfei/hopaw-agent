@@ -20,32 +20,34 @@
                 <span class="chat-header-desc" th:text="${selectedAgent.description}"></span>
             </div>
             <div class="header-actions">
-                <button class="btn-add-header" onclick="showAddModal()" title="添加 Agent">
-                    <svg viewBox="0 0 24 24" fill="currentColor">
-                        <path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/>
-                    </svg>
-                    添加
+                <button class="btn-stop-header" th:attr="onclick=|forceStopAgent(${selectedAgent.id})|" title="强停">
+                    <svg viewBox="0 0 24 24" fill="currentColor"><rect x="4" y="4" width="16" height="16" rx="2"/></svg>
+                    强停
                 </button>
-                <button class="btn-edit"
-                        th:attr="onclick=|showEditModal(${selectedAgent.id}, '${#strings.escapeJava(selectedAgent.name)}', '${#strings.escapeJava(selectedAgent.description)}', '${#strings.escapeJava(selectedAgent.tools)}', ${selectedAgent.maxMemoryRecords != null ? selectedAgent.maxMemoryRecords : 20}, ${selectedAgent.maxToolInvocations != null ? selectedAgent.maxToolInvocations : 10}, ${selectedAgent.aiModelId}, ${selectedAgent.enableThinking != null ? selectedAgent.enableThinking : true}, ${selectedAgent.vectorToolSearch != null ? selectedAgent.vectorToolSearch : true}, ${selectedAgent.vectorToolSearchMaxResults != null ? selectedAgent.vectorToolSearchMaxResults : 5})|"
-                        title="编辑">
-                    <svg viewBox="0 0 24 24" fill="currentColor">
-                        <path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/>
-                    </svg>
-                    编辑
-                </button>
-                <button class="btn-delete" th:attr="onclick=|deleteAgent(${selectedAgent.id})|" title="删除">
-                    <svg viewBox="0 0 24 24" fill="currentColor">
-                        <path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/>
-                    </svg>
-                    删除
-                </button>
-                <button class="btn-clear" th:attr="onclick=|clearHistory(${selectedAgent.id})|" title="清空对话和临时记忆">
-                    <svg viewBox="0 0 24 24" fill="currentColor">
-                        <path d="M19.36 2.72l1.42 1.42-5.72 5.71c1.07 1.54 1.22 3.39.32 4.59L9.06 8.12c1.2-.9 3.05-.75 4.59.32l5.71-5.72zM5.93 17.57c-2.01-2.01-3.24-4.41-3.58-6.65l4.88-2.09 7.44 7.44-2.09 4.88c-2.24-.34-4.64-1.57-6.65-3.58z"/>
-                    </svg>
-                    清空对话
-                </button>
+                <div class="header-dropdown">
+                    <button class="btn-more" title="更多操作">
+                        <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor"><path d="M12 8c1.1 0 2-.9 2-2s-.9-2-2-2-2 .9-2 2 .9 2 2 2zm0 2c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2zm0 6c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2z"/></svg>
+                    </button>
+                    <div class="dropdown-menu"><div class="dropdown-menu-inner">
+                        <button class="dropdown-item" onclick="showAddModal()">
+                            <svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor"><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/></svg>
+                            添加
+                        </button>
+                        <button class="dropdown-item"
+                                th:attr="onclick=|showEditModal(${selectedAgent.id}, '${#strings.escapeJava(selectedAgent.name)}', '${#strings.escapeJava(selectedAgent.description)}', '${#strings.escapeJava(selectedAgent.tools)}', ${selectedAgent.maxMemoryRecords != null ? selectedAgent.maxMemoryRecords : 20}, ${selectedAgent.maxToolInvocations != null ? selectedAgent.maxToolInvocations : 10}, ${selectedAgent.aiModelId}, ${selectedAgent.enableThinking != null ? selectedAgent.enableThinking : true}, ${selectedAgent.vectorToolSearch != null ? selectedAgent.vectorToolSearch : true}, ${selectedAgent.vectorToolSearchMaxResults != null ? selectedAgent.vectorToolSearchMaxResults : 5})|">
+                            <svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor"><path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/></svg>
+                            编辑
+                        </button>
+                        <button class="dropdown-item" th:attr="onclick=|deleteAgent(${selectedAgent.id})|">
+                            <svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor"><path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/></svg>
+                            删除
+                        </button>
+                        <button class="dropdown-item" th:attr="onclick=|clearHistory(${selectedAgent.id})|">
+                            <svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor"><path d="M19.36 2.72l1.42 1.42-5.72 5.71c1.07 1.54 1.22 3.39.32 4.59L9.06 8.12c1.2-.9 3.05-.75 4.59.32l5.71-5.72zM5.93 17.57c-2.01-2.01-3.24-4.41-3.58-6.65l4.88-2.09 7.44 7.44-2.09 4.88c-2.24-.34-4.64-1.57-6.65-3.58z"/></svg>
+                            清空对话
+                        </button>
+                    </div></div>
+                </div>
             </div>
         </div>
         <div th:if="${selectedAgent != null}" class="chat-messages" id="chatMessages">

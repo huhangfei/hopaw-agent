@@ -188,9 +188,10 @@ public class LongTermMemoryService {
         DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
         if (!longTermMemories.isEmpty()) {
             longTermMemories.stream().map(LongTermMemory::getMemoryType).distinct().forEach(memoryType -> {
+                LongTermMemoryTypeEnum longTermMemoryTypeEnum = LongTermMemoryTypeEnum.fromCode(memoryType);
+                memory.append("----").append(longTermMemoryTypeEnum != null ? longTermMemoryTypeEnum.getName() : memoryType).append("----\n");
                 longTermMemories.stream().filter(x -> x.getMemoryType().equals(memoryType)).forEach(x -> {
-                    memory.append("-------\n")
-                            .append(buildMemoryContent(x, includeDetail))
+                    memory.append(buildMemoryContent(x, includeDetail))
                             .append("\n");
                 });
             });
