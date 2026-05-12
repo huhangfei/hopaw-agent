@@ -7,7 +7,8 @@
 <div class="main-container">
     <nav th:replace="fragments/layout::menuSidebar('home')"></nav>
 
-<main class="chat-area">
+<div class="chat-wrapper">
+        <main class="chat-area">
         <div th:if="${selectedAgent != null}" class="chat-header">
             <div class="chat-header-title">
                 <select class="agent-select" onchange="selectAgent(this.value)">
@@ -141,6 +142,20 @@
             <p>选择一个 Agent 开始对话</p>
         </div>
     </main>
+        <aside class="tool-panel">
+            <div class="tool-panel-section tool-panel-top">
+                <div class="tool-panel-title">工具执行列表</div>
+                <div class="tool-panel-body" id="toolExecList">
+                </div>
+            </div>
+            <div class="tool-panel-section tool-panel-bottom">
+                <div class="tool-panel-title" style="height: 32px;">Token用量</div>
+                <div class="tool-panel-body" id="tokenUsage">
+                </div>
+            </div>
+        </aside>
+
+    </div>
 </div>
 
 <div id="addAgentModal" class="modal-overlay">
