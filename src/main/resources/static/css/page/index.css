@@ -323,6 +323,13 @@
 .chat-input-wrapper:focus-within {
     border-color: #667eea;
 }
+.chat-input-wrapper textarea:disabled {
+    background: #f0f0f0;
+    color: #aaa;
+    cursor: not-allowed;
+    opacity: 0.6;
+}
+
 .chat-input-wrapper textarea {
     width: 100%;
     border: none;

@@ -84,8 +84,10 @@ public class AgentExecutor {
             );
         }
         if (!selectedTools.isEmpty()) {
-            aiBuilder.maxSequentialToolsInvocations(maxToolInvocations)
-                    .tools(selectedTools.toArray());
+            if(maxToolInvocations>0){
+                aiBuilder.maxSequentialToolsInvocations(maxToolInvocations);
+            }
+            aiBuilder.tools(selectedTools.toArray());
         }
         if (chatModel != null) {
             this.assistant = aiBuilder.chatModel(chatModel).build();
@@ -258,6 +260,12 @@ public class AgentExecutor {
                         if(toolCancelLatch.containsKey(toolExecution.request().id())){
                             toolCancelLatch.get(toolExecution.request().id()).countDown();
                         }
+                        if(toolStopHooks.containsKey(toolExecution.request().id())){
+                            toolStopHooks.remove(toolExecution.request().id());
+                        }
+                        if(toolCancelInvocations.containsKey(toolExecution.request().id())){
+                            toolCancelInvocations.remove(toolExecution.request().id());
+                        }
                         agentMessageHandler.toolExecutionHandler(toolExecution);
                     });
             tokenStream.start();
@@ -267,8 +275,12 @@ public class AgentExecutor {
             toolCancelLatch.clear();
             toolCancelInvocations.clear();
         } catch (Exception e) {
-            logger.error("\n(注: 流式响应失败: " + e.getMessage() + ")", e);
+            logger.error("\n(注: 流式响应失败: " + e.getMessage() + ")\n可以尝试清理对话或强停试试。", e);
             cancelTask.set(true);
+            toolCancelLatch.values().forEach(latch -> latch.countDown());
+            toolCancelInvocations.clear();
+            toolStopHooks.clear();
+            taskLatch.countDown();
             agentMessageHandler.onErrorHandler(e);
         }
     }

@@ -107,7 +107,7 @@ public class LongTermMemoryTaskHandler implements TaskHandler {
             } else if (message instanceof AiMessage) {
                 AiMessage aiMessage = (AiMessage) message;
                 if (aiMessage.thinking() != null) {
-                    conversationBuilder.append("Ai thinking:").append("\n").append(aiMessage.thinking()).append("\n");
+                    //conversationBuilder.append("Ai thinking:").append("\n").append(aiMessage.thinking()).append("\n");
                 }
                 if (aiMessage.text() != null) {
                     conversationBuilder.append("Ai:").append("\n").append(aiMessage.text()).append("\n");
