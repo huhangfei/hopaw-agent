@@ -385,6 +385,7 @@ public class AgentExecutor {
                     toolCall.partialArguments()
             );
             toolCallInfo.setResponseId(responseId);
+            toolCallInfo.setIndex(toolCall.index());
             messageTypeChangedChatHistoryHandler("tool_call_preparing");
         }
 

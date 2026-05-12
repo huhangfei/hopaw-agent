@@ -43,7 +43,7 @@ function renderMarkdown(content) {
 }
 
 function renderAllMessages() {
-    var messageContents = document.querySelectorAll('.message-content[data-is-agent="true"]');
+    var messageContents = document.querySelectorAll('.message-content[data-is-agent="true"], .thinking-content');
     messageContents.forEach(function(el) {
         var textContent = el.getAttribute('data-raw-content') || el.textContent;
         el.innerHTML = renderMarkdown(textContent);
@@ -101,7 +101,7 @@ function connectWebSocket(agentId) {
 
 function handleToolCall(data, responseId) {
     var messagesDiv = document.getElementById('chatMessages');
-    var agentName = (function(){ var s = document.querySelector('.chat-header .agent-select'); return s ? s.options[s.selectedIndex].text : 'Agent'; })();
+    var toolExecList = document.getElementById('toolExecList');
 
     var msgState = streamingMessages[responseId];
     if (!msgState) {
@@ -123,18 +123,8 @@ function handleToolCall(data, responseId) {
         msgState.streamingMarkdownContent = '';
         msgState.lastMessageType = 'tool_call';
 
-        msgState.currentStreamingMessage = document.createElement('div');
-        msgState.currentStreamingMessage.className = 'message agent tool-call-message';
-        msgState.currentStreamingMessage.setAttribute('data-response-id', responseId);
-
-        var label = document.createElement('div');
-        label.className = 'message-label';
-        label.textContent = agentName;
-        msgState.currentStreamingMessage.appendChild(label);
-
         var toolCallContainer = document.createElement('div');
         toolCallContainer.className = 'tool-call-container';
-        msgState.currentStreamingMessage.appendChild(toolCallContainer);
 
         toolCallDiv = document.createElement('div');
         toolCallDiv.className = 'tool-call';
@@ -146,7 +136,7 @@ function handleToolCall(data, responseId) {
 
         var toolIcon = document.createElement('span');
         toolIcon.className = 'tool-call-icon';
-        toolIcon.textContent = '🔧';
+        toolIcon.textContent = '⚙';
         toolCallHeader.appendChild(toolIcon);
 
         var toolName = document.createElement('span');
@@ -164,7 +154,8 @@ function handleToolCall(data, responseId) {
         bodyDiv.className = 'tool-call-body open';
         toolCallDiv.appendChild(bodyDiv);
 
-        messagesDiv.appendChild(msgState.currentStreamingMessage);
+        toolExecList.appendChild(toolCallContainer);
+        toolExecList.scrollTop = toolExecList.scrollHeight;
     }
 
     // ── per-status updates ──
@@ -320,12 +311,13 @@ function handleToolCall(data, responseId) {
     if (data.status !== 'running') {
         messagesDiv.scrollTop = messagesDiv.scrollHeight;
     }
+    if (toolExecList) toolExecList.scrollTop = toolExecList.scrollHeight;
 }
 
 function showLoadingMessage() {
     if (loadingMessageDiv) return;
-    var messagesDiv = document.getElementById('chatMessages');
     var agentName = (function(){ var s = document.querySelector('.chat-header .agent-select'); return s ? s.options[s.selectedIndex].text : 'Agent'; })();
+    var messagesDiv = document.getElementById('chatMessages');
 
     loadingMessageDiv = document.createElement('div');
     loadingMessageDiv.className = 'message agent loading-message';
@@ -463,6 +455,7 @@ function handleStreamingChunk(content, responseId) {
 }
 
 function handleStreamingDone(userMessage, response, responseId) {
+    var agentName = (function(){ var s = document.querySelector('.chat-header .agent-select'); return s ? s.options[s.selectedIndex].text : 'Agent'; })();
     var msgState = streamingMessages[responseId];
     if (!msgState || !msgState.currentStreamingMessage) {
         isStreaming = false;
@@ -790,6 +783,7 @@ window.onload = function() {
     if (messagesDiv) {
         renderAllMessages();
         messagesDiv.scrollTop = messagesDiv.scrollHeight;
+        if (toolExecList) toolExecList.scrollTop = toolExecList.scrollHeight;
     }
     var input = document.getElementById('messageInput');
     if (input) {

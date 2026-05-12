@@ -49,7 +49,7 @@
             </div>
         </div>
         <div th:if="${selectedAgent != null}" class="chat-messages" id="chatMessages">
-            <div th:each="chat : ${chatHistory}" th:switch="${chat.messageType}"
+            <div th:each="chat : ${chatHistory}" th:if="${chat.messageType != 'tool_call'}" th:switch="${chat.messageType}"
                  th:classappend="${chat.role == 'user' ? 'user' : 'agent'}" class="message">
                 <div th:case="'text'">
                     <div class="message-label" th:text="${chat.role == 'user' ? '你' : selectedAgent.name}"></div>
@@ -68,7 +68,7 @@
                     <div class="message-label" th:text="${selectedAgent.name}"></div>
                     <div class="tool-call-container-static">
                         <div class="tool-call"
-                             th:attr="data-tool-call-id=${chat.toolCallId}, data-status=${chat.toolCallStatus}">
+                             th:attr="data-tool-call-id=${chat.toolCallId}, data-status=${chat.toolCallStatus == 'tool_call_start' ? 'starting' : (chat.toolCallStatus == 'tool_call_end' ? 'executed' : (chat.toolCallStatus == 'tool_call_failed' ? 'executed' : 'unknown'))}">
                             <div class="tool-call-header">
                                     <span class="tool-call-icon" th:switch="${chat.toolCallStatus}"
                                           th:classappend="${chat.toolCallStatus == 'tool_call_end' ? 'completed' : ''}">
@@ -146,6 +146,43 @@
             <div class="tool-panel-section tool-panel-top">
                 <div class="tool-panel-title">工具执行列表</div>
                 <div class="tool-panel-body" id="toolExecList">
+                    <div th:each="chat : ${chatHistory}" th:if="${chat.messageType == 'tool_call'}">
+                        <div class="tool-call-container-static">
+                            <div class="tool-call"
+                                 th:attr="data-tool-call-id=${chat.toolCallId}, data-status=${chat.toolCallStatus == 'tool_call_start' ? 'starting' : (chat.toolCallStatus == 'tool_call_end' ? 'executed' : (chat.toolCallStatus == 'tool_call_failed' ? 'executed' : 'unknown'))}">
+                                <div class="tool-call-header">
+                                    <span class="tool-call-icon" th:switch="${chat.toolCallStatus}"
+                                          th:classappend="${chat.toolCallStatus == 'tool_call_end' or chat.toolCallStatus == 'tool_call_failed' ? 'completed' : ''}">
+                                        <span th:case="'tool_call_start'">⚙</span>
+                                        <span th:case="'tool_call_end'">✅</span>
+                                        <span th:case="'tool_call_failed'">❌</span>
+                                        <span th:case="*">🔧</span>
+                                    </span>
+                                    <span class="tool-call-name" th:text="${chat.toolName}"></span>
+                                    <span class="tool-call-status" th:switch="${chat.toolCallStatus}"
+                                          th:classappend="${chat.toolCallStatus == 'tool_call_end' or chat.toolCallStatus == 'tool_call_failed' ? 'completed' : ''}">
+                                        <span th:case="'tool_call_start'">执行中...</span>
+                                        <span th:case="'tool_call_end'" th:text="${chat.toolExecutionTime != null ? '已完成(' + #numbers.formatDecimal(chat.toolExecutionTime / 1000.0, 1, 1) + 's)' : '已完成'}">已完成</span>
+                                        <span th:case="'tool_call_failed'">执行失败</span>
+                                        <span th:case="*" th:text="${chat.toolCallStatus}">未知</span>
+                                    </span>
+                                    <span th:if="${chat.toolCallStatus == 'tool_call_end' or chat.toolCallStatus == 'tool_call_failed'}"
+                                          class="tool-call-toggle">▼</span>
+                                </div>
+                                <div class="tool-call-body"
+                                     th:classappend="${chat.toolCallStatus == 'tool_call_start' ? '' : 'collapsed'}">
+                                    <div class="tool-call-args" th:if="${chat.toolArguments}">
+                                        <div class="args-label">参数:</div>
+                                        <pre class="args-content" th:text="${chat.toolArguments}"></pre>
+                                    </div>
+                                    <div class="tool-call-result" th:if="${chat.content}">
+                                        <div class="result-label">结果:</div>
+                                        <pre class="result-content" th:text="${chat.content}"></pre>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </div>
             <div class="tool-panel-section tool-panel-bottom">

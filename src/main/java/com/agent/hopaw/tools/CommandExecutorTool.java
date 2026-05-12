@@ -68,7 +68,16 @@ public class CommandExecutorTool implements AgentTool {
             //进程开始
             Process process = processBuilder.start();
 
-            agentExecutorManager.addToolStopHook(agentId, userId, toolCallId, (callId) -> process.destroyForcibly());
+            agentExecutorManager.addToolStopHook(agentId, userId, toolCallId, (callId) -> {
+                try {
+                    ProcessHandle processHandle = process.toHandle();
+                    processHandle.descendants()
+                            .forEach(ProcessHandle::destroyForcibly);
+                    processHandle.destroyForcibly();
+                } catch (Exception e) {
+                    process.destroyForcibly(); // 降级方案
+                }
+            });
 
             StringBuilder output = new StringBuilder();
             try (BufferedReader reader = new BufferedReader(new InputStreamReader(process.getInputStream(), determineEncoding(os)))) {

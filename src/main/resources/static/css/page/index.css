@@ -424,6 +424,10 @@
     border-color: rgba(76, 175, 80, 0.3);
     background: rgba(76, 175, 80, 0.05);
 }
+.tool-call[data-status="executed"] .tool-call-icon {
+    animation: none;
+}
+
 .tool-call-args {
     margin-top: 8px;
 }
@@ -503,6 +507,7 @@
     border-radius: 4px;
     font-family: 'Courier New', monospace;
     font-size: 0.9em;
+    word-break: break-all;
 }
 .message.user .message-content code {
     background: rgba(255, 255, 255, 0.2);
@@ -513,6 +518,8 @@
     border-radius: 8px;
     overflow-x: auto;
     margin: 10px 0;
+    white-space: pre-wrap;
+    word-break: break-word;
 }
 .message.user .message-content pre {
     background: rgba(255, 255, 255, 0.1);
@@ -521,6 +528,8 @@
     background: none;
     padding: 0;
     border-radius: 0;
+    white-space: pre-wrap;
+    word-break: break-word;
 }
 .message-content ul,
 .message-content ol {
@@ -608,6 +617,36 @@
     margin-bottom: 20px;
     opacity: 0.5;
 }
+
+
+/* Tool calls in sidebar panel */
+.tool-panel-body .tool-call-container-static,
+.tool-panel-body .tool-call-container {
+    margin: 0 0 10px 0;
+}
+
+.tool-panel-body .tool-call {
+    font-size: 12px;
+}
+
+.tool-panel-body .tool-call-header {
+    padding: 5px 8px;
+}
+
+.tool-panel-body .tool-call-name {
+    font-size: 12px;
+}
+
+.tool-panel-body .tool-call-status {
+    font-size: 11px;
+}
+
+.tool-panel-body .args-content,
+.tool-panel-body .result-content {
+    font-size: 11px;
+    max-height: 120px;
+}
+
 
 /* Tool call toggle button */
 
