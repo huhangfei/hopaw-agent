@@ -68,7 +68,7 @@ public class WebPageTool implements AgentTool {
                 return "获取网页失败: 无法加载页面";
             }
 
-            page.waitForLoadState(LoadState.NETWORKIDLE);
+            page.waitForLoadState(LoadState.LOAD);
 
             String html = page.content();
 

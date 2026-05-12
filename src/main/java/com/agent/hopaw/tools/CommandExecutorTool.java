@@ -67,6 +67,9 @@ public class CommandExecutorTool implements AgentTool {
             processBuilder.redirectErrorStream(true);
             //进程开始
             Process process = processBuilder.start();
+
+            agentExecutorManager.addToolStopHook(agentId, userId, toolCallId, (callId) -> process.destroyForcibly());
+
             StringBuilder output = new StringBuilder();
             try (BufferedReader reader = new BufferedReader(new InputStreamReader(process.getInputStream(), determineEncoding(os)))) {
                 //异步读取

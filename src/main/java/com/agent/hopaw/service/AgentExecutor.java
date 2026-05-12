@@ -46,6 +46,7 @@ public class AgentExecutor {
     private final SQLiteChatMemoryStore memoryStore;
     private final java.util.concurrent.ConcurrentMap<String, AtomicBoolean> toolCancelInvocations = new ConcurrentHashMap<>();
     private final java.util.concurrent.ConcurrentMap<String, CountDownLatch> toolCancelLatch = new ConcurrentHashMap<>();
+    private final java.util.concurrent.ConcurrentMap<String,Consumer<String>> toolStopHooks = new ConcurrentHashMap<>();
     private final ChatMemoryId memoryId;
     public AgentExecutor(Agent agent, String userId,
                          ChatModel chatModel,
@@ -104,9 +105,14 @@ public class AgentExecutor {
     public void stop() {
         //停止所有工具
         toolCancelInvocations.values().forEach(atomicBoolean -> atomicBoolean.set(true));
+        toolStopHooks.entrySet().forEach(entry -> {
+            ToolCallInfo stopping = ToolCallInfo.stopping(entry.getKey());
+            agentMessageHandler.getMessageConsumer().accept(JSON.toJSONString(stopping));
+            entry.getValue().accept(entry.getKey());
+        });
         toolCancelLatch.values().forEach(countDownLatch -> {
             try {
-                countDownLatch.await(60, java.util.concurrent.TimeUnit.SECONDS);
+                countDownLatch.await(5, java.util.concurrent.TimeUnit.SECONDS);
             } catch (InterruptedException e) {
                 logger.error("Tool cancellation latch await interrupted", e);
             }
@@ -123,24 +129,35 @@ public class AgentExecutor {
             agentMessageHandler.done();
         }
     }
+    public void addToolStopHook(String callId, Consumer<String> hook){
+        toolStopHooks.put(callId, hook);
+        ToolCallInfo stoppable = ToolCallInfo.stoppable(callId);
+        agentMessageHandler.getMessageConsumer().accept(JSON.toJSONString(stoppable));
+    }
     public void stopTool(String callId) {
         //停止工具
         if(toolCancelInvocations.containsKey(callId)){
             toolCancelInvocations.get(callId).set(true);
         }
+        if(toolStopHooks.containsKey(callId)) {
+            Consumer<String> hook = toolStopHooks.get(callId);
+            ToolCallInfo stopping = ToolCallInfo.stopping(callId);
+            agentMessageHandler.getMessageConsumer().accept(JSON.toJSONString(stopping));
+            hook.accept(callId);
+        }
     }
-
     public boolean toolHaveCall(String callId) {
         return toolCancelInvocations.containsKey(callId);
     }
     public boolean toolIsCancelled(String callId) {
         return toolCancelInvocations.containsKey(callId) && toolCancelInvocations.get(callId).get();
     }
-
     public void sendToolRunningContent(String callId,Object resultPartial){
         ToolCallInfo toolCallInfo = ToolCallInfo.running(callId,resultPartial);
         agentMessageHandler.getMessageConsumer().accept(JSON.toJSONString(toolCallInfo));
     }
+
+
     public boolean running() {
         return taskLatch.getCount() > 0;
     }

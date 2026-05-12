@@ -10,6 +10,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 
 import java.util.*;
+import java.util.function.Consumer;
 import java.util.stream.Collectors;
 
 @Service
@@ -30,6 +31,12 @@ public class AgentExecutorManager {
         this.memoryStore = memoryStore;
         this.agentToolService = agentToolService;
         this.longTermMemoryService = longTermMemoryService;
+    }
+    public void addToolStopHook(Long agentId, String userId, String callId, Consumer<String> hook){
+        AgentExecutor agentExecutor = agentExecutors.get(agentId + "_" + userId);
+        if (agentExecutor != null) {
+            agentExecutor.addToolStopHook(callId, hook);
+        }
     }
     public void sendToolRunningContent(Long agentId, String userId,String callId,Object resultPartial){
         AgentExecutor agentExecutor = agentExecutors.get(agentId + "_" + userId);
@@ -119,7 +126,7 @@ public class AgentExecutorManager {
         });
 
         if (StringUtils.hasLength(memoryContent)) {
-            systemMessage += "这是所有用户记忆：\n" + memoryContent + "\n如果需要详细的记忆内容可以根据记忆编号查询记忆详情。";
+            systemMessage += "这是所有用户记忆，如果需要详细的记忆内容可以根据记忆编号查询记忆详情：\n" + memoryContent + "\n";
         }
         return systemMessage;
     }

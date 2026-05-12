@@ -6,6 +6,8 @@ public class ToolCallInfo {
     public static final String STATUS_STARTING = "starting";
     public static final String STATUS_RUNNING = "running";
     public static final String STATUS_EXECUTED = "executed";
+    public static final String STATUS_STOPPABLE = "stoppable";
+    public static final String STATUS_STOPPING = "stopping";
 
     private String type;
     private String status;
@@ -36,6 +38,23 @@ public class ToolCallInfo {
         info.toolCallId = toolCallId;
         info.toolName = toolName;
         info.arguments = arguments;
+        return info;
+    }
+
+    public static ToolCallInfo stoppable(String toolCallId) {
+        ToolCallInfo info = new ToolCallInfo();
+        info.type = TYPE_TOOL_CALL;
+        info.status = STATUS_STOPPABLE;
+        info.toolCallId = toolCallId;
+        return info;
+    }
+
+
+    public static ToolCallInfo stopping(String toolCallId) {
+        ToolCallInfo info = new ToolCallInfo();
+        info.type = TYPE_TOOL_CALL;
+        info.status = STATUS_STOPPING;
+        info.toolCallId = toolCallId;
         return info;
     }
 

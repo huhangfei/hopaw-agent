@@ -198,32 +198,9 @@ function handleToolCall(data, responseId) {
 
         toolCallDiv.setAttribute('data-status', 'starting');
         if (statusEl) { statusEl.textContent = '执行中...'; statusEl.classList.remove('completed'); }
-        if (iconEl) { iconEl.textContent = '⚙️'; iconEl.style.animation = ''; }
+        if (iconEl) { iconEl.textContent = '⚙'; iconEl.style.animation = ''; }
 
-        // Add stop button if not exists
-        if (!toolCallDiv.querySelector('.tool-call-stop-btn')) {
-            var stopBtn = document.createElement('button');
-            stopBtn.className = 'tool-call-stop-btn';
-            stopBtn.title = '停止工具';
-            stopBtn.innerHTML = '<svg viewBox="0 0 24 24" width="12" height="12" fill="currentColor"><rect x="4" y="4" width="16" height="16" rx="2"/></svg>';
-            stopBtn.onclick = function(e) {
-                e.stopPropagation();
-                e.preventDefault();
-                fetch('/agent/tool/stop', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-                    body: 'agentId=' + currentAgentId + '&callId=' + data.toolCallId
-                });
-            };
-            var headerEl = toolCallDiv.querySelector('.tool-call-header');
-            if (headerEl) {
-                var nameEl = headerEl.querySelector('.tool-call-name');
-                if (nameEl) nameEl.parentNode.insertBefore(stopBtn, nameEl.nextSibling);
-                else headerEl.appendChild(stopBtn);
-            }
-        }
-
-        // 启动实时计时器
+        // 启动计时器
         var startTime = Date.now();
         var timerStatusEl = statusEl;
         var intervalId = setInterval(function() {
@@ -262,6 +239,30 @@ function handleToolCall(data, responseId) {
             var preEl = resultDiv.querySelector('.result-content');
             preEl.textContent = msgState.toolCallResultBuffer[key];
             preEl.scrollTop = preEl.scrollHeight;
+        }
+
+    } else if (data.status === 'stoppable') {
+        // Show stop button
+        if (!toolCallDiv.querySelector('.tool-call-stop-btn')) {
+            var stopBtn = document.createElement('button');
+            stopBtn.className = 'tool-call-stop-btn';
+            stopBtn.title = '停止工具';
+            stopBtn.innerHTML = '<svg viewBox="0 0 24 24" width="12" height="12" fill="currentColor"><rect x="4" y="4" width="16" height="16" rx="2"/></svg>';
+            stopBtn.onclick = function(e) {
+                e.stopPropagation();
+                e.preventDefault();
+                fetch('/agent/tool/stop', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                    body: 'agentId=' + currentAgentId + '&callId=' + data.toolCallId
+                });
+            };
+            var headerEl = toolCallDiv.querySelector('.tool-call-header');
+            if (headerEl) {
+                var nameEl = headerEl.querySelector('.tool-call-name');
+                if (nameEl) nameEl.parentNode.insertBefore(stopBtn, nameEl.nextSibling);
+                else headerEl.appendChild(stopBtn);
+            }
         }
 
     } else if (data.status === 'executed') {

@@ -10,9 +10,11 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 
+import java.io.IOException;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.*;
+import java.util.concurrent.atomic.AtomicReference;
 
 @Service
 public class SshTool implements AgentTool {
@@ -100,6 +102,7 @@ public class SshTool implements AgentTool {
         Long agentId = invocationParametersWrapper.getAgentId();
         int timeoutSec = (timeout != null && timeout > 0) ? timeout : 60;
         long deadline = System.currentTimeMillis() + timeoutSec * 1000L;
+        AtomicReference<Boolean> userCancelled = new AtomicReference<>(false);
 
         try {
             ChannelExec channel = (ChannelExec) session.openChannel("exec");
@@ -110,13 +113,15 @@ public class SshTool implements AgentTool {
             int connectTimeout = Math.min(timeoutSec * 1000, 30000);
             channel.connect(connectTimeout);
 
+            agentExecutorManager.addToolStopHook(agentId, userId, toolCallId, (callId) -> { userCancelled.set(true); channel.disconnect();  });
+
             StringBuilder output = new StringBuilder();
             byte[] tmp = new byte[1024];
             boolean timedOut = false;
             while (true) {
                 while (in.available() > 0) {
                     if (agentExecutorManager.toolIsCancelled(agentId, userId, toolCallId)) {
-                        output.append("错误: 命令执行被用户取消");
+                        output.append("退出: 用户取消执行");
                         break;
                     }
 
@@ -127,7 +132,7 @@ public class SshTool implements AgentTool {
                     agentExecutorManager.sendToolRunningContent(agentId, userId, toolCallId, msg);
                 }
                 if (agentExecutorManager.toolIsCancelled(agentId, userId, toolCallId)) {
-                    output.append("错误: 命令执行被用户取消");
+                    output.append("退出: 用户取消执行");
                     break;
                 }
                 if (channel.isClosed()) {
@@ -148,6 +153,9 @@ public class SshTool implements AgentTool {
             return "退出码: " + exitCode + "\n" + output;
         } catch (Exception e) {
             logger.error("SSH exec failed", e);
+            if(e instanceof ExecutionException && userCancelled.get()){
+                return "退出: 用户取消执行";
+            }
             return "错误：命令执行失败 - " + e.getMessage();
         }
     }
@@ -175,21 +183,29 @@ public class SshTool implements AgentTool {
 
         int timeoutSec = (timeout != null && timeout > 0) ? timeout : 300;
         ExecutorService executor = Executors.newSingleThreadExecutor();
+        AtomicReference<Boolean> userCancelled = new AtomicReference<>(false);
+
         try {
             SftpProgressMonitor monitor = new SftpProgressReporter(
                     agentExecutorManager, agentId, userId, toolCallId, "上传");
             java.util.concurrent.Future<String> future = executor.submit(() -> {
             ChannelSftp sftp = (ChannelSftp) session.openChannel("sftp");
-                sftp.connect(Math.min(timeoutSec * 1000, 30000));
+            sftp.connect(Math.min(timeoutSec * 1000, 30000));
+            agentExecutorManager.addToolStopHook(agentId, userId, toolCallId, (callId) -> {userCancelled.set(true);sftp.disconnect(); });
+
             sftp.put(localPath, remotePath, monitor);
             sftp.disconnect();
+
             return "成功：文件已上传至 " + remotePath;
             });
             return future.get(timeoutSec, TimeUnit.SECONDS);
         } catch (java.util.concurrent.TimeoutException e) {
             return "错误：上传超时（" + timeoutSec + "秒）";
-        } catch (Exception e) {
+        }catch (Exception e) {
             logger.error("SSH upload failed", e);
+            if(e instanceof ExecutionException && userCancelled.get()){
+                return "退出: 用户取消上传";
+            }
             return "错误：上传失败 - " + e.getMessage();
         } finally {
             executor.shutdownNow();
@@ -216,6 +232,7 @@ public class SshTool implements AgentTool {
         Long agentId = wrapper.getAgentId();
         String userId = wrapper.getUserId();
         String toolCallId = wrapper.getToolCallId();
+        AtomicReference<Boolean> userCancelled = new AtomicReference<>(false);
 
         int timeoutSec = (timeout != null && timeout > 0) ? timeout : 300;
         ExecutorService executor = Executors.newSingleThreadExecutor();
@@ -225,6 +242,7 @@ public class SshTool implements AgentTool {
             java.util.concurrent.Future<String> future = executor.submit(() -> {
             ChannelSftp sftp = (ChannelSftp) session.openChannel("sftp");
                 sftp.connect(Math.min(timeoutSec * 1000, 30000));
+            agentExecutorManager.addToolStopHook(agentId, userId, toolCallId, (callId) -> {userCancelled.set(true);sftp.disconnect(); });
             sftp.get(remotePath, localPath, monitor);
             sftp.disconnect();
             return "成功：文件已下载至 " + localPath;
@@ -234,6 +252,9 @@ public class SshTool implements AgentTool {
             return "错误：下载超时（" + timeoutSec + "秒）";
         } catch (Exception e) {
             logger.error("SSH download failed", e);
+            if(e instanceof ExecutionException && userCancelled.get()){
+                return "退出: 用户取消下载";
+            }
             return "错误：下载失败 - " + e.getMessage();
         } finally {
             executor.shutdownNow();
