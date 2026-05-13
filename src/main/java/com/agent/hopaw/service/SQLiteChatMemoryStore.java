@@ -103,7 +103,7 @@ public class SQLiteChatMemoryStore implements ChatMemoryStore {
     }
 
     /**
-     * 清理历史孤儿信息
+     * 清理历史孤儿信息，同时将状态1的消息转到状态3
      * @param memoryId
      */
     public void orphanCleanup(ChatMemoryId memoryId){
@@ -148,5 +148,7 @@ public class SQLiteChatMemoryStore implements ChatMemoryStore {
                 }
             }
         }
+
+        chatMemoryMapper.updateStatusByStatus(memoryId.getAgentId(), memoryId.getUserId(), 1, 3);
     }
 }

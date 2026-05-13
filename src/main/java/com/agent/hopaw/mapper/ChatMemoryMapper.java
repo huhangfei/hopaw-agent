@@ -32,4 +32,5 @@ public interface ChatMemoryMapper {
     int deleteByIds(@Param("ids") List<Long> ids);
 
     int updateStatus(@Param("agentId") Long agentId, @Param("userId") String userId, @Param("messageId") String messageId, @Param("status") Integer status);
+    int updateStatusByStatus(@Param("agentId") Long agentId, @Param("userId") String userId, @Param("oldStatus")Integer oldStatus, @Param("status") Integer status);
 }

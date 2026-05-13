@@ -189,10 +189,9 @@ public class LongTermMemoryService {
         if (!longTermMemories.isEmpty()) {
             longTermMemories.stream().map(LongTermMemory::getMemoryType).distinct().forEach(memoryType -> {
                 LongTermMemoryTypeEnum longTermMemoryTypeEnum = LongTermMemoryTypeEnum.fromCode(memoryType);
-                memory.append("----").append(longTermMemoryTypeEnum != null ? longTermMemoryTypeEnum.getName() : memoryType).append("----\n");
+                memory.append("----").append(longTermMemoryTypeEnum != null ? longTermMemoryTypeEnum.getName() : memoryType).append("("+memoryType+")").append("----\n");
                 longTermMemories.stream().filter(x -> x.getMemoryType().equals(memoryType)).forEach(x -> {
-                    memory.append(buildMemoryContent(x, includeDetail))
-                            .append("\n");
+                    memory.append(buildMemoryContent(x, includeDetail,false));
                 });
             });
         }
@@ -208,10 +207,9 @@ public class LongTermMemoryService {
         if (!longTermMemories.isEmpty()) {
             longTermMemories.stream().map(LongTermMemory::getMemoryType).distinct().forEach(memoryType -> {
                 LongTermMemoryTypeEnum longTermMemoryTypeEnum = LongTermMemoryTypeEnum.fromCode(memoryType);
-                memory.append("----").append(longTermMemoryTypeEnum != null ? longTermMemoryTypeEnum.getName() : memoryType).append("----\n");
+                memory.append("----").append(longTermMemoryTypeEnum != null ? longTermMemoryTypeEnum.getName() : memoryType).append("("+memoryType+")").append("----\n");
                 longTermMemories.stream().filter(x -> x.getMemoryType().equals(memoryType)).forEach(x -> {
-                    memory.append(buildMemoryContent(x, includeDetailFun,false))
-                            .append("\n");
+                    memory.append(buildMemoryContent(x, includeDetailFun,false));
                 });
             });
         }
@@ -238,10 +236,9 @@ public class LongTermMemoryService {
         DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
         LongTermMemoryTypeEnum longTermMemoryTypeEnum = LongTermMemoryTypeEnum.fromCode(memory.getMemoryType());
         if(includeType!=null && includeType){
-            memorySb.append("【").append(longTermMemoryTypeEnum != null ? longTermMemoryTypeEnum.getName() : memory.getMemoryType()).append("】\n");
+            memorySb.append("【").append(longTermMemoryTypeEnum != null ? longTermMemoryTypeEnum.getName() : memory.getMemoryType()).append("】").append("(").append(memory.getMemoryType()).append(")\n");
         }
         memorySb.append("编号:").append(memory.getId()).append("\n")
-                .append("类型:").append(memory.getMemoryType()).append("\n")
                 .append("概要:").append(memory.getSummary()).append("\n");
         if (memory.getMemory() != null && !memory.getMemory().isEmpty()) {
             if (includeDetail != null && includeDetail) {

@@ -58,6 +58,11 @@
         SET status = #{status}
         WHERE agent_id = #{agentId} AND user_id = #{userId} AND message_id = #{messageId}
     </update>
+    <update id="updateStatusByStatus">
+        UPDATE chat_memory
+        SET status = #{status}
+        WHERE agent_id = #{agentId} AND user_id = #{userId} AND status = #{oldStatus}
+    </update>
 
     <update id="updateByMessageId">
         UPDATE chat_memory

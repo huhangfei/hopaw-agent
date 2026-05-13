@@ -28,3 +28,4 @@ agent.db
 #config
 application-dev.properties
 /.deepseek/
+/.claude/

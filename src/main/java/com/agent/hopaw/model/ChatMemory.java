@@ -9,7 +9,7 @@ public class ChatMemory {
     private String messageId;
     private String messageJson;
     /**
-     * 状态 0 未清理，1 已过期等待整理记忆和删除，2 主动丢弃和待整理记忆后删除
+     * 状态 0 未清理，1 已过期等待确认是否整理的，2 主动丢弃和待整理记忆后删除，3 已确认需要整理记忆后删除
      */
     private Integer status;
     private LocalDateTime createTime;

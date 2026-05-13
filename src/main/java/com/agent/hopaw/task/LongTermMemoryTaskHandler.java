@@ -180,7 +180,7 @@ public class LongTermMemoryTaskHandler implements TaskHandler {
 
     private void processMemoryForIdentity(Agent agent, String userId) {
         //已标记清理的消息
-        List<ChatMemory> cleanedMessages = chatMemoryMapper.findByAgentIdAndUserIdInStatus(agent.getId(), userId, Arrays.asList(1, 2));
+        List<ChatMemory> cleanedMessages = chatMemoryMapper.findByAgentIdAndUserIdInStatus(agent.getId(), userId, Arrays.asList(2, 3));
         if (cleanedMessages.isEmpty()) {
             return;
         }
