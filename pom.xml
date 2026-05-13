@@ -84,6 +84,13 @@
             <version>1.14.0</version>
         </dependency>
 
+        <!-- LangChain4j Anthropic -->
+        <dependency>
+            <groupId>dev.langchain4j</groupId>
+            <artifactId>langchain4j-anthropic</artifactId>
+            <version>1.14.0</version>
+        </dependency>
+
         <!-- SQLite JDBC -->
         <dependency>
             <groupId>org.xerial</groupId>
