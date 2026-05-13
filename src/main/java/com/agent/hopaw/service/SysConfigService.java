@@ -2,12 +2,19 @@ package com.agent.hopaw.service;
 
 import com.agent.hopaw.mapper.SysConfigMapper;
 import com.agent.hopaw.model.SysConfig;
+import com.agent.hopaw.util.AesEncryptionUtil;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
+import java.util.Set;
 
 @Service
 public class SysConfigService {
+
+    private static final Set<String> SENSITIVE_KEYS = Set.of(
+            "mail_password",
+            "qianfan_web_search_api_keys"
+    );
 
     private final SysConfigMapper sysConfigMapper;
 
@@ -16,23 +23,46 @@ public class SysConfigService {
     }
 
     public List<SysConfig> getAll() {
-        return sysConfigMapper.findAll();
+        List<SysConfig> configs = sysConfigMapper.findAll();
+        for (SysConfig config : configs) {
+            if (SENSITIVE_KEYS.contains(config.getConfigKey())) {
+                config.setConfigValue(AesEncryptionUtil.decrypt(config.getConfigValue()));
+            }
+        }
+        return configs;
     }
 
     public SysConfig getByKey(String key) {
-        return sysConfigMapper.findByKey(key);
+        SysConfig config = sysConfigMapper.findByKey(key);
+        if (config != null && SENSITIVE_KEYS.contains(key)) {
+            config.setConfigValue(AesEncryptionUtil.decrypt(config.getConfigValue()));
+        }
+        return config;
     }
+
     public String getValueByKey(String key, String defaultValue) {
         var config = getByKey(key);
         return config != null ? config.getConfigValue() : defaultValue;
     }
 
     public int save(SysConfig sysConfig) {
-        return sysConfigMapper.insert(sysConfig);
+        String plainValue = sysConfig.getConfigValue();
+        if (SENSITIVE_KEYS.contains(sysConfig.getConfigKey())) {
+            sysConfig.setConfigValue(AesEncryptionUtil.encrypt(plainValue));
+        }
+        int result = sysConfigMapper.insert(sysConfig);
+        sysConfig.setConfigValue(plainValue);
+        return result;
     }
 
     public int update(SysConfig sysConfig) {
-        return sysConfigMapper.update(sysConfig);
+        String plainValue = sysConfig.getConfigValue();
+        if (SENSITIVE_KEYS.contains(sysConfig.getConfigKey())) {
+            sysConfig.setConfigValue(AesEncryptionUtil.encrypt(plainValue));
+        }
+        int result = sysConfigMapper.update(sysConfig);
+        sysConfig.setConfigValue(plainValue);
+        return result;
     }
 
     public int deleteById(Long id) {
