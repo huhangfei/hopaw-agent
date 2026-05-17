@@ -3,7 +3,6 @@ package com.agent.hopaw.infra.tool;
 import com.agent.hopaw.infra.model.dto.ToolInfo;
 import com.agent.hopaw.infra.model.dto.ToolParamInfo;
 import com.agent.hopaw.infra.model.dto.ToolSetInfo;
-import com.agent.hopaw.infra.tool.AgentTool;
 import dev.langchain4j.agent.tool.P;
 import dev.langchain4j.agent.tool.Tool;
 import dev.langchain4j.invocation.InvocationParameters;
@@ -18,7 +17,7 @@ import java.util.List;
 import java.util.Map;
 
 @Service
-public class AgentToolService {
+public class AgentToolService implements IAgentToolService {
 
     private final ApplicationContext applicationContext;
 
@@ -26,11 +25,13 @@ public class AgentToolService {
         this.applicationContext = applicationContext;
     }
 
+    @Override
     public List<AgentTool> getAgentTools() {
         Map<String, AgentTool> beans = applicationContext.getBeansOfType(AgentTool.class);
         return new ArrayList<>(beans.values());
     }
 
+    @Override
     public List<ToolSetInfo> getToolSets() {
         List<ToolSetInfo> result = new ArrayList<>();
         for (AgentTool agentTool : getAgentTools()) {

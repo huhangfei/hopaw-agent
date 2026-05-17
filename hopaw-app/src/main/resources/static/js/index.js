@@ -66,7 +66,7 @@ function connectWebSocket(agentId) {
     
     ws.onmessage = function(event) {
         var data = JSON.parse(event.data);
-        var responseId = data.responseId;
+        var requestId = data.requestId;
 
         if (data.type !== 'received') {
             removeLoadingMessage();
@@ -75,17 +75,17 @@ function connectWebSocket(agentId) {
         if (data.type === 'received') {
             showLoadingMessage();
         } else if (data.type === 'chunk') {
-            handleStreamingChunk(data.content, responseId);
+            handleStreamingChunk(data.content, requestId);
         } else if (data.type === 'tool_call') {
-            handleToolCall(data, responseId);
+            handleToolCall(data, requestId);
         } else if (data.type === 'thinking') {
-            handleThinking(data, responseId);
+            handleThinking(data, requestId);
         } else if (data.type === 'done') {
-            handleStreamingDone(data.message, data.response, responseId);
+            handleStreamingDone(data.message, data.response, requestId);
         } else if (data.type === 'task-done') {
             loadTokenUsage(lastTokenId || undefined);
         } else if (data.type === 'error') {
-            handleStreamingError(data.content || data.message, responseId);
+            handleStreamingError(data.content || data.message, requestId);
         }
     };
     
@@ -101,14 +101,14 @@ function connectWebSocket(agentId) {
     };
 }
 
-function handleToolCall(data, responseId) {
+function handleToolCall(data, requestId) {
     var messagesDiv = document.getElementById('chatMessages');
     var toolExecList = document.getElementById('toolExecList');
 
-    var msgState = streamingMessages[responseId];
+    var msgState = streamingMessages[requestId];
     if (!msgState) {
         msgState = { currentStreamingMessage: null, streamingMarkdownContent: '', lastMessageType: null, toolCallArgsBuffer: {}, toolCallResultBuffer: {} };
-        streamingMessages[responseId] = msgState;
+        streamingMessages[requestId] = msgState;
     }
     if (msgState.toolCallArgsBuffer == null) {
         msgState.toolCallArgsBuffer = {};
@@ -351,14 +351,14 @@ function escapeHtml(text) {
     return div.innerHTML;
 }
 
-function handleThinking(data, responseId) {
+function handleThinking(data, requestId) {
     var messagesDiv = document.getElementById('chatMessages');
     var agentName = (function(){ var s = document.querySelector('.chat-header .agent-select'); return s ? s.options[s.selectedIndex].text : 'Agent'; })();
     
-    var msgState = streamingMessages[responseId];
+    var msgState = streamingMessages[requestId];
     if (!msgState) {
         msgState = { currentStreamingMessage: null, streamingMarkdownContent: '', lastMessageType: null, thinkingContent: '', thinkingDiv: null };
-        streamingMessages[responseId] = msgState;
+        streamingMessages[requestId] = msgState;
     }
     
     if (data.status === 'partial') {
@@ -368,7 +368,7 @@ function handleThinking(data, responseId) {
             
             msgState.currentStreamingMessage = document.createElement('div');
             msgState.currentStreamingMessage.className = 'message agent thinking-message';
-            msgState.currentStreamingMessage.setAttribute('data-response-id', responseId);
+            msgState.currentStreamingMessage.setAttribute('data-request-id', requestId);
             
             var label = document.createElement('div');
             label.className = 'message-label';
@@ -403,14 +403,14 @@ function handleThinking(data, responseId) {
     }
 }
 
-function handleStreamingChunk(content, responseId) {
+function handleStreamingChunk(content, requestId) {
     var messagesDiv = document.getElementById('chatMessages');
     var agentName = (function(){ var s = document.querySelector('.chat-header .agent-select'); return s ? s.options[s.selectedIndex].text : 'Agent'; })();
     
-    var msgState = streamingMessages[responseId];
+    var msgState = streamingMessages[requestId];
     if (!msgState) {
         msgState = { currentStreamingMessage: null, streamingMarkdownContent: '', lastMessageType: null };
-        streamingMessages[responseId] = msgState;
+        streamingMessages[requestId] = msgState;
     }
     
     if (!msgState.currentStreamingMessage || msgState.lastMessageType !== 'text') {
@@ -419,7 +419,7 @@ function handleStreamingChunk(content, responseId) {
         
         msgState.currentStreamingMessage = document.createElement('div');
         msgState.currentStreamingMessage.className = 'message agent';
-        msgState.currentStreamingMessage.setAttribute('data-response-id', responseId);
+        msgState.currentStreamingMessage.setAttribute('data-request-id', requestId);
         
         var label = document.createElement('div');
         label.className = 'message-label';
@@ -456,9 +456,9 @@ function handleStreamingChunk(content, responseId) {
     messagesDiv.scrollTop = messagesDiv.scrollHeight;
 }
 
-function handleStreamingDone(userMessage, response, responseId) {
+function handleStreamingDone(userMessage, response, requestId) {
     var agentName = (function(){ var s = document.querySelector('.chat-header .agent-select'); return s ? s.options[s.selectedIndex].text : 'Agent'; })();
-    var msgState = streamingMessages[responseId];
+    var msgState = streamingMessages[requestId];
     if (!msgState || !msgState.currentStreamingMessage) {
         isStreaming = false;
         enableInput();
@@ -485,19 +485,19 @@ function handleStreamingDone(userMessage, response, responseId) {
     timeDiv.textContent = formatMessageTime(new Date());
     msgState.currentStreamingMessage.appendChild(timeDiv);
     
-    delete streamingMessages[responseId];
+    delete streamingMessages[requestId];
     isStreaming = false;
     enableInput();
 }
 
-function handleStreamingError(errorMessage, responseId) {
+function handleStreamingError(errorMessage, requestId) {
     var messagesDiv = document.getElementById('chatMessages');
     var agentName = (function(){ var s = document.querySelector('.chat-header .agent-select'); return s ? s.options[s.selectedIndex].text : 'Agent'; })();
 
     var errorDiv = document.createElement('div');
     errorDiv.className = 'message agent error-message';
-    if (responseId) {
-        errorDiv.setAttribute('data-response-id', responseId);
+    if (requestId) {
+        errorDiv.setAttribute('data-request-id', requestId);
     }
 
     var label = document.createElement('div');

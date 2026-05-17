@@ -42,6 +42,10 @@ public class InvocationParametersWrapper {
         invocationParameters.put("requestId",requestId);
         return this;
     }
+    public  InvocationParametersWrapper setSessionId(String sessionId){
+        invocationParameters.put("sessionId",sessionId);
+        return this;
+    }
 
     public InvocationParameters getParameters() {
         return invocationParameters;

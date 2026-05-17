@@ -9,7 +9,7 @@ import com.agent.hopaw.infra.model.dto.ResponseBean;
 import com.agent.hopaw.infra.model.dto.ToolSetInfo;
 import com.agent.hopaw.infra.service.AgentService;
 import com.agent.hopaw.infra.service.IAgentExecutorService;
-import com.agent.hopaw.infra.tool.AgentToolService;
+import com.agent.hopaw.infra.tool.IAgentToolService;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -28,13 +28,13 @@ import java.util.Map;
 public class AgentController {
 
     private final AgentService agentService;
-    private final AgentToolService agentToolService;
+    private final IAgentToolService agentToolService;
     private final ChatHistoryMapper chatHistoryMapper;
     private final ChatMemoryMapper chatMemoryMapper;
 
     private final IAgentExecutorService agentExecutorService;
 
-    public AgentController(AgentService agentService, AgentToolService agentToolService,
+    public AgentController(AgentService agentService, IAgentToolService agentToolService,
                            ChatHistoryMapper chatHistoryMapper, ChatMemoryMapper chatMemoryMapper,
                            IAgentExecutorService agentExecutorService) {
         this.agentService = agentService;

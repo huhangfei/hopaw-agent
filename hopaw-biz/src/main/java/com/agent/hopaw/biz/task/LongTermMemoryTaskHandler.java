@@ -250,9 +250,11 @@ public class LongTermMemoryTaskHandler implements TaskHandler {
                 logger.warn("缺失记忆整理提示词，无法进行记忆整理，请先设置提示词。");
                 return false;
             }
-            InvocationParametersWrapper invocationParametersWrapper = InvocationParametersWrapper.create();
-            invocationParametersWrapper.setAgentId(agentId);
-            invocationParametersWrapper.setUserId(userId);
+            InvocationParametersWrapper invocationParametersWrapper = InvocationParametersWrapper.create()
+                    .setAgentId(agentId)
+                    .setUserId(userId)
+                    .setRequestId(UUID.randomUUID().toString())
+                    .setSessionId(UUID.randomUUID().toString());
 
             MemoryAssistant assistant = AiServices.builder(MemoryAssistant.class)
                     .chatModel(chatModel)

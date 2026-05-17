@@ -1,11 +1,12 @@
 package com.agent.hopaw.infra.executor;
 
 
+import com.agent.hopaw.infra.memory.SQLiteChatMemoryStore;
 import com.agent.hopaw.infra.model.entity.*;
 import com.agent.hopaw.infra.model.dto.*;
 import com.agent.hopaw.infra.tool.AgentTool;
 import com.agent.hopaw.infra.storage.ChatHistoryStore;
-import com.agent.hopaw.infra.memory.SQLiteChatMemoryStore;
+import com.agent.hopaw.infra.tool.IAgentToolService;
 import com.agent.hopaw.infra.util.InvocationParametersWrapper;
 import com.alibaba.fastjson2.JSON;
 import dev.langchain4j.data.message.*;
@@ -18,7 +19,6 @@ import dev.langchain4j.model.chat.response.PartialThinking;
 import dev.langchain4j.model.chat.response.PartialToolCall;
 import dev.langchain4j.model.embedding.EmbeddingModel;
 import dev.langchain4j.model.embedding.onnx.bgesmallzhv15.BgeSmallZhV15EmbeddingModel;
-import dev.langchain4j.observability.api.event.AiServiceEvent;
 import dev.langchain4j.service.AiServices;
 import dev.langchain4j.service.TokenStream;
 import dev.langchain4j.service.tool.BeforeToolExecution;
@@ -36,44 +36,49 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.Consumer;
 import java.util.function.Function;
+import java.util.stream.Collectors;
 
 public class AgentExecutor implements IAgentExecutor {
     private final Logger logger = LoggerFactory.getLogger(AgentExecutor.class);
     private final Agent agent;
     private final String userId;
-    private Assistant assistant = null;
-    private Assistant streamingAssistant = null;
+    private final String sessionId;
+    private final ChatAgentAssistant chatAgentAssistant;
+    private final ChatAgentAssistant streamingChatAgentAssistant;
     private final AgentMessageHandler agentMessageHandler;
     private final AtomicBoolean cancelTask = new AtomicBoolean(false);
-    private CountDownLatch taskLatch = new CountDownLatch(0);
     private final ChatHistoryStore chatHistoryStore;
-    private final ChatMemoryStore memoryStore;
+    private final SQLiteChatMemoryStore memoryStore;
     private final java.util.concurrent.ConcurrentMap<String, AtomicBoolean> toolCancelInvocations = new ConcurrentHashMap<>();
     private final java.util.concurrent.ConcurrentMap<String, CountDownLatch> toolCancelLatch = new ConcurrentHashMap<>();
     private final java.util.concurrent.ConcurrentMap<String,Consumer<String>> toolStopHooks = new ConcurrentHashMap<>();
     private final ChatMemoryId memoryId;
-    public AgentExecutor(Agent agent, String userId,
+    private String requestId;
+    private CountDownLatch taskLatch = new CountDownLatch(0);
+    public AgentExecutor(String sessionId,Agent agent, String userId,
                          ChatModel chatModel,
                          StreamingChatModel streamingModel,
                          List<AgentTool> selectedTools,
-                         ChatMemoryStore memoryStore,
+                         SQLiteChatMemoryStore memoryStore,
                          Function<Agent, String> systemMessageProvider,
                          ChatHistoryStore chatHistoryStore) {
         this.chatHistoryStore = chatHistoryStore;
-        this.agentMessageHandler = new AgentMessageHandler();
         this.agent = agent;
         this.userId = userId;
+        this.sessionId = sessionId;
         this.memoryStore = memoryStore;
+        this.agentMessageHandler = new AgentMessageHandler(this.sessionId);
+        this.memoryId = new ChatMemoryId(agent.getId(), userId);
+
         int maxMemoryRecords = agent.getMaxMemoryRecords() != null ? agent.getMaxMemoryRecords() : 20;
         int maxToolInvocations = agent.getMaxToolInvocations() != null ? agent.getMaxToolInvocations() : 10;
 
-        memoryId = new ChatMemoryId(agent.getId(), userId);
         MessageWindowChatMemory.Builder memoryBuilder = MessageWindowChatMemory.builder()
                 .id(memoryId)
                 .maxMessages(maxMemoryRecords)
                 .chatMemoryStore(memoryStore != null ? memoryStore : new InMemoryChatMemoryStore());
         var aiBuilder = AiServices
-                .builder(Assistant.class)
+                .builder(ChatAgentAssistant.class)
                 .systemMessageProvider(chatMemoryId -> systemMessageProvider.apply(agent))
                 .chatMemory(memoryBuilder.build())
                 .executeToolsConcurrently(Executors.newFixedThreadPool(5))
@@ -95,10 +100,14 @@ public class AgentExecutor implements IAgentExecutor {
             aiBuilder.tools(selectedTools.toArray());
         }
         if (chatModel != null) {
-            this.assistant = aiBuilder.chatModel(chatModel).build();
+            this.chatAgentAssistant = aiBuilder.chatModel(chatModel).build();
+        }else {
+            this.chatAgentAssistant =null;
         }
         if (streamingModel != null) {
-            this.streamingAssistant = aiBuilder.streamingChatModel(streamingModel).build();
+            this.streamingChatAgentAssistant = aiBuilder.streamingChatModel(streamingModel).build();
+        }else {
+            this.streamingChatAgentAssistant =null;
         }
     }
 
@@ -116,7 +125,7 @@ public class AgentExecutor implements IAgentExecutor {
         //停止所有工具
         toolCancelInvocations.values().forEach(atomicBoolean -> atomicBoolean.set(true));
         toolStopHooks.entrySet().forEach(entry -> {
-            ToolCallInfo stopping = ToolCallInfo.stopping(entry.getKey());
+            AiToolCallMessageInfo stopping = AiToolCallMessageInfo.stopping(sessionId, requestId, entry.getKey());
             agentMessageHandler.getMessageConsumer().accept(JSON.toJSONString(stopping));
             entry.getValue().accept(entry.getKey());
         });
@@ -142,7 +151,7 @@ public class AgentExecutor implements IAgentExecutor {
     @Override
     public void addToolStopHook(String callId, Consumer<String> hook){
         toolStopHooks.put(callId, hook);
-        ToolCallInfo stoppable = ToolCallInfo.stoppable(callId);
+        AiToolCallMessageInfo stoppable = AiToolCallMessageInfo.stoppable(sessionId, requestId, callId);
         agentMessageHandler.getMessageConsumer().accept(JSON.toJSONString(stoppable));
     }
     @Override
@@ -153,7 +162,7 @@ public class AgentExecutor implements IAgentExecutor {
         }
         if(toolStopHooks.containsKey(callId)) {
             Consumer<String> hook = toolStopHooks.get(callId);
-            ToolCallInfo stopping = ToolCallInfo.stopping(callId);
+            AiToolCallMessageInfo stopping = AiToolCallMessageInfo.stopping(sessionId, requestId, callId);
             agentMessageHandler.getMessageConsumer().accept(JSON.toJSONString(stopping));
             hook.accept(callId);
         }
@@ -168,28 +177,27 @@ public class AgentExecutor implements IAgentExecutor {
     }
     @Override
     public void sendToolRunningContent(String callId, Object resultPartial){
-        ToolCallInfo toolCallInfo = ToolCallInfo.running(callId,resultPartial);
-        agentMessageHandler.getMessageConsumer().accept(JSON.toJSONString(toolCallInfo));
+        AiToolCallMessageInfo aiToolCallMessageInfo = AiToolCallMessageInfo.running(sessionId, requestId, callId, resultPartial);
+        agentMessageHandler.getMessageConsumer().accept(JSON.toJSONString(aiToolCallMessageInfo));
     }
-
-
     @Override
     public boolean running() {
         return taskLatch.getCount() > 0;
     }
-
     @Override
     public String execute(List<Content> contents) {
-        //this.memoryStore.orphanCleanup(memoryId);
-        if (assistant == null) {
-            return getSimulatedResponse();
-        }
         try {
-            InvocationParametersWrapper invocationParametersWrapper = InvocationParametersWrapper.create();
-            invocationParametersWrapper.setUserId(userId);
-            invocationParametersWrapper.setAgentId(agent.getId());
-            invocationParametersWrapper.setRequestId(UUID.randomUUID().toString());
-            return assistant.chat(contents, invocationParametersWrapper.getParameters());
+            this.requestId = UUID.randomUUID().toString();
+            this.memoryStore.orphanCleanup(memoryId);
+            if (chatAgentAssistant == null) {
+                return getSimulatedResponse();
+            }
+            InvocationParametersWrapper invocationParametersWrapper = InvocationParametersWrapper.create()
+                    .setUserId(userId)
+                    .setAgentId(agent.getId())
+                    .setSessionId(sessionId)
+                    .setRequestId(requestId);
+            return chatAgentAssistant.chat(contents, invocationParametersWrapper.getParameters());
         } catch (Exception e) {
             return getSimulatedResponse() + "\n(注: " + e.getMessage() + ")";
         }
@@ -197,31 +205,25 @@ public class AgentExecutor implements IAgentExecutor {
 
     @Override
     public void executeStreaming(List<Content> contents, Consumer<String> messageConsumer) {
-        //this.memoryStore.orphanCleanup(memoryId);
-
-        List<ChatHistory> chatHistoryList = convertToChatHistory(contents);
-        for (ChatHistory chatHistory : chatHistoryList) {
-            chatHistory.setUserId(userId);
-        }
-        chatHistoryStore.saveChatHistoryBatch(chatHistoryList);
-
-        cancelTask.set(false);
-        agentMessageHandler.setMessageConsumer(messageConsumer);
-        agentMessageHandler.setChatHistoryConsumer(chatHistory -> chatHistoryStore.saveChatHistory(chatHistory));
-
         try {
-            if (streamingAssistant == null) {
-                String response = execute(contents);
-                agentMessageHandler.partialResponseHandler(response);
-                agentMessageHandler.done();
-                return;
+            this.requestId = UUID.randomUUID().toString();
+            this.memoryStore.orphanCleanup(memoryId);
+            List<ChatHistory> chatHistoryList = convertToChatHistory(contents);
+            for (ChatHistory chatHistory : chatHistoryList) {
+                chatHistory.setUserId(userId);
             }
+            chatHistoryStore.saveChatHistoryBatch(chatHistoryList);
+            this.cancelTask.set(false);
             this.taskLatch = new CountDownLatch(1);
-            InvocationParametersWrapper invocationParametersWrapper = InvocationParametersWrapper.create();
-            invocationParametersWrapper.setUserId(userId);
-            invocationParametersWrapper.setAgentId(agent.getId());
-            invocationParametersWrapper.setRequestId(UUID.randomUUID().toString());
-            TokenStream tokenStream = streamingAssistant.streamingChat(contents, invocationParametersWrapper.getParameters())
+            agentMessageHandler.setMessageConsumer(messageConsumer);
+            agentMessageHandler.setChatHistoryConsumer(chatHistory -> chatHistoryStore.saveChatHistory(chatHistory));
+
+            InvocationParametersWrapper invocationParametersWrapper = InvocationParametersWrapper.create()
+                    .setUserId(userId)
+                    .setAgentId(agent.getId())
+                    .setSessionId(sessionId)
+                    .setRequestId(requestId);
+            TokenStream tokenStream = streamingChatAgentAssistant.streamingChat(contents, invocationParametersWrapper.getParameters())
                     .onError(e -> {
                         agentMessageHandler.onErrorHandler(e);
                         taskLatch.countDown();
@@ -335,65 +337,50 @@ public class AgentExecutor implements IAgentExecutor {
      * 智能体消息处理器
      */
     public class AgentMessageHandler {
-        private Consumer<String> messageConsumer;
+        private final String sessionId;
         private String lastMessageType = "";
         private String currentMessageType = "";
-        private String responseId;
         private StringBuilder messageBuilder = new StringBuilder();
         private StringBuilder thinkingBuilder = new StringBuilder();
+        private AiToolCallMessageInfo aiToolCallMessageInfo;
+        private Consumer<String> messageConsumer;
+        private Consumer<ChatHistory> chatHistoryConsumer;
+        private String requestId;
 
-        private ToolCallInfo toolCallInfo;
+        public AgentMessageHandler(String sessionId) {
+            this.sessionId = sessionId;
+        }
+
         public Consumer<String> getMessageConsumer() {
             return messageConsumer;
-        }
-
-        public Consumer<ChatHistory> getChatHistoryConsumer() {
-            return chatHistoryConsumer;
-        }
-
-        public String getLastMessageType() {
-            return lastMessageType;
-        }
-
-        public String getCurrentMessageType() {
-            return currentMessageType;
-        }
-
-        public String getResponseId() {
-            return responseId;
-        }
-
-        public ToolCallInfo getToolCallInfo() {
-            return toolCallInfo;
         }
 
         public void setMessageConsumer(Consumer<String> messageConsumer) {
             this.messageConsumer = messageConsumer == null ? (r) -> {
             } : messageConsumer;
         }
-
-        private Consumer<ChatHistory> chatHistoryConsumer;
+        public void setRequestId(String requestId) {
+            this.requestId = requestId;
+        }
 
         public void setChatHistoryConsumer(Consumer<ChatHistory> chatHistoryConsumer) {
             this.chatHistoryConsumer = chatHistoryConsumer == null ? (h) -> {
             } : chatHistoryConsumer;
         }
 
-        public AgentMessageHandler() {
-            this.responseId = UUID.randomUUID().toString();
-        }
-
         public void done() {
             Map<String, Object> data = new HashMap<>(3);
             data.put("type", "done");
-            data.put("responseId", responseId);
+            data.put("sessionId", sessionId);
+            data.put("requestId", requestId);
             messageConsumer.accept(JSON.toJSONString(data));
             messageTypeChangedChatHistoryHandler("done");
         }
         public void taskDone() {
             Map<String, Object> data = new HashMap<>(3);
             data.put("type", "task-done");
-            data.put("responseId", responseId);
+            data.put("sessionId", sessionId);
+            data.put("requestId", requestId);
             messageConsumer.accept(JSON.toJSONString(data));
             messageTypeChangedChatHistoryHandler("task-done");
         }
@@ -403,7 +390,8 @@ public class AgentExecutor implements IAgentExecutor {
             Map<String, Object> data = new HashMap<>(3);
             data.put("type", "error");
             data.put("content", "发生异常：" + ex.getMessage());
-            data.put("responseId", responseId);
+            data.put("sessionId", sessionId);
+            data.put("requestId", requestId);
             messageConsumer.accept(JSON.toJSONString(data));
             messageTypeChangedChatHistoryHandler("error");
         }
@@ -414,37 +402,33 @@ public class AgentExecutor implements IAgentExecutor {
         }
 
         private void partialToolExecutionHandler(PartialToolCall toolCall) {
-            this.toolCallInfo = ToolCallInfo.preparing(
+            this.aiToolCallMessageInfo = AiToolCallMessageInfo.preparing(sessionId,requestId,
                     toolCall.id(),
                     toolCall.name(),
-                    toolCall.partialArguments()
+                    toolCall.partialArguments(),
+                    toolCall.index()
             );
-            toolCallInfo.setResponseId(responseId);
-            toolCallInfo.setIndex(toolCall.index());
             messageTypeChangedChatHistoryHandler("tool_call_preparing");
         }
 
         private void beforeToolExecutionHandler(BeforeToolExecution toolExecution) {
 
-            this.toolCallInfo = ToolCallInfo.starting(
+            this.aiToolCallMessageInfo = AiToolCallMessageInfo.starting(sessionId,requestId,
                     toolExecution.request().id(),
                     toolExecution.request().name(),
                     JSON.parseObject(toolExecution.request().arguments())
             );
-            toolCallInfo.setResponseId(responseId);
             messageTypeChangedChatHistoryHandler("tool_call_start");
         }
 
         private void toolExecutionHandler(ToolExecution toolExecution) {
 
-            this.toolCallInfo = ToolCallInfo.executed(
+            this.aiToolCallMessageInfo = AiToolCallMessageInfo.executed(sessionId,requestId,
                     toolExecution.request().id(),
                     toolExecution.request().name(),
                     JSON.parseObject(toolExecution.request().arguments()),
                     toolExecution.result()
             );
-            toolCallInfo.setResponseId(responseId);
-
             messageTypeChangedChatHistoryHandler("tool_call_end");
         }
 
@@ -452,9 +436,8 @@ public class AgentExecutor implements IAgentExecutor {
             messageTypeChangedChatHistoryHandler("thinking");
             thinkingBuilder.append(thinking.text());
             //发送
-            ThinkingInfo thinkingInfo = ThinkingInfo.partial(thinking.text(), responseId);
-            thinkingInfo.setResponseId(responseId);
-            messageConsumer.accept(JSON.toJSONString(thinkingInfo));
+            AiThinkingMessageInfo aiThinkingMessageInfo = AiThinkingMessageInfo.partial(sessionId,requestId,thinking.text());
+            messageConsumer.accept(JSON.toJSONString(aiThinkingMessageInfo));
 
 
         }
@@ -466,7 +449,7 @@ public class AgentExecutor implements IAgentExecutor {
             Map<String, Object> data = new HashMap<>(3);
             data.put("type", "chunk");
             data.put("content", partialResponse);
-            data.put("responseId", responseId);
+            data.put("responseId", sessionId);
             messageConsumer.accept(JSON.toJSONString(data));
         }
 
@@ -492,9 +475,9 @@ public class AgentExecutor implements IAgentExecutor {
                 } else if (lastMessageType.equals("thinking")) {
 
                     //发送
-                    ThinkingInfo thinkingInfo = ThinkingInfo.done("", responseId);
-                    thinkingInfo.setResponseId(responseId);
-                    messageConsumer.accept(JSON.toJSONString(thinkingInfo));
+                    AiThinkingMessageInfo aiThinkingMessageInfo = AiThinkingMessageInfo.done(sessionId,requestId, "结束");
+                    aiThinkingMessageInfo.setSessionId(sessionId);
+                    messageConsumer.accept(JSON.toJSONString(aiThinkingMessageInfo));
 
                     ChatHistory textChat = new ChatHistory(agent.getId(), "agent", "thinking", thinkingBuilder.toString());
                     chatHistoryConsumer.accept(textChat);
@@ -504,13 +487,13 @@ public class AgentExecutor implements IAgentExecutor {
             }
             //开始调用 和 结束调用
             if (currentMessageType.startsWith("tool_call")) {
-                messageConsumer.accept(JSON.toJSONString(toolCallInfo));
+                messageConsumer.accept(JSON.toJSONString(aiToolCallMessageInfo));
                 if (currentMessageType.equals("tool_call_start") || currentMessageType.equals("tool_call_end")) {
                     //入库
                     ChatHistory toolChat = new ChatHistory(
                             agent.getId(), "agent", "tool_call",
-                            toolCallInfo.getToolCallId(), toolCallInfo.getToolName(),
-                            (toolCallInfo.getArguments()!=null?toolCallInfo.getArguments().toString():null), toolCallInfo.getResult() != null ? (String) toolCallInfo.getResult() : null
+                            aiToolCallMessageInfo.getToolCallId(), aiToolCallMessageInfo.getToolName(),
+                            (aiToolCallMessageInfo.getArguments()!=null? aiToolCallMessageInfo.getArguments().toString():null), aiToolCallMessageInfo.getResult() != null ? (String) aiToolCallMessageInfo.getResult() : null
                     );
                     toolChat.setToolCallStatus(currentMessageType);
                     chatHistoryConsumer.accept(toolChat);
@@ -519,7 +502,7 @@ public class AgentExecutor implements IAgentExecutor {
         }
     }
 
-    public interface Assistant {
+    public interface ChatAgentAssistant {
         String chat(@dev.langchain4j.service.UserMessage List<Content> contents,
                     // ChatRequestParameters requestParameters, // 模型参数
                     InvocationParameters invocationParameters);

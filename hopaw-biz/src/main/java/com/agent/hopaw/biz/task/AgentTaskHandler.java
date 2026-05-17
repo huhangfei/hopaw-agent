@@ -74,11 +74,11 @@ public class AgentTaskHandler implements TaskHandler {
                         return selectTools.contains(t.getName()) && !"agentTaskTool".equals(t.getName());
                     })
                     .collect(Collectors.toList());
-            InvocationParametersWrapper invocationParametersWrapper = InvocationParametersWrapper.create();
-            invocationParametersWrapper.setUserId(task.getUserId());
-            invocationParametersWrapper.setAgentId(Long.parseLong(agentIdStr));
-            invocationParametersWrapper.setRequestId(UUID.randomUUID().toString());
-
+            InvocationParametersWrapper invocationParametersWrapper = InvocationParametersWrapper.create()
+            .setUserId(task.getUserId())
+            .setAgentId(Long.parseLong(agentIdStr))
+            .setRequestId(UUID.randomUUID().toString())
+            .setSessionId(UUID.randomUUID().toString());
             AgentTaskAssistant assistant = AiServices.builder(AgentTaskAssistant.class)
                     .chatModel(chatModel)
                     .systemMessageProvider(chatMemoryId -> "这是一个定时执行的任务，你根据任务描述认真执行任务，有疑问可以尝试查询用户记忆。")

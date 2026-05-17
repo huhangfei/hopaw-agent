@@ -7,10 +7,10 @@ import com.agent.hopaw.infra.executor.IAgentExecutor;
 import com.agent.hopaw.infra.memory.SQLiteChatMemoryStore;
 import com.agent.hopaw.infra.monitor.LangChain4jMonitor;
 import com.agent.hopaw.infra.storage.ChatHistoryStore;
-import com.agent.hopaw.infra.tool.AgentToolService;
 import com.agent.hopaw.infra.memory.LongTermMemoryService;
 import com.agent.hopaw.infra.model.entity.Agent;
 import com.agent.hopaw.infra.tool.AgentTool;
+import com.agent.hopaw.infra.tool.IAgentToolService;
 import dev.langchain4j.model.chat.ChatModel;
 import dev.langchain4j.model.chat.StreamingChatModel;
 import org.springframework.stereotype.Service;
@@ -27,12 +27,12 @@ public class AgentExecutorService implements IAgentExecutorService {
 
     private final TokenUsageService tokenUsageService;
     private final SQLiteChatMemoryStore memoryStore;
-    private final AgentToolService agentToolService;
+    private final IAgentToolService agentToolService;
 
     private final LongTermMemoryService longTermMemoryService;
     private final Map<String, IAgentExecutor> agentExecutors = new HashMap<>();
 
-    public AgentExecutorService(AiModelService aiModelService, ChatHistoryStore chatHistoryStore, TokenUsageService tokenUsageService, SQLiteChatMemoryStore memoryStore, AgentToolService agentToolService, LongTermMemoryService longTermMemoryService) {
+    public AgentExecutorService(AiModelService aiModelService, ChatHistoryStore chatHistoryStore, TokenUsageService tokenUsageService, SQLiteChatMemoryStore memoryStore, IAgentToolService agentToolService, LongTermMemoryService longTermMemoryService) {
         this.aiModelService = aiModelService;
         this.chatHistoryStore = chatHistoryStore;
         this.tokenUsageService = tokenUsageService;
@@ -114,22 +114,17 @@ public class AgentExecutorService implements IAgentExecutorService {
 
     @Override
     public IAgentExecutor createAgentExecutor(Agent agent, String userId) {
-        ChatModel chatModel = null;
-        StreamingChatModel streamingModel = null;
-
         LangChain4jMonitor langChain4jMonitor = new LangChain4jMonitor(AiModelCallSourceEnum.Chat)
                 .setAgentId(agent.getId())
                 .setUserId(userId)
                 .setTokenUsageService(tokenUsageService);
-        List<AgentTool> agentTools = agentToolService.getAgentTools();
-        chatModel = aiModelService.createChatModel(agent.getAiModelId(), agent.getEnableThinking(), langChain4jMonitor);
-        streamingModel = aiModelService.createStreamingChatModel(agent.getAiModelId(), agent.getEnableThinking(), langChain4jMonitor);
+        ChatModel chatModel = aiModelService.createChatModel(agent.getAiModelId(), agent.getEnableThinking(), langChain4jMonitor);
+        StreamingChatModel streamingModel = aiModelService.createStreamingChatModel(agent.getAiModelId(), agent.getEnableThinking(), langChain4jMonitor);
         List<String> selectedToolNames = parseToolNames(agent.getTools());
-        List<AgentTool> selectedTools = agentTools.stream()
+        List<AgentTool> selectedTools = agentToolService.getAgentTools().stream()
                 .filter(t -> selectedToolNames.contains(t.getName()))
                 .collect(Collectors.toList());
-
-        return new AgentExecutor(agent, userId, chatModel, streamingModel, selectedTools, memoryStore, a -> this.getSystemMessage(a, userId, selectedTools), chatHistoryStore);
+        return new AgentExecutor(UUID.randomUUID().toString(),agent, userId, chatModel, streamingModel,selectedTools, memoryStore, a -> this.getSystemMessage(a, userId, selectedTools), chatHistoryStore);
     }
 
     @Override
