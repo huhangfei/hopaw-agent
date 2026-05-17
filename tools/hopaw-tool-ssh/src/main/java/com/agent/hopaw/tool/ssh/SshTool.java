@@ -18,12 +18,12 @@ import java.util.concurrent.atomic.AtomicReference;
 
 @Component
 public class SshTool implements AgentTool {
-    private final IAgentExecutorService IAgentExecutorService;
+    private final IAgentExecutorService agentExecutorService;
     private static final Logger logger = LoggerFactory.getLogger(SshTool.class);
     private static final Map<String, Session> sessionCache = new ConcurrentHashMap<>();
 
-    public SshTool(IAgentExecutorService IAgentExecutorService) {
-        this.IAgentExecutorService = IAgentExecutorService;
+    public SshTool(IAgentExecutorService agentExecutorService) {
+        this.agentExecutorService = agentExecutorService;
     }
 
     @Override
@@ -113,14 +113,14 @@ public class SshTool implements AgentTool {
             int connectTimeout = Math.min(timeoutSec * 1000, 30000);
             channel.connect(connectTimeout);
 
-            IAgentExecutorService.addToolStopHook(agentId, userId, toolCallId, (callId) -> { userCancelled.set(true); channel.disconnect();  });
+            agentExecutorService.addToolStopHook(agentId, userId, toolCallId, (callId) -> { userCancelled.set(true); channel.disconnect();  });
 
             StringBuilder output = new StringBuilder();
             byte[] tmp = new byte[1024];
             boolean timedOut = false;
             while (true) {
                 while (in.available() > 0) {
-                    if (IAgentExecutorService.toolIsCancelled(agentId, userId, toolCallId)) {
+                    if (agentExecutorService.toolIsCancelled(agentId, userId, toolCallId)) {
                         output.append("退出: 用户取消执行");
                         break;
                     }
@@ -129,9 +129,9 @@ public class SshTool implements AgentTool {
                     if (i < 0) break;
                     String msg = new String(tmp, 0, i);
                     output.append(msg);
-                    IAgentExecutorService.sendToolRunningContent(agentId, userId, toolCallId, msg);
+                    agentExecutorService.sendToolRunningContent(agentId, userId, toolCallId, msg);
                 }
-                if (IAgentExecutorService.toolIsCancelled(agentId, userId, toolCallId)) {
+                if (agentExecutorService.toolIsCancelled(agentId, userId, toolCallId)) {
                     output.append("退出: 用户取消执行");
                     break;
                 }
@@ -187,11 +187,11 @@ public class SshTool implements AgentTool {
 
         try {
             SftpProgressMonitor monitor = new SftpProgressReporter(
-                    IAgentExecutorService, agentId, userId, toolCallId, "上传");
+                    agentExecutorService, agentId, userId, toolCallId, "上传");
             java.util.concurrent.Future<String> future = executor.submit(() -> {
             ChannelSftp sftp = (ChannelSftp) session.openChannel("sftp");
             sftp.connect(Math.min(timeoutSec * 1000, 30000));
-            IAgentExecutorService.addToolStopHook(agentId, userId, toolCallId, (callId) -> {userCancelled.set(true);sftp.disconnect(); });
+            agentExecutorService.addToolStopHook(agentId, userId, toolCallId, (callId) -> {userCancelled.set(true);sftp.disconnect(); });
 
             sftp.put(localPath, remotePath, monitor);
             sftp.disconnect();
@@ -238,11 +238,11 @@ public class SshTool implements AgentTool {
         ExecutorService executor = Executors.newSingleThreadExecutor();
         try {
             SftpProgressMonitor monitor = new SftpProgressReporter(
-                    IAgentExecutorService, agentId, userId, toolCallId, "下载");
+                    agentExecutorService, agentId, userId, toolCallId, "下载");
             java.util.concurrent.Future<String> future = executor.submit(() -> {
             ChannelSftp sftp = (ChannelSftp) session.openChannel("sftp");
                 sftp.connect(Math.min(timeoutSec * 1000, 30000));
-            IAgentExecutorService.addToolStopHook(agentId, userId, toolCallId, (callId) -> {userCancelled.set(true);sftp.disconnect(); });
+            agentExecutorService.addToolStopHook(agentId, userId, toolCallId, (callId) -> {userCancelled.set(true);sftp.disconnect(); });
             sftp.get(remotePath, localPath, monitor);
             sftp.disconnect();
             return "成功：文件已下载至 " + localPath;
@@ -292,7 +292,7 @@ public class SshTool implements AgentTool {
     }
 
     private static class SftpProgressReporter implements SftpProgressMonitor {
-        private final IAgentExecutorService manager;
+        private final IAgentExecutorService executorService;
         private final Long agentId;
         private final String userId;
         private final String toolCallId;
@@ -301,9 +301,9 @@ public class SshTool implements AgentTool {
         private long transferred;
         private int lastPercent = -1;
 
-        SftpProgressReporter(IAgentExecutorService manager, Long agentId, String userId,
+        SftpProgressReporter(IAgentExecutorService executorService, Long agentId, String userId,
                              String toolCallId, String direction) {
-            this.manager = manager;
+            this.executorService = executorService;
             this.agentId = agentId;
             this.userId = userId;
             this.toolCallId = toolCallId;
@@ -315,7 +315,7 @@ public class SshTool implements AgentTool {
             this.max = max;
             if (max > 0) {
                 String msg = "[" + direction + "] 开始传输，文件大小: " + formatSize(max);
-                manager.sendToolRunningContent(agentId, userId, toolCallId, msg);
+                executorService.sendToolRunningContent(agentId, userId, toolCallId, msg);
             }
         }
 
@@ -328,7 +328,7 @@ public class SshTool implements AgentTool {
                     lastPercent = percent;
                     String msg = "\n[" + direction + "进度] " + percent + "% ("
                             + formatSize(transferred) + " / " + formatSize(max) + ")";
-                    manager.sendToolRunningContent(agentId, userId, toolCallId, msg);
+                    executorService.sendToolRunningContent(agentId, userId, toolCallId, msg);
                 }
             }
             return true;
@@ -337,7 +337,7 @@ public class SshTool implements AgentTool {
         @Override
         public void end() {
             String msg = "\n[" + direction + "] 传输完成";
-            manager.sendToolRunningContent(agentId, userId, toolCallId, msg);
+            executorService.sendToolRunningContent(agentId, userId, toolCallId, msg);
         }
 
         private String formatSize(long bytes) {

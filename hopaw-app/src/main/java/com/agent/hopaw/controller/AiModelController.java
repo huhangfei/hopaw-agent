@@ -19,12 +19,12 @@ public class AiModelController {
 
     private final AiModelProviderService aiModelProviderService;
     private final AiModelService aiModelService;
-    private final IAgentExecutorService IAgentExecutorService;
+    private final IAgentExecutorService agentExecutorService;
 
-    public AiModelController(AiModelProviderService aiModelProviderService, AiModelService aiModelService, IAgentExecutorService IAgentExecutorService) {
+    public AiModelController(AiModelProviderService aiModelProviderService, AiModelService aiModelService, IAgentExecutorService agentExecutorService) {
         this.aiModelProviderService = aiModelProviderService;
         this.aiModelService = aiModelService;
-        this.IAgentExecutorService = IAgentExecutorService;
+        this.agentExecutorService = agentExecutorService;
     }
 
     @GetMapping("/models")
@@ -74,7 +74,7 @@ public class AiModelController {
 
         List<AiModel> models = aiModelService.findByProviderId(aiModelProvider.getId());
         for (AiModel model : models) {
-            IAgentExecutorService.clearAndStopAgentExecutorByAiModel(model.getId());
+            agentExecutorService.clearAndStopAgentExecutorByAiModel(model.getId());
         }
 
         return aiModelProvider;
@@ -95,7 +95,7 @@ public class AiModelController {
     public void deleteProvider(@PathVariable Long id) {
         aiModelProviderService.deleteById(id);
         aiModelService.findByProviderId(id).forEach(model -> {
-            IAgentExecutorService.clearAndStopAgentExecutorByAiModel(model.getId());
+            agentExecutorService.clearAndStopAgentExecutorByAiModel(model.getId());
                 aiModelService.deleteById(model.getId());
         });
     }
@@ -124,7 +124,7 @@ public class AiModelController {
     public AiModel updateModel(@PathVariable Long id, @RequestBody AiModel aiModel) {
         aiModel.setId(id);
         aiModelService.update(aiModel);
-        IAgentExecutorService.clearAndStopAgentExecutorByAiModel(aiModel.getId());
+        agentExecutorService.clearAndStopAgentExecutorByAiModel(aiModel.getId());
         return aiModel;
     }
 
@@ -138,7 +138,7 @@ public class AiModelController {
     @ResponseBody
     public void deleteModel(@PathVariable Long id) {
         aiModelService.deleteById(id);
-        IAgentExecutorService.clearAndStopAgentExecutorByAiModel(id);
+        agentExecutorService.clearAndStopAgentExecutorByAiModel(id);
     }
 
     @GetMapping("/api/models/all")

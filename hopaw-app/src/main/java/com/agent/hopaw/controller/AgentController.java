@@ -32,16 +32,16 @@ public class AgentController {
     private final ChatHistoryMapper chatHistoryMapper;
     private final ChatMemoryMapper chatMemoryMapper;
 
-    private final IAgentExecutorService IAgentExecutorService;
+    private final IAgentExecutorService agentExecutorService;
 
     public AgentController(AgentService agentService, AgentToolService agentToolService,
                            ChatHistoryMapper chatHistoryMapper, ChatMemoryMapper chatMemoryMapper,
-                           IAgentExecutorService IAgentExecutorService) {
+                           IAgentExecutorService agentExecutorService) {
         this.agentService = agentService;
         this.agentToolService = agentToolService;
         this.chatHistoryMapper = chatHistoryMapper;
         this.chatMemoryMapper = chatMemoryMapper;
-        this.IAgentExecutorService = IAgentExecutorService;
+        this.agentExecutorService = agentExecutorService;
     }
 
     @GetMapping("/")
@@ -102,14 +102,14 @@ public class AgentController {
     @PostMapping("/agent/force-stop")
     @ResponseBody
     public ResponseBean forceStopAgent(@RequestParam Long id) {
-        IAgentExecutorService.stopAndRemoveAgentExecutor(id, DefaultUser.USER);
+        agentExecutorService.stopAndRemoveAgentExecutor(id, DefaultUser.USER);
         return ResponseBean.success();
     }
 
     @PostMapping("/agent/tool/stop")
     @ResponseBody
     public ResponseBean stopTool(@RequestParam Long agentId, @RequestParam String callId) {
-        IAgentExecutorService.stopTool(agentId, DefaultUser.USER, callId);
+        agentExecutorService.stopTool(agentId, DefaultUser.USER, callId);
         return ResponseBean.success();
     }
 

@@ -9,7 +9,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import com.agent.hopaw.infra.tool.AgentTool;
 import org.springframework.stereotype.Component;
-import org.springframework.stereotype.Service;
 
 import java.io.BufferedReader;
 import java.io.IOException;
@@ -23,13 +22,13 @@ import java.util.concurrent.TimeoutException;
 @Component("commandExecutor")
 public class CommandExecutorTool implements AgentTool {
 
-    private final IAgentExecutorService IAgentExecutorService;
+    private final IAgentExecutorService agentExecutorService;
     private final Logger logger = LoggerFactory.getLogger(CommandExecutorTool.class);
     private static final int TIMEOUT_SECONDS = 30;
     private static final int MAX_OUTPUT_LINES = 500;
 
-    public CommandExecutorTool(IAgentExecutorService IAgentExecutorService) {
-        this.IAgentExecutorService = IAgentExecutorService;
+    public CommandExecutorTool(IAgentExecutorService agentExecutorService) {
+        this.agentExecutorService = agentExecutorService;
     }
 
     @Tool("获取本地操作系统的名称，例如 Windows 10 或 Ubuntu 20.04")
@@ -69,7 +68,7 @@ public class CommandExecutorTool implements AgentTool {
             //进程开始
             Process process = processBuilder.start();
 
-            IAgentExecutorService.addToolStopHook(agentId, userId, toolCallId, (callId) -> {
+            agentExecutorService.addToolStopHook(agentId, userId, toolCallId, (callId) -> {
                 try {
                     ProcessHandle processHandle = process.toHandle();
                     processHandle.descendants()
@@ -88,7 +87,7 @@ public class CommandExecutorTool implements AgentTool {
                     int lineCount = 0;
                     try {
                         while ((line = reader.readLine()) != null) {
-                            if (IAgentExecutorService.toolIsCancelled(agentId, userId, toolCallId)) {
+                            if (agentExecutorService.toolIsCancelled(agentId, userId, toolCallId)) {
                                 output.append("错误: 命令执行被用户取消");
                                 break;
                             }
@@ -96,7 +95,7 @@ public class CommandExecutorTool implements AgentTool {
                                 output.append("\n... (输出已截断，超过 ").append(MAX_OUTPUT_LINES).append(" 行)");
                                 break;
                             }
-                            IAgentExecutorService.sendToolRunningContent(agentId, userId, toolCallId, line + "\n");
+                            agentExecutorService.sendToolRunningContent(agentId, userId, toolCallId, line + "\n");
                             output.append(line).append("\n");
                             lineCount++;
 

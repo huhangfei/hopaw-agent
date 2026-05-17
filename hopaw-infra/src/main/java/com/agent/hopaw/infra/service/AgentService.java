@@ -15,12 +15,12 @@ public class AgentService implements IAgentService {
     private final static Logger logger = LoggerFactory.getLogger(AgentService.class);
     private final AgentMapper agentMapper;
     private final ChatMemoryMapper chatMemoryMapper;
-    private final IAgentExecutorService IAgentExecutorService;
+    private final IAgentExecutorService agentExecutorService;
 
-    public AgentService(AgentMapper agentMapper, ChatMemoryMapper chatMemoryMapper, IAgentExecutorService IAgentExecutorService) {
+    public AgentService(AgentMapper agentMapper, ChatMemoryMapper chatMemoryMapper, IAgentExecutorService agentExecutorService) {
         this.agentMapper = agentMapper;
         this.chatMemoryMapper = chatMemoryMapper;
-        this.IAgentExecutorService = IAgentExecutorService;
+        this.agentExecutorService = agentExecutorService;
     }
 
     public List<Agent> getAllAgents() {
@@ -46,7 +46,7 @@ public class AgentService implements IAgentService {
     public void deleteAgent(Long id, String userId) {
         agentMapper.deleteById(id);
         chatMemoryMapper.deleteByAgentId(id);
-        IAgentExecutorService.stopAndRemoveAgentExecutor(id, userId);
+        agentExecutorService.stopAndRemoveAgentExecutor(id, userId);
     }
 
     public void updateAgent(String userId, Long id, String name, String description, String tools, Integer maxMemoryRecords, Integer maxToolInvocations, Long aiModelId, Boolean enableThinking, Boolean vectorToolSearch, Integer vectorToolSearchMaxResults) {
@@ -64,7 +64,7 @@ public class AgentService implements IAgentService {
             agent.setVectorToolSearch(vectorToolSearch != null ? vectorToolSearch : true);
             agent.setVectorToolSearchMaxResults(vectorToolSearchMaxResults != null ? vectorToolSearchMaxResults : 5);
             agentMapper.update(agent);
-            IAgentExecutorService.stopAndRemoveAgentExecutor(id, userId);
+            agentExecutorService.stopAndRemoveAgentExecutor(id, userId);
         }
     }
 
@@ -74,17 +74,17 @@ public class AgentService implements IAgentService {
         if (agent != null) {
             agent.setEnableThinking(enabled);
             agentMapper.update(agent);
-            IAgentExecutorService.stopAndRemoveAgentExecutor(id, userId);
+            agentExecutorService.stopAndRemoveAgentExecutor(id, userId);
         }
 
 
     }
     public boolean isAgentExecutorRunning(Long agentId, String userId) {
-        return IAgentExecutorService.isAgentExecutorRunning(agentId, userId);
+        return agentExecutorService.isAgentExecutorRunning(agentId, userId);
     }
 
     public void stopAgentExecutor(Long agentId, String userId) {
-        IAgentExecutorService.stopAndRemoveAgentExecutor(agentId, userId);
+        agentExecutorService.stopAndRemoveAgentExecutor(agentId, userId);
     }
 
 
@@ -93,7 +93,7 @@ public class AgentService implements IAgentService {
         if(agent==null){
             return null;
         }
-        return IAgentExecutorService.getAgentExecutor(agent, userId);
+        return agentExecutorService.getAgentExecutor(agent, userId);
     }
 
 }
