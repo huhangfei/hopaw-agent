@@ -37,26 +37,30 @@
             </svg>
             <span class="menu-label">Token用量</span>
         </button>
-        <button class="menu-btn" th:classappend="${activePage == 'memory-manage' ? 'active' : ''}" title="记忆管理" onclick="location.href='/memory-manage'">
+        <button class="menu-btn" th:classappend="${activePage == 'memory-manage' ? 'active' : ''}" title="长时记忆" onclick="location.href='/memory-manage'">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
-                <!-- 灯泡玻璃外轮廓 -->
                 <path d="M9 2.5C6.5 2.5 4.5 4.5 4.5 7c0 2.3 1.3 4.2 3.2 5.1.3.1.5.4.5.7V15h2v1.5h-1.5V18h6.6v-1.5H13.8V15h2v-2.2c0-.3.2-.6.5-.7 1.9-.9 3.2-2.8 3.2-5.1 0-2.5-2-4.5-4.5-4.5H9z" fill="currentColor" fill-opacity="0.15"/>
-                <!-- 灯泡底座 -->
                 <path d="M9 18v2c0 .6.4 1 1 1h4c.6 0 1-.4 1-1v-2"/>
                 <line x1="9" y1="18.5" x2="15" y2="18.5"/>
                 <line x1="9" y1="20" x2="15" y2="20"/>
-                <!-- 大脑纹路（左半） -->
                 <path d="M7 6.5c.5-.8 1.3-1.3 2.2-1.3"/>
                 <path d="M6.8 8.5c.4-.5 1-1 1.7-1.2"/>
                 <path d="M7.2 10.5c.4-.3.9-.5 1.5-.5"/>
-                <!-- 大脑纹路（右半） -->
                 <path d="M17 6.5c-.5-.8-1.3-1.3-2.2-1.3"/>
                 <path d="M17.2 8.5c-.4-.5-1-1-1.7-1.2"/>
                 <path d="M16.8 10.5c-.4-.3-.9-.5-1.5-.5"/>
-                <!-- 中央沟 -->
                 <path d="M12 4.5v7.5"/>
             </svg>
-            <span class="menu-label">记忆管理</span>
+            <span class="menu-label">长时记忆</span>
+        </button>
+        <button class="menu-btn" th:classappend="${activePage == 'vector-history' ? 'active' : ''}" title="向量历史" onclick="location.href='/vector-history'">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                <circle cx="11" cy="11" r="8"/>
+                <line x1="21" y1="21" x2="16.65" y2="16.65"/>
+                <line x1="11" y1="8" x2="11" y2="14"/>
+                <line x1="8" y1="11" x2="14" y2="11"/>
+            </svg>
+            <span class="menu-label">向量历史</span>
         </button>
         <button class="menu-btn" th:classappend="${activePage == 'tools' ? 'active' : ''}" title="工具管理" onclick="location.href='/tools'">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">

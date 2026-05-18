@@ -1,6 +1,7 @@
 package com.agent.hopaw.infra.memory;
 
 import com.agent.hopaw.infra.constant.VectorMemoryTypeEnum;
+import com.agent.hopaw.infra.model.dto.VectorSearchResult;
 import com.agent.hopaw.infra.service.SysConfigService;
 import dev.langchain4j.data.embedding.Embedding;
 import dev.langchain4j.data.segment.TextSegment;
@@ -19,14 +20,13 @@ import java.util.List;
 import java.util.stream.Collectors;
 
 @Service
-public class VectorMemoryService {
+public class VectorMemoryService implements IVectorMemoryService {
 
-    private static final Logger logger = LoggerFactory.getLogger(VectorMemoryService.class);
+    private static final Logger logger = LoggerFactory.getLogger(IVectorMemoryService.class);
 
     private static final String METADATA_AGENT_ID = "agentId";
     private static final String METADATA_USER_ID = "userId";
     private static final String METADATA_MEMORY_TYPE = "memoryType";
-    private static final String METADATA_MEMORY_ID = "memoryId";
 
     private final SysConfigService sysConfigService;
     private final EmbeddingModel embeddingModel;
@@ -117,7 +117,7 @@ public class VectorMemoryService {
     /**
      * 将内容写入向量库，附带 agent、用户、记忆类型、记忆ID 等分类信息
      */
-    public void store(String content, Long agentId, String userId, VectorMemoryTypeEnum memoryType, Long memoryId) {
+    public void store(String content, Long agentId, String userId, VectorMemoryTypeEnum memoryType) {
         if (content == null || content.isBlank()) {
             return;
         }
@@ -126,9 +126,6 @@ public class VectorMemoryService {
             segment.metadata().put(METADATA_AGENT_ID, String.valueOf(agentId));
             segment.metadata().put(METADATA_USER_ID, userId);
             segment.metadata().put(METADATA_MEMORY_TYPE, memoryType.getCode());
-            if (memoryId != null) {
-                segment.metadata().put(METADATA_MEMORY_ID, String.valueOf(memoryId));
-            }
 
             Embedding embedding = embeddingModel.embed(segment).content();
             embeddingStore.add(embedding, segment);
@@ -143,14 +140,13 @@ public class VectorMemoryService {
     /**
      * 批量写入向量库
      */
-    public void storeBatch(List<String> contents, Long agentId, String userId, VectorMemoryTypeEnum memoryType, List<Long> memoryIds) {
+    public void storeBatch(List<String> contents, Long agentId, String userId, VectorMemoryTypeEnum memoryType) {
         if (contents == null || contents.isEmpty()) {
             return;
         }
         try {
             List<TextSegment> segments = new java.util.ArrayList<>();
-            for (int i = 0; i < contents.size(); i++) {
-                String content = contents.get(i);
+            for (String content : contents) {
                 if (content == null || content.isBlank()) {
                     continue;
                 }
@@ -158,9 +154,6 @@ public class VectorMemoryService {
                 segment.metadata().put(METADATA_AGENT_ID, String.valueOf(agentId));
                 segment.metadata().put(METADATA_USER_ID, userId);
                 segment.metadata().put(METADATA_MEMORY_TYPE, memoryType.getCode());
-                if (memoryIds != null && i < memoryIds.size() && memoryIds.get(i) != null) {
-                    segment.metadata().put(METADATA_MEMORY_ID, String.valueOf(memoryIds.get(i)));
-                }
                 segments.add(segment);
             }
 
@@ -196,6 +189,25 @@ public class VectorMemoryService {
             }
         }
     }
+
+    /**
+     * 根据 embeddingId 删除向量库中的单条记录
+     */
+    public boolean deleteByEmbeddingId(String embeddingId) {
+        if (embeddingId == null || embeddingId.isBlank()) {
+            return false;
+        }
+        try {
+            embeddingStore.remove(embeddingId);
+            saveVectorStore((JVectorEmbeddingStore) embeddingStore);
+            logger.info("Deleted vector, embeddingId={}", embeddingId);
+            return true;
+        } catch (Exception e) {
+            logger.error("Failed to delete vector, embeddingId={}", embeddingId, e);
+            return false;
+        }
+    }
+
     /**
      * 语义检索向量库中的历史记忆
      *
@@ -245,61 +257,22 @@ public class VectorMemoryService {
                         return true;
                     })
                     .limit(maxResults)
-                    .map(match -> new VectorSearchResult(
-                            match.score(),
-                            match.embedded().text(),
-                            match.embedded().metadata()))
+                    .map(match -> {
+                        dev.langchain4j.data.document.Metadata m = match.embedded().metadata();
+                        return new VectorSearchResult(
+                                match.embeddingId(),
+                                match.score(),
+                                match.embedded().text(),
+                                m != null ? m.getString(METADATA_AGENT_ID) : null,
+                                m != null ? m.getString(METADATA_USER_ID) : null,
+                                m != null ? m.getString(METADATA_MEMORY_TYPE) : null
+                        );
+                    })
                     .collect(Collectors.toList());
 
         } catch (Exception e) {
             logger.error("Failed to search vector store, query={}", query, e);
             return List.of();
-        }
-    }
-
-    /**
-     * 向量搜索结果
-     */
-    public static class VectorSearchResult {
-        private final double score;
-        private final String text;
-        private final dev.langchain4j.data.document.Metadata metadata;
-
-        public VectorSearchResult(double score, String text, dev.langchain4j.data.document.Metadata metadata) {
-            this.score = score;
-            this.text = text;
-            this.metadata = metadata;
-        }
-
-        public double getScore() {
-            return score;
-        }
-
-        public String getText() {
-            return text;
-        }
-
-        public dev.langchain4j.data.document.Metadata getMetadata() {
-            return metadata;
-        }
-
-        public String getAgentId() {
-            return metadata != null ? metadata.getString(METADATA_AGENT_ID) : null;
-        }
-
-        public String getUserId() {
-            return metadata != null ? metadata.getString(METADATA_USER_ID) : null;
-        }
-
-        public String getMemoryType() {
-            return metadata != null ? metadata.getString(METADATA_MEMORY_TYPE) : null;
-        }
-
-        @Override
-        public String toString() {
-            return String.format("[score=%.4f, type=%s, text=%s]",
-                    score, getMemoryType(),
-                    text != null && text.length() > 100 ? text.substring(0, 100) + "..." : text);
         }
     }
 }

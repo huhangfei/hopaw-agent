@@ -1,9 +1,9 @@
 package com.agent.hopaw.biz.tool.memory;
 
-import com.agent.hopaw.infra.constant.LongTermMemoryTypeEnum;
 import com.agent.hopaw.infra.constant.VectorMemoryTypeEnum;
 import com.agent.hopaw.infra.memory.LongTermMemoryService;
-import com.agent.hopaw.infra.memory.VectorMemoryService;
+import com.agent.hopaw.infra.memory.IVectorMemoryService;
+import com.agent.hopaw.infra.model.dto.VectorSearchResult;
 import com.agent.hopaw.infra.util.InvocationParametersWrapper;
 import dev.langchain4j.agent.tool.P;
 import dev.langchain4j.agent.tool.SearchBehavior;
@@ -22,9 +22,9 @@ import java.util.List;
 public class MemoryTool implements AgentTool {
 
     private final LongTermMemoryService longTermMemoryService;
-    private final VectorMemoryService vectorMemoryService;
+    private final IVectorMemoryService vectorMemoryService;
 
-    public MemoryTool(LongTermMemoryService longTermMemoryService, VectorMemoryService vectorMemoryService) {
+    public MemoryTool(LongTermMemoryService longTermMemoryService, IVectorMemoryService vectorMemoryService) {
         this.longTermMemoryService = longTermMemoryService;
         this.vectorMemoryService = vectorMemoryService;
     }
@@ -102,7 +102,7 @@ public class MemoryTool implements AgentTool {
         int maxResultsVal = maxResults != null ? maxResults : 5;
         double minScoreVal = minScore != null ? minScore : 0.5;
 
-        List<VectorMemoryService.VectorSearchResult> results =
+        List<VectorSearchResult> results =
                 vectorMemoryService.search(query, agentId, userId, VectorMemoryTypeEnum.fromCode(memoryType), maxResultsVal, minScoreVal);
 
         if (results.isEmpty()) {
@@ -113,7 +113,7 @@ public class MemoryTool implements AgentTool {
         sb.append("语义搜索找到 ").append(results.size()).append(" 条相关历史记忆：\n\n");
 
         int idx = 1;
-        for (VectorMemoryService.VectorSearchResult result : results) {
+        for (VectorSearchResult result : results) {
             sb.append("[").append(idx++).append("] 相似度: ").append(String.format("%.4f", result.getScore())).append("\n");
             sb.append("记忆类型: ").append(result.getMemoryType()).append("\n");
             sb.append("内容: ").append(result.getText()).append("\n");

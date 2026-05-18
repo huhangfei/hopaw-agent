@@ -6,7 +6,7 @@ import com.agent.hopaw.infra.constant.VectorMemoryTypeEnum;
 import com.agent.hopaw.infra.mapper.AgentMapper;
 import com.agent.hopaw.infra.mapper.ChatMemoryMapper;
 import com.agent.hopaw.infra.memory.LongTermMemoryService;
-import com.agent.hopaw.infra.memory.VectorMemoryService;
+import com.agent.hopaw.infra.memory.IVectorMemoryService;
 import com.agent.hopaw.infra.model.entity.Agent;
 import com.agent.hopaw.infra.model.entity.ChatMemory;
 import com.agent.hopaw.infra.model.entity.LongTermMemory;
@@ -31,7 +31,6 @@ import org.springframework.util.StringUtils;
 
 import java.time.LocalDateTime;
 import java.util.*;
-import java.util.stream.Collectors;
 
 @Component
 public class LongTermMemoryTaskHandler implements TaskHandler {
@@ -39,7 +38,7 @@ public class LongTermMemoryTaskHandler implements TaskHandler {
     private static final Logger logger = LoggerFactory.getLogger(LongTermMemoryTaskHandler.class);
 
     private final com.agent.hopaw.infra.memory.LongTermMemoryService longTermMemoryService;
-    private final VectorMemoryService vectorMemoryService;
+    private final IVectorMemoryService vectorMemoryService;
     private final MemoryTool memoryTool;
     private final ChatMemoryMapper chatMemoryMapper;
     private final AgentMapper agentMapper;
@@ -51,7 +50,7 @@ public class LongTermMemoryTaskHandler implements TaskHandler {
 
     public LongTermMemoryTaskHandler(AiModelService aiModelService,
                                      LongTermMemoryService longTermMemoryService,
-                                     VectorMemoryService vectorMemoryService,
+                                     IVectorMemoryService vectorMemoryService,
                                      MemoryTool memoryTool,
                                      ChatMemoryMapper chatMemoryMapper, AgentMapper agentMapper,
                                      SysConfigService sysConfigService, TokenUsageService tokenUsageService) {
@@ -368,7 +367,7 @@ public class LongTermMemoryTaskHandler implements TaskHandler {
                 }
 
                 String label = String.format("[%s] %s", role, text);
-                vectorMemoryService.store(label, agentId, userId, VectorMemoryTypeEnum.CHAT_HISTORY, chat.getId());
+                vectorMemoryService.store(label, agentId, userId, VectorMemoryTypeEnum.CHAT_HISTORY);
             }
             logger.info("Stored {} chat history messages to vector store, agentId={}, userId={}",
                     cleanedMessages.size(), agentId, userId);
@@ -413,7 +412,7 @@ public class LongTermMemoryTaskHandler implements TaskHandler {
 
             if (!contents.isEmpty()) {
                 vectorMemoryService.storeBatch(contents, agentId, userId,
-                        VectorMemoryTypeEnum.TASK_RECORDS, ids);
+                        VectorMemoryTypeEnum.TASK_RECORDS);
                 logger.info("Stored {} expired task records to vector store, agentId={}, userId={}",
                         contents.size(), agentId, userId);
             }
