@@ -220,6 +220,7 @@ public class LongTermMemoryTaskHandler implements TaskHandler {
 
         boolean handle = handle(agent.getId(), userId, content);
         if (handle) {
+             //todo: 要移除的记忆记录移入向量库后删除
             chatMemoryMapper.deleteByIds(cleanedMessages.stream().map(ChatMemory::getId).toList());
         }
 
