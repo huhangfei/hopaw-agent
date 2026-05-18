@@ -28,7 +28,9 @@ public class AgentToolService implements IAgentToolService {
     @Override
     public List<AgentTool> getAgentTools() {
         Map<String, AgentTool> beans = applicationContext.getBeansOfType(AgentTool.class);
-        return new ArrayList<>(beans.values());
+        List<AgentTool> tools = new ArrayList<>(beans.values());
+        tools.sort(Comparator.comparing(AgentTool::getName));
+        return tools;
     }
 
     @Override
