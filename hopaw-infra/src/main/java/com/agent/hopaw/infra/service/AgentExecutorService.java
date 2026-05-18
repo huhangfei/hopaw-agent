@@ -121,6 +121,9 @@ public class AgentExecutorService implements IAgentExecutorService {
                 .setAgentId(agent.getId())
                 .setUserId(userId)
                 .setTokenUsageService(tokenUsageService);
+        if(agent.getAiModelId() == null){
+            throw new RuntimeException("智能体没有设置AI模型");
+        }
         ChatModel chatModel = aiModelService.createChatModel(agent.getAiModelId(), agent.getEnableThinking(), langChain4jMonitor);
         StreamingChatModel streamingModel = aiModelService.createStreamingChatModel(agent.getAiModelId(), agent.getEnableThinking(), langChain4jMonitor);
         List<String> selectedToolNames = parseToolNames(agent.getTools());
