@@ -354,6 +354,8 @@ public class DataInitializer implements CommandLineRunner {
             String tools = allTools.stream().map(x -> x.getName()).collect(Collectors.joining(","));
             Agent agent = new Agent("大虾🦐", "回答各种问题，使用多种工具", tools, 20, 20, true);
             agent.setUserId(DefaultUser.USER);
+            agent.setVectorToolSearch(true);
+            agent.setVectorToolSearchMaxResults(15);
             agentMapper.insert(agent);
 
         }

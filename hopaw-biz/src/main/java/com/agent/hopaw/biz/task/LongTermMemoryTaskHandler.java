@@ -2,9 +2,11 @@ package com.agent.hopaw.biz.task;
 
 import com.agent.hopaw.infra.constant.AiModelCallSourceEnum;
 import com.agent.hopaw.infra.constant.LongTermMemoryTypeEnum;
+import com.agent.hopaw.infra.constant.VectorMemoryTypeEnum;
 import com.agent.hopaw.infra.mapper.AgentMapper;
 import com.agent.hopaw.infra.mapper.ChatMemoryMapper;
 import com.agent.hopaw.infra.memory.LongTermMemoryService;
+import com.agent.hopaw.infra.memory.VectorMemoryService;
 import com.agent.hopaw.infra.model.entity.Agent;
 import com.agent.hopaw.infra.model.entity.ChatMemory;
 import com.agent.hopaw.infra.model.entity.LongTermMemory;
@@ -29,6 +31,7 @@ import org.springframework.util.StringUtils;
 
 import java.time.LocalDateTime;
 import java.util.*;
+import java.util.stream.Collectors;
 
 @Component
 public class LongTermMemoryTaskHandler implements TaskHandler {
@@ -36,6 +39,8 @@ public class LongTermMemoryTaskHandler implements TaskHandler {
     private static final Logger logger = LoggerFactory.getLogger(LongTermMemoryTaskHandler.class);
 
     private final com.agent.hopaw.infra.memory.LongTermMemoryService longTermMemoryService;
+    private final VectorMemoryService vectorMemoryService;
+    private final MemoryTool memoryTool;
     private final ChatMemoryMapper chatMemoryMapper;
     private final AgentMapper agentMapper;
     private final SysConfigService sysConfigService;
@@ -46,10 +51,14 @@ public class LongTermMemoryTaskHandler implements TaskHandler {
 
     public LongTermMemoryTaskHandler(AiModelService aiModelService,
                                      LongTermMemoryService longTermMemoryService,
+                                     VectorMemoryService vectorMemoryService,
+                                     MemoryTool memoryTool,
                                      ChatMemoryMapper chatMemoryMapper, AgentMapper agentMapper,
                                      SysConfigService sysConfigService, TokenUsageService tokenUsageService) {
         this.aiModelService = aiModelService;
         this.longTermMemoryService = longTermMemoryService;
+        this.vectorMemoryService = vectorMemoryService;
+        this.memoryTool = memoryTool;
         this.chatMemoryMapper = chatMemoryMapper;
         this.agentMapper = agentMapper;
         this.sysConfigService = sysConfigService;
@@ -220,13 +229,12 @@ public class LongTermMemoryTaskHandler implements TaskHandler {
 
         boolean handle = handle(agent.getId(), userId, content);
         if (handle) {
-             //todo: 要移除的记忆记录移入向量库后删除
+            storeChatHistoryToVector(agent.getId(), userId, cleanedMessages);
             chatMemoryMapper.deleteByIds(cleanedMessages.stream().map(ChatMemory::getId).toList());
         }
 
-        //todo: 几天前的任务记录移入向量库
+        storeExpiredTaskRecordsToVector(agent.getId(), userId);
 
-        //移除几天前的任务记录
         longTermMemoryService.deleteExpiredTaskRecordsMemories(agent.getId(), userId);
 
         logger.info("Processing memory for agentId: {}, cleaned messages count: {}", agentIdStr, cleanedMessages.size());
@@ -260,7 +268,7 @@ public class LongTermMemoryTaskHandler implements TaskHandler {
             MemoryAssistant assistant = AiServices.builder(MemoryAssistant.class)
                     .chatModel(chatModel)
                     .systemMessageProvider(chatMemoryId -> systemMessage)
-                    .tools(Arrays.asList(new MemoryTool(longTermMemoryService)))
+                    .tools(Arrays.asList(memoryTool))
                     .build();
             logger.info("开始汇总记忆 \n {}", content);
             ChatRequestParameters chatRequestParameters = ChatRequestParameters.builder()
@@ -331,5 +339,113 @@ public class LongTermMemoryTaskHandler implements TaskHandler {
         memory.append("【以下是新对话】\n").append(newConversation).append("\n\n");
         memory.append("===========================");
         return memory.toString();
+    }
+
+    /**
+     * 将被清理的聊天历史记录写入向量库
+     */
+    private void storeChatHistoryToVector(Long agentId, String userId, List<ChatMemory> cleanedMessages) {
+        if (cleanedMessages == null || cleanedMessages.isEmpty()) {
+            return;
+        }
+        try {
+            for (ChatMemory chat : cleanedMessages) {
+                if (chat == null || chat.getMessageJson() == null) {
+                    continue;
+                }
+                ChatMessage message = ChatMessageDeserializer.messageFromJson(chat.getMessageJson());
+                if (message == null) {
+                    continue;
+                }
+                String role = "";
+                String text = "";
+                if (message instanceof dev.langchain4j.data.message.UserMessage) {
+                    role = "User";
+                    text = extractTextContent(message);
+                } else if (message instanceof AiMessage) {
+                    role = "Ai";
+                    text = ((AiMessage) message).text();
+                } else if (message instanceof SystemMessage) {
+                    role = "System";
+                    text = ((SystemMessage) message).text();
+                } else if (message instanceof ToolExecutionResultMessage) {
+                    role = "Tool";
+                    text = ((ToolExecutionResultMessage) message).text();
+                } else {
+                    continue;
+                }
+
+                if (text == null || text.isBlank()) {
+                    continue;
+                }
+
+                String label = String.format("[%s] %s", role, text);
+                vectorMemoryService.store(label, agentId, userId, VectorMemoryTypeEnum.CHAT_HISTORY, chat.getId());
+            }
+            logger.info("Stored {} chat history messages to vector store, agentId={}, userId={}",
+                    cleanedMessages.size(), agentId, userId);
+        } catch (Exception e) {
+            logger.error("Failed to store chat history to vector store, agentId={}, userId={}",
+                    agentId, userId, e);
+        }
+    }
+
+    /**
+     * 将被清理的过期任务记录写入向量库
+     */
+    private void storeExpiredTaskRecordsToVector(Long agentId, String userId) {
+        try {
+            List<LongTermMemory> expiredRecords =
+                    longTermMemoryService.findExpiredTaskRecordsMemories(agentId, userId);
+            if (expiredRecords == null || expiredRecords.isEmpty()) {
+                return;
+            }
+
+            List<String> contents = new java.util.ArrayList<>();
+            List<Long> ids = new java.util.ArrayList<>();
+            for (LongTermMemory record : expiredRecords) {
+                String summary = record.getSummary();
+                String memory = record.getMemory();
+                StringBuilder sb = new StringBuilder();
+                if (summary != null && !summary.isBlank()) {
+                    sb.append(summary);
+                }
+                if (memory != null && !memory.isBlank()) {
+                    if (!sb.isEmpty()) {
+                        sb.append(" - ");
+                    }
+                    sb.append(memory);
+                }
+                String text = sb.toString();
+                if (!text.isBlank()) {
+                    contents.add(text);
+                    ids.add(record.getId());
+                }
+            }
+
+            if (!contents.isEmpty()) {
+                vectorMemoryService.storeBatch(contents, agentId, userId,
+                        VectorMemoryTypeEnum.TASK_RECORDS, ids);
+                logger.info("Stored {} expired task records to vector store, agentId={}, userId={}",
+                        contents.size(), agentId, userId);
+            }
+        } catch (Exception e) {
+            logger.error("Failed to store expired task records to vector store, agentId={}, userId={}",
+                    agentId, userId, e);
+        }
+    }
+
+    private String extractTextContent(ChatMessage message) {
+        if (!(message instanceof dev.langchain4j.data.message.UserMessage)) {
+            return "";
+        }
+        dev.langchain4j.data.message.UserMessage userMessage = (dev.langchain4j.data.message.UserMessage) message;
+        StringBuilder sb = new StringBuilder();
+        for (Content content : userMessage.contents()) {
+            if (content instanceof TextContent) {
+                sb.append(((TextContent) content).text());
+            }
+        }
+        return sb.toString();
     }
 }
