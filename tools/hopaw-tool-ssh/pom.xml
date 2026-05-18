@@ -8,6 +8,7 @@
         <groupId>com.hopaw.agent</groupId>
         <artifactId>hopaw-agent</artifactId>
         <version>1.0.0</version>
+        <relativePath>../../pom.xml</relativePath>
     </parent>
 
     <artifactId>hopaw-tool-ssh</artifactId>
