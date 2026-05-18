@@ -13,6 +13,7 @@ import com.agent.hopaw.infra.tool.AgentTool;
 import com.agent.hopaw.infra.tool.IAgentToolService;
 import dev.langchain4j.model.chat.ChatModel;
 import dev.langchain4j.model.chat.StreamingChatModel;
+import dev.langchain4j.model.embedding.EmbeddingModel;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 
@@ -30,15 +31,17 @@ public class AgentExecutorService implements IAgentExecutorService {
     private final IAgentToolService agentToolService;
 
     private final LongTermMemoryService longTermMemoryService;
+    private final EmbeddingModel embeddingModel;
     private final Map<String, IAgentExecutor> agentExecutors = new HashMap<>();
 
-    public AgentExecutorService(AiModelService aiModelService, ChatHistoryStore chatHistoryStore, TokenUsageService tokenUsageService, SQLiteChatMemoryStore memoryStore, IAgentToolService agentToolService, LongTermMemoryService longTermMemoryService) {
+    public AgentExecutorService(AiModelService aiModelService, ChatHistoryStore chatHistoryStore, TokenUsageService tokenUsageService, SQLiteChatMemoryStore memoryStore, IAgentToolService agentToolService, LongTermMemoryService longTermMemoryService, EmbeddingModel embeddingModel) {
         this.aiModelService = aiModelService;
         this.chatHistoryStore = chatHistoryStore;
         this.tokenUsageService = tokenUsageService;
         this.memoryStore = memoryStore;
         this.agentToolService = agentToolService;
         this.longTermMemoryService = longTermMemoryService;
+        this.embeddingModel = embeddingModel;
     }
 
     @Override
@@ -124,7 +127,7 @@ public class AgentExecutorService implements IAgentExecutorService {
         List<AgentTool> selectedTools = agentToolService.getAgentTools().stream()
                 .filter(t -> selectedToolNames.contains(t.getName()))
                 .collect(Collectors.toList());
-        return new AgentExecutor(UUID.randomUUID().toString(),agent, userId, chatModel, streamingModel,selectedTools, memoryStore, a -> this.getSystemMessage(a, userId, selectedTools), chatHistoryStore);
+        return new AgentExecutor(UUID.randomUUID().toString(),agent, userId, chatModel, streamingModel,selectedTools, memoryStore, embeddingModel, a -> this.getSystemMessage(a, userId, selectedTools), chatHistoryStore);
     }
 
     @Override

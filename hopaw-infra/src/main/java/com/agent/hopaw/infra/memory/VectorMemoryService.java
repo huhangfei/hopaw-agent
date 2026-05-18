@@ -5,7 +5,6 @@ import com.agent.hopaw.infra.service.SysConfigService;
 import dev.langchain4j.data.embedding.Embedding;
 import dev.langchain4j.data.segment.TextSegment;
 import dev.langchain4j.model.embedding.EmbeddingModel;
-import dev.langchain4j.model.embedding.onnx.bgesmallzhv15.BgeSmallZhV15EmbeddingModel;
 import dev.langchain4j.store.embedding.EmbeddingSearchRequest;
 import dev.langchain4j.store.embedding.EmbeddingSearchResult;
 import dev.langchain4j.store.embedding.EmbeddingStore;
@@ -16,6 +15,10 @@ import org.springframework.stereotype.Service;
 
 import javax.annotation.PostConstruct;
 import javax.annotation.PreDestroy;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.nio.file.StandardCopyOption;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -30,17 +33,18 @@ public class VectorMemoryService {
     private static final String METADATA_MEMORY_ID = "memoryId";
 
     private final SysConfigService sysConfigService;
-    private EmbeddingModel embeddingModel;
+    private final EmbeddingModel embeddingModel;
     private EmbeddingStore<TextSegment> embeddingStore;
+    private String currentPersistencePath;
 
-    public VectorMemoryService(SysConfigService sysConfigService) {
+    public VectorMemoryService(SysConfigService sysConfigService, EmbeddingModel embeddingModel) {
         this.sysConfigService = sysConfigService;
+        this.embeddingModel = embeddingModel;
     }
 
     @PostConstruct
     public void init() {
         try {
-            embeddingModel = new BgeSmallZhV15EmbeddingModel();
             int dimension = 512;
 
             String persistencePath = sysConfigService.getValueByKey("vector_store_path", "./vector_store");
@@ -97,6 +101,7 @@ public class VectorMemoryService {
 
             logger.info("JVectorEmbeddingStore initialized, profile={}, dimension={}, maxDegree={}, beamWidth={}, path={}",
                     profile, dimension, maxDegree, beamWidth, persistencePath);
+            currentPersistencePath = persistencePath;
         } catch (Exception e) {
             logger.error("Failed to initialize JVectorEmbeddingStore", e);
             throw new RuntimeException("Vector store initialization failed", e);
@@ -112,6 +117,76 @@ public class VectorMemoryService {
             }
         } catch (Exception e) {
             logger.error("Failed to save vector store on shutdown", e);
+        }
+    }
+
+    /**
+     * 重建向量引擎。
+     *
+     * 完整流程：
+     *   ① save()                   - 旧数据刷入磁盘（保存在旧路径）
+     *   ② 读取配置中的新路径
+     *   ③ 对比新旧路径
+     *        ├─ 相同 → 跳过迁移
+     *        └─ 不同 → migrateStoreFiles() 将旧目录文件复制到新目录
+     *   ④ embeddingStore = null
+     *   ⑤ init()                   - 用新路径创建 store，JVector 自动加载持久化文件
+     *
+     * 注意：图构建参数 (maxDegree/beamWidth 等) 只对新插入的向量生效，
+     * 已持久化的向量加载后仍保留原有的图结构。
+     * 如需彻底切换预设参数，需手动删除持久化目录后重建。
+     */
+    public synchronized void reinit() {
+        logger.info("Rebuilding JVectorEmbeddingStore...");
+
+        String newPath = sysConfigService.getValueByKey("vector_store_path", "./vector_store");
+
+        try {
+            if (embeddingStore instanceof JVectorEmbeddingStore) {
+                ((JVectorEmbeddingStore) embeddingStore).save();
+            }
+        } catch (Exception e) {
+            logger.warn("Failed to save vector store before rebuild", e);
+        }
+
+        boolean pathChanged = currentPersistencePath != null
+                && !currentPersistencePath.equals(newPath);
+
+        if (pathChanged) {
+            migrateStoreFiles(currentPersistencePath, newPath);
+        }
+
+        embeddingStore = null;
+        init();
+        logger.info("JVectorEmbeddingStore rebuilt successfully, pathChanged={}", pathChanged);
+    }
+
+    /**
+     * 将旧路径下的向量存储文件迁移到新路径。
+     * 使用 Files.copy 而非 move，保证原文件不受影响，迁移失败也可回退。
+     */
+    private void migrateStoreFiles(String oldPath, String newPath) {
+        try {
+            Path oldDir = Paths.get(oldPath);
+            Path newDir = Paths.get(newPath);
+            if (!Files.exists(oldDir) || !Files.isDirectory(oldDir)) {
+                logger.info("Old persistence path does not exist, skip migration: {}", oldPath);
+                return;
+            }
+            Files.createDirectories(newDir);
+            Files.list(oldDir).forEach(file -> {
+                try {
+                    Path target = newDir.resolve(file.getFileName());
+                    Files.copy(file, target, StandardCopyOption.REPLACE_EXISTING);
+                    logger.debug("Migrated vector store file: {} -> {}", file, target);
+                } catch (Exception e) {
+                    logger.error("Failed to migrate file: {}", file, e);
+                }
+            });
+            logger.info("Vector store files migrated from '{}' to '{}'", oldPath, newPath);
+        } catch (Exception e) {
+            logger.error("Failed to migrate vector store files from '{}' to '{}'",
+                    oldPath, newPath, e);
         }
     }
 

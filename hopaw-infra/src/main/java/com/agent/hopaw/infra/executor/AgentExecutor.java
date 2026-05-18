@@ -18,7 +18,6 @@ import dev.langchain4j.model.chat.response.ChatResponse;
 import dev.langchain4j.model.chat.response.PartialThinking;
 import dev.langchain4j.model.chat.response.PartialToolCall;
 import dev.langchain4j.model.embedding.EmbeddingModel;
-import dev.langchain4j.model.embedding.onnx.bgesmallzhv15.BgeSmallZhV15EmbeddingModel;
 import dev.langchain4j.service.AiServices;
 import dev.langchain4j.service.TokenStream;
 import dev.langchain4j.service.tool.BeforeToolExecution;
@@ -32,14 +31,34 @@ import org.slf4j.LoggerFactory;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.Executors;
+import java.util.concurrent.LinkedBlockingQueue;
+import java.util.concurrent.ThreadFactory;
+import java.util.concurrent.ThreadPoolExecutor;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
 public class AgentExecutor implements IAgentExecutor {
     private final Logger logger = LoggerFactory.getLogger(AgentExecutor.class);
+    
+    /**
+     * 工具执行线程池的 ThreadFactory，静态常量复用
+     */
+    private static final ThreadFactory TOOL_THREAD_FACTORY = new ThreadFactory() {
+        private final java.util.concurrent.atomic.AtomicInteger counter = new java.util.concurrent.atomic.AtomicInteger(0);
+
+        @Override
+        public Thread newThread(Runnable r) {
+            Thread thread = new Thread(r);
+            thread.setName("agent-tool-worker-" + counter.incrementAndGet());
+            thread.setDaemon(true);
+            return thread;
+        }
+    };
+    
     private final Agent agent;
     private final String userId;
     private final String sessionId;
@@ -53,6 +72,8 @@ public class AgentExecutor implements IAgentExecutor {
     private final java.util.concurrent.ConcurrentMap<String, CountDownLatch> toolCancelLatch = new ConcurrentHashMap<>();
     private final java.util.concurrent.ConcurrentMap<String,Consumer<String>> toolStopHooks = new ConcurrentHashMap<>();
     private final ChatMemoryId memoryId;
+    private final EmbeddingModel embeddingModel;
+    private final ThreadPoolExecutor toolExecutor;
     private String requestId;
     private CountDownLatch taskLatch = new CountDownLatch(0);
     public AgentExecutor(String sessionId,Agent agent, String userId,
@@ -60,6 +81,7 @@ public class AgentExecutor implements IAgentExecutor {
                          StreamingChatModel streamingModel,
                          List<AgentTool> selectedTools,
                          SQLiteChatMemoryStore memoryStore,
+                         EmbeddingModel embeddingModel,
                          Function<Agent, String> systemMessageProvider,
                          ChatHistoryStore chatHistoryStore) {
         this.chatHistoryStore = chatHistoryStore;
@@ -67,11 +89,14 @@ public class AgentExecutor implements IAgentExecutor {
         this.userId = userId;
         this.sessionId = sessionId;
         this.memoryStore = memoryStore;
+        this.embeddingModel = embeddingModel;
         this.agentMessageHandler = new AgentMessageHandler(this.sessionId);
         this.memoryId = new ChatMemoryId(agent.getId(), userId);
-
         int maxMemoryRecords = agent.getMaxMemoryRecords() != null ? agent.getMaxMemoryRecords() : 20;
         int maxToolInvocations = agent.getMaxToolInvocations() != null ? agent.getMaxToolInvocations() : 10;
+
+        // 创建工具执行线程池
+        this.toolExecutor = createToolExecutor();
 
         MessageWindowChatMemory.Builder memoryBuilder = MessageWindowChatMemory.builder()
                 .id(memoryId)
@@ -81,10 +106,9 @@ public class AgentExecutor implements IAgentExecutor {
                 .builder(ChatAgentAssistant.class)
                 .systemMessageProvider(chatMemoryId -> systemMessageProvider.apply(agent))
                 .chatMemory(memoryBuilder.build())
-                .executeToolsConcurrently(Executors.newFixedThreadPool(5))
+                .executeToolsConcurrently(toolExecutor);
                 ;
         if (selectedTools != null && agent.getVectorToolSearch() != null && agent.getVectorToolSearch()) {
-            EmbeddingModel embeddingModel = new BgeSmallZhV15EmbeddingModel();
             int maxResults = agent.getVectorToolSearchMaxResults() != null ? agent.getVectorToolSearchMaxResults() : 10;
             aiBuilder.toolSearchStrategy(
                     VectorToolSearchStrategy
@@ -146,6 +170,22 @@ public class AgentExecutor implements IAgentExecutor {
         }
         if (!running()) {
             agentMessageHandler.done();
+        }
+
+        // 关闭工具执行线程池，释放资源
+        if (toolExecutor != null && !toolExecutor.isShutdown()) {
+            toolExecutor.shutdown();
+            try {
+                if (!toolExecutor.awaitTermination(10, TimeUnit.SECONDS)) {
+                    toolExecutor.shutdownNow();
+                    logger.warn("Tool executor force shutdown");
+                } else {
+                    logger.info("Tool executor shutdown gracefully");
+                }
+            } catch (InterruptedException e) {
+                toolExecutor.shutdownNow();
+                Thread.currentThread().interrupt();
+            }
         }
     }
     @Override
@@ -331,6 +371,30 @@ public class AgentExecutor implements IAgentExecutor {
             }
         }
         return chatHistoryList;
+    }
+
+    /**
+     * 创建工具执行线程池
+     * 使用 ThreadPoolExecutor 手动创建，更好地控制线程池行为
+     *
+     * @return 配置好的 ThreadPoolExecutor 实例
+     */
+    private ThreadPoolExecutor createToolExecutor() {
+        // 固定 5 个线程，有界队列容量 10，CallerRunsPolicy 拒绝策略
+        int toolThreadPoolSize = 5;
+
+        // 手动创建 ThreadPoolExecutor
+        // corePoolSize = maximumPoolSize = 5，固定大小线程池
+        // 使用有界队列防止内存溢出，队列大小为线程数的2倍
+        // CallerRunsPolicy 拒绝策略：队列满时由调用线程执行，提供背压机制
+        return new ThreadPoolExecutor(
+                toolThreadPoolSize,                    // corePoolSize
+                toolThreadPoolSize,                    // maximumPoolSize
+                60L, TimeUnit.SECONDS,                 // keepAliveTime（固定线程池不适用）
+                new LinkedBlockingQueue<>(toolThreadPoolSize * 2),  // 有界队列
+                TOOL_THREAD_FACTORY,                   // 复用静态 ThreadFactory
+                new ThreadPoolExecutor.CallerRunsPolicy()  // 拒绝策略
+        );
     }
 
     /**

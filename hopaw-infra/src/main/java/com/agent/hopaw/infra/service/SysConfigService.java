@@ -42,7 +42,13 @@ public class SysConfigService implements ISysConfigService {
 
     public String getValueByKey(String key, String defaultValue) {
         var config = getByKey(key);
-        return config != null ? config.getConfigValue() : defaultValue;
+        if(config==null){
+            return defaultValue;
+        }
+        if(config.getConfigValue()==null || config.getConfigValue().isEmpty()){
+            return defaultValue;
+        }
+        return config.getConfigValue();
     }
 
     public int save(SysConfig sysConfig) {

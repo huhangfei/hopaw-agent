@@ -52,6 +52,18 @@
     max-width: 600px;
 }
 
+/* ========== 设置双栏布局 ========== */
+.settings-row {
+    display: flex;
+    gap: 20px;
+    align-items: flex-start;
+}
+
+.settings-row .settings-form {
+    flex: 1;
+    min-width: 0;
+}
+
 /* ========== 保存按钮 ========== */
 .settings-actions {
     margin-top: 24px;
@@ -256,5 +268,59 @@
     color: #999;
     margin-top: 8px;
     margin-bottom: 0;
+}
+
+/* ========== 向量重建 ========== */
+.rebuild-section {
+    background: #fff8e1;
+    border: 1px solid #ffe082;
+    border-radius: 8px;
+    padding: 12px 16px;
+    margin-bottom: 16px;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 10px;
+}
+
+.rebuild-hint {
+    flex: 1 1 100%;
+    font-size: 12px;
+    color: #8d6e00;
+    margin: 0;
+    line-height: 1.5;
+}
+
+.btn-rebuild-store {
+    background: #ff8f00;
+    color: #fff;
+    border: none;
+    padding: 8px 20px;
+    border-radius: 6px;
+    font-size: 13px;
+    cursor: pointer;
+    transition: background 0.2s;
+}
+
+.btn-rebuild-store:hover {
+    background: #e65100;
+}
+
+.btn-rebuild-store:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+.rebuild-status {
+    font-size: 12px;
+    margin-left: 8px;
+}
+
+.rebuild-status.success {
+    color: #2e7d32;
+}
+
+.rebuild-status.error {
+    color: #c62828;
 }
 
