@@ -7,42 +7,41 @@
         <nav th:replace="fragments/layout::menuSidebar('vector-history')"></nav>
         <main class="vector-history-container">
             <div class="search-panel">
-                <h3>向量库查询</h3>
-                <div class="search-form">
-                    <div class="form-row">
-                        <div class="form-group">
-                            <label for="queryText">查询关键词 <span class="required">*</span></label>
-                            <input type="text" id="queryText" class="form-input" placeholder="输入语义查询关键词">
-                        </div>
-                        <div class="form-group">
-                            <label for="searchMemoryType">记忆类型</label>
-                            <select id="searchMemoryType" class="form-input">
-                                <option value="">全部</option>
-                                <option value="chatHistory">聊天历史</option>
-                                <option value="taskRecords">任务记录</option>
-                            </select>
-                        </div>
+                <div class="search-row">
+                    <div class="search-item search-item-keyword">
+                        <label for="queryText">查询关键词</label>
+                        <input type="text" id="queryText" class="search-input" placeholder="输入语义查询关键词">
                     </div>
-                    <div class="form-row">
-                        <div class="form-group">
-                            <label for="searchAgentId">智能体ID</label>
-                            <input type="text" id="searchAgentId" class="form-input" placeholder="不过滤则留空">
-                        </div>
-                        <div class="form-group">
-                            <label for="searchUserId">用户ID</label>
-                            <input type="text" id="searchUserId" class="form-input" placeholder="不过滤则留空">
-                        </div>
-                        <div class="form-group">
-                            <label for="searchMaxResults">最大条数</label>
-                            <input type="number" id="searchMaxResults" class="form-input" value="20" min="1" max="100">
-                        </div>
-                        <div class="form-group">
-                            <label for="searchMinScore">最低相似度</label>
-                            <input type="number" id="searchMinScore" class="form-input" value="0.0" min="0" max="1" step="0.01">
-                        </div>
+                    <div class="search-item">
+                        <label for="searchAgentId">智能体</label>
+                        <select id="searchAgentId" class="filter-select">
+                            <option value="">全部</option>
+                            <option th:each="agent : ${agents}" th:value="${agent.id}" th:text="${agent.name}"></option>
+                        </select>
                     </div>
-                    <div class="form-actions">
-                        <button class="btn btn-primary" onclick="doSearch()">🔍 查询</button>
+                    <div class="search-item">
+                        <label for="searchMemoryType">记忆类型</label>
+                        <select id="searchMemoryType" class="filter-select">
+                            <option value="">所有类型</option>
+                        </select>
+                    </div>
+                    <div class="search-item">
+                        <label for="searchUserId">用户</label>
+                        <select id="searchUserId" class="filter-select">
+                            <option value="">全部</option>
+                            <option value="user1">user1</option>
+                        </select>
+                    </div>
+                    <div class="search-item">
+                        <label for="searchMaxResults">最大条数</label>
+                        <input type="number" id="searchMaxResults" class="filter-num" value="20" min="1" max="100">
+                    </div>
+                    <div class="search-item">
+                        <label for="searchMinScore">最低相似度</label>
+                        <input type="number" id="searchMinScore" class="filter-num" value="0.0" min="0" max="1" step="0.01">
+                    </div>
+                    <div class="search-actions">
+                        <button class="btn btn-primary" onclick="doSearch()">查询</button>
                         <button class="btn btn-secondary" onclick="clearResults()">清空结果</button>
                     </div>
                 </div>
@@ -58,12 +57,13 @@
                     <table class="results-table" id="resultsTable" style="display:none;">
                         <thead>
                             <tr>
-                                <th style="width:60px;">#</th>
-                                <th style="width:80px;">记忆类型</th>
-                                <th style="width:80px;">智能体ID</th>
+                                <th style="width:50px;">#</th>
+                                <th style="width:90px;">记忆类型</th>
+                                <th style="width:70px;">智能体</th>
+                                <th style="width:80px;">用户</th>
                                 <th>内容</th>
-                                <th style="width:70px;">相似度</th>
-                                <th style="width:120px;">操作</th>
+                                <th style="width:65px;">相似度</th>
+                                <th style="width:130px;">操作</th>
                             </tr>
                         </thead>
                         <tbody id="resultsBody"></tbody>
@@ -80,6 +80,22 @@
             <div class="modal-footer">
                 <button class="btn btn-secondary" onclick="closeConfirmModal()">取消</button>
                 <button class="btn btn-danger" id="confirmDeleteBtn">确认删除</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal-overlay" id="detailModal" style="display:none;">
+        <div class="modal-dialog modal-detail">
+            <div class="modal-header">记忆详情</div>
+            <div class="modal-body">
+                <div class="detail-meta">
+                    <span class="detail-tag" id="detailType"></span>
+                    <span class="detail-id"><strong>embeddingId:</strong> <code id="detailEmbeddingId"></code></span>
+                </div>
+                <div class="detail-text" id="detailText"></div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="closeDetailModal()">关闭</button>
             </div>
         </div>
     </div>

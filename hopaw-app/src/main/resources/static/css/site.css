@@ -102,6 +102,111 @@ header h1 {
     margin-top: 4px;
     padding-top: 8px;
 }
+
+/* 菜单分组 */
+.menu-group {
+    display: flex;
+    flex-direction: column;
+}
+
+.menu-parent-btn {
+    position: relative;
+}
+
+.menu-parent-btn.active-parent {
+    background: #e8e8e8;
+    color: #4a66d6;
+}
+
+.menu-arrow {
+    margin-left: auto;
+    flex-shrink: 0;
+    transition: transform 0.25s ease;
+}
+
+.menu-group.expanded .menu-arrow {
+    transform: rotate(180deg);
+}
+
+.menu-sub-items {
+    display: none;
+    flex-direction: column;
+    background: #fafafa;
+}
+
+.menu-group.expanded .menu-sub-items {
+    display: flex;
+}
+
+.menu-sub-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    height: 38px;
+    padding: 0 12px 0 36px;
+    font-size: 13px;
+    color: #666;
+    text-decoration: none;
+    border: none;
+    background: transparent;
+    cursor: pointer;
+    transition: background 0.2s;
+}
+
+.menu-sub-item:hover {
+    background: #e8e8e8;
+}
+
+.menu-sub-item.active {
+    background: #d0d7ef;
+    color: #4a66d6;
+    font-weight: 500;
+}
+
+.menu-sub-item svg {
+    width: 18px;
+    height: 18px;
+    flex-shrink: 0;
+}
+
+.menu-sidebar.collapsed .menu-group .menu-sub-items {
+    display: none;
+    position: fixed;
+    background: #fff;
+    border: 1px solid #e0e0e0;
+    border-radius: 6px;
+    box-shadow: 0 4px 14px rgba(0,0,0,0.12);
+    z-index: 200;
+    min-width: 130px;
+    padding: 4px 0;
+}
+
+.menu-sidebar.collapsed .menu-group .menu-sub-items .menu-sub-item {
+    padding: 0 14px;
+    height: 36px;
+    font-size: 13px;
+    gap: 8px;
+    white-space: nowrap;
+}
+
+.menu-sidebar.collapsed .menu-group .menu-arrow {
+    display: none;
+}
+
+.menu-sidebar.collapsed .menu-group.popup-visible .menu-sub-items {
+    display: flex !important;
+}
+
+.menu-sidebar.collapsed .menu-group.popup-visible .menu-sub-items .menu-label {
+    opacity: 1;
+    width: auto;
+    margin: 0;
+    padding: 0;
+}
+
+.menu-sidebar.collapsed .menu-parent-btn.active-parent {
+    background: #d0d7ef;
+}
 .hide{
     display: none !important;
 }
