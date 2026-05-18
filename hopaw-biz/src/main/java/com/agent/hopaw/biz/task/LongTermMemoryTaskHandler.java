@@ -225,9 +225,11 @@ public class LongTermMemoryTaskHandler implements TaskHandler {
             return false;
         });
 
-        String content = buildContent(longTermMemoryContent, newConversation);
+        String content = "以下是需要分析的新会话内容\n";
+        content += newConversation;
+        content +=("\n===========================");
 
-        boolean handle = handle(agent.getId(), userId, content);
+        boolean handle = handle(agent.getId(), userId, longTermMemoryContent,content);
         if (handle) {
             storeChatHistoryToVector(agent.getId(), userId, cleanedMessages);
             chatMemoryMapper.deleteByIds(cleanedMessages.stream().map(ChatMemory::getId).toList());
@@ -240,7 +242,7 @@ public class LongTermMemoryTaskHandler implements TaskHandler {
         logger.info("Processing memory for agentId: {}, cleaned messages count: {}", agentIdStr, cleanedMessages.size());
     }
 
-    private boolean handle(Long agentId, String userId, String content) {
+    private boolean handle(Long agentId, String userId,String longTermMemoriesContent, String content) {
         try {
             String modelIdStr = getConfig("memory_ai_model_id", "");
             Long modelId = null;
@@ -259,15 +261,18 @@ public class LongTermMemoryTaskHandler implements TaskHandler {
                 logger.warn("缺失记忆整理提示词，无法进行记忆整理，请先设置提示词。");
                 return false;
             }
+            systemMessage+= "\n========现有记忆========\n" + longTermMemoriesContent;
             InvocationParametersWrapper invocationParametersWrapper = InvocationParametersWrapper.create()
                     .setAgentId(agentId)
                     .setUserId(userId)
                     .setRequestId(UUID.randomUUID().toString())
                     .setSessionId(UUID.randomUUID().toString());
 
+            String finalSystemMessage = systemMessage;
+
             MemoryAssistant assistant = AiServices.builder(MemoryAssistant.class)
                     .chatModel(chatModel)
-                    .systemMessageProvider(chatMemoryId -> systemMessage)
+                    .systemMessageProvider(chatMemoryId -> finalSystemMessage)
                     .tools(Arrays.asList(memoryTool))
                     .build();
             logger.info("开始汇总记忆 \n {}", content);
@@ -323,23 +328,6 @@ public class LongTermMemoryTaskHandler implements TaskHandler {
                     InvocationParameters invocationParameters);
     }
 
-    /**
-     * @param longTermMemoriesContent
-     * @param newConversation
-     * @return
-     */
-    private String buildContent(String longTermMemoriesContent, String newConversation) {
-        StringBuilder memory = new StringBuilder();
-        memory.append("以下是需要分析的内容\n");
-        memory.append("===========================\n");
-        if (longTermMemoriesContent != null && !longTermMemoriesContent.isEmpty()) {
-            memory.append("【以下是现有记忆内容】\n");
-            memory.append(longTermMemoriesContent).append("\n");
-        }
-        memory.append("【以下是新对话】\n").append(newConversation).append("\n\n");
-        memory.append("===========================");
-        return memory.toString();
-    }
 
     /**
      * 将被清理的聊天历史记录写入向量库

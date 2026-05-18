@@ -106,8 +106,6 @@ function saveSettings() {
     var prompt = document.getElementById('memoryPrompt').value.trim();
     var arrangeTimeoutHour = document.getElementById('taskRecordsArrangeTimeoutHour').value.trim();
     var clearTimeoutDay = document.getElementById('taskRecordsClearTimeoutDay').value.trim();
-    var vectorStorePath = document.getElementById('vectorStorePath').value.trim();
-    var vectorStoreProfile = document.getElementById('vectorStoreProfile').value;
 
     var saves = [];
 
@@ -115,13 +113,29 @@ function saveSettings() {
     saves.push(saveConfig('memory_prompt', prompt, '记忆整理提示词'));
     saves.push(saveConfig('taskRecordsArrangeTimeoutHour', arrangeTimeoutHour, '近期任务记忆过期时间（小时）'));
     saves.push(saveConfig('taskRecordsClearTimeoutDay', clearTimeoutDay, '任务记忆过期归档时间（天）'));
+
+    Promise.all(saves).then(function(results) {
+        var allOk = results.every(function(r) { return r; });
+        if (allOk) {
+            showToast('设置保存成功', 'success');
+        } else {
+            showToast('部分设置保存失败', 'error');
+        }
+    });
+}
+
+function saveVectorStoreSettings() {
+    var vectorStorePath = document.getElementById('vectorStorePath').value.trim();
+    var vectorStoreProfile = document.getElementById('vectorStoreProfile').value;
+
+    var saves = [];
     saves.push(saveConfig('vector_store_path', vectorStorePath, '向量持久化路径'));
     saves.push(saveConfig('vector_store_profile', vectorStoreProfile, '向量存储预设'));
 
     Promise.all(saves).then(function(results) {
         var allOk = results.every(function(r) { return r; });
         if (allOk) {
-            showToast('设置保存成功', 'success');
+            showToast('向量存储设置保存成功', 'success');
         } else {
             showToast('部分设置保存失败', 'error');
         }
@@ -187,41 +201,6 @@ function toggleMemoryTask() {
             showToast(action + '失败', 'error');
         });
     });
-}
-
-function rebuildVectorStore() {
-    var btn = document.getElementById('rebuildVectorBtn');
-    var statusEl = document.getElementById('rebuildStatus');
-
-    btn.disabled = true;
-    btn.textContent = '重建中...';
-    statusEl.style.display = 'none';
-
-    fetch('/api/memory-manage/rebuild-vector-store', { method: 'POST' })
-        .then(function(r) { return r.json(); })
-        .then(function(resp) {
-            if (resp.msg === 'success') {
-                statusEl.style.display = '';
-                statusEl.className = 'rebuild-status success';
-                statusEl.textContent = '✓ 重建成功';
-                showToast('向量引擎重建成功', 'success');
-            } else {
-                statusEl.style.display = '';
-                statusEl.className = 'rebuild-status error';
-                statusEl.textContent = '✗ ' + (resp.data || resp.msg);
-                showToast('向量引擎重建失败', 'error');
-            }
-        })
-        .catch(function() {
-            statusEl.style.display = '';
-            statusEl.className = 'rebuild-status error';
-            statusEl.textContent = '✗ 请求失败';
-            showToast('重建请求失败', 'error');
-        })
-        .finally(function() {
-            btn.disabled = false;
-            btn.textContent = '🔄 重建向量引擎';
-        });
 }
 
 function loadMailSettings() {

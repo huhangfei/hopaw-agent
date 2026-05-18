@@ -63,10 +63,8 @@
                     <div class="settings-form">
                         <h3 style="font-size:15px;color:#333;margin:0 0 16px 0;">向量存储配置</h3>
 
-                        <div class="rebuild-section">
-                            <p class="rebuild-hint">重建会重新加载向量引擎。修改路径后重建会自动迁移文件。预设参数变更只对新写入的向量生效。</p>
-                            <button class="btn-rebuild-store" id="rebuildVectorBtn" onclick="rebuildVectorStore()">🔄 重建向量引擎</button>
-                            <span class="rebuild-status" id="rebuildStatus" style="display:none;"></span>
+                        <div class="restart-notice">
+                            <p>向量存储设置修改后需重启应用使配置生效。</p>
                         </div>
 
                         <div class="form-group">
@@ -83,6 +81,10 @@
                                 <option value="speed">极速 - 构建最快，内存更省</option>
                             </select>
                             <p class="form-hint">精准：maxDegree=32, 速度慢但搜索准。极速：maxDegree=8, 快但召回有所下降</p>
+                        </div>
+
+                        <div class="settings-actions">
+                            <button class="btn-save-settings" onclick="saveVectorStoreSettings()">保存设置</button>
                         </div>
                     </div>
                 </div>

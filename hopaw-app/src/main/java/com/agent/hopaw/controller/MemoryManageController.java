@@ -7,7 +7,6 @@ import com.agent.hopaw.infra.model.entity.Agent;
 import com.agent.hopaw.infra.model.entity.LongTermMemory;
 import com.agent.hopaw.infra.model.dto.ResponseBean;
 import com.agent.hopaw.infra.memory.LongTermMemoryService;
-import com.agent.hopaw.infra.memory.VectorMemoryService;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.*;
@@ -19,13 +18,10 @@ public class MemoryManageController {
 
     private final LongTermMemoryService longTermMemoryService;
     private final AgentMapper agentMapper;
-    private final VectorMemoryService vectorMemoryService;
 
-    public MemoryManageController(LongTermMemoryService longTermMemoryService, AgentMapper agentMapper,
-                                  VectorMemoryService vectorMemoryService) {
+    public MemoryManageController(LongTermMemoryService longTermMemoryService, AgentMapper agentMapper) {
         this.longTermMemoryService = longTermMemoryService;
         this.agentMapper = agentMapper;
-        this.vectorMemoryService = vectorMemoryService;
     }
 
     @GetMapping("/memory-manage")
@@ -48,17 +44,6 @@ public class MemoryManageController {
             result.add(item);
         }
         return ResponseBean.success(result);
-    }
-
-    @PostMapping("/api/memory-manage/rebuild-vector-store")
-    @ResponseBody
-    public ResponseBean rebuildVectorStore() {
-        try {
-            vectorMemoryService.reinit();
-            return ResponseBean.success("向量引擎重建成功");
-        } catch (Exception e) {
-            return ResponseBean.fail("向量引擎重建失败: " + e.getMessage());
-        }
     }
 
     @GetMapping("/api/memory-manage/tree")
