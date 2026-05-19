@@ -6,6 +6,7 @@ import com.agent.hopaw.infra.model.dto.ToolSetInfo;
 import dev.langchain4j.agent.tool.P;
 import dev.langchain4j.agent.tool.Tool;
 import dev.langchain4j.invocation.InvocationParameters;
+import com.agent.hopaw.infra.plugin.DynamicToolRegistry;
 import org.springframework.context.ApplicationContext;
 import org.springframework.stereotype.Service;
 
@@ -20,15 +21,18 @@ import java.util.Map;
 public class AgentToolService implements IAgentToolService {
 
     private final ApplicationContext applicationContext;
+    private final DynamicToolRegistry dynamicToolRegistry;
 
-    public AgentToolService(ApplicationContext applicationContext) {
+    public AgentToolService(ApplicationContext applicationContext, DynamicToolRegistry dynamicToolRegistry) {
         this.applicationContext = applicationContext;
+        this.dynamicToolRegistry = dynamicToolRegistry;
     }
 
     @Override
     public List<AgentTool> getAgentTools() {
         Map<String, AgentTool> beans = applicationContext.getBeansOfType(AgentTool.class);
         List<AgentTool> tools = new ArrayList<>(beans.values());
+        tools.addAll(dynamicToolRegistry.getAllDynamicTools());
         tools.sort(Comparator.comparing(AgentTool::getName));
         return tools;
     }
@@ -36,13 +40,31 @@ public class AgentToolService implements IAgentToolService {
     @Override
     public List<ToolSetInfo> getToolSets() {
         List<ToolSetInfo> result = new ArrayList<>();
-        for (AgentTool agentTool : getAgentTools()) {
-            result.add(scanToolSet(agentTool));
+        Map<String, AgentTool> beans = applicationContext.getBeansOfType(AgentTool.class);
+        for (AgentTool agentTool : beans.values()) {
+            result.add(scanToolSet(agentTool, "built-in"));
+        }
+        for (AgentTool agentTool : dynamicToolRegistry.getAllDynamicTools()) {
+            result.add(scanToolSet(agentTool, "dynamic"));
         }
         return result;
     }
 
-    private ToolSetInfo scanToolSet(AgentTool agentTool) {
+    @Override
+    public List<ToolSetInfo> getDynamicToolSets() {
+        List<ToolSetInfo> result = new ArrayList<>();
+        for (AgentTool agentTool : dynamicToolRegistry.getAllDynamicTools()) {
+            result.add(scanToolSet(agentTool, "dynamic"));
+        }
+        return result;
+    }
+
+    @Override
+    public int getDynamicPluginCount() {
+        return dynamicToolRegistry.getPluginNames().size();
+    }
+
+    private ToolSetInfo scanToolSet(AgentTool agentTool, String source) {
         List<ToolInfo> tools = new ArrayList<>();
         for (Method method : agentTool.getClass().getMethods()) {
             Tool toolAnn = method.getAnnotation(Tool.class);
@@ -76,6 +98,6 @@ public class AgentToolService implements IAgentToolService {
 
             tools.add(new ToolInfo(toolName, toolAnn.value()[0], params));
         }
-        return new ToolSetInfo(agentTool.getName(), agentTool.getDescription(), agentTool.getIcon(), tools);
+        return new ToolSetInfo(agentTool.getName(), agentTool.getDescription(), agentTool.getIcon(), tools, source);
     }
 }
