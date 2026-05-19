@@ -2,7 +2,7 @@
 setlocal enabledelayedexpansion
 cd /d "%~dp0"
 
-set JAR_FILE=target\hopaw-agent-1.0.0.jar
+set JAR_FILE=hopaw-app\target\hopaw-app-1.0.0.jar
 set PORT=8080
 set PID_FILE=%~dp0hopaw-agent.pid
 set TIMEOUT=30

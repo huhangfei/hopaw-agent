@@ -25,7 +25,7 @@ public class CurrentDateTimeTool implements AgentTool {
 
     @Override
     public String getIcon() {
-        return "current-datetime-tool";
+        return "current-datetime-tool.svg";
     }
 
     @Override

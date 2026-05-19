@@ -6,8 +6,7 @@
 
 /* ===== Left panel ===== */
 .tools-list-panel {
-    width: 240px;
-    min-width: 240px;
+    width: 300px;
     background: #fafafa;
     border-right: 1px solid #e0e0e0;
     display: flex;
@@ -61,6 +60,13 @@
 }
 
 .tool-list-icon img {
+    width: 32px;
+    height: 32px;
+    border-radius: 8px;
+}
+
+/* 支持内联 SVG 图标 */
+.tool-list-icon svg {
     width: 32px;
     height: 32px;
     border-radius: 8px;
@@ -138,6 +144,13 @@
 }
 
 .detail-header-icon img {
+    width: 44px;
+    height: 44px;
+    border-radius: 12px;
+}
+
+/* 支持内联 SVG 图标 */
+.detail-header-icon svg {
     width: 44px;
     height: 44px;
     border-radius: 12px;
@@ -300,4 +313,104 @@
     background: white;
     border-radius: 12px;
     box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+}
+
+/* ===== 工具集来源标签（左侧列表 & 详情） ===== */
+.tool-list-source-badge {
+    display: inline-block;
+    font-size: 11px;
+    padding: 1px 8px;
+    border-radius: 10px;
+    margin-left: 8px;
+    vertical-align: middle;
+    font-weight: 500;
+    line-height: 1.6;
+}
+
+.source-builtin {
+    color: #667eea;
+    background: #667eea15;
+}
+
+.source-plugin {
+    color: #e8913a;
+    background: #e8913a15;
+}
+
+/* ===== 左侧列表元信息行 ===== */
+.tool-list-meta {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.tool-list-version {
+    font-size: 11px;
+    color: #bbb;
+    font-weight: 400;
+}
+
+/* ===== 详情面板元信息栏 ===== */
+.detail-meta {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 6px 4px;
+    padding: 14px 24px;
+    background: white;
+    border-radius: 10px;
+    margin-bottom: 16px;
+    font-size: 13px;
+    color: #666;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.06);
+}
+
+.detail-meta-label {
+    font-size: 12px;
+    color: #999;
+    margin-right: 2px;
+}
+
+.detail-meta-label:not(:first-child) {
+    margin-left: 10px;
+}
+
+.detail-meta-badge {
+    display: inline-block;
+    font-size: 12px;
+    padding: 2px 10px;
+    border-radius: 10px;
+    font-weight: 500;
+}
+
+.detail-meta-tag {
+    display: inline-block;
+    font-size: 12px;
+    padding: 2px 10px;
+    border-radius: 10px;
+    background: #e8f0fe;
+    color: #4a66d6;
+    font-weight: 500;
+}
+
+.detail-meta-value {
+    font-size: 13px;
+    color: #555;
+    font-weight: 500;
+}
+
+.detail-meta-link {
+    font-size: 13px;
+    color: #4a66d6;
+    text-decoration: none;
+    word-break: break-all;
+    max-width: 400px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.detail-meta-link:hover {
+    text-decoration: underline;
+    color: #2a46b6;
 }

@@ -7,20 +7,38 @@ import org.jsoup.Jsoup;
 import org.jsoup.safety.Safelist;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.stereotype.Component;
 import com.microsoft.playwright.*;
 import com.microsoft.playwright.options.LoadState;
 
-@Component
+import javax.annotation.PostConstruct;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+
+/**
+ * 网页内容获取工具插件
+ * 注意：作为插件使用时，不要加 @Component 注解，由插件加载器实例化
+ * Playwright 采用异步初始化策略，在插件加载后立即后台初始化，避免首次调用时等待时间过长
+ */
 public class WebPageTool implements AgentTool {
 
     private final Logger logger = LoggerFactory.getLogger(WebPageTool.class);
-    private static final Playwright playwright = Playwright.create();
-    private static final Browser browser;
+    
+    private volatile Playwright playwright;
+    private volatile Browser browser;
 
-    static {
-        browser = playwright.chromium().launch();
-    }
+    private volatile boolean initialized = false;
+    private volatile boolean initializing = false;
+    private volatile boolean initializationFailed = false;
+    private volatile CompletableFuture<Void> initializationFuture=null;
+    
+    // 单线程池用于异步初始化
+    private static final ExecutorService initExecutor = Executors.newSingleThreadExecutor(r -> {
+        Thread t = new Thread(r, "webpage-tool-init");
+        t.setDaemon(true);
+        return t;
+    });
 
     @Override
     public String getName() {
@@ -34,7 +52,7 @@ public class WebPageTool implements AgentTool {
 
     @Override
     public String getIcon() {
-        return "web-page-tool";
+        return "web-page-tool.svg";
     }
 
     @Override
@@ -42,8 +60,85 @@ public class WebPageTool implements AgentTool {
         return "网页,url";
     }
 
+    /**
+     * 插件实例化后立即启动异步初始化
+     */
+    @Override
+    public void asyncInit() {
+        if (!initializing && !initialized) {
+            initializing = true;
+            initializationFuture= CompletableFuture.runAsync(() -> {
+                ClassLoader originalCl = Thread.currentThread().getContextClassLoader();
+                try {
+                    Thread.currentThread().setContextClassLoader(this.getClass().getClassLoader());
+                    logger.info("Initializing Playwright...");
+                    playwright = Playwright.create();
+                    browser = playwright.chromium().launch();
+                    initialized = true;
+                    logger.info("WebPageTool Playwright initialized successfully");
+                } catch (Exception e) {
+                    logger.error("Failed to initialize Playwright", e);
+                    initializationFailed = true;
+                    throw new RuntimeException("Playwright initialization failed", e);
+                } finally {
+                    initializing = false;
+                    Thread.currentThread().setContextClassLoader(originalCl);
+                }
+            }, initExecutor);
+            logger.info("WebPageTool async initialization started");
+        }
+    }
+
+    /**
+     * 插件卸载时清理资源
+     */
+    @Override
+    public void destroy() {
+        try {
+            if (browser != null) {
+                browser.close();
+                logger.info("WebPageTool browser closed");
+            }
+            if (playwright != null) {
+                playwright.close();
+                logger.info("WebPageTool playwright closed");
+            }
+        } catch (Exception e) {
+            logger.error("Error closing WebPageTool resources", e);
+        }
+    }
+
+
+    /**
+     * 确保 Playwright 已初始化（支持异步和同步两种模式）
+     */
+    private void ensureInitialized() {
+        // 如果已经初始化完成，直接返回
+        if (initialized) {
+            return;
+        }
+        // 如果初始化失败，抛出异常
+        if (initializationFailed) {
+            throw new RuntimeException("Playwright initialization failed");
+        }
+        // 如果正在异步初始化中，等待完成
+        if (initializing) {
+            logger.debug("Playwright is initializing, waiting...");
+            try {
+                if (initializationFuture != null){ initializationFuture.get();}
+            } catch (InterruptedException e) {
+                logger.error("Playwright initialization interrupted", e);
+            } catch (ExecutionException e) {
+                logger.error("Playwright initialization failed", e);
+            }
+        }
+    }
+
     @Tool("获取网页内容，输入URL地址，返回网页的纯文本内容")
     public String fetchWebPage(@P(description = "URL地址") String url) {
+        // 确保 Playwright 已初始化
+        ensureInitialized();
+        
         BrowserContext context = null;
         Page page = null;
         try {

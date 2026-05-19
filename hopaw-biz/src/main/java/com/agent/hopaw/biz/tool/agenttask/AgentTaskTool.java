@@ -31,7 +31,7 @@ public class AgentTaskTool implements AgentTool {
 
     @Override
     public String getIcon() {
-        return "agent-task-tool";
+        return "agent-task-tool.svg";
     }
 
     @Override

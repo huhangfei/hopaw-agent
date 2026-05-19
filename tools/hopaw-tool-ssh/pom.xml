@@ -12,15 +12,12 @@
     </parent>
 
     <artifactId>hopaw-tool-ssh</artifactId>
-
+    <version>1.0.0</version>
     <dependencies>
         <dependency>
             <groupId>com.hopaw.agent</groupId>
             <artifactId>hopaw-contract</artifactId>
-        </dependency>
-        <dependency>
-            <groupId>com.hopaw.agent</groupId>
-            <artifactId>hopaw-infra</artifactId>
+            <scope>provided</scope>
         </dependency>
         <dependency>
             <groupId>org.springframework.boot</groupId>
@@ -31,4 +28,73 @@
             <artifactId>jsch</artifactId>
         </dependency>
     </dependencies>
+
+    <build>
+        <finalName>${project.artifactId}-${project.version}</finalName>
+        <plugins>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-compiler-plugin</artifactId>
+                <version>3.11.0</version>
+            </plugin>
+            <!-- 使用 shade 插件打包所有依赖 -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-shade-plugin</artifactId>
+                <version>3.6.0</version>
+                <executions>
+                    <execution>
+                        <phase>package</phase>
+                        <goals>
+                            <goal>shade</goal>
+                        </goals>
+                        <configuration>
+                            <!-- 不要排除 com.hopaw.agent 自己的类 -->
+                            <artifactSet>
+                                <excludes>
+                                    <!-- 只排除外部依赖,不排除本项目的类 -->
+                                    <exclude>org.springframework:*</exclude>
+                                    <exclude>org.springframework.boot:*</exclude>
+                                </excludes>
+                            </artifactSet>
+                            <filters>
+                                <filter>
+                                    <artifact>*:*</artifact>
+                                    <excludes>
+                                        <exclude>META-INF/*.SF</exclude>
+                                        <exclude>META-INF/*.DSA</exclude>
+                                        <exclude>META-INF/*.RSA</exclude>
+                                        <exclude>module-info.class</exclude>
+                                    </excludes>
+                                </filter>
+                            </filters>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-antrun-plugin</artifactId>
+                <version>3.1.0</version>
+                <executions>
+                    <execution>
+                        <id>copy-to-plugins</id>
+                        <phase>package</phase>
+                        <goals>
+                            <goal>run</goal>
+                        </goals>
+                        <configuration>
+                            <target>
+                                <mkdir dir="../../plugins"/>
+                                <copy file="target/${project.artifactId}-${project.version}.jar"
+                                      tofile="../../plugins/${project.artifactId}-${project.version}.jar"
+                                      overwrite="true"/>
+                                <echo message="Plugin jar deployed to ../../plugins/${project.artifactId}-${project.version}.jar"/>
+                            </target>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+        </plugins>
+    </build>
 </project>

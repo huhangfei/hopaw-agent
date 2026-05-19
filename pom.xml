@@ -23,6 +23,7 @@
         <module>hopaw-app</module>
         <module>tools/hopaw-tool-webpage</module>
         <module>tools/hopaw-tool-ssh</module>
+        <module>tools/hopaw-tool-demo</module>
     </modules>
 
     <properties>
@@ -141,5 +142,20 @@
                 </plugin>
             </plugins>
         </pluginManagement>
+        <plugins>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-compiler-plugin</artifactId>
+                <configuration>
+                    <basedir/>
+                    <mainOutputDirectory/>
+                    <mojoStatusPath/>
+                    <outputDirectory/>
+                    <projectArtifact/>
+                    <source>16</source>
+                    <target>16</target>
+                </configuration>
+            </plugin>
+        </plugins>
     </build>
 </project>

@@ -1,5 +1,6 @@
 package com.agent.hopaw.infra.tool;
 
+import com.agent.hopaw.infra.constant.AgentToolSourceEnum;
 import com.agent.hopaw.infra.model.dto.ToolInfo;
 import com.agent.hopaw.infra.model.dto.ToolParamInfo;
 import com.agent.hopaw.infra.model.dto.ToolSetInfo;
@@ -16,6 +17,7 @@ import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 @Service
 public class AgentToolService implements IAgentToolService {
@@ -42,29 +44,27 @@ public class AgentToolService implements IAgentToolService {
         List<ToolSetInfo> result = new ArrayList<>();
         Map<String, AgentTool> beans = applicationContext.getBeansOfType(AgentTool.class);
         for (AgentTool agentTool : beans.values()) {
-            result.add(scanToolSet(agentTool, "built-in"));
+            result.add(scanToolSet(agentTool, AgentToolSourceEnum.BUILT_IN));
         }
-        for (AgentTool agentTool : dynamicToolRegistry.getAllDynamicTools()) {
-            result.add(scanToolSet(agentTool, "dynamic"));
-        }
+        result.addAll(getAllToolSets());
         return result;
     }
-
-    @Override
-    public List<ToolSetInfo> getDynamicToolSets() {
+    public List<ToolSetInfo> getAllToolSets() {
         List<ToolSetInfo> result = new ArrayList<>();
-        for (AgentTool agentTool : dynamicToolRegistry.getAllDynamicTools()) {
-            result.add(scanToolSet(agentTool, "dynamic"));
+        List<DynamicToolRegistry.PluginEntry> allPluginEntries = dynamicToolRegistry.getAllPluginEntries();
+        for (DynamicToolRegistry.PluginEntry entry : allPluginEntries) {
+            List<AgentTool> tools = entry.tools;
+            for (AgentTool tool : tools) {
+                ToolSetInfo toolSetInfo = scanToolSet(tool, AgentToolSourceEnum.PLUGIN);
+                if(!AgentTool.DEFAULT_ICON.equals(toolSetInfo.getIcon())){
+                    toolSetInfo.setIcon(entry.getCachedResource("static/icons/tools/"+tool.getIcon()));
+                }
+                result.add(toolSetInfo);
+            }
         }
         return result;
     }
-
-    @Override
-    public int getDynamicPluginCount() {
-        return dynamicToolRegistry.getPluginNames().size();
-    }
-
-    private ToolSetInfo scanToolSet(AgentTool agentTool, String source) {
+    private ToolSetInfo scanToolSet(AgentTool agentTool, AgentToolSourceEnum source) {
         List<ToolInfo> tools = new ArrayList<>();
         for (Method method : agentTool.getClass().getMethods()) {
             Tool toolAnn = method.getAnnotation(Tool.class);
@@ -98,6 +98,11 @@ public class AgentToolService implements IAgentToolService {
 
             tools.add(new ToolInfo(toolName, toolAnn.value()[0], params));
         }
-        return new ToolSetInfo(agentTool.getName(), agentTool.getDescription(), agentTool.getIcon(), tools, source);
+        ToolSetInfo toolSetInfo = new ToolSetInfo(agentTool.getName(), agentTool.getDescription(), agentTool.getIcon(), tools, source);
+        toolSetInfo.setVersion(agentTool.getVersion());
+        toolSetInfo.setAuthor(agentTool.getAuthor());
+        toolSetInfo.setUrl(agentTool.getUrl());
+        toolSetInfo.setKeyword(agentTool.getKeyword());
+        return toolSetInfo;
     }
 }

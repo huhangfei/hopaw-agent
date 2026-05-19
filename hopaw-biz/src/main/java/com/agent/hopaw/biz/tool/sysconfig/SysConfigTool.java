@@ -30,7 +30,7 @@ public class SysConfigTool implements AgentTool {
 
     @Override
     public String getIcon() {
-        return "sys-config-tool";
+        return "sys-config-tool.svg";
     }
 
     @Override

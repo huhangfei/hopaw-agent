@@ -10,9 +10,14 @@
         <relativePath>../../pom.xml</relativePath>
     </parent>
 
-    <artifactId>hopaw-tool-webpage</artifactId>
+    <groupId>com.hopaw.agent</groupId>
+    <artifactId>hopaw-tool-demo</artifactId>
     <version>1.0.0</version>
     <packaging>jar</packaging>
+
+    <name>hopaw-tool-demo</name>
+    <description>独立插件式工具示例，仅依赖契约层，模拟外部工具项目</description>
+
 
     <dependencies>
         <dependency>
@@ -21,22 +26,17 @@
             <scope>provided</scope>
         </dependency>
         <dependency>
-            <groupId>org.springframework.boot</groupId>
-            <artifactId>spring-boot-starter</artifactId>
-        </dependency>
-        <dependency>
             <groupId>dev.langchain4j</groupId>
             <artifactId>langchain4j</artifactId>
+            <scope>provided</scope>
         </dependency>
         <dependency>
-            <groupId>org.jsoup</groupId>
-            <artifactId>jsoup</artifactId>
-        </dependency>
-        <dependency>
-            <groupId>com.microsoft.playwright</groupId>
-            <artifactId>playwright</artifactId>
+            <groupId>org.slf4j</groupId>
+            <artifactId>slf4j-api</artifactId>
+            <scope>provided</scope>
         </dependency>
     </dependencies>
+
     <build>
         <finalName>${project.artifactId}-${project.version}</finalName>
         <plugins>
@@ -57,11 +57,12 @@
                             <goal>shade</goal>
                         </goals>
                         <configuration>
+                            <!-- 不要排除 com.hopaw.agent 自己的类 -->
                             <artifactSet>
                                 <excludes>
-                                    <exclude>org.springframework:*</exclude>
-                                    <exclude>org.springframework.boot:*</exclude>
+                                    <!-- 只排除外部依赖,不排除本项目的类 -->
                                     <exclude>dev.langchain4j:*</exclude>
+                                    <exclude>org.slf4j:*</exclude>
                                 </excludes>
                             </artifactSet>
                             <filters>

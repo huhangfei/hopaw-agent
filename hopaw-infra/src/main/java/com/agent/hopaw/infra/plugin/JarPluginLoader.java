@@ -14,12 +14,14 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.TimeUnit;
 
-import javax.annotation.PostConstruct;
 import javax.annotation.PreDestroy;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.beans.factory.config.AutowireCapableBeanFactory;
+import org.springframework.boot.context.event.ApplicationReadyEvent;
+import org.springframework.context.event.EventListener;
 import org.springframework.stereotype.Component;
 
 import com.agent.hopaw.infra.tool.AgentTool;
@@ -30,6 +32,7 @@ public class JarPluginLoader {
     private static final Logger logger = LoggerFactory.getLogger(JarPluginLoader.class);
 
     private final DynamicToolRegistry registry;
+    private final AutowireCapableBeanFactory beanFactory;
     private final Path pluginDir;
     private final Thread watcherThread;
     private volatile boolean running = true;
@@ -37,33 +40,41 @@ public class JarPluginLoader {
     private final ConcurrentMap<String, Long> recentEvents = new ConcurrentHashMap<>();
 
     public JarPluginLoader(DynamicToolRegistry registry,
+                           AutowireCapableBeanFactory beanFactory,
                            @Value("${agent.plugin.dir:plugins}") String pluginDirPath) {
         this.registry = registry;
+        this.beanFactory = beanFactory;
         this.pluginDir = new File(pluginDirPath).toPath().toAbsolutePath().normalize();
         this.watcherThread = new Thread(this::watchLoop, "plugin-watcher");
         this.watcherThread.setDaemon(true);
     }
 
-    @PostConstruct
+    @EventListener(ApplicationReadyEvent.class)
     public void init() {
-        File dir = pluginDir.toFile();
-        if (!dir.exists()) {
-            if (dir.mkdirs()) {
-                logger.info("Created plugin directory: {}", pluginDir);
-            } else {
-                logger.warn("Failed to create plugin directory: {}", pluginDir);
+        try {
+            File dir = pluginDir.toFile();
+            if (!dir.exists()) {
+                if (dir.mkdirs()) {
+                    logger.info("Created plugin directory: {}", pluginDir);
+                } else {
+                    logger.warn("Failed to create plugin directory: {}", pluginDir);
+                    return;
+                }
+            }
+            if (!dir.isDirectory()) {
+                logger.error("Plugin path is not a directory: {}", pluginDir);
                 return;
             }
-        }
-        if (!dir.isDirectory()) {
-            logger.error("Plugin path is not a directory: {}", pluginDir);
-            return;
-        }
 
-        initialScan(dir);
+            initialScan(dir);
 
-        watcherThread.start();
-        logger.info("Plugin watcher started, monitoring: {}", pluginDir);
+            watcherThread.start();
+            logger.info("Plugin watcher started, monitoring: {}", pluginDir);
+        } catch (Throwable ex) {
+            // 捕获所有异常和错误（包括 NoClassDefFoundError、NoSuchMethodError 等）
+            // 确保插件加载失败不会影响应用启动
+            logger.error("Error during plugin initialization (non-fatal, application will continue)", ex);
+        }
     }
 
     @PreDestroy
@@ -170,14 +181,22 @@ public class JarPluginLoader {
 
             List<AgentTool> tools = new ArrayList<>();
             for (String className : classNames) {
-                Class<?> clazz = classLoader.loadClass(className);
-                AgentTool tool = (AgentTool) clazz.getDeclaredConstructor().newInstance();
-                tools.add(tool);
+                try {
+                    Class<?> clazz = classLoader.loadClass(className);
+                    AgentTool tool = (AgentTool) clazz.getDeclaredConstructor().newInstance();
+                    // 使用 Spring 的依赖注入功能为插件工具注入依赖
+                    beanFactory.autowireBean(tool);
+                    tool.asyncInit();
+                    tools.add(tool);
+                } catch (Exception e) {
+                    logger.error("Failed to load tool class: {}", className, e);
+                }
             }
 
             registry.register(jarName, classLoader, tools);
             logger.info("Loaded plugin: {} with {} tools", jarName, tools.size());
-        } catch (Exception e) {
+        } catch (Throwable e) {
+            // 捕获所有异常和错误，确保单个插件加载失败不影响其他插件和应用启动
             logger.error("Failed to load plugin: {}", jarName, e);
         }
     }

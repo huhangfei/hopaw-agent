@@ -9,19 +9,33 @@ import dev.langchain4j.invocation.InvocationParameters;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import com.agent.hopaw.infra.tool.AgentTool;
-import org.springframework.stereotype.Component;
+import org.springframework.beans.factory.annotation.Autowired;
 
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicReference;
 
-@Component
+/**
+ * SSH远程连接工具插件
+ * 注意：作为插件使用时，不要加 @Component 注解，由插件加载器实例化并通过 @Autowired 注入依赖
+ */
 public class SshTool implements AgentTool {
-    private final IAgentExecutorService agentExecutorService;
     private static final Logger logger = LoggerFactory.getLogger(SshTool.class);
     private static final Map<String, Session> sessionCache = new ConcurrentHashMap<>();
+    
+    @Autowired
+    private IAgentExecutorService agentExecutorService;
 
+    /**
+     * 无参构造函数 - 插件加载器使用
+     */
+    public SshTool() {
+    }
+
+    /**
+     * 有参构造函数 - 如果作为 Spring Bean 直接使用
+     */
     public SshTool(IAgentExecutorService agentExecutorService) {
         this.agentExecutorService = agentExecutorService;
     }
@@ -38,7 +52,7 @@ public class SshTool implements AgentTool {
 
     @Override
     public String getIcon() {
-        return "ssh-tool";
+        return "ssh-tool.svg";
     }
 
     @Override
@@ -291,6 +305,11 @@ public class SshTool implements AgentTool {
         return "成功：已断开全部 " + count + " 个连接";
     }
 
+    @Override
+    public void destroy(){
+        sshDisconnectAll();
+    }
+
     private static class SftpProgressReporter implements SftpProgressMonitor {
         private final IAgentExecutorService executorService;
         private final Long agentId;
@@ -347,5 +366,4 @@ public class SshTool implements AgentTool {
             return String.format("%.1fGB", bytes / (1024.0 * 1024 * 1024));
         }
     }
-
 }

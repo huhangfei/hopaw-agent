@@ -32,7 +32,7 @@ public class MailTool implements AgentTool {
 
     @Override
     public String getIcon() {
-        return "mail-tool";
+        return "mail-tool.svg";
     }
 
     @Override

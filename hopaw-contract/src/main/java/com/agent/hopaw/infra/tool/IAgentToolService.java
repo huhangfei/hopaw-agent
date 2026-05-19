@@ -8,8 +8,4 @@ public interface IAgentToolService {
     List<AgentTool> getAgentTools();
 
     List<ToolSetInfo> getToolSets();
-
-    List<ToolSetInfo> getDynamicToolSets();
-
-    int getDynamicPluginCount();
 }

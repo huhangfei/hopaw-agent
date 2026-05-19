@@ -283,7 +283,13 @@
                                 <div class="tool-item-row">
                                     <input type="checkbox" name="tools" th:value="${ts.name}">
                                     <div class="tool-item-icon">
-                                        <img th:src="@{/icons/tools/__${ts.icon}__.svg}" alt="" onerror="this.style.display='none'">
+                                        <!-- 判断 icon 是否为 SVG 内容 -->
+                                        <th:block th:if="${ts.iconIsSvgCode()}">
+                                            <span th:utext="${ts.icon}"></span>
+                                        </th:block>
+                                        <th:block th:unless="${ts.iconIsSvgCode()}">
+                                            <img th:src="@{/icons/tools/__${ts.icon}__}" alt="icon" onerror="this.style.display='none'">
+                                        </th:block>
                                     </div>
                                     <span class="tool-item-name" th:text="${ts.name}"></span>
                                     <span class="tool-item-count" th:text="${#lists.size(ts.tools)} + ' 个方法'"></span>
@@ -389,7 +395,13 @@
                                 <div class="tool-item-row">
                                     <input type="checkbox" name="tools" th:value="${ts.name}" class="edit-tool-checkbox">
                                     <div class="tool-item-icon">
-                                        <img th:src="@{/icons/tools/__${ts.icon}__.svg}" alt="" onerror="this.style.display='none'">
+                                        <!-- 判断 icon 是否为 SVG 内容 -->
+                                        <th:block th:if="${ts.iconIsSvgCode()}">
+                                            <span th:utext="${ts.icon}"></span>
+                                        </th:block>
+                                        <th:block th:unless="${ts.iconIsSvgCode()}">
+                                            <img th:src="@{/icons/tools/__${ts.icon}__}" alt="icon" onerror="this.style.display='none'">
+                                        </th:block>
                                     </div>
                                     <span class="tool-item-name" th:text="${ts.name}"></span>
                                     <span class="tool-item-count" th:text="${#lists.size(ts.tools)} + ' 个方法'"></span>

@@ -1,3 +1,6 @@
+# Maven shade plugin generated POM
+dependency-reduced-pom.xml
+
 # Compiled class file
 *.class
 

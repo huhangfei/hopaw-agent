@@ -60,7 +60,7 @@ public class WebSearchTool implements AgentTool {
 
     @Override
     public String getIcon() {
-        return "web-search-tool";
+        return "web-search-tool.svg";
     }
 
     @Override

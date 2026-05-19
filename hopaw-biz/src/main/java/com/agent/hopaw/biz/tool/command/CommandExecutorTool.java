@@ -184,7 +184,7 @@ public class CommandExecutorTool implements AgentTool {
 
     @Override
     public String getIcon() {
-        return "command-executor-tool";
+        return "command-executor-tool.svg";
     }
 
     @Override

@@ -65,47 +65,47 @@ public class LangChain4jMonitor implements ChatModelListener {
         logger.info("========== LangChain4j 请求开始 ==========");
         logger.info("模型: {}", chatRequest.parameters().modelName());
 
-        if (chatRequest.messages() != null) {
-            for (ChatMessage message : chatRequest.messages()) {
-                if (message instanceof UserMessage) {
-                    UserMessage userMessage=((UserMessage) message);
-
-                    for (Content content : userMessage.contents()) {
-                        if(content instanceof TextContent){
-                            logger.info("用户消息 [User][{}]: {}", userMessage.name(),((TextContent)content).text());
-                        }else  if(content instanceof ImageContent){
-                            logger.info("用户消息 [User][{}]: {}", userMessage.name(),"Image");
-                        }else  if(content instanceof VideoContent){
-                            logger.info("用户消息 [User][{}]: {}", userMessage.name(),"Video");
-                        }else  if(content instanceof AudioContent){
-                            logger.info("用户消息 [User][{}]: {}", userMessage.name(),"Audio");
-                        }else  if(content instanceof PdfFileContent){
-                            logger.info("用户消息 [User][{}]: {}", userMessage.name(),"PdfFile");
-                        }else{
-                            logger.info("用户消息 [User][{}]: {}", userMessage.name(),"未知");
-                        }
-                    }
-                } else if (message instanceof AiMessage) {
-                    AiMessage aiMessage = (AiMessage) message;
-                    if(aiMessage.thinking()!=null){
-                        logger.info("助手消息 [Ai thinking]: {}", aiMessage.thinking());
-                    } if(aiMessage.text()!=null){
-                        logger.info("助手消息 [Ai text]: {}", aiMessage.text());
-                    }
-                    if(aiMessage.toolExecutionRequests()!=null && !aiMessage.toolExecutionRequests().isEmpty()){
-                        logger.info("助手消息 [Ai toolExecutionRequests]: {}", JSON.toJSONString(aiMessage.toolExecutionRequests().stream().map(x->x.id()+" "+x.name()+" "+x.arguments()).collect(Collectors.toList())));
-                    }
-                } else if (message instanceof SystemMessage) {
-                    logger.info("系统消息 [System]: {}", ((SystemMessage) message).text());
-                } else if (message instanceof ToolExecutionResultMessage) {
-                    ToolExecutionResultMessage toolExecutionResultMessage = (ToolExecutionResultMessage) message;
-                    logger.info("工具执行结果 [Tool][{}][{}]: {}",toolExecutionResultMessage.toolName(),toolExecutionResultMessage.id(), toolExecutionResultMessage.text());
-                } else {
-                    logger.info("其他消息 [{}]: {}", message.getClass().getSimpleName(), message);
-                }
-            }
-        }
-        logger.info("==========================================");
+//        if (chatRequest.messages() != null) {
+//            for (ChatMessage message : chatRequest.messages()) {
+//                if (message instanceof UserMessage) {
+//                    UserMessage userMessage=((UserMessage) message);
+//
+//                    for (Content content : userMessage.contents()) {
+//                        if(content instanceof TextContent){
+//                            logger.info("用户消息 [User][{}]: {}", userMessage.name(),((TextContent)content).text());
+//                        }else  if(content instanceof ImageContent){
+//                            logger.info("用户消息 [User][{}]: {}", userMessage.name(),"Image");
+//                        }else  if(content instanceof VideoContent){
+//                            logger.info("用户消息 [User][{}]: {}", userMessage.name(),"Video");
+//                        }else  if(content instanceof AudioContent){
+//                            logger.info("用户消息 [User][{}]: {}", userMessage.name(),"Audio");
+//                        }else  if(content instanceof PdfFileContent){
+//                            logger.info("用户消息 [User][{}]: {}", userMessage.name(),"PdfFile");
+//                        }else{
+//                            logger.info("用户消息 [User][{}]: {}", userMessage.name(),"未知");
+//                        }
+//                    }
+//                } else if (message instanceof AiMessage) {
+//                    AiMessage aiMessage = (AiMessage) message;
+//                    if(aiMessage.thinking()!=null){
+//                        logger.info("助手消息 [Ai thinking]: {}", aiMessage.thinking());
+//                    } if(aiMessage.text()!=null){
+//                        logger.info("助手消息 [Ai text]: {}", aiMessage.text());
+//                    }
+//                    if(aiMessage.toolExecutionRequests()!=null && !aiMessage.toolExecutionRequests().isEmpty()){
+//                        logger.info("助手消息 [Ai toolExecutionRequests]: {}", JSON.toJSONString(aiMessage.toolExecutionRequests().stream().map(x->x.id()+" "+x.name()+" "+x.arguments()).collect(Collectors.toList())));
+//                    }
+//                } else if (message instanceof SystemMessage) {
+//                    logger.info("系统消息 [System]: {}", ((SystemMessage) message).text());
+//                } else if (message instanceof ToolExecutionResultMessage) {
+//                    ToolExecutionResultMessage toolExecutionResultMessage = (ToolExecutionResultMessage) message;
+//                    logger.info("工具执行结果 [Tool][{}][{}]: {}",toolExecutionResultMessage.toolName(),toolExecutionResultMessage.id(), toolExecutionResultMessage.text());
+//                } else {
+//                    logger.info("其他消息 [{}]: {}", message.getClass().getSimpleName(), message);
+//                }
+//            }
+//        }
+        logger.info("=================LangChain4j 请求结束=========================");
     }
 
     @Override

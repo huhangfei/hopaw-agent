@@ -41,7 +41,7 @@ public class MemoryTool implements AgentTool {
 
     @Override
     public String getIcon() {
-        return "memory-tool";
+        return "memory-tool.svg";
     }
 
     @Override
