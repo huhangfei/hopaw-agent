@@ -27,13 +27,11 @@ public class PluginClassLoader extends ClassLoader {
     private final Map<String, byte[]> classCache = new HashMap<>();
     private final Map<String, byte[]> resourceCache = new HashMap<>();
     private final Map<String, File> extractedDirs = new HashMap<>();
-    private JarFile cachedJarFile;
 
     public PluginClassLoader(File jarFile) throws IOException {
         super(PluginClassLoader.class.getClassLoader());
         this.jarFile = jarFile;
         this.jarFileName = jarFile.getName();
-        this.cachedJarFile = new JarFile(jarFile);
 
         try (JarFile jar = new JarFile(jarFile)) {
             Enumeration<JarEntry> entries = jar.entries();
