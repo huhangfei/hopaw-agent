@@ -414,3 +414,31 @@
     text-decoration: underline;
     color: #2a46b6;
 }
+
+/* ===== 卸载插件按钮 ===== */
+.btn-unload-plugin {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 5px 14px;
+    font-size: 12px;
+    font-weight: 500;
+    color: #e53935;
+    background: #fff;
+    border: 1px solid #ffcdd2;
+    border-radius: 8px;
+    cursor: pointer;
+    margin-left: auto;
+    transition: all 0.2s;
+}
+
+.btn-unload-plugin:hover {
+    background: #e53935;
+    color: #fff;
+    border-color: #e53935;
+}
+
+.btn-unload-plugin:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}

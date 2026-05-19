@@ -62,6 +62,7 @@
                             <div class="detail-desc" th:text="${toolSet.description}"></div>
                         </div>
                         <span class="detail-count-badge" th:if="${not #lists.isEmpty(toolSet.tools)}" th:text="${#lists.size(toolSet.tools)} + ' 个方法'"></span>
+                        <button class="btn-unload-plugin" th:if="${toolSet.source.code == 'plugin'}" th:attr="data-jar=${toolSet.jarFileName}" onclick="uninstallPlugin(this)" title="卸载此插件">卸载</button>
                     </div>
 
                     <div class="detail-meta">

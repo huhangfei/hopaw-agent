@@ -8,15 +8,13 @@ import dev.langchain4j.agent.tool.P;
 import dev.langchain4j.agent.tool.Tool;
 import dev.langchain4j.invocation.InvocationParameters;
 import com.agent.hopaw.infra.plugin.DynamicToolRegistry;
+import com.agent.hopaw.infra.plugin.JarPluginLoader;
 import org.springframework.context.ApplicationContext;
 import org.springframework.stereotype.Service;
 
 import java.lang.reflect.Method;
 import java.lang.reflect.Parameter;
-import java.util.ArrayList;
-import java.util.Comparator;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.stream.Collectors;
 
 @Service
@@ -24,10 +22,12 @@ public class AgentToolService implements IAgentToolService {
 
     private final ApplicationContext applicationContext;
     private final DynamicToolRegistry dynamicToolRegistry;
+    private final JarPluginLoader jarPluginLoader;
 
-    public AgentToolService(ApplicationContext applicationContext, DynamicToolRegistry dynamicToolRegistry) {
+    public AgentToolService(ApplicationContext applicationContext, DynamicToolRegistry dynamicToolRegistry, JarPluginLoader jarPluginLoader) {
         this.applicationContext = applicationContext;
         this.dynamicToolRegistry = dynamicToolRegistry;
+        this.jarPluginLoader = jarPluginLoader;
     }
 
     @Override
@@ -56,6 +56,7 @@ public class AgentToolService implements IAgentToolService {
             List<AgentTool> tools = entry.tools;
             for (AgentTool tool : tools) {
                 ToolSetInfo toolSetInfo = scanToolSet(tool, AgentToolSourceEnum.PLUGIN);
+                toolSetInfo.setJarFileName(entry.jarFileName);
                 if(!AgentTool.DEFAULT_ICON.equals(toolSetInfo.getIcon())){
                     toolSetInfo.setIcon(entry.getCachedResource("static/icons/tools/"+tool.getIcon()));
                 }
@@ -74,7 +75,7 @@ public class AgentToolService implements IAgentToolService {
             if (toolName.isEmpty()) {
                 toolName = method.getName();
             }
-
+            String description = Arrays.stream(toolAnn.value()).collect(Collectors.joining(","));
             List<ToolParamInfo> params = new ArrayList<>();
             for (Parameter param : method.getParameters()) {
                 if (param.getType() == InvocationParameters.class) continue;
@@ -96,7 +97,7 @@ public class AgentToolService implements IAgentToolService {
             }
             params.sort(Comparator.comparing(p -> p.isRequired() ? 0 : 1));
 
-            tools.add(new ToolInfo(toolName, toolAnn.value()[0], params));
+            tools.add(new ToolInfo(toolName, description, params));
         }
         ToolSetInfo toolSetInfo = new ToolSetInfo(agentTool.getName(), agentTool.getDescription(), agentTool.getIcon(), tools, source);
         toolSetInfo.setVersion(agentTool.getVersion());
@@ -104,5 +105,10 @@ public class AgentToolService implements IAgentToolService {
         toolSetInfo.setUrl(agentTool.getUrl());
         toolSetInfo.setKeyword(agentTool.getKeyword());
         return toolSetInfo;
+    }
+
+    @Override
+    public boolean unloadPlugin(String jarFileName) {
+        return jarPluginLoader.unloadAndDeletePlugin(jarFileName);
     }
 }

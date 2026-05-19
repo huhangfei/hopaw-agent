@@ -14,6 +14,7 @@ public class ToolSetInfo {
     private String version;
     private String author;
     private String url;
+    private String jarFileName;
 
     public Boolean iconIsSvgCode(){
         return icon != null && icon.startsWith("<svg");
@@ -87,5 +88,13 @@ public class ToolSetInfo {
 
     public void setSource(AgentToolSourceEnum source) {
         this.source = source;
+    }
+
+    public String getJarFileName() {
+        return jarFileName;
+    }
+
+    public void setJarFileName(String jarFileName) {
+        this.jarFileName = jarFileName;
     }
 }

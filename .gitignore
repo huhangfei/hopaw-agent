@@ -6,6 +6,7 @@ dependency-reduced-pom.xml
 
 # Log file
 *.log
+logs/
 
 # BlueJ files
 *.ctxt

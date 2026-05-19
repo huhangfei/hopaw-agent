@@ -207,4 +207,23 @@ public class JarPluginLoader {
             logger.info("Unloaded plugin: {} ({} tools released)", jarName, removed.tools.size());
         }
     }
+
+    public boolean unloadAndDeletePlugin(String jarName) {
+        DynamicToolRegistry.PluginEntry removed = registry.unregister(jarName);
+        if (removed == null) {
+            logger.warn("Plugin not found for unload: {}", jarName);
+            return false;
+        }
+        logger.info("Unloaded plugin: {} ({} tools released)", jarName, removed.tools.size());
+
+        File jarFile = pluginDir.resolve(jarName).toFile();
+        if (jarFile.exists()) {
+            if (jarFile.delete()) {
+                logger.info("Deleted plugin JAR: {}", jarFile.getAbsolutePath());
+            } else {
+                logger.warn("Failed to delete plugin JAR: {}", jarFile.getAbsolutePath());
+            }
+        }
+        return true;
+    }
 }

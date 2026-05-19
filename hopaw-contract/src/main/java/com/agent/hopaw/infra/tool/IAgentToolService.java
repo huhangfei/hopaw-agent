@@ -8,4 +8,6 @@ public interface IAgentToolService {
     List<AgentTool> getAgentTools();
 
     List<ToolSetInfo> getToolSets();
+
+    boolean unloadPlugin(String jarFileName);
 }
