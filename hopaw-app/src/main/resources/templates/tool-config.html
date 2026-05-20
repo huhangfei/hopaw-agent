@@ -49,7 +49,7 @@
                                   th:text="${config.values[item.key]}"></textarea>
 
                         <div th:case="'TEXT_MULTI'" class="config-multi-input" th:data-key="${item.key}" th:data-is-multi="true">
-                            <div th:with="savedValues=${config.values[item.key] != null && !config.values[item.key].isEmpty() ? config.values[item.key].split(',') : new String[] {''}}">
+                            <th:block th:with="savedValues=${config.values[item.key] != null && !config.values[item.key].isEmpty() ? config.values[item.key].split(',') : {''}}">
                                 <div th:each="value, stat : ${savedValues}" class="multi-input-row">
                                     <input type="text"
                                            th:name="|config_${item.key}_${stat.index}|"
@@ -62,7 +62,7 @@
                                     <button type="button" class="btn-remove-row" onclick="removeMultiRow(this)" th:if="${stat.index > 0}">-</button>
                                     <button type="button" class="btn-add-row" onclick="addMultiRow(this)" th:if="${stat.last}">+</button>
                                 </div>
-                            </div>
+                            </th:block>
                         </div>
 
                         <input th:case="'TEXT_PASSWORD'"
@@ -78,7 +78,7 @@
                                th:data-key="${item.key}">
 
                         <div th:case="'TEXT_PASSWORD_MULTI'" class="config-multi-input" th:data-key="${item.key}" th:data-is-multi="true">
-                            <div th:with="savedValues=${config.values[item.key] != null && !config.values[item.key].isEmpty() ? config.values[item.key].split(',') : new String[] {''}}">
+                            <th:block th:with="savedValues=${config.values[item.key] != null && !config.values[item.key].isEmpty() ? config.values[item.key].split(',') : {''}}">
                                 <div th:each="value, stat : ${savedValues}" class="multi-input-row">
                                     <input type="password"
                                            th:name="|config_${item.key}_${stat.index}|"
@@ -91,7 +91,7 @@
                                     <button type="button" class="btn-remove-row" onclick="removeMultiRow(this)" th:if="${stat.index > 0}">-</button>
                                     <button type="button" class="btn-add-row" onclick="addMultiRow(this)" th:if="${stat.last}">+</button>
                                 </div>
-                            </div>
+                            </th:block>
                         </div>
 
                         <select th:case="'SELECT'"

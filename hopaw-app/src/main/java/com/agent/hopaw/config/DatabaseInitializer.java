@@ -266,8 +266,8 @@ public class DatabaseInitializer implements CommandLineRunner {
                 String tools = "agentTaskTool,commandExecutor,getCurrentTime,mailTool,memoryTool,sysConfigTool,baiduSearch";
                 stmt.execute(String.format(
                         "INSERT INTO agents (name, description, tools, max_memory_records, max_tool_invocations, vector_tool_search, vector_tool_search_max_results, user_id, enable_thinking) VALUES ('%s', '%s', '%s', %d, %d, %d, %d, '%s', %d)",
-                        escapeSQL("大虾"),
-                        escapeSQL("Answer various questions using multiple tools"),
+                        escapeSQL("大虾\uD83E\uDD90"),
+                        escapeSQL("善于使用多种工具解决用户问题"),
                         escapeSQL(tools),
                         20, 20, 1, 15,
                         DefaultUser.USER,
@@ -277,7 +277,24 @@ public class DatabaseInitializer implements CommandLineRunner {
 
             if (!configExists(stmt, "memory_prompt")) {
                 log.info("Initializing memory prompt...");
-                String customPrompt = "You are a memory organizer...";
+                String customPrompt="你是一个记忆整理助手。善于根据聊天记录提取关键的用户记忆信息。" +
+                        "请根据已提供的现有记忆和新会话总结出用户的关键记忆信息（拓展知识仅提供了概要，如果发现有新总结出的扩展知识需要校验时，再对应的去查询某一条详情即可），要严格按以下要求进行分类整理：\n" +
+                        "========\n" +
+                        "分类1，用户画像\n" +
+                        "内容包含：姓名、昵称、年龄、地域、职业、收入、常用设备、喜好、交流风格、偏好与厌恶、经常提的要求规则等，只记录简短的用户各种标签。\n" +
+                        "整理限制: 请给出一个简短的标签作为概要(比如：姓名及昵称、爱好及延误、服务器清单、联系方式等)，具体事实作为画像内容，内容要精简；每条画像不宜过细，相同分类的共用一条即可。\n" +
+                        "分类2，任务记录\n" +
+                        "内容包含：正在做的什么事情（开始时间、任务说明、任务过程主要节点、结果、结束时间）。\n" +
+                        "整理限制: 每次可以汇总出一条或多条不同任务记录，要根据具体的对话场景和已有的任务记录做判断，那些是旧任务的延续，哪些是新任务的开始；旧任务就更新内容新任务就新增内容；" +
+                        "每条任务都要汇总出一段简短的任务概要；内容要抓住终点，涵盖完整任务内容但不要啰嗦。\n" +
+                        "分类3，扩展知识\n" +
+                        "内容包含：解决问题的经验、操作指导说明、明确的操作步骤。\n" +
+                        "整理限制: 请给出一个简短的问题对象描述作为概要(比如，安装git经验、docker镜像源超时等);内容：要从对话中总结解决问题的正确经验，汇总出操作指导说明，梳理出明确的操作步骤。过于简单的问题（通过搜索可以快速找到答案的、经过3步以内尝试解决的），请勿记录，发现多个知识属于同一类型或者同一技术方向的请合并。\n" +
+                        "========\n" +
+                        "请认真总结记忆得到清单后进行检查，不要有重复的记忆，发现已有重复记忆请删除,记忆内容不能胡编乱造信息，要完全从内容中来，冲突的记忆以最新的为准。\n" +
+                        "在完成记忆总结后，有新增或修改记忆时必须调用记忆操作相关工具，保存完再进行查询检查一下。\n"+
+                        "你是一个后台助手，做好任务即可不需要回复我任何信息。\n";
+
                 stmt.execute(String.format(
                         "INSERT INTO sys_config (config_key, config_value, description) VALUES ('%s', '%s', '%s')",
                         "memory_prompt",
