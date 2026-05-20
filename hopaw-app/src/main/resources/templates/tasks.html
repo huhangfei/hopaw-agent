@@ -48,39 +48,36 @@
                     </div>
                     <div class="form-group">
                         <label for="taskType">任务类型 *</label>
-                        <select id="taskType" required onchange="onTaskTypeChange()">
-                            <option value="">选择任务类型</option>
-                            <option value="memory_organize">记忆整理</option>
-                            <option value="agent_task">智能体任务</option>
-                        </select>
-                    </div>
-                    <div id="agentTaskFields" style="display:none;">
-                        <div class="form-group">
-                            <label for="agentSelect">选择智能体 *</label>
-                            <select id="agentSelect">
-                                <option value="">选择智能体</option>
-                                <option th:each="agent : ${agents}" th:value="${agent.id}" th:text="${agent.name}"></option>
-                            </select>
-                        </div>
+                        <input type="text" id="taskType" class="form-input" disabled style="display:none;">
                     </div>
                     <div class="form-group">
                         <label for="taskCron">Cron 表达式 *</label>
-                        <input type="text" id="taskCron" required placeholder="0 0 * * * *">
-                        <small class="form-help">格式: 秒 分 时 日 月 周 (例: 0 0 * * * * 表示每小时)</small>
+                        <input type="text" id="taskCron" required placeholder="例如：0 */5 * * * *">
                     </div>
                     <div class="form-group">
-                        <label>状态</label>
-                        <label class="switch">
-                            <input type="checkbox" id="taskEnabled" checked>
-                            <span class="slider"></span>
-                        </label>
-                        <span id="taskStatusLabel">启用</span>
+                        <label for="taskIdentity">创建者</label>
+                        <input type="text" id="taskIdentity" placeholder="空表示系统任务">
                     </div>
-                    <div class="modal-actions">
-                        <button type="button" class="btn btn-secondary" onclick="closeModal()">取消</button>
-                        <button type="submit" class="btn btn-primary">保存</button>
+                    <input type="hidden" id="taskBuiltin" value="0">
+                    <div class="form-group">
+                        <label>启用</label>
+                        <div class="toggle-wrapper">
+                            <label class="toggle">
+                                <input type="checkbox" id="taskEnabled" >
+                                <span class="slider"></span>
+                            </label>
+                            <span class="toggle-label" id="taskEnabledLabel" >关闭</span>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label for="taskDescription">描述</label>
+                        <textarea id="taskDescription" rows="3" placeholder="任务描述"></textarea>
                     </div>
                 </form>
+            </div>
+            <div class="modal-footer">
+                <button class="btn-cancel" onclick="closeModal()">取消</button>
+                <button class="btn-submit" onclick="submitTask()">保存</button>
             </div>
         </div>
     </div>

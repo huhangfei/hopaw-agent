@@ -194,226 +194,226 @@
             </div>
         </div>
     </aside>
-
-</div>
-
-<div id="addAgentModal" class="modal-overlay">
-    <div class="modal">
-        <div class="modal-header">
-            <h3>添加新 Agent</h3>
-            <button class="modal-close" onclick="hideAddModal()">&times;</button>
-        </div>
-        <div class="modal-body">
-            <form th:action="@{/agent/create}" method="post" class="modal-form" id="addAgentForm">
-                <div class="form-left">
-                    <div class="form-group">
-                        <label>名称 *</label>
-                        <input type="text" name="name" placeholder="输入 Agent 名称" required>
-                    </div>
-                    <div class="form-group">
-                        <label>描述 *</label>
-                        <textarea name="description" placeholder="输入 Agent 描述" required></textarea>
-                    </div>
-                    <div class="form-group">
+    <div id="addAgentModal" class="modal-overlay">
+        <div class="modal">
+            <div class="modal-header">
+                <h3>添加新 Agent</h3>
+                <button class="modal-close" onclick="hideAddModal()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <form th:action="@{/agent/create}" method="post" class="modal-form" id="addAgentForm">
+                    <div class="form-left">
+                        <div class="form-group">
+                            <label>名称 *</label>
+                            <input type="text" name="name" placeholder="输入 Agent 名称" required>
+                        </div>
+                        <div class="form-group">
+                            <label>描述 *</label>
+                            <textarea name="description" placeholder="输入 Agent 描述" required></textarea>
+                        </div>
+                        <div class="form-group">
                             <label>模型 *</label>
-                        <div class="flex-container">
-                            <select id="addProviderSelect" class="model-select" required>
-                                <option value="">选择提供商</option>
-                            </select>
-                            <select name="aiModelId" id="addModelSelect" class="model-select" required>
-                                <option value="">选择模型</option>
-                            </select>
-                        </div>
-                    </div>
-                    <div class="form-row">
-                        <div class="form-group">
-                            <label>最大记忆</label>
-                            <input type="number" name="maxMemoryRecords" value="20" min="1" max="100" placeholder="20">
-                        </div>
-                        <div class="form-group">
-                            <label>最大工具调用</label>
-                            <input type="number" name="maxToolInvocations" value="10" min="1" max="50" placeholder="10">
-                        </div>
-                    </div>
-                    <div class="form-row">
-                        <div class="form-group">
-                            <div class="toggle-wrapper">
-                                <input type="hidden" name="enableThinking" id="addEnableThinking" value="true">
-                                <label class="toggle">
-                                    <input type="checkbox" checked
-                                           onchange="document.getElementById('addEnableThinking').value=this.checked?'true':'false'">
-                                    <span class="slider"></span>
-                                </label>
-                                <span class="toggle-label">启用思考（Thinking）</span>
+                            <div class="flex-container">
+                                <select id="addProviderSelect" class="model-select" required>
+                                    <option value="">选择提供商</option>
+                                </select>
+                                <select name="aiModelId" id="addModelSelect" class="model-select" required>
+                                    <option value="">选择模型</option>
+                                </select>
                             </div>
                         </div>
-                    </div>
-                    <div class="form-row">
-                        <div class="form-group">
-                            <div class="toggle-wrapper">
-                                <input type="hidden" name="vectorToolSearch" id="addVectorToolSearch" value="true">
-                                <label class="toggle">
-                                    <input type="checkbox" checked
-                                           onchange="document.getElementById('addVectorToolSearch').value=this.checked?'true':'false';document.getElementById('addVectorToolSearchResultsGroup').style.display=this.checked?'':'none'">
-                                    <span class="slider"></span>
-                                </label>
-                                <span class="toggle-label">启用搜索工具</span>
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label>最大记忆</label>
+                                <input type="number" name="maxMemoryRecords" value="20" min="1" max="100" placeholder="20">
+                            </div>
+                            <div class="form-group">
+                                <label>最大工具调用</label>
+                                <input type="number" name="maxToolInvocations" value="10" min="1" max="50" placeholder="10">
                             </div>
                         </div>
-                        <div class="form-group form-inline" id="addVectorToolSearchResultsGroup">
-                            <label>最大数量</label>
-                            <input type="number" name="vectorToolSearchMaxResults" value="10" min="1" max="500" placeholder="10">
-                        </div>
-                    </div>
-                </div>
-                <div class="form-right">
-                    <div class="form-group">
-                        <div class="tool-header">
-                            <label>工具</label>
-                            <div class="tool-toggle-bar">
-                                <button type="button" class="btn-tool-toggle" onclick="selectAllTools('#addAgentModal .checkbox-group')">全选</button>
-                                <button type="button" class="btn-tool-toggle" onclick="deselectAllTools('#addAgentModal .checkbox-group')">取消</button>
-                            </div>
-                        </div>
-                        <div class="checkbox-group">
-                            <label th:each="ts : ${toolSets}" class="checkbox-item">
-                                <div class="tool-item-row">
-                                    <input type="checkbox" name="tools" th:value="${ts.name}">
-                                    <div class="tool-item-icon">
-                                        <th:block th:if="${ts.iconIsSvgCode()}">
-                                            <span th:utext="${ts.icon}"></span>
-                                        </th:block>
-                                        <th:block th:unless="${ts.iconIsSvgCode()}">
-                                            <img th:src="@{/icons/tools/__${ts.icon}__}" alt="icon" onerror="this.style.display='none'">
-                                        </th:block>
-                                    </div>
-                                    <span class="tool-item-name" th:text="${ts.name}"></span>
-                                    <span class="tool-item-count" th:text="${#lists.size(ts.tools)} + ' 个方法'"></span>
+                        <div class="form-row">
+                            <div class="form-group">
+                                <div class="toggle-wrapper">
+                                    <input type="hidden" name="enableThinking" id="addEnableThinking" value="true">
+                                    <label class="toggle">
+                                        <input type="checkbox" checked
+                                               onchange="document.getElementById('addEnableThinking').value=this.checked?'true':'false'">
+                                        <span class="slider"></span>
+                                    </label>
+                                    <span class="toggle-label">启用思考（Thinking）</span>
                                 </div>
-                                <span class="tool-item-desc" th:text="${ts.description}"></span>
-                            </label>
+                            </div>
+                        </div>
+                        <div class="form-row">
+                            <div class="form-group">
+                                <div class="toggle-wrapper">
+                                    <input type="hidden" name="vectorToolSearch" id="addVectorToolSearch" value="true">
+                                    <label class="toggle">
+                                        <input type="checkbox" checked
+                                               onchange="document.getElementById('addVectorToolSearch').value=this.checked?'true':'false';document.getElementById('addVectorToolSearchResultsGroup').style.display=this.checked?'':'none'">
+                                        <span class="slider"></span>
+                                    </label>
+                                    <span class="toggle-label">启用搜索工具</span>
+                                </div>
+                            </div>
+                            <div class="form-group form-inline" id="addVectorToolSearchResultsGroup">
+                                <label>最大数量</label>
+                                <input type="number" name="vectorToolSearchMaxResults" value="10" min="1" max="500" placeholder="10">
+                            </div>
                         </div>
                     </div>
-                </div>
-            </form>
+                    <div class="form-right">
+                        <div class="form-group">
+                            <div class="tool-header">
+                                <label>工具</label>
+                                <div class="tool-toggle-bar">
+                                    <button type="button" class="btn-tool-toggle" onclick="selectAllTools('#addAgentModal .checkbox-group')">全选</button>
+                                    <button type="button" class="btn-tool-toggle" onclick="deselectAllTools('#addAgentModal .checkbox-group')">取消</button>
+                                </div>
+                            </div>
+                            <div class="checkbox-group">
+                                <label th:each="ts : ${toolSets}" class="checkbox-item">
+                                    <div class="tool-item-row">
+                                        <input type="checkbox" name="tools" th:value="${ts.name}">
+                                        <div class="tool-item-icon">
+                                            <!-- 判断 icon 是否为 SVG 内容 -->
+                                            <th:block th:if="${ts.iconIsSvgCode()}">
+                                                <span th:utext="${ts.icon}"></span>
+                                            </th:block>
+                                            <th:block th:unless="${ts.iconIsSvgCode()}">
+                                                <img th:src="@{/icons/tools/__${ts.icon}__}" alt="icon" onerror="this.style.display='none'">
+                                            </th:block>
+                                        </div>
+                                        <span class="tool-item-name" th:text="${ts.name}"></span>
+                                        <span class="tool-item-count" th:text="${#lists.size(ts.tools)} + ' 个方法'"></span>
+                                    </div>
+                                    <span class="tool-item-desc" th:text="${ts.description}"></span>
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn-cancel" onclick="hideAddModal()">取消</button>
+                <button type="submit" form="addAgentForm" class="btn-submit">创建</button>
+            </div>
         </div>
-        <div class="modal-footer">
-            <button type="button" class="btn-cancel" onclick="hideAddModal()">取消</button>
-            <button type="submit" form="addAgentForm" class="btn-submit">创建</button>
+    </div>
+    <div id="editAgentModal" class="modal-overlay">
+        <div class="modal">
+            <div class="modal-header">
+                <h3>编辑 Agent</h3>
+                <button class="modal-close" onclick="hideEditModal()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <form th:action="@{/agent/update}" method="post" class="modal-form" id="editAgentForm">
+                    <input type="hidden" name="id" id="editAgentId">
+                    <div class="form-left">
+                        <div class="form-group">
+                            <label>名称</label>
+                            <input type="text" name="name" id="editAgentName" placeholder="输入 Agent 名称" required>
+                        </div>
+                        <div class="form-group">
+                            <label>描述</label>
+                            <textarea name="description" id="editAgentDescription" placeholder="输入 Agent 描述"
+                                      required></textarea>
+                        </div>
+                        <div class="form-group">
+                            <label>模型 *</label>
+                            <div class="flex-container">
+                                <select id="editProviderSelect" class="model-select" required>
+                                    <option value="">选择提供商</option>
+                                </select>
+                                <select name="aiModelId" id="editModelSelect" class="model-select" required>
+                                    <option value="">选择模型</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label>最大记忆</label>
+                                <input type="number" name="maxMemoryRecords" id="editMaxMemoryRecords" value="20" min="1"
+                                       max="100" placeholder="20">
+                            </div>
+                            <div class="form-group">
+                                <label>最大工具调用</label>
+                                <input type="number" name="maxToolInvocations" id="editMaxToolInvocations" value="10"
+                                       min="1" max="50" placeholder="10">
+                            </div>
+                        </div>
+                        <div class="form-row">
+                            <div class="form-group">
+                                <div class="toggle-wrapper">
+                                    <input type="hidden" name="enableThinking" id="editEnableThinking" value="true">
+                                    <label class="toggle">
+                                        <input type="checkbox" id="editEnableThinkingCheckbox"
+                                               onchange="document.getElementById('editEnableThinking').value=this.checked?'true':'false'">
+                                        <span class="slider"></span>
+                                    </label>
+                                    <span class="toggle-label">启用思考（Thinking）</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="form-row">
+                            <div class="form-group">
+                                <div class="toggle-wrapper">
+                                    <input type="hidden" name="vectorToolSearch" id="editVectorToolSearch" value="true">
+                                    <label class="toggle">
+                                        <input type="checkbox" id="editVectorToolSearchCheckbox"
+                                               onchange="document.getElementById('editVectorToolSearch').value=this.checked?'true':'false';document.getElementById('editVectorToolSearchResultsGroup').style.display=this.checked?'':'none'">
+                                        <span class="slider"></span>
+                                    </label>
+                                    <span class="toggle-label">启用搜索工具</span>
+                                </div>
+                            </div>
+                            <div class="form-group form-inline" id="editVectorToolSearchResultsGroup">
+                                <label>最大数量</label>
+                                <input type="number" name="vectorToolSearchMaxResults" id="editVectorToolSearchMaxResults" value="10" min="1" max="500" placeholder="10">
+                            </div>
+                        </div>
+                    </div>
+                    <div class="form-right">
+                        <div class="form-group">
+                            <div class="tool-header">
+                                <label>工具</label>
+                                <div class="tool-toggle-bar">
+                                    <button type="button" class="btn-tool-toggle" onclick="selectAllTools('#editToolList')">全选</button>
+                                    <button type="button" class="btn-tool-toggle" onclick="deselectAllTools('#editToolList')">取消</button>
+                                </div>
+                            </div>
+                            <div class="checkbox-group" id="editToolList">
+                                <label th:each="ts : ${toolSets}" class="checkbox-item">
+                                    <div class="tool-item-row">
+                                        <input type="checkbox" name="tools" th:value="${ts.name}" class="edit-tool-checkbox">
+                                        <div class="tool-item-icon">
+                                            <!-- 判断 icon 是否为 SVG 内容 -->
+                                            <th:block th:if="${ts.iconIsSvgCode()}">
+                                                <span th:utext="${ts.icon}"></span>
+                                            </th:block>
+                                            <th:block th:unless="${ts.iconIsSvgCode()}">
+                                                <img th:src="@{/icons/tools/__${ts.icon}__}" alt="icon" onerror="this.style.display='none'">
+                                            </th:block>
+                                        </div>
+                                        <span class="tool-item-name" th:text="${ts.name}"></span>
+                                        <span class="tool-item-count" th:text="${#lists.size(ts.tools)} + ' 个方法'"></span>
+                                    </div>
+                                    <span class="tool-item-desc" th:text="${ts.description}"></span>
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn-cancel" onclick="hideEditModal()">取消</button>
+                <button type="submit" form="editAgentForm" class="btn-submit">保存</button>
+            </div>
         </div>
     </div>
 </div>
 
-<div id="editAgentModal" class="modal-overlay">
-    <div class="modal">
-        <div class="modal-header">
-            <h3>编辑 Agent</h3>
-            <button class="modal-close" onclick="hideEditModal()">&times;</button>
-        </div>
-        <div class="modal-body">
-            <form th:action="@{/agent/update}" method="post" class="modal-form" id="editAgentForm">
-                <input type="hidden" name="id" id="editAgentId">
-                <div class="form-left">
-                    <div class="form-group">
-                        <label>名称</label>
-                        <input type="text" name="name" id="editAgentName" placeholder="输入 Agent 名称" required>
-                    </div>
-                    <div class="form-group">
-                        <label>描述</label>
-                        <textarea name="description" id="editAgentDescription" placeholder="输入 Agent 描述"
-                                  required></textarea>
-                    </div>
-                    <div class="form-group">
-                            <label>模型 *</label>
-                        <div class="flex-container">
-                            <select id="editProviderSelect" class="model-select" required>
-                                <option value="">选择提供商</option>
-                            </select>
-                            <select name="aiModelId" id="editModelSelect" class="model-select" required>
-                                <option value="">选择模型</option>
-                            </select>
-                        </div>
-                    </div>
-                    <div class="form-row">
-                        <div class="form-group">
-                            <label>最大记忆</label>
-                            <input type="number" name="maxMemoryRecords" id="editMaxMemoryRecords" value="20" min="1"
-                                   max="100" placeholder="20">
-                        </div>
-                        <div class="form-group">
-                            <label>最大工具调用</label>
-                            <input type="number" name="maxToolInvocations" id="editMaxToolInvocations" value="10"
-                                   min="1" max="50" placeholder="10">
-                        </div>
-                    </div>
-                    <div class="form-row">
-                        <div class="form-group">
-                            <div class="toggle-wrapper">
-                                <input type="hidden" name="enableThinking" id="editEnableThinking" value="true">
-                                <label class="toggle">
-                                    <input type="checkbox" id="editEnableThinkingCheckbox"
-                                           onchange="document.getElementById('editEnableThinking').value=this.checked?'true':'false'">
-                                    <span class="slider"></span>
-                                </label>
-                                <span class="toggle-label">启用思考（Thinking）</span>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="form-row">
-                        <div class="form-group">
-                            <div class="toggle-wrapper">
-                                <input type="hidden" name="vectorToolSearch" id="editVectorToolSearch" value="true">
-                                <label class="toggle">
-                                    <input type="checkbox" id="editVectorToolSearchCheckbox"
-                                           onchange="document.getElementById('editVectorToolSearch').value=this.checked?'true':'false';document.getElementById('editVectorToolSearchResultsGroup').style.display=this.checked?'':'none'">
-                                    <span class="slider"></span>
-                                </label>
-                                <span class="toggle-label">启用搜索工具</span>
-                            </div>
-                        </div>
-                        <div class="form-group form-inline" id="editVectorToolSearchResultsGroup">
-                            <label>最大数量</label>
-                            <input type="number" name="vectorToolSearchMaxResults" id="editVectorToolSearchMaxResults" value="10" min="1" max="500" placeholder="10">
-                        </div>
-                    </div>
-                </div>
-                <div class="form-right">
-                    <div class="form-group">
-                        <div class="tool-header">
-                            <label>工具</label>
-                            <div class="tool-toggle-bar">
-                                <button type="button" class="btn-tool-toggle" onclick="selectAllTools('#editToolList')">全选</button>
-                                <button type="button" class="btn-tool-toggle" onclick="deselectAllTools('#editToolList')">取消</button>
-                            </div>
-                        </div>
-                        <div class="checkbox-group" id="editToolList">
-                            <label th:each="ts : ${toolSets}" class="checkbox-item">
-                                <div class="tool-item-row">
-                                    <input type="checkbox" name="tools" th:value="${ts.name}" class="edit-tool-checkbox">
-                                    <div class="tool-item-icon">
-                                        <th:block th:if="${ts.iconIsSvgCode()}">
-                                            <span th:utext="${ts.icon}"></span>
-                                        </th:block>
-                                        <th:block th:unless="${ts.iconIsSvgCode()}">
-                                            <img th:src="@{/icons/tools/__${ts.icon}__}" alt="icon" onerror="this.style.display='none'">
-                                        </th:block>
-                                    </div>
-                                    <span class="tool-item-name" th:text="${ts.name}"></span>
-                                    <span class="tool-item-count" th:text="${#lists.size(ts.tools)} + ' 个方法'"></span>
-                                </div>
-                                <span class="tool-item-desc" th:text="${ts.description}"></span>
-                            </label>
-                        </div>
-                    </div>
-                </div>
-            </form>
-        </div>
-        <div class="modal-footer">
-            <button type="button" class="btn-cancel" onclick="hideEditModal()">取消</button>
-            <button type="submit" form="editAgentForm" class="btn-submit">保存</button>
-        </div>
-    </div>
-</div>
 
 <th:block layout:fragment="extraCss">
     <link rel="stylesheet" th:href="@{/css/page/index.css}">
