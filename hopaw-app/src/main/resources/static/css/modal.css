@@ -134,3 +134,53 @@
 .modal-footer .btn-submit:hover {
     background: #45a049;
 }
+
+/* ==================== Dark Theme ==================== */
+body.dark-theme .modal-overlay,
+body.dark-theme .confirm-overlay {
+    background: rgba(0, 0, 0, 0.7);
+}
+
+body.dark-theme .modal {
+    background: #16213e;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+}
+
+body.dark-theme .modal-header {
+    border-bottom-color: #2d2d44;
+}
+
+body.dark-theme .modal-header h3 {
+    color: #e0e0e0;
+}
+
+body.dark-theme .modal-close {
+    color: #888;
+}
+
+body.dark-theme .modal-close:hover {
+    background: #2d2d44;
+    color: #e0e0e0;
+}
+
+body.dark-theme .modal-footer {
+    border-top-color: #2d2d44;
+}
+
+body.dark-theme .modal-footer .btn-cancel {
+    background: #2d2d44;
+    color: #c0c0c0;
+}
+
+body.dark-theme .modal-footer .btn-cancel:hover {
+    background: #3d3d6b;
+}
+
+body.dark-theme .modal-footer .btn-submit {
+    background: #4CAF50;
+    color: white;
+}
+
+body.dark-theme .modal-footer .btn-submit:hover {
+    background: #66bb6a;
+}

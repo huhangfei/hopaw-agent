@@ -231,3 +231,122 @@
     font-size: 14px;
     color: #666;
 }
+
+/* ==================== Dark Theme ==================== */
+body.dark-theme .usage-container {
+    background: #1a1a2e;
+}
+
+body.dark-theme .usage-header h2 {
+    color: #e0e0e0;
+}
+
+body.dark-theme .filter-card {
+    background: #16213e;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+}
+
+body.dark-theme .filter-group label {
+    color: #b0b0b0;
+}
+
+body.dark-theme .filter-group select {
+    background: #2d2d44;
+    border-color: #3d3d6b;
+    color: #e0e0e0;
+}
+
+body.dark-theme .filter-group select:focus {
+    border-color: #8ba3ff;
+}
+
+body.dark-theme .filter-group input {
+    background: #2d2d44;
+    border-color: #3d3d6b;
+    color: #e0e0e0;
+}
+
+body.dark-theme .filter-group input:focus {
+    border-color: #8ba3ff;
+}
+
+body.dark-theme .btn-query {
+    background: #667eea;
+}
+
+body.dark-theme .btn-query:hover {
+    background: #8ba3ff;
+}
+
+body.dark-theme .summary-card {
+    background: #16213e;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+}
+
+body.dark-theme .summary-label {
+    color: #888;
+}
+
+body.dark-theme .summary-value {
+    color: #e0e0e0;
+}
+
+body.dark-theme .summary-value.total {
+    color: #8ba3ff;
+}
+
+body.dark-theme .chart-card {
+    background: #16213e;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+}
+
+body.dark-theme .chart-header h3 {
+    color: #e0e0e0;
+}
+
+body.dark-theme .chart-empty {
+    color: #888;
+}
+
+body.dark-theme .usage-card {
+    background: #16213e;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+}
+
+body.dark-theme .usage-table thead {
+    background: #1e3a5f;
+}
+
+body.dark-theme .usage-table th {
+    color: #b0b0b0;
+    border-bottom-color: #2d2d44;
+}
+
+body.dark-theme .usage-table td {
+    color: #c0c0c0;
+    border-bottom-color: #2d2d44;
+}
+
+body.dark-theme .usage-table tbody tr:hover {
+    background: #2d2d44;
+}
+
+body.dark-theme .empty-state {
+    background: #16213e;
+    color: #888;
+}
+
+body.dark-theme .page-btn {
+    background: #2d2d44;
+    border-color: #3d3d6b;
+    color: #c0c0c0;
+}
+
+body.dark-theme .page-btn:hover:not(:disabled) {
+    border-color: #8ba3ff;
+    color: #8ba3ff;
+}
+
+body.dark-theme .page-info {
+    color: #b0b0b0;
+}
