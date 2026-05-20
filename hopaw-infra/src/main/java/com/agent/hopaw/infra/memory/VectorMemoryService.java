@@ -12,9 +12,10 @@ import dev.langchain4j.store.embedding.EmbeddingStore;
 import dev.langchain4j.community.store.embedding.jvector.JVectorEmbeddingStore;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.boot.context.event.ApplicationReadyEvent;
+import org.springframework.context.event.EventListener;
 import org.springframework.stereotype.Service;
 
-import javax.annotation.PostConstruct;
 import javax.annotation.PreDestroy;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -37,7 +38,7 @@ public class VectorMemoryService implements IVectorMemoryService {
         this.embeddingModel = embeddingModel;
     }
 
-    @PostConstruct
+    @EventListener(ApplicationReadyEvent.class)
     public void init() {
         try {
             int dimension = 512;
@@ -70,7 +71,7 @@ public class VectorMemoryService implements IVectorMemoryService {
              * maxDegree        : 每节点最大边数，影响召回率与内存
              * beamWidth        : 构建束宽，影响索引质量（不影响在线查询）
              * neighborOverflow : 候选邻居溢出系数，1.2=内存优先, 1.5=磁盘优先
-             * alpha            : 边多样性 (DiskANN)，1.2=高维推荐，2.0=低维推荐
+             * alpha            : 边多样性 (DiskANN)，1.2=高维推荐, 2.0=低维推荐
              */
 
             int maxDegree, beamWidth;
@@ -219,7 +220,7 @@ public class VectorMemoryService implements IVectorMemoryService {
      * @param minScore   最低相似度阈值
      */
     public List<VectorSearchResult> search(String query, Long agentId, String userId,
-                                           VectorMemoryTypeEnum memoryType, int maxResults, double minScore) {
+                                          VectorMemoryTypeEnum memoryType, int maxResults, double minScore) {
         try {
             Embedding queryEmbedding = embeddingModel.embed(TextSegment.from(query)).content();
 

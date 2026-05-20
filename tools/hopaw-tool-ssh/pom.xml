@@ -10,7 +10,9 @@
         <version>1.0.0</version>
         <relativePath>../../pom.xml</relativePath>
     </parent>
-
+    <properties>
+        <maven.install.skip>true</maven.install.skip>
+    </properties>
     <artifactId>hopaw-tool-ssh</artifactId>
     <version>1.0.0</version>
     <dependencies>

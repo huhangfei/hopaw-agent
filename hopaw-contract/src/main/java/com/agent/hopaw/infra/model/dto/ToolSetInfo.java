@@ -15,6 +15,7 @@ public class ToolSetInfo {
     private String author;
     private String url;
     private String jarFileName;
+    private boolean hasConfigItems;
 
     public Boolean iconIsSvgCode(){
         return icon != null && icon.startsWith("<svg");
@@ -96,5 +97,13 @@ public class ToolSetInfo {
 
     public void setJarFileName(String jarFileName) {
         this.jarFileName = jarFileName;
+    }
+
+    public boolean isHasConfigItems() {
+        return hasConfigItems;
+    }
+
+    public void setHasConfigItems(boolean hasConfigItems) {
+        this.hasConfigItems = hasConfigItems;
     }
 }

@@ -104,6 +104,7 @@ public class AgentToolService implements IAgentToolService {
         toolSetInfo.setAuthor(agentTool.getAuthor());
         toolSetInfo.setUrl(agentTool.getUrl());
         toolSetInfo.setKeyword(agentTool.getKeyword());
+        toolSetInfo.setHasConfigItems(!agentTool.getConfigItems().isEmpty());
         return toolSetInfo;
     }
 

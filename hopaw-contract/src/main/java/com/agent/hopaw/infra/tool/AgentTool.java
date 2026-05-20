@@ -1,5 +1,9 @@
 package com.agent.hopaw.infra.tool;
 
+import com.agent.hopaw.infra.model.dto.ToolConfigItem;
+
+import java.util.List;
+
 public interface AgentTool {
     public static final String DEFAULT_ICON="agent-tool.svg";
     String getName();
@@ -35,4 +39,20 @@ public interface AgentTool {
      * 插件卸载时清理资源
      */
     default void destroy(){ return;}
+
+    /**
+     * 获取工具配置项定义
+     * @return 配置项列表
+     */
+    default List<ToolConfigItem> getConfigItems() {
+        return List.of();
+    }
+
+    /**
+     * 获取配置键前缀
+     * @return 配置键前缀
+     */
+    default String getConfigPrefix() {
+        return "tool." + getName() + ".";
+    }
 }

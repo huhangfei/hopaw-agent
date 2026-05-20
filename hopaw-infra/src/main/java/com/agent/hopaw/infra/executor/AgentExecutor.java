@@ -353,18 +353,23 @@ public class AgentExecutor implements IAgentExecutor {
         for (Content content : contents) {
             if (content instanceof TextContent) {
                 ChatHistory userChat = new ChatHistory(agent.getId(), "user", "text", ((TextContent) content).text());
+                userChat.setSessionId(sessionId);
                 chatHistoryList.add(userChat);
             } else if (content instanceof ImageContent) {
                 ChatHistory userChat = new ChatHistory(agent.getId(), "user", "image", "[一张图片]");
+                userChat.setSessionId(sessionId);
                 chatHistoryList.add(userChat);
             } else if (content instanceof VideoContent) {
                 ChatHistory userChat = new ChatHistory(agent.getId(), "user", "video", "[一段视频]");
+                userChat.setSessionId(sessionId);
                 chatHistoryList.add(userChat);
             } else if (content instanceof AudioContent) {
                 ChatHistory userChat = new ChatHistory(agent.getId(), "user", "audio", "[一段音频]");
+                userChat.setSessionId(sessionId);
                 chatHistoryList.add(userChat);
             } else if (content instanceof PdfFileContent) {
                 ChatHistory userChat = new ChatHistory(agent.getId(), "user", "pdf", "[一个PDF文件]");
+                userChat.setSessionId(sessionId);
                 chatHistoryList.add(userChat);
             } else {
                 logger.info("用户消息 user[{}] agent[{}]: {}", userId, agent.getId(), "未知");
@@ -534,6 +539,7 @@ public class AgentExecutor implements IAgentExecutor {
                 //需要处理上个类型的消息
                 if (lastMessageType.equals("message")) {
                     ChatHistory textChat = new ChatHistory(agent.getId(), "agent", "text", messageBuilder.toString());
+                    textChat.setSessionId(sessionId);
                     chatHistoryConsumer.accept(textChat);
                     messageBuilder = new StringBuilder(100);
                 } else if (lastMessageType.equals("thinking")) {
@@ -544,6 +550,7 @@ public class AgentExecutor implements IAgentExecutor {
                     messageConsumer.accept(JSON.toJSONString(aiThinkingMessageInfo));
 
                     ChatHistory textChat = new ChatHistory(agent.getId(), "agent", "thinking", thinkingBuilder.toString());
+                    textChat.setSessionId(sessionId);
                     chatHistoryConsumer.accept(textChat);
                     thinkingBuilder = new StringBuilder(100);
                 }
@@ -560,6 +567,7 @@ public class AgentExecutor implements IAgentExecutor {
                             (aiToolCallMessageInfo.getArguments()!=null? aiToolCallMessageInfo.getArguments().toString():null), aiToolCallMessageInfo.getResult() != null ? (String) aiToolCallMessageInfo.getResult() : null
                     );
                     toolChat.setToolCallStatus(currentMessageType);
+                    toolChat.setSessionId(sessionId);
                     chatHistoryConsumer.accept(toolChat);
                 }
             }

@@ -19,7 +19,6 @@
                      th:attr="data-index=${iter.index}"
                      onclick="selectToolSet(this)">
                         <div class="tool-list-icon">
-                            <!-- 判断 icon 是否为 SVG 内容 -->
                             <th:block th:if="${toolSet.iconIsSvgCode()}">
                                 <span th:utext="${toolSet.icon}"></span>
                             </th:block>
@@ -31,8 +30,8 @@
                             <div class="tool-list-name"><span th:text="${toolSet.name}"></span><span class="tool-list-source-badge" th:classappend="${toolSet.source.code == 'built_in' ? 'source-builtin' : 'source-plugin'}" th:text="${toolSet.source.description}"></span></div>
                             <div class="tool-list-desc" th:text="${toolSet.description}"></div>
                             <div class="tool-list-meta">
-                                <span class="tool-list-count" th:text="${#lists.size(toolSet.tools)} + ' 个工具方法'"></span>
-                                <span class="tool-list-version" th:if="${toolSet.version != null and !toolSet.version.isEmpty()}" th:text="'v' + ${toolSet.version}"></span>
+                                <span class="tool-list-count" th:text="|${#lists.size(toolSet.tools)} 个工具方法|"></span>
+                                <span class="tool-list-version" th:if="${toolSet.version != null and !toolSet.version.isEmpty()}" th:text="|v${toolSet.version}|"></span>
                             </div>
                         </div>
                     </div>
@@ -49,7 +48,6 @@
                      th:attr="data-index=${iter.index}">
                     <div class="detail-header">
                         <div class="detail-header-icon">
-                            <!-- 判断 icon 是否为 SVG 内容 -->
                             <th:block th:if="${toolSet.iconIsSvgCode()}">
                                 <span th:utext="${toolSet.icon}"></span>
                             </th:block>
@@ -61,7 +59,8 @@
                             <div class="detail-name" th:text="${toolSet.name}"></div>
                             <div class="detail-desc" th:text="${toolSet.description}"></div>
                         </div>
-                        <span class="detail-count-badge" th:if="${not #lists.isEmpty(toolSet.tools)}" th:text="${#lists.size(toolSet.tools)} + ' 个方法'"></span>
+                        <span class="detail-count-badge" th:if="${not #lists.isEmpty(toolSet.tools)}" th:text="|${#lists.size(toolSet.tools)} 个方法|"></span>
+                        <button th:if="${toolSet.hasConfigItems}" th:attr="onclick=|location.href='/tool-config/${toolSet.name}'|" class="btn-config" title="配置此工具">配置</button>
                         <button class="btn-unload-plugin" th:if="${toolSet.source.code == 'plugin'}" th:attr="data-jar=${toolSet.jarFileName}" onclick="uninstallPlugin(this)" title="卸载此插件">卸载</button>
                     </div>
 

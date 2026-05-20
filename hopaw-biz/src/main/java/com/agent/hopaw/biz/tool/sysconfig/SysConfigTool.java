@@ -1,5 +1,6 @@
 package com.agent.hopaw.biz.tool.sysconfig;
 
+import com.agent.hopaw.infra.model.dto.ToolConfigItem;
 import com.agent.hopaw.infra.model.entity.SysConfig;
 import com.agent.hopaw.infra.service.SysConfigService;
 import dev.langchain4j.agent.tool.P;
@@ -36,6 +37,17 @@ public class SysConfigTool implements AgentTool {
     @Override
     public String getKeyword() {
         return "配置";
+    }
+
+    @Override
+    public List<ToolConfigItem> getConfigItems() {
+        return List.of(
+                new ToolConfigItem("exampleText", "示例文本", "这是一个单文本配置示例", ToolConfigItem.ConfigType.TEXT_SINGLE),
+                new ToolConfigItem("exampleSelect", "示例下拉", "从预设选项中选择一个", ToolConfigItem.ConfigType.SELECT, List.of("选项1", "选项2", "选项3")),
+                new ToolConfigItem("exampleRadio", "示例单选", "选择一个选项", ToolConfigItem.ConfigType.RADIO, List.of("苹果", "香蕉", "橙子")),
+                new ToolConfigItem("exampleCheck", "示例多选", "可以选择多个", ToolConfigItem.ConfigType.CHECKBOX, List.of("A", "B", "C", "D")),
+                new ToolConfigItem("exampleMultiText", "示例多文本", "支持多行输入", ToolConfigItem.ConfigType.TEXT_MULTI)
+        );
     }
 
     @Tool("根据 Key 查询系统配置项的值")

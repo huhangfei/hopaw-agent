@@ -24,8 +24,9 @@ public class QianfanWebSearchUtil {
 
     private static final Logger log = LoggerFactory.getLogger(QianfanWebSearchUtil.class);
 
-    private static final String CONFIG_KEY = "qianfan_web_search_api_keys";
-    private static final String CONFIG_KEY_EDITION = "qianfan_web_search_edition";
+    private static final String CONFIG_PREFIX = "tool.baiduSearch.";
+    private static final String CONFIG_KEY_API_KEYS = CONFIG_PREFIX + "apiKeys";
+    private static final String CONFIG_KEY_EDITION = CONFIG_PREFIX + "edition";
     private static final String API_URL = "https://qianfan.baidubce.com/v2/ai_search/web_search";
     private static final int TIMEOUT_SECONDS = 15;
 
@@ -37,7 +38,7 @@ public class QianfanWebSearchUtil {
     }
 
     private List<String> getApiKeys() {
-        SysConfig config = sysConfigService.getByKey(CONFIG_KEY);
+        SysConfig config = sysConfigService.getByKey(CONFIG_KEY_API_KEYS);
         if (config == null || config.getConfigValue() == null || config.getConfigValue().isBlank()) {
             return Collections.emptyList();
         }
@@ -64,7 +65,7 @@ public class QianfanWebSearchUtil {
     public String search(String query, int maxResults, int timeoutMs) {
         List<String> keys = getApiKeys();
         if (keys.isEmpty()) {
-            throw new RuntimeException("未配置API密钥");
+            throw new RuntimeException("未配置API密钥，请在工具配置页面配置 baiduSearch 的 API 密钥");
         }
 
         int maxAttempts = keys.size();
@@ -73,7 +74,7 @@ public class QianfanWebSearchUtil {
             try {
                 return doSearch(apiKey, query, maxResults, timeoutMs);
             } catch (Exception e) {
-                log.warn("Qianfan搜索失败(密钥{}): {}", i + 1, e.getMessage());
+                log.warn("百度搜索失败(密钥{}): {}", i + 1, e.getMessage());
                 if (i == maxAttempts - 1) {
                     throw new RuntimeException("所有API密钥均无效", e);
                 }

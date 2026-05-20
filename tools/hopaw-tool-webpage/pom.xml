@@ -13,7 +13,9 @@
     <artifactId>hopaw-tool-webpage</artifactId>
     <version>1.0.0</version>
     <packaging>jar</packaging>
-
+    <properties>
+        <maven.install.skip>true</maven.install.skip>
+    </properties>
     <dependencies>
         <dependency>
             <groupId>com.hopaw.agent</groupId>

@@ -9,6 +9,7 @@ import java.util.List;
 @Mapper
 public interface ChatHistoryMapper {
     List<ChatHistory> findByAgentId(@Param("agentId") Long agentId, @Param("limit") int limit);
+    List<ChatHistory> findBySessionId(@Param("sessionId") String sessionId, @Param("limit") int limit);
     ChatHistory findByAgentIdAndToolCallId(@Param("agentId") Long agentId, @Param("toolCallId") String toolCallId);
 
     List<ChatHistory> findByAgentIdAfterId(@Param("agentId") Long agentId, @Param("afterId") Long afterId);
@@ -22,6 +23,7 @@ public interface ChatHistoryMapper {
     int insertBatch(List<ChatHistory> list);
 
     int deleteByAgentId(@Param("agentId") Long agentId);
+    int deleteBySessionId(@Param("sessionId") String sessionId);
 
     int updateToolCallStatusAndContent(@Param("id") Long id, @Param("toolCallStatus") String toolCallStatus, @Param("content") String content, @Param("toolExecutionTime") Long toolExecutionTime);
 }

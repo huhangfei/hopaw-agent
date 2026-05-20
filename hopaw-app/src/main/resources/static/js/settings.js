@@ -36,7 +36,6 @@ function loadAllSettings() {
             document.getElementById('vectorStorePath').value = settingsCache['vector_store_path'] || '';
             document.getElementById('vectorStoreProfile').value = settingsCache['vector_store_profile'] || 'stable';
             loadMailSettings();
-            loadSearchSettings();
         })
         .catch(function(e) {
             console.error('加载设置失败:', e);
@@ -250,68 +249,6 @@ function testMailConfig() {
             btn.disabled = false;
             btn.textContent = '测试连接';
         });
-}
-
-function loadSearchSettings() {
-    var keys = settingsCache['qianfan_web_search_api_keys'] || '';
-    var container = document.getElementById('searchKeyContainer');
-    container.innerHTML = '';
-    var keyList = keys.split(',').filter(function(k) { return k.trim(); });
-    if (keyList.length === 0) keyList = [''];
-    keyList.forEach(function(key) {
-        addKeyInput(key.trim());
-    });
-    document.getElementById('searchEdition').value = settingsCache['qianfan_web_search_edition'] || 'standard';
-}
-
-function addKeyInput(value) {
-    value = value || '';
-    var container = document.getElementById('searchKeyContainer');
-    var row = document.createElement('div');
-    row.className = 'search-key-row';
-    var input = document.createElement('input');
-    input.type = 'password';
-    input.className = 'settings-input search-key-input';
-    input.value = value;
-    input.placeholder = '请输入千帆API密钥';
-    row.appendChild(input);
-    var btn = document.createElement('button');
-    btn.type = 'button';
-    btn.className = 'btn-remove-key';
-    btn.textContent = '×';
-    btn.onclick = function() { removeKeyInput(this); };
-    row.appendChild(btn);
-    container.appendChild(row);
-}
-
-function removeKeyInput(btn) {
-    var container = document.getElementById('searchKeyContainer');
-    if (container.children.length <= 1) {
-        container.querySelector('input').value = '';
-        return;
-    }
-    btn.parentElement.remove();
-}
-
-function saveSearchSettings() {
-    var inputs = document.querySelectorAll('#searchKeyContainer .search-key-input');
-    var keys = [];
-    inputs.forEach(function(input) {
-        var val = input.value.trim();
-        if (val) keys.push(val);
-    });
-    var saves = [];
-    saves.push(saveConfig('qianfan_web_search_api_keys', keys.join(','), '百度千帆搜索API密钥（多个用逗号隔开）'));
-    saves.push(saveConfig('qianfan_web_search_edition', document.getElementById('searchEdition').value, '搜索版本（standard/lite）'));
-
-    Promise.all(saves).then(function(results) {
-        var allOk = results.every(function(r) { return r; });
-        if (allOk) {
-            showToast('搜索配置保存成功', 'success');
-        } else {
-            showToast('部分配置保存失败', 'error');
-        }
-    });
 }
 
 function saveConfig(key, value, description) {

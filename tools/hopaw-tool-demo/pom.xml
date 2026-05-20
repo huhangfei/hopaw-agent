@@ -17,7 +17,9 @@
 
     <name>hopaw-tool-demo</name>
     <description>独立插件式工具示例，仅依赖契约层，模拟外部工具项目</description>
-
+    <properties>
+        <maven.install.skip>true</maven.install.skip>
+    </properties>
 
     <dependencies>
         <dependency>

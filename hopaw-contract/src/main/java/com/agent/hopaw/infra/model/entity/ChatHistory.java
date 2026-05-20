@@ -5,6 +5,7 @@ import java.time.LocalDateTime;
 public class ChatHistory {
     private Long id;
     private Long agentId;
+    private String sessionId;
     private String role;
     private String messageType;
     private String content;
@@ -58,6 +59,14 @@ public class ChatHistory {
 
     public void setAgentId(Long agentId) {
         this.agentId = agentId;
+    }
+
+    public String getSessionId() {
+        return sessionId;
+    }
+
+    public void setSessionId(String sessionId) {
+        this.sessionId = sessionId;
     }
 
     public String getRole() {
