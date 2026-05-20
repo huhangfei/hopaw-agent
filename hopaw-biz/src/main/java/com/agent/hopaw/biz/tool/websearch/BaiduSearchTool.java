@@ -39,13 +39,15 @@ public class BaiduSearchTool implements AgentTool {
     public BaiduSearchTool(ISysConfigService sysConfigService) {
         this.sysConfigService = sysConfigService;
         sysConfigService.setSensitiveKeys(CONFIG_KEY_API_KEYS);
-        reloadConfig();
     }
 
     @Tool(value={"搜索查询互联网最新网络信息，返回相关的网页标题和摘要内容。","新闻、军事、财经、时事、天气、资料"})
     public String baiduSearch(@P(description = "搜索关键词") String query, @P(description = "最大数，默认5", required = false) Integer maxResults, @P(description = "超时时间（毫秒），默认10000毫秒", required = false) Integer timeout) {
         if (query == null || query.trim().isEmpty()) {
             return "错误: 搜索关键词不能为空";
+        }
+        if(cachedApiKeys.isEmpty()){
+            reloadConfig();
         }
 
         String apiKey = selectKey(cachedApiKeys);

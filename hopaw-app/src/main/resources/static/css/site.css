@@ -213,7 +213,7 @@ header h1 {
     align-items: center;
     gap: 10px;
     height: 38px;
-    padding: 0 12px 0 36px;
+    padding: 0 12px 0 25px;
     font-size: 13px;
     color: #666;
     text-decoration: none;
@@ -270,6 +270,7 @@ header h1 {
     width: auto;
     margin: 0;
     padding: 0;
+    display: flex;
 }
 
 .menu-sidebar.collapsed .menu-parent-btn.active-parent {
