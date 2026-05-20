@@ -32,6 +32,7 @@ public class MailUtil {
 
     public MailUtil(SysConfigService sysConfigService) {
         this.sysConfigService = sysConfigService;
+        this.sysConfigService.setSensitiveKeys( KEY_PASSWORD);
     }
 
     /**
@@ -68,7 +69,7 @@ public class MailUtil {
      * 读取所有配置并转为 Map
      */
     private Map<String, String> loadConfig() {
-        List<SysConfig> configs = sysConfigService.getAll();
+        List<SysConfig> configs = sysConfigService.getByKeys(List.of(KEY_HOST, KEY_PORT, KEY_USERNAME, KEY_PASSWORD, KEY_FROM));
         return configs.stream()
                 .collect(Collectors.toMap(SysConfig::getConfigKey, SysConfig::getConfigValue, (a, b) -> a));
     }

@@ -545,7 +545,7 @@ public class AgentExecutor implements IAgentExecutor {
                 } else if (lastMessageType.equals("thinking")) {
 
                     //发送
-                    AiThinkingMessageInfo aiThinkingMessageInfo = AiThinkingMessageInfo.done(sessionId,requestId, "结束");
+                    AiThinkingMessageInfo aiThinkingMessageInfo = AiThinkingMessageInfo.done(sessionId,requestId, "");
                     aiThinkingMessageInfo.setSessionId(sessionId);
                     messageConsumer.accept(JSON.toJSONString(aiThinkingMessageInfo));
 

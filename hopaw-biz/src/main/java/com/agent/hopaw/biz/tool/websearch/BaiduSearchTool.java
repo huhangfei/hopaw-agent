@@ -1,9 +1,11 @@
 package com.agent.hopaw.biz.tool.websearch;
 
-import com.agent.hopaw.biz.util.QianfanWebSearchUtil;
+import com.agent.hopaw.biz.util.QianFanWebSearchUtil;
 import com.agent.hopaw.infra.model.dto.OptionItem;
 import com.agent.hopaw.infra.model.dto.ToolConfigItem;
 import com.agent.hopaw.infra.model.dto.ValidationRule;
+import com.agent.hopaw.infra.model.entity.SysConfig;
+import com.agent.hopaw.infra.service.ISysConfigService;
 import dev.langchain4j.agent.tool.P;
 import dev.langchain4j.agent.tool.Tool;
 import com.agent.hopaw.infra.tool.AgentTool;
@@ -11,20 +13,33 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
 
+import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.stream.Collectors;
 
 @Component("baiduSearch")
 public class BaiduSearchTool implements AgentTool {
-    
+    private static final String CONFIG_PREFIX = "tool.baiduSearch.";
+    private static final String CONFIG_KEY_API_KEYS = CONFIG_PREFIX + "apiKeys";
+    private static final String CONFIG_KEY_EDITION = CONFIG_PREFIX + "edition";
     private static final Logger log = LoggerFactory.getLogger(BaiduSearchTool.class);
+    private final AtomicInteger keyIndex = new AtomicInteger(0);
+
+    // 缓存的配置
+    private volatile List<String> cachedApiKeys = Collections.emptyList();
+    private volatile String cachedEdition = null;
 
     private static final int TIMEOUT_MS = 10000;
     private static final int MAX_RESULTS = 5;
 
-    private final QianfanWebSearchUtil qianfanWebSearchUtil;
+    private final ISysConfigService sysConfigService;
 
-    public BaiduSearchTool(QianfanWebSearchUtil qianfanWebSearchUtil) {
-        this.qianfanWebSearchUtil = qianfanWebSearchUtil;
+    public BaiduSearchTool(ISysConfigService sysConfigService) {
+        this.sysConfigService = sysConfigService;
+        sysConfigService.setSensitiveKeys(CONFIG_KEY_API_KEYS);
+        reloadConfig();
     }
 
     @Tool(value={"搜索查询互联网最新网络信息，返回相关的网页标题和摘要内容。","新闻、军事、财经、时事、天气、资料"})
@@ -33,11 +48,17 @@ public class BaiduSearchTool implements AgentTool {
             return "错误: 搜索关键词不能为空";
         }
 
+        String apiKey = selectKey(cachedApiKeys);
+        if(apiKey == null) {
+            return "错误: 没有配置百度千帆 API 密钥";
+        }
+        String edition = cachedEdition;
+
         int mr = maxResults != null ? maxResults : MAX_RESULTS;
         int to = timeout != null ? timeout : TIMEOUT_MS;
 
         try {
-            String result = qianfanWebSearchUtil.search(query, mr, to);
+            String result = QianFanWebSearchUtil.search(apiKey, query, mr, to, edition);
             if (result != null) {
                 return result;
             }
@@ -83,6 +104,40 @@ public class BaiduSearchTool implements AgentTool {
     @Override
     public void onConfigChanged() {
         log.info("收到配置变更通知，重新加载百度搜索工具配置");
-        qianfanWebSearchUtil.reloadConfig();
+        reloadConfig();
+    }
+    /**
+     * 重新加载配置
+     */
+    public void reloadConfig() {
+        this.cachedApiKeys = loadApiKeys();
+        this.cachedEdition = loadEdition();
+        // 重置密钥索引
+        this.keyIndex.set(0);
+        log.info("百度搜索工具配置已重载");
+    }
+
+    private List<String> loadApiKeys() {
+        SysConfig config = sysConfigService.getByKey(CONFIG_KEY_API_KEYS);
+        if (config == null || config.getConfigValue() == null || config.getConfigValue().isBlank()) {
+            return Collections.emptyList();
+        }
+        return Arrays.stream(config.getConfigValue().split(","))
+                .map(String::trim)
+                .filter(s -> !s.isEmpty())
+                .collect(Collectors.toList());
+    }
+
+    private String loadEdition() {
+        SysConfig config = sysConfigService.getByKey(CONFIG_KEY_EDITION);
+        if (config != null && config.getConfigValue() != null && !config.getConfigValue().isBlank()) {
+            return config.getConfigValue();
+        }
+        return null;
+    }
+    private String selectKey(List<String> keys) {
+        if (keys.isEmpty()) return null;
+        int index = keyIndex.getAndUpdate(i -> (i + 1) % keys.size());
+        return keys.get(index);
     }
 }

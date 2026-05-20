@@ -12,6 +12,8 @@ public interface SysConfigMapper {
 
     SysConfig findByKey(@Param("key") String key);
 
+    List<SysConfig> findByKeys(@Param("keys") List<String> keys);
+
     int insert(SysConfig sysConfig);
 
     int update(SysConfig sysConfig);

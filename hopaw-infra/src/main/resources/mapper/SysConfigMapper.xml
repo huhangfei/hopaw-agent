@@ -23,6 +23,15 @@
         WHERE config_key = #{key}
     </select>
 
+    <select id="findByKeys" resultMap="SysConfigResultMap">
+        SELECT id, config_key, config_value, description, create_time, update_time
+        FROM sys_config
+        WHERE config_key IN
+        <foreach collection="keys" item="key" open="(" separator="," close=")">
+            #{key}
+        </foreach>
+    </select>
+
     <insert id="insert" parameterType="com.agent.hopaw.infra.model.entity.SysConfig">
         INSERT INTO sys_config (config_key, config_value, description)
         VALUES (#{configKey}, #{configValue}, #{description})
