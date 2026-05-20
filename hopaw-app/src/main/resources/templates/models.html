@@ -1,92 +1,91 @@
 <!DOCTYPE html>
-<html xmlns:th="http://www.thymeleaf.org">
-<head th:replace="fragments/layout::head('模型管理 - HoPaw', 'models.css')"></head>
+<html xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+      xmlns:th="http://www.thymeleaf.org"
+      layout:decorate="~{layouts/default}">
+<head>
+    <title>模型管理 - HoPaw</title>
+</head>
 <body>
-    <header th:replace="fragments/layout::header('🤖 HoPaw - 模型管理')"></header>
-    
-    <div class="main-container">
-        <nav th:replace="fragments/layout::menuSidebar('models')"></nav>
-        
-        <main class="models-container">
-            <div class="models-header">
-                <h2>AI 模型管理</h2>
-                <button class="btn-add-provider" onclick="showAddProviderModal()">
+<div layout:fragment="pageTitle">🤖 HoPaw - 模型管理</div>
+
+<main layout:fragment="content" class="models-container">
+    <div class="models-header">
+        <h2>AI 模型管理</h2>
+        <button class="btn-add-provider" onclick="showAddProviderModal()">
+            <svg viewBox="0 0 24 24" fill="currentColor"><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/></svg>
+            添加提供商
+        </button>
+    </div>
+
+    <div class="providers-grid" id="providersGrid">
+        <div th:each="provider : ${providers}" class="provider-card" th:attr="data-id=${provider.id}">
+            <div class="provider-card-header">
+                <img th:src="${provider.icon}" alt="icon" class="provider-icon" onerror="this.style.display='none'">
+                <div class="provider-header-info">
+                    <div class="provider-name" th:text="${provider.name}"></div>
+                    <div class="provider-code" th:text="${provider.provider}"></div>
+                </div>
+            </div>
+            <div class="provider-card-body">
+                <div class="provider-url" th:text="${provider.url}"></div>
+                <div class="model-count">
+                    <span class="model-count-label">模型数量：</span>
+                    <span class="model-count-value" th:attr="data-provider-id=${provider.id}">加载中...</span>
+                </div>
+            </div>
+            <div class="provider-card-footer">
+                <div class="provider-actions-left">
+                    <button class="btn-config" th:attr="onclick=|selectProvider(this)|" title="模型配置">
+                        <svg viewBox="0 0 24 24" fill="currentColor"><path d="M19.14 12.94c.04-.31.06-.63.06-.94 0-.31-.02-.63-.06-.94l2.03-1.58c.18-.14.23-.41.12-.61l-1.92-3.32c-.12-.22-.37-.29-.59-.22l-2.39.96c-.5-.38-1.03-.7-1.62-.94l-.36-2.54c-.04-.24-.24-.41-.48-.41h-3.84c-.24 0-.43.17-.47.41l-.36 2.54c-.59.24-1.13.57-1.62.94l-2.39-.96c-.22-.08-.47 0-.59.22L2.74 8.87c-.12.21-.08.47.12.61l2.03 1.58c-.04.31-.06.63-.06.94s.02.63.06.94l-2.03 1.58c-.18.14-.23.41-.12.61l1.92 3.32c.12.22.37.29.59.22l2.39-.96c.5.38 1.03.7 1.62.94l.36 2.54c.05.24.24.41.48.41h3.84c.24 0 .44-.17.47-.41l.36-2.54c.59-.24 1.13-.56 1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32c.12-.22.07-.47-.12-.61l-2.01-1.58zM12 15.6c-1.98 0-3.6-1.62-3.6-3.6s1.62-3.6 3.6-3.6 3.6 1.62 3.6 3.6-1.62 3.6-3.6 3.6z"/></svg>
+                        模型配置
+                    </button>
+                </div>
+                <div class="provider-actions">
+                    <button class="btn-icon btn-edit-provider" th:attr="onclick=|event.stopPropagation();showEditProviderModal(${provider.id})|" title="编辑">
+                        <svg viewBox="0 0 24 24" fill="currentColor"><path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/></svg>
+                    </button>
+                    <button class="btn-icon btn-delete-provider" th:if="${provider.type != 'builtin'}" th:attr="onclick=|event.stopPropagation();deleteProvider(${provider.id})|" title="删除">
+                        <svg viewBox="0 0 24 24" fill="currentColor"><path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/></svg>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div th:if="${providers.isEmpty()}" class="empty-state">
+        <p>暂无模型提供商，点击"添加提供商"按钮开始添加</p>
+    </div>
+
+    <div class="modal-overlay" id="modelsModal">
+        <div class="modal modal-wide">
+            <div class="modal-header">
+                <h3 id="modelsModalTitle">模型列表</h3>
+                <button class="modal-close" onclick="closeModelsModal()">&times;</button>
+            </div>
+            <div class="models-modal-toolbar">
+                <button class="btn-add-model" onclick="showAddModelModal()">
                     <svg viewBox="0 0 24 24" fill="currentColor"><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/></svg>
-                    添加提供商
+                    添加模型
                 </button>
             </div>
-            
-            <div class="providers-grid" id="providersGrid">
-                <div th:each="provider : ${providers}" class="provider-card" th:attr="data-id=${provider.id}">
-                    <div class="provider-card-header">
-                        <img th:src="${provider.icon}" alt="icon" class="provider-icon" onerror="this.style.display='none'">
-                        <div class="provider-header-info">
-                            <div class="provider-name" th:text="${provider.name}"></div>
-                            <div class="provider-code" th:text="${provider.provider}"></div>
-                        </div>
-                    </div>
-                    <div class="provider-card-body">
-                        <div class="provider-url" th:text="${provider.url}"></div>
-                        <div class="model-count">
-                            <span class="model-count-label">模型数量：</span>
-                            <span class="model-count-value" th:attr="data-provider-id=${provider.id}">加载中...</span>
-                        </div>
-                    </div>
-                    <div class="provider-card-footer">
-                        <div class="provider-actions-left">
-                            <button class="btn-config" th:attr="onclick=|selectProvider(this)|" title="模型配置">
-                                <svg viewBox="0 0 24 24" fill="currentColor"><path d="M19.14 12.94c.04-.31.06-.63.06-.94 0-.31-.02-.63-.06-.94l2.03-1.58c.18-.14.23-.41.12-.61l-1.92-3.32c-.12-.22-.37-.29-.59-.22l-2.39.96c-.5-.38-1.03-.7-1.62-.94l-.36-2.54c-.04-.24-.24-.41-.48-.41h-3.84c-.24 0-.43.17-.47.41l-.36 2.54c-.59.24-1.13.57-1.62.94l-2.39-.96c-.22-.08-.47 0-.59.22L2.74 8.87c-.12.21-.08.47.12.61l2.03 1.58c-.04.31-.06.63-.06.94s.02.63.06.94l-2.03 1.58c-.18.14-.23.41-.12.61l1.92 3.32c.12.22.37.29.59.22l2.39-.96c.5.38 1.03.7 1.62.94l.36 2.54c.05.24.24.41.48.41h3.84c.24 0 .44-.17.47-.41l.36-2.54c.59-.24 1.13-.56 1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32c.12-.22.07-.47-.12-.61l-2.01-1.58zM12 15.6c-1.98 0-3.6-1.62-3.6-3.6s1.62-3.6 3.6-3.6 3.6 1.62 3.6 3.6-1.62 3.6-3.6 3.6z"/></svg>
-                                模型配置
-                            </button>
-                        </div>
-                        <div class="provider-actions">
-                            <button class="btn-icon btn-edit-provider" th:attr="onclick=|event.stopPropagation();showEditProviderModal(${provider.id})|" title="编辑">
-                                <svg viewBox="0 0 24 24" fill="currentColor"><path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/></svg>
-                            </button>
-                            <button class="btn-icon btn-delete-provider" th:if="${provider.type != 'builtin'}" th:attr="onclick=|event.stopPropagation();deleteProvider(${provider.id})|" title="删除">
-                                <svg viewBox="0 0 24 24" fill="currentColor"><path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/></svg>
-                            </button>
-                        </div>
-                    </div>
+            <div class="models-table-scroll">
+                <table class="models-table" id="modelsTable">
+                    <thead>
+                        <tr>
+                            <th>模型名称</th>
+                            <th>能力</th>
+                            <th>已验证</th>
+                            <th>创建时间</th>
+                            <th>操作</th>
+                        </tr>
+                    </thead>
+                    <tbody id="modelsTableBody">
+                    </tbody>
+                </table>
+                <div class="empty-state" id="modelsEmptyState" style="display: none;">
+                    <p>该提供商下暂无模型，点击"添加模型"按钮开始添加</p>
                 </div>
             </div>
-            <div th:if="${providers.isEmpty()}" class="empty-state">
-                <p>暂无模型提供商，点击"添加提供商"按钮开始添加</p>
-            </div>
-            
-            <div class="modal-overlay" id="modelsModal">
-                <div class="modal modal-wide">
-                    <div class="modal-header">
-                        <h3 id="modelsModalTitle">模型列表</h3>
-                        <button class="modal-close" onclick="closeModelsModal()">&times;</button>
-                    </div>
-                    <div class="models-modal-toolbar">
-                        <button class="btn-add-model" onclick="showAddModelModal()">
-                            <svg viewBox="0 0 24 24" fill="currentColor"><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/></svg>
-                            添加模型
-                        </button>
-                    </div>
-                    <div class="models-table-scroll">
-                        <table class="models-table" id="modelsTable">
-                            <thead>
-                                <tr>
-                                    <th>模型名称</th>
-                                    <th>能力</th>
-                                    <th>已验证</th>
-                                    <th>创建时间</th>
-                                    <th>操作</th>
-                                </tr>
-                            </thead>
-                            <tbody id="modelsTableBody">
-                            </tbody>
-                        </table>
-                        <div class="empty-state" id="modelsEmptyState" style="display: none;">
-                            <p>该提供商下暂无模型，点击"添加模型"按钮开始添加</p>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </main>
+        </div>
     </div>
 
     <div class="modal-overlay" id="providerModal">
@@ -178,9 +177,14 @@
             </div>
         </div>
     </div>
+</main>
 
-    <div th:replace="fragments/layout::toastContainer"></div>
+<th:block layout:fragment="extraCss">
+    <link rel="stylesheet" th:href="@{/css/page/models.css}">
+</th:block>
 
-    <th:block th:replace="fragments/layout::commonScripts('models.js')"></th:block>
+<th:block layout:fragment="extraScripts">
+    <script th:src="@{/js/models.js}"></script>
+</th:block>
 </body>
 </html>

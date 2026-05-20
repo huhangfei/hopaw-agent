@@ -1,127 +1,131 @@
 <!DOCTYPE html>
-<html xmlns:th="http://www.thymeleaf.org">
-<head th:replace="fragments/layout::head('设置 - HoPaw', 'settings.css')"></head>
+<html xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+      xmlns:th="http://www.thymeleaf.org"
+      layout:decorate="~{layouts/default}">
+<head>
+    <title>设置 - HoPaw</title>
+</head>
 <body>
-    <header th:replace="fragments/layout::header('🤖 HoPaw - 设置')"></header>
+<div layout:fragment="pageTitle">🤖 HoPaw - 设置</div>
 
-    <div class="main-container">
-        <nav th:replace="fragments/layout::menuSidebar('settings')"></nav>
+<main layout:fragment="content" class="settings-content">
+    <h2 style="font-size:20px;color:#333;margin-bottom:16px;">系统设置</h2>
 
-        <main class="settings-content">
-            <h2 style="font-size:20px;color:#333;margin-bottom:16px;">系统设置</h2>
-
-            <div class="settings-tabs">
-                <button class="settings-tab active" data-tab="memory" onclick="switchTab('memory')">记忆设置</button>
-                <button class="settings-tab" data-tab="mail" onclick="switchTab('mail')">邮件配置</button>
-            </div>
-
-            <div class="settings-panel active" id="tab-memory">
-                <div class="settings-row">
-                    <div class="settings-form">
-                        <div class="form-group">
-                            <label>定时任务状态</label>
-                            <div class="task-status-row">
-                                <span class="task-status-badge" id="memoryTaskStatus">检测中...</span>
-                                <button class="btn-toggle-task" id="memoryTaskToggleBtn" onclick="toggleMemoryTask()">启用</button>
-                            </div>
-                        </div>
-
-                        <div class="form-group">
-                            <label>记忆整理使用模型</label>
-                            <div class="flex-container">
-                                <select id="memoryProviderSelect" class="model-select">
-                                    <option value="">选择提供商</option>
-                                </select>
-                                <select id="memoryModelSelect" class="model-select">
-                                    <option value="">选择模型</option>
-                                </select>
-                            </div>
-                        </div>
-
-                        <div class="form-group">
-                            <label for="memoryPrompt">记忆整理提示词</label>
-                            <textarea id="memoryPrompt" class="memory-prompt-input" rows="8" placeholder="自定义记忆整理的提示词，留空则使用默认提示词"></textarea>
-                        </div>
-
-                        <div class="form-row">
-                            <div class="form-group">
-                                <label for="taskRecordsArrangeTimeoutHour">近期任务记忆过期时间（小时）</label>
-                                <input type="number" id="taskRecordsArrangeTimeoutHour" class="settings-input" min="1" placeholder="48">
-                            </div>
-                            <div class="form-group">
-                                <label for="taskRecordsClearTimeoutDay">任务记忆过期归档时间（天）</label>
-                                <input type="number" id="taskRecordsClearTimeoutDay" class="settings-input" min="1" placeholder="7">
-                            </div>
-                        </div>
-
-                        <div class="settings-actions">
-                            <button class="btn-save-settings" onclick="saveSettings()">保存设置</button>
-                        </div>
-                    </div>
-
-                    <div class="settings-form">
-                        <h3 style="font-size:15px;color:#333;margin:0 0 16px 0;">向量存储配置</h3>
-
-                        <div class="restart-notice">
-                            <p>向量存储设置修改后需重启应用使配置生效。</p>
-                        </div>
-
-                        <div class="form-group">
-                            <label for="vectorStorePath">向量持久化路径</label>
-                            <input type="text" id="vectorStorePath" class="settings-input" placeholder="./vector_store">
-                            <p class="form-hint">向量索引文件的存储目录，默认 ./vector_store</p>
-                        </div>
-
-                        <div class="form-group">
-                            <label>向量存储预设</label>
-                            <select id="vectorStoreProfile" class="settings-input">
-                                <option value="stable">稳定 - 默认，均衡精度与性能</option>
-                                <option value="precision">精准 - 召回率最优，构建较慢</option>
-                                <option value="speed">极速 - 构建最快，内存更省</option>
-                            </select>
-                            <p class="form-hint">精准：maxDegree=32, 速度慢但搜索准。极速：maxDegree=8, 快但召回有所下降</p>
-                        </div>
-
-                        <div class="settings-actions">
-                            <button class="btn-save-settings" onclick="saveVectorStoreSettings()">保存设置</button>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <div class="settings-panel" id="tab-mail">
-                <div class="settings-form">
-                    <div class="form-group">
-                        <label for="mailHost">SMTP 服务器</label>
-                        <input type="text" id="mailHost" class="settings-input" placeholder="smtp.example.com">
-                    </div>
-                    <div class="form-group">
-                        <label for="mailPort">端口</label>
-                        <input type="number" id="mailPort" class="settings-input" placeholder="587">
-                    </div>
-                    <div class="form-group">
-                        <label for="mailUsername">用户名</label>
-                        <input type="text" id="mailUsername" class="settings-input" placeholder="your@example.com">
-                    </div>
-                    <div class="form-group">
-                        <label for="mailPassword">密码/授权码</label>
-                        <input type="password" id="mailPassword" class="settings-input" placeholder="SMTP 密码或授权码">
-                    </div>
-                    <div class="form-group">
-                        <label for="mailFrom">发件人地址</label>
-                        <input type="text" id="mailFrom" class="settings-input" placeholder="noreply@example.com（可选）">
-                    </div>
-                    <div class="settings-actions">
-                        <button class="btn-save-settings" onclick="saveMailSettings()">保存设置</button>
-                        <button class="btn-test-mail" onclick="testMailConfig()">测试连接</button>
-                    </div>
-                </div>
-            </div>
-        </main>
+    <div class="settings-tabs">
+        <button class="settings-tab active" data-tab="memory" onclick="switchTab('memory')">记忆设置</button>
+        <button class="settings-tab" data-tab="mail" onclick="switchTab('mail')">邮件配置</button>
     </div>
 
-    <div th:replace="fragments/layout::toastContainer"></div>
+    <div class="settings-panel active" id="tab-memory">
+        <div class="settings-row">
+            <div class="settings-form">
+                <div class="form-group">
+                    <label>定时任务状态</label>
+                    <div class="task-status-row">
+                        <span class="task-status-badge" id="memoryTaskStatus">检测中...</span>
+                        <button class="btn-toggle-task" id="memoryTaskToggleBtn" onclick="toggleMemoryTask()">启用</button>
+                    </div>
+                </div>
 
-    <th:block th:replace="fragments/layout::commonScripts('settings.js')"></th:block>
+                <div class="form-group">
+                    <label>记忆整理使用模型</label>
+                    <div class="flex-container">
+                        <select id="memoryProviderSelect" class="model-select">
+                            <option value="">选择提供商</option>
+                        </select>
+                        <select id="memoryModelSelect" class="model-select">
+                            <option value="">选择模型</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label for="memoryPrompt">记忆整理提示词</label>
+                    <textarea id="memoryPrompt" class="memory-prompt-input" rows="8" placeholder="自定义记忆整理的提示词，留空则使用默认提示词"></textarea>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="taskRecordsArrangeTimeoutHour">近期任务记忆过期时间（小时）</label>
+                        <input type="number" id="taskRecordsArrangeTimeoutHour" class="settings-input" min="1" placeholder="48">
+                    </div>
+                    <div class="form-group">
+                        <label for="taskRecordsClearTimeoutDay">任务记忆过期归档时间（天）</label>
+                        <input type="number" id="taskRecordsClearTimeoutDay" class="settings-input" min="1" placeholder="7">
+                    </div>
+                </div>
+
+                <div class="settings-actions">
+                    <button class="btn-save-settings" onclick="saveSettings()">保存设置</button>
+                </div>
+            </div>
+
+            <div class="settings-form">
+                <h3 style="font-size:15px;color:#333;margin:0 0 16px 0;">向量存储配置</h3>
+
+                <div class="restart-notice">
+                    <p>向量存储设置修改后需重启应用使配置生效。</p>
+                </div>
+
+                <div class="form-group">
+                    <label for="vectorStorePath">向量持久化路径</label>
+                    <input type="text" id="vectorStorePath" class="settings-input" placeholder="./vector_store">
+                    <p class="form-hint">向量索引文件的存储目录，默认 ./vector_store</p>
+                </div>
+
+                <div class="form-group">
+                    <label>向量存储预设</label>
+                    <select id="vectorStoreProfile" class="settings-input">
+                        <option value="stable">稳定 - 默认，均衡精度与性能</option>
+                        <option value="precision">精准 - 召回率最优，构建较慢</option>
+                        <option value="speed">极速 - 构建最快，内存更省</option>
+                    </select>
+                    <p class="form-hint">精准：maxDegree=32, 速度慢但搜索准。极速：maxDegree=8, 快但召回有所下降</p>
+                </div>
+
+                <div class="settings-actions">
+                    <button class="btn-save-settings" onclick="saveVectorStoreSettings()">保存设置</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="settings-panel" id="tab-mail">
+        <div class="settings-form">
+            <div class="form-group">
+                <label for="mailHost">SMTP 服务器</label>
+                <input type="text" id="mailHost" class="settings-input" placeholder="smtp.example.com">
+            </div>
+            <div class="form-group">
+                <label for="mailPort">端口</label>
+                <input type="number" id="mailPort" class="settings-input" placeholder="587">
+            </div>
+            <div class="form-group">
+                <label for="mailUsername">用户名</label>
+                <input type="text" id="mailUsername" class="settings-input" placeholder="your@example.com">
+            </div>
+            <div class="form-group">
+                <label for="mailPassword">密码/授权码</label>
+                <input type="password" id="mailPassword" class="settings-input" placeholder="SMTP 密码或授权码">
+            </div>
+            <div class="form-group">
+                <label for="mailFrom">发件人地址</label>
+                <input type="text" id="mailFrom" class="settings-input" placeholder="noreply@example.com（可选）">
+            </div>
+            <div class="settings-actions">
+                <button class="btn-save-settings" onclick="saveMailSettings()">保存设置</button>
+                <button class="btn-test-mail" onclick="testMailConfig()">测试连接</button>
+            </div>
+        </div>
+    </div>
+</main>
+
+<th:block layout:fragment="extraCss">
+    <link rel="stylesheet" th:href="@{/css/page/settings.css}">
+</th:block>
+
+<th:block layout:fragment="extraScripts">
+    <script th:src="@{/js/settings.js}"></script>
+</th:block>
 </body>
 </html>

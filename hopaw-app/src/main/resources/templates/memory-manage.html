@@ -1,41 +1,49 @@
 <!DOCTYPE html>
-<html xmlns:th="http://www.thymeleaf.org">
-<head th:replace="fragments/layout::head('记忆', 'memory-manage.css')"></head>
+<html xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+      xmlns:th="http://www.thymeleaf.org"
+      layout:decorate="~{layouts/default}">
+<head>
+    <title>记忆管理 - HoPaw</title>
+</head>
 <body>
-    <header th:replace="fragments/layout::header('记忆管理')"></header>
-    <div class="main-container">
-        <nav th:replace="fragments/layout::menuSidebar('memory-manage')"></nav>
-        <main class="memory-manage-container">
-            <div class="toolbar">
-                <div class="toolbar-group">
-                    <label>智能体</label>
-                    <select id="agentSelect">
-                        <option value="">请选择智能体</option>
-                        <option th:each="agent : ${agents}" th:value="${agent.id}" th:text="${agent.name}"></option>
-                    </select>
-                </div>
-                <button class="btn btn-primary" onclick="loadTree()">查询</button>
-            </div>
-            <div class="memory-panels">
-                <div class="tree-panel">
-                    <div class="panel-header">
-                        记忆树
-                        <button class="btn btn-sm btn-primary" onclick="addRootMemory()">+ 添加记忆</button>
-                    </div>
-                    <div class="tree-container" id="treeContainer">
-                        <div class="empty-state">请选择智能体并点击查询</div>
-                    </div>
-                </div>
-                <div class="editor-panel">
-                    <div class="panel-header">记忆详情</div>
-                    <div class="editor-content" id="editorContent">
-                        <div class="empty-state">请在左侧选择一条记忆</div>
-                    </div>
-                </div>
-            </div>
-        </main>
+<div layout:fragment="pageTitle">🤖 HoPaw - 记忆管理</div>
+
+<main layout:fragment="content" class="memory-manage-container">
+    <div class="toolbar">
+        <div class="toolbar-group">
+            <label>智能体</label>
+            <select id="agentSelect">
+                <option value="">请选择智能体</option>
+                <option th:each="agent : ${agents}" th:value="${agent.id}" th:text="${agent.name}"></option>
+            </select>
+        </div>
+        <button class="btn btn-primary" onclick="loadTree()">查询</button>
     </div>
-    <div th:replace="fragments/layout::toastContainer"></div>
-    <th:block th:replace="fragments/layout::commonScripts('memory-manage.js')"></th:block>
+    <div class="memory-panels">
+        <div class="tree-panel">
+            <div class="panel-header">
+                记忆树
+                <button class="btn btn-sm btn-primary" onclick="addRootMemory()">+ 添加记忆</button>
+            </div>
+            <div class="tree-container" id="treeContainer">
+                <div class="empty-state">请选择智能体并点击查询</div>
+            </div>
+        </div>
+        <div class="editor-panel">
+            <div class="panel-header">记忆详情</div>
+            <div class="editor-content" id="editorContent">
+                <div class="empty-state">请在左侧选择一条记忆</div>
+            </div>
+        </div>
+    </div>
+</main>
+
+<th:block layout:fragment="extraCss">
+    <link rel="stylesheet" th:href="@{/css/page/memory-manage.css}">
+</th:block>
+
+<th:block layout:fragment="extraScripts">
+    <script th:src="@{/js/memory-manage.js}"></script>
+</th:block>
 </body>
 </html>

@@ -1,134 +1,139 @@
 <!DOCTYPE html>
-<html xmlns:th="http://www.thymeleaf.org">
-<head th:replace="fragments/layout::head('工具管理 - HoPaw', 'tools.css')"></head>
+<html xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+      xmlns:th="http://www.thymeleaf.org"
+      layout:decorate="~{layouts/default}">
+<head>
+    <title>工具管理 - HoPaw</title>
+</head>
 <body>
-    <header th:replace="fragments/layout::header('🤖 HoPaw - 工具管理')"></header>
+<div layout:fragment="pageTitle">🤖 HoPaw - 工具管理</div>
 
-    <div class="main-container">
-        <nav th:replace="fragments/layout::menuSidebar('tools')"></nav>
-
-        <div class="tools-split">
-            <div class="tools-list-panel">
-                <div class="tools-list-header">
-                    <h3>工具集列表</h3>
+<div class="tools-split" layout:fragment="content">
+    <div class="tools-list-panel">
+        <div class="tools-list-header">
+            <h3>工具集列表</h3>
+        </div>
+        <div class="tools-list-body">
+            <div th:each="toolSet, iter : ${toolSets}"
+             class="tool-list-item"
+             th:classappend="${iter.first ? 'active' : ''}"
+             th:attr="data-index=${iter.index}"
+             onclick="selectToolSet(this)">
+                <div class="tool-list-icon">
+                    <th:block th:if="${toolSet.iconIsSvgCode()}">
+                        <span th:utext="${toolSet.icon}"></span>
+                    </th:block>
+                    <th:block th:unless="${toolSet.iconIsSvgCode()}">
+                        <img th:src="@{/icons/tools/__${toolSet.icon}__}" alt="icon" onerror="this.style.display='none'">
+                    </th:block>
                 </div>
-                <div class="tools-list-body">
-                    <div th:each="toolSet, iter : ${toolSets}"
-                     class="tool-list-item"
-                     th:classappend="${iter.first ? 'active' : ''}"
-                     th:attr="data-index=${iter.index}"
-                     onclick="selectToolSet(this)">
-                        <div class="tool-list-icon">
-                            <th:block th:if="${toolSet.iconIsSvgCode()}">
-                                <span th:utext="${toolSet.icon}"></span>
-                            </th:block>
-                            <th:block th:unless="${toolSet.iconIsSvgCode()}">
-                                <img th:src="@{/icons/tools/__${toolSet.icon}__}" alt="icon" onerror="this.style.display='none'">
-                            </th:block>
-                        </div>
-                        <div class="tool-list-info">
-                            <div class="tool-list-name"><span th:text="${toolSet.name}"></span><span class="tool-list-source-badge" th:classappend="${toolSet.source.code == 'built_in' ? 'source-builtin' : 'source-plugin'}" th:text="${toolSet.source.description}"></span></div>
-                            <div class="tool-list-desc" th:text="${toolSet.description}"></div>
-                            <div class="tool-list-meta">
-                                <span class="tool-list-count" th:text="|${#lists.size(toolSet.tools)} 个工具方法|"></span>
-                                <span class="tool-list-version" th:if="${toolSet.version != null and !toolSet.version.isEmpty()}" th:text="|v${toolSet.version}|"></span>
-                            </div>
-                        </div>
-                    </div>
-                    <div th:if="${#lists.isEmpty(toolSets)}" class="tools-list-empty">
-                        暂无工具数据
+                <div class="tool-list-info">
+                    <div class="tool-list-name"><span th:text="${toolSet.name}"></span><span class="tool-list-source-badge" th:classappend="${toolSet.source.code == 'built_in' ? 'source-builtin' : 'source-plugin'}" th:text="${toolSet.source.description}"></span></div>
+                    <div class="tool-list-desc" th:text="${toolSet.description}"></div>
+                    <div class="tool-list-meta">
+                        <span class="tool-list-count" th:text="|${#lists.size(toolSet.tools)} 个工具方法|"></span>
+                        <span class="tool-list-version" th:if="${toolSet.version != null and !toolSet.version.isEmpty()}" th:text="|v${toolSet.version}|"></span>
                     </div>
                 </div>
             </div>
-
-            <div class="tools-detail-panel">
-                <div th:each="toolSet, iter : ${toolSets}"
-                     class="tool-detail"
-                     th:classappend="${iter.first ? 'active' : ''}"
-                     th:attr="data-index=${iter.index}">
-                    <div class="detail-header">
-                        <div class="detail-header-icon">
-                            <th:block th:if="${toolSet.iconIsSvgCode()}">
-                                <span th:utext="${toolSet.icon}"></span>
-                            </th:block>
-                            <th:block th:unless="${toolSet.iconIsSvgCode()}">
-                                <img th:src="@{/icons/tools/__${toolSet.icon}__}" alt="icon" onerror="this.style.display='none'">
-                            </th:block>
-                        </div>
-                        <div class="detail-header-info">
-                            <div class="detail-name" th:text="${toolSet.name}"></div>
-                            <div class="detail-desc" th:text="${toolSet.description}"></div>
-                        </div>
-                        <span class="detail-count-badge" th:if="${not #lists.isEmpty(toolSet.tools)}" th:text="|${#lists.size(toolSet.tools)} 个方法|"></span>
-                        <button th:if="${toolSet.hasConfigItems}" th:attr="onclick=|location.href='/tool-config/${toolSet.name}'|" class="btn-config" title="配置此工具">配置</button>
-                        <button class="btn-unload-plugin" th:if="${toolSet.source.code == 'plugin'}" th:attr="data-jar=${toolSet.jarFileName}" onclick="uninstallPlugin(this)" title="卸载此插件">卸载</button>
-                    </div>
-
-                    <div class="detail-meta">
-                        <span class="detail-meta-label">来源</span>
-                        <span class="detail-meta-badge" th:classappend="${toolSet.source.code == 'built_in' ? 'source-builtin' : 'source-plugin'}" th:text="${toolSet.source.description}"></span>
-                        <th:block th:if="${toolSet.keyword != null and !toolSet.keyword.isEmpty()}">
-                            <span class="detail-meta-label">关键词</span>
-                            <span class="detail-meta-tag" th:text="${toolSet.keyword}"></span>
-                        </th:block>
-                        <th:block th:if="${toolSet.version != null and !toolSet.version.isEmpty()}">
-                            <span class="detail-meta-label">版本</span>
-                            <span class="detail-meta-value" th:text="${toolSet.version}"></span>
-                        </th:block>
-                        <th:block th:if="${toolSet.author != null and !toolSet.author.isEmpty()}">
-                            <span class="detail-meta-label">作者</span>
-                            <span class="detail-meta-value" th:text="${toolSet.author}"></span>
-                        </th:block>
-                        <th:block th:if="${toolSet.url != null and !toolSet.url.isEmpty()}">
-                            <span class="detail-meta-label">地址</span>
-                            <a class="detail-meta-link" th:href="${toolSet.url}" target="_blank" rel="noopener" th:text="${toolSet.url}"></a>
-                        </th:block>
-                    </div>
-
-                    <div class="detail-body" th:if="${not #lists.isEmpty(toolSet.tools)}">
-                        <div th:each="tool : ${toolSet.tools}" class="detail-tool-item">
-                            <div class="detail-tool-header">
-                                <span class="detail-tool-name" th:text="${tool.name}"></span>
-                                <span class="detail-tool-desc" th:text="${tool.description}"></span>
-                            </div>
-                            <div th:if="${not #lists.isEmpty(tool.parameters)}" class="detail-tool-params">
-                                <table class="detail-param-table">
-                                    <thead>
-                                        <tr>
-                                            <th>参数名</th>
-                                            <th>类型</th>
-                                            <th>说明</th>
-                                            <th>必填</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        <tr th:each="p : ${tool.parameters}">
-                                            <td class="dp-name" th:text="${p.name}"></td>
-                                            <td class="dp-type" th:text="${p.type}"></td>
-                                            <td class="dp-desc" th:text="${p.description}"></td>
-                                            <td class="dp-required">
-                                                <span th:if="${p.required}" class="tag-required">是</span>
-                                                <span th:unless="${p.required}" class="tag-optional">否</span>
-                                            </td>
-                                        </tr>
-                                    </tbody>
-                                </table>
-                            </div>
-                            <div th:if="${#lists.isEmpty(tool.parameters)}" class="detail-no-params">
-                                无参数
-                            </div>
-                        </div>
-                    </div>
-
-                    <div th:if="${#lists.isEmpty(toolSet.tools)}" class="detail-empty-state">
-                        该工具集下没有工具方法
-                    </div>
-                </div>
+            <div th:if="${#lists.isEmpty(toolSets)}" class="tools-list-empty">
+                暂无工具数据
             </div>
         </div>
     </div>
 
-    <div th:replace="fragments/layout::toastContainer"></div>
-    <th:block th:replace="fragments/layout::commonScripts('tools.js')"></th:block>
+    <div class="tools-detail-panel">
+        <div th:each="toolSet, iter : ${toolSets}"
+             class="tool-detail"
+             th:classappend="${iter.first ? 'active' : ''}"
+             th:attr="data-index=${iter.index}">
+            <div class="detail-header">
+                <div class="detail-header-icon">
+                    <th:block th:if="${toolSet.iconIsSvgCode()}">
+                        <span th:utext="${toolSet.icon}"></span>
+                    </th:block>
+                    <th:block th:unless="${toolSet.iconIsSvgCode()}">
+                        <img th:src="@{/icons/tools/__${toolSet.icon}__}" alt="icon" onerror="this.style.display='none'">
+                    </th:block>
+                </div>
+                <div class="detail-header-info">
+                    <div class="detailname" th:text="${toolSet.name}"></div>
+                    <div class="detail-desc" th:text="${toolSet.description}"></div>
+                </div>
+                <span class="detail-count-badge" th:if="${not #lists.isEmpty(toolSet.tools)}" th:text="|${#lists.size(toolSet.tools)} 个方法|"></span>
+                <button th:if="${toolSet.hasConfigItems}" th:attr="onclick=|location.href='/tool-config/${toolSet.name}'|" class="btn-config" title="配置此工具">配置</button>
+                <button class="btn-unload-plugin" th:if="${toolSet.source.code == 'plugin'}" th:attr="data-jar=${toolSet.jarFileName}" onclick="uninstallPlugin(this)" title="卸载此插件">卸载</button>
+            </div>
+
+            <div class="detail-meta">
+                <span class="detail-meta-label">来源</span>
+                <span class="detail-meta-badge" th:classappend="${toolSet.source.code == 'built_in' ? 'source-builtin' : 'source-plugin'}" th:text="${toolSet.source.description}"></span>
+                <th:block th:if="${toolSet.keyword != null and !toolSet.keyword.isEmpty()}">
+                    <span class="detail-meta-label">关键词</span>
+                    <span class="detail-meta-tag" th:text="${toolSet.keyword}"></span>
+                </th:block>
+                <th:block th:if="${toolSet.version != null and !toolSet.version.isEmpty()}">
+                    <span class="detail-meta-label">版本</span>
+                    <span class="detail-meta-value" th:text="${toolSet.version}"></span>
+                </th:block>
+                <th:block th:if="${toolSet.author != null and !toolSet.author.isEmpty()}">
+                    <span class="detail-meta-label">作者</span>
+                    <span class="detail-meta-value" th:text="${toolSet.author}"></span>
+                </th:block>
+                <th:block th:if="${toolSet.url != null and !toolSet.url.isEmpty()}">
+                    <span class="detail-meta-label">地址</span>
+                    <a class="detail-meta-link" th:href="${toolSet.url}" target="_blank" rel="noopener" th:text="${toolSet.url}"></a>
+                </th:block>
+            </div>
+
+            <div class="detail-body" th:if="${not #lists.isEmpty(toolSet.tools)}">
+                <div th:each="tool : ${toolSet.tools}" class="detail-tool-item">
+                    <div class="detail-tool-header">
+                        <span class="detail-tool-name" th:text="${tool.name}"></span>
+                        <span class="detail-tool-desc" th:text="${tool.description}"></span>
+                    </div>
+                    <div th:if="${not #lists.isEmpty(tool.parameters)}" class="detail-tool-params">
+                        <table class="detail-param-table">
+                            <thead>
+                                <tr>
+                                    <th>参数名</th>
+                                    <th>类型</th>
+                                    <th>说明</th>
+                                    <th>必填</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr th:each="p : ${tool.parameters}">
+                                    <td class="dp-name" th:text="${p.name}"></td>
+                                    <td class="dp-type" th:text="${p.type}"></td>
+                                    <td class="dp-desc" th:text="${p.description}"></td>
+                                    <td class="dp-required">
+                                        <span th:if="${p.required}" class="tag-required">是</span>
+                                        <span th:unless="${p.required}" class="tag-optional">否</span>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                    <div th:if="${#lists.isEmpty(tool.parameters)}" class="detail-no-params">
+                        无参数
+                    </div>
+                </div>
+            </div>
+
+            <div th:if="${#lists.isEmpty(toolSet.tools)}" class="detail-empty-state">
+                该工具集下没有工具方法
+            </div>
+        </div>
+    </div>
+</div>
+
+<th:block layout:fragment="extraCss">
+    <link rel="stylesheet" th:href="@{/css/page/tools.css}">
+</th:block>
+
+<th:block layout:fragment="extraScripts">
+    <script th:src="@{/js/tools.js}"></script>
+</th:block>
 </body>
 </html>

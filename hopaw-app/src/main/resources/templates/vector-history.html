@@ -1,76 +1,77 @@
 <!DOCTYPE html>
-<html xmlns:th="http://www.thymeleaf.org">
-<head th:replace="fragments/layout::head('向量历史', 'vector-history.css')"></head>
+<html xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+      xmlns:th="http://www.thymeleaf.org"
+      layout:decorate="~{layouts/default}">
+<head>
+    <title>向量历史 - HoPaw</title>
+</head>
 <body>
-    <header th:replace="fragments/layout::header('向量历史')"></header>
-    <div class="main-container">
-        <nav th:replace="fragments/layout::menuSidebar('vector-history')"></nav>
-        <main class="vector-history-container">
-            <div class="search-panel">
-                <div class="search-row">
-                    <div class="search-item search-item-keyword">
-                        <label for="queryText">查询关键词</label>
-                        <input type="text" id="queryText" class="search-input" placeholder="输入语义查询关键词">
-                    </div>
-                    <div class="search-item">
-                        <label for="searchAgentId">智能体</label>
-                        <select id="searchAgentId" class="filter-select">
-                            <option value="">全部</option>
-                            <option th:each="agent : ${agents}" th:value="${agent.id}" th:text="${agent.name}"></option>
-                        </select>
-                    </div>
-                    <div class="search-item">
-                        <label for="searchMemoryType">记忆类型</label>
-                        <select id="searchMemoryType" class="filter-select">
-                            <option value="">所有类型</option>
-                        </select>
-                    </div>
-                    <div class="search-item">
-                        <label for="searchUserId">用户</label>
-                        <select id="searchUserId" class="filter-select">
-                            <option value="">全部</option>
-                            <option value="user1">user1</option>
-                        </select>
-                    </div>
-                    <div class="search-item">
-                        <label for="searchMaxResults">最大条数</label>
-                        <input type="number" id="searchMaxResults" class="filter-num" value="20" min="1" max="100">
-                    </div>
-                    <div class="search-item">
-                        <label for="searchMinScore">最低相似度</label>
-                        <input type="number" id="searchMinScore" class="filter-num" value="0.0" min="0" max="1" step="0.01">
-                    </div>
-                    <div class="search-actions">
-                        <button class="btn btn-primary" onclick="doSearch()">查询</button>
-                        <button class="btn btn-secondary" onclick="clearResults()">清空结果</button>
-                    </div>
-                </div>
-            </div>
+<div layout:fragment="pageTitle">🤖 HoPaw - 向量历史</div>
 
-            <div class="results-panel">
-                <div class="panel-header">
-                    <span>查询结果</span>
-                    <span id="resultCount" class="result-count"></span>
-                </div>
-                <div class="table-container" id="resultsContainer">
-                    <div class="empty-state" id="emptyState">请输入查询关键词后点击查询</div>
-                    <table class="results-table" id="resultsTable" style="display:none;">
-                        <thead>
-                            <tr>
-                                <th style="width:50px;">#</th>
-                                <th style="width:90px;">记忆类型</th>
-                                <th style="width:70px;">智能体</th>
-                                <th style="width:80px;">用户</th>
-                                <th>内容</th>
-                                <th style="width:65px;">相似度</th>
-                                <th style="width:130px;">操作</th>
-                            </tr>
-                        </thead>
-                        <tbody id="resultsBody"></tbody>
-                    </table>
-                </div>
+<main layout:fragment="content" class="vector-history-container">
+    <div class="search-panel">
+        <div class="search-row">
+            <div class="search-item search-item-keyword">
+                <label for="queryText">查询关键词</label>
+                <input type="text" id="queryText" class="search-input" placeholder="输入语义查询关键词">
             </div>
-        </main>
+            <div class="search-item">
+                <label for="searchAgentId">智能体</label>
+                <select id="searchAgentId" class="filter-select">
+                    <option value="">全部</option>
+                    <option th:each="agent : ${agents}" th:value="${agent.id}" th:text="${agent.name}"></option>
+                </select>
+            </div>
+            <div class="search-item">
+                <label for="searchMemoryType">记忆类型</label>
+                <select id="searchMemoryType" class="filter-select">
+                    <option value="">所有类型</option>
+                </select>
+            </div>
+            <div class="search-item">
+                <label for="searchUserId">用户</label>
+                <select id="searchUserId" class="filter-select">
+                    <option value="">全部</option>
+                    <option value="user1">user1</option>
+                </select>
+            </div>
+            <div class="search-item">
+                <label for="searchMaxResults">最大条数</label>
+                <input type="number" id="searchMaxResults" class="filter-num" value="20" min="1" max="100">
+            </div>
+            <div class="search-item">
+                <label for="searchMinScore">最低相似度</label>
+                <input type="number" id="searchMinScore" class="filter-num" value="0.0" min="0" max="1" step="0.01">
+            </div>
+            <div class="search-actions">
+                <button class="btn btn-primary" onclick="doSearch()">查询</button>
+                <button class="btn btn-secondary" onclick="clearResults()">清空结果</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="results-panel">
+        <div class="panel-header">
+            <span>查询结果</span>
+            <span id="resultCount" class="result-count"></span>
+        </div>
+        <div class="table-container" id="resultsContainer">
+            <div class="empty-state" id="emptyState">请输入查询关键词后点击查询</div>
+            <table class="results-table" id="resultsTable" style="display:none;">
+                <thead>
+                    <tr>
+                        <th style="width:50px;">#</th>
+                        <th style="width:90px;">记忆类型</th>
+                        <th style="width:70px;">智能体</th>
+                        <th style="width:80px;">用户</th>
+                        <th>内容</th>
+                        <th style="width:65px;">相似度</th>
+                        <th style="width:130px;">操作</th>
+                    </tr>
+                </thead>
+                <tbody id="resultsBody"></tbody>
+            </table>
+        </div>
     </div>
 
     <div class="modal-overlay" id="confirmModal" style="display:none;">
@@ -99,8 +100,14 @@
             </div>
         </div>
     </div>
+</main>
 
-    <div th:replace="fragments/layout::toastContainer"></div>
-    <th:block th:replace="fragments/layout::commonScripts('vector-history.js')"></th:block>
+<th:block layout:fragment="extraCss">
+    <link rel="stylesheet" th:href="@{/css/page/vector-history.css}">
+</th:block>
+
+<th:block layout:fragment="extraScripts">
+    <script th:src="@{/js/vector-history.js}"></script>
+</th:block>
 </body>
 </html>

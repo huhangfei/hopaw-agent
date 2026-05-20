@@ -1,14 +1,15 @@
 <!DOCTYPE html>
-<html xmlns:th="http://www.thymeleaf.org">
-<head th:replace="fragments/layout::head('🤖 HoPaw - 你的智能小帮手', 'index.css')"></head>
+<html xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+      xmlns:th="http://www.thymeleaf.org"
+      layout:decorate="~{layouts/default}">
+<head>
+    <title>🤖 HoPaw - 你的智能小帮手</title>
+</head>
 <body>
-<header th:replace="fragments/layout::header('🤖 HoPaw - 你的智能小帮手')"></header>
+<div layout:fragment="pageTitle">🤖 HoPaw - 你的智能小帮手</div>
 
-<div class="main-container">
-    <nav th:replace="fragments/layout::menuSidebar('home')"></nav>
-
-<div class="chat-wrapper">
-        <main class="chat-area">
+<div class="chat-wrapper" layout:fragment="content">
+    <main class="chat-area">
         <div th:if="${selectedAgent != null}" class="chat-header">
             <div class="chat-header-title">
                 <select class="agent-select" onchange="selectAgent(this.value)">
@@ -115,9 +116,6 @@
                     <textarea name="message" id="messageInput" placeholder="输入消息..." required
                            th:disabled="${agentExecutorState}" rows="2"></textarea>
                     <div class="chat-input-tools">
-<!--                        <button type="button" class="chat-btn-plus" title="添加附件">-->
-<!--                            <svg viewBox="0 0 24 24" fill="currentColor"><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/></svg>-->
-<!--                        </button>-->
                         <button type="button" class="chat-btn-deep" id="deepThinkBtn"
                                 th:attr="data-agent-id=${selectedAgent.id}, data-enabled=${selectedAgent.enableThinking}"
                                 th:classappend="${selectedAgent.enableThinking ? 'active' : ''}">
@@ -144,15 +142,15 @@
             <p>选择一个 Agent 开始对话</p>
         </div>
     </main>
-        <aside class="tool-panel">
-            <div class="tool-panel-section tool-panel-top">
-                <div class="tool-panel-title">工具执行列表</div>
-                <div class="tool-panel-body" id="toolExecList">
-                    <div th:each="chat : ${chatHistory}" th:if="${chat.messageType == 'tool_call'}">
-                        <div class="tool-call-container-static">
-                            <div class="tool-call"
-                                 th:attr="data-tool-call-id=${chat.toolCallId}, data-status=${chat.toolCallStatus == 'tool_call_start' ? 'starting' : (chat.toolCallStatus == 'tool_call_end' ? 'executed' : (chat.toolCallStatus == 'tool_call_failed' ? 'executed' : 'unknown'))}">
-                                <div class="tool-call-header">
+    <aside class="tool-panel">
+        <div class="tool-panel-section tool-panel-top">
+            <div class="tool-panel-title">工具执行列表</div>
+            <div class="tool-panel-body" id="toolExecList">
+                <div th:each="chat : ${chatHistory}" th:if="${chat.messageType == 'tool_call'}">
+                    <div class="tool-call-container-static">
+                        <div class="tool-call"
+                             th:attr="data-tool-call-id=${chat.toolCallId}, data-status=${chat.toolCallStatus == 'tool_call_start' ? 'starting' : (chat.toolCallStatus == 'tool_call_end' ? 'executed' : (chat.toolCallStatus == 'tool_call_failed' ? 'executed' : 'unknown'))}">
+                            <div class="tool-call-header">
                                     <span class="tool-call-icon" th:switch="${chat.toolCallStatus}"
                                           th:classappend="${chat.toolCallStatus == 'tool_call_end' or chat.toolCallStatus == 'tool_call_failed' ? 'completed' : ''}">
                                         <span th:case="'tool_call_start'">⚙</span>
@@ -171,33 +169,32 @@
                                     <span th:if="${chat.toolCallStatus == 'tool_call_end' or chat.toolCallStatus == 'tool_call_failed'}"
                                           class="tool-call-toggle">▼</span>
                                 </div>
-                                <div class="tool-call-body"
-                                     th:classappend="${chat.toolCallStatus == 'tool_call_start' ? '' : 'collapsed'}">
-                                    <div class="tool-call-args" th:if="${chat.toolArguments}">
-                                        <div class="args-label">参数:</div>
-                                        <pre class="args-content" th:text="${chat.toolArguments}"></pre>
-                                    </div>
-                                    <div class="tool-call-result" th:if="${chat.content}">
-                                        <div class="result-label">结果:</div>
-                                        <pre class="result-content" th:text="${chat.content}"></pre>
-                                    </div>
+                            <div class="tool-call-body"
+                                 th:classappend="${chat.toolCallStatus == 'tool_call_start' ? '' : 'collapsed'}">
+                                <div class="tool-call-args" th:if="${chat.toolArguments}">
+                                    <div class="args-label">参数:</div>
+                                    <pre class="args-content" th:text="${chat.toolArguments}"></pre>
+                                </div>
+                                <div class="tool-call-result" th:if="${chat.content}">
+                                    <div class="result-label">结果:</div>
+                                    <pre class="result-content" th:text="${chat.content}"></pre>
                                 </div>
                             </div>
                         </div>
                     </div>
                 </div>
             </div>
-            <div class="tool-panel-section tool-panel-bottom">
-                <div class="tool-panel-title" style="height: 40px;">会话Token
-                    <span id="tokenDailyStats" style="font-size:11px;font-weight:400;margin-left:8px;float: right;"></span>
-                    <span id="tokenLastStats" style="font-size:11px;font-weight:400;margin-left:8px;float: right;"></span>
-                </div>
-                <div class="tool-panel-body" id="tokenUsage">
-                </div>
+        </div>
+        <div class="tool-panel-section tool-panel-bottom">
+            <div class="tool-panel-title" style="height: 40px;">会话Token
+                <span id="tokenDailyStats" style="font-size:11px;font-weight:400;margin-left:8px;float: right;"></span>
+                <span id="tokenLastStats" style="font-size:11px;font-weight:400;margin-left:8px;float: right;"></span>
             </div>
-        </aside>
+            <div class="tool-panel-body" id="tokenUsage">
+            </div>
+        </div>
+    </aside>
 
-    </div>
 </div>
 
 <div id="addAgentModal" class="modal-overlay">
@@ -283,7 +280,6 @@
                                 <div class="tool-item-row">
                                     <input type="checkbox" name="tools" th:value="${ts.name}">
                                     <div class="tool-item-icon">
-                                        <!-- 判断 icon 是否为 SVG 内容 -->
                                         <th:block th:if="${ts.iconIsSvgCode()}">
                                             <span th:utext="${ts.icon}"></span>
                                         </th:block>
@@ -395,7 +391,6 @@
                                 <div class="tool-item-row">
                                     <input type="checkbox" name="tools" th:value="${ts.name}" class="edit-tool-checkbox">
                                     <div class="tool-item-icon">
-                                        <!-- 判断 icon 是否为 SVG 内容 -->
                                         <th:block th:if="${ts.iconIsSvgCode()}">
                                             <span th:utext="${ts.icon}"></span>
                                         </th:block>
@@ -419,11 +414,17 @@
         </div>
     </div>
 </div>
-<div th:replace="fragments/layout::toastContainer"></div>
-<th:block th:replace="fragments/layout::commonScripts('index.js')"></th:block>
-<script th:src="@{/js/marked.min.js}"></script>
-<script th:inline="javascript">
+
+<th:block layout:fragment="extraCss">
+    <link rel="stylesheet" th:href="@{/css/page/index.css}">
+</th:block>
+
+<th:block layout:fragment="extraScripts">
+    <script th:src="@{/js/index.js}"></script>
+    <script th:src="@{/js/marked.min.js}"></script>
+    <script th:inline="javascript">
         setCurrentAgentId(/*[[${selectedAgentId}]]*/ null);
-</script>
+    </script>
+</th:block>
 </body>
 </html>

@@ -1,21 +1,21 @@
 <!DOCTYPE html>
-<html xmlns:th="http://www.thymeleaf.org">
+<html xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+      xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title layout:title-pattern="$CONTENT_TITLE">HoPaw</title>
+    <link rel="stylesheet" th:href="@{/css/site.css}">
+    <link rel="stylesheet" th:href="@{/css/form.css}">
+    <link rel="stylesheet" th:href="@{/css/modal.css}">
+    <link rel="stylesheet" th:href="@{/css/confirm-dialog.css}">
+    <link rel="stylesheet" th:href="@{/css/toast.css}">
+    <link rel="stylesheet" th:href="@{/css/dark-theme.css}">
+    <th:block layout:fragment="extraCss"></th:block>
+</head>
 <body th:class="${currentTheme == 'dark' ? 'dark-theme' : ''}">
-    <th:block th:fragment="head(title, pageCss)">
-        <meta charset="UTF-8">
-        <title th:text="${title}">HoPaw</title>
-        <link rel="stylesheet" th:href="@{/css/site.css}">
-        <link rel="stylesheet" th:href="@{/css/form.css}">
-        <link rel="stylesheet" th:href="@{/css/modal.css}">
-        <link rel="stylesheet" th:href="@{/css/confirm-dialog.css}">
-        <link rel="stylesheet" th:href="@{/css/toast.css}">
-        <link rel="stylesheet" th:href="@{/css/dark-theme.css}">
-        <link rel="stylesheet" th:href="@{'/css/page/' + ${pageCss}}" th:if="${pageCss != null}">
-    </th:block>
-
-    <header th:fragment="header(title)">
+    <header>
         <div class="header-content">
-            <h1 th:text="${title}">🤖 HoPaw</h1>
+            <h1 layout:fragment="pageTitle">🤖 HoPaw</h1>
             <button id="theme-toggle" class="theme-toggle-btn" title="切换主题" onclick="toggleTheme()">
                 <svg class="theme-icon" viewBox="0 0 24 24" fill="currentColor">
                     <path class="sun-path" d="M12 7c-2.76 0-5 2.24-5 5s2.24 5 5 5 5-2.24 5-5-2.24-5-5-5zM2 13h2c.55 0 1-.45 1-1s-.45-1-1-1H2c-.55 0-1 .45-1 1s.45 1 1 1zm18 0h2c.55 0 1-.45 1-1s-.45-1-1-1h-2c-.55 0-1 .45-1 1s.45 1 1 1zM11 2v2c0 .55.45 1 1 1s1-.45 1-1V2c0-.55-.45-1-1-1s-1 .45-1 1zm0 18v2c0 .55.45 1 1 1s1-.45 1-1v-2c0-.55-.45-1-1-1s-1 .45-1 1zM5.99 4.58a.996.996 0 00-1.41 0 .996.996 0 000 1.41l1.06 1.06c.39.39 1.03.39 1.41 0 .38-.39.39-1.03 0-1.41L5.99 4.58zm12.37 12.37a.996.996 0 00-1.41 0 .996.996 0 000 1.41l1.06 1.06c.39.39 1.03.39 1.41 0 .38-.39.39-1.03 0-1.41l-1.06-1.06zM20 11h-2c-.55 0-1 .45-1 1s.45 1 1 1h2c.55 0 1-.45 1-1s-.45-1-1-1zM4 11H2c-.55 0-1 .45-1 1s.45 1 1 1h2c.55 0 1-.45 1-1s-.45-1-1-1zM12 16.99c-.38 0-.69-.28-.72-.66-.02-.24.16-.48.38-.64l2.03-1.51c.37-.28.48-.76.21-1.12-.27-.36-.76-.47-1.12-.21l-1.37 1.02c-.56.42-1.31.42-1.87 0l-1.37-1.02c-.36-.27-.85-.16-1.12.21-.27.36-.16.85.21 1.12l2.03 1.51c.22.16.4.4.38.64-.03.38-.34.66-.72.66z"/>
@@ -25,7 +25,7 @@
         </div>
     </header>
 
-    <th:block th:fragment="menuSidebar(activePage)">
+    <div class="main-container">
         <nav class="menu-sidebar" id="mainMenu">
             <a href="/" class="menu-btn" th:classappend="${activePage == 'index' ? 'active' : ''}" title="首页">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
@@ -137,147 +137,130 @@
                 </button>
             </div>
         </nav>
-    </th:block>
+        <main layout:fragment="content"></main>
+    </div>
 
-    <th:block th:fragment="toastContainer">
-        <div id="toast-container" class="toast-container"></div>
-    </th:block>
 
-    <th:block th:fragment="commonScripts(pageJs)">
-        <script>
-            function toggleTheme() {
-                var body = document.body;
-                var isDark = body.classList.toggle('dark-theme');
-                var theme = isDark ? 'dark' : 'light';
-                document.cookie = 'theme=' + theme + ';path=/;max-age=' + (365 * 24 * 60 * 60);
-                var sunPath = document.querySelector('.sun-path');
-                var moonPath = document.querySelector('.moon-path');
-                if (isDark) {
-                    if (sunPath) sunPath.style.display = 'none';
-                    if (moonPath) moonPath.style.display = 'block';
-                } else {
-                    if (sunPath) sunPath.style.display = 'block';
-                    if (moonPath) moonPath.style.display = 'none';
-                }
+    <div id="toast-container" class="toast-container"></div>
+
+    <script>
+
+        (function() {
+            var sunPath = document.querySelector('.sun-path');
+            var moonPath = document.querySelector('.moon-path');
+            var isDark = document.documentElement.classList.contains('dark-theme');
+            if (isDark) {
+                if (sunPath) sunPath.style.display = 'none';
+                if (moonPath) moonPath.style.display = 'block';
+            } else {
+                if (sunPath) sunPath.style.display = 'block';
+                if (moonPath) moonPath.style.display = 'none';
             }
+        })();
 
-            (function() {
-                var sunPath = document.querySelector('.sun-path');
-                var moonPath = document.querySelector('.moon-path');
-                var isDark = document.documentElement.classList.contains('dark-theme');
-                if (isDark) {
-                    if (sunPath) sunPath.style.display = 'none';
-                    if (moonPath) moonPath.style.display = 'block';
-                } else {
-                    if (sunPath) sunPath.style.display = 'block';
-                    if (moonPath) moonPath.style.display = 'none';
-                }
-            })();
-            /***侧边栏菜单隐藏和显示控制****/
-            function toggleMenu() {
-                var menu = document.getElementById('mainMenu');
-                menu.classList.add('with-anim');
-                menu.classList.toggle('collapsed');
-                updateMenuUI(menu);
-                localStorage.setItem('menuCollapsed', menu.classList.contains('collapsed'));
+        function toggleMenu() {
+            var menu = document.getElementById('mainMenu');
+            menu.classList.add('with-anim');
+            menu.classList.toggle('collapsed');
+            updateMenuUI(menu);
+            localStorage.setItem('menuCollapsed', menu.classList.contains('collapsed'));
+        }
+
+        function updateMenuUI(menu) {
+            var btn = menu.querySelector('.menu-collapse-btn');
+            var icon = btn.querySelector('.collapse-icon');
+            var label = btn.querySelector('.menu-label');
+            if (menu.classList.contains('collapsed')) {
+                btn.title = '展开菜单';
+                label.textContent = '展开菜单';
+                icon.innerHTML = '<path d="M8.59 16.59L10 18l6-6-6-6-1.41 1.41L13.17 12z"/>';
+            } else {
+                btn.title = '收缩菜单';
+                label.textContent = '收缩菜单';
+                icon.innerHTML = '<path d="M15.41 7.41L14 6l-6 6 6 6 1.41-1.41L10.83 12z"/>';
             }
+        }
 
-            function updateMenuUI(menu) {
-                var btn = menu.querySelector('.menu-collapse-btn');
-                var icon = btn.querySelector('.collapse-icon');
-                var label = btn.querySelector('.menu-label');
-                if (menu.classList.contains('collapsed')) {
-                    btn.title = '展开菜单';
-                    label.textContent = '展开菜单';
-                    icon.innerHTML = '<path d="M8.59 16.59L10 18l6-6-6-6-1.41 1.41L13.17 12z"/>';
-                } else {
-                    btn.title = '收缩菜单';
-                    label.textContent = '收缩菜单';
-                    icon.innerHTML = '<path d="M15.41 7.41L14 6l-6 6 6 6 1.41-1.41L10.83 12z"/>';
-                }
+        (function initMenu() {
+            var menu = document.getElementById('mainMenu');
+            if (!menu) return;
+            var collapsed = localStorage.getItem('menuCollapsed');
+            if (collapsed === 'true') {
+                menu.classList.add('collapsed');
+            } else if (collapsed === 'false') {
+                menu.classList.remove('collapsed');
             }
+            updateMenuUI(menu);
+        })();
 
-            (function initMenu() {
-                var menu = document.getElementById('mainMenu');
-                if (!menu) return;
-                var collapsed = localStorage.getItem('menuCollapsed');
-                if (collapsed === 'true') {
-                    menu.classList.add('collapsed');
-                }else if (collapsed === 'false') {
-                    menu.classList.remove('collapsed');
-                }
-                updateMenuUI(menu);
-            })();
-
-            (function initSubMenu() {
-                var group = document.getElementById('menuGroupMemory');
-                if (!group) return;
-                var expanded = localStorage.getItem('menuGroupMemory_expanded');
-                if (expanded === 'true' || expanded === null) {
-                    group.classList.add('expanded');
-                }
-            })();
-
-            function toggleMenuSub(groupId) {
-                var group = document.getElementById(groupId);
-                if (!group) return;
-                var menu = document.getElementById('mainMenu');
-                if (menu && menu.classList.contains('collapsed')) {
-                    group.classList.toggle('popup-visible');
-                    return;
-                }
-                group.classList.toggle('expanded');
-
-                if (group.classList.contains('expanded')) {
-                    try { localStorage.setItem(groupId + '_expanded', 'true'); } catch(e) {}
-                } else {
-                    try { localStorage.setItem(groupId + '_expanded', 'false'); } catch(e) {}
-                }
+        (function initSubMenu() {
+            var group = document.getElementById('menuGroupMemory');
+            if (!group) return;
+            var expanded = localStorage.getItem('menuGroupMemory_expanded');
+            if (expanded === 'true' || expanded === null) {
+                group.classList.add('expanded');
             }
+        })();
 
-            (function initCollapsedPopup() {
-                var menu = document.getElementById('mainMenu');
-                if (!menu) return;
-                var groups = menu.querySelectorAll('.menu-group');
-                groups.forEach(function(group) {
-                    var parentBtn = group.querySelector('.menu-parent-btn');
-                    if (!parentBtn) return;
-                    var hideTimer = null;
+        function toggleMenuSub(groupId) {
+            var group = document.getElementById(groupId);
+            if (!group) return;
+            var menu = document.getElementById('mainMenu');
+            if (menu && menu.classList.contains('collapsed')) {
+                group.classList.toggle('popup-visible');
+                return;
+            }
+            group.classList.toggle('expanded');
 
-                    function cancelHide() {
-                        if (hideTimer) { clearTimeout(hideTimer); hideTimer = null; }
-                    }
+            if (group.classList.contains('expanded')) {
+                try { localStorage.setItem(groupId + '_expanded', 'true'); } catch(e) {}
+            } else {
+                try { localStorage.setItem(groupId + '_expanded', 'false'); } catch(e) {}
+            }
+        }
 
-                    function showPopup() {
-                        if (!menu.classList.contains('collapsed')) return;
-                        cancelHide();
-                        var items = group.querySelector('.menu-sub-items');
-                        if (!items) return;
-                        var rect = parentBtn.getBoundingClientRect();
-                        items.style.top = rect.top + 'px';
-                        items.style.left = (rect.right + 4) + 'px';
-                        group.classList.add('popup-visible');
-                    }
+        (function initCollapsedPopup() {
+            var menu = document.getElementById('mainMenu');
+            if (!menu) return;
+            var groups = menu.querySelectorAll('.menu-group');
+            groups.forEach(function(group) {
+                var parentBtn = group.querySelector('.menu-parent-btn');
+                if (!parentBtn) return;
+                var hideTimer = null;
 
-                    function hidePopup() {
-                        cancelHide();
-                        hideTimer = setTimeout(function() {
-                            group.classList.remove('popup-visible');
-                        }, 180);
-                    }
+                function cancelHide() {
+                    if (hideTimer) { clearTimeout(hideTimer); hideTimer = null; }
+                }
 
-                    parentBtn.addEventListener('mouseenter', showPopup);
-                    parentBtn.addEventListener('mouseleave', hidePopup);
-                    group.querySelector('.menu-sub-items').addEventListener('mouseenter', showPopup);
-                    group.querySelector('.menu-sub-items').addEventListener('mouseleave', hidePopup);
-                });
-            })();
-        </script>
-        <script th:src="@{/js/site.js}"></script>
-        <script th:src="@{/js/toast.js}"></script>
-        <script th:src="@{/js/modal.js}"></script>
-        <script th:src="@{/js/confirm-dialog.js}"></script>
-        <script th:src="@{'/js/' + ${pageJs}}" th:if="${pageJs != null}"></script>
-    </th:block>
+                function showPopup() {
+                    if (!menu.classList.contains('collapsed')) return;
+                    cancelHide();
+                    var items = group.querySelector('.menu-sub-items');
+                    if (!items) return;
+                    var rect = parentBtn.getBoundingClientRect();
+                    items.style.top = rect.top + 'px';
+                    items.style.left = (rect.right + 4) + 'px';
+                    group.classList.add('popup-visible');
+                }
+
+                function hidePopup() {
+                    cancelHide();
+                    hideTimer = setTimeout(function() {
+                        group.classList.remove('popup-visible');
+                    }, 180);
+                }
+
+                parentBtn.addEventListener('mouseenter', showPopup);
+                parentBtn.addEventListener('mouseleave', hidePopup);
+                group.querySelector('.menu-sub-items').addEventListener('mouseenter', showPopup);
+                group.querySelector('.menu-sub-items').addEventListener('mouseleave', hidePopup);
+            });
+        })();
+    </script>
+    <script th:src="@{/js/site.js}"></script>
+    <script th:src="@{/js/toast.js}"></script>
+    <script th:src="@{/js/modal.js}"></script>
+    <script th:src="@{/js/confirm-dialog.js}"></script>
+    <th:block layout:fragment="extraScripts"></th:block>
 </body>
 </html>
