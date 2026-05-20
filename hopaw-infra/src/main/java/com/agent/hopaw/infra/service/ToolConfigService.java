@@ -1,6 +1,7 @@
 package com.agent.hopaw.infra.service;
 
 import com.agent.hopaw.infra.model.dto.ToolConfigItem;
+import com.agent.hopaw.infra.model.dto.ValidationResult;
 import com.agent.hopaw.infra.model.entity.SysConfig;
 import com.agent.hopaw.infra.tool.AgentTool;
 import com.agent.hopaw.infra.tool.AgentToolService;
@@ -10,6 +11,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 @Service
 public class ToolConfigService {
@@ -60,7 +62,6 @@ public class ToolConfigService {
             String key = prefix + item.getKey();
             
             if (item.getType() == ToolConfigItem.ConfigType.CHECKBOX) {
-                // 处理多选
                 List<String> values = new ArrayList<>();
                 for (Map.Entry<String, String> entry : params.entrySet()) {
                     if (entry.getKey().startsWith("config_" + item.getKey() + "_")) {
@@ -68,15 +69,44 @@ public class ToolConfigService {
                     }
                 }
                 String joinedValue = String.join(",", values);
-                saveOrUpdateConfig(key, joinedValue, tool.getName() + " - " + item.getLabel());
+                validateAndSave(item, joinedValue, key, tool.getName() + " - " + item.getLabel());
+            } else if (item.getType() == ToolConfigItem.ConfigType.SELECT_MULTI) {
+                List<String> values = new ArrayList<>();
+                for (Map.Entry<String, String> entry : params.entrySet()) {
+                    if (entry.getKey().startsWith("config_" + item.getKey() + "[")) {
+                        values.add(entry.getValue());
+                    }
+                }
+                String joinedValue = String.join(",", values);
+                validateAndSave(item, joinedValue, key, tool.getName() + " - " + item.getLabel());
+            } else if (item.getType() == ToolConfigItem.ConfigType.TEXT_MULTI || 
+                      item.getType() == ToolConfigItem.ConfigType.TEXT_PASSWORD_MULTI) {
+                List<String> values = params.entrySet().stream()
+                    .filter(entry -> entry.getKey().startsWith("config_" + item.getKey() + "_"))
+                    .map(Map.Entry::getValue)
+                    .filter(v -> v != null && !v.trim().isEmpty())
+                    .collect(Collectors.toList());
+                
+                String joinedValue = String.join(",", values);
+                validateAndSave(item, joinedValue, key, tool.getName() + " - " + item.getLabel());
             } else {
-                // 处理其他类型
                 String value = params.get("config_" + item.getKey());
                 if (value != null) {
-                    saveOrUpdateConfig(key, value, tool.getName() + " - " + item.getLabel());
+                    validateAndSave(item, value, key, tool.getName() + " - " + item.getLabel());
                 }
             }
         }
+        
+        // 通知工具配置已变更
+        tool.onConfigChanged();
+    }
+
+    private void validateAndSave(ToolConfigItem item, String value, String key, String description) {
+        ValidationResult result = item.validate(value);
+        if (!result.isValid()) {
+            throw new IllegalArgumentException(result.getMessage());
+        }
+        saveOrUpdateConfig(key, value, description);
     }
 
     private void saveOrUpdateConfig(String key, String value, String description) {

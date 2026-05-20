@@ -1,16 +1,22 @@
 package com.agent.hopaw.biz.tool.websearch;
 
 import com.agent.hopaw.biz.util.QianfanWebSearchUtil;
+import com.agent.hopaw.infra.model.dto.OptionItem;
 import com.agent.hopaw.infra.model.dto.ToolConfigItem;
+import com.agent.hopaw.infra.model.dto.ValidationRule;
 import dev.langchain4j.agent.tool.P;
 import dev.langchain4j.agent.tool.Tool;
 import com.agent.hopaw.infra.tool.AgentTool;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
 
 import java.util.List;
 
 @Component("baiduSearch")
 public class BaiduSearchTool implements AgentTool {
+    
+    private static final Logger log = LoggerFactory.getLogger(BaiduSearchTool.class);
 
     private static final int TIMEOUT_MS = 10000;
     private static final int MAX_RESULTS = 5;
@@ -22,7 +28,7 @@ public class BaiduSearchTool implements AgentTool {
     }
 
     @Tool(value={"搜索查询互联网最新网络信息，返回相关的网页标题和摘要内容。","新闻、军事、财经、时事、天气、资料"})
-    public String baiduSearch(@P(description = "搜索关键词") String query, @P(description = "最大结果数，默认5", required = false) Integer maxResults, @P(description = "超时时间（毫秒），默认10000毫秒", required = false) Integer timeout) {
+    public String baiduSearch(@P(description = "搜索关键词") String query, @P(description = "最大数，默认5", required = false) Integer maxResults, @P(description = "超时时间（毫秒），默认10000毫秒", required = false) Integer timeout) {
         if (query == null || query.trim().isEmpty()) {
             return "错误: 搜索关键词不能为空";
         }
@@ -65,8 +71,18 @@ public class BaiduSearchTool implements AgentTool {
     @Override
     public List<ToolConfigItem> getConfigItems() {
         return List.of(
-                new ToolConfigItem("apiKeys", "API 密钥", "百度千帆 API 密钥，多个密钥用英文逗号分隔，将自动轮询使用", ToolConfigItem.ConfigType.TEXT_MULTI),
-                new ToolConfigItem("edition", "搜索参数", "搜索版本：standard 完整版或 lite 轻量版", ToolConfigItem.ConfigType.SELECT, List.of("standard", "lite"))
+                new ToolConfigItem("apiKeys", "API 密钥", "百度千帆 API 密钥，支持多个密钥自动轮询使用", ToolConfigItem.ConfigType.TEXT_PASSWORD_MULTI)
+                    .validation(new ValidationRule().required()),
+                new ToolConfigItem("edition", "搜索版本", "选择搜索版本", ToolConfigItem.ConfigType.SELECT,
+                    new OptionItem("standard", "完整版"),
+                    new OptionItem("lite", "轻量版"))
+                    .validation(new ValidationRule().required())
         );
+    }
+
+    @Override
+    public void onConfigChanged() {
+        log.info("收到配置变更通知，重新加载百度搜索工具配置");
+        qianfanWebSearchUtil.reloadConfig();
     }
 }

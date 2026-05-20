@@ -9,6 +9,7 @@
         <link rel="stylesheet" th:href="@{/css/modal.css}">
         <link rel="stylesheet" th:href="@{/css/confirm-dialog.css}">
         <link rel="stylesheet" th:href="@{/css/toast.css}">
+        <link rel="stylesheet" th:href="@{/css/dark-theme.css}">
         <link rel="stylesheet" th:href="@{'/css/page/' + ${pageCss}}" th:if="${pageCss != null}">
     </th:block>
 
@@ -24,99 +25,115 @@
         </div>
     </header>
 
-    <nav class="menu-sidebar collapsed" id="mainMenu" th:fragment="menuSidebar(activePage)">
-        <button class="menu-btn" th:classappend="${activePage == 'home' ? 'active' : ''}" title="首页" onclick="location.href='/'">
-            <svg viewBox="0 0 24 24" fill="currentColor"><path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z"/></svg>
-            <span class="menu-label">首页</span>
-        </button>
-        <button class="menu-btn" th:classappend="${activePage == 'models' ? 'active' : ''}" title="模型管理" onclick="location.href='/models'">
-            <svg viewBox="0 0 24 24" fill="currentColor"><path d="M4 8h4V4H4v4zm6 12h4v-4h-4v4zm-6 0h4v-4H4v4zm0-6h4v-4H4v4zm6 0h4v-4h-4v4zm6-10v4h4V4h-4zm-6 4h4V4h-4v4zm6 6h4v-4h-4v4zm0 6h4v-4h-4v4z"/></svg>
-            <span class="menu-label">模型管理</span>
-        </button>
-        <button class="menu-btn" th:classappend="${activePage == 'tasks' ? 'active' : ''}" title="定时任务" onclick="location.href='/tasks'">
-            <svg viewBox="0 0 24 24" fill="currentColor"><path d="M11.99 2C6.47 2 2 6.48 2 12s4.47 10 9.99 10C17.52 22 22 17.52 22 12S17.52 2 11.99 2zM12 20c-4.42 0-8-3.58-8-8s3.58-8 8-8 8 3.58 8 8-3.58 8-8 8zm.5-13H11v6l5.25 3.15.75-1.23-4.5-2.67z"/></svg>
-            <span class="menu-label">定时任务</span>
-        </button>
-        <button class="menu-btn" th:classappend="${activePage == 'token-usage' ? 'active' : ''}" title="Token用量" onclick="location.href='/token-usage'">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
-                <polyline points="3 20 3 4"/>
-                <polyline points="3 20 22 20"/>
-                <polyline points="5 16 8 12 13 15 18 5 20 3"/>
-            </svg>
-            <span class="menu-label">Token用量</span>
-        </button>
-        <div class="menu-group" id="menuGroupMemory">
-            <button class="menu-btn menu-parent-btn" th:classappend="${activePage == 'memory-manage' or activePage == 'vector-history' ? 'active-parent' : ''}" onclick="toggleMenuSub('menuGroupMemory')" title="记忆">
+    <th:block th:fragment="menuSidebar(activePage)">
+        <nav class="menu-sidebar" id="mainMenu">
+            <a href="/" class="menu-btn" th:classappend="${activePage == 'index' ? 'active' : ''}" title="首页">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
-                    <path d="M9 2.5C6.5 2.5 4.5 4.5 4.5 7c0 2.3 1.3 4.2 3.2 5.1.3.1.5.4.5.7V15h2v1.5h-1.5V18h6.6v-1.5H13.8V15h2v-2.2c0-.3.2-.6.5-.7 1.9-.9 3.2-2.8 3.2-5.1 0-2.5-2-4.5-4.5-4.5H9z" fill="currentColor" fill-opacity="0.15"/>
-                    <path d="M9 18v2c0 .6.4 1 1 1h4c.6 0 1-.4 1-1v-2"/>
-                    <line x1="9" y1="18.5" x2="15" y2="18.5"/>
-                    <line x1="9" y1="20" x2="15" y2="20"/>
-                    <path d="M7 6.5c.5-.8 1.3-1.3 2.2-1.3"/>
-                    <path d="M6.8 8.5c.4-.5 1-1 1.7-1.2"/>
-                    <path d="M7.2 10.5c.4-.3.9-.5 1.5-.5"/>
-                    <path d="M17 6.5c-.5-.8-1.3-1.3-2.2-1.3"/>
-                    <path d="M17.2 8.5c-.4-.5-1-1-1.7-1.2"/>
-                    <path d="M16.8 10.5c-.4-.3-.9-.5-1.5-.5"/>
-                    <path d="M12 4.5v7.5"/>
+                    <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>
+                    <polyline points="9 22 9 12 15 12 15 22"/>
                 </svg>
-                <span class="menu-label">记忆</span>
-            </button>
-            <div class="menu-sub-items">
-                <a class="menu-sub-item" th:classappend="${activePage == 'memory-manage' ? 'active' : ''}" href="/memory-manage">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round">
-                        <!-- 中心节点 -->
-                        <circle cx="12" cy="12" r="2.5" fill="currentColor" fill-opacity="0.3"/>
-                        <!-- 外层六边形（网面） -->
-                        <polygon points="12,3 20,7 20,17 12,21 4,17 4,7" fill="currentColor" fill-opacity="0.06"/>
-                        <!-- 径向连线 -->
-                        <line x1="12" y1="12" x2="12" y2="3"/>
-                        <line x1="12" y1="12" x2="20" y2="7"/>
-                        <line x1="12" y1="12" x2="20" y2="17"/>
-                        <line x1="12" y1="12" x2="12" y2="21"/>
-                        <line x1="12" y1="12" x2="4" y2="17"/>
-                        <line x1="12" y1="12" x2="4" y2="7"/>
-                        <!-- 交叉环线 -->
-                        <line x1="12" y1="3" x2="20" y2="17"/>
-                        <line x1="4" y1="7" x2="20" y2="7"/>
-                        <line x1="4" y1="17" x2="12" y2="21"/>
-                        <!-- 外圈节点 -->
-                        <circle cx="12" cy="3" r="1" fill="currentColor"/>
-                        <circle cx="20" cy="7" r="1" fill="currentColor"/>
-                        <circle cx="20" cy="17" r="1" fill="currentColor"/>
-                        <circle cx="12" cy="21" r="1" fill="currentColor"/>
-                        <circle cx="4" cy="17" r="1" fill="currentColor"/>
-                        <circle cx="4" cy="7" r="1" fill="currentColor"/>
-                    </svg>
-                    <span class="menu-label">长时记忆</span>
-                </a>
-                <a class="menu-sub-item" th:classappend="${activePage == 'vector-history' ? 'active' : ''}" href="/vector-history">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                        <circle cx="11" cy="11" r="8"/>
-                        <line x1="21" y1="21" x2="16.65" y2="16.65"/>
-                    </svg>
-                    <span class="menu-label">向量历史</span>
-                </a>
-            </div>
-        </div>
-        <button class="menu-btn" th:classappend="${activePage == 'tools' ? 'active' : ''}" title="工具管理" onclick="location.href='/tools'">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                <path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/>
-            </svg>
-            <span class="menu-label">工具管理</span>
-        </button>
-        <button class="menu-btn" th:classappend="${activePage == 'settings' ? 'active' : ''}" title="设置" onclick="location.href='/settings'">
-            <svg viewBox="0 0 24 24" fill="currentColor"><path d="M19.14 12.94c.04-.31.06-.63.06-.94 0-.31-.02-.63-.06-.94l2.03-1.58c.18-.14.23-.41.12-.61l-1.92-3.32c-.12-.22-.37-.29-.59-.22l-2.39.96c-.5-.38-1.03-.7-1.62-.94l-.36-2.54c-.04-.24-.24-.41-.48-.41h-3.84c-.24 0-.43.17-.47.41l-.36 2.54c-.59.24-1.13.57-1.62.94l-2.39-.96c-.22-.08-.47 0-.59.22L2.74 8.87c-.12.21-.08.47.12.61l2.03 1.58c-.04.31-.06.63-.06.94s.02.63.06.94l-2.03 1.58c-.18.14-.23.41-.12.61l1.92 3.32c.12.22.37.29.59.22l2.39-.96c.5.38 1.03.7 1.62.94l.36 2.54c.05.24.24.41.48.41h3.84c.24 0 .44-.17.47-.41l.36-2.54c.59-.24 1.13-.56 1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32c.12-.22.07-.47-.12-.61l-2.01-1.58zM12 15.6c-1.98 0-3.6-1.62-3.6-3.6s1.62-3.6 3.6-3.6 3.6 1.62 3.6 3.6-1.62 3.6-3.6 3.6z"/></svg>
-            <span class="menu-label">设置</span>
-        </button>
-        <div class="menu-spacer"></div>
-        <button class="menu-btn menu-collapse-btn" onclick="toggleMenu()" title="收缩菜单">
-            <svg class="collapse-icon" viewBox="0 0 24 24" fill="currentColor"><path d="M15.41 7.41L14 6l-6 6 6 6 1.41-1.41L10.83 12z"/></svg>
-            <span class="menu-label">收缩菜单</span>
-        </button>
-    </nav>
+                <span class="menu-label">首页</span>
+            </a>
 
-    <div class="toast-container" id="toastContainer" th:fragment="toastContainer"></div>
+
+
+            <div class="menu-group" id="menuGroupMemory">
+                <button class="menu-btn menu-parent-btn" th:classappend="${activePage == 'memory-manage' or activePage == 'vector-history' ? 'active-parent' : ''}" onclick="toggleMenuSub('menuGroupMemory')" title="记忆">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M9 2.5C6.5 2.5 4.5 4.5 4.5 7c0 2.3 1.3 4.2 3.2 5.1.3.1.5.4.5.7V15h2v1.5h-1.5V18h6.6v-1.5H13.8V15h2v-2.2c0-.3.2-.6.5-.7 1.9-.9 3.2-2.8 3.2-5.1 0-2.5-2-4.5-4.5-4.5H9z" fill="currentColor" fill-opacity="0.15"/>
+                        <path d="M9 18v2c0 .6.4 1 1 1h4c.6 0 1-.4 1-1v-2"/>
+                        <line x1="9" y1="18.5" x2="15" y2="18.5"/>
+                        <line x1="9" y1="20" x2="15" y2="20"/>
+                        <path d="M7 6.5c.5-.8 1.3-1.3 2.2-1.3"/>
+                        <path d="M6.8 8.5c.4-.5 1-1 1.7-1.2"/>
+                        <path d="M7.2 10.5c.4-.3.9-.5 1.5-.5"/>
+                        <path d="M17 6.5c-.5-.8-1.3-1.3-2.2-1.3"/>
+                        <path d="M17.2 8.5c-.4-.5-1-1-1.7-1.2"/>
+                        <path d="M16.8 10.5c-.4-.3-.9-.5-1.5-.5"/>
+                        <path d="M12 4.5v7.5"/>
+                    </svg>
+                    <span class="menu-label">记忆</span>
+                </button>
+                <div class="menu-sub-items">
+                    <a href="/memory-manage" class="menu-btn menu-sub-item" th:classappend="${activePage == 'memory-manage' ? 'active' : ''}" title="记忆管理">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M9 2.5C6.5 2.5 4.5 4.5 4.5 7c0 2.3 1.3 4.2 3.2 5.1.3.1.5.4.5.7V15h2v1.5h-1.5V18h6.6v-1.5H13.8V15h2v-2.2c0-.3.2-.6.5-.7 1.9-.9 3.2-2.8 3.2-5.1 0-2.5-2-4.5-4.5-4.5H9z" fill="currentColor" fill-opacity="0.15"/>
+                            <path d="M9 18v2c0 .6.4 1 1 1h4c.6 0 1-.4 1-1v-2"/>
+                            <line x1="9" y1="18.5" x2="15" y2="18.5"/>
+                            <line x1="9" y1="20" x2="15" y2="20"/>
+                            <path d="M7 6.5c.5-.8 1.3-1.3 2.2-1.3"/>
+                            <path d="M6.8 8.5c.4-.5 1-1 1.7-1.2"/>
+                            <path d="M7.2 10.5c.4-.3.9-.5 1.5-.5"/>
+                            <path d="M17 6.5c-.5-.8-1.3-1.3-2.2-1.3"/>
+                            <path d="M17.2 8.5c-.4-.5-1-1-1.7-1.2"/>
+                            <path d="M16.8 10.5c-.4-.3-.9-.5-1.5-.5"/>
+                            <path d="M12 4.5v7.5"/>
+                        </svg>
+                        <span class="menu-label">记忆管理</span>
+                    </a>
+                    <a href="/vector-history" class="menu-btn menu-sub-item" th:classappend="${activePage == 'vector-history' ? 'active' : ''}" title="向量历史">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                            <circle cx="12" cy="12" r="10"/>
+                            <line x1="12" y1="8" x2="12" y2="16"/>
+                            <line x1="8" y1="12" x2="16" y2="12"/>
+                        </svg>
+                        <span class="menu-label">向量历史</span>
+                    </a>
+                </div>
+            </div>
+
+            <a href="/models" class="menu-btn" th:classappend="${activePage == 'models' ? 'active' : ''}" title="模型管理">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                    <rect x="2" y="3" width="20" height="14" rx="2" ry="2"/>
+                    <line x1="8" y1="21" x2="16" y2="21"/>
+                    <line x1="12" y1="17" x2="12" y2="21"/>
+                </svg>
+                <span class="menu-label">模型管理</span>
+            </a>
+            <a href="/tools" class="menu-btn" th:classappend="${activePage == 'tools' ? 'active' : ''}" title="工具管理">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/>
+                </svg>
+                <span class="menu-label">工具管理</span>
+            </a>
+
+            <a href="/tasks" class="menu-btn" th:classappend="${activePage == 'tasks' ? 'active' : ''}" title="定时任务">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                    <circle cx="12" cy="12" r="10"/>
+                    <polyline points="12 6 12 12 16 14"/>
+                </svg>
+                <span class="menu-label">定时任务</span>
+            </a>
+
+            <a href="/token-usage" class="menu-btn" th:classappend="${activePage == 'token-usage' ? 'active' : ''}" title="Token 使用">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                    <line x1="12" y1="1" x2="12" y2="23"/>
+                    <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/>
+                </svg>
+                <span class="menu-label">Token 使用</span>
+            </a>
+
+            <a href="/settings" class="menu-btn" th:classappend="${activePage == 'settings' ? 'active' : ''}" title="设置">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                    <circle cx="12" cy="12" r="3"/>
+                    <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/>
+                </svg>
+                <span class="menu-label">设置</span>
+            </a>
+            <div class="menu-collapse-wrapper">
+                <button class="menu-collapse-btn" onclick="toggleMenu()" title="收缩菜单">
+                    <svg class="collapse-icon" viewBox="0 0 24 24" fill="currentColor" width="18" height="18">
+                        <path d="M15.41 7.41L14 6l-6 6 6 6 1.41-1.41L10.83 12z"/>
+                    </svg>
+                    <span class="menu-label">收缩菜单</span>
+                </button>
+            </div>
+        </nav>
+    </th:block>
+
+    <th:block th:fragment="toastContainer">
+        <div id="toast-container" class="toast-container"></div>
+    </th:block>
 
     <th:block th:fragment="commonScripts(pageJs)">
         <script>

@@ -55,4 +55,12 @@ public interface AgentTool {
     default String getConfigPrefix() {
         return "tool." + getName() + ".";
     }
+    
+    /**
+     * 配置变更通知
+     * 当工具配置保存后会调用此方法，方便工具重建内部对象
+     */
+    default void onConfigChanged() {
+        return;
+    }
 }

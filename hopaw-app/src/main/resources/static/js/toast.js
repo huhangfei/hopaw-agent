@@ -1,5 +1,5 @@
 function showToast(message, type) {
-    const container = document.getElementById('toastContainer');
+    const container = document.getElementById('toast-container');
     const toast = document.createElement('div');
     toast.className = 'toast toast-' + (type || 'info');
     toast.textContent = message;

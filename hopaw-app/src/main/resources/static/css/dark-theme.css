@@ -1,0 +1,430 @@
+/* ========== Dark Theme for All Pages ========== */
+
+/* ===== Global Page Dark Theme ===== */
+body.dark-theme .settings-content,
+body.dark-theme .tools-detail-panel,
+body.dark-theme .models-content,
+body.dark-theme .tasks-content,
+body.dark-theme .token-usage-content,
+body.dark-theme .memory-manage-content,
+body.dark-theme .vector-history-content {
+    background: #1a1a2e;
+}
+
+/* ===== Tools Page ===== */
+body.dark-theme .tools-list-panel {
+    background: #16213e;
+    border-right-color: #3d3d6b;
+}
+
+body.dark-theme .tools-list-header {
+    border-bottom-color: #3d3d6b;
+}
+
+body.dark-theme .tools-list-header h3 {
+    color: #e0e0e0;
+}
+
+body.dark-theme .tool-list-item:hover {
+    background: #1e3a5f;
+}
+
+body.dark-theme .tool-list-item.active {
+    background: #2d2d44;
+}
+
+body.dark-theme .tool-list-name {
+    color: #e0e0e0;
+}
+
+body.dark-theme .tool-list-desc {
+    color: #999;
+}
+
+body.dark-theme .tool-list-count {
+    color: #888;
+}
+
+body.dark-theme .tool-list-source-badge {
+    color: #8ba3ff;
+    background: #2d2d44;
+}
+
+body.dark-theme .tool-list-version {
+    color: #888;
+}
+
+body.dark-theme .tools-list-empty {
+    color: #888;
+}
+
+body.dark-theme .detail-header {
+    background: linear-gradient(135deg, #2d2d4466 0%, #1e3a5f66 100%);
+}
+
+body.dark-theme .detail-name {
+    color: #e0e0e0;
+}
+
+body.dark-theme .detail-desc {
+    color: #999;
+}
+
+body.dark-theme .detail-body {
+    background: #1e3a5f;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+}
+
+body.dark-theme .detail-tool-item {
+    border-bottom-color: #3d3d6b;
+}
+
+body.dark-theme .detail-tool-item:hover {
+    background: #2d2d44;
+}
+
+body.dark-theme .detail-tool-name {
+    color: #8ba3ff;
+}
+
+body.dark-theme .detail-tool-desc {
+    color: #c0c0c0;
+}
+
+body.dark-theme .detail-param-table {
+    border-color: #3d3d6b;
+}
+
+body.dark-theme .detail-param-table thead {
+    background: #2d2d44;
+}
+
+body.dark-theme .detail-param-table th {
+    color: #b0b0b0;
+    border-bottom-color: #3d3d6b;
+}
+
+body.dark-theme .detail-param-table td {
+    color: #e0e0e0;
+    border-bottom-color: #3d3d6b;
+}
+
+body.dark-theme .dp-name {
+    color: #8ba3ff;
+}
+
+body.dark-theme .dp-type {
+    color: #999;
+}
+
+body.dark-theme .dp-desc {
+    color: #c0c0c0;
+}
+
+body.dark-theme .tag-required {
+    background: rgba(229, 57, 53, 0.2);
+    color: #ff7961;
+}
+
+body.dark-theme .tag-optional {
+    background: rgba(67, 160, 71, 0.2);
+    color: #69f0ae;
+}
+
+body.dark-theme .detail-no-params {
+    color: #888;
+}
+
+body.dark-theme .detail-empty-state {
+    background: #1e3a5f;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+    color: #888;
+}
+
+body.dark-theme .detail-meta {
+    background: #1e3a5f;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.2);
+}
+
+body.dark-theme .detail-meta-label {
+    color: #999;
+}
+
+body.dark-theme .detail-meta-badge {
+    color: #8ba3ff;
+    background: #2d2d44;
+}
+
+body.dark-theme .source-builtin {
+    color: #8ba3ff;
+    background: #2d2d44;
+}
+
+body.dark-theme .source-plugin {
+    color: #ffb74d;
+    background: rgba(255, 183, 77, 0.15);
+}
+
+body.dark-theme .detail-meta-tag {
+    background: rgba(139, 163, 255, 0.15);
+    color: #8ba3ff;
+}
+
+body.dark-theme .detail-meta-value {
+    color: #c0c0c0;
+}
+
+body.dark-theme .detail-meta-link {
+    color: #8ba3ff;
+}
+
+body.dark-theme .detail-meta-link:hover {
+    color: #a0b4ff;
+}
+
+body.dark-theme .btn-unload-plugin {
+    background: #1e3a5f;
+    color: #ff7961;
+    border-color: rgba(255, 121, 97, 0.3);
+}
+
+body.dark-theme .btn-unload-plugin:hover {
+    background: #ff7961;
+    color: #fff;
+    border-color: #ff7961;
+}
+
+body.dark-theme .btn-config {
+    background: #3d3d6b;
+    color: #c0c0c0;
+}
+
+body.dark-theme .btn-config:hover {
+    background: #4d4d7b;
+}
+
+/* ===== Settings Page ===== */
+body.dark-theme .settings-tabs {
+    border-bottom-color: #3d3d6b;
+}
+
+body.dark-theme .settings-tab {
+    color: #999;
+}
+
+body.dark-theme .settings-tab:hover {
+    color: #c0c0c0;
+}
+
+body.dark-theme .settings-tab.active {
+    color: #8ba3ff;
+    border-bottom-color: #8ba3ff;
+}
+
+body.dark-theme .settings-form {
+    background: #1e3a5f;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+}
+
+body.dark-theme .settings-actions {
+    border-top-color: #3d3d6b;
+}
+
+body.dark-theme .settings-input {
+    background: #2d2d44;
+    border-color: #3d3d6b;
+    color: #e0e0e0;
+}
+
+body.dark-theme .settings-input:focus {
+    border-color: #8ba3ff;
+}
+
+body.dark-theme .memory-prompt-input {
+    background: #2d2d44;
+    border-color: #3d3d6b;
+    color: #e0e0e0;
+}
+
+body.dark-theme .memory-prompt-input:focus {
+    border-color: #8ba3ff;
+}
+
+body.dark-theme .task-status-badge.running {
+    background: rgba(46, 125, 50, 0.2);
+    color: #69f0ae;
+}
+
+body.dark-theme .task-status-badge.running::before {
+    background: #69f0ae;
+}
+
+body.dark-theme .task-status-badge.stopped {
+    background: rgba(198, 40, 40, 0.2);
+    color: #ff7961;
+}
+
+body.dark-theme .task-status-badge.stopped::before {
+    background: #ff7961;
+}
+
+body.dark-theme .task-status-badge.loading {
+    background: #2d2d44;
+    color: #888;
+}
+
+body.dark-theme .btn-toggle-task {
+    background: #1e3a5f;
+    color: #8ba3ff;
+    border-color: #8ba3ff;
+}
+
+body.dark-theme .btn-toggle-task:hover {
+    background: #8ba3ff;
+    color: #fff;
+}
+
+body.dark-theme .btn-toggle-task.running {
+    background: #8ba3ff;
+    color: #fff;
+}
+
+body.dark-theme .btn-toggle-task.running:hover {
+    background: #ff7961;
+    border-color: #ff7961;
+}
+
+body.dark-theme .btn-test-mail {
+    background: #1e3a5f;
+    color: #8ba3ff;
+    border-color: #8ba3ff;
+}
+
+body.dark-theme .btn-test-mail:hover {
+    background: #8ba3ff;
+    color: #fff;
+}
+
+body.dark-theme .search-key-input {
+    background: #2d2d44;
+    border-color: #3d3d6b;
+    color: #e0e0e0;
+}
+
+body.dark-theme .search-key-input:focus {
+    border-color: #8ba3ff;
+}
+
+body.dark-theme .btn-remove-key {
+    background: rgba(198, 40, 40, 0.2);
+    color: #ff7961;
+}
+
+body.dark-theme .btn-remove-key:hover {
+    background: rgba(198, 40, 40, 0.4);
+}
+
+body.dark-theme .btn-add-key {
+    color: #8ba3ff;
+    border-color: #8ba3ff;
+}
+
+body.dark-theme .btn-add-key:hover {
+    background: #8ba3ff;
+    color: #fff;
+}
+
+body.dark-theme .restart-notice {
+    background: rgba(21, 101, 192, 0.2);
+    border-color: rgba(144, 202, 249, 0.3);
+}
+
+body.dark-theme .restart-notice p {
+    color: #90caf9;
+}
+
+body.dark-theme .form-hint {
+    color: #888;
+}
+
+/* ===== Modal ===== */
+body.dark-theme .modal {
+    background: #1e3a5f;
+}
+
+body.dark-theme .modal-header {
+    border-bottom-color: #3d3d6b;
+}
+
+body.dark-theme .modal-header h3 {
+    color: #e0e0e0;
+}
+
+body.dark-theme .modal-close {
+    color: #999;
+}
+
+body.dark-theme .modal-close:hover {
+    background: #2d2d44;
+    color: #e0e0e0;
+}
+
+body.dark-theme .modal-footer {
+    border-top-color: #3d3d6b;
+}
+
+body.dark-theme .modal-footer .btn-cancel {
+    background: #2d2d44;
+    color: #c0c0c0;
+}
+
+body.dark-theme .modal-footer .btn-cancel:hover {
+    background: #3d3d6b;
+}
+
+/* ===== Confirm Dialog ===== */
+body.dark-theme .confirm-overlay {
+    background: rgba(0, 0, 0, 0.7);
+}
+
+body.dark-theme .confirm-dialog {
+    background: #1e3a5f;
+}
+
+body.dark-theme .confirm-content {
+    color: #e0e0e0;
+}
+
+body.dark-theme .confirm-btn-cancel {
+    background: #2d2d44;
+    color: #c0c0c0;
+}
+
+body.dark-theme .confirm-btn-cancel:hover {
+    background: #3d3d6b;
+}
+
+/* ===== Toast ===== */
+body.dark-theme .toast-success {
+    background: rgba(46, 125, 50, 0.9);
+    border-color: rgba(46, 125, 50, 0.5);
+    color: #fff;
+}
+
+body.dark-theme .toast-error {
+    background: rgba(198, 40, 40, 0.9);
+    border-color: rgba(198, 40, 40, 0.5);
+    color: #fff;
+}
+
+body.dark-theme .toast-info {
+    background: rgba(21, 101, 192, 0.9);
+    border-color: rgba(21, 101, 192, 0.5);
+    color: #fff;
+}
+
+body.dark-theme .toast-warning {
+    background: rgba(230, 81, 0, 0.9);
+    border-color: rgba(230, 81, 0, 0.5);
+    color: #fff;
+}

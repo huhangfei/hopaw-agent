@@ -54,6 +54,11 @@
     margin-bottom: 4px;
 }
 
+.required {
+    color: #e53935;
+    margin-left: 4px;
+}
+
 .config-hint {
     display: block;
     font-size: 12px;
@@ -77,6 +82,26 @@
 .config-input:focus {
     border-color: #667eea;
     box-shadow: 0 0 0 3px rgba(102,126,234,0.1);
+}
+
+.config-input.invalid,
+.config-textarea.invalid,
+.config-select.invalid {
+    border-color: #e53935;
+}
+
+.config-input.invalid:focus,
+.config-textarea.invalid:focus,
+.config-select.invalid:focus {
+    border-color: #e53935;
+    box-shadow: 0 0 0 3px rgba(229,57,53,0.1);
+}
+
+.validation-error {
+    display: none;
+    color: #e53935;
+    font-size: 12px;
+    margin-top: 4px;
 }
 
 .config-textarea {
@@ -112,6 +137,10 @@
 .config-select:focus {
     border-color: #667eea;
     box-shadow: 0 0 0 3px rgba(102,126,234,0.1);
+}
+
+.config-select-multi {
+    min-height: 100px;
 }
 
 .config-radio-group,
@@ -204,6 +233,53 @@
     background: #d0d0d0;
 }
 
+.config-multi-input {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.multi-input-row {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+}
+
+.multi-input-field {
+    flex: 1;
+}
+
+.btn-add-row,
+.btn-remove-row {
+    width: 36px;
+    height: 36px;
+    border: none;
+    border-radius: 6px;
+    font-size: 16px;
+    font-weight: bold;
+    cursor: pointer;
+    transition: all 0.2s;
+    flex-shrink: 0;
+}
+
+.btn-add-row {
+    background: #667eea;
+    color: white;
+}
+
+.btn-add-row:hover {
+    background: #764ba2;
+}
+
+.btn-remove-row {
+    background: #ff7961;
+    color: white;
+}
+
+.btn-remove-row:hover {
+    background: #e53935;
+}
+
 body.dark-theme .tool-config-container {
     background: #1a1a2e;
 }
@@ -242,6 +318,23 @@ body.dark-theme .config-textarea:focus,
 body.dark-theme .config-select:focus {
     border-color: #8ba3ff;
     box-shadow: 0 0 0 3px rgba(139,163,255,0.1);
+}
+
+body.dark-theme .config-input.invalid,
+body.dark-theme .config-textarea.invalid,
+body.dark-theme .config-select.invalid {
+    border-color: #ff7961;
+}
+
+body.dark-theme .config-input.invalid:focus,
+body.dark-theme .config-textarea.invalid:focus,
+body.dark-theme .config-select.invalid:focus {
+    border-color: #ff7961;
+    box-shadow: 0 0 0 3px rgba(255,121,97,0.1);
+}
+
+body.dark-theme .validation-error {
+    color: #ff7961;
 }
 
 body.dark-theme .config-radio-item label,

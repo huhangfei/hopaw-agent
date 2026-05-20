@@ -442,3 +442,25 @@
     opacity: 0.6;
     cursor: not-allowed;
 }
+
+/* ===== 配置按钮 ===== */
+.btn-config {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 5px 14px;
+    font-size: 12px;
+    font-weight: 500;
+    color: #667eea;
+    background: #fff;
+    border: 1px solid #667eea;
+    border-radius: 8px;
+    cursor: pointer;
+    margin-left: 8px;
+    transition: all 0.2s;
+}
+
+.btn-config:hover {
+    background: #667eea;
+    color: #fff;
+}

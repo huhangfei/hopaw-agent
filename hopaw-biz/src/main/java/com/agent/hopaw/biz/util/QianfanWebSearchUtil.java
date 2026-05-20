@@ -32,12 +32,29 @@ public class QianfanWebSearchUtil {
 
     private final SysConfigService sysConfigService;
     private final AtomicInteger keyIndex = new AtomicInteger(0);
+    
+    // 缓存的配置
+    private volatile List<String> cachedApiKeys = Collections.emptyList();
+    private volatile String cachedEdition = null;
 
     public QianfanWebSearchUtil(SysConfigService sysConfigService) {
         this.sysConfigService = sysConfigService;
+        // 初始化时加载配置
+        reloadConfig();
     }
 
-    private List<String> getApiKeys() {
+    /**
+     * 重新加载配置
+     */
+    public void reloadConfig() {
+        this.cachedApiKeys = loadApiKeys();
+        this.cachedEdition = loadEdition();
+        // 重置密钥索引
+        this.keyIndex.set(0);
+        log.info("百度搜索工具配置已重载");
+    }
+
+    private List<String> loadApiKeys() {
         SysConfig config = sysConfigService.getByKey(CONFIG_KEY_API_KEYS);
         if (config == null || config.getConfigValue() == null || config.getConfigValue().isBlank()) {
             return Collections.emptyList();
@@ -46,6 +63,22 @@ public class QianfanWebSearchUtil {
                 .map(String::trim)
                 .filter(s -> !s.isEmpty())
                 .collect(Collectors.toList());
+    }
+
+    private String loadEdition() {
+        SysConfig config = sysConfigService.getByKey(CONFIG_KEY_EDITION);
+        if (config != null && config.getConfigValue() != null && !config.getConfigValue().isBlank()) {
+            return config.getConfigValue();
+        }
+        return null;
+    }
+
+    private List<String> getApiKeys() {
+        return cachedApiKeys;
+    }
+
+    private String getEdition() {
+        return cachedEdition;
     }
 
     private String selectKey(List<String> keys) {
@@ -107,10 +140,10 @@ public class QianfanWebSearchUtil {
         body.put("messages", messages);
         body.put("search_source", "baidu_search_v2");
 
-        // 读取 edition 配置并传入请求
-        SysConfig editionConfig = sysConfigService.getByKey(CONFIG_KEY_EDITION);
-        if (editionConfig != null && editionConfig.getConfigValue() != null && !editionConfig.getConfigValue().isBlank()) {
-            body.put("edition", editionConfig.getConfigValue());
+        // 使用缓存的 edition 配置
+        String edition = getEdition();
+        if (edition != null) {
+            body.put("edition", edition);
         }
 
         JSONArray resourceFilter = new JSONArray();

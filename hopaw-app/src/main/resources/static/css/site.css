@@ -87,14 +87,17 @@ header h1 {
     transition: background 0.2s;
     font-size: 14px;
     color: #555;
+    text-decoration: none;
 }
 .menu-btn:hover {
     background: #e0e0e0;
+    text-decoration: none;
 }
 .menu-btn.active {
     background: #d0d7ef;
     color: #4a66d6;
     font-weight: 500;
+    text-decoration: none;
 }
 .menu-btn.active svg {
     color: #4a66d6;
@@ -112,6 +115,35 @@ header h1 {
 }
 .menu-spacer {
     flex: 1;
+}
+
+/* 菜单底部的收缩按钮 */
+.menu-sidebar .menu-collapse-wrapper {
+    margin-top: auto;
+}
+.menu-collapse-btn {
+    width: 100%;
+    height: 44px;
+    padding: 0 12px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    transition: background 0.2s;
+    font-size: 14px;
+    color: #555;
+    text-decoration: none;
+    border: none;
+    background: transparent;
+}
+.menu-collapse-btn:hover {
+    background: #e0e0e0;
+}
+.menu-collapse-btn .collapse-icon {
+    width: 22px;
+    height: 22px;
+    color: #666;
+    flex-shrink: 0;
 }
 
 /* Collapsed state */
@@ -134,9 +166,16 @@ header h1 {
     height: 24px;
 }
 .menu-sidebar.collapsed .menu-collapse-btn {
+    padding: 0;
+    justify-content: center;
     border-top: 1px solid #e0e0e0;
-    margin-top: 4px;
-    padding-top: 8px;
+}
+.menu-sidebar.collapsed .menu-collapse-btn .menu-label {
+    opacity: 0;
+    width: 0;
+    margin: 0;
+    padding: 0;
+    display: none;
 }
 
 /* 菜单分组 */
@@ -147,6 +186,11 @@ header h1 {
 
 .menu-parent-btn {
     position: relative;
+    text-decoration: none;
+}
+
+.menu-parent-btn:hover {
+    text-decoration: none;
 }
 
 .menu-parent-btn.active-parent {
@@ -181,12 +225,14 @@ header h1 {
 
 .menu-sub-item:hover {
     background: #e8e8e8;
+    text-decoration: none;
 }
 
 .menu-sub-item.active {
     background: #d0d7ef;
     color: #4a66d6;
     font-weight: 500;
+    text-decoration: none;
 }
 
 .menu-sub-item svg {
@@ -277,15 +323,18 @@ body.dark-theme .menu-sidebar {
 
 body.dark-theme .menu-btn {
     color: #b0b0b0;
+    text-decoration: none;
 }
 
 body.dark-theme .menu-btn:hover {
     background: #2d2d44;
+    text-decoration: none;
 }
 
 body.dark-theme .menu-btn.active {
     background: #3d3d6b;
     color: #8ba3ff;
+    text-decoration: none;
 }
 
 body.dark-theme .menu-btn.active svg {
@@ -293,6 +342,18 @@ body.dark-theme .menu-btn.active svg {
 }
 
 body.dark-theme .menu-btn svg {
+    color: #888;
+}
+
+body.dark-theme .menu-collapse-btn {
+    color: #b0b0b0;
+}
+
+body.dark-theme .menu-collapse-btn:hover {
+    background: #2d2d44;
+}
+
+body.dark-theme .menu-collapse-btn .collapse-icon {
     color: #888;
 }
 
@@ -307,15 +368,18 @@ body.dark-theme .menu-sub-items {
 
 body.dark-theme .menu-sub-item {
     color: #b0b0b0;
+    text-decoration: none;
 }
 
 body.dark-theme .menu-sub-item:hover {
     background: #2d2d44;
+    text-decoration: none;
 }
 
 body.dark-theme .menu-sub-item.active {
     background: #3d3d6b;
     color: #8ba3ff;
+    text-decoration: none;
 }
 
 body.dark-theme .menu-sidebar.collapsed .menu-group .menu-sub-items {
