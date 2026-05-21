@@ -18,8 +18,8 @@
             <h1 layout:fragment="pageTitle">🤖 HoPaw</h1>
             <button id="theme-toggle" class="theme-toggle-btn" title="切换主题" onclick="toggleTheme()">
                 <svg class="theme-icon" viewBox="0 0 24 24" fill="currentColor">
-                    <path class="sun-path" d="M12 7c-2.76 0-5 2.24-5 5s2.24 5 5 5 5-2.24 5-5-2.24-5-5-5zM2 13h2c.55 0 1-.45 1-1s-.45-1-1-1H2c-.55 0-1 .45-1 1s.45 1 1 1zm18 0h2c.55 0 1-.45 1-1s-.45-1-1-1h-2c-.55 0-1 .45-1 1s.45 1 1 1zM11 2v2c0 .55.45 1 1 1s1-.45 1-1V2c0-.55-.45-1-1-1s-1 .45-1 1zm0 18v2c0 .55.45 1 1 1s1-.45 1-1v-2c0-.55-.45-1-1-1s-1 .45-1 1zM5.99 4.58a.996.996 0 00-1.41 0 .996.996 0 000 1.41l1.06 1.06c.39.39 1.03.39 1.41 0 .38-.39.39-1.03 0-1.41L5.99 4.58zm12.37 12.37a.996.996 0 00-1.41 0 .996.996 0 000 1.41l1.06 1.06c.39.39 1.03.39 1.41 0 .38-.39.39-1.03 0-1.41l-1.06-1.06zM20 11h-2c-.55 0-1 .45-1 1s.45 1 1 1h2c.55 0 1-.45 1-1s-.45-1-1-1zM4 11H2c-.55 0-1 .45-1 1s.45 1 1 1h2c.55 0 1-.45 1-1s-.45-1-1-1zM12 16.99c-.38 0-.69-.28-.72-.66-.02-.24.16-.48.38-.64l2.03-1.51c.37-.28.48-.76.21-1.12-.27-.36-.76-.47-1.12-.21l-1.37 1.02c-.56.42-1.31.42-1.87 0l-1.37-1.02c-.36-.27-.85-.16-1.12.21-.27.36-.16.85.21 1.12l2.03 1.51c.22.16.4.4.38.64-.03.38-.34.66-.72.66z"/>
-                    <path class="moon-path" d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>
+                    <path class="sun-path" th:style="${currentTheme == 'dark' ? 'display: none;' : 'display: block;'}" d="M12 7c-2.76 0-5 2.24-5 5s2.24 5 5 5 5-2.24 5-5-2.24-5-5-5zM2 13h2c.55 0 1-.45 1-1s-.45-1-1-1H2c-.55 0-1 .45-1 1s.45 1 1 1zm18 0h2c.55 0 1-.45 1-1s-.45-1-1-1h-2c-.55 0-1 .45-1 1s.45 1 1 1zM11 2v2c0 .55.45 1 1 1s1-.45 1-1V2c0-.55-.45-1-1-1s-1 .45-1 1zm0 18v2c0 .55.45 1 1 1s1-.45 1-1v-2c0-.55-.45-1-1-1s-1 .45-1 1zM5.99 4.58a.996.996 0 00-1.41 0 .996.996 0 000 1.41l1.06 1.06c.39.39 1.03.39 1.41 0 .38-.39.39-1.03 0-1.41L5.99 4.58zm12.37 12.37a.996.996 0 00-1.41 0 .996.996 0 000 1.41l1.06 1.06c.39.39 1.03.39 1.41 0 .38-.39.39-1.03 0-1.41l-1.06-1.06zM20 11h-2c-.55 0-1 .45-1 1s.45 1 1 1h2c.55 0 1-.45 1-1s-.45-1-1-1zM4 11H2c-.55 0-1 .45-1 1s.45 1 1 1h2c.55 0 1-.45 1-1s-.45-1-1-1zM12 16.99c-.38 0-.69-.28-.72-.66-.02-.24.16-.48.38-.64l2.03-1.51c.37-.28.48-.76.21-1.12-.27-.36-.76-.47-1.12-.21l-1.37 1.02c-.56.42-1.31.42-1.87 0l-1.37-1.02c-.36-.27-.85-.16-1.12.21-.27.36-.16.85.21 1.12l2.03 1.51c.22.16.4.4.38.64-.03.38-.34.66-.72.66z"/>
+                    <path class="moon-path" th:style="${currentTheme == 'dark' ? 'display: block;' : 'display: none;'}" d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>
                 </svg>
             </button>
         </div>
@@ -34,14 +34,6 @@
                 </svg>
                 <span class="menu-label">首页</span>
             </a>
-
-            <a href="/tools" class="menu-btn" th:classappend="${activePage == 'tools' ? 'active' : ''}" title="工具管理">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
-                    <path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/>
-                </svg>
-                <span class="menu-label">工具管理</span>
-            </a>
-
             <a href="/models" class="menu-btn" th:classappend="${activePage == 'models' ? 'active' : ''}" title="模型管理">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
                     <rect x="2" y="3" width="20" height="14" rx="2" ry="2"/>
@@ -50,15 +42,6 @@
                 </svg>
                 <span class="menu-label">模型管理</span>
             </a>
-
-            <a href="/settings" class="menu-btn" th:classappend="${activePage == 'settings' ? 'active' : ''}" title="设置">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
-                    <circle cx="12" cy="12" r="3"/>
-                    <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/>
-                </svg>
-                <span class="menu-label">设置</span>
-            </a>
-
             <div class="menu-group" id="menuGroupMemory">
                 <button class="menu-btn menu-parent-btn" th:classappend="${activePage == 'memory-manage' or activePage == 'vector-history' ? 'active-parent' : ''}" onclick="toggleMenuSub('menuGroupMemory')" title="记忆">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
@@ -112,6 +95,12 @@
                 </div>
             </div>
 
+            <a href="/tools" class="menu-btn" th:classappend="${activePage == 'tools' ? 'active' : ''}" title="工具管理">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/>
+                </svg>
+                <span class="menu-label">工具管理</span>
+            </a>
             <a href="/tasks" class="menu-btn" th:classappend="${activePage == 'tasks' ? 'active' : ''}" title="定时任务">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
                     <circle cx="12" cy="12" r="10"/>
@@ -119,13 +108,21 @@
                 </svg>
                 <span class="menu-label">定时任务</span>
             </a>
-
             <a href="/token-usage" class="menu-btn" th:classappend="${activePage == 'token-usage' ? 'active' : ''}" title="Token 使用">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
                     <line x1="12" y1="1" x2="12" y2="23"/>
                     <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/>
                 </svg>
                 <span class="menu-label">Token 使用</span>
+            </a>
+
+
+            <a href="/settings" class="menu-btn" th:classappend="${activePage == 'settings' ? 'active' : ''}" title="设置">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                    <circle cx="12" cy="12" r="3"/>
+                    <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/>
+                </svg>
+                <span class="menu-label">设置</span>
             </a>
 
             <div class="menu-collapse-wrapper">
@@ -144,20 +141,6 @@
     <div id="toast-container" class="toast-container"></div>
 
     <script>
-
-        (function() {
-            var sunPath = document.querySelector('.sun-path');
-            var moonPath = document.querySelector('.moon-path');
-            var isDark = document.documentElement.classList.contains('dark-theme');
-            if (isDark) {
-                if (sunPath) sunPath.style.display = 'none';
-                if (moonPath) moonPath.style.display = 'block';
-            } else {
-                if (sunPath) sunPath.style.display = 'block';
-                if (moonPath) moonPath.style.display = 'none';
-            }
-        })();
-
         function toggleMenu() {
             var menu = document.getElementById('mainMenu');
             menu.classList.add('with-anim');

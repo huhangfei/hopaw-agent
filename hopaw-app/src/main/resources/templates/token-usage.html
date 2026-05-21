@@ -51,51 +51,66 @@
                     <option value="agentTask">智能体定时任务</option>
                 </select>
             </div>
-            <div class="filter-group">
-                <label>&nbsp;</label>
-                <button class="btn btn-primary" onclick="query()">查询</button>
-                <button class="btn btn-secondary" onclick="reset()">重置</button>
-            </div>
+            <button class="btn-query" onclick="queryData()">查询</button>
         </div>
     </div>
 
-    <div class="summary-cards">
+    <div class="summary-cards" id="summaryCards">
         <div class="summary-card">
-            <div class="summary-label">总请求数</div>
-            <div class="summary-value" id="totalRequests">-</div>
+            <div class="summary-label">请求次数</div>
+            <div class="summary-value" id="summaryCount">0</div>
         </div>
         <div class="summary-card">
-            <div class="summary-label">总输入 Token</div>
-            <div class="summary-value" id="totalInputTokens">-</div>
+            <div class="summary-label">输入 Tokens</div>
+            <div class="summary-value" id="summaryInput">0</div>
         </div>
         <div class="summary-card">
-            <div class="summary-label">总输出 Token</div>
-            <div class="summary-value" id="totalOutputTokens">-</div>
+            <div class="summary-label">输出 Tokens</div>
+            <div class="summary-value" id="summaryOutput">0</div>
         </div>
         <div class="summary-card">
-            <div class="summary-label">总费用</div>
-            <div class="summary-value" id="totalCost">-</div>
+            <div class="summary-label">总 Tokens</div>
+            <div class="summary-value total" id="summaryTotal">0</div>
         </div>
     </div>
-
-    <div class="table-card">
-        <table class="data-table" id="usageTable">
+    <div class="chart-card" id="chartCard">
+        <div class="chart-header">
+            <h3>每日趋势</h3>
+        </div>
+        <div class="chart-wrapper">
+            <canvas id="dailyChart"></canvas>
+        </div>
+        <div class="chart-empty" id="chartEmpty" style="display:none;">
+            <p>暂无数据</p>
+        </div>
+    </div>
+    <div class="usage-card">
+        <table class="usage-table">
             <thead>
-                <tr>
-                    <th>时间</th>
-                    <th>用户</th>
-                    <th>智能体</th>
-                    <th>模型</th>
-                    <th>来源</th>
-                    <th>输入 Tokens</th>
-                    <th>输出 Tokens</th>
-                    <th>费用</th>
-                </tr>
+            <tr>
+                <th>时间</th>
+                <th>用户</th>
+                <th>智能体</th>
+                <th>模型</th>
+                <th>来源</th>
+                <th>输入 Tokens</th>
+                <th>输出 Tokens</th>
+                <th>总 Tokens</th>
+            </tr>
             </thead>
             <tbody id="usageTableBody">
             </tbody>
         </table>
-        <div class="pagination" id="pagination"></div>
+    </div>
+
+    <div class="empty-state" id="emptyState" style="display:none;">
+        <p>暂无数据，请选择时间范围后查询</p>
+    </div>
+
+    <div class="pagination" id="pagination" style="display:none;">
+        <button class="page-btn" id="prevPage" onclick="goPage(currentPage - 1)">上一页</button>
+        <span class="page-info" id="pageInfo"></span>
+        <button class="page-btn" id="nextPage" onclick="goPage(currentPage + 1)">下一页</button>
     </div>
 </main>
 
@@ -104,7 +119,11 @@
 </th:block>
 
 <th:block layout:fragment="extraScripts">
+    <script th:inline="javascript">
+        var AGENTS = /*[[${agents}]]*/ [];
+    </script>
     <script th:src="@{/js/token-usage.js}"></script>
+    <script th:src="@{/js/chart.umd.min.js}"></script>
 </th:block>
 </body>
 </html>

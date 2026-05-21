@@ -2,6 +2,9 @@ package com.agent.hopaw.biz.tool.file;
 
 import dev.langchain4j.agent.tool.P;
 import dev.langchain4j.agent.tool.Tool;
+import com.agent.hopaw.infra.model.dto.ToolConfigItem;
+import com.agent.hopaw.infra.model.dto.ValidationRule;
+import com.agent.hopaw.infra.service.ISysConfigService;
 import com.agent.hopaw.infra.tool.AgentTool;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -13,17 +16,66 @@ import java.io.File;
 import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
+import java.nio.ByteBuffer;
+import java.nio.channels.FileChannel;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.StandardCopyOption;
+import java.nio.file.StandardOpenOption;
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.concurrent.Callable;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
+import java.util.regex.Pattern;
 
 @Component("fileOperation")
 public class FileOperationTool implements AgentTool {
-    
+
     private static final Logger log = LoggerFactory.getLogger(FileOperationTool.class);
+    private static final String CONFIG_PREFIX = "tool.fileOperation.";
+    private static final String CONFIG_KEY_MAX_THREADS = CONFIG_PREFIX + "maxThreads";
+    private static final String CONFIG_KEY_MAX_RESULTS = CONFIG_PREFIX + "maxResults";
+    private static final int DEFAULT_MAX_THREADS = 4;
+    private static final int DEFAULT_MAX_RESULTS = 10;
+
+    private final ISysConfigService sysConfigService;
+    private volatile int maxThreads = DEFAULT_MAX_THREADS;
+    private volatile int maxResults = DEFAULT_MAX_RESULTS;
+
+    public FileOperationTool(ISysConfigService sysConfigService) {
+        this.sysConfigService = sysConfigService;
+        loadConfig();
+    }
+
+    private void loadConfig() {
+        com.agent.hopaw.infra.model.entity.SysConfig threadsConfig = sysConfigService.getByKey(CONFIG_KEY_MAX_THREADS);
+        if (threadsConfig != null && threadsConfig.getConfigValue() != null && !threadsConfig.getConfigValue().isBlank()) {
+            try {
+                int val = Integer.parseInt(threadsConfig.getConfigValue().trim());
+                maxThreads = Math.max(1, Math.min(val, 32));
+            } catch (NumberFormatException e) {
+                log.warn("无效的maxThreads配置: {}, 使用默认值 {}", threadsConfig.getConfigValue(), DEFAULT_MAX_THREADS);
+                maxThreads = DEFAULT_MAX_THREADS;
+            }
+        }
+        com.agent.hopaw.infra.model.entity.SysConfig resultsConfig = sysConfigService.getByKey(CONFIG_KEY_MAX_RESULTS);
+        if (resultsConfig != null && resultsConfig.getConfigValue() != null && !resultsConfig.getConfigValue().isBlank()) {
+            try {
+                int val = Integer.parseInt(resultsConfig.getConfigValue().trim());
+                maxResults = Math.max(0, Math.min(val, 1000));
+            } catch (NumberFormatException e) {
+                log.warn("无效的maxResults配置: {}, 使用默认值 {}", resultsConfig.getConfigValue(), DEFAULT_MAX_RESULTS);
+                maxResults = DEFAULT_MAX_RESULTS;
+            }
+        }
+    }
     
     @Tool(value={"读取文本文件内容","文件读取"})
     public String readFile(@P(description = "文件路径") String filePath) {
@@ -489,6 +541,267 @@ public class FileOperationTool implements AgentTool {
         }
     }
     
+    @Tool(value={"在文件或目录中高性能搜索关键词，支持多关键词、正则、多线程并行处理","文件搜索"})
+    public String searchInFiles(
+            @P(description = "搜索关键词，多个关键词用逗号、空格或分号分隔") String keywords,
+            @P(description = "文件或目录路径") String targetPath,
+            @P(description = "是否使用正则表达式搜索，默认否", required = false) Boolean isRegex,
+            @P(description = "最大线程数，控制并行搜索的文件数，不传则使用配置值", required = false) Integer maxThreads,
+            @P(description = "最大搜索条数，传0不限制，不传则使用配置值（默认10）", required = false) Integer maxResults) {
+        try {
+            Path path = Paths.get(targetPath).toAbsolutePath().normalize();
+            if (!Files.exists(path)) {
+                return "错误: 路径不存在: " + targetPath;
+            }
+
+            String[] kwArray = keywords.split("[,;，；\\s]+");
+            if (kwArray.length == 0) {
+                return "错误: 关键词不能为空";
+            }
+
+            boolean useRegex = isRegex != null && isRegex;
+            int threads = maxThreads != null && maxThreads > 0
+                    ? Math.min(maxThreads, 32)
+                    : this.maxThreads;
+            int limit = maxResults != null ? maxResults : this.maxResults;
+
+            List<Path> files = new ArrayList<>();
+            if (Files.isDirectory(path)) {
+                Files.walk(path).filter(Files::isRegularFile).forEach(files::add);
+            } else {
+                files.add(path);
+            }
+
+            if (files.isEmpty()) {
+                return "未找到任何文件: " + targetPath;
+            }
+
+            ExecutorService executor = Executors.newFixedThreadPool(threads);
+            MatchStats stats = new MatchStats();
+            Map<String, List<LineMatch>> resultsByFile = new LinkedHashMap<>();
+
+            try {
+                @SuppressWarnings("unchecked")
+                Future<List<LineMatch>>[] futures = new Future[files.size()];
+                for (int i = 0; i < files.size(); i++) {
+                    Path f = files.get(i);
+                    SearchPattern searchPattern = useRegex
+                            ? new RegexSearchPattern(kwArray)
+                            : new BmSearchPattern(kwArray);
+                    futures[i] = executor.submit(new FileSearchTask(f, searchPattern, stats));
+                }
+
+                long totalCollected = 0;
+                int fileIdx = 0;
+                for (fileIdx = 0; fileIdx < futures.length; fileIdx++) {
+                    List<LineMatch> matches = futures[fileIdx].get();
+                    if (!matches.isEmpty()) {
+                        if (limit > 0 && totalCollected + matches.size() > limit) {
+                            int remaining = (int) (limit - totalCollected);
+                            if (remaining > 0) {
+                                resultsByFile.put(files.get(fileIdx).toString(), matches.subList(0, remaining));
+                                totalCollected += remaining;
+                            }
+                            break;
+                        }
+                        resultsByFile.put(files.get(fileIdx).toString(), matches);
+                        totalCollected += matches.size();
+                        if (limit > 0 && totalCollected >= limit) {
+                            break;
+                        }
+                    }
+                }
+
+                if (limit > 0 && totalCollected >= limit) {
+                    for (int j = futures.length - 1; j > fileIdx; j--) {
+                        futures[j].cancel(true);
+                    }
+                }
+            } finally {
+                executor.shutdown();
+            }
+
+            if (resultsByFile.isEmpty()) {
+                return "未找到匹配内容，共扫描 " + files.size() + " 个文件，命中 " + stats.totalLines + " 行，耗时 " + stats.elapsedMs + "ms";
+            }
+
+            StringBuilder result = new StringBuilder();
+            result.append("搜索完成: 扫描 ").append(files.size()).append(" 个文件, 命中 ")
+                    .append(stats.totalLines).append(" 行, 耗时 ").append(stats.elapsedMs).append("ms\n\n");
+
+            for (Map.Entry<String, List<LineMatch>> entry : resultsByFile.entrySet()) {
+                result.append(entry.getKey()).append(" (").append(entry.getValue().size()).append("处匹配):\n");
+                for (LineMatch m : entry.getValue()) {
+                    result.append(String.format("%6d: %s%n", m.lineNumber, m.line));
+                }
+                result.append("\n");
+            }
+
+            return result.toString();
+        } catch (Exception e) {
+            log.error("搜索文件失败: {}", targetPath, e);
+            return "错误: 搜索失败 - " + e.getMessage();
+        }
+    }
+
+    private static class MatchStats {
+        long totalLines;
+        long elapsedMs;
+    }
+
+    private static class LineMatch {
+        final long lineNumber;
+        final String line;
+
+        LineMatch(long lineNumber, String line) {
+            this.lineNumber = lineNumber;
+            this.line = line;
+        }
+    }
+
+    private interface SearchPattern {
+        boolean matches(byte[] array, int offset, int length);
+    }
+
+    private static class RegexSearchPattern implements SearchPattern {
+        private final Pattern[] patterns;
+
+        RegexSearchPattern(String[] keywords) {
+            this.patterns = new Pattern[keywords.length];
+            for (int i = 0; i < keywords.length; i++) {
+                this.patterns[i] = Pattern.compile(keywords[i]);
+            }
+        }
+
+        @Override
+        public boolean matches(byte[] array, int offset, int length) {
+            String line = new String(array, offset, length, StandardCharsets.UTF_8);
+            for (Pattern p : patterns) {
+                if (p.matcher(line).find()) {
+                    return true;
+                }
+            }
+            return false;
+        }
+    }
+
+    private static class BmSearchPattern implements SearchPattern {
+        private final byte[][] patternBytes;
+        private final int[][] badCharSkip;
+        private final int[] patternLengths;
+
+        BmSearchPattern(String[] keywords) {
+            int n = keywords.length;
+            this.patternBytes = new byte[n][];
+            this.badCharSkip = new int[n][];
+            this.patternLengths = new int[n];
+
+            for (int k = 0; k < n; k++) {
+                byte[] p = keywords[k].getBytes(StandardCharsets.UTF_8);
+                this.patternBytes[k] = p;
+                int m = p.length;
+                this.patternLengths[k] = m;
+                this.badCharSkip[k] = new int[256];
+                Arrays.fill(this.badCharSkip[k], m);
+                for (int i = 0; i < m - 1; i++) {
+                    this.badCharSkip[k][p[i] & 0xFF] = m - 1 - i;
+                }
+            }
+        }
+
+        @Override
+        public boolean matches(byte[] array, int offset, int length) {
+            for (int k = 0; k < patternBytes.length; k++) {
+                byte[] p = patternBytes[k];
+                int m = patternLengths[k];
+                if (m == 0) continue;
+                int[] skip = badCharSkip[k];
+                int n = length;
+                int i = 0;
+                while (i <= n - m) {
+                    int j = m - 1;
+                    while (j >= 0 && p[j] == array[offset + i + j]) j--;
+                    if (j < 0) return true;
+                    i += Math.max(1, skip[array[offset + i + m - 1] & 0xFF]);
+                }
+            }
+            return false;
+        }
+    }
+
+    private static class FileSearchTask implements Callable<List<LineMatch>> {
+        private final Path file;
+        private final SearchPattern pattern;
+        private final MatchStats stats;
+
+        FileSearchTask(Path file, SearchPattern pattern, MatchStats stats) {
+            this.file = file;
+            this.pattern = pattern;
+            this.stats = stats;
+        }
+
+        @Override
+        public List<LineMatch> call() throws Exception {
+            List<LineMatch> results = new ArrayList<>();
+            long start = System.currentTimeMillis();
+            try (FileChannel channel = FileChannel.open(file, StandardOpenOption.READ)) {
+                long size = channel.size();
+                if (size == 0) return results;
+                if (size > Integer.MAX_VALUE - 8) {
+                    size = Integer.MAX_VALUE - 8;
+                }
+                ByteBuffer buf = channel.map(FileChannel.MapMode.READ_ONLY, 0, size);
+                byte[] lineBuffer = new byte[8192];
+                int lineLen = 0;
+                long lineNumber = 1;
+
+                for (int i = 0; i < size; i++) {
+                    byte b = buf.get(i);
+                    if (b == '\n') {
+                        if (pattern.matches(lineBuffer, 0, lineLen)) {
+                            results.add(new LineMatch(lineNumber,
+                                    new String(lineBuffer, 0, lineLen, StandardCharsets.UTF_8)));
+                        }
+                        lineLen = 0;
+                        lineNumber++;
+                    } else if (b == '\r') {
+                        if (i + 1 < size && buf.get(i + 1) == '\n') {
+                            if (pattern.matches(lineBuffer, 0, lineLen)) {
+                                results.add(new LineMatch(lineNumber,
+                                        new String(lineBuffer, 0, lineLen, StandardCharsets.UTF_8)));
+                            }
+                            i++;
+                        } else {
+                            if (pattern.matches(lineBuffer, 0, lineLen)) {
+                                results.add(new LineMatch(lineNumber,
+                                        new String(lineBuffer, 0, lineLen, StandardCharsets.UTF_8)));
+                            }
+                        }
+                        lineLen = 0;
+                        lineNumber++;
+                    } else {
+                        if (lineLen == lineBuffer.length) {
+                            lineBuffer = Arrays.copyOf(lineBuffer, lineBuffer.length * 2);
+                        }
+                        lineBuffer[lineLen++] = b;
+                    }
+                }
+                if (lineLen > 0 && pattern.matches(lineBuffer, 0, lineLen)) {
+                    results.add(new LineMatch(lineNumber,
+                            new String(lineBuffer, 0, lineLen, StandardCharsets.UTF_8)));
+                }
+            }
+            long elapsed = System.currentTimeMillis() - start;
+            synchronized (stats) {
+                stats.totalLines += results.size();
+                if (elapsed > stats.elapsedMs) {
+                    stats.elapsedMs = elapsed;
+                }
+            }
+            return results;
+        }
+    }
+
     private boolean isDirectoryEmpty(Path path) throws IOException {
         try (var entries = Files.list(path)) {
             return entries.findFirst().isEmpty();
@@ -508,13 +821,29 @@ public class FileOperationTool implements AgentTool {
     }
     
     @Override
+    public List<ToolConfigItem> getConfigItems() {
+        return List.of(
+                new ToolConfigItem("maxThreads", "最大线程数", "文件搜索时的最大并行线程数（1-32），控制同时搜索多个文件的并发度", ToolConfigItem.ConfigType.TEXT_SINGLE)
+                        .validation(new ValidationRule().required().value(1L, 32L)),
+                new ToolConfigItem("maxResults", "最大搜索条数", "单次搜索返回的最大匹配行数，0表示不限制（0-1000）", ToolConfigItem.ConfigType.TEXT_SINGLE)
+                        .validation(new ValidationRule().required().value(0L, 1000L))
+        );
+    }
+
+    @Override
+    public void onConfigChanged() {
+        loadConfig();
+        log.info("文件操作工具配置已重载, maxThreads={}, maxResults={}", maxThreads, maxResults);
+    }
+
+    @Override
     public String getName() {
         return "fileOperation";
     }
     
     @Override
     public String getDescription() {
-        return "文件操作工具集，支持读取、写入、删除、移动、复制等文件操作";
+        return "文件操作工具集，支持读取、写入、删除、移动、复制、高性能搜索等文件操作";
     }
     
     @Override
