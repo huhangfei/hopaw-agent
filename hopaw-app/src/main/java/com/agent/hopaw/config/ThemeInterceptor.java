@@ -30,13 +30,29 @@ public class ThemeInterceptor implements HandlerInterceptor {
 
     @Override
     public void postHandle(HttpServletRequest request, HttpServletResponse response, Object handler, ModelAndView modelAndView) throws Exception {
-        if (modelAndView != null) {
+        if (modelAndView != null && modelAndView.getViewName() != null) {
             String theme = (String) request.getAttribute(THEME_REQUEST_ATTRIBUTE);
             if (theme == null) {
                 theme = getThemeFromCookie(request);
             }
             modelAndView.addObject(THEME_MODEL_ATTRIBUTE, theme);
+            modelAndView.addObject("activePage", resolveActivePage(request));
             logger.debug("ThemeInterceptor postHandle: modelAndView={}, theme={}", modelAndView.getViewName(), theme);
+        }
+    }
+
+    private String resolveActivePage(HttpServletRequest request) {
+        String path = request.getRequestURI();
+        switch (path) {
+            case "/":               return "index";
+            case "/models":         return "models";
+            case "/memory-manage":  return "memory-manage";
+            case "/vector-history": return "vector-history";
+            case "/tools":          return "tools";
+            case "/tasks":          return "tasks";
+            case "/token-usage":    return "token-usage";
+            case "/settings":       return "settings";
+            default:                return "";
         }
     }
 
