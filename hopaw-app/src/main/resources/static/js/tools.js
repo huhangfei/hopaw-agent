@@ -14,6 +14,31 @@ function selectToolSet(el) {
     if (target) target.classList.add('active');
 }
 
+function upgradePlugin(btn) {
+    var toolName = btn.getAttribute('data-tool');
+    var currentVersion = btn.getAttribute('data-version') || '';
+    var jarFileName = btn.getAttribute('data-jar') || '';
+    var defaultUpdateUrl = btn.getAttribute('data-update-url') || '';
+
+    if (!toolName) {
+        showToast('无法获取工具名称', 'error');
+        return;
+    }
+
+    var url = '/tools/upgrade?toolName=' + encodeURIComponent(toolName);
+    if (currentVersion) {
+        url += '&currentVersion=' + encodeURIComponent(currentVersion);
+    }
+    if (jarFileName) {
+        url += '&jarFileName=' + encodeURIComponent(jarFileName);
+    }
+    if (defaultUpdateUrl) {
+        url += '&updateUrl=' + encodeURIComponent(defaultUpdateUrl);
+    }
+
+    window.location.href = url;
+}
+
 function uninstallPlugin(btn) {
     var jarFileName = btn.getAttribute('data-jar');
     if (!jarFileName) {

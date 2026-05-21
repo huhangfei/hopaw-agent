@@ -62,6 +62,7 @@
                 </div>
                 <span class="detail-count-badge" th:if="${not #lists.isEmpty(toolSet.tools)}" th:text="|${#lists.size(toolSet.tools)} 个方法|"></span>
                 <button th:if="${toolSet.hasConfigItems}" th:attr="onclick=|location.href='/tool-config/${toolSet.name}'|" class="btn-config" title="配置此工具">配置</button>
+                <button class="btn-update-plugin" th:if="${toolSet.source.code == 'plugin'}" th:attr="data-tool=${toolSet.name},data-version=${toolSet.version},data-jar=${toolSet.jarFileName},data-update-url=${toolSet.defaultUpdateUrl}" onclick="upgradePlugin(this)" title="检查更新">更新</button>
                 <button class="btn-unload-plugin" th:if="${toolSet.source.code == 'plugin'}" th:attr="data-jar=${toolSet.jarFileName}" onclick="uninstallPlugin(this)" title="卸载此插件">卸载</button>
             </div>
 

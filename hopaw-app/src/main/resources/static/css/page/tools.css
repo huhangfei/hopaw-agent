@@ -443,6 +443,34 @@
     cursor: not-allowed;
 }
 
+/* ===== 更新插件按钮 ===== */
+.btn-update-plugin {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 5px 14px;
+    font-size: 12px;
+    font-weight: 500;
+    color: #1976d2;
+    background: #fff;
+    border: 1px solid #bbdefb;
+    border-radius: 8px;
+    cursor: pointer;
+    margin-left: 8px;
+    transition: all 0.2s;
+}
+
+.btn-update-plugin:hover {
+    background: #1976d2;
+    color: #fff;
+    border-color: #1976d2;
+}
+
+.btn-update-plugin:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
 /* ===== 配置按钮 ===== */
 .btn-config {
     display: inline-flex;

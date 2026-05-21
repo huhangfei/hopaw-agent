@@ -226,4 +226,8 @@ public class JarPluginLoader {
         }
         return true;
     }
+
+    public Path getPluginDir() {
+        return pluginDir;
+    }
 }

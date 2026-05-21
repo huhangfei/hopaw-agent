@@ -16,6 +16,7 @@ public class ToolSetInfo {
     private String url;
     private String jarFileName;
     private boolean hasConfigItems;
+    private String defaultUpdateUrl;
 
     public Boolean iconIsSvgCode(){
         return icon != null && icon.startsWith("<svg");
@@ -105,5 +106,13 @@ public class ToolSetInfo {
 
     public void setHasConfigItems(boolean hasConfigItems) {
         this.hasConfigItems = hasConfigItems;
+    }
+
+    public String getDefaultUpdateUrl() {
+        return defaultUpdateUrl;
+    }
+
+    public void setDefaultUpdateUrl(String defaultUpdateUrl) {
+        this.defaultUpdateUrl = defaultUpdateUrl;
     }
 }

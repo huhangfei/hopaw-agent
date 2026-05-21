@@ -1,0 +1,285 @@
+.upgrade-page {
+    max-width: 700px;
+    margin: 0 auto;
+    padding: 20px;
+}
+
+.upgrade-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 24px;
+}
+
+.upgrade-header h2 {
+    font-size: 20px;
+    color: #333;
+    font-weight: 600;
+}
+
+.btn-back {
+    padding: 8px 16px;
+    background: #fff;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 14px;
+    color: #666;
+    transition: all 0.2s;
+}
+
+.btn-back:hover {
+    background: #f5f5f5;
+    border-color: #ccc;
+}
+
+.upgrade-card {
+    background: #fff;
+    border-radius: 12px;
+    box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
+    padding: 24px;
+}
+
+.upgrade-info {
+    background: #f8f9fa;
+    border-radius: 8px;
+    padding: 16px 20px;
+    margin-bottom: 20px;
+}
+
+.info-row {
+    display: flex;
+    align-items: center;
+    margin-bottom: 10px;
+}
+
+.info-row:last-child {
+    margin-bottom: 0;
+}
+
+.info-label {
+    font-size: 14px;
+    color: #666;
+    font-weight: 500;
+    min-width: 90px;
+}
+
+.info-value {
+    font-size: 14px;
+    color: #333;
+}
+
+.upgrade-url-section {
+    margin-bottom: 20px;
+}
+
+.upgrade-url-label {
+    display: block;
+    font-size: 14px;
+    color: #333;
+    font-weight: 500;
+    margin-bottom: 8px;
+}
+
+.upgrade-url-input {
+    display: flex;
+    gap: 10px;
+}
+
+.upgrade-url-input input {
+    flex: 1;
+    padding: 10px 14px;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    font-size: 14px;
+    outline: none;
+    transition: border-color 0.2s;
+}
+
+.upgrade-url-input input:focus {
+    border-color: #667eea;
+}
+
+.btn-check {
+    padding: 10px 24px;
+    background: #667eea;
+    color: #fff;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 14px;
+    font-weight: 500;
+    transition: all 0.2s;
+    white-space: nowrap;
+}
+
+.btn-check:hover {
+    background: #5a6fd6;
+}
+
+.btn-check:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+.upgrade-result {
+    border: 1px solid #e8e8e8;
+    border-radius: 8px;
+    margin-top: 20px;
+    overflow: hidden;
+}
+
+.result-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 12px 20px;
+    background: #f8f9fa;
+    border-bottom: 1px solid #e8e8e8;
+}
+
+.result-title {
+    font-size: 14px;
+    font-weight: 600;
+    color: #333;
+}
+
+.result-status {
+    font-size: 12px;
+    padding: 4px 12px;
+    border-radius: 12px;
+    font-weight: 500;
+}
+
+.result-status.up-to-date {
+    background: #e8f5e9;
+    color: #43a047;
+}
+
+.result-status.need-upgrade {
+    background: #fff3e0;
+    color: #e65100;
+}
+
+.result-status.not-installed {
+    background: #e3f2fd;
+    color: #1976d2;
+}
+
+.result-status.no-update {
+    background: #f5f5f5;
+    color: #666;
+}
+
+.result-info {
+    padding: 16px 20px;
+}
+
+.result-row {
+    display: flex;
+    align-items: flex-start;
+    margin-bottom: 10px;
+}
+
+.result-row:last-child {
+    margin-bottom: 0;
+}
+
+.result-label {
+    font-size: 13px;
+    color: #666;
+    min-width: 80px;
+    flex-shrink: 0;
+}
+
+.result-value {
+    font-size: 13px;
+    color: #333;
+    word-break: break-all;
+}
+
+.download-url {
+    color: #4a66d6;
+}
+
+.hash-value {
+    font-family: 'Consolas', 'Courier New', monospace;
+    font-size: 12px;
+    background: #f5f5f5;
+    padding: 2px 6px;
+    border-radius: 4px;
+}
+
+.result-action {
+    padding: 16px 20px;
+    border-top: 1px solid #e8e8e8;
+    background: #fafafa;
+}
+
+.btn-install {
+    width: 100%;
+    padding: 12px 24px;
+    font-size: 14px;
+    font-weight: 500;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.btn-install.upgrade {
+    background: #ff9800;
+    color: #fff;
+}
+
+.btn-install.upgrade:hover {
+    background: #f57c00;
+}
+
+.btn-install.install {
+    background: #4caf50;
+    color: #fff;
+}
+
+.btn-install.install:hover {
+    background: #43a047;
+}
+
+.btn-install:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+.upgrade-loading {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    padding: 30px;
+    color: #666;
+    font-size: 14px;
+}
+
+.loading-spinner {
+    width: 24px;
+    height: 24px;
+    border: 3px solid #e0e0e0;
+    border-top-color: #667eea;
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+.upgrade-error {
+    margin-top: 16px;
+    padding: 12px 16px;
+    background: #ffebee;
+    border-radius: 8px;
+    color: #c62828;
+    font-size: 14px;
+}
