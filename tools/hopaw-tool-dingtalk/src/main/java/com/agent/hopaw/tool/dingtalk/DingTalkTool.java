@@ -28,9 +28,6 @@ import java.util.Properties;
 public class DingTalkTool implements AgentTool {
 
     private static final Logger logger = LoggerFactory.getLogger(DingTalkTool.class);
-    private static final String CONFIG_FILE = "dingtalk.properties";
-    private static final String PROP_WEBHOOK_URL = "dingtalk.webhook.url";
-    private static final String PROP_SECRET = "dingtalk.secret";
     private static final String ENV_WEBHOOK_URL = "DINGTALK_WEBHOOK_URL";
     private static final String ENV_SECRET = "DINGTALK_SECRET";
     private static final String CONFIG_KEY_WEBHOOK = "webhookUrl";
@@ -108,29 +105,11 @@ public class DingTalkTool implements AgentTool {
         }
 
         if (defaultWebhookUrl == null || defaultWebhookUrl.isBlank()) {
-            try (InputStream in = getClass().getClassLoader().getResourceAsStream(CONFIG_FILE)) {
-                if (in != null) {
-                    Properties props = new Properties();
-                    props.load(in);
-                    defaultWebhookUrl = props.getProperty(PROP_WEBHOOK_URL);
-                    defaultSecret = props.getProperty(PROP_SECRET);
-                    if (defaultWebhookUrl != null && !defaultWebhookUrl.isBlank()) {
-                        logger.info("Loaded DingTalk webhook/secret from {}", CONFIG_FILE);
-                    }
-                }
-            } catch (IOException e) {
-                logger.debug("No {} found on classpath", CONFIG_FILE);
-            }
-        }
-
-        if (defaultWebhookUrl == null || defaultWebhookUrl.isBlank()) {
-            defaultWebhookUrl = System.getProperty(PROP_WEBHOOK_URL);
             if (defaultWebhookUrl == null || defaultWebhookUrl.isBlank()) {
                 defaultWebhookUrl = System.getenv(ENV_WEBHOOK_URL);
             }
         }
         if (defaultSecret == null || defaultSecret.isBlank()) {
-            defaultSecret = System.getProperty(PROP_SECRET);
             if (defaultSecret == null || defaultSecret.isBlank()) {
                 defaultSecret = System.getenv(ENV_SECRET);
             }
@@ -140,8 +119,16 @@ public class DingTalkTool implements AgentTool {
     @Tool("发送纯文本消息到钉钉群")
     public String sendTextToDingTalk(
             @P("要发送的文本内容") String message,
-            @P(value = "钉钉机器人webhook地址，不传则使用已配置的地址", required = false) String webhookUrl) {
-        String url = resolveWebhookUrl(webhookUrl);
+            @P(value = "钉钉机器人webhook地址，不传则使用已配置的地址", required = false) String webhookUrl,
+            @P(value = "加签密钥，不传则不使用加签") String inputSecret) {
+        String url = null;
+        if(webhookUrl != null && !webhookUrl.trim().isBlank()){
+            //使用输入的
+            url = resolveInputWebhookUrl(webhookUrl, inputSecret);
+        }else{
+            //使用配置的
+            url = resolveWebhookUrl();
+        }
         if (url == null) {
             return "错误: 未配置钉钉机器人webhook地址。请到 工具配置 页面设置，或传入 webhookUrl 参数";
         }
@@ -154,8 +141,16 @@ public class DingTalkTool implements AgentTool {
     public String sendMarkdownToDingTalk(
             @P("消息标题") String title,
             @P("Markdown格式的消息内容") String text,
-            @P(value = "钉钉机器人webhook地址，不传则使用已配置的地址", required = false) String webhookUrl) {
-        String url = resolveWebhookUrl(webhookUrl);
+            @P(value = "钉钉机器人webhook地址，不传则使用已配置的地址", required = false) String webhookUrl,
+            @P(value = "加签密钥，不传则不使用加签") String inputSecret) {
+        String url = null;
+        if(webhookUrl != null && !webhookUrl.trim().isBlank()){
+            //使用输入的
+            url = resolveInputWebhookUrl(webhookUrl, inputSecret);
+        }else{
+            //使用配置的
+            url = resolveWebhookUrl();
+        }
         if (url == null) {
             return "错误: 未配置钉钉机器人webhook地址。请到 工具配置 页面设置，或传入 webhookUrl 参数";
         }
@@ -164,16 +159,26 @@ public class DingTalkTool implements AgentTool {
         return doPost(url, json, "Markdown消息");
     }
 
-    private String resolveWebhookUrl(String paramUrl) {
-        String baseUrl = (paramUrl != null && !paramUrl.isBlank()) ? paramUrl.trim() : defaultWebhookUrl;
+    private String resolveWebhookUrl() {
+        String baseUrl = defaultWebhookUrl;
         if (baseUrl == null || baseUrl.isBlank()) {
             return null;
         }
-        String secret = (paramUrl != null && !paramUrl.isBlank()) ? null : defaultSecret;
+        String secret = defaultSecret;
         if (secret != null && !secret.isBlank()) {
             baseUrl = appendSign(baseUrl, secret);
         }
         return baseUrl;
+    }
+    private String resolveInputWebhookUrl(String paramUrl, String inputSecret) {
+        if (paramUrl == null || paramUrl.trim().isBlank()) {
+            return null;
+        }
+        paramUrl=paramUrl.trim();
+        if (inputSecret != null && !inputSecret.trim().isBlank()) {
+            paramUrl = appendSign(paramUrl, inputSecret);
+        }
+        return paramUrl;
     }
 
     private String appendSign(String webhookUrl, String secret) {
