@@ -67,4 +67,14 @@ public class DemoTool implements AgentTool {
         logger.info("DemoTool: queried system property [{}]={}", key, value);
         return key + " = " + value;
     }
+
+    @Override
+    public String getDefaultUpdateUrl() {
+        return "http://127.0.0.1:8080/test/demoPluginTool.json";
+    }
+
+    @Override
+    public String getVersion() {
+        return "1.0.0";
+    }
 }
