@@ -75,7 +75,7 @@ public class AgentToolService implements IAgentToolService {
             if (toolName.isEmpty()) {
                 toolName = method.getName();
             }
-            String description = Arrays.stream(toolAnn.value()).collect(Collectors.joining(","));
+            String description = Arrays.stream(toolAnn.value()).collect(Collectors.joining(" "));
             List<ToolParamInfo> params = new ArrayList<>();
             for (Parameter param : method.getParameters()) {
                 if (param.getType() == InvocationParameters.class) continue;
