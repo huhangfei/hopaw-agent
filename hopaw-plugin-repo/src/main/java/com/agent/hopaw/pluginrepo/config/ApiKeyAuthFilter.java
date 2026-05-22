@@ -38,11 +38,14 @@ public class ApiKeyAuthFilter extends OncePerRequestFilter {
         }
 
         String apiKey = request.getHeader(API_KEY_HEADER);
+        if (apiKey == null || apiKey.isEmpty()) {
+            apiKey = request.getParameter("api_key");
+        }
 
         if (apiKey == null || apiKey.isEmpty()) {
             response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
             response.setContentType("application/json;charset=UTF-8");
-            response.getWriter().write("{\"error\":\"Missing X-API-Key header\"}");
+            response.getWriter().write("{\"error\":\"Missing API key (X-API-Key header or api_key query parameter)\"}");
             return;
         }
 

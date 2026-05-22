@@ -1,8 +1,7 @@
 package com.agent.hopaw.pluginrepo.controller;
 
-import com.agent.hopaw.pluginrepo.entity.User;
-import com.agent.hopaw.pluginrepo.model.PluginRepoResult;
 import com.agent.hopaw.pluginrepo.service.AuthService;
+import com.agent.hopaw.infra.model.dto.PluginRepoResult;
 import com.agent.hopaw.pluginrepo.service.PluginRepoService;
 import org.springframework.http.*;
 import org.springframework.stereotype.Controller;

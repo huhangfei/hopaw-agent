@@ -1,6 +1,4 @@
-package com.agent.hopaw.pluginrepo.model;
-
-import com.agent.hopaw.infra.model.dto.PluginExportInfo;
+package com.agent.hopaw.infra.model.dto;
 
 import java.util.List;
 

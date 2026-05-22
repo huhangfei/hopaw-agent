@@ -8,6 +8,7 @@ import org.springframework.stereotype.Component;
 public class PluginRepoProperties {
 
     private String packagesDir = "plugin-packages";
+    private String baseUrl;
 
     public String getPackagesDir() {
         return packagesDir;
@@ -15,5 +16,13 @@ public class PluginRepoProperties {
 
     public void setPackagesDir(String packagesDir) {
         this.packagesDir = packagesDir;
+    }
+
+    public String getBaseUrl() {
+        return baseUrl;
+    }
+
+    public void setBaseUrl(String baseUrl) {
+        this.baseUrl = baseUrl;
     }
 }

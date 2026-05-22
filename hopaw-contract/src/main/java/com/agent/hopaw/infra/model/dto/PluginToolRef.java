@@ -1,4 +1,4 @@
-package com.agent.hopaw.pluginrepo.model;
+package com.agent.hopaw.infra.model.dto;
 
 public class PluginToolRef {
 

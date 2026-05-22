@@ -1,17 +1,19 @@
 package com.agent.hopaw.pluginrepo.service;
 
 import com.agent.hopaw.infra.model.dto.PluginExportInfo;
+import com.agent.hopaw.infra.model.dto.PluginRepoResult;
 import com.agent.hopaw.pluginrepo.config.PluginRepoProperties;
-import com.agent.hopaw.pluginrepo.model.PluginRepoResult;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
+import org.springframework.web.context.request.RequestContextHolder;
+import org.springframework.web.context.request.ServletRequestAttributes;
 import org.springframework.web.multipart.MultipartFile;
 
 import javax.annotation.PostConstruct;
+import javax.servlet.http.HttpServletRequest;
 import java.io.IOException;
-import java.io.InputStream;
 import java.nio.file.*;
 import java.util.*;
 import java.util.zip.ZipEntry;
@@ -36,6 +38,28 @@ public class PluginRepoService {
         packagesDir = Paths.get(properties.getPackagesDir()).toAbsolutePath();
         Files.createDirectories(packagesDir);
         log.info("PluginRepo packages dir: {}", packagesDir);
+    }
+
+    private String getBaseUrl() {
+        if (properties.getBaseUrl() != null && !properties.getBaseUrl().isEmpty()) {
+            return properties.getBaseUrl();
+        }
+        ServletRequestAttributes attrs = (ServletRequestAttributes) RequestContextHolder.getRequestAttributes();
+        if (attrs != null) {
+            HttpServletRequest request = attrs.getRequest();
+            String scheme = request.getScheme();
+            int port = request.getServerPort();
+            String host = request.getServerName();
+            if ((scheme.equals("http") && port == 80) || (scheme.equals("https") && port == 443)) {
+                port = -1;
+            }
+            String base = scheme + "://" + host;
+            if (port != -1) {
+                base += ":" + port;
+            }
+            return base;
+        }
+        return null;
     }
 
     public List<PluginRepoResult> scanPlugins() throws IOException {
@@ -79,8 +103,10 @@ public class PluginRepoService {
                             keyword = info.getKeyword();
                         }
 
-                        String downloadUrl = "/plugin-repo/api/download/"
+                        String base = getBaseUrl();
+                        String relPath = "/plugin-repo/api/download/"
                                 + urlEncode(pluginName) + "/" + urlEncode(version);
+                        String downloadUrl = (base != null ? base : "") + relPath;
                         PluginRepoResult.VersionEntry entry = PluginRepoResult.VersionEntry.from(info, downloadUrl);
                         versions.add(entry);
                     }
