@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>插件仓库 - Plugin Repository</title>
+    <link rel="stylesheet" th:href="@{/css/plugin-repo.css}">
+</head>
+<body>
+    <header class="nav-bar">
+        <a th:href="@{/plugin-repo/}" class="nav-brand">插件仓库</a>
+        <div class="nav-links">
+            <a th:href="@{/plugin-repo/}" class="active">插件列表</a>
+            <a th:if="${currentUser != null and currentUser.role == 'ADMIN'}" th:href="@{/plugin-repo/admin/users}">用户管理</a>
+            <a th:href="@{/plugin-repo/keys}">API Keys</a>
+        </div>
+        <div class="nav-user" th:if="${currentUser != null}">
+            <span th:text="${currentUser.displayName}">admin</span>
+            <a href="javascript:void(0)" onclick="document.getElementById('logoutForm').submit()">退出</a>
+            <form id="logoutForm" th:action="@{/plugin-repo/auth/logout}" method="post" style="display:none;"></form>
+        </div>
+        <div class="nav-actions">
+            <button class="btn-refresh" id="btnRefresh" onclick="refreshPlugins()">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M23 4v6h-6"/><path d="M1 20v-6h6"/>
+                    <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/>
+                </svg>
+                刷新
+            </button>
+            <button class="btn-import" id="btnImport" onclick="showImportDialog()">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                    <polyline points="17 8 12 3 7 8"/>
+                    <line x1="12" y1="3" x2="12" y2="15"/>
+                </svg>
+                导入插件包
+            </button>
+        </div>
+    </header>
+
+    <div class="main-container">
+        <aside class="sidebar" id="sidebar">
+            <div class="sidebar-header">
+                <input type="text" class="search-input" id="searchInput" placeholder="搜索插件..." oninput="filterPlugins()">
+            </div>
+            <div class="tree-container" id="treeContainer">
+                <div th:if="${plugins == null or plugins.isEmpty()}" class="empty-state">
+                    <div class="empty-icon">📦</div>
+                    <p>暂无插件包</p>
+                    <p class="empty-hint">点击「导入插件包」上传</p>
+                </div>
+                <div th:each="plugin, pIdx : ${plugins}" class="tree-node" th:attr="data-name=${plugin.name}">
+                    <div class="tree-node-header" th:onclick="'toggleTreeNode(this)'">
+                        <span class="tree-arrow">▸</span>
+                        <span class="tree-icon">🧩</span>
+                        <span class="tree-name" th:text="${plugin.name}">plugin-name</span>
+                        <span class="tree-badge" th:text="${plugin.versions.size() + '个版本'}">3个版本</span>
+                    </div>
+                    <div class="tree-node-children">
+                        <div th:each="version, vIdx : ${plugin.versions}" class="tree-leaf"
+                             th:attr="data-plugin=${plugin.name},data-version=${version.version}"
+                             th:onclick="'selectVersion(this)'">
+                            <span class="leaf-dot"></span>
+                            <span class="leaf-version" th:text="'v' + ${version.version}">v1.0.0</span>
+                            <span class="leaf-hash" th:text="${#strings.isEmpty(version.sha256Hash) ? '' : version.sha256Hash.substring(0, 8)}"></span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </aside>
+
+        <main class="content" id="content">
+            <div class="welcome" id="welcomePanel">
+                <div class="welcome-icon">🔌</div>
+                <h2>插件仓库管理</h2>
+                <p>从左侧选择一个插件查看详情，或导入新的插件包。</p>
+            </div>
+            <div class="detail-panel" id="detailPanel">
+                <div class="detail-header">
+                    <div class="detail-header-icon" id="detailIcon"></div>
+                    <div class="detail-header-info">
+                        <h2 id="detailName">插件名</h2>
+                        <div class="detail-header-tags">
+                            <span class="tag" id="detailKeyword"></span>
+                        </div>
+                    </div>
+                    <div class="detail-header-actions">
+                        <button class="btn-download" id="btnDownload" onclick="downloadPlugin()">
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                                <polyline points="7 10 12 15 17 10"/>
+                                <line x1="12" y1="15" x2="12" y2="3"/>
+                            </svg>
+                            下载此版本
+                        </button>
+                        <button class="btn-delete" id="btnDelete" onclick="deletePlugin()">
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <polyline points="3 6 5 6 21 6"/>
+                                <path d="M19 6l-1 14H6L5 6"/>
+                                <path d="M10 11v6"/><path d="M14 11v6"/>
+                                <path d="M9 6V4h6v2"/>
+                            </svg>
+                            删除此版本
+                        </button>
+                    </div>
+                </div>
+                <div class="detail-meta">
+                    <div class="meta-item">
+                        <span class="meta-label">版本</span>
+                        <span class="meta-value" id="metaVersion">-</span>
+                    </div>
+                    <div class="meta-item">
+                        <span class="meta-label">作者</span>
+                        <span class="meta-value" id="metaAuthor">-</span>
+                    </div>
+                    <div class="meta-item">
+                        <span class="meta-label">文件大小</span>
+                        <span class="meta-value" id="metaFileSize">-</span>
+                    </div>
+                    <div class="meta-item">
+                        <span class="meta-label">SHA256</span>
+                        <span class="meta-value hash-value" id="metaHash">-</span>
+                    </div>
+                </div>
+                <div class="detail-section">
+                    <h3>描述</h3>
+                    <p id="metaDescription" class="detail-description">-</p>
+                </div>
+                <div class="detail-section">
+                    <h3>工具列表</h3>
+                    <div class="tools-list" id="toolsList"></div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <div class="modal-overlay" id="importModal" style="display:none;">
+        <div class="modal">
+            <div class="modal-header">
+                <h2>导入插件包</h2>
+                <button class="modal-close" onclick="hideImportDialog()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="drop-zone" id="dropZone">
+                    <div class="drop-zone-content">
+                        <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" class="drop-icon">
+                            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                            <polyline points="17 8 12 3 7 8"/>
+                            <line x1="12" y1="3" x2="12" y2="15"/>
+                        </svg>
+                        <p>拖拽ZIP文件到此处，或点击选择</p>
+                        <p class="drop-hint">支持 .zip 格式的插件导出包</p>
+                    </div>
+                    <input type="file" id="fileInput" accept=".zip" style="display:none;" onchange="handleFileSelect(this)">
+                </div>
+                <div class="import-progress" id="importProgress" style="display:none;">
+                    <div class="progress-bar"><div class="progress-fill" id="progressFill"></div></div>
+                    <p id="progressText">正在导入...</p>
+                </div>
+                <div class="import-result" id="importResult" style="display:none;"></div>
+            </div>
+        </div>
+    </div>
+
+    <script th:src="@{/js/plugin-repo.js}"></script>
+</body>
+</html>

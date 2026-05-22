@@ -1,0 +1,59 @@
+{
+  "name" : "dingtalkNotify",
+  "description" : "钉钉机器人通知工具，支持发送文本和Markdown消息到钉钉群",
+  "keyword" : "钉钉,通知,消息,dingtalk,群消息,机器人",
+  "icon" : "<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 100 100\">\n  <circle cx=\"50\" cy=\"50\" r=\"45\" fill=\"#1677FF\"/>\n  <path d=\"M50 18 C42 18 35 25 35 34 L35 42 C32 44 30 46 30 49 L30 55 L70 55 L70 49 C70 46 68 44 65 42 L65 34 C65 25 58 18 50 18 Z\" fill=\"white\"/>\n  <rect x=\"44\" y=\"54\" width=\"12\" height=\"18\" rx=\"4\" fill=\"white\"/>\n  <circle cx=\"50\" cy=\"73\" r=\"3\" fill=\"#1677FF\"/>\n  <rect x=\"26\" y=\"47\" width=\"48\" height=\"3\" rx=\"1.5\" fill=\"#1677FF\"/>\n  <rect x=\"36\" y=\"30\" width=\"28\" height=\"3\" rx=\"1.5\" fill=\"#1677FF\"/>\n  <rect x=\"40\" y=\"24\" width=\"20\" height=\"3\" rx=\"1.5\" fill=\"#1677FF\"/>\n</svg>",
+  "version" : "1.0.0",
+  "author" : "Agent Tool",
+  "url" : "https://gitee.com/hgflydream/hopaw-agent",
+  "source" : "PLUGIN",
+  "jarFileName" : "hopaw-tool-dingtalk-1.0.0.jar",
+  "defaultUpdateUrl" : "",
+  "fileSize" : 2240784,
+  "sha256Hash" : "499e4995301b6a85b7549943d68943139a783245d258ddd643768ae435e40db5",
+  "tools" : [ {
+    "name" : "sendTextToDingTalk",
+    "description" : "发送纯文本消息到钉钉群",
+    "parameters" : [ {
+      "name" : "message",
+      "description" : "要发送的文本内容",
+      "required" : true,
+      "type" : "String"
+    }, {
+      "name" : "inputSecret",
+      "description" : "加签密钥，不传则不使用加签",
+      "required" : true,
+      "type" : "String"
+    }, {
+      "name" : "webhookUrl",
+      "description" : "钉钉机器人webhook地址，不传则使用已配置的地址",
+      "required" : false,
+      "type" : "String"
+    } ]
+  }, {
+    "name" : "sendMarkdownToDingTalk",
+    "description" : "发送Markdown格式消息到钉钉群",
+    "parameters" : [ {
+      "name" : "title",
+      "description" : "消息标题",
+      "required" : true,
+      "type" : "String"
+    }, {
+      "name" : "text",
+      "description" : "Markdown格式的消息内容",
+      "required" : true,
+      "type" : "String"
+    }, {
+      "name" : "inputSecret",
+      "description" : "加签密钥，不传则不使用加签",
+      "required" : true,
+      "type" : "String"
+    }, {
+      "name" : "webhookUrl",
+      "description" : "钉钉机器人webhook地址，不传则使用已配置的地址",
+      "required" : false,
+      "type" : "String"
+    } ]
+  } ],
+  "hasConfigItems" : true
+}

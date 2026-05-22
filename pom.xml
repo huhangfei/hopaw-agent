@@ -21,6 +21,7 @@
         <module>hopaw-infra</module>
         <module>hopaw-biz</module>
         <module>hopaw-app</module>
+        <module>hopaw-plugin-repo</module>
         <module>tools/hopaw-tool-webpage</module>
         <module>tools/hopaw-tool-ssh</module>
         <module>tools/hopaw-tool-demo</module>

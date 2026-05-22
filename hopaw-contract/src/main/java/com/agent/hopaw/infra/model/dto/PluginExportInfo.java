@@ -12,6 +12,10 @@ public class PluginExportInfo extends ToolSetInfo {
     private long fileSize;
     private String sha256Hash;
 
+    public PluginExportInfo() {
+        super(null, null, null, null);
+    }
+
     public PluginExportInfo(ToolSetInfo info, long fileSize, String sha256Hash) {
         super(info.getName(), info.getDescription(), info.getIcon(), info.getTools(), info.getSource());
         this.setVersion(info.getVersion());

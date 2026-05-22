@@ -1,0 +1,311 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>用户管理 - 插件仓库</title>
+    <link rel="stylesheet" th:href="@{/css/plugin-repo.css}">
+    <style>
+        .page-container {
+            max-width: 1100px;
+            margin: 0 auto;
+            padding: 24px 32px;
+        }
+        .page-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 24px;
+        }
+        .page-header h1 {
+            font-size: 20px;
+            font-weight: 700;
+        }
+        .nav-bar {
+            display: flex;
+            align-items: center;
+            gap: 24px;
+            padding: 0 32px;
+            height: 56px;
+            background: var(--card-bg);
+            border-bottom: 1px solid var(--border);
+        }
+        .nav-brand {
+            font-weight: 700;
+            color: var(--primary);
+            font-size: 16px;
+            text-decoration: none;
+        }
+        .nav-links { display: flex; gap: 8px; flex: 1; }
+        .nav-links a {
+            padding: 6px 14px;
+            font-size: 13px;
+            text-decoration: none;
+            color: var(--text-secondary);
+            border-radius: 6px;
+            transition: all .2s;
+        }
+        .nav-links a:hover, .nav-links a.active { background: var(--primary-light); color: var(--primary); }
+        .nav-user {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            font-size: 13px;
+            color: var(--text-secondary);
+        }
+        .nav-user a { color: #dc2626; text-decoration: none; font-size: 12px; }
+        .btn-primary {
+            display: inline-flex; align-items: center; gap: 6px;
+            padding: 8px 16px; font-size: 13px; font-weight: 600;
+            color: #fff; background: var(--primary); border: none;
+            border-radius: 8px; cursor: pointer;
+        }
+        .btn-primary:hover { background: #4338ca; }
+        .btn-sm {
+            padding: 4px 10px; font-size: 11px; font-weight: 600;
+            border-radius: 6px; cursor: pointer; border: none;
+        }
+        .btn-edit { color: var(--primary); background: var(--primary-light); }
+        .btn-lock { color: #d97706; background: #fffbeb; }
+        .btn-unlock { color: #059669; background: #ecfdf5; }
+        .btn-danger { color: #dc2626; background: #fef2f2; }
+        .btn-edit:hover { background: #c7d2fe; }
+        .data-table {
+            width: 100%;
+            border-collapse: collapse;
+            background: var(--card-bg);
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: var(--shadow);
+        }
+        .data-table th {
+            text-align: left;
+            padding: 12px 16px;
+            font-size: 12px;
+            font-weight: 600;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            background: var(--bg);
+            border-bottom: 1px solid var(--border);
+        }
+        .data-table td {
+            padding: 12px 16px;
+            font-size: 13px;
+            border-bottom: 1px solid var(--border);
+            vertical-align: middle;
+        }
+        .data-table tr:last-child td { border-bottom: none; }
+        .role-badge {
+            display: inline-block;
+            padding: 2px 10px;
+            border-radius: 10px;
+            font-size: 11px;
+            font-weight: 600;
+        }
+        .role-admin { background: #fef3c7; color: #92400e; }
+        .role-user { background: #e0e7ff; color: #3730a3; }
+        .status-locked { color: #dc2626; font-weight: 600; }
+        .status-active { color: #059669; font-weight: 600; }
+        .actions { display: flex; gap: 4px; }
+        .modal-actions { display: flex; gap: 10px; justify-content: flex-end; margin-top: 20px; }
+        .btn-cancel {
+            padding: 8px 16px; font-size: 13px; font-weight: 500;
+            background: var(--bg); border: 1px solid var(--border);
+            border-radius: 8px; cursor: pointer; color: var(--text-secondary);
+        }
+    </style>
+</head>
+<body>
+    <nav class="nav-bar">
+        <a th:href="@{/plugin-repo/}" class="nav-brand">插件仓库</a>
+        <div class="nav-links">
+            <a th:href="@{/plugin-repo/}">插件列表</a>
+            <a th:href="@{/plugin-repo/admin/users}" class="active">用户管理</a>
+            <a th:href="@{/plugin-repo/keys}">API Keys</a>
+        </div>
+        <div class="nav-user" th:if="${currentUser != null}">
+            <span th:text="${currentUser.displayName}">admin</span>
+            <a href="javascript:void(0)" th:onclick="'document.getElementById(\'logoutForm\').submit()'">退出</a>
+            <form id="logoutForm" th:action="@{/plugin-repo/auth/logout}" method="post" style="display:none;"></form>
+        </div>
+    </nav>
+
+    <div class="page-container">
+        <div class="page-header">
+            <h1>用户管理</h1>
+            <button class="btn-primary" onclick="showUserModal()">+ 新增用户</button>
+        </div>
+
+        <table class="data-table">
+            <thead>
+                <tr>
+                    <th>用户名</th>
+                    <th>显示名</th>
+                    <th>角色</th>
+                    <th>状态</th>
+                    <th>创建时间</th>
+                    <th>操作</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr th:each="user : ${users}" class="user-row"
+                    th:attr="data-id=${user.id},data-username=${user.username},data-displayname=${user.displayName},data-role=${user.role}">
+                    <td><strong th:text="${user.username}">admin</strong></td>
+                    <td th:text="${user.displayName}">管理员</td>
+                    <td>
+                        <span class="role-badge" th:classappend="${user.role == 'ADMIN'} ? role-admin : role-user"
+                              th:text="${user.role == 'ADMIN'} ? '管理员' : '普通用户'">管理员</span>
+                    </td>
+                    <td>
+                        <span th:class="${user.locked} ? status-locked : status-active"
+                              th:text="${user.locked} ? '已锁定' : '正常'">正常</span>
+                    </td>
+                    <td th:text="${user.createdAt}">2024-01-01</td>
+                    <td>
+                        <div class="actions">
+                            <button class="btn-sm btn-edit" onclick="editUser(this)">编辑</button>
+                            <button th:if="${user.locked}" class="btn-sm btn-unlock" onclick="toggleLock(this)">解锁</button>
+                            <button th:if="${!user.locked and user.username != 'admin'}" class="btn-sm btn-lock" onclick="toggleLock(this)">锁定</button>
+                            <button th:if="${user.username != 'admin'}" class="btn-sm btn-danger" onclick="deleteUser(this)">删除</button>
+                        </div>
+                    </td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+
+    <div class="modal-overlay" id="userModal" style="display:none;">
+        <div class="modal">
+            <div class="modal-header">
+                <h2 id="userModalTitle">新增用户</h2>
+                <button class="modal-close" onclick="hideUserModal()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <input type="hidden" id="editUserId">
+                <div class="form-group">
+                    <label>用户名</label>
+                    <input type="text" id="editUsername" class="search-input" placeholder="登录用户名" style="width:100%;box-sizing:border-box;">
+                </div>
+                <div class="form-group">
+                    <label>显示名称</label>
+                    <input type="text" id="editDisplayName" class="search-input" placeholder="显示名称" style="width:100%;box-sizing:border-box;">
+                </div>
+                <div class="form-group">
+                    <label>密码 <span style="color:var(--text-muted);font-weight:400;">（留空则不修改）</span></label>
+                    <input type="password" id="editPassword" class="search-input" placeholder="密码" style="width:100%;box-sizing:border-box;">
+                </div>
+                <div class="form-group">
+                    <label>角色</label>
+                    <select id="editRole" class="search-input" style="width:100%;box-sizing:border-box;">
+                        <option value="USER">普通用户</option>
+                        <option value="ADMIN">管理员</option>
+                    </select>
+                </div>
+                <div class="modal-actions">
+                    <button class="btn-cancel" onclick="hideUserModal()">取消</button>
+                    <button class="btn-primary" onclick="saveUser()">保存</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function showUserModal() {
+            document.getElementById('userModalTitle').textContent = '新增用户';
+            document.getElementById('editUserId').value = '';
+            document.getElementById('editUsername').value = '';
+            document.getElementById('editUsername').disabled = false;
+            document.getElementById('editDisplayName').value = '';
+            document.getElementById('editPassword').value = '';
+            document.getElementById('editRole').value = 'USER';
+            document.getElementById('userModal').style.display = '';
+        }
+
+        function getRowData(el) {
+            var row = el.closest('tr');
+            return {
+                id: row.getAttribute('data-id'),
+                username: row.getAttribute('data-username'),
+                displayName: row.getAttribute('data-displayname'),
+                role: row.getAttribute('data-role')
+            };
+        }
+
+        function editUser(el) {
+            var d = getRowData(el);
+            document.getElementById('userModalTitle').textContent = '编辑用户';
+            document.getElementById('editUserId').value = d.id;
+            document.getElementById('editUsername').value = d.username;
+            document.getElementById('editUsername').disabled = true;
+            document.getElementById('editDisplayName').value = d.displayName;
+            document.getElementById('editPassword').value = '';
+            document.getElementById('editRole').value = d.role;
+            document.getElementById('userModal').style.display = '';
+        }
+
+        function hideUserModal() {
+            document.getElementById('userModal').style.display = 'none';
+        }
+
+        function saveUser() {
+            var id = document.getElementById('editUserId').value;
+            var username = document.getElementById('editUsername').value;
+            var displayName = document.getElementById('editDisplayName').value;
+            var password = document.getElementById('editPassword').value;
+            var role = document.getElementById('editRole').value;
+
+            var body = {displayName: displayName, role: role, password: password};
+
+            if (!id) {
+                if (!username) { alert('请输入用户名'); return; }
+                if (!password) { alert('请输入密码'); return; }
+                body.username = username;
+                fetch('/plugin-repo/admin/api/users', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify(body)
+                }).then(function(r) { return r.json(); }).then(function(d) {
+                    if (d.type === 'success') location.reload();
+                    else alert(d.message);
+                });
+            } else {
+                fetch('/plugin-repo/admin/api/users/' + id, {
+                    method: 'PUT',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify(body)
+                }).then(function(r) { return r.json(); }).then(function(d) {
+                    if (d.type === 'success') location.reload();
+                    else alert(d.message);
+                });
+            }
+        }
+
+        function toggleLock(el) {
+            var d = getRowData(el);
+            if (!confirm('确定要切换用户锁定状态吗？')) return;
+            fetch('/plugin-repo/admin/api/users/' + d.id + '/lock', { method: 'PUT' })
+                .then(function(r) { return r.json(); }).then(function(d) {
+                    if (d.type === 'success') location.reload();
+                    else alert(d.message);
+                });
+        }
+
+        function deleteUser(el) {
+            var d = getRowData(el);
+            if (!confirm('确定要删除用户 "' + d.username + '" 吗？此操作不可撤销。')) return;
+            fetch('/plugin-repo/admin/api/users/' + d.id, { method: 'DELETE' })
+                .then(function(r) { return r.json(); }).then(function(d) {
+                    if (d.type === 'success') location.reload();
+                    else alert(d.message);
+                });
+        }
+
+        document.getElementById('userModal').addEventListener('click', function(e) {
+            if (e.target === this) hideUserModal();
+        });
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'Escape') hideUserModal();
+        });
+    </script>
+</body>
+</html>

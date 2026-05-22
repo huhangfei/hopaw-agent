@@ -22,6 +22,9 @@ public class ToolSetInfo {
         return icon != null && icon.startsWith("<svg");
     }
 
+    public ToolSetInfo() {
+    }
+
     public ToolSetInfo(String name, String description, String icon, List<ToolInfo> tools) {
         this(name, description, icon, tools, AgentToolSourceEnum.BUILT_IN);
     }
