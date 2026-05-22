@@ -5,7 +5,6 @@ document.addEventListener('DOMContentLoaded', function() {
     loadProviders();
     setupCascading();
     loadMemoryTaskStatus();
-    loadPluginStoreSettings();
 });
 
 function switchTab(name) {
@@ -37,6 +36,7 @@ function loadAllSettings() {
             document.getElementById('vectorStorePath').value = settingsCache['vector_store_path'] || '';
             document.getElementById('vectorStoreProfile').value = settingsCache['vector_store_profile'] || 'stable';
             loadMailSettings();
+            loadPluginStoreSettings();
         })
         .catch(function(e) {
             console.error('加载设置失败:', e);
