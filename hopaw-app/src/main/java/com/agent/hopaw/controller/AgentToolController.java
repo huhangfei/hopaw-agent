@@ -5,6 +5,10 @@ import com.agent.hopaw.infra.model.dto.ResponseBean;
 import com.agent.hopaw.infra.model.dto.ToolSetInfo;
 import com.agent.hopaw.infra.service.ISysConfigService;
 import com.agent.hopaw.infra.tool.IAgentToolService;
+import org.springframework.http.ContentDisposition;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.*;
@@ -76,5 +80,24 @@ public class AgentToolController {
             return ResponseBean.success("安装/升级成功");
         }
         return ResponseBean.fail("安装/升级失败");
+    }
+
+    @GetMapping("/api/export/{jarFileName}")
+    @ResponseBody
+    public ResponseEntity<byte[]> exportPlugin(@PathVariable String jarFileName) {
+        byte[] zipBytes = IAgentToolService.exportPlugin(jarFileName);
+        if (zipBytes == null) {
+            return ResponseEntity.notFound().build();
+        }
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.APPLICATION_OCTET_STREAM);
+        String exportFileName = jarFileName;
+        if (exportFileName.toLowerCase().endsWith(".jar")) {
+            exportFileName = exportFileName.substring(0, exportFileName.length() - 4);
+        }
+        headers.setContentDisposition(ContentDisposition.attachment()
+                .filename(exportFileName + ".zip").build());
+        headers.setContentLength(zipBytes.length);
+        return ResponseEntity.ok().headers(headers).body(zipBytes);
     }
 }

@@ -72,3 +72,12 @@ function uninstallPlugin(btn) {
         });
     });
 }
+
+function exportPlugin(btn) {
+    var jarFileName = btn.getAttribute('data-jar');
+    if (!jarFileName) {
+        showToast('无法获取插件文件名', 'error');
+        return;
+    }
+    window.location.href = '/tools/api/export/' + encodeURIComponent(jarFileName);
+}

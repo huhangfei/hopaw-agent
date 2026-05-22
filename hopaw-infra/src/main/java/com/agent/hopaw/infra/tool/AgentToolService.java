@@ -1,6 +1,7 @@
 package com.agent.hopaw.infra.tool;
 
 import com.agent.hopaw.infra.constant.AgentToolSourceEnum;
+import com.agent.hopaw.infra.model.dto.PluginExportInfo;
 import com.agent.hopaw.infra.model.dto.PluginUpdateInfo;
 import com.agent.hopaw.infra.model.dto.ToolInfo;
 import com.agent.hopaw.infra.model.dto.ToolParamInfo;
@@ -29,6 +30,8 @@ import java.nio.file.StandardCopyOption;
 import java.security.MessageDigest;
 import java.util.*;
 import java.util.stream.Collectors;
+import java.util.zip.ZipEntry;
+import java.util.zip.ZipOutputStream;
 
 @Service
 public class AgentToolService implements IAgentToolService {
@@ -64,10 +67,10 @@ public class AgentToolService implements IAgentToolService {
         for (AgentTool agentTool : beans.values()) {
             result.add(scanToolSet(agentTool, AgentToolSourceEnum.BUILT_IN));
         }
-        result.addAll(getAllToolSets());
+        result.addAll(getAllPluginToolSets());
         return result;
     }
-    public List<ToolSetInfo> getAllToolSets() {
+    private List<ToolSetInfo> getAllPluginToolSets() {
         List<ToolSetInfo> result = new ArrayList<>();
         List<DynamicToolRegistry.PluginEntry> allPluginEntries = dynamicToolRegistry.getAllPluginEntries();
         for (DynamicToolRegistry.PluginEntry entry : allPluginEntries) {
@@ -278,5 +281,75 @@ public class AgentToolService implements IAgentToolService {
             hexString.append(hex);
         }
         return hexString.toString();
+    }
+
+    @Override
+    public byte[] exportPlugin(String jarFileName) {
+        if (jarFileName == null || jarFileName.isEmpty()) {
+            log.warn("exportPlugin: jarFileName is empty");
+            return null;
+        }
+
+        try {
+            Path jarPath = jarPluginLoader.getPluginDir().resolve(jarFileName);
+            File jarFile = jarPath.toFile();
+            if (!jarFile.exists()) {
+                log.warn("exportPlugin: jar file not found: {}", jarPath);
+                return null;
+            }
+
+            DynamicToolRegistry.PluginEntry entry = dynamicToolRegistry.getPlugins().get(jarFileName);
+            if (entry == null || entry.tools.isEmpty()) {
+                log.warn("exportPlugin: plugin not loaded or has no tools: {}", jarFileName);
+                return null;
+            }
+
+            ToolSetInfo tsInfo = getAllPluginToolSets().stream()
+                    .filter(ts -> jarFileName.equals(ts.getJarFileName()))
+                    .findFirst().orElse(null);
+            if (tsInfo == null) {
+                log.warn("exportPlugin: no ToolSetInfo found for jar: {}", jarFileName);
+                return null;
+            }
+
+            long fileSize = jarFile.length();
+            String sha256Hash = calculateSHA256(jarPath);
+
+            PluginExportInfo exportInfo = new PluginExportInfo(tsInfo, fileSize, sha256Hash);
+            byte[] jsonBytes = objectMapper.writerWithDefaultPrettyPrinter()
+                    .writeValueAsBytes(exportInfo);
+
+            String baseName = jarFileName;
+            if (baseName.toLowerCase().endsWith(".jar")) {
+                baseName = baseName.substring(0, baseName.length() - 4);
+            }
+
+            ByteArrayOutputStream baos = new ByteArrayOutputStream();
+            try (ZipOutputStream zos = new ZipOutputStream(baos)) {
+                ZipEntry jsonEntry = new ZipEntry(baseName + ".json");
+                zos.putNextEntry(jsonEntry);
+                zos.write(jsonBytes);
+                zos.closeEntry();
+
+                ZipEntry jarEntry = new ZipEntry(jarFileName);
+                zos.putNextEntry(jarEntry);
+                Files.copy(jarPath, zos);
+                zos.closeEntry();
+            }
+
+            log.info("exportPlugin: exported {} ({}, SHA256: {})", jarFileName,
+                    formatFileSize(fileSize), sha256Hash);
+            return baos.toByteArray();
+        } catch (Exception e) {
+            log.error("exportPlugin: error exporting plugin: {}", jarFileName, e);
+            return null;
+        }
+    }
+
+    private String formatFileSize(long bytes) {
+        if (bytes < 1024) return bytes + " B";
+        if (bytes < 1024 * 1024) return String.format("%.2f KB", bytes / 1024.0);
+        if (bytes < 1024 * 1024 * 1024) return String.format("%.2f MB", bytes / (1024.0 * 1024.0));
+        return String.format("%.2f GB", bytes / (1024.0 * 1024.0 * 1024.0));
     }
 }

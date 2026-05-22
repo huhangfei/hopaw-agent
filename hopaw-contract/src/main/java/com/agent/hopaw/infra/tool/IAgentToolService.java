@@ -15,4 +15,6 @@ public interface IAgentToolService {
     PluginUpdateInfo checkPluginUpdate(String checkUrl, String toolName, String currentVersion, String jarFileName);
 
     boolean installOrUpgradePlugin(PluginUpdateInfo updateInfo);
+
+    byte[] exportPlugin(String jarFileName);
 }

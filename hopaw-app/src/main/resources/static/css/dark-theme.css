@@ -194,6 +194,18 @@ body.dark-theme .btn-unload-plugin:hover {
     border-color: #ff7961;
 }
 
+body.dark-theme .btn-export-plugin {
+    background: #1a3b1a;
+    color: #66bb6a;
+    border-color: rgba(102, 187, 106, 0.3);
+}
+
+body.dark-theme .btn-export-plugin:hover {
+    background: #66bb6a;
+    color: #fff;
+    border-color: #66bb6a;
+}
+
 body.dark-theme .btn-config {
     background: #3d3d6b;
     color: #c0c0c0;

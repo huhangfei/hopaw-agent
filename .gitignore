@@ -33,3 +33,10 @@ agent.db
 application-dev.properties
 /.deepseek/
 /.claude/
+
+.idea/
+*.iml
+target/
+hopaw-agent.pid
+vector_store.graph
+vector_store.metadata

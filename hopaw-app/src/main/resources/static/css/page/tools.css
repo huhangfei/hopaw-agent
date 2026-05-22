@@ -502,6 +502,29 @@
     cursor: not-allowed;
 }
 
+/* ===== 导出插件按钮 ===== */
+.btn-export-plugin {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 5px 14px;
+    font-size: 12px;
+    font-weight: 500;
+    color: #2e7d32;
+    background: #fff;
+    border: 1px solid #c8e6c9;
+    border-radius: 8px;
+    cursor: pointer;
+    margin-left: 8px;
+    transition: all 0.2s;
+}
+
+.btn-export-plugin:hover {
+    background: #2e7d32;
+    color: #fff;
+    border-color: #2e7d32;
+}
+
 /* ===== 配置按钮 ===== */
 .btn-config {
     display: inline-flex;
