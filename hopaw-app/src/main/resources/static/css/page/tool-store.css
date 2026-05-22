@@ -1,0 +1,236 @@
+.btn-back-link {
+    font-size: 13px;
+    color: #667eea;
+    text-decoration: none;
+    font-weight: 500;
+    padding: 4px 0;
+}
+
+.btn-back-link:hover {
+    color: #4a56d4;
+    text-decoration: underline;
+}
+
+.store-search-box {
+    padding: 8px 16px;
+    border-bottom: 1px solid #e8e8e8;
+}
+
+.store-search-input {
+    width: 100%;
+    padding: 8px 12px;
+    border: 1px solid #e0e0e0;
+    border-radius: 6px;
+    font-size: 13px;
+    outline: none;
+    transition: border-color 0.2s;
+    box-sizing: border-box;
+}
+
+.store-search-input:focus {
+    border-color: #667eea;
+}
+
+.store-refresh-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 6px 16px;
+    border-bottom: 1px solid #f0f0f0;
+}
+
+.store-status {
+    font-size: 12px;
+    color: #999;
+}
+
+.btn-refresh-store {
+    font-size: 12px;
+    color: #667eea;
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 2px 8px;
+    border-radius: 4px;
+    transition: background 0.15s;
+}
+
+.btn-refresh-store:hover {
+    background: #667eea10;
+}
+
+.store-status-tag {
+    display: inline-block;
+    font-size: 10px;
+    padding: 1px 6px;
+    border-radius: 8px;
+    margin-left: 6px;
+    vertical-align: middle;
+    font-weight: 500;
+    line-height: 1.6;
+}
+
+.status-installed {
+    color: #43a047;
+    background: #e8f5e9;
+}
+
+.status-update {
+    color: #e8913a;
+    background: #fff3e0;
+}
+
+.status-not-installed {
+    color: #999;
+    background: #f5f5f5;
+}
+
+.store-new-tag {
+    display: inline-block;
+    font-size: 9px;
+    padding: 1px 5px;
+    border-radius: 4px;
+    margin-left: 4px;
+    vertical-align: middle;
+    font-weight: 700;
+    background: #ff5722;
+    color: #fff;
+    line-height: 1.6;
+}
+
+.store-welcome {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    height: 100%;
+    color: #999;
+    text-align: center;
+}
+
+.store-welcome h2 {
+    margin: 12px 0 8px;
+    font-size: 20px;
+    color: #666;
+}
+
+.store-welcome p {
+    font-size: 14px;
+    max-width: 400px;
+}
+
+.welcome-hint {
+    color: #e8913a;
+    font-size: 13px;
+}
+
+.welcome-hint a {
+    color: #667eea;
+}
+
+.store-action-area {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex-shrink: 0;
+}
+
+.store-version-selector {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.store-version-selector label {
+    font-size: 13px;
+    color: #888;
+    white-space: nowrap;
+}
+
+.store-version-selector select {
+    padding: 6px 10px;
+    border: 1px solid #d0d0d0;
+    border-radius: 6px;
+    font-size: 13px;
+    background: #fff;
+    cursor: pointer;
+    outline: none;
+}
+
+.store-version-selector select:focus {
+    border-color: #667eea;
+}
+
+.store-status-badge {
+    font-size: 12px;
+    padding: 4px 12px;
+    border-radius: 12px;
+    font-weight: 500;
+    white-space: nowrap;
+}
+
+.badge-installed {
+    background: #e8f5e9;
+    color: #43a047;
+}
+
+.badge-update {
+    background: #fff3e0;
+    color: #e8913a;
+}
+
+.badge-not-installed {
+    background: #f5f5f5;
+    color: #999;
+}
+
+.btn-store-action {
+    padding: 8px 18px;
+    border: none;
+    border-radius: 8px;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+    white-space: nowrap;
+}
+
+.btn-store-action:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+.btn-install {
+    background: #4caf50;
+    color: #fff;
+}
+
+.btn-install:hover:not(:disabled) {
+    background: #43a047;
+}
+
+.btn-update {
+    background: #ff9800;
+    color: #fff;
+}
+
+.btn-update:hover:not(:disabled) {
+    background: #f57c00;
+}
+
+.store-detail-keyword {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+    margin-top: 6px;
+}
+
+.store-detail-keyword .tag {
+    display: inline-block;
+    font-size: 11px;
+    padding: 2px 8px;
+    border-radius: 10px;
+    background: #e8f0fe;
+    color: #4a66d6;
+    font-weight: 500;
+}

@@ -62,6 +62,17 @@ public class PluginRepoService {
         return null;
     }
 
+    private String getQueryString() {
+        ServletRequestAttributes attrs = (ServletRequestAttributes) RequestContextHolder.getRequestAttributes();
+        if (attrs != null) {
+            String query = attrs.getRequest().getQueryString();
+            if (query != null && !query.isEmpty()) {
+                return "?" + query;
+            }
+        }
+        return "";
+    }
+
     public List<PluginRepoResult> scanPlugins() throws IOException {
         if (!Files.exists(packagesDir)) {
             return Collections.emptyList();
@@ -104,9 +115,10 @@ public class PluginRepoService {
                         }
 
                         String base = getBaseUrl();
+                        String query = getQueryString();
                         String relPath = "/plugin-repo/api/download/"
                                 + urlEncode(pluginName) + "/" + urlEncode(version);
-                        String downloadUrl = (base != null ? base : "") + relPath;
+                        String downloadUrl = (base != null ? base : "") + relPath + query;
                         PluginRepoResult.VersionEntry entry = PluginRepoResult.VersionEntry.from(info, downloadUrl);
                         versions.add(entry);
                     }

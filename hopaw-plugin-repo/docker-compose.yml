@@ -1,0 +1,70 @@
+version: '3.8'
+
+services:
+  hopaw-plugin-repo:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: hopaw-plugin-repo
+    restart: unless-stopped
+    
+    # 使用 root 用户启动，以解决挂载卷的权限问题
+    user: "0:0"
+    
+    # 端口映射
+    ports:
+      - "8081:8081"
+    
+    # 环境变量
+    environment:
+      - TZ=Asia/Shanghai
+      - JAVA_OPTS=-Xms256m -Xmx256m -XX:+UseG1GC -XX:MaxGCPauseMillis=200
+      # 或者使用 Spring Boot 2.x+ 推荐格式：
+      # - SPRING_DATASOURCE_URL=jdbc:sqlite:/app/data/plugin-repo.db
+    
+    # 数据卷挂载
+    volumes:
+      # 日志目录
+      - ./logs:/app/logs
+      # 插件包目录
+      - ./plugin-packages:/app/plugin-packages
+      # 数据库文件持久化（使用命名卷避免 Windows 下的目录问题）
+      - ./data:/app/data
+    
+    # 资源限制
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+          cpus: '1.0'
+        reservations:
+          memory: 256M
+          cpus: '0.5'
+    
+    # 网络配置
+    networks:
+      - hopaw-network
+    
+    # 健康检查
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:8081/"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    
+    # 日志配置
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+networks:
+  hopaw-network:
+    driver: bridge
+
+# 命名卷定义
+volumes:
+  plugin-db-data:
+    driver: local

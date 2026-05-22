@@ -1,7 +1,10 @@
 package com.agent.hopaw.infra.model.dto;
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+
 import java.util.List;
 
+@JsonIgnoreProperties(ignoreUnknown = true)
 public class PluginRepoResult {
 
     private String name;
@@ -29,6 +32,7 @@ public class PluginRepoResult {
         return icon != null && icon.startsWith("<svg");
     }
 
+    @JsonIgnoreProperties(ignoreUnknown = true)
     public static class VersionEntry {
         private String version;
         private long fileSize;

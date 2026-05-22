@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+      layout:decorate="~{layouts/default}">
+<head>
+    <title>插件商店 - HoPaw</title>
+</head>
+<body>
+<div layout:fragment="pageTitle">🤖 HoPaw - 插件商店</div>
+
+<div class="tools-split" layout:fragment="content">
+    <div class="tools-list-panel">
+        <div class="tools-list-header">
+            <div class="tools-list-header-row">
+                <h3>插件商店</h3>
+                <a href="/tools" class="btn-back-link">← 返回</a>
+            </div>
+        </div>
+        <div class="store-search-box">
+            <input type="text" id="storeSearch" class="store-search-input" placeholder="搜索插件名称、关键字、描述..." oninput="filterPlugins()">
+        </div>
+        <div class="store-refresh-row">
+            <span class="store-status" id="storeStatus"></span>
+            <button class="btn-refresh-store" onclick="loadStorePlugins()" title="刷新插件列表">🔄 刷新</button>
+        </div>
+        <div class="tools-list-body" id="storeListBody">
+            <div class="tools-list-empty" id="storeLoading">加载中...</div>
+        </div>
+    </div>
+
+    <div class="tools-detail-panel" id="storeDetailPanel">
+        <div class="store-welcome" id="storeWelcome">
+            <div class="welcome-icon">🛒</div>
+            <h2>插件商店</h2>
+            <p>从左侧列表选择插件查看详情。可安装未安装的插件，或更新已有插件到新版本。</p>
+            <p class="welcome-hint" id="storeNoSource" style="display:none;">
+                ⚠ 尚未配置商店源地址，请先在 <a href="/settings">设置 → 插件商店源</a> 中配置。
+            </p>
+        </div>
+        <div class="tool-detail active" id="storeDetail" style="display:none;">
+            <div class="detail-header">
+                <div class="detail-header-icon" id="storeDetailIcon"></div>
+                <div class="detail-header-info">
+                    <div class="detail-name" id="storeDetailName"></div>
+                    <div class="detail-desc" id="storeDetailDesc"></div>
+                    <div class="store-detail-keyword" id="storeDetailKeyword" style="display:none;"></div>
+                </div>
+                <div class="store-action-area" id="storeActionArea">
+                    <div class="store-version-selector">
+                        <label>版本:</label>
+                        <select id="storeVersionSelect" onchange="onVersionSwitch()"></select>
+                    </div>
+                    <div class="store-status-badge" id="storeStatusBadge"></div>
+                    <button class="btn-store-action" id="btnStoreAction" onclick="doInstallOrUpgrade()"></button>
+                </div>
+            </div>
+
+            <div class="detail-meta" id="storeDetailMeta"></div>
+
+            <div class="detail-body" id="storeDetailBody">
+                <div class="detail-empty-state" id="storeDetailEmpty">加载中...</div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<th:block layout:fragment="extraCss">
+    <link rel="stylesheet" href="/css/page/tools.css">
+    <link rel="stylesheet" href="/css/page/tool-store.css">
+</th:block>
+
+<th:block layout:fragment="extraScripts">
+    <script src="/js/tool-store.js"></script>
+</th:block>
+</body>
+</html>
