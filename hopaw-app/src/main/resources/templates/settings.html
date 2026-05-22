@@ -14,6 +14,7 @@
     <div class="settings-tabs">
         <button class="settings-tab active" data-tab="memory" onclick="switchTab('memory')">记忆设置</button>
         <button class="settings-tab" data-tab="mail" onclick="switchTab('mail')">邮件配置</button>
+        <button class="settings-tab" data-tab="pluginStore" onclick="switchTab('pluginStore')">插件商店源</button>
     </div>
 
     <div class="settings-panel active" id="tab-memory">
@@ -115,6 +116,21 @@
             <div class="settings-actions">
                 <button class="btn-save-settings" onclick="saveMailSettings()">保存设置</button>
                 <button class="btn-test-mail" onclick="testMailConfig()">测试连接</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="settings-panel" id="tab-pluginStore">
+        <div class="settings-form">
+            <div class="form-group">
+                <label>插件商店源地址</label>
+                <div id="pluginSourceList">
+                </div>
+                <button class="btn-add-key" onclick="addPluginSource()">+ 添加源地址</button>
+                <p class="form-hint">添加多个插件商店源地址，多个源将按顺序查询</p>
+            </div>
+            <div class="settings-actions">
+                <button class="btn-save-settings" onclick="savePluginStoreSettings()">保存设置</button>
             </div>
         </div>
     </div>

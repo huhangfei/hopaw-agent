@@ -11,7 +11,16 @@
 <div class="tools-split" layout:fragment="content">
     <div class="tools-list-panel">
         <div class="tools-list-header">
-            <h3>工具集列表</h3>
+            <div class="tools-list-header-row">
+                <h3>工具集列表</h3>
+                <button class="btn-install-plugin" onclick="location.href='/tools/store'" title="安装插件">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <line x1="12" y1="5" x2="12" y2="19"></line>
+                        <line x1="5" y1="12" x2="19" y2="12"></line>
+                    </svg>
+                    安装插件
+                </button>
+            </div>
         </div>
         <div class="tools-list-body">
             <div th:each="toolSet, iter : ${toolSets}"

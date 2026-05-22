@@ -69,6 +69,10 @@ public class DynamicToolRegistry {
         return new ArrayList<>(plugins.keySet());
     }
 
+    public Map<String, PluginEntry> getPlugins() {
+        return Collections.unmodifiableMap(plugins);
+    }
+
     public boolean isEmpty() {
         return plugins.isEmpty();
     }

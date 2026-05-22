@@ -18,10 +18,41 @@
     border-bottom: 1px solid #e8e8e8;
 }
 
+.tools-list-header-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+}
+
 .tools-list-header h3 {
     font-size: 15px;
     color: #333;
     font-weight: 600;
+}
+
+.btn-install-plugin {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 6px 12px;
+    font-size: 12px;
+    font-weight: 500;
+    color: #fff;
+    background: #4caf50;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.btn-install-plugin:hover {
+    background: #43a047;
+}
+
+.btn-install-plugin svg {
+    width: 14px;
+    height: 14px;
 }
 
 .tools-list-body {
