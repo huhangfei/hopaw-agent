@@ -40,3 +40,5 @@ target/
 hopaw-agent.pid
 vector_store.graph
 vector_store.metadata
+/plugin-packages/
+/plugin-repo.db
