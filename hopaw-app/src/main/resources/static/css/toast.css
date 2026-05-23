@@ -40,3 +40,28 @@
     from { transform: translateX(100%); opacity: 0; }
     to { transform: translateX(0); opacity: 1; }
 }
+
+/* ==================== Dark Theme ==================== */
+body.dark-theme .toast-success {
+    background: rgba(46, 125, 50, 0.9);
+    border-color: rgba(46, 125, 50, 0.5);
+    color: #fff;
+}
+
+body.dark-theme .toast-error {
+    background: rgba(198, 40, 40, 0.9);
+    border-color: rgba(198, 40, 40, 0.5);
+    color: #fff;
+}
+
+body.dark-theme .toast-info {
+    background: rgba(21, 101, 192, 0.9);
+    border-color: rgba(21, 101, 192, 0.5);
+    color: #fff;
+}
+
+body.dark-theme .toast-warning {
+    background: rgba(230, 81, 0, 0.9);
+    border-color: rgba(230, 81, 0, 0.5);
+    color: #fff;
+}

@@ -114,3 +114,24 @@ body.dark-theme .confirm-btn-ok {
 body.dark-theme .confirm-btn-ok:hover {
     background: #8ba3ff;
 }
+
+body.dark-theme .confirm-overlay {
+    background: rgba(0, 0, 0, 0.7);
+}
+
+body.dark-theme .confirm-dialog {
+    background: #1e3a5f;
+}
+
+body.dark-theme .confirm-content {
+    color: #e0e0e0;
+}
+
+body.dark-theme .confirm-btn-cancel {
+    background: #2d2d44;
+    color: #c0c0c0;
+}
+
+body.dark-theme .confirm-btn-cancel:hover {
+    background: #3d3d6b;
+}
