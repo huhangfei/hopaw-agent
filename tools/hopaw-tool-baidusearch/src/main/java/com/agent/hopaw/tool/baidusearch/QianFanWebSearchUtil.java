@@ -1,4 +1,4 @@
-package com.agent.hopaw.biz.util;
+package com.agent.hopaw.tool.baidusearch;
 
 import com.alibaba.fastjson2.JSONArray;
 import com.alibaba.fastjson2.JSONObject;
@@ -9,21 +9,10 @@ import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.time.Duration;
 
-/**
- * @author hhf
- */
 public class QianFanWebSearchUtil {
     private static final String API_URL = "https://qianfan.baidubce.com/v2/ai_search/web_search";
-    /**
-     * @param apiKey
-     * @param query
-     * @param maxResults
-     * @param timeoutMs
-     * @param edition
-     * @return
-     * @throws Exception
-     */
-    public  static String search(String apiKey, String query, int maxResults, int timeoutMs,String edition) throws Exception {
+
+    public static String search(String apiKey, String query, int maxResults, int timeoutMs, String edition) throws Exception {
         int clampedResults = Math.max(1, Math.min(maxResults, 50));
         Duration timeout = Duration.ofMillis(Math.max(1000, timeoutMs));
 
@@ -40,7 +29,6 @@ public class QianFanWebSearchUtil {
         body.put("messages", messages);
         body.put("search_source", "baidu_search_v2");
 
-        // 使用缓存的 edition 配置
         if (edition != null) {
             body.put("edition", edition);
         }

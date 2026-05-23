@@ -1,17 +1,16 @@
-package com.agent.hopaw.biz.tool.websearch;
+package com.agent.hopaw.tool.baidusearch;
 
-import com.agent.hopaw.biz.util.QianFanWebSearchUtil;
 import com.agent.hopaw.infra.model.dto.OptionItem;
 import com.agent.hopaw.infra.model.dto.ToolConfigItem;
 import com.agent.hopaw.infra.model.dto.ValidationRule;
 import com.agent.hopaw.infra.model.entity.SysConfig;
 import com.agent.hopaw.infra.service.ISysConfigService;
+import com.agent.hopaw.infra.tool.AgentTool;
 import dev.langchain4j.agent.tool.P;
 import dev.langchain4j.agent.tool.Tool;
-import com.agent.hopaw.infra.tool.AgentTool;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.stereotype.Component;
+import org.springframework.beans.factory.annotation.Autowired;
 
 import java.util.Arrays;
 import java.util.Collections;
@@ -19,39 +18,32 @@ import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
 
-@Component("baiduSearch")
 public class BaiduSearchTool implements AgentTool {
-    private static final String CONFIG_PREFIX = "tool.baiduSearch.";
-    private static final String CONFIG_KEY_API_KEYS = CONFIG_PREFIX + "apiKeys";
-    private static final String CONFIG_KEY_EDITION = CONFIG_PREFIX + "edition";
+    private static final String CONFIG_KEY_API_KEYS = "apiKeys";
+    private static final String CONFIG_KEY_EDITION = "edition";
     private static final Logger log = LoggerFactory.getLogger(BaiduSearchTool.class);
     private final AtomicInteger keyIndex = new AtomicInteger(0);
 
-    // 缓存的配置
     private volatile List<String> cachedApiKeys = Collections.emptyList();
     private volatile String cachedEdition = null;
 
     private static final int TIMEOUT_MS = 10000;
     private static final int MAX_RESULTS = 5;
 
-    private final ISysConfigService sysConfigService;
+    @Autowired
+    private ISysConfigService sysConfigService;
 
-    public BaiduSearchTool(ISysConfigService sysConfigService) {
-        this.sysConfigService = sysConfigService;
-        sysConfigService.setSensitiveKeys(CONFIG_KEY_API_KEYS);
-    }
-
-    @Tool(value={"搜索查询互联网最新网络信息，返回相关的网页标题和摘要内容。","新闻、军事、财经、时事、天气、资料"})
+    @Tool(value = {"搜索查询互联网最新网络信息，返回相关的网页标题和摘要内容。", "新闻、军事、财经、时事、天气、资料"})
     public String baiduSearch(@P(description = "搜索关键词") String query, @P(description = "最大数，默认5", required = false) Integer maxResults, @P(description = "超时时间（毫秒），默认10000毫秒", required = false) Integer timeout) {
         if (query == null || query.trim().isEmpty()) {
             return "错误: 搜索关键词不能为空";
         }
-        if(cachedApiKeys.isEmpty()){
+        if (cachedApiKeys.isEmpty()) {
             reloadConfig();
         }
 
         String apiKey = selectKey(cachedApiKeys);
-        if(apiKey == null) {
+        if (apiKey == null) {
             return "错误: 没有配置百度千帆 API 密钥";
         }
         String edition = cachedEdition;
@@ -70,7 +62,6 @@ public class BaiduSearchTool implements AgentTool {
         return "未找到相关结果";
     }
 
-
     @Override
     public String getName() {
         return "baiduSearch";
@@ -88,19 +79,26 @@ public class BaiduSearchTool implements AgentTool {
 
     @Override
     public String getKeyword() {
-        return "搜索";
+        return "搜索,百度,千帆,联网,web,搜索,查找,查询";
     }
 
     @Override
     public List<ToolConfigItem> getConfigItems() {
         return List.of(
                 new ToolConfigItem("apiKeys", "API 密钥", "百度千帆 API 密钥，支持多个密钥自动轮询使用", ToolConfigItem.ConfigType.TEXT_PASSWORD_MULTI)
-                    .validation(new ValidationRule().required()),
+                        .validation(new ValidationRule().required()),
                 new ToolConfigItem("edition", "搜索版本", "选择搜索版本", ToolConfigItem.ConfigType.SELECT,
-                    new OptionItem("standard", "完整版"),
-                    new OptionItem("lite", "轻量版"))
-                    .validation(new ValidationRule().required())
+                        new OptionItem("standard", "完整版"),
+                        new OptionItem("lite", "轻量版"))
+                        .validation(new ValidationRule().required())
         );
+    }
+
+    @Override
+    public void asyncInit() {
+        String prefix = getConfigPrefix();
+        sysConfigService.setSensitiveKeys(prefix + CONFIG_KEY_API_KEYS);
+        reloadConfig();
     }
 
     @Override
@@ -108,19 +106,17 @@ public class BaiduSearchTool implements AgentTool {
         log.info("收到配置变更通知，重新加载百度搜索工具配置");
         reloadConfig();
     }
-    /**
-     * 重新加载配置
-     */
+
     public void reloadConfig() {
         this.cachedApiKeys = loadApiKeys();
         this.cachedEdition = loadEdition();
-        // 重置密钥索引
         this.keyIndex.set(0);
         log.info("百度搜索工具配置已重载");
     }
 
     private List<String> loadApiKeys() {
-        SysConfig config = sysConfigService.getByKey(CONFIG_KEY_API_KEYS);
+        String prefix = getConfigPrefix();
+        SysConfig config = sysConfigService.getByKey(prefix + CONFIG_KEY_API_KEYS);
         if (config == null || config.getConfigValue() == null || config.getConfigValue().isBlank()) {
             return Collections.emptyList();
         }
@@ -131,12 +127,14 @@ public class BaiduSearchTool implements AgentTool {
     }
 
     private String loadEdition() {
-        SysConfig config = sysConfigService.getByKey(CONFIG_KEY_EDITION);
+        String prefix = getConfigPrefix();
+        SysConfig config = sysConfigService.getByKey(prefix + CONFIG_KEY_EDITION);
         if (config != null && config.getConfigValue() != null && !config.getConfigValue().isBlank()) {
             return config.getConfigValue();
         }
         return null;
     }
+
     private String selectKey(List<String> keys) {
         if (keys.isEmpty()) return null;
         int index = keyIndex.getAndUpdate(i -> (i + 1) % keys.size());

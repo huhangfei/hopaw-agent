@@ -26,6 +26,7 @@
         <module>tools/hopaw-tool-ssh</module>
         <module>tools/hopaw-tool-demo</module>
         <module>tools/hopaw-tool-dingtalk</module>
+        <module>tools/hopaw-tool-baidusearch</module>
     </modules>
 
     <properties>
@@ -55,6 +56,16 @@
             <dependency>
                 <groupId>com.hopaw.agent</groupId>
                 <artifactId>hopaw-biz</artifactId>
+                <version>${parent.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.hopaw.agent</groupId>
+                <artifactId>hopaw-tool-dingtalk</artifactId>
+                <version>${parent.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.hopaw.agent</groupId>
+                <artifactId>hopaw-tool-baidusearch</artifactId>
                 <version>${parent.version}</version>
             </dependency>
             <dependency>
