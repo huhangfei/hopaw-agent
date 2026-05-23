@@ -13,6 +13,9 @@ public class PluginRepoResult {
     private String keyword;
     private List<VersionEntry> versions;
 
+    private String status;
+
+    private String installedVersion;
     public String getName() { return name; }
     public void setName(String name) { this.name = name; }
 
@@ -32,6 +35,22 @@ public class PluginRepoResult {
         return icon != null && icon.startsWith("<svg");
     }
 
+    public String getStatus() {
+        return status;
+    }
+
+    public void setStatus(String status) {
+        this.status = status;
+    }
+
+    public String getInstalledVersion() {
+        return installedVersion;
+    }
+
+    public void setInstalledVersion(String installedVersion) {
+        this.installedVersion = installedVersion;
+    }
+
     @JsonIgnoreProperties(ignoreUnknown = true)
     public static class VersionEntry {
         private String version;
@@ -42,6 +61,7 @@ public class PluginRepoResult {
         private String downloadUrl;
         private String jarFileName;
         private List<PluginToolRef> tools;
+        private String status;
 
         public String getVersion() { return version; }
         public void setVersion(String version) { this.version = version; }
@@ -91,6 +111,14 @@ public class PluginRepoResult {
                         .toList());
             }
             return entry;
+        }
+
+        public String getStatus() {
+            return status;
+        }
+
+        public void setStatus(String status) {
+            this.status = status;
         }
     }
 }

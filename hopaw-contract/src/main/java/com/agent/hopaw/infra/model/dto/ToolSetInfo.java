@@ -1,6 +1,8 @@
 package com.agent.hopaw.infra.model.dto;
 
 import com.agent.hopaw.infra.constant.AgentToolSourceEnum;
+import com.agent.hopaw.infra.tool.AgentTool;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 
 import java.util.List;
 
@@ -16,6 +18,9 @@ public class ToolSetInfo {
     private String url;
     private String jarFileName;
     private boolean hasConfigItems;
+
+    @JsonIgnore
+    private AgentTool agentTool;
 
     public Boolean iconIsSvgCode(){
         return icon != null && icon.startsWith("<svg");
@@ -108,5 +113,13 @@ public class ToolSetInfo {
 
     public void setHasConfigItems(boolean hasConfigItems) {
         this.hasConfigItems = hasConfigItems;
+    }
+
+    public AgentTool getAgentTool() {
+        return agentTool;
+    }
+
+    public void setAgentTool(AgentTool agentTool) {
+        this.agentTool = agentTool;
     }
 }

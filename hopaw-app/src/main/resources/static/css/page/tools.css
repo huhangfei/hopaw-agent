@@ -79,6 +79,30 @@
     height: 14px;
 }
 
+.btn-local-install {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 6px 8px;
+    font-size: 12px;
+    font-weight: 500;
+    color: #fff;
+    background: #2196f3;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.btn-local-install:hover {
+    background: #1976d2;
+}
+
+.btn-local-install svg {
+    width: 14px;
+    height: 14px;
+}
+
 .tools-list-body {
     flex: 1;
     overflow-y: auto;

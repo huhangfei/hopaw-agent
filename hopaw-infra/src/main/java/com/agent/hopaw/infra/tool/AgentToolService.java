@@ -20,6 +20,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.context.ApplicationContext;
 import org.springframework.stereotype.Service;
 
+import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.InputStream;
@@ -135,6 +136,7 @@ public class AgentToolService implements IAgentToolService {
         toolSetInfo.setUrl(agentTool.getUrl());
         toolSetInfo.setKeyword(agentTool.getKeyword());
         toolSetInfo.setHasConfigItems(!agentTool.getConfigItems().isEmpty());
+        toolSetInfo.setAgentTool(agentTool);
         return toolSetInfo;
     }
 
@@ -373,12 +375,23 @@ public class AgentToolService implements IAgentToolService {
     }
 
     @Override
-    public byte[] exportPlugin(String jarFileName) {
-        if (jarFileName == null || jarFileName.isEmpty()) {
-            log.warn("exportPlugin: jarFileName is empty");
+    public byte[] exportPlugin(String toolName, String toolVersion) {
+        if (toolName == null || toolName.isEmpty()) {
+            log.warn("exportPlugin: toolName is empty");
             return null;
         }
-
+        if (toolVersion == null || toolVersion.isEmpty()) {
+            log.warn("exportPlugin: toolVersion is empty");
+            return null;
+        }
+        ToolSetInfo tsInfo = getAllPluginToolSets().stream()
+                .filter(ts -> toolName.equals(ts.getName()) && toolVersion.equals(ts.getVersion()))
+                .findFirst().orElse(null);
+        if (tsInfo == null) {
+            log.warn("exportPlugin: no ToolSetInfo found for tool: {} {}", toolName, toolVersion);
+            return null;
+        }
+        String jarFileName = tsInfo.getJarFileName();
         try {
             Path jarPath = jarPluginLoader.getPluginDir().resolve(jarFileName);
             File jarFile = jarPath.toFile();
@@ -390,14 +403,6 @@ public class AgentToolService implements IAgentToolService {
             DynamicToolRegistry.PluginEntry entry = dynamicToolRegistry.getPlugins().get(jarFileName);
             if (entry == null || entry.tools.isEmpty()) {
                 log.warn("exportPlugin: plugin not loaded or has no tools: {}", jarFileName);
-                return null;
-            }
-
-            ToolSetInfo tsInfo = getAllPluginToolSets().stream()
-                    .filter(ts -> jarFileName.equals(ts.getJarFileName()))
-                    .findFirst().orElse(null);
-            if (tsInfo == null) {
-                log.warn("exportPlugin: no ToolSetInfo found for jar: {}", jarFileName);
                 return null;
             }
 
@@ -433,6 +438,64 @@ public class AgentToolService implements IAgentToolService {
             log.error("exportPlugin: error exporting plugin: {}", jarFileName, e);
             return null;
         }
+    }
+
+    @Override
+    public PluginInstallResult installPluginFromBytes(byte[] zipBytes) throws Exception {
+        PluginExportInfo exportInfo = null;
+        byte[] jarBytes = null;
+
+        try (ZipInputStream zis = new ZipInputStream(new ByteArrayInputStream(zipBytes))) {
+            ZipEntry entry;
+            while ((entry = zis.getNextEntry()) != null) {
+                if (entry.getName().endsWith(".json")) {
+                    byte[] jsonBytes = zis.readAllBytes();
+                    exportInfo = objectMapper.readValue(jsonBytes, PluginExportInfo.class);
+                } else if (entry.getName().endsWith(".jar")) {
+                    jarBytes = zis.readAllBytes();
+                }
+                zis.closeEntry();
+            }
+        }
+
+        if (exportInfo == null) {
+            throw new IllegalArgumentException("ZIP包中未找到插件描述文件");
+        }
+        if (jarBytes == null) {
+            throw new IllegalArgumentException("ZIP包中未找到插件JAR文件");
+        }
+
+        String toolName = exportInfo.getName();
+        String version = exportInfo.getVersion();
+        String jarFileName = exportInfo.getJarFileName();
+
+        if (jarFileName == null || !jarFileName.toLowerCase().endsWith(".jar")) {
+            jarFileName = toolName + ".jar";
+        }
+
+        boolean isUpgrade = false;
+        String previousVersion = null;
+
+        Path targetPath = jarPluginLoader.getPluginDir().resolve(jarFileName);
+        File existingFile = targetPath.toFile();
+
+        if (existingFile.exists() || dynamicToolRegistry.hasPlugin(jarFileName)) {
+            isUpgrade = true;
+            DynamicToolRegistry.PluginEntry existing = dynamicToolRegistry.getPlugins().get(jarFileName);
+            if (existing != null && !existing.tools.isEmpty()) {
+                previousVersion = existing.tools.get(0).getVersion();
+            }
+            jarPluginLoader.unloadAndDeletePlugin(jarFileName);
+        }
+
+        Files.write(targetPath, jarBytes);
+        log.info("Plugin JAR written to: {}", targetPath);
+
+        PluginConflictInfo conflictInfo = detectConflicts(targetPath.toFile(), toolName);
+
+        int toolCount = jarPluginLoader.loadPlugin(targetPath.toFile());
+
+        return PluginInstallResult.success(toolName, version, jarFileName, toolCount, isUpgrade, previousVersion, conflictInfo);
     }
 
     private String formatFileSize(long bytes) {

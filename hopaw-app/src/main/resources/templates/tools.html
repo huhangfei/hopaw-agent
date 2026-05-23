@@ -21,6 +21,14 @@
                     </svg>
                     插件商店
                 </button>
+                <button class="btn-local-install" onclick="document.getElementById('localInstallInput').click()" title="从本地安装插件">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                        <polyline points="17 8 12 3 7 8"></polyline>
+                        <line x1="12" y1="3" x2="12" y2="15"></line>
+                    </svg>
+                </button>
+                <input type="file" id="localInstallInput" accept=".zip" style="display:none;" onchange="localInstallPlugin(this)">
             </div>
             <div class="tools-list-search">
                 <input type="text" class="tools-search-input" id="toolsSearchInput" placeholder="搜索工具集..." oninput="filterTools()">
@@ -75,8 +83,8 @@
                 </div>
                 <span class="detail-count-badge" th:if="${not #lists.isEmpty(toolSet.tools)}" th:text="|${#lists.size(toolSet.tools)} 个方法|"></span>
                 <button th:if="${toolSet.hasConfigItems}" th:attr="onclick=|location.href='/tool-config/${toolSet.name}'|" class="btn-config" title="配置此工具">配置</button>
-                <button class="btn-unload-plugin" th:if="${toolSet.source.code == 'plugin'}" th:attr="data-jar=${toolSet.jarFileName}" onclick="uninstallPlugin(this)" title="卸载此插件">卸载</button>
-                <button class="btn-export-plugin" th:if="${toolSet.source.code == 'plugin'}" th:attr="data-jar=${toolSet.jarFileName}" onclick="exportPlugin(this)" title="导出插件包">导出</button>
+                <button class="btn-unload-plugin" th:if="${toolSet.source.code == 'plugin'}" th:attr="data-jar=${toolSet.jarFileName},data-name=${toolSet.name},data-version=${toolSet.version}" th:id="'uninstallPlugin_'+${toolSet.name}+${toolSet.version}" onclick="uninstallPlugin(this)" title="卸载此插件">卸载</button>
+                <button class="btn-export-plugin" th:if="${toolSet.source.code == 'plugin'}" th:attr="data-jar=${toolSet.jarFileName},data-name=${toolSet.name},data-version=${toolSet.version}" th:id="'exportPlugin_'+${toolSet.name}+${toolSet.version}" onclick="exportPlugin(this)" title="导出插件包">导出</button>
             </div>
 
             <div class="detail-meta">

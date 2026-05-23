@@ -20,5 +20,7 @@ public interface IAgentToolService {
                                                Consumer<String> stageCallback,
                                                Consumer<Integer> downloadProgressCallback);
 
-    byte[] exportPlugin(String jarFileName);
+    byte[] exportPlugin(String toolName, String toolVersion);
+
+    PluginInstallResult installPluginFromBytes(byte[] zipBytes) throws Exception;
 }

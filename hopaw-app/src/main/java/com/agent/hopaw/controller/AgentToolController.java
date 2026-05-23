@@ -1,9 +1,6 @@
 package com.agent.hopaw.controller;
 
-import com.agent.hopaw.infra.model.dto.PluginInstallResult;
-import com.agent.hopaw.infra.model.dto.PluginUpdateInfo;
-import com.agent.hopaw.infra.model.dto.ResponseBean;
-import com.agent.hopaw.infra.model.dto.ToolSetInfo;
+import com.agent.hopaw.infra.model.dto.*;
 import com.agent.hopaw.infra.service.ISysConfigService;
 import com.agent.hopaw.infra.tool.IAgentToolService;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -16,6 +13,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
 import java.util.List;
@@ -51,27 +49,17 @@ public class AgentToolController {
 
     @PostMapping("/api/unload")
     @ResponseBody
-    public ResponseBean unloadPlugin(@RequestParam String jarFileName,
+    public ResponseBean unloadPlugin(@RequestParam String toolName,@RequestParam String toolVersion,
                                      @RequestParam(required = false, defaultValue = "false") boolean cleanConfig) {
-        boolean result = IAgentToolService.unloadPlugin(jarFileName);
-        if (result) {
-            if (cleanConfig) {
-                final String toolName = jarFileName;
-                final String name = toolName.toLowerCase().endsWith(".jar")
-                    ? toolName.substring(0, toolName.length() - 4) : toolName;
-                try {
-                    var tool = IAgentToolService.getAgentTools().stream()
-                            .filter(t -> t.getName().equals(name))
-                            .findFirst().orElse(null);
-                    if (tool != null && !tool.getConfigItems().isEmpty()) {
-                        String prefix = tool.getConfigPrefix();
-                        for (var item : tool.getConfigItems()) {
-                            String key = prefix + item.getKey();
-                            sysConfigService.deleteByKey(key);
-                        }
-                    }
-                } catch (Exception e) {
-                    // 配置清理失败不影响卸载结果
+        List<ToolSetInfo> toolSets = IAgentToolService.getToolSets();
+        var tool = toolSets.stream().filter(t -> t.getName().equals(toolName) && t.getVersion().equals(toolVersion)).findFirst().orElse(null);
+        if(tool!=null){
+            boolean result = IAgentToolService.unloadPlugin(tool.getJarFileName());
+            if(cleanConfig && result && tool.isHasConfigItems()){
+                String prefix = tool.getAgentTool().getConfigPrefix();
+                for (ToolConfigItem configItem : tool.getAgentTool().getConfigItems()) {
+                    String key = prefix + configItem.getKey();
+                    sysConfigService.deleteByKey(key);
                 }
             }
             return ResponseBean.success("插件卸载成功");
@@ -81,9 +69,7 @@ public class AgentToolController {
 
     @GetMapping("/api/plugin-config-info")
     @ResponseBody
-    public ResponseBean getPluginConfigInfo(@RequestParam String jarFileName) {
-        final String toolName = jarFileName.toLowerCase().endsWith(".jar")
-            ? jarFileName.substring(0, jarFileName.length() - 4) : jarFileName;
+    public ResponseBean getPluginConfigInfo(@RequestParam String toolName) {
         try {
             var tool = IAgentToolService.getAgentTools().stream()
                     .filter(t -> t.getName().equals(toolName))
@@ -145,19 +131,33 @@ public class AgentToolController {
         return emitter;
     }
 
-    @GetMapping("/api/export/{jarFileName}")
+    @PostMapping("/api/local-install")
     @ResponseBody
-    public ResponseEntity<byte[]> exportPlugin(@PathVariable String jarFileName) {
-        byte[] zipBytes = IAgentToolService.exportPlugin(jarFileName);
+    public ResponseBean localInstall(@RequestParam("file") MultipartFile file) {
+        if (file.isEmpty()) {
+            return ResponseBean.fail("文件为空");
+        }
+        try {
+            PluginInstallResult result = IAgentToolService.installPluginFromBytes(file.getBytes());
+            return ResponseBean.success(result);
+        } catch (IllegalArgumentException e) {
+            return ResponseBean.fail(e.getMessage());
+        } catch (Exception e) {
+            log.error("Local install failed", e);
+            return ResponseBean.fail("安装失败: " + e.getMessage());
+        }
+    }
+
+    @GetMapping("/api/export/{toolName}/{toolVersion}")
+    @ResponseBody
+    public ResponseEntity<byte[]> exportPlugin(@PathVariable String toolName, @PathVariable String toolVersion) {
+        byte[] zipBytes = IAgentToolService.exportPlugin(toolName, toolVersion);
         if (zipBytes == null) {
             return ResponseEntity.notFound().build();
         }
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_OCTET_STREAM);
-        String exportFileName = jarFileName;
-        if (exportFileName.toLowerCase().endsWith(".jar")) {
-            exportFileName = exportFileName.substring(0, exportFileName.length() - 4);
-        }
+        String exportFileName = toolName + "-" + toolVersion;
         headers.setContentDisposition(ContentDisposition.attachment()
                 .filename(exportFileName + ".zip").build());
         headers.setContentLength(zipBytes.length);

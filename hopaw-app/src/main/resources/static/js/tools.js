@@ -52,47 +52,52 @@ function filterTools() {
 }
 
 function uninstallPlugin(btn) {
-    var jarFileName = btn.getAttribute('data-jar');
-    if (!jarFileName) {
-        showToast('无法获取插件文件名', 'error');
+    var toolName = btn.getAttribute('data-name');
+    var toolVersion = btn.getAttribute('data-version');
+    if (!toolName) {
+        showToast('无法获取插件名', 'error');
+        return;
+    }
+    if (!toolVersion) {
+        showToast('无法获取插件版本', 'error');
         return;
     }
     btn.disabled = true;
     btn.textContent = '检查中...';
 
-    fetch('/tools/api/plugin-config-info?jarFileName=' + encodeURIComponent(jarFileName))
+    fetch('/tools/api/plugin-config-info?toolName=' + encodeURIComponent(toolName))
         .then(function(r) { return r.json(); })
         .then(function(resp) {
             btn.disabled = false;
             btn.textContent = '卸载';
             if (resp.code === 200 && resp.data && resp.data.hasConfig) {
                 showConfirmWithCheckbox(
-                    '确定要卸载插件 "' + jarFileName + '" 吗？此操作不可撤销。',
+                    '确定要卸载插件 "' + toolName + ' ' + toolVersion + '" 吗？此操作不可撤销。',
                     '同时清理插件配置项',
                     false
                 ).then(function(result) {
                     if (!result.confirmed) return;
-                    doUninstall(jarFileName, result.checked);
+                    doUninstall(toolName,toolVersion,result.checked);
                 });
             } else {
-                showConfirm('确定要卸载插件 "' + jarFileName + '" 吗？此操作不可撤销。').then(function(confirmed) {
+                showConfirm('确定要卸载插件 "' + toolName + ' ' + toolVersion + '" 吗？此操作不可撤销。').then(function(confirmed) {
                     if (!confirmed) return;
-                    doUninstall(jarFileName, false);
+                    doUninstall(toolName,toolVersion,false);
                 });
             }
         })
         .catch(function() {
             btn.disabled = false;
             btn.textContent = '卸载';
-            showConfirm('确定要卸载插件 "' + jarFileName + '" 吗？此操作不可撤销。').then(function(confirmed) {
+            showConfirm('确定要卸载插件 "' + toolName + ' ' + toolVersion + '" 吗？此操作不可撤销。').then(function(confirmed) {
                 if (!confirmed) return;
-                doUninstall(jarFileName, false);
+                doUninstall(toolName,toolVersion, false);
             });
         });
 }
 
-function doUninstall(jarFileName, cleanConfig) {
-    var btn = document.querySelector('.btn-unload-plugin[data-jar="' + jarFileName + '"]');
+function doUninstall(toolName,toolVersion, cleanConfig) {
+    var btn = document.getElementById('uninstallPlugin_' + toolName + toolVersion);
     if (btn) {
         btn.disabled = true;
         btn.textContent = '卸载中...';
@@ -100,7 +105,7 @@ function doUninstall(jarFileName, cleanConfig) {
     fetch('/tools/api/unload', {
         method: 'POST',
         headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-        body: 'jarFileName=' + encodeURIComponent(jarFileName) + '&cleanConfig=' + cleanConfig
+        body: 'toolName=' + encodeURIComponent(toolName) + '&toolVersion=' + encodeURIComponent(toolVersion) + '&cleanConfig=' + cleanConfig
     })
     .then(function(r) { return r.json(); })
     .then(function(resp) {
@@ -125,10 +130,56 @@ function doUninstall(jarFileName, cleanConfig) {
 }
 
 function exportPlugin(btn) {
-    var jarFileName = btn.getAttribute('data-jar');
-    if (!jarFileName) {
-        showToast('无法获取插件文件名', 'error');
+    var toolName = btn.getAttribute('data-name');
+    var toolVersion = btn.getAttribute('data-version');
+    if (!toolName) {
+        showToast('无法获取插件名', 'error');
         return;
     }
-    window.location.href = '/tools/api/export/' + encodeURIComponent(jarFileName);
+    if (!toolVersion) {
+        showToast('无法获取插件版本', 'error');
+        return;
+    }
+    window.location.href = '/tools/api/export/' + encodeURIComponent(toolName) + '/' + encodeURIComponent(toolVersion);
+}
+
+function localInstallPlugin(input) {
+    if (!input.files || input.files.length === 0) return;
+    var file = input.files[0];
+
+    if (!file.name.toLowerCase().endsWith('.zip')) {
+        showToast('仅支持 .zip 格式的插件包', 'error');
+        input.value = '';
+        return;
+    }
+
+    showToast('正在安装插件...', 'info');
+
+    var formData = new FormData();
+    formData.append('file', file);
+
+    fetch('/tools/api/local-install', {
+        method: 'POST',
+        body: formData
+    })
+    .then(function(r) { return r.json(); })
+    .then(function(resp) {
+        if (resp.code === 200) {
+            var result = resp.data;
+            if (result.upgrade) {
+                showToast('插件 ' + result.toolName + ' 更新成功 (v' + result.previousVersion + ' → v' + result.version + ')，加载了 ' + result.toolCount + ' 个工具', 'success');
+            } else {
+                showToast('插件 ' + result.toolName + ' 安装成功 v' + result.version + '，加载了 ' + result.toolCount + ' 个工具', 'success');
+            }
+            setTimeout(function() { location.reload(); }, 1000);
+        } else {
+            showToast(resp.msg || '安装失败', 'error');
+        }
+    })
+    .catch(function() {
+        showToast('请求失败', 'error');
+    })
+    .finally(function() {
+        input.value = '';
+    });
 }
