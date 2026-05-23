@@ -116,11 +116,11 @@ public class DingTalkTool implements AgentTool {
         }
     }
 
-    @Tool("发送纯文本消息到钉钉群")
+    @Tool(value = {"发送纯文本消息到钉钉群"})
     public String sendTextToDingTalk(
             @P("要发送的文本内容") String message,
-            @P(value = "钉钉机器人webhook地址，不传则使用已配置的地址", required = false) String webhookUrl,
-            @P(value = "加签密钥，不传则不使用加签") String inputSecret) {
+            @P(value = "钉钉机器人webhook地址，不传则使用内部配置地址", required = false) String webhookUrl,
+            @P(value = "加签密钥，不传则不使用加签", required = false) String inputSecret) {
         String url = null;
         if(webhookUrl != null && !webhookUrl.trim().isBlank()){
             //使用输入的
@@ -141,8 +141,8 @@ public class DingTalkTool implements AgentTool {
     public String sendMarkdownToDingTalk(
             @P("消息标题") String title,
             @P("Markdown格式的消息内容") String text,
-            @P(value = "钉钉机器人webhook地址，不传则使用已配置的地址", required = false) String webhookUrl,
-            @P(value = "加签密钥，不传则不使用加签") String inputSecret) {
+            @P(value = "钉钉机器人webhook地址，不传则使用内部配置地址", required = false) String webhookUrl,
+            @P(value = "加签密钥，不传则不使用加签", required = false) String inputSecret) {
         String url = null;
         if(webhookUrl != null && !webhookUrl.trim().isBlank()){
             //使用输入的
