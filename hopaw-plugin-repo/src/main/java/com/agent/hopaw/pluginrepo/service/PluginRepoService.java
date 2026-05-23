@@ -15,6 +15,7 @@ import javax.annotation.PostConstruct;
 import javax.servlet.http.HttpServletRequest;
 import java.io.IOException;
 import java.nio.file.*;
+import java.security.MessageDigest;
 import java.util.*;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipInputStream;
@@ -150,6 +151,7 @@ public class PluginRepoService {
 
         PluginExportInfo exportInfo = null;
         byte[] jsonBytes = null;
+        byte[] jarBytes = null;
         Path tempDir = Files.createTempDirectory("plugin-import-");
         try {
             Path tempZip = tempDir.resolve(file.getOriginalFilename());
@@ -162,6 +164,8 @@ public class PluginRepoService {
                     if (entryName.endsWith(".json")) {
                         jsonBytes = zis.readAllBytes();
                         exportInfo = objectMapper.readValue(jsonBytes, PluginExportInfo.class);
+                    } else if (entryName.endsWith(".jar")) {
+                        jarBytes = zis.readAllBytes();
                     }
                     zis.closeEntry();
                 }
@@ -170,6 +174,19 @@ public class PluginRepoService {
             if (exportInfo == null || jsonBytes == null) {
                 cleanTempDir(tempDir);
                 throw new IllegalArgumentException("ZIP包中未找到插件描述文件");
+            }
+
+            if (jarBytes == null) {
+                cleanTempDir(tempDir);
+                throw new IllegalArgumentException("ZIP包中未找到插件JAR文件");
+            }
+
+            // 校验 JAR 哈希值
+            String actualJarHash = computeSha256(jarBytes);
+            if (exportInfo.getSha256Hash() != null && !exportInfo.getSha256Hash().equalsIgnoreCase(actualJarHash)) {
+                cleanTempDir(tempDir);
+                throw new IllegalArgumentException(String.format("JAR文件哈希校验失败！期望: %s, 实际: %s",
+                        exportInfo.getSha256Hash(), actualJarHash));
             }
 
             String pluginName = sanitizeName(exportInfo.getName());
@@ -188,7 +205,7 @@ public class PluginRepoService {
             Path targetJson = targetDir.resolve(pluginName + ".json");
             Files.write(targetJson, jsonBytes);
 
-            log.info("Imported plugin: {} v{}, size: {}", pluginName, version,
+            log.info("Imported plugin: {} v{}, JAR哈希校验通过, size: {}", pluginName, version,
                     formatFileSize(originalBytes.length));
 
             PluginRepoResult result = new PluginRepoResult();
@@ -307,5 +324,22 @@ public class PluginRepoService {
         int exp = (int) (Math.log(bytes) / Math.log(1024));
         String pre = "KMGTPE".charAt(exp - 1) + "B";
         return String.format("%.1f %s", bytes / Math.pow(1024, exp), pre);
+    }
+
+    private String computeSha256(byte[] data) {
+        try {
+            MessageDigest digest = MessageDigest.getInstance("SHA-256");
+            byte[] hash = digest.digest(data);
+            StringBuilder hex = new StringBuilder();
+            for (byte b : hash) {
+                String h = Integer.toHexString(0xff & b);
+                if (h.length() == 1) hex.append('0');
+                hex.append(h);
+            }
+            return hex.toString();
+        } catch (Exception e) {
+            log.error("Failed to compute SHA256", e);
+            return "";
+        }
     }
 }

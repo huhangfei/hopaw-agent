@@ -22,23 +22,23 @@ import java.net.URL;
 import java.util.*;
 
 @Controller
-@RequestMapping("/tools/store")
-public class StoreController {
+@RequestMapping("/tools/plugin-store")
+public class PluginStoreController {
 
-    private static final Logger log = LoggerFactory.getLogger(StoreController.class);
+    private static final Logger log = LoggerFactory.getLogger(PluginStoreController.class);
     private static final ObjectMapper objectMapper = new ObjectMapper();
 
     private final ISysConfigService sysConfigService;
     private final IAgentToolService agentToolService;
 
-    public StoreController(ISysConfigService sysConfigService, IAgentToolService agentToolService) {
+    public PluginStoreController(ISysConfigService sysConfigService, IAgentToolService agentToolService) {
         this.sysConfigService = sysConfigService;
         this.agentToolService = agentToolService;
     }
 
     @GetMapping({"", "/"})
     public String storePage(Model model) {
-        return "tool-store";
+        return "plugin-store";
     }
 
     @GetMapping("/api/plugins")
@@ -54,7 +54,7 @@ public class StoreController {
             installedMap.put(info.getName(), info);
         }
 
-        List<StorePluginInfo> result = new ArrayList<>();
+        List<PluginStoreInfo> result = new ArrayList<>();
 
         for (String urlStr : sourceUrls.split(",")) {
             urlStr = urlStr.trim();
@@ -65,18 +65,18 @@ public class StoreController {
                 if (storePlugins == null) continue;
 
                 for (PluginRepoResult storePlugin : storePlugins) {
-                    StorePluginInfo storeInfo = new StorePluginInfo();
+                    PluginStoreInfo storeInfo = new PluginStoreInfo();
                     storeInfo.setName(storePlugin.getName());
                     storeInfo.setDescription(storePlugin.getDescription());
                     storeInfo.setIcon(storePlugin.getIcon());
                     storeInfo.setKeyword(storePlugin.getKeyword());
 
                     ToolSetInfo installed = installedMap.get(storePlugin.getName());
-                    List<StoreVersionInfo> versions = new ArrayList<>();
+                    List<PluginStoreVersionInfo> versions = new ArrayList<>();
 
                     if (storePlugin.getVersions() != null) {
                         for (PluginRepoResult.VersionEntry version : storePlugin.getVersions()) {
-                            StoreVersionInfo v = new StoreVersionInfo();
+                            PluginStoreVersionInfo v = new PluginStoreVersionInfo();
                             v.setVersion(version.getVersion());
                             v.setFileSize(version.getFileSize());
                             v.setSha256Hash(version.getSha256Hash());
@@ -148,14 +148,14 @@ public class StoreController {
         }
     }
 
-    public static class StorePluginInfo {
+    public static class PluginStoreInfo {
         private String name;
         private String description;
         private String icon;
         private String keyword;
         private String installedVersion;
         private String jarFileName;
-        private List<StoreVersionInfo> versions;
+        private List<PluginStoreVersionInfo> versions;
 
         public String getName() { return name; }
         public void setName(String name) { this.name = name; }
@@ -175,15 +175,15 @@ public class StoreController {
         public String getJarFileName() { return jarFileName; }
         public void setJarFileName(String jarFileName) { this.jarFileName = jarFileName; }
 
-        public List<StoreVersionInfo> getVersions() { return versions; }
-        public void setVersions(List<StoreVersionInfo> versions) { this.versions = versions; }
+        public List<PluginStoreVersionInfo> getVersions() { return versions; }
+        public void setVersions(List<PluginStoreVersionInfo> versions) { this.versions = versions; }
 
         public boolean getIconIsSvgCode() {
             return icon != null && icon.startsWith("<svg");
         }
     }
 
-    public static class StoreVersionInfo {
+    public static class PluginStoreVersionInfo {
         private String version;
         private long fileSize;
         private String sha256Hash;

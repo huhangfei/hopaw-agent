@@ -2,23 +2,27 @@ package com.agent.hopaw.infra.tool;
 
 import com.agent.hopaw.infra.constant.AgentToolSourceEnum;
 import com.agent.hopaw.infra.model.dto.PluginExportInfo;
+import com.agent.hopaw.infra.model.dto.PluginInstallResult;
 import com.agent.hopaw.infra.model.dto.PluginUpdateInfo;
+import com.agent.hopaw.infra.model.dto.PluginConflictInfo;
 import com.agent.hopaw.infra.model.dto.ToolInfo;
 import com.agent.hopaw.infra.model.dto.ToolParamInfo;
 import com.agent.hopaw.infra.model.dto.ToolSetInfo;
+import com.agent.hopaw.infra.plugin.DynamicToolRegistry;
+import com.agent.hopaw.infra.plugin.JarPluginLoader;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import dev.langchain4j.agent.tool.P;
 import dev.langchain4j.agent.tool.Tool;
 import dev.langchain4j.invocation.InvocationParameters;
-import com.agent.hopaw.infra.plugin.DynamicToolRegistry;
-import com.agent.hopaw.infra.plugin.JarPluginLoader;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.context.ApplicationContext;
 import org.springframework.stereotype.Service;
 
-import java.io.*;
+import java.io.ByteArrayOutputStream;
+import java.io.File;
+import java.io.InputStream;
 import java.lang.reflect.Method;
 import java.lang.reflect.Parameter;
 import java.net.HttpURLConnection;
@@ -28,9 +32,14 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
 import java.security.MessageDigest;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Comparator;
+import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 import java.util.zip.ZipEntry;
+import java.util.zip.ZipInputStream;
 import java.util.zip.ZipOutputStream;
 
 @Service
@@ -126,7 +135,6 @@ public class AgentToolService implements IAgentToolService {
         toolSetInfo.setUrl(agentTool.getUrl());
         toolSetInfo.setKeyword(agentTool.getKeyword());
         toolSetInfo.setHasConfigItems(!agentTool.getConfigItems().isEmpty());
-        toolSetInfo.setDefaultUpdateUrl(agentTool.getDefaultUpdateUrl());
         return toolSetInfo;
     }
 
@@ -136,78 +144,33 @@ public class AgentToolService implements IAgentToolService {
     }
 
     @Override
-    public PluginUpdateInfo checkPluginUpdate(String checkUrl, String toolName, String currentVersion, String jarFileName) {
-        PluginUpdateInfo updateInfo = new PluginUpdateInfo();
-        updateInfo.setToolName(toolName);
-        updateInfo.setCurrentVersion(currentVersion);
-        updateInfo.setInstalled(dynamicToolRegistry.getAllDynamicTools().stream()
-                .anyMatch(tool -> tool.getName().equals(toolName)));
-
-        try {
-            URL url = new URI(checkUrl).toURL();
-            HttpURLConnection connection = (HttpURLConnection) url.openConnection();
-            connection.setRequestMethod("GET");
-            connection.setConnectTimeout(10000);
-            connection.setReadTimeout(10000);
-
-            int responseCode = connection.getResponseCode();
-            if (responseCode == HttpURLConnection.HTTP_OK) {
-                try (BufferedReader reader = new BufferedReader(new InputStreamReader(connection.getInputStream()))) {
-                    StringBuilder response = new StringBuilder();
-                    String line;
-                    while ((line = reader.readLine()) != null) {
-                        response.append(line);
-                    }
-                    JsonNode root = objectMapper.readTree(response.toString());
-
-                    updateInfo.setVersion(getJsonText(root, "version"));
-                    updateInfo.setFileName(getJsonText(root, "fileName"));
-                    updateInfo.setFileSize(root.has("fileSize") ? root.get("fileSize").asLong() : 0);
-                    updateInfo.setDownloadUrl(getJsonText(root, "downloadUrl"));
-                    updateInfo.setSha256Hash(getJsonText(root, "sha256Hash"));
-                }
-            } else {
-                log.warn("Failed to check plugin update, HTTP response code: {}", responseCode);
-            }
-            connection.disconnect();
-        } catch (Exception e) {
-            log.error("Error checking plugin update for {}", toolName, e);
+    public PluginInstallResult installOrUpgradePlugin(PluginUpdateInfo updateInfo) {
+        String toolName = updateInfo.getToolName();
+        String version = updateInfo.getVersion();
+        String jarFileName = updateInfo.getFileName();
+        
+        if (jarFileName == null || !jarFileName.toLowerCase().endsWith(".jar")) {
+            jarFileName = toolName + ".jar";
         }
-
-        if (updateInfo.getVersion() != null && !updateInfo.getVersion().isEmpty()) {
-            updateInfo.setNeedUpgrade(!updateInfo.getVersion().equals(currentVersion));
-        }
-
-        return updateInfo;
-    }
-
-    private String getJsonText(JsonNode node, String field) {
-        return node.has(field) && !node.get(field).isNull() ? node.get(field).asText() : "";
-    }
-
-    @Override
-    public boolean installOrUpgradePlugin(PluginUpdateInfo updateInfo) {
+        
         if (updateInfo.getDownloadUrl() == null || updateInfo.getDownloadUrl().isEmpty()) {
-            log.error("Download URL is empty for plugin: {}", updateInfo.getToolName());
-            return false;
+            log.error("Download URL is empty for plugin: {}", toolName);
+            return PluginInstallResult.fail(toolName, version, jarFileName, "下载地址为空");
         }
 
         if (updateInfo.getSha256Hash() == null || updateInfo.getSha256Hash().isEmpty()) {
-            log.error("SHA256 hash is empty for plugin: {}", updateInfo.getToolName());
-            return false;
-        }
-
-        String jarFileName = updateInfo.getFileName();
-        if (jarFileName == null || !jarFileName.toLowerCase().endsWith(".jar")) {
-            jarFileName = updateInfo.getToolName() + ".jar";
+            log.error("SHA256 hash is empty for plugin: {}", toolName);
+            return PluginInstallResult.fail(toolName, version, jarFileName, "插件哈希值为空");
         }
 
         Path pluginDir = jarPluginLoader.getPluginDir();
         Path targetPath = pluginDir.resolve(jarFileName);
+        String previousVersion = updateInfo.getCurrentVersion();
+        boolean isUpgrade = updateInfo.isInstalled();
 
         try {
-            if (updateInfo.isInstalled()) {
-                log.info("Plugin {} is installed, uninstalling before upgrade", updateInfo.getToolName());
+            if (isUpgrade) {
+                log.info("Plugin {} is installed, uninstalling before upgrade", toolName);
                 DynamicToolRegistry.PluginEntry removed = dynamicToolRegistry.unregister(jarFileName);
                 if (removed != null) {
                     for (AgentTool tool : removed.tools) {
@@ -224,7 +187,7 @@ public class AgentToolService implements IAgentToolService {
                 }
             }
 
-            log.info("Downloading plugin from: {}", updateInfo.getDownloadUrl());
+            log.info("Downloading plugin ZIP from: {}", updateInfo.getDownloadUrl());
             URL downloadUrl = new URI(updateInfo.getDownloadUrl()).toURL();
             HttpURLConnection connection = (HttpURLConnection) downloadUrl.openConnection();
             connection.setRequestMethod("GET");
@@ -233,32 +196,63 @@ public class AgentToolService implements IAgentToolService {
 
             int responseCode = connection.getResponseCode();
             if (responseCode != HttpURLConnection.HTTP_OK) {
-                log.error("Failed to download plugin, HTTP response code: {}", responseCode);
+                log.error("Failed to download plugin ZIP, HTTP response code: {}", responseCode);
                 connection.disconnect();
-                return false;
+                return PluginInstallResult.fail(toolName, version, jarFileName, 
+                    String.format("下载失败，HTTP响应码: %d", responseCode));
             }
 
-            Path tempFile = Files.createTempFile("plugin_download_", ".jar");
+            Path tempZip = Files.createTempFile("plugin_download_", ".zip");
             try (InputStream in = connection.getInputStream()) {
-                Files.copy(in, tempFile, StandardCopyOption.REPLACE_EXISTING);
+                Files.copy(in, tempZip, StandardCopyOption.REPLACE_EXISTING);
             }
             connection.disconnect();
 
-            String downloadedHash = calculateSHA256(tempFile);
-            if (!updateInfo.getSha256Hash().equalsIgnoreCase(downloadedHash)) {
-                log.error("SHA256 hash mismatch for plugin {}. Expected: {}, Got: {}",
-                        updateInfo.getToolName(), updateInfo.getSha256Hash(), downloadedHash);
-                Files.deleteIfExists(tempFile);
-                return false;
+            // 解压 ZIP，提取 JAR 并校验
+            byte[] jarBytes = null;
+            try (ZipInputStream zis = new ZipInputStream(Files.newInputStream(tempZip))) {
+                ZipEntry entry;
+                while ((entry = zis.getNextEntry()) != null) {
+                    if (entry.getName().endsWith(".jar")) {
+                        jarBytes = zis.readAllBytes();
+                    }
+                    zis.closeEntry();
+                }
             }
 
-            Files.move(tempFile, targetPath, StandardCopyOption.REPLACE_EXISTING);
-            log.info("Plugin {} installed successfully to {}", updateInfo.getToolName(), targetPath);
+            if (jarBytes == null) {
+                log.error("ZIP包中未找到插件JAR文件");
+                Files.deleteIfExists(tempZip);
+                return PluginInstallResult.fail(toolName, version, jarFileName, "ZIP包中未找到插件JAR文件");
+            }
 
-            return true;
+            // 校验 JAR 哈希
+            String downloadedJarHash = calculateSHA256(jarBytes);
+            if (!updateInfo.getSha256Hash().equalsIgnoreCase(downloadedJarHash)) {
+                log.error("JAR文件SHA256哈希校验失败！期望: {}, 实际: {}",
+                        updateInfo.getSha256Hash(), downloadedJarHash);
+                Files.deleteIfExists(tempZip);
+                return PluginInstallResult.fail(toolName, version, jarFileName, "插件哈希校验失败");
+            }
+
+            // 保存 JAR 文件
+            Files.write(targetPath, jarBytes);
+            log.info("Plugin {} installed successfully to {}, JAR哈希校验通过", toolName, targetPath);
+
+            // 冲突检测
+            PluginConflictInfo conflictInfo = detectConflicts(targetPath.toFile(), toolName);
+
+            // 加载插件
+            int toolCount = jarPluginLoader.loadPlugin(targetPath.toFile());
+
+            // 清理临时文件
+            Files.deleteIfExists(tempZip);
+
+            return PluginInstallResult.success(toolName, version, jarFileName, toolCount, isUpgrade, previousVersion, conflictInfo);
         } catch (Exception e) {
-            log.error("Error installing/upgrading plugin: {}", updateInfo.getToolName(), e);
-            return false;
+            log.error("Error installing/upgrading plugin: {}", toolName, e);
+            return PluginInstallResult.fail(toolName, version, jarFileName, 
+                String.format("安装失败: %s", e.getMessage()));
         }
     }
 
@@ -281,6 +275,66 @@ public class AgentToolService implements IAgentToolService {
             hexString.append(hex);
         }
         return hexString.toString();
+    }
+
+    private String calculateSHA256(byte[] data) throws Exception {
+        MessageDigest digest = MessageDigest.getInstance("SHA-256");
+        byte[] hashBytes = digest.digest(data);
+        StringBuilder hexString = new StringBuilder();
+        for (byte b : hashBytes) {
+            String hex = Integer.toHexString(0xff & b);
+            if (hex.length() == 1) {
+                hexString.append('0');
+            }
+            hexString.append(hex);
+        }
+        return hexString.toString();
+    }
+
+    private PluginConflictInfo detectConflicts(File jarFile, String currentToolName) {
+        List<String> conflictingPlugins = new ArrayList<>();
+        List<String> conflictingTools = new ArrayList<>();
+
+        JarPluginLoader.PluginScanResult scanResult = jarPluginLoader.scanPluginInfo(jarFile);
+        if (scanResult.hasError() || scanResult.pluginName == null) {
+            return null;
+        }
+
+        Map<String, DynamicToolRegistry.PluginEntry> allPlugins = dynamicToolRegistry.getPlugins();
+        for (DynamicToolRegistry.PluginEntry entry : allPlugins.values()) {
+            if (entry.tools.isEmpty()) continue;
+            AgentTool existingTool = entry.tools.get(0);
+            String existingPluginName = existingTool.getName();
+            if (!entry.jarFileName.equals(jarFile.getName()) && existingPluginName.equals(scanResult.pluginName)) {
+                conflictingPlugins.add(existingPluginName);
+            }
+        }
+
+        if (scanResult.toolNames != null) {
+            List<AgentTool> allDynamicTools = dynamicToolRegistry.getAllDynamicTools();
+            for (AgentTool existingTool : allDynamicTools) {
+                for (Method method : existingTool.getClass().getMethods()) {
+                    dev.langchain4j.agent.tool.Tool toolAnn = method.getAnnotation(dev.langchain4j.agent.tool.Tool.class);
+                    if (toolAnn != null) {
+                        String existingToolName = toolAnn.name();
+                        if (existingToolName.isEmpty()) {
+                            existingToolName = method.getName();
+                        }
+                        if (scanResult.toolNames.contains(existingToolName)) {
+                            if (!conflictingTools.contains(existingToolName)) {
+                                conflictingTools.add(existingToolName);
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        if (conflictingPlugins.isEmpty() && conflictingTools.isEmpty()) {
+            return null;
+        }
+
+        return new PluginConflictInfo(conflictingPlugins, conflictingTools);
     }
 
     @Override

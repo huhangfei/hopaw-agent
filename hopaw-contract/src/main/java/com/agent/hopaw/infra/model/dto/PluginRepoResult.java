@@ -40,6 +40,7 @@ public class PluginRepoResult {
         private String author;
         private String url;
         private String downloadUrl;
+        private String jarFileName;
         private List<PluginToolRef> tools;
 
         public String getVersion() { return version; }
@@ -60,6 +61,9 @@ public class PluginRepoResult {
         public String getDownloadUrl() { return downloadUrl; }
         public void setDownloadUrl(String downloadUrl) { this.downloadUrl = downloadUrl; }
 
+        public String getJarFileName() { return jarFileName; }
+        public void setJarFileName(String jarFileName) { this.jarFileName = jarFileName; }
+
         public List<PluginToolRef> getTools() { return tools; }
         public void setTools(List<PluginToolRef> tools) { this.tools = tools; }
 
@@ -71,6 +75,7 @@ public class PluginRepoResult {
             entry.setAuthor(info.getAuthor());
             entry.setUrl(info.getUrl());
             entry.setDownloadUrl(downloadUrl);
+            entry.setJarFileName(info.getJarFileName());
             if (info.getTools() != null) {
                 entry.setTools(info.getTools().stream()
                         .map(t -> {

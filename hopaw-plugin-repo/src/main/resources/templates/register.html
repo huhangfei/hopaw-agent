@@ -1,0 +1,299 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>注册 - 插件仓库</title>
+    <link rel="stylesheet" th:href="@{/css/plugin-repo.css}">
+    <style>
+        .login-wrapper {
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        }
+        .login-card {
+            background: #fff;
+            border-radius: 16px;
+            padding: 48px 40px;
+            width: 400px;
+            box-shadow: 0 20px 60px rgba(0,0,0,.15);
+        }
+        .login-card h1 {
+            font-size: 24px;
+            font-weight: 700;
+            text-align: center;
+            margin-bottom: 4px;
+            color: #1f2937;
+        }
+        .login-card .login-subtitle {
+            text-align: center;
+            font-size: 13px;
+            color: #9ca3af;
+            margin-bottom: 32px;
+        }
+        .form-group {
+            margin-bottom: 20px;
+        }
+        .form-group label {
+            display: block;
+            font-size: 13px;
+            font-weight: 600;
+            color: #374151;
+            margin-bottom: 6px;
+        }
+        .form-group input {
+            width: 100%;
+            padding: 10px 14px;
+            font-size: 14px;
+            border: 1px solid #e5e7eb;
+            border-radius: 8px;
+            outline: none;
+            transition: border-color .2s;
+            box-sizing: border-box;
+        }
+        .form-group input:focus {
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102,126,234,.1);
+        }
+        .code-input-group {
+            display: flex;
+            gap: 10px;
+        }
+        .code-input-group input {
+            flex: 1;
+        }
+        .btn-code {
+            padding: 10px 20px;
+            font-size: 14px;
+            font-weight: 600;
+            color: #667eea;
+            background: #f3f4ff;
+            border: 1px solid #d1d5db;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all .2s;
+            white-space: nowrap;
+        }
+        .btn-code:hover:not(:disabled) {
+            background: #e0e7ff;
+            border-color: #667eea;
+        }
+        .btn-code:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+        .btn-login {
+            width: 100%;
+            padding: 12px;
+            font-size: 14px;
+            font-weight: 600;
+            color: #fff;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: opacity .2s;
+        }
+        .btn-login:hover {
+            opacity: .9;
+        }
+        .login-error {
+            background: #fef2f2;
+            color: #991b1b;
+            padding: 10px 14px;
+            border-radius: 8px;
+            font-size: 13px;
+            margin-bottom: 20px;
+        }
+        .login-success {
+            background: #ecfdf5;
+            color: #065f46;
+            padding: 10px 14px;
+            border-radius: 8px;
+            font-size: 13px;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+        .login-footer {
+            text-align: center;
+            margin-top: 20px;
+            font-size: 13px;
+            color: #6b7280;
+        }
+        .login-footer a {
+            color: #667eea;
+            text-decoration: none;
+            font-weight: 600;
+        }
+        .login-footer a:hover {
+            text-decoration: underline;
+        }
+    </style>
+</head>
+<body>
+    <div class="login-wrapper">
+        <div class="login-card">
+            <h1>插件仓库</h1>
+            <p class="login-subtitle">注册新账号</p>
+            
+            <div id="errorMsg" class="login-error" style="display:none;"></div>
+            
+            <form th:action="@{/plugin-repo/auth/register}" method="post" id="registerForm">
+                <div class="form-group">
+                    <label>用户名</label>
+                    <input type="text" name="username" placeholder="请输入用户名" required autofocus>
+                </div>
+                <div class="form-group">
+                    <label>邮箱</label>
+                    <input type="email" name="email" id="email" placeholder="请输入邮箱" required>
+                </div>
+                <div class="form-group">
+                    <label>验证码</label>
+                    <div class="code-input-group" style="display: flex; gap: 10px;">
+                        <input type="text" name="code" placeholder="请输入验证码" required maxlength="6" style="flex: 1;">
+                        <button type="button" class="btn-code" id="sendCodeBtn" onclick="sendCode()">获取验证码</button>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label>密码</label>
+                    <input type="password" name="password" placeholder="请输入密码" required minlength="6">
+                </div>
+                <div class="form-group">
+                    <label>显示名称</label>
+                    <input type="text" name="displayName" placeholder="请输入显示名称" required>
+                </div>
+                <button type="button" class="btn-login" id="submitBtn" onclick="submitForm()">注册</button>
+            </form>
+            <div class="login-footer">
+                已有账号？<a th:href="@{/login}">立即登录</a>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let countdown = 0;
+        let timer = null;
+
+        function sendCode() {
+            const email = document.getElementById('email').value;
+            if (!email) {
+                alert('请先输入邮箱');
+                return;
+            }
+
+            const btn = document.getElementById('sendCodeBtn');
+            btn.disabled = true;
+
+            fetch('/plugin-repo/auth/send-code?email=' + encodeURIComponent(email) + '&type=register', {
+                method: 'POST'
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    alert(data.message);
+                    startCountdown();
+                } else {
+                    alert(data.message);
+                    btn.disabled = false;
+                }
+            })
+            .catch(error => {
+                alert('发送失败');
+                btn.disabled = false;
+            });
+        }
+
+        function startCountdown() {
+            countdown = 60;
+            const btn = document.getElementById('sendCodeBtn');
+            btn.disabled = true;
+
+            timer = setInterval(() => {
+                countdown--;
+                if (countdown <= 0) {
+                    clearInterval(timer);
+                    btn.disabled = false;
+                    btn.textContent = '获取验证码';
+                } else {
+                    btn.textContent = countdown + 's';
+                }
+            }, 1000);
+        }
+
+        function showError(msg) {
+            const el = document.getElementById('errorMsg');
+            el.textContent = msg;
+            el.style.display = '';
+        }
+
+        function hideError() {
+            const el = document.getElementById('errorMsg');
+            el.style.display = 'none';
+        }
+
+        function submitForm() {
+            hideError();
+
+            const username = document.querySelector('input[name="username"]').value.trim();
+            const email = document.getElementById('email').value.trim();
+            const code = document.querySelector('input[name="code"]').value.trim();
+            const password = document.querySelector('input[name="password"]').value;
+            const displayName = document.querySelector('input[name="displayName"]').value.trim();
+
+            if (!username) {
+                showError('请输入用户名');
+                return;
+            }
+            if (!email) {
+                showError('请输入邮箱');
+                return;
+            }
+            if (!code) {
+                showError('请输入验证码');
+                return;
+            }
+            if (password.length < 6) {
+                showError('密码长度至少6位');
+                return;
+            }
+
+            const btn = document.getElementById('submitBtn');
+            btn.disabled = true;
+            btn.textContent = '注册中...';
+
+            const formData = new URLSearchParams();
+            formData.append('username', username);
+            formData.append('email', email);
+            formData.append('code', code);
+            formData.append('password', password);
+            formData.append('displayName', displayName);
+
+            fetch('/plugin-repo/auth/register', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                },
+                body: formData
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    alert('注册成功！即将跳转到登录页...');
+                    window.location.href = '/login';
+                } else {
+                    showError(data.message);
+                    btn.disabled = false;
+                    btn.textContent = '注册';
+                }
+            })
+            .catch(error => {
+                showError('注册失败，请重试');
+                btn.disabled = false;
+                btn.textContent = '注册';
+            });
+        }
+    </script>
+</body>
+</html>

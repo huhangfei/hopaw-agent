@@ -42,6 +42,10 @@ public class PluginRepoController {
     @PostMapping("/web/import")
     @ResponseBody
     public ResponseEntity<?> webImport(@RequestParam("file") MultipartFile file) {
+        if (!authService.isAdmin()) {
+            return ResponseEntity.status(403).body(Map.of("type", "error", "message", "无权限操作"));
+        }
+
         try {
             PluginRepoResult result = pluginRepoService.importPlugin(file);
             return ResponseEntity.ok(result);
@@ -56,6 +60,10 @@ public class PluginRepoController {
     @ResponseBody
     public ResponseEntity<?> webDelete(@PathVariable String pluginName,
                                        @PathVariable String version) {
+        if (!authService.isAdmin()) {
+            return ResponseEntity.status(403).body(Map.of("type", "error", "message", "无权限操作"));
+        }
+
         try {
             pluginRepoService.deletePlugin(pluginName, version);
             return ResponseEntity.ok(Map.of("type", "success", "message", "删除成功"));

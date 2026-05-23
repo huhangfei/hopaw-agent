@@ -1,5 +1,6 @@
 package com.agent.hopaw.controller;
 
+import com.agent.hopaw.infra.model.dto.PluginInstallResult;
 import com.agent.hopaw.infra.model.dto.PluginUpdateInfo;
 import com.agent.hopaw.infra.model.dto.ResponseBean;
 import com.agent.hopaw.infra.model.dto.ToolSetInfo;
@@ -41,45 +42,65 @@ public class AgentToolController {
 
     @PostMapping("/api/unload")
     @ResponseBody
-    public ResponseBean unloadPlugin(@RequestParam String jarFileName) {
+    public ResponseBean unloadPlugin(@RequestParam String jarFileName,
+                                     @RequestParam(required = false, defaultValue = "false") boolean cleanConfig) {
         boolean result = IAgentToolService.unloadPlugin(jarFileName);
         if (result) {
+            if (cleanConfig) {
+                final String toolName = jarFileName;
+                final String name = toolName.toLowerCase().endsWith(".jar")
+                    ? toolName.substring(0, toolName.length() - 4) : toolName;
+                try {
+                    var tool = IAgentToolService.getAgentTools().stream()
+                            .filter(t -> t.getName().equals(name))
+                            .findFirst().orElse(null);
+                    if (tool != null && !tool.getConfigItems().isEmpty()) {
+                        String prefix = tool.getConfigPrefix();
+                        for (var item : tool.getConfigItems()) {
+                            String key = prefix + item.getKey();
+                            sysConfigService.deleteByKey(key);
+                        }
+                    }
+                } catch (Exception e) {
+                    // 配置清理失败不影响卸载结果
+                }
+            }
             return ResponseBean.success("插件卸载成功");
         }
         return ResponseBean.fail("插件不存在或卸载失败");
     }
 
-    @GetMapping("/upgrade")
-    public String upgradePage(@RequestParam String toolName,
-                               @RequestParam(required = false) String currentVersion,
-                               @RequestParam(required = false) String jarFileName,
-                               @RequestParam(required = false) String updateUrl,
-                               Model model) {
-        model.addAttribute("toolName", toolName);
-        model.addAttribute("currentVersion", currentVersion != null ? currentVersion : "");
-        model.addAttribute("jarFileName", jarFileName != null ? jarFileName : "");
-        model.addAttribute("defaultUpdateUrl", updateUrl != null ? updateUrl : "");
-        return "tool-upgrade";
-    }
-
-    @PostMapping("/api/check-update")
+    @GetMapping("/api/plugin-config-info")
     @ResponseBody
-    public ResponseBean checkUpdate(@RequestParam String checkUrl,
-                                    @RequestParam String toolName,
-                                    @RequestParam(required = false) String currentVersion,
-                                    @RequestParam(required = false) String jarFileName) {
-        PluginUpdateInfo updateInfo = IAgentToolService.checkPluginUpdate(checkUrl, toolName, currentVersion, jarFileName);
-        return ResponseBean.success(updateInfo);
+    public ResponseBean getPluginConfigInfo(@RequestParam String jarFileName) {
+        final String toolName = jarFileName.toLowerCase().endsWith(".jar")
+            ? jarFileName.substring(0, jarFileName.length() - 4) : jarFileName;
+        try {
+            var tool = IAgentToolService.getAgentTools().stream()
+                    .filter(t -> t.getName().equals(toolName))
+                    .findFirst().orElse(null);
+            if (tool != null && !tool.getConfigItems().isEmpty()) {
+                return ResponseBean.success(java.util.Map.of(
+                        "hasConfig", true,
+                        "configKeys", tool.getConfigItems().stream()
+                                .map(item -> tool.getConfigPrefix() + item.getKey())
+                                .toList()
+                ));
+            }
+        } catch (Exception e) {
+            // ignore
+        }
+        return ResponseBean.success(java.util.Map.of("hasConfig", false));
     }
 
     @PostMapping("/api/install-upgrade")
     @ResponseBody
     public ResponseBean installOrUpgrade(@RequestBody PluginUpdateInfo updateInfo) {
-        boolean result = IAgentToolService.installOrUpgradePlugin(updateInfo);
-        if (result) {
-            return ResponseBean.success("安装/升级成功");
+        PluginInstallResult result = IAgentToolService.installOrUpgradePlugin(updateInfo);
+        if (result.isSuccess()) {
+            return ResponseBean.success(result);
         }
-        return ResponseBean.fail("安装/升级失败");
+        return ResponseBean.fail(result.getMessage());
     }
 
     @GetMapping("/api/export/{jarFileName}")

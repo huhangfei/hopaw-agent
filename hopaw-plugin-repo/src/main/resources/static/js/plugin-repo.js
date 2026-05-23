@@ -146,6 +146,7 @@ function selectVersion(leaf, fromRefresh) {
     var keywordEl = document.getElementById('detailKeyword');
     var iconEl = document.getElementById('detailIcon');
     var btnDownload = document.getElementById('btnDownload');
+    var btnDelete = document.getElementById('btnDelete');
 
     if (detailName) detailName.textContent = selectedPlugin;
     if (metaVersion) metaVersion.textContent = 'v' + selectedVersion;
@@ -177,6 +178,14 @@ function selectVersion(leaf, fromRefresh) {
     if (btnDownload) {
         btnDownload.setAttribute('data-url',
             '/plugin-repo/api/download/' + encodeURIComponent(selectedPlugin) + '/' + encodeURIComponent(selectedVersion));
+    }
+
+    if (btnDelete) {
+        if (isAdmin) {
+            btnDelete.style.display = '';
+        } else {
+            btnDelete.style.display = 'none';
+        }
     }
 
     renderToolsList(version.tools);

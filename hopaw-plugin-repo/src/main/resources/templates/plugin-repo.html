@@ -13,6 +13,7 @@
             <a th:href="@{/plugin-repo/}" class="active">插件列表</a>
             <a th:if="${currentUser != null and currentUser.role == 'ADMIN'}" th:href="@{/plugin-repo/admin/users}">用户管理</a>
             <a th:href="@{/plugin-repo/keys}">API Keys</a>
+            <a th:href="@{/plugin-repo/user/change-password}">修改密码</a>
         </div>
         <div class="nav-user" th:if="${currentUser != null}">
             <span th:text="${currentUser.displayName}">admin</span>
@@ -27,7 +28,7 @@
                 </svg>
                 刷新
             </button>
-            <button class="btn-import" id="btnImport" onclick="showImportDialog()">
+            <button th:if="${currentUser != null and currentUser.role == 'ADMIN'}" class="btn-import" id="btnImport" onclick="showImportDialog()">
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                     <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
                     <polyline points="17 8 12 3 7 8"/>
@@ -162,6 +163,9 @@
         </div>
     </div>
 
+    <script th:inline="javascript">
+        var isAdmin = /*[[${currentUser != null and currentUser.role == 'ADMIN'}]]*/ false;
+    </script>
     <script th:src="@{/js/plugin-repo.js}"></script>
 </body>
 </html>

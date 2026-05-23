@@ -71,7 +71,8 @@ public class SecurityConfig {
         http
             .csrf().disable()
             .authorizeRequests()
-                .antMatchers("/login", "/css/**", "/js/**", "/favicon.ico").permitAll()
+                .antMatchers("/login", "/register", "/css/**", "/js/**", "/favicon.ico").permitAll()
+                .antMatchers("/plugin-repo/auth/send-code", "/plugin-repo/auth/register").permitAll()
                 .antMatchers("/plugin-repo/admin/**").hasRole("ADMIN")
                 .antMatchers("/plugin-repo/auth/**").authenticated()
                 .antMatchers("/plugin-repo/keys/**").authenticated()

@@ -30,7 +30,8 @@ services:
       - ./plugin-packages:/app/plugin-packages
       # 数据库文件持久化（使用命名卷避免 Windows 下的目录问题）
       - ./data:/app/data
-    
+      - ./config:/app/config
+
     # 资源限制
     deploy:
       resources:

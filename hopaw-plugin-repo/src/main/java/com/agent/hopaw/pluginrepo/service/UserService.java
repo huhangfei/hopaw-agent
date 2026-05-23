@@ -18,6 +18,7 @@ public class UserService {
         User u = new User();
         u.setId(rs.getLong("id"));
         u.setUsername(rs.getString("username"));
+        u.setEmail(rs.getString("email"));
         u.setPassword(rs.getString("password"));
         u.setDisplayName(rs.getString("display_name"));
         u.setRole(rs.getString("role"));
@@ -36,6 +37,11 @@ public class UserService {
         return users.isEmpty() ? null : users.get(0);
     }
 
+    public User findByEmail(String email) {
+        List<User> users = jdbc.query("SELECT * FROM users WHERE email = ?", userRowMapper, email);
+        return users.isEmpty() ? null : users.get(0);
+    }
+
     public User findById(Long id) {
         List<User> users = jdbc.query("SELECT * FROM users WHERE id = ?", userRowMapper, id);
         return users.isEmpty() ? null : users.get(0);
@@ -47,8 +53,15 @@ public class UserService {
 
     public User create(String username, String password, String displayName, String role) {
         String encoded = passwordEncoder.encode(password);
-        jdbc.update("INSERT INTO users (username, password, display_name, role) VALUES (?, ?, ?, ?)",
+        jdbc.update("INSERT INTO users (username, password, displayName, role) VALUES (?, ?, ?, ?)",
                 username, encoded, displayName, role);
+        return findByUsername(username);
+    }
+
+    public User create(String username, String email, String password, String displayName, String role) {
+        String encoded = passwordEncoder.encode(password);
+        jdbc.update("INSERT INTO users (username, email, password, display_name, role) VALUES (?, ?, ?, ?, ?)",
+                username, email, encoded, displayName, role);
         return findByUsername(username);
     }
 
@@ -78,5 +91,12 @@ public class UserService {
 
     public boolean verifyPassword(String rawPassword, String encodedPassword) {
         return passwordEncoder.matches(rawPassword, encodedPassword);
+    }
+
+    public User updatePassword(Long userId, String newPassword) {
+        String encoded = passwordEncoder.encode(newPassword);
+        jdbc.update("UPDATE users SET password = ?, updated_at = datetime('now','localtime') WHERE id = ?",
+                encoded, userId);
+        return findById(userId);
     }
 }

@@ -24,6 +24,23 @@
     line-height: 1.5;
 }
 
+.confirm-checkbox {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    margin-top: 16px;
+    font-size: 13px;
+    color: #666;
+    cursor: pointer;
+}
+
+.confirm-checkbox input {
+    width: 16px;
+    height: 16px;
+    cursor: pointer;
+}
+
 .confirm-footer {
     display: flex;
     justify-content: flex-end;
@@ -71,6 +88,10 @@ body.dark-theme .confirm-icon {
 
 body.dark-theme .confirm-text {
     color: #e0e0e0;
+}
+
+body.dark-theme .confirm-checkbox {
+    color: #aaa;
 }
 
 body.dark-theme .confirm-footer {

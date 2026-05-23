@@ -14,29 +14,41 @@ function selectToolSet(el) {
     if (target) target.classList.add('active');
 }
 
-function upgradePlugin(btn) {
-    var toolName = btn.getAttribute('data-tool');
-    var currentVersion = btn.getAttribute('data-version') || '';
-    var jarFileName = btn.getAttribute('data-jar') || '';
-    var defaultUpdateUrl = btn.getAttribute('data-update-url') || '';
+function filterTools() {
+    var query = document.getElementById('toolsSearchInput').value.toLowerCase().trim();
+    var items = document.querySelectorAll('.tool-list-item');
 
-    if (!toolName) {
-        showToast('无法获取工具名称', 'error');
+    if (query === '') {
+        items.forEach(function(item) {
+            item.classList.remove('filtered-hidden');
+        });
         return;
     }
 
-    var url = '/tools/upgrade?toolName=' + encodeURIComponent(toolName);
-    if (currentVersion) {
-        url += '&currentVersion=' + encodeURIComponent(currentVersion);
-    }
-    if (jarFileName) {
-        url += '&jarFileName=' + encodeURIComponent(jarFileName);
-    }
-    if (defaultUpdateUrl) {
-        url += '&updateUrl=' + encodeURIComponent(defaultUpdateUrl);
-    }
+    items.forEach(function(item) {
+        var name = (item.querySelector('.tool-list-name') || item.querySelector('.detail-name') || {}).textContent || '';
+        var desc = (item.querySelector('.tool-list-desc') || {}).textContent || '';
+        name = name.toLowerCase();
+        desc = desc.toLowerCase();
 
-    window.location.href = url;
+        if (name.indexOf(query) !== -1 || desc.indexOf(query) !== -1) {
+            item.classList.remove('filtered-hidden');
+        } else {
+            item.classList.add('filtered-hidden');
+        }
+    });
+
+    // auto-select first visible item
+    var visibleItems = document.querySelectorAll('.tool-list-item:not(.filtered-hidden)');
+    if (visibleItems.length > 0) {
+        var firstVisible = visibleItems[0];
+        document.querySelectorAll('.tool-list-item').forEach(function(i) { i.classList.remove('active'); });
+        document.querySelectorAll('.tool-detail').forEach(function(d) { d.classList.remove('active'); });
+        firstVisible.classList.add('active');
+        var idx = firstVisible.getAttribute('data-index');
+        var detail = document.querySelector('.tool-detail[data-index="' + idx + '"]');
+        if (detail) detail.classList.add('active');
+    }
 }
 
 function uninstallPlugin(btn) {
@@ -45,31 +57,70 @@ function uninstallPlugin(btn) {
         showToast('无法获取插件文件名', 'error');
         return;
     }
-    showConfirm('确定要卸载插件 "' + jarFileName + '" 吗？此操作不可撤销。').then(function(confirmed) {
-        if (!confirmed) return;
-        btn.disabled = true;
-        btn.textContent = '卸载中...';
-        fetch('/tools/api/unload', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-            body: 'jarFileName=' + encodeURIComponent(jarFileName)
-        })
+    btn.disabled = true;
+    btn.textContent = '检查中...';
+
+    fetch('/tools/api/plugin-config-info?jarFileName=' + encodeURIComponent(jarFileName))
         .then(function(r) { return r.json(); })
         .then(function(resp) {
-            if (resp.code === 200) {
-                showToast(resp.data || '卸载成功', 'success');
-                setTimeout(function() { location.reload(); }, 800);
+            btn.disabled = false;
+            btn.textContent = '卸载';
+            if (resp.code === 200 && resp.data && resp.data.hasConfig) {
+                showConfirmWithCheckbox(
+                    '确定要卸载插件 "' + jarFileName + '" 吗？此操作不可撤销。',
+                    '同时清理插件配置项',
+                    false
+                ).then(function(result) {
+                    if (!result.confirmed) return;
+                    doUninstall(jarFileName, result.checked);
+                });
             } else {
-                showToast(resp.msg || '卸载失败', 'error');
-                btn.disabled = false;
-                btn.textContent = '卸载';
+                showConfirm('确定要卸载插件 "' + jarFileName + '" 吗？此操作不可撤销。').then(function(confirmed) {
+                    if (!confirmed) return;
+                    doUninstall(jarFileName, false);
+                });
             }
         })
         .catch(function() {
-            showToast('请求失败', 'error');
             btn.disabled = false;
             btn.textContent = '卸载';
+            showConfirm('确定要卸载插件 "' + jarFileName + '" 吗？此操作不可撤销。').then(function(confirmed) {
+                if (!confirmed) return;
+                doUninstall(jarFileName, false);
+            });
         });
+}
+
+function doUninstall(jarFileName, cleanConfig) {
+    var btn = document.querySelector('.btn-unload-plugin[data-jar="' + jarFileName + '"]');
+    if (btn) {
+        btn.disabled = true;
+        btn.textContent = '卸载中...';
+    }
+    fetch('/tools/api/unload', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: 'jarFileName=' + encodeURIComponent(jarFileName) + '&cleanConfig=' + cleanConfig
+    })
+    .then(function(r) { return r.json(); })
+    .then(function(resp) {
+        if (resp.code === 200) {
+            showToast(cleanConfig ? '插件卸载成功，配置已清理' : '插件卸载成功', 'success');
+            setTimeout(function() { location.reload(); }, 800);
+        } else {
+            showToast(resp.msg || '卸载失败', 'error');
+            if (btn) {
+                btn.disabled = false;
+                btn.textContent = '卸载';
+            }
+        }
+    })
+    .catch(function() {
+        showToast('请求失败', 'error');
+        if (btn) {
+            btn.disabled = false;
+            btn.textContent = '卸载';
+        }
     });
 }
 

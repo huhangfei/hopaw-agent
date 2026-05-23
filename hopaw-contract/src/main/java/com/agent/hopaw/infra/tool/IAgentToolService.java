@@ -1,5 +1,6 @@
 package com.agent.hopaw.infra.tool;
 
+import com.agent.hopaw.infra.model.dto.PluginInstallResult;
 import com.agent.hopaw.infra.model.dto.PluginUpdateInfo;
 import com.agent.hopaw.infra.model.dto.ToolSetInfo;
 
@@ -12,9 +13,7 @@ public interface IAgentToolService {
 
     boolean unloadPlugin(String jarFileName);
 
-    PluginUpdateInfo checkPluginUpdate(String checkUrl, String toolName, String currentVersion, String jarFileName);
-
-    boolean installOrUpgradePlugin(PluginUpdateInfo updateInfo);
+    PluginInstallResult installOrUpgradePlugin(PluginUpdateInfo updateInfo);
 
     byte[] exportPlugin(String jarFileName);
 }

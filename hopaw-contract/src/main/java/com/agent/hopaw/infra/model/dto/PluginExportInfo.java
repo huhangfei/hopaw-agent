@@ -6,7 +6,7 @@ import com.fasterxml.jackson.annotation.JsonPropertyOrder;
 import java.util.List;
 
 @JsonPropertyOrder({"name", "description", "keyword", "icon", "version", "author", "url",
-        "source", "jarFileName", "defaultUpdateUrl", "fileSize", "sha256Hash", "tools"})
+        "source", "jarFileName", "fileSize", "sha256Hash", "tools"})
 public class PluginExportInfo extends ToolSetInfo {
 
     private long fileSize;
@@ -23,7 +23,6 @@ public class PluginExportInfo extends ToolSetInfo {
         this.setUrl(info.getUrl());
         this.setJarFileName(info.getJarFileName());
         this.setKeyword(info.getKeyword());
-        this.setDefaultUpdateUrl(info.getDefaultUpdateUrl());
         this.setHasConfigItems(info.isHasConfigItems());
         this.fileSize = fileSize;
         this.sha256Hash = sha256Hash;

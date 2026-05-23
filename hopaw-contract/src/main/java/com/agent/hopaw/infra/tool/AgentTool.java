@@ -63,13 +63,4 @@ public interface AgentTool {
     default void onConfigChanged() {
         return;
     }
-
-    /**
-     * 获取插件默认更新检测接口地址
-     * 如果插件支持在线更新，返回对应的检测接口地址，否则返回空字符串
-     * @return 更新检测接口地址
-     */
-    default String getDefaultUpdateUrl() {
-        return "";
-    }
 }

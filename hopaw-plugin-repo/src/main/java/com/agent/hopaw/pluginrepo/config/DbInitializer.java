@@ -22,6 +22,7 @@ public class DbInitializer implements CommandLineRunner {
         jdbc.execute("CREATE TABLE IF NOT EXISTS users (" +
                 "id INTEGER PRIMARY KEY AUTOINCREMENT, " +
                 "username TEXT NOT NULL UNIQUE, " +
+                "email TEXT NOT NULL UNIQUE, " +
                 "password TEXT NOT NULL, " +
                 "display_name TEXT, " +
                 "role TEXT NOT NULL DEFAULT 'USER', " +
@@ -38,15 +39,24 @@ public class DbInitializer implements CommandLineRunner {
                 "created_at TEXT NOT NULL DEFAULT (datetime('now','localtime')), " +
                 "updated_at TEXT NOT NULL DEFAULT (datetime('now','localtime')), " +
                 "expires_at TEXT, " +
-                "FOREIGN KEY (user_id) REFERENCES users(id))"); 
+                "FOREIGN KEY (user_id) REFERENCES users(id))");
+
+        jdbc.execute("CREATE TABLE IF NOT EXISTS verification_codes (" +
+                "id INTEGER PRIMARY KEY AUTOINCREMENT, " +
+                "email TEXT NOT NULL, " +
+                "code TEXT NOT NULL, " +
+                "type TEXT NOT NULL, " +
+                "used INTEGER NOT NULL DEFAULT 0, " +
+                "expires_at TEXT NOT NULL, " +
+                "created_at TEXT NOT NULL DEFAULT (datetime('now','localtime')))"); 
 
 
         Integer count = jdbc.queryForObject("SELECT COUNT(*) FROM users WHERE username = ?", Integer.class, "admin");
         if (count == null || count == 0) {
             String encodedPwd = new BCryptPasswordEncoder().encode("admin123");
-            jdbc.update("INSERT INTO users (username, password, display_name, role) VALUES (?, ?, ?, ?)",
-                    "admin", encodedPwd, "超级管理员", "ADMIN");
-            log.info("Default admin user created (username: admin, password: admin123)");
+            jdbc.update("INSERT INTO users (username, email, password, display_name, role) VALUES (?, ?, ?, ?, ?)",
+                    "admin", "admin@example.com", encodedPwd, "超级管理员", "ADMIN");
+            log.info("Default admin user created (username: admin, email: admin@example.com, password: admin123)");
         }
 
         log.info("Database initialized successfully");

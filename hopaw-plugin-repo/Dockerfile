@@ -19,7 +19,7 @@ RUN addgroup -S hopaw && adduser -S hopaw -G hopaw
 WORKDIR /app
 
 # 创建必要的目录
-RUN mkdir -p /app/logs /app/plugin-packages /app/data
+RUN mkdir -p /app/logs /app/plugin-packages /app/data /app/config
 
 # 复制已构建的 JAR 文件
 COPY hopaw-plugin-repo-1.0.0.jar app.jar
