@@ -351,8 +351,9 @@ function uploadFile(file) {
 }
 
 function formatFileSize(bytes) {
+    if (!bytes || bytes <= 0) return '-';
     if (bytes < 1024) return bytes + ' B';
-    var exp = Math.log(bytes) / Math.log(1024);
+    var exp = Math.floor(Math.log(bytes) / Math.log(1024));
     var pre = 'KMGTPE'.charAt(exp - 1) + 'B';
     return (bytes / Math.pow(1024, exp)).toFixed(1) + ' ' + pre;
 }

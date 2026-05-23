@@ -351,8 +351,9 @@ function resetDetail() {
 function formatFileSize(bytes) {
     if (!bytes || bytes <= 0) return '未知';
     if (bytes < 1024) return bytes + ' B';
-    if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
-    return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
+    var exp = Math.floor(Math.log(bytes) / Math.log(1024));
+    var pre = 'KMGTPE'.charAt(exp - 1) + 'B';
+    return (bytes / Math.pow(1024, exp)).toFixed(1) + ' ' + pre;
 }
 
 function escapeHtml(str) {
