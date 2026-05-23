@@ -66,6 +66,11 @@ public class DingTalkTool implements AgentTool {
     }
 
     @Override
+    public String getVersion() {
+        return "1.0.1";
+    }
+
+    @Override
     public List<ToolConfigItem> getConfigItems() {
         return List.of(
                 new ToolConfigItem(CONFIG_KEY_WEBHOOK, "Webhook地址", "钉钉群机器人的完整Webhook地址（https://oapi.dingtalk.com/robot/send?access_token=xxx）",

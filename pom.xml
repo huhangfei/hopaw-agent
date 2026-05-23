@@ -37,6 +37,7 @@
         <playwright.version>1.40.0</playwright.version>
         <fastjson2.version>2.0.43</fastjson2.version>
         <jsch.version>2.28.0</jsch.version>
+        <parent.version>1.0.0</parent.version>
     </properties>
 
     <dependencyManagement>
@@ -44,27 +45,27 @@
             <dependency>
                 <groupId>com.hopaw.agent</groupId>
                 <artifactId>hopaw-contract</artifactId>
-                <version>${project.version}</version>
+                <version>${parent.version}</version>
             </dependency>
             <dependency>
                 <groupId>com.hopaw.agent</groupId>
                 <artifactId>hopaw-infra</artifactId>
-                <version>${project.version}</version>
+                <version>${parent.version}</version>
             </dependency>
             <dependency>
                 <groupId>com.hopaw.agent</groupId>
                 <artifactId>hopaw-biz</artifactId>
-                <version>${project.version}</version>
+                <version>${parent.version}</version>
             </dependency>
             <dependency>
                 <groupId>com.hopaw.agent</groupId>
                 <artifactId>hopaw-tool-webpage</artifactId>
-                <version>${project.version}</version>
+                <version>${parent.version}</version>
             </dependency>
             <dependency>
                 <groupId>com.hopaw.agent</groupId>
                 <artifactId>hopaw-tool-ssh</artifactId>
-                <version>${project.version}</version>
+                <version>${parent.version}</version>
             </dependency>
 
             <dependency>

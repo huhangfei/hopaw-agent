@@ -6,6 +6,9 @@ import com.agent.hopaw.infra.model.dto.ResponseBean;
 import com.agent.hopaw.infra.model.dto.ToolSetInfo;
 import com.agent.hopaw.infra.service.ISysConfigService;
 import com.agent.hopaw.infra.tool.IAgentToolService;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.http.ContentDisposition;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
@@ -13,12 +16,18 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
 import java.util.List;
+import java.util.Map;
+import java.util.concurrent.CompletableFuture;
 
 @Controller
 @RequestMapping("/tools")
 public class AgentToolController {
+
+    private static final Logger log = LoggerFactory.getLogger(AgentToolController.class);
+    private static final ObjectMapper objectMapper = new ObjectMapper();
 
     private final IAgentToolService IAgentToolService;
     private final ISysConfigService sysConfigService;
@@ -94,13 +103,46 @@ public class AgentToolController {
     }
 
     @PostMapping("/api/install-upgrade")
-    @ResponseBody
-    public ResponseBean installOrUpgrade(@RequestBody PluginUpdateInfo updateInfo) {
-        PluginInstallResult result = IAgentToolService.installOrUpgradePlugin(updateInfo);
-        if (result.isSuccess()) {
-            return ResponseBean.success(result);
-        }
-        return ResponseBean.fail(result.getMessage());
+    public SseEmitter installOrUpgrade(@RequestBody PluginUpdateInfo updateInfo) {
+        SseEmitter emitter = new SseEmitter(600000L);
+
+        CompletableFuture.runAsync(() -> {
+            try {
+                PluginInstallResult result = IAgentToolService.installOrUpgradePlugin(updateInfo,
+                        stage -> {
+                            try {
+                                String data = objectMapper.writeValueAsString(Map.of("stage", stage));
+                                emitter.send(SseEmitter.event().name("stage").data(data));
+                            } catch (Exception e) {
+                                log.warn("Failed to send stage event", e);
+                            }
+                        },
+                        percent -> {
+                            try {
+                                String data = objectMapper.writeValueAsString(Map.of("percent", percent));
+                                emitter.send(SseEmitter.event().name("progress").data(data));
+                            } catch (Exception e) {
+                                log.warn("Failed to send progress event", e);
+                            }
+                        });
+
+                String resultJson = objectMapper.writeValueAsString(result);
+                Thread.sleep(100);
+                emitter.send(SseEmitter.event().name("complete").data(resultJson));
+                Thread.sleep(100);
+                emitter.complete();
+            } catch (Exception e) {
+                log.error("Install/upgrade failed", e);
+                try {
+                    String errData = objectMapper.writeValueAsString(Map.of("message", e.getMessage()));
+                    emitter.send(SseEmitter.event().name("error").data(errData));
+                } catch (Exception ex) {
+                    log.warn("Failed to send error event", ex);
+                }
+                emitter.completeWithError(e);
+            }
+        });
+        return emitter;
     }
 
     @GetMapping("/api/export/{jarFileName}")

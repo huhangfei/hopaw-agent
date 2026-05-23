@@ -145,6 +145,13 @@ public class AgentToolService implements IAgentToolService {
 
     @Override
     public PluginInstallResult installOrUpgradePlugin(PluginUpdateInfo updateInfo) {
+        return installOrUpgradePlugin(updateInfo, null, null);
+    }
+
+    @Override
+    public PluginInstallResult installOrUpgradePlugin(PluginUpdateInfo updateInfo,
+                                                      java.util.function.Consumer<String> stageCallback,
+                                                      java.util.function.Consumer<Integer> downloadProgressCallback) {
         String toolName = updateInfo.getToolName();
         String version = updateInfo.getVersion();
         String jarFileName = updateInfo.getFileName();
@@ -171,6 +178,7 @@ public class AgentToolService implements IAgentToolService {
         try {
             if (isUpgrade) {
                 log.info("Plugin {} is installed, uninstalling before upgrade", toolName);
+                reportStage(stageCallback, "uninstalling");
                 DynamicToolRegistry.PluginEntry removed = dynamicToolRegistry.unregister(jarFileName);
                 if (removed != null) {
                     for (AgentTool tool : removed.tools) {
@@ -188,11 +196,12 @@ public class AgentToolService implements IAgentToolService {
             }
 
             log.info("Downloading plugin ZIP from: {}", updateInfo.getDownloadUrl());
+            reportStage(stageCallback, "downloading");
             URL downloadUrl = new URI(updateInfo.getDownloadUrl()).toURL();
             HttpURLConnection connection = (HttpURLConnection) downloadUrl.openConnection();
             connection.setRequestMethod("GET");
-            connection.setConnectTimeout(60000);
-            connection.setReadTimeout(60000);
+            connection.setConnectTimeout(600000);
+            connection.setReadTimeout(3000000);
 
             int responseCode = connection.getResponseCode();
             if (responseCode != HttpURLConnection.HTTP_OK) {
@@ -202,13 +211,30 @@ public class AgentToolService implements IAgentToolService {
                     String.format("下载失败，HTTP响应码: %d", responseCode));
             }
 
+            long totalBytes = connection.getContentLengthLong();
             Path tempZip = Files.createTempFile("plugin_download_", ".zip");
-            try (InputStream in = connection.getInputStream()) {
-                Files.copy(in, tempZip, StandardCopyOption.REPLACE_EXISTING);
+            try (InputStream in = connection.getInputStream();
+                 java.io.OutputStream out = Files.newOutputStream(tempZip)) {
+                byte[] buffer = new byte[BUFFER_SIZE];
+                long bytesRead = 0;
+                int n;
+                int lastReportedPercent = 0;
+                while ((n = in.read(buffer)) != -1) {
+                    out.write(buffer, 0, n);
+                    bytesRead += n;
+                    if (totalBytes > 0) {
+                        int percent = (int) (bytesRead * 100 / totalBytes);
+                        if (percent > lastReportedPercent) {
+                            lastReportedPercent = percent;
+                            reportProgress(downloadProgressCallback, percent);
+                        }
+                    }
+                }
+                reportProgress(downloadProgressCallback, 100);
             }
             connection.disconnect();
 
-            // 解压 ZIP，提取 JAR 并校验
+            reportStage(stageCallback, "extracting");
             byte[] jarBytes = null;
             try (ZipInputStream zis = new ZipInputStream(Files.newInputStream(tempZip))) {
                 ZipEntry entry;
@@ -226,7 +252,7 @@ public class AgentToolService implements IAgentToolService {
                 return PluginInstallResult.fail(toolName, version, jarFileName, "ZIP包中未找到插件JAR文件");
             }
 
-            // 校验 JAR 哈希
+            reportStage(stageCallback, "verifying");
             String downloadedJarHash = calculateSHA256(jarBytes);
             if (!updateInfo.getSha256Hash().equalsIgnoreCase(downloadedJarHash)) {
                 log.error("JAR文件SHA256哈希校验失败！期望: {}, 实际: {}",
@@ -235,17 +261,14 @@ public class AgentToolService implements IAgentToolService {
                 return PluginInstallResult.fail(toolName, version, jarFileName, "插件哈希校验失败");
             }
 
-            // 保存 JAR 文件
+            reportStage(stageCallback, "installing");
             Files.write(targetPath, jarBytes);
             log.info("Plugin {} installed successfully to {}, JAR哈希校验通过", toolName, targetPath);
 
-            // 冲突检测
             PluginConflictInfo conflictInfo = detectConflicts(targetPath.toFile(), toolName);
 
-            // 加载插件
             int toolCount = jarPluginLoader.loadPlugin(targetPath.toFile());
 
-            // 清理临时文件
             Files.deleteIfExists(tempZip);
 
             return PluginInstallResult.success(toolName, version, jarFileName, toolCount, isUpgrade, previousVersion, conflictInfo);
@@ -253,6 +276,18 @@ public class AgentToolService implements IAgentToolService {
             log.error("Error installing/upgrading plugin: {}", toolName, e);
             return PluginInstallResult.fail(toolName, version, jarFileName, 
                 String.format("安装失败: %s", e.getMessage()));
+        }
+    }
+
+    private void reportStage(java.util.function.Consumer<String> callback, String stage) {
+        if (callback != null) {
+            callback.accept(stage);
+        }
+    }
+
+    private void reportProgress(java.util.function.Consumer<Integer> callback, int percent) {
+        if (callback != null) {
+            callback.accept(percent);
         }
     }
 

@@ -234,3 +234,56 @@
     color: #4a66d6;
     font-weight: 500;
 }
+
+.store-progress-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(245, 245, 245, 0.92);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 10;
+}
+
+.store-progress-card {
+    background: #fff;
+    border-radius: 12px;
+    padding: 32px 40px;
+    box-shadow: 0 4px 24px rgba(0, 0, 0, 0.1);
+    text-align: center;
+    min-width: 320px;
+    max-width: 400px;
+}
+
+.store-progress-stage {
+    font-size: 14px;
+    color: #555;
+    margin-bottom: 16px;
+    font-weight: 500;
+}
+
+.store-progress-bar-track {
+    width: 100%;
+    height: 12px;
+    background: #e8e8e8;
+    border-radius: 6px;
+    overflow: hidden;
+    margin-bottom: 10px;
+}
+
+.store-progress-bar-fill {
+    height: 100%;
+    background: linear-gradient(90deg, #667eea, #764ba2);
+    border-radius: 6px;
+    transition: width 0.3s ease;
+    min-width: 0;
+}
+
+.store-progress-percent {
+    font-size: 15px;
+    font-weight: 700;
+    color: #667eea;
+}
