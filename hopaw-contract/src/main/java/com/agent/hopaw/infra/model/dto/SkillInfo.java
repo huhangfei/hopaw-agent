@@ -1,7 +1,5 @@
 package com.agent.hopaw.infra.model.dto;
 
-import java.util.Map;
-
 public class SkillInfo {
 
     private String name;
@@ -14,7 +12,7 @@ public class SkillInfo {
     private String homepage;
     private String changelog;
     private String slug;
-    private Map<String, String> metadata;
+    private String rawFrontmatter;
 
     public String getName() {
         return name;
@@ -96,11 +94,11 @@ public class SkillInfo {
         this.slug = slug;
     }
 
-    public Map<String, String> getMetadata() {
-        return metadata;
+    public String getRawFrontmatter() {
+        return rawFrontmatter;
     }
 
-    public void setMetadata(Map<String, String> metadata) {
-        this.metadata = metadata;
+    public void setRawFrontmatter(String rawFrontmatter) {
+        this.rawFrontmatter = rawFrontmatter;
     }
 }

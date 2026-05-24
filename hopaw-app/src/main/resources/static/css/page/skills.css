@@ -50,6 +50,38 @@
     height: 14px;
 }
 
+.skills-header-actions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.btn-import-skill {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 16px;
+    background: #fff;
+    border: 1px solid #e0e0e0;
+    border-radius: 8px;
+    color: #555;
+    font-size: 13px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.btn-import-skill:hover {
+    border-color: #ff9800;
+    color: #ff9800;
+    background: #fff8f0;
+}
+
+.btn-import-skill svg {
+    width: 14px;
+    height: 14px;
+}
+
 .skills-grid {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
@@ -259,14 +291,6 @@
 
 
 /* ===== Dark Theme ===== */
-body.dark-theme .skills-container {
-    background: #14141e;
-}
-
-body.dark-theme .skills-page {
-    background: #14141e;
-}
-
 body.dark-theme .skills-header h3 {
     color: #e0e0e0;
 }
@@ -277,6 +301,18 @@ body.dark-theme .btn-add-skill {
 
 body.dark-theme .btn-add-skill:hover {
     background: #4caf50;
+}
+
+body.dark-theme .btn-import-skill {
+    background: #1e1e2e;
+    border-color: #2a2a3e;
+    color: #bbb;
+}
+
+body.dark-theme .btn-import-skill:hover {
+    border-color: #ffb74d;
+    color: #ffb74d;
+    background: rgba(255, 183, 77, 0.1);
 }
 
 body.dark-theme .skills-grid {

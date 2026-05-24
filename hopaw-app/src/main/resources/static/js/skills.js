@@ -3,6 +3,20 @@ var currentFolder = null;
 
 document.addEventListener('DOMContentLoaded', function() {
     loadSkills();
+
+    var importBtn = document.getElementById('btnImportSkill');
+    var importInput = document.getElementById('skillImportInput');
+    if (importBtn && importInput) {
+        importBtn.addEventListener('click', function() {
+            importInput.click();
+        });
+        importInput.addEventListener('change', function() {
+            var file = importInput.files[0];
+            if (!file) return;
+            importSkill(file);
+            importInput.value = '';
+        });
+    }
 });
 
 function loadSkills() {
@@ -67,7 +81,6 @@ function openAddModal() {
     document.getElementById('skillVersion').value = '';
     document.getElementById('skillHomepage').value = '';
     document.getElementById('skillChangelog').value = '';
-    document.getElementById('skillMetadata').value = '';
     document.getElementById('skillContent').value = '';
     showContentTextarea();
     document.getElementById('btnSave').style.display = '';
@@ -95,7 +108,6 @@ function viewSkill(folderName) {
             document.getElementById('skillVersion').value = skill.version || '';
             document.getElementById('skillHomepage').value = skill.homepage || '';
             document.getElementById('skillChangelog').value = skill.changelog || '';
-            document.getElementById('skillMetadata').value = formatMetadata(skill.metadata);
             document.getElementById('skillContent').value = skill.content || '';
             showContentPreview(skill.content);
             document.getElementById('btnSave').style.display = 'none';
@@ -127,7 +139,6 @@ function editSkill(folderName) {
             document.getElementById('skillVersion').value = skill.version || '';
             document.getElementById('skillHomepage').value = skill.homepage || '';
             document.getElementById('skillChangelog').value = skill.changelog || '';
-            document.getElementById('skillMetadata').value = formatMetadata(skill.metadata);
             document.getElementById('skillContent').value = skill.content || '';
             showContentTextarea();
             document.getElementById('btnSave').style.display = '';
@@ -148,26 +159,13 @@ function saveSkill() {
     var desc = document.getElementById('skillDesc').value.trim();
     var slug = document.getElementById('skillSlug').value.trim();
     var version = document.getElementById('skillVersion').value.trim();
+    if (!version) {
+        showToast('请输入版本号', 'error');
+        return;
+    }
     var homepage = document.getElementById('skillHomepage').value.trim();
     var changelog = document.getElementById('skillChangelog').value.trim();
-    var metadataText = document.getElementById('skillMetadata').value.trim();
     var content = document.getElementById('skillContent').value;
-
-    var metadata = null;
-    if (metadataText) {
-        metadata = {};
-        var lines = metadataText.split('\n');
-        lines.forEach(function(line) {
-            var colonIdx = line.indexOf(':');
-            if (colonIdx > 0) {
-                var key = line.substring(0, colonIdx).trim();
-                var value = line.substring(colonIdx + 1).trim();
-                if (key && value) {
-                    metadata[key] = value;
-                }
-            }
-        });
-    }
 
     var body = {
         name: name,
@@ -176,7 +174,6 @@ function saveSkill() {
         version: version || null,
         homepage: homepage || null,
         changelog: changelog || null,
-        metadata: metadata,
         content: content
     };
 
@@ -244,17 +241,6 @@ function escapeAttr(str) {
     return str.replace(/'/g, "\\'").replace(/"/g, '&quot;');
 }
 
-function formatMetadata(meta) {
-    if (!meta) return '';
-    var lines = [];
-    for (var key in meta) {
-        if (meta.hasOwnProperty(key)) {
-            lines.push(key + ': ' + meta[key]);
-        }
-    }
-    return lines.join('\n');
-}
-
 function showContentTextarea() {
     document.getElementById('skillContent').style.display = '';
     document.getElementById('skillContentPreview').style.display = 'none';
@@ -275,4 +261,35 @@ function extractMarkdownBody(content) {
     var firstEnd = content.indexOf('---', 3);
     if (firstEnd === -1) return content;
     return content.substring(firstEnd + 3).trim();
+}
+
+function importSkill(file) {
+    if (!file) return;
+    var name = file.name.toLowerCase();
+    if (!name.endsWith('.zip') && !name.endsWith('.md')) {
+        showToast('仅支持 .zip 或 .md 文件', 'error');
+        return;
+    }
+
+    showToast('正在导入: ' + file.name + '...', 'info');
+
+    var formData = new FormData();
+    formData.append('file', file);
+
+    fetch('/skills/api/import', {
+        method: 'POST',
+        body: formData
+    })
+    .then(function(r) { return r.json(); })
+    .then(function(resp) {
+        if (resp.code === 200) {
+            showToast('导入成功', 'success');
+            loadSkills();
+        } else {
+            showToast(resp.msg || '导入失败', 'error');
+        }
+    })
+    .catch(function() {
+        showToast('导入失败', 'error');
+    });
 }

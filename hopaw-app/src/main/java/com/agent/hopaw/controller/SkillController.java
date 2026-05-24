@@ -8,6 +8,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
 
@@ -78,6 +79,29 @@ public class SkillController {
             return ResponseBean.success();
         } catch (Exception e) {
             log.error("Failed to delete skill: {}", folderName, e);
+            return ResponseBean.fail(e.getMessage());
+        }
+    }
+
+    @PostMapping("/api/import")
+    @ResponseBody
+    public ResponseBean importSkill(@RequestParam("file") MultipartFile file) {
+        if (file.isEmpty()) {
+            return ResponseBean.fail("文件为空");
+        }
+        String originalName = file.getOriginalFilename();
+        if (originalName == null) {
+            return ResponseBean.fail("文件名无效");
+        }
+        String lowerName = originalName.toLowerCase();
+        if (!lowerName.endsWith(".zip") && !lowerName.endsWith(".md")) {
+            return ResponseBean.fail("仅支持 .zip 或 SKILL.md 文件");
+        }
+        try {
+            SkillInfo imported = skillService.importSkill(file.getBytes(), originalName);
+            return ResponseBean.success(imported);
+        } catch (Exception e) {
+            log.error("Failed to import skill: {}", originalName, e);
             return ResponseBean.fail(e.getMessage());
         }
     }

@@ -6,11 +6,12 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 
-import java.io.IOException;
+import java.io.*;
 import java.nio.file.*;
 import java.util.*;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
+import java.util.zip.ZipInputStream;
 
 @Service
 public class SkillService {
@@ -57,14 +58,17 @@ public class SkillService {
     }
 
     public SkillInfo createSkill(SkillInfo skillInfo) {
-        if (skillInfo.getFolderName() == null || skillInfo.getFolderName().isBlank()) {
-            if (skillInfo.getSlug() != null && !skillInfo.getSlug().isBlank()) {
-                skillInfo.setFolderName(skillInfo.getSlug());
-            } else {
-                skillInfo.setFolderName(toFolderName(skillInfo.getName()));
-            }
+        if (skillInfo.getVersion() == null || skillInfo.getVersion().isBlank()) {
+            skillInfo.setVersion("1.0.0");
         }
+        String slug = (skillInfo.getSlug() != null && !skillInfo.getSlug().isBlank())
+                ? skillInfo.getSlug()
+                : toFolderName(skillInfo.getName());
+        skillInfo.setFolderName(buildFolderName(slug, skillInfo.getVersion()));
         Path skillDir = getSkillDir().resolve(skillInfo.getFolderName());
+        if (Files.exists(skillDir)) {
+            throw new RuntimeException("技能目录已存在: " + skillInfo.getFolderName());
+        }
         try {
             Files.createDirectories(skillDir);
             writeSkillMd(skillDir, skillInfo);
@@ -76,6 +80,9 @@ public class SkillService {
     }
 
     public SkillInfo updateSkill(String folderName, SkillInfo skillInfo) {
+        if (skillInfo.getVersion() == null || skillInfo.getVersion().isBlank()) {
+            skillInfo.setVersion("1.0.0");
+        }
         Path skillDir = getSkillDir().resolve(folderName);
         if (!Files.isDirectory(skillDir)) {
             throw new RuntimeException("技能不存在: " + folderName);
@@ -153,6 +160,8 @@ public class SkillService {
         }
 
         String yamlBlock = content.substring(firstDelim + 3, secondDelim).trim();
+        info.setRawFrontmatter(yamlBlock);
+
         Map<String, String> frontmatter = parseSimpleYaml(yamlBlock);
 
         info.setName(frontmatter.getOrDefault("name", ""));
@@ -163,20 +172,6 @@ public class SkillService {
         info.setHomepage(frontmatter.get("homepage"));
         info.setChangelog(frontmatter.get("changelog"));
         info.setSlug(frontmatter.get("slug"));
-
-        Map<String, String> metadata = new LinkedHashMap<>();
-        for (Map.Entry<String, String> entry : frontmatter.entrySet()) {
-            String key = entry.getKey();
-            if (!key.equals("name") && !key.equals("description")
-                    && !key.equals("license") && !key.equals("compatibility")
-                    && !key.equals("version") && !key.equals("homepage") && !key.equals("changelog")
-                    && !key.equals("slug")) {
-                metadata.put(key, entry.getValue());
-            }
-        }
-        if (!metadata.isEmpty()) {
-            info.setMetadata(metadata);
-        }
 
         return info;
     }
@@ -249,48 +244,331 @@ public class SkillService {
         String name = skillInfo.getName() != null ? skillInfo.getName() : skillInfo.getFolderName();
         String description = skillInfo.getDescription() != null ? skillInfo.getDescription() : "";
 
+        String rawFrontmatter = extractRawFrontmatter(skillInfo.getContent());
+        String body = extractBody(skillInfo.getContent());
+
         StringBuilder sb = new StringBuilder();
         sb.append("---\n");
-        sb.append("name: ").append(name).append("\n");
-        sb.append("description: ").append(description).append("\n");
-        if (skillInfo.getSlug() != null && !skillInfo.getSlug().isBlank()) {
-            sb.append("slug: ").append(skillInfo.getSlug()).append("\n");
-        }
-        if (skillInfo.getLicense() != null && !skillInfo.getLicense().isBlank()) {
-            sb.append("license: ").append(skillInfo.getLicense()).append("\n");
-        }
-        if (skillInfo.getCompatibility() != null && !skillInfo.getCompatibility().isBlank()) {
-            sb.append("compatibility: ").append(skillInfo.getCompatibility()).append("\n");
-        }
-        if (skillInfo.getVersion() != null && !skillInfo.getVersion().isBlank()) {
-            sb.append("version: ").append(skillInfo.getVersion()).append("\n");
-        }
-        if (skillInfo.getHomepage() != null && !skillInfo.getHomepage().isBlank()) {
-            sb.append("homepage: ").append(skillInfo.getHomepage()).append("\n");
-        }
-        if (skillInfo.getChangelog() != null && !skillInfo.getChangelog().isBlank()) {
-            sb.append("changelog: ").append(skillInfo.getChangelog()).append("\n");
-        }
-        if (skillInfo.getMetadata() != null && !skillInfo.getMetadata().isEmpty()) {
-            sb.append("metadata:\n");
-            for (Map.Entry<String, String> entry : skillInfo.getMetadata().entrySet()) {
-                sb.append("  ").append(entry.getKey()).append(": ").append(entry.getValue()).append("\n");
-            }
-        }
-        sb.append("---\n");
 
-        String body = skillInfo.getContent();
+        if (rawFrontmatter != null && !rawFrontmatter.isBlank()) {
+            sb.append(applyFrontmatterFields(rawFrontmatter, skillInfo));
+        } else {
+            sb.append("name: ").append(name).append("\n");
+            sb.append("description: ").append(description).append("\n");
+            appendFrontmatterField(sb, "slug", skillInfo.getSlug());
+            appendFrontmatterField(sb, "license", skillInfo.getLicense());
+            appendFrontmatterField(sb, "compatibility", skillInfo.getCompatibility());
+            appendFrontmatterField(sb, "version", skillInfo.getVersion());
+            appendFrontmatterField(sb, "homepage", skillInfo.getHomepage());
+            appendFrontmatterField(sb, "changelog", skillInfo.getChangelog());
+        }
+
+        sb.append("---\n");
         if (body != null && !body.isBlank()) {
-            int secondDelim = body.indexOf("---", body.indexOf("---") + 3);
-            if (body.stripLeading().startsWith("---") && secondDelim != -1) {
-                sb.append(body.substring(secondDelim + 3).stripLeading());
-            } else {
-                sb.append("\n").append(body.strip());
-            }
+            sb.append(body).append("\n");
+        } else {
             sb.append("\n");
         }
 
         Files.writeString(skillDir.resolve(SKILL_MD), sb.toString());
+    }
+
+    private String extractRawFrontmatter(String content) {
+        if (content == null || content.isBlank()) {
+            return null;
+        }
+        String trimmed = content.stripLeading();
+        if (!trimmed.startsWith("---")) {
+            return null;
+        }
+        int firstDelim = content.indexOf("---");
+        int secondDelim = content.indexOf("---", firstDelim + 3);
+        if (secondDelim == -1) {
+            return null;
+        }
+        return content.substring(firstDelim + 3, secondDelim).trim();
+    }
+
+    private String extractBody(String content) {
+        if (content == null || content.isBlank()) {
+            return "";
+        }
+        String trimmed = content.stripLeading();
+        if (!trimmed.startsWith("---")) {
+            return content;
+        }
+        int firstDelim = content.indexOf("---");
+        int secondDelim = content.indexOf("---", firstDelim + 3);
+        if (secondDelim == -1) {
+            return content.substring(firstDelim + 3).trim();
+        }
+        return content.substring(secondDelim + 3).stripLeading();
+    }
+
+    private String applyFrontmatterFields(String raw, SkillInfo skillInfo) {
+        List<String> knownKeys = Arrays.asList(
+                "name", "description", "slug", "license",
+                "compatibility", "version", "homepage", "changelog"
+        );
+        Set<String> knownKeySet = new HashSet<>(knownKeys);
+
+        Map<String, String> newValues = new LinkedHashMap<>();
+        newValues.put("name", skillInfo.getName());
+        newValues.put("description", skillInfo.getDescription());
+        newValues.put("slug", skillInfo.getSlug());
+        newValues.put("license", skillInfo.getLicense());
+        newValues.put("compatibility", skillInfo.getCompatibility());
+        newValues.put("version", skillInfo.getVersion());
+        newValues.put("homepage", skillInfo.getHomepage());
+        newValues.put("changelog", skillInfo.getChangelog());
+
+        StringBuilder sb = new StringBuilder();
+        List<String> lines = raw.lines().collect(Collectors.toList());
+        int i = 0;
+        while (i < lines.size()) {
+            String line = lines.get(i);
+            if (line.isBlank()) {
+                sb.append(line).append("\n");
+                i++;
+                continue;
+            }
+
+            int indent = countLeadingSpaces(line);
+            if (indent > 0) {
+                i++;
+                continue;
+            }
+
+            String trimmedLine = line.stripLeading();
+            if (trimmedLine.startsWith("#")) {
+                sb.append(line).append("\n");
+                i++;
+                continue;
+            }
+
+            int colonIdx = trimmedLine.indexOf(':');
+            if (colonIdx <= 0) {
+                sb.append(line).append("\n");
+                i++;
+                continue;
+            }
+
+            String key = trimmedLine.substring(0, colonIdx).trim();
+            if (knownKeySet.contains(key)) {
+                i = skipFieldLines(lines, i);
+                String newValue = newValues.get(key);
+                if (newValue != null && !newValue.isBlank()) {
+                    if (newValue.contains("\n")) {
+                        sb.append(key).append(": |\n");
+                        for (String vl : newValue.split("\n")) {
+                            sb.append("  ").append(vl).append("\n");
+                        }
+                    } else {
+                        sb.append(key).append(": ").append(newValue).append("\n");
+                    }
+                }
+            } else {
+                i = copyFieldLines(lines, i, sb);
+            }
+        }
+
+        return sb.toString().stripTrailing();
+    }
+
+    private int skipFieldLines(List<String> lines, int startIdx) {
+        int i = startIdx + 1;
+        while (i < lines.size()) {
+            String line = lines.get(i);
+            if (line.isBlank() || countLeadingSpaces(line) > 0) {
+                i++;
+            } else {
+                String tl = line.stripLeading();
+                if (tl.startsWith("#")) {
+                    i++;
+                } else {
+                    break;
+                }
+            }
+        }
+        return i;
+    }
+
+    private int copyFieldLines(List<String> lines, int startIdx, StringBuilder sb) {
+        int i = startIdx;
+        while (i < lines.size()) {
+            String line = lines.get(i);
+            if (i > startIdx && !line.isBlank() && countLeadingSpaces(line) == 0) {
+                String tl = line.stripLeading();
+                if (!tl.startsWith("#") && tl.indexOf(':') > 0) {
+                    break;
+                }
+            }
+            sb.append(line).append("\n");
+            i++;
+        }
+        return i;
+    }
+
+    private void appendFrontmatterField(StringBuilder sb, String key, String value) {
+        if (value != null && !value.isBlank()) {
+            sb.append(key).append(": ").append(value).append("\n");
+        }
+    }
+
+    public SkillInfo importSkill(byte[] fileBytes, String originalFilename) throws IOException {
+        if (originalFilename == null) {
+            throw new RuntimeException("文件名无效");
+        }
+        String lowerName = originalFilename.toLowerCase();
+
+        if (lowerName.endsWith(".zip")) {
+            return importFromZip(fileBytes);
+        } else if (lowerName.endsWith(".md")) {
+            return importFromMd(fileBytes, originalFilename);
+        } else {
+            throw new RuntimeException("不支持的文件格式: " + originalFilename);
+        }
+    }
+
+    private SkillInfo importFromZip(byte[] fileBytes) throws IOException {
+        Path tempDir = Files.createTempDirectory("skill-import-");
+        try {
+            try (ZipInputStream zis = new ZipInputStream(new ByteArrayInputStream(fileBytes))) {
+                java.util.zip.ZipEntry entry;
+                while ((entry = zis.getNextEntry()) != null) {
+                    if (entry.isDirectory()) {
+                        continue;
+                    }
+                    String entryName = entry.getName();
+                    int slashIdx = entryName.indexOf('/');
+                    if (slashIdx > 0) {
+                        entryName = entryName.substring(slashIdx + 1);
+                    }
+                    Path targetPath = tempDir.resolve(entryName);
+                    Files.createDirectories(targetPath.getParent());
+                    Files.copy(zis, targetPath, StandardCopyOption.REPLACE_EXISTING);
+                    zis.closeEntry();
+                }
+            }
+
+            Path skillMd = findSkillMdInDir(tempDir);
+            if (skillMd == null) {
+                throw new RuntimeException("ZIP 文件中未找到 SKILL.md");
+            }
+
+            Path skillDir = createSkillDirFromMd(skillMd);
+            copyDir(tempDir, skillDir);
+
+            return readSkillFromDir(skillDir);
+        } finally {
+            deleteRecursively(tempDir);
+        }
+    }
+
+    private SkillInfo importFromMd(byte[] fileBytes, String originalFilename) throws IOException {
+        String content = new String(fileBytes);
+        SkillInfo info = parseSkillMd(content);
+        String slug;
+        if (info.getSlug() != null && !info.getSlug().isBlank()) {
+            slug = info.getSlug();
+        } else if (info.getName() != null && !info.getName().isBlank()) {
+            slug = toFolderName(info.getName());
+        } else {
+            slug = originalFilename.replaceFirst("(?i)\\.md$", "");
+        }
+        String version = (info.getVersion() != null && !info.getVersion().isBlank())
+                ? info.getVersion() : "1.0.0";
+        String folderName = buildFolderName(slug, version);
+
+        Path skillDir = getSkillDir().resolve(folderName);
+        if (Files.exists(skillDir)) {
+            throw new RuntimeException("技能目录已存在: " + folderName);
+        }
+        Files.createDirectories(skillDir);
+        Files.writeString(skillDir.resolve(SKILL_MD), content);
+
+        return readSkillFromDir(skillDir);
+    }
+
+    private Path findSkillMdInDir(Path dir) throws IOException {
+        Path direct = dir.resolve(SKILL_MD);
+        if (Files.isRegularFile(direct)) {
+            return direct;
+        }
+        try (Stream<Path> entries = Files.list(dir)) {
+            List<Path> subDirs = entries.filter(Files::isDirectory).collect(Collectors.toList());
+            for (Path subDir : subDirs) {
+                Path nested = subDir.resolve(SKILL_MD);
+                if (Files.isRegularFile(nested)) {
+                    return nested;
+                }
+            }
+        }
+        return null;
+    }
+
+    private Path createSkillDirFromMd(Path skillMd) throws IOException {
+        String content = Files.readString(skillMd);
+        SkillInfo info = parseSkillMd(content);
+        String slug;
+        if (info.getSlug() != null && !info.getSlug().isBlank()) {
+            slug = info.getSlug();
+        } else if (info.getName() != null && !info.getName().isBlank()) {
+            slug = toFolderName(info.getName());
+        } else {
+            slug = toFolderName(skillMd.getParent().getFileName().toString());
+        }
+        String version = (info.getVersion() != null && !info.getVersion().isBlank())
+                ? info.getVersion() : "1.0.0";
+        String folderName = buildFolderName(slug, version);
+
+        Path skillDir = getSkillDir().resolve(folderName);
+        if (Files.exists(skillDir)) {
+            throw new RuntimeException("技能目录已存在: " + folderName);
+        }
+        Files.createDirectories(skillDir);
+        return skillDir;
+    }
+
+    private void copyDir(Path source, Path target) throws IOException {
+        try (Stream<Path> files = Files.walk(source)) {
+            files.forEach(sourcePath -> {
+                try {
+                    Path targetPath = target.resolve(source.relativize(sourcePath));
+                    if (Files.isDirectory(sourcePath)) {
+                        Files.createDirectories(targetPath);
+                    } else {
+                        Files.copy(sourcePath, targetPath, StandardCopyOption.REPLACE_EXISTING);
+                    }
+                } catch (IOException e) {
+                    throw new UncheckedIOException(e);
+                }
+            });
+        } catch (UncheckedIOException e) {
+            throw e.getCause();
+        }
+    }
+
+    private String buildFolderName(String slug, String version) {
+        String ver = (version != null && !version.isBlank()) ? version : "1.0.0";
+        return slug + "-" + ver;
+    }
+
+    private void deleteRecursively(Path dir) {
+        try {
+            try (Stream<Path> files = Files.walk(dir)) {
+                files.sorted(Comparator.reverseOrder())
+                        .forEach(path -> {
+                            try {
+                                Files.delete(path);
+                            } catch (IOException e) {
+                                log.warn("Failed to delete temp file: {}", path, e);
+                            }
+                        });
+            }
+        } catch (IOException e) {
+            log.warn("Failed to clean up temp dir: {}", dir, e);
+        }
     }
 
     private String toFolderName(String name) {

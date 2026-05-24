@@ -12,13 +12,24 @@
     <div class="skills-page">
         <div class="skills-header">
             <h3>技能列表</h3>
-            <button class="btn-add-skill" onclick="openAddModal()">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <line x1="12" y1="5" x2="12" y2="19"/>
-                    <line x1="5" y1="12" x2="19" y2="12"/>
-                </svg>
-                添加技能
-            </button>
+            <div class="skills-header-actions">
+                <button class="btn-import-skill" id="btnImportSkill">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                        <polyline points="7 10 12 15 17 10"/>
+                        <line x1="12" y1="15" x2="12" y2="3"/>
+                    </svg>
+                    导入技能
+                </button>
+                <button class="btn-add-skill" onclick="openAddModal()">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <line x1="12" y1="5" x2="12" y2="19"/>
+                        <line x1="5" y1="12" x2="19" y2="12"/>
+                    </svg>
+                    添加技能
+                </button>
+            </div>
+            <input type="file" id="skillImportInput" accept=".zip,.md" style="display: none;">
         </div>
 
         <div class="skills-grid" id="skillsGrid">
@@ -51,8 +62,8 @@
                     <input type="text" id="skillSlug" placeholder="例如: word-docx">
                 </div>
                 <div class="form-group">
-                    <label>版本号</label>
-                    <input type="text" id="skillVersion" placeholder="例如: 1.0.0">
+                    <label>版本号 <span class="required">*</span></label>
+                    <input type="text" id="skillVersion" placeholder="例如: 1.0.0" required>
                 </div>
                 <div class="form-group">
                     <label>主页</label>
@@ -61,10 +72,6 @@
                 <div class="form-group">
                     <label>更新日志</label>
                     <textarea id="skillChangelog" rows="3" placeholder="版本更新日志"></textarea>
-                </div>
-                <div class="form-group">
-                    <label>元数据 (每行一个 key: value)</label>
-                    <textarea id="skillMetadata" rows="4" placeholder="author: 作者名&#10;tags: ai, tool&#10;category: general"></textarea>
                 </div>
                 <div class="form-group">
                     <label>内容 (Markdown)</label>
