@@ -34,6 +34,7 @@ public class SQLiteChatMemoryStore implements ChatMemoryStore {
         status.add(0);
         if(scheduledTaskService.isTaskRunning("longTermMemory")){
             status.add(1);
+            status.add(3);
         }
         List<ChatMemory> records = chatMemoryMapper.findByAgentIdAndUserIdInStatus(memoryId.getAgentId(), memoryId.getUserId(), status);
         return records;

@@ -312,6 +312,15 @@ public class DatabaseInitializer implements CommandLineRunner {
                 ));
             }
 
+            if (!configExists(stmt, "skill.dir")) {
+                stmt.execute(String.format(
+                        "INSERT INTO sys_config (config_key, config_value, description) VALUES ('%s', '%s', '%s')",
+                        "skill.dir",
+                        "skills",
+                        "技能文件存放目录"
+                ));
+            }
+
             long taskCount = countTableRows(stmt, "scheduled_tasks");
             if (taskCount == 0) {
                 log.info("Initializing default scheduled tasks...");

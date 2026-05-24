@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+      xmlns:th="http://www.thymeleaf.org"
+      layout:decorate="~{layouts/default}">
+<head>
+    <title>技能管理 - HoPaw</title>
+</head>
+<body>
+<div layout:fragment="pageTitle">🤖 HoPaw - 技能管理</div>
+
+<main class="skills-container" layout:fragment="content">
+    <div class="skills-page">
+        <div class="skills-header">
+            <h3>技能列表</h3>
+            <button class="btn-add-skill" onclick="openAddModal()">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <line x1="12" y1="5" x2="12" y2="19"/>
+                    <line x1="5" y1="12" x2="19" y2="12"/>
+                </svg>
+                添加技能
+            </button>
+        </div>
+
+        <div class="skills-grid" id="skillsGrid">
+            <div class="skills-empty">加载中...</div>
+        </div>
+    </div>
+
+    <div class="skill-modal-overlay" id="skillModal" style="display:none;">
+        <div class="skill-modal">
+            <div class="skill-modal-header">
+                <h3 id="modalTitle">技能详情</h3>
+                <button class="btn-modal-close" onclick="closeModal()">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <line x1="18" y1="6" x2="6" y2="18"/>
+                        <line x1="6" y1="6" x2="18" y2="18"/>
+                    </svg>
+                </button>
+            </div>
+            <div class="skill-modal-body">
+                <div class="form-group">
+                    <label>名称 <span class="required">*</span></label>
+                    <input type="text" id="skillName" placeholder="技能名称">
+                </div>
+                <div class="form-group">
+                    <label>描述</label>
+                    <input type="text" id="skillDesc" placeholder="技能描述">
+                </div>
+                <div class="form-group">
+                    <label>Slug (目录名，留空则自动生成)</label>
+                    <input type="text" id="skillSlug" placeholder="例如: word-docx">
+                </div>
+                <div class="form-group">
+                    <label>版本号</label>
+                    <input type="text" id="skillVersion" placeholder="例如: 1.0.0">
+                </div>
+                <div class="form-group">
+                    <label>主页</label>
+                    <input type="text" id="skillHomepage" placeholder="例如: https://example.com">
+                </div>
+                <div class="form-group">
+                    <label>更新日志</label>
+                    <textarea id="skillChangelog" rows="3" placeholder="版本更新日志"></textarea>
+                </div>
+                <div class="form-group">
+                    <label>元数据 (每行一个 key: value)</label>
+                    <textarea id="skillMetadata" rows="4" placeholder="author: 作者名&#10;tags: ai, tool&#10;category: general"></textarea>
+                </div>
+                <div class="form-group">
+                    <label>内容 (Markdown)</label>
+                    <textarea id="skillContent" rows="18" placeholder="技能内容（支持 Markdown 格式，可包含 YAML frontmatter）"></textarea>
+                    <div id="skillContentPreview" class="skill-content-preview"></div>
+                </div>
+            </div>
+            <div class="skill-modal-footer">
+                <span class="modal-mode-hint" id="modalModeHint"></span>
+                <button class="btn-cancel" onclick="closeModal()">取消</button>
+                <button class="btn-save" id="btnSave" onclick="saveSkill()">保存</button>
+            </div>
+        </div>
+    </div>
+</main>
+<th:block layout:fragment="extraCss">
+    <link rel="stylesheet" th:href="@{/css/page/skills.css}">
+</th:block>
+
+<th:block layout:fragment="extraScripts">
+    <script th:src="@{/js/marked.min.js}"></script>
+    <script th:src="@{/js/skills.js}"></script>
+</th:block>
+</body>
+</html>

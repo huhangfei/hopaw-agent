@@ -220,3 +220,187 @@ body.dark-theme .btn-config:hover {
     background: #4d4d7b;
 }
 
+/* ===== Skills Page Dark Theme ===== */
+body.dark-theme .skills-container {
+    background: #14141e;
+}
+
+body.dark-theme .skills-page {
+    background: #14141e;
+}
+
+body.dark-theme .skills-header h3 {
+    color: #e0e0e0;
+}
+
+body.dark-theme .btn-add-skill {
+    background: #43a047;
+}
+
+body.dark-theme .btn-add-skill:hover {
+    background: #4caf50;
+}
+
+body.dark-theme .skills-grid {
+    background: transparent;
+}
+
+body.dark-theme .skill-card {
+    background: #1e1e2e;
+    border-color: #2a2a3e;
+}
+
+body.dark-theme .skill-card:hover {
+    border-color: #3a3a5e;
+    box-shadow: 0 4px 16px rgba(0,0,0,0.3);
+}
+
+body.dark-theme .skill-card-name {
+    color: #e8e8f0;
+}
+
+body.dark-theme .skill-card-desc {
+    color: #999;
+}
+
+body.dark-theme .skill-card-actions {
+    border-top-color: #2a2a3e;
+}
+
+body.dark-theme .btn-view {
+    color: #64b5f6;
+}
+
+body.dark-theme .btn-view:hover {
+    background: rgba(100, 181, 246, 0.15);
+}
+
+body.dark-theme .btn-edit {
+    color: #ffb74d;
+}
+
+body.dark-theme .btn-edit:hover {
+    background: rgba(255, 183, 77, 0.15);
+}
+
+body.dark-theme .btn-delete {
+    color: #ef5350;
+}
+
+body.dark-theme .btn-delete:hover {
+    background: rgba(239, 83, 80, 0.15);
+}
+
+body.dark-theme .skill-modal {
+    background: #1e1e2e;
+    border-color: #2a2a3e;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.5);
+}
+
+body.dark-theme .skill-modal-header {
+    border-bottom-color: #2a2a3e;
+}
+
+body.dark-theme .skill-modal-header h3 {
+    color: #e0e0e0;
+}
+
+body.dark-theme .skill-modal-body label {
+    color: #bbb;
+}
+
+body.dark-theme .skill-modal-body input[type="text"],
+body.dark-theme .skill-modal-body textarea {
+    color: #e0e0e0;
+    background: #16162a;
+    border-color: #2a2a3e;
+}
+
+body.dark-theme .skill-modal-body input[type="text"]:focus,
+body.dark-theme .skill-modal-body textarea:focus {
+    border-color: #2196f3;
+    background: #1a1a32;
+}
+
+body.dark-theme .skill-modal-body input[type="text"]:disabled {
+    color: #777;
+    background: #1a1a2e;
+    border-color: #2a2a3e;
+}
+
+body.dark-theme .skill-modal-footer {
+    border-top-color: #2a2a3e;
+}
+
+body.dark-theme .btn-cancel {
+    color: #bbb;
+    background: transparent;
+    border-color: #3a3a5e;
+}
+
+body.dark-theme .btn-cancel:hover {
+    background: rgba(255,255,255,0.05);
+    color: #e0e0e0;
+}
+
+body.dark-theme .btn-modal-close {
+    color: #888;
+}
+
+body.dark-theme .btn-modal-close:hover {
+    color: #e0e0e0;
+    background: rgba(255,255,255,0.08);
+}
+
+body.dark-theme .skills-empty {
+    color: #888;
+}
+
+body.dark-theme .skill-content-preview {
+    color: #ccc;
+    background: #16162a;
+    border-color: #2a2a3e;
+}
+
+body.dark-theme .skill-content-preview h1,
+body.dark-theme .skill-content-preview h2 {
+    border-bottom-color: #2a2a3e;
+}
+
+body.dark-theme .skill-content-preview code {
+    background: #2a2a3e;
+    color: #ddd;
+}
+
+body.dark-theme .skill-content-preview pre {
+    background: #1a1a32;
+    border-color: #2a2a3e;
+}
+
+body.dark-theme .skill-content-preview pre code {
+    background: none;
+}
+
+body.dark-theme .skill-content-preview blockquote {
+    border-left-color: #64b5f6;
+    background: rgba(100, 181, 246, 0.08);
+    color: #bbb;
+}
+
+body.dark-theme .skill-content-preview th,
+body.dark-theme .skill-content-preview td {
+    border-color: #2a2a3e;
+}
+
+body.dark-theme .skill-content-preview th {
+    background: #1e1e32;
+}
+
+body.dark-theme .skill-content-preview a {
+    color: #64b5f6;
+}
+
+body.dark-theme .skill-content-preview hr {
+    border-top-color: #2a2a3e;
+}
+
