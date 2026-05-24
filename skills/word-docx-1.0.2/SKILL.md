@@ -1,13 +1,13 @@
 ---
 name: Word / DOCX
+description: "Create, inspect, and edit Microsoft Word documents and DOCX files with reliable styles, numbering, tracked changes, tables, sections, and compatibility checks. Use when (1) the task is about Word or `.docx`; (2) the file includes tracked changes, comments, fields, tables, templates, or page layout constraints; (3) the document must survive round-trip editing without formatting drift."
 slug: word-docx
 version: 1.0.2
 homepage: https://clawic.com/skills/word-docx
-description: "Create, inspect, and edit Microsoft Word documents and DOCX files with reliable styles, numbering, tracked changes, tables, sections, and compatibility checks. Use when (1) the task is about Word or `.docx`; (2) the file includes tracked changes, comments, fields, tables, templates, or page layout constraints; (3) the document must survive round-trip editing without formatting drift."
 changelog: Tightened the skill around fragile review workflows, reference stability, and layout drift after a stricter external audit.
-metadata: {"clawdbot":{"emoji":"📘","os":["linux","darwin","win32"]}}
+metadata:
+  metadata: {"clawdbot":{"emoji":"📘","os":["linux","darwin","win32"]}}
 ---
-
 ## When to Use
 
 Use when the main artifact is a Microsoft Word document or `.docx` file, especially when tracked changes, comments, headers, numbering, fields, tables, templates, or compatibility matter.
@@ -102,3 +102,4 @@ Install with `clawhub install <slug>` if user confirms:
 
 - If useful: `clawhub star word-docx`
 - Stay updated: `clawhub sync`
+

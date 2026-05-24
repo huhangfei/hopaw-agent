@@ -8,7 +8,7 @@
 <body>
 <div layout:fragment="pageTitle">🤖 HoPaw - 技能管理</div>
 
-<main class="skills-container" layout:fragment="content">
+<main class="skills-content" layout:fragment="content">
     <div class="skills-page">
         <div class="skills-header">
             <h3>技能列表</h3>
@@ -26,18 +26,18 @@
         </div>
     </div>
 
-    <div class="skill-modal-overlay" id="skillModal" style="display:none;">
-        <div class="skill-modal">
-            <div class="skill-modal-header">
+    <div class="modal-overlay" id="skillModal">
+        <div class="modal" style="width: 60%;">
+            <div class="modal-header">
                 <h3 id="modalTitle">技能详情</h3>
-                <button class="btn-modal-close" onclick="closeModal()">
+                <button class="modal-close" onclick="closeModal()">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                         <line x1="18" y1="6" x2="6" y2="18"/>
                         <line x1="6" y1="6" x2="18" y2="18"/>
                     </svg>
                 </button>
             </div>
-            <div class="skill-modal-body">
+            <div class="modal-body">
                 <div class="form-group">
                     <label>名称 <span class="required">*</span></label>
                     <input type="text" id="skillName" placeholder="技能名称">
@@ -72,10 +72,10 @@
                     <div id="skillContentPreview" class="skill-content-preview"></div>
                 </div>
             </div>
-            <div class="skill-modal-footer">
+            <div class="modal-footer">
                 <span class="modal-mode-hint" id="modalModeHint"></span>
                 <button class="btn-cancel" onclick="closeModal()">取消</button>
-                <button class="btn-save" id="btnSave" onclick="saveSkill()">保存</button>
+                <button class="btn-submit" id="btnSave" onclick="saveSkill()">保存</button>
             </div>
         </div>
     </div>

@@ -71,7 +71,7 @@ function openAddModal() {
     document.getElementById('skillContent').value = '';
     showContentTextarea();
     document.getElementById('btnSave').style.display = '';
-    document.getElementById('skillModal').style.display = 'flex';
+    Modal.open('skillModal');
 }
 
 function viewSkill(folderName) {
@@ -99,7 +99,7 @@ function viewSkill(folderName) {
             document.getElementById('skillContent').value = skill.content || '';
             showContentPreview(skill.content);
             document.getElementById('btnSave').style.display = 'none';
-            document.getElementById('skillModal').style.display = 'flex';
+            Modal.open('skillModal');
         })
         .catch(function() {
             showToast('请求失败', 'error');
@@ -131,7 +131,7 @@ function editSkill(folderName) {
             document.getElementById('skillContent').value = skill.content || '';
             showContentTextarea();
             document.getElementById('btnSave').style.display = '';
-            document.getElementById('skillModal').style.display = 'flex';
+            Modal.open('skillModal');
         })
         .catch(function() {
             showToast('请求失败', 'error');
@@ -231,7 +231,7 @@ function deleteSkill(folderName, displayName) {
 }
 
 function closeModal() {
-    document.getElementById('skillModal').style.display = 'none';
+    Modal.close('skillModal');
 }
 
 function escapeHtml(str) {
