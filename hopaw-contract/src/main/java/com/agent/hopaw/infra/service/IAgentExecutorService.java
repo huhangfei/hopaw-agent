@@ -1,6 +1,7 @@
 package com.agent.hopaw.infra.service;
 
 import com.agent.hopaw.infra.executor.IAgentExecutor;
+import com.agent.hopaw.infra.model.dto.UserRequest;
 import com.agent.hopaw.infra.model.entity.Agent;
 import com.agent.hopaw.infra.tool.AgentTool;
 
@@ -27,11 +28,11 @@ public interface IAgentExecutorService {
 
     boolean isAgentExecutorRunning(Long agentId, String userId);
 
-    IAgentExecutor getAgentExecutor(Agent agent, String userId);
+    IAgentExecutor getAgentExecutor(UserRequest userRequest);
 
-    IAgentExecutor createAgentExecutor(Agent agent, String userId);
+    IAgentExecutor createAgentExecutor(UserRequest userRequest);
 
-    String getSystemMessage(Agent agent, String userId, List<AgentTool> selectedTools);
+    String getSystemMessage(Agent agent, String userId, List<AgentTool> selectedTools, List<String> skillNames);
 
     default String getToolKeywords(List<AgentTool> selectedTools) {
         return selectedTools.stream().map(AgentTool::getKeyword).collect(Collectors.joining(","));

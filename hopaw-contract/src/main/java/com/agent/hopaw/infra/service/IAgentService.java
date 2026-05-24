@@ -1,5 +1,7 @@
 package com.agent.hopaw.infra.service;
 
+import com.agent.hopaw.infra.executor.IAgentExecutor;
+import com.agent.hopaw.infra.model.dto.UserRequest;
 import com.agent.hopaw.infra.model.entity.Agent;
 
 import java.util.List;
@@ -13,4 +15,6 @@ public interface IAgentService {
     void updateThinking(Long id, Boolean enabled, String userId);
     boolean isAgentExecutorRunning(Long agentId, String userId);
     void stopAgentExecutor(Long agentId, String userId);
+
+    IAgentExecutor getAgentExecutor(UserRequest userRequest);
 }

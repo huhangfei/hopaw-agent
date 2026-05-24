@@ -2,9 +2,10 @@ package com.agent.hopaw.websocket;
 
 import com.agent.hopaw.constant.DefaultUser;
 import com.agent.hopaw.infra.executor.IAgentExecutor;
+import com.agent.hopaw.infra.model.dto.UserRequest;
 import com.agent.hopaw.infra.service.AgentService;
+import com.agent.hopaw.infra.service.IAgentService;
 import com.alibaba.fastjson2.JSON;
-import dev.langchain4j.data.message.TextContent;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
@@ -14,9 +15,7 @@ import org.springframework.web.socket.WebSocketSession;
 import org.springframework.web.socket.handler.TextWebSocketHandler;
 
 import java.io.IOException;
-import java.util.Arrays;
-import java.util.HashMap;
-import java.util.Map;
+import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 
 @Component
@@ -25,7 +24,7 @@ public class ChatWebSocketHandler extends TextWebSocketHandler {
     private static final ConcurrentHashMap<String, Object> SESSION_LOCK_MAP = new ConcurrentHashMap<>();
 
     private static final Logger logger = LoggerFactory.getLogger(ChatWebSocketHandler.class);
-    private final AgentService agentService;
+    private final IAgentService agentService;
     private static final Map<Long, String> sessionAgentMap = new ConcurrentHashMap<>();
     private static final Map<String, WebSocketSession> sessionMap = new ConcurrentHashMap<>();
 
@@ -55,27 +54,36 @@ public class ChatWebSocketHandler extends TextWebSocketHandler {
     @Override
     protected void handleTextMessage(WebSocketSession session, TextMessage message) {
         try {
-            Map<String, String> payload = JSON.parseObject(message.getPayload(), Map.class);
-            String agentIdStr = payload.get("agentId");
-            String userMessage = payload.get("message");
+            Map<String, Object> payload = JSON.parseObject(message.getPayload(), Map.class);
+            String agentIdStr = (String) payload.get("agentId");
+            String userMessage = (String) payload.get("message");
 
             if (agentIdStr == null || userMessage == null) {
                 sendError(session, "缺少必要参数");
                 return;
             }
+
+            @SuppressWarnings("unchecked")
+            List<String> skillNames = (List<String>) payload.get("skills");
+
+            UserRequest userRequest = new UserRequest();
+            userRequest.setAgentId(Long.parseLong(agentIdStr));
+            userRequest.setUserId(DefaultUser.USER);
+            userRequest.setMessage(userMessage);
+            userRequest.setSkillNames(skillNames);
+
             //回复一个已收到消息，开始处理
             sendFirstState(session);
 
             Long agentId = Long.parseLong(agentIdStr);
-            IAgentExecutor executor = agentService.getAgentExecutor(agentId, DefaultUser.USER);
+            IAgentExecutor executor = agentService.getAgentExecutor(userRequest);
 
             if (executor == null) {
                 sendError(session, "Agent 初始化执行失败，请检查相关配置。");
                 return;
             }
 
-
-            executor.executeStreaming(Arrays.asList(new TextContent(userMessage)), aiMessageJson->{
+            executor.executeStreaming(userRequest, aiMessageJson->{
                 try {
                     String sessionId = sessionAgentMap.get(agentId);
                     if(sessionId == null){
@@ -103,6 +111,8 @@ public class ChatWebSocketHandler extends TextWebSocketHandler {
             sendError(session, "处理消息失败: " + e.getMessage());
         }
     }
+
+
 
     private void sendFirstState(WebSocketSession session) {
         try {

@@ -6,7 +6,6 @@ import com.agent.hopaw.infra.model.entity.*;
 import com.agent.hopaw.infra.model.dto.*;
 import com.agent.hopaw.infra.tool.AgentTool;
 import com.agent.hopaw.infra.storage.ChatHistoryStore;
-import com.agent.hopaw.infra.tool.IAgentToolService;
 import com.agent.hopaw.infra.util.InvocationParametersWrapper;
 import com.alibaba.fastjson2.JSON;
 import dev.langchain4j.data.message.*;
@@ -23,7 +22,6 @@ import dev.langchain4j.service.TokenStream;
 import dev.langchain4j.service.tool.BeforeToolExecution;
 import dev.langchain4j.service.tool.ToolExecution;
 import dev.langchain4j.service.tool.search.vector.VectorToolSearchStrategy;
-import dev.langchain4j.store.memory.chat.ChatMemoryStore;
 import dev.langchain4j.store.memory.chat.InMemoryChatMemoryStore;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -36,10 +34,8 @@ import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Consumer;
 import java.util.function.Function;
-import java.util.stream.Collectors;
 
 public class AgentExecutor implements IAgentExecutor {
     private final Logger logger = LoggerFactory.getLogger(AgentExecutor.class);
@@ -225,8 +221,10 @@ public class AgentExecutor implements IAgentExecutor {
         return taskLatch.getCount() > 0;
     }
     @Override
-    public String execute(List<Content> contents) {
+    public String execute(UserRequest userRequest) {
         try {
+            List<Content> contents=new ArrayList<>();
+            contents.add(new TextContent(userRequest.getMessage()));
             this.requestId = UUID.randomUUID().toString();
             this.memoryStore.orphanCleanup(memoryId);
             if (chatAgentAssistant == null) {
@@ -244,8 +242,10 @@ public class AgentExecutor implements IAgentExecutor {
     }
 
     @Override
-    public void executeStreaming(List<Content> contents, Consumer<String> messageConsumer) {
+    public void executeStreaming(UserRequest userRequest, Consumer<String> messageConsumer) {
         try {
+            List<Content> contents = new ArrayList<>();
+            contents.add(new TextContent(userRequest.getMessage()));
             this.requestId = UUID.randomUUID().toString();
             this.memoryStore.orphanCleanup(memoryId);
             List<ChatHistory> chatHistoryList = convertToChatHistory(contents);

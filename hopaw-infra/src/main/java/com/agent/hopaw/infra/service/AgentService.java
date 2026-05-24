@@ -3,6 +3,7 @@ package com.agent.hopaw.infra.service;
 import com.agent.hopaw.infra.executor.IAgentExecutor;
 import com.agent.hopaw.infra.mapper.AgentMapper;
 import com.agent.hopaw.infra.mapper.ChatMemoryMapper;
+import com.agent.hopaw.infra.model.dto.UserRequest;
 import com.agent.hopaw.infra.model.entity.Agent;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -88,12 +89,13 @@ public class AgentService implements IAgentService {
     }
 
 
-    public IAgentExecutor getAgentExecutor(Long agentId, String userId){
-        Agent agent = agentMapper.findById(agentId);
+    public IAgentExecutor getAgentExecutor(UserRequest userRequest){
+        Agent agent = agentMapper.findById(userRequest.getAgentId());
         if(agent==null){
             return null;
         }
-        return agentExecutorService.getAgentExecutor(agent, userId);
+        userRequest.setAgent(agent);
+        return agentExecutorService.getAgentExecutor(userRequest);
     }
 
 }

@@ -1,9 +1,8 @@
 package com.agent.hopaw.infra.executor;
 
+import com.agent.hopaw.infra.model.dto.UserRequest;
 import com.agent.hopaw.infra.model.entity.Agent;
-import dev.langchain4j.data.message.Content;
 
-import java.util.List;
 import java.util.function.Consumer;
 
 public interface IAgentExecutor {
@@ -25,7 +24,7 @@ public interface IAgentExecutor {
 
     boolean running();
 
-    String execute(List<Content> contents);
+    String execute(UserRequest userRequest);
 
-    void executeStreaming(List<Content> contents, Consumer<String> messageConsumer);
+    void executeStreaming(UserRequest userRequest, Consumer<String> messageConsumer);
 }

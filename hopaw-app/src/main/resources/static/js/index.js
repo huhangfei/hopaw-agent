@@ -566,7 +566,8 @@ function sendMessage() {
 
             var payload = {
                 agentId: currentAgentId.toString(),
-                message: message
+                message: message,
+                skills: getSelectedSkills()
             };
 
             ws.send(JSON.stringify(payload));
@@ -945,6 +946,25 @@ window.onload = function() {
         connectWebSocket(currentAgentId);
         loadTokenUsage();
     }
+
+    loadChatSkills();
+
+    var skillBtn = document.getElementById('skillSelectBtn');
+    if (skillBtn) {
+        skillBtn.addEventListener('click', function(e) {
+            e.stopPropagation();
+            var menu = document.getElementById('skillsDropdownMenu');
+            menu.classList.toggle('open');
+        });
+    }
+
+    document.addEventListener('click', function(e) {
+        var dropdown = document.getElementById('skillsDropdown');
+        if (dropdown && !dropdown.contains(e.target)) {
+            var menu = document.getElementById('skillsDropdownMenu');
+            if (menu) menu.classList.remove('open');
+        }
+    });
     
     var form = document.getElementById('chatForm');
     if (form) {
@@ -1000,3 +1020,58 @@ window.onload = function() {
         }
     });
 };
+
+function loadChatSkills() {
+    fetch('/skills/api/list')
+        .then(function(r) { return r.json(); })
+        .then(function(resp) {
+            if (resp.code !== 200 || !resp.data) return;
+            var list = document.getElementById('skillsCheckboxList');
+            if (!list) return;
+            if (resp.data.length === 0) {
+                list.innerHTML = '<div class="skills-dropdown-empty">暂无可用技能</div>';
+                return;
+            }
+            var html = '';
+            resp.data.forEach(function(s) {
+                var name = s.name || s.folderName;
+                html += '<label class="skill-checkbox-item">' +
+                    '<input type="checkbox" value="' + escapeHtml(name) + '" data-folder="' + escapeHtml(s.folderName || '') + '">' +
+                    '<span class="skill-checkbox-item-name">' + escapeHtml(name) + '</span>' +
+                    '</label>';
+            });
+            list.innerHTML = html;
+
+            var checkboxes = list.querySelectorAll('input[type="checkbox"]');
+            checkboxes.forEach(function(cb) {
+                cb.addEventListener('change', updateSkillBtnState);
+            });
+        });
+}
+
+function updateSkillBtnState() {
+    var selected = getSelectedSkills();
+    var btn = document.getElementById('skillSelectBtn');
+    if (!btn) return;
+    if (selected.length > 0) {
+        btn.classList.add('has-selected');
+        btn.textContent = '';
+        var svg = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg>';
+        btn.innerHTML = svg + ' 技能 (' + selected.length + ')';
+    } else {
+        btn.classList.remove('has-selected');
+        var svg = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg>';
+        btn.innerHTML = svg + ' 技能';
+    }
+}
+
+function getSelectedSkills() {
+    var list = document.getElementById('skillsCheckboxList');
+    if (!list) return [];
+    var checkboxes = list.querySelectorAll('input[type="checkbox"]:checked');
+    var names = [];
+    checkboxes.forEach(function(cb) {
+        names.push(cb.getAttribute('data-folder'));
+    });
+    return names;
+}

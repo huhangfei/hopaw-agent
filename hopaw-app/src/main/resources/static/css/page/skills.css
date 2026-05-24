@@ -259,6 +259,14 @@
 
 
 /* ===== Dark Theme ===== */
+body.dark-theme .skills-container {
+    background: #14141e;
+}
+
+body.dark-theme .skills-page {
+    background: #14141e;
+}
+
 body.dark-theme .skills-header h3 {
     color: #e0e0e0;
 }

@@ -392,6 +392,101 @@
     background: #667eea;
     color: #fff;
 }
+
+.skills-dropdown {
+    position: relative;
+    display: inline-flex;
+}
+
+.chat-btn-skill {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 4px 10px;
+    border: 1px solid #e0e0e0;
+    border-radius: 14px;
+    background: transparent;
+    color: #666;
+    font-size: 13px;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.chat-btn-skill:hover {
+    border-color: #667eea;
+    color: #667eea;
+    background: #f8f9ff;
+}
+
+.chat-btn-skill.has-selected {
+    border-color: #667eea;
+    background: #f0f3ff;
+    color: #667eea;
+}
+
+.skills-dropdown-menu {
+    display: none;
+    position: absolute;
+    bottom: calc(100% + 6px);
+    left: 0;
+    min-width: 200px;
+    max-width: 260px;
+    max-height: 240px;
+    background: #fff;
+    border: 1px solid #e0e0e0;
+    border-radius: 8px;
+    box-shadow: 0 4px 16px rgba(0,0,0,0.12);
+    z-index: 1000;
+    overflow: hidden;
+}
+
+.skills-dropdown-menu.open {
+    display: block;
+}
+
+.skills-dropdown-list {
+    max-height: 240px;
+    overflow-y: auto;
+    padding: 4px 0;
+}
+
+.skill-checkbox-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 12px;
+    cursor: pointer;
+    font-size: 13px;
+    color: #333;
+    transition: background 0.15s;
+}
+
+.skill-checkbox-item:hover {
+    background: #f5f5f5;
+}
+
+.skill-checkbox-item input[type="checkbox"] {
+    width: 14px;
+    height: 14px;
+    accent-color: #667eea;
+    cursor: pointer;
+    flex-shrink: 0;
+}
+
+.skill-checkbox-item-name {
+    flex: 1;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.skills-dropdown-empty {
+    padding: 12px;
+    text-align: center;
+    color: #999;
+    font-size: 12px;
+}
+
 .chat-form-send-button {
     padding: 15px 28px;
     background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
@@ -1208,4 +1303,39 @@ body.dark-theme .checkbox-item:has(input:checked) .tool-item-count {
 
 body.dark-theme .modal-form .form-right {
     border-left-color: #3d3d6b;
+}
+
+body.dark-theme .chat-btn-skill {
+    border-color: #3d3d6b;
+    color: #999;
+}
+
+body.dark-theme .chat-btn-skill:hover {
+    border-color: #8ba3ff;
+    color: #8ba3ff;
+    background: #2d2d44;
+}
+
+body.dark-theme .chat-btn-skill.has-selected {
+    border-color: #8ba3ff;
+    background: #2d2d44;
+    color: #8ba3ff;
+}
+
+body.dark-theme .skills-dropdown-menu {
+    background: #1e3a5f;
+    border-color: #3d3d6b;
+    box-shadow: 0 4px 16px rgba(0,0,0,0.4);
+}
+
+body.dark-theme .skill-checkbox-item {
+    color: #e0e0e0;
+}
+
+body.dark-theme .skill-checkbox-item:hover {
+    background: #2d2d44;
+}
+
+body.dark-theme .skills-dropdown-empty {
+    color: #777;
 }
