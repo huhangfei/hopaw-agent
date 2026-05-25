@@ -35,10 +35,11 @@ public class AgentExecutorService implements IAgentExecutorService {
     private final LongTermMemoryService longTermMemoryService;
     private final EmbeddingModel embeddingModel;
     private final SkillService skillService;
+    private final ChatSessionService chatSessionService;
 
     private final Map<String, IAgentExecutor> agentExecutors = new HashMap<>();
 
-    public AgentExecutorService(AiModelService aiModelService, ChatHistoryStore chatHistoryStore, TokenUsageService tokenUsageService, SQLiteChatMemoryStore memoryStore, IAgentToolService agentToolService, LongTermMemoryService longTermMemoryService, EmbeddingModel embeddingModel, SkillService skillService) {
+    public AgentExecutorService(AiModelService aiModelService, ChatHistoryStore chatHistoryStore, TokenUsageService tokenUsageService, SQLiteChatMemoryStore memoryStore, IAgentToolService agentToolService, LongTermMemoryService longTermMemoryService, EmbeddingModel embeddingModel, SkillService skillService, ChatSessionService chatSessionService) {
         this.aiModelService = aiModelService;
         this.chatHistoryStore = chatHistoryStore;
         this.tokenUsageService = tokenUsageService;
@@ -47,6 +48,7 @@ public class AgentExecutorService implements IAgentExecutorService {
         this.longTermMemoryService = longTermMemoryService;
         this.embeddingModel = embeddingModel;
         this.skillService = skillService;
+        this.chatSessionService = chatSessionService;
     }
 
     @Override
@@ -129,16 +131,27 @@ public class AgentExecutorService implements IAgentExecutorService {
                 .setUserId(userRequest.getUserId())
                 .setTokenUsageService(tokenUsageService);
         Agent agent = userRequest.getAgent();
-        if(agent.getAiModelId() == null){
+
+        Long aiModelId = userRequest.getAiModelId() != null ? userRequest.getAiModelId() : agent.getAiModelId();
+        if(aiModelId == null){
             throw new RuntimeException("智能体没有设置AI模型");
         }
-        ChatModel chatModel = aiModelService.createChatModel(agent.getAiModelId(), agent.getEnableThinking(), langChain4jMonitor);
-        StreamingChatModel streamingModel = aiModelService.createStreamingChatModel(agent.getAiModelId(), agent.getEnableThinking(), langChain4jMonitor);
+
+        Boolean enableThinking = userRequest.getEnableThinking() != null ? userRequest.getEnableThinking() : agent.getEnableThinking();
+
+        ChatModel chatModel = aiModelService.createChatModel(aiModelId, enableThinking, langChain4jMonitor);
+        StreamingChatModel streamingModel = aiModelService.createStreamingChatModel(aiModelId, enableThinking, langChain4jMonitor);
         List<String> selectedToolNames = parseToolNames(agent.getTools());
         List<AgentTool> selectedTools = agentToolService.getAgentTools().stream()
                 .filter(t -> selectedToolNames.contains(t.getName()))
                 .collect(Collectors.toList());
-        return new AgentExecutor(UUID.randomUUID().toString(),agent, userRequest.getUserId(), chatModel, streamingModel,selectedTools, memoryStore, embeddingModel, a -> this.getSystemMessage(a, userRequest.getUserId(), selectedTools, userRequest.getSkillNames()), chatHistoryStore);
+
+        String sessionId = userRequest.getSessionId();
+        if (sessionId == null || sessionId.isEmpty()) {
+            sessionId = UUID.randomUUID().toString();
+            chatSessionService.createSessionWithId(agent.getId(), userRequest.getUserId(), "新会话", sessionId);
+        }
+        return new AgentExecutor(sessionId, agent, userRequest.getUserId(), chatModel, streamingModel, selectedTools, memoryStore, embeddingModel, a -> this.getSystemMessage(a, userRequest.getUserId(), selectedTools, userRequest.getSkillNames()), chatHistoryStore);
     }
 
     @Override

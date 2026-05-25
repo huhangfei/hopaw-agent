@@ -7,6 +7,15 @@ var lastMessageType = null;
 var streamingMessages = {};
 var toolCallTimers = {};
 var loadingMessageDiv = null;
+var currentSessionId = null;
+var currentAgentName = 'Agent';
+var currentAiModelId = null;
+var currentEnableThinking = true;
+var allAgents = [];
+var allProviders = [];
+var selectedProviderId = null;
+var selectedModelId = null;
+var selectedModelName = '';
 
 if (typeof marked !== 'undefined') {
     marked.setOptions({
@@ -33,6 +42,29 @@ function formatMessageTime(date) {
         var day = date.getDate().toString().padStart(2, '0');
         return year + '-' + month + '-' + day + ' ' + hours + ':' + minutes + ':' + seconds;
     }
+}
+
+function formatSessionTime(timeStr) {
+    if (!timeStr) return '';
+    var date = new Date(timeStr);
+    if (isNaN(date.getTime())) return timeStr;
+    var now = new Date();
+    var isToday = date.getFullYear() === now.getFullYear() &&
+                  date.getMonth() === now.getMonth() &&
+                  date.getDate() === now.getDate();
+    if (isToday) {
+        var hours = date.getHours().toString().padStart(2, '0');
+        var minutes = date.getMinutes().toString().padStart(2, '0');
+        return hours + ':' + minutes;
+    }
+    var year = date.getFullYear();
+    var month = (date.getMonth() + 1).toString().padStart(2, '0');
+    var day = date.getDate().toString().padStart(2, '0');
+    var isThisYear = year === now.getFullYear();
+    if (isThisYear) {
+        return month + '-' + day;
+    }
+    return year + '-' + month + '-' + day;
 }
 
 function renderMarkdown(content) {
@@ -81,7 +113,7 @@ function connectWebSocket(agentId) {
         } else if (data.type === 'thinking') {
             handleThinking(data, requestId);
         } else if (data.type === 'done') {
-            handleStreamingDone(data.message, data.response, requestId);
+            handleStreamingDone(data.message, data.response, requestId, data.sessionId);
         } else if (data.type === 'task-done') {
             loadTokenUsage(lastTokenId || undefined);
         } else if (data.type === 'error') {
@@ -322,7 +354,6 @@ function handleToolCall(data, requestId) {
 
 function showLoadingMessage() {
     if (loadingMessageDiv) return;
-    var agentName = (function(){ var s = document.querySelector('.chat-header .agent-select'); return s ? s.options[s.selectedIndex].text : 'Agent'; })();
     var messagesDiv = document.getElementById('chatMessages');
 
     loadingMessageDiv = document.createElement('div');
@@ -330,7 +361,7 @@ function showLoadingMessage() {
 
     var label = document.createElement('div');
     label.className = 'message-label';
-    label.textContent = agentName;
+    label.textContent = currentAgentName;
     loadingMessageDiv.appendChild(label);
 
     var loadingContent = document.createElement('div');
@@ -357,7 +388,6 @@ function escapeHtml(text) {
 
 function handleThinking(data, requestId) {
     var messagesDiv = document.getElementById('chatMessages');
-    var agentName = (function(){ var s = document.querySelector('.chat-header .agent-select'); return s ? s.options[s.selectedIndex].text : 'Agent'; })();
     
     var msgState = streamingMessages[requestId];
     if (!msgState) {
@@ -376,7 +406,7 @@ function handleThinking(data, requestId) {
             
             var label = document.createElement('div');
             label.className = 'message-label';
-            label.textContent = agentName + ' (思考)';
+            label.textContent = currentAgentName + ' (思考)';
             msgState.currentStreamingMessage.appendChild(label);
             
             var contentDiv = document.createElement('div');
@@ -409,7 +439,6 @@ function handleThinking(data, requestId) {
 
 function handleStreamingChunk(content, requestId) {
     var messagesDiv = document.getElementById('chatMessages');
-    var agentName = (function(){ var s = document.querySelector('.chat-header .agent-select'); return s ? s.options[s.selectedIndex].text : 'Agent'; })();
     
     var msgState = streamingMessages[requestId];
     if (!msgState) {
@@ -427,7 +456,7 @@ function handleStreamingChunk(content, requestId) {
         
         var label = document.createElement('div');
         label.className = 'message-label';
-        label.textContent = agentName;
+        label.textContent = currentAgentName;
         msgState.currentStreamingMessage.appendChild(label);
         
         var contentDiv = document.createElement('div');
@@ -460,8 +489,7 @@ function handleStreamingChunk(content, requestId) {
     messagesDiv.scrollTop = messagesDiv.scrollHeight;
 }
 
-function handleStreamingDone(userMessage, response, requestId) {
-    var agentName = (function(){ var s = document.querySelector('.chat-header .agent-select'); return s ? s.options[s.selectedIndex].text : 'Agent'; })();
+function handleStreamingDone(userMessage, response, requestId, sessionId) {
     var msgState = streamingMessages[requestId];
     if (!msgState || !msgState.currentStreamingMessage) {
         isStreaming = false;
@@ -492,11 +520,17 @@ function handleStreamingDone(userMessage, response, requestId) {
     delete streamingMessages[requestId];
     isStreaming = false;
     enableInput();
+
+    if (!currentSessionId && sessionId) {
+        currentSessionId = sessionId;
+        var hiddenInput = document.getElementById('currentSessionId');
+        if (hiddenInput) hiddenInput.value = sessionId;
+        refreshSessionList();
+    }
 }
 
 function handleStreamingError(errorMessage, requestId) {
     var messagesDiv = document.getElementById('chatMessages');
-    var agentName = (function(){ var s = document.querySelector('.chat-header .agent-select'); return s ? s.options[s.selectedIndex].text : 'Agent'; })();
 
     var errorDiv = document.createElement('div');
     errorDiv.className = 'message agent error-message';
@@ -506,7 +540,7 @@ function handleStreamingError(errorMessage, requestId) {
 
     var label = document.createElement('div');
     label.className = 'message-label';
-    label.textContent = agentName + ' (错误)';
+    label.textContent = currentAgentName + ' (错误)';
     errorDiv.appendChild(label);
 
     var contentDiv = document.createElement('div');
@@ -547,6 +581,9 @@ function sendMessage() {
             disableInput();
             isStreaming = true;
 
+            var emptyGuide = document.getElementById('emptyChatGuide');
+            if (emptyGuide) emptyGuide.style.display = 'none';
+
             var userMessageDiv = document.createElement('div');
             userMessageDiv.className = 'message user';
 
@@ -571,6 +608,9 @@ function sendMessage() {
             var payload = {
                 agentId: currentAgentId.toString(),
                 message: message,
+                sessionId: currentSessionId || '',
+                aiModelId: currentAiModelId,
+                enableThinking: currentEnableThinking,
                 skills: getSelectedSkills()
             };
 
@@ -599,10 +639,6 @@ function enableInput() {
     if (sendBtn) sendBtn.classList.remove('hide');
     if (runningBtn) runningBtn.classList.add('hide');
     if (input) input.focus();
-}
-
-function selectAgent(agentId) {
-    window.location.href = '/?agentId=' + agentId;
 }
 
 function clearHistory(agentId) {
@@ -763,13 +799,12 @@ function forceStopAgent(agentId) {
 function stopAgent() {
     showConfirm('确定要停止智能体运行吗？').then(function(confirmed) {
         if (!confirmed) return;
-        var agentId = document.querySelector('input[name="agentId"]').value;
         fetch('/agent/stop', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/x-www-form-urlencoded',
             },
-            body: 'id=' + agentId
+            body: 'id=' + currentAgentId
         }).then(function(response) {
             return response.json();
         }).then(function(res) {
@@ -952,6 +987,8 @@ function formatTokenCount(n) {
 
 window.onload = function() {
 
+    initFromConfig();
+
     document.getElementById('addAgentModal').addEventListener('click', function(e) {
         if (e.target === this) {
             hideAddModal();
@@ -984,7 +1021,10 @@ window.onload = function() {
         loadTokenUsage();
     }
 
+    initAgentDropdown();
+    initModelDropdown();
     loadChatSkills();
+    initSessionListEvents();
 
     var skillBtn = document.getElementById('skillSelectBtn');
     if (skillBtn) {
@@ -1000,6 +1040,21 @@ window.onload = function() {
         if (dropdown && !dropdown.contains(e.target)) {
             var menu = document.getElementById('skillsDropdownMenu');
             if (menu) menu.classList.remove('open');
+        }
+    });
+
+    document.addEventListener('click', function(e) {
+        var agentDropdown = document.getElementById('agentDropdown');
+        var agentBtn = document.getElementById('agentSelectBtn');
+        if (agentDropdown && agentBtn && !agentBtn.contains(e.target) && !agentDropdown.contains(e.target)) {
+            agentDropdown.classList.remove('open');
+            agentBtn.classList.remove('open');
+        }
+        var modelDropdown = document.getElementById('modelDropdown');
+        var modelBtn = document.getElementById('modelSelectBtn');
+        if (modelDropdown && modelBtn && !modelBtn.contains(e.target) && !modelDropdown.contains(e.target)) {
+            modelDropdown.classList.remove('open');
+            modelBtn.classList.remove('open');
         }
     });
     
@@ -1023,25 +1078,12 @@ window.onload = function() {
     var deepBtn = document.getElementById('deepThinkBtn');
     if (deepBtn) {
         deepBtn.addEventListener('click', function() {
-            var agentId = this.getAttribute('data-agent-id');
-            var current = this.getAttribute('data-enabled') === 'true';
-            var newEnabled = !current;
-            fetch('/api/agents/' + agentId + '/thinking', {
-                method: 'PUT',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ enabled: newEnabled })
-            })
-            .then(function(r) { return r.json(); })
-            .then(function(resp) {
-                if (resp.msg === 'success') {
-                    deepBtn.setAttribute('data-enabled', newEnabled);
-                    deepBtn.classList.toggle('active', newEnabled);
-                }
-            });
+            currentEnableThinking = !currentEnableThinking;
+            deepBtn.setAttribute('data-enabled', currentEnableThinking);
+            deepBtn.classList.toggle('active', currentEnableThinking);
         });
     }
 
-    // Event delegation: toggle collapsible tool-call-body on ▼ click
     document.addEventListener('click', function(e) {
         var toggle = e.target.closest('.tool-call-toggle');
         if (toggle) {
@@ -1057,6 +1099,335 @@ window.onload = function() {
         }
     });
 };
+
+function initFromConfig() {
+    var cfg = window.__hopawConfig;
+    if (!cfg) return;
+
+    allAgents = cfg.agents || [];
+
+    if (cfg.selectedSession) {
+        var session = cfg.selectedSession;
+        currentSessionId = session.sessionId || null;
+        currentAgentId = session.agentId || null;
+        currentAiModelId = session.aiModelId || null;
+        currentEnableThinking = session.enableThinking != null ? session.enableThinking : true;
+
+        if (allAgents.length > 0) {
+            var agent = allAgents.find(function(a) { return a.id === currentAgentId; });
+            if (agent) {
+                currentAgentName = agent.name;
+                updateAgentSelectLabel(agent.name);
+            }
+        }
+
+        updateModelSelectLabel();
+    }
+}
+
+function initSessionListEvents() {
+    var sessionItems = document.querySelectorAll('.session-item');
+    sessionItems.forEach(function(item) {
+        item.addEventListener('click', function(e) {
+            if (e.target.closest('.session-item-delete')) return;
+            var sessionId = this.getAttribute('data-session-id');
+            if (sessionId && sessionId !== currentSessionId) {
+                switchSession(sessionId);
+            }
+        });
+    });
+}
+
+function switchSession(sessionId) {
+    window.location.href = '/?sessionId=' + encodeURIComponent(sessionId);
+}
+
+function createNewSession() {
+    window.location.href = '/';
+}
+
+function refreshSessionList() {
+    fetch('/api/session/list?agentId=' + currentAgentId)
+        .then(function(r) { return r.json(); })
+        .then(function(res) {
+            if (res.code === 200 && res.data) {
+                var sessionListDiv = document.getElementById('sessionList');
+                if (!sessionListDiv) return;
+                var sessions = res.data;
+                var html = '';
+                sessions.forEach(function(s) {
+                    var activeClass = s.sessionId === currentSessionId ? ' active' : '';
+                    html += '<div class="session-item' + activeClass + '" data-session-id="' + s.sessionId + '">' +
+                        '<div class="session-item-info">' +
+                        '<span class="session-item-name">' + escapeHtml(s.title || '新会话') + '</span>' +
+                        '<span class="session-item-time">' + escapeHtml(formatSessionTime(s.lastUpdateTime || s.createTime)) + '</span>' +
+                        '</div>' +
+                        '<button class="session-item-delete" onclick="deleteSession(\'' + s.sessionId + '\')" title="删除会话">' +
+                        '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><path d="M3 6h18M8 6V4a2 2 0 012-2h4a2 2 0 012 2v2M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"/></svg>' +
+                        '</button></div>';
+                });
+                sessionListDiv.innerHTML = html;
+                initSessionListEvents();
+            }
+        });
+}
+
+function deleteSession(sessionId) {
+    showConfirm('确定要删除此会话吗？').then(function(confirmed) {
+        if (!confirmed) return;
+        fetch('/api/session/delete-by-session-id', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+            body: 'sessionId=' + encodeURIComponent(sessionId)
+        }).then(function(r) { return r.json(); }).then(function(res) {
+            if (res.code === 200) {
+                window.location.reload();
+            } else {
+                showToast(res.msg || '删除失败', 'warning');
+            }
+        });
+    });
+}
+
+function clearCurrentSessionHistory() {
+    showConfirm('确定要清空当前会话的对话历史吗？').then(function(confirmed) {
+        if (!confirmed) return;
+        if (currentAgentId) {
+            fetch('/chat/clear?agentId=' + currentAgentId)
+                .then(function() { window.location.reload(); });
+        }
+    });
+}
+
+function initAgentDropdown() {
+    var agentBtn = document.getElementById('agentSelectBtn');
+    var agentDropdown = document.getElementById('agentDropdown');
+    var agentList = document.getElementById('agentDropdownList');
+    if (!agentBtn || !agentDropdown || !agentList) return;
+
+    var html = '';
+    allAgents.forEach(function(a) {
+        var selected = a.id === currentAgentId ? ' selected' : '';
+        html += '<button class="config-dropdown-item' + selected + '" data-agent-id="' + a.id + '" data-agent-name="' + escapeHtml(a.name) + '">' +
+            '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 4-6 8-6s8 2 8 6"/></svg>' +
+            escapeHtml(a.name) + '</button>';
+    });
+    agentList.innerHTML = html;
+
+    agentBtn.addEventListener('click', function(e) {
+        e.stopPropagation();
+        e.preventDefault();
+        var isOpen = agentDropdown.classList.contains('open');
+        agentDropdown.classList.toggle('open');
+        agentBtn.classList.toggle('open');
+        var modelDropdown = document.getElementById('modelDropdown');
+        var modelBtn = document.getElementById('modelSelectBtn');
+        if (modelDropdown) modelDropdown.classList.remove('open');
+        if (modelBtn) modelBtn.classList.remove('open');
+    });
+
+    agentList.addEventListener('click', function(e) {
+        var item = e.target.closest('.config-dropdown-item');
+        if (!item) return;
+        var agentId = parseInt(item.getAttribute('data-agent-id'));
+        var agentName = item.getAttribute('data-agent-name');
+        selectAgent(agentId, agentName);
+        agentDropdown.classList.remove('open');
+        agentBtn.classList.remove('open');
+    });
+}
+
+function selectAgent(agentId, agentName) {
+    if (currentAgentId === agentId) return;
+    currentAgentId = agentId;
+    currentAgentName = agentName;
+    updateAgentSelectLabel(agentName);
+
+    var agentBtn = document.getElementById('agentSelectBtn');
+    agentBtn.setAttribute('data-agent-id', agentId);
+
+    var items = document.querySelectorAll('#agentDropdownList .config-dropdown-item');
+    items.forEach(function(item) {
+        item.classList.toggle('selected', parseInt(item.getAttribute('data-agent-id')) === agentId);
+    });
+
+    if (ws && ws.readyState === WebSocket.OPEN) {
+        ws.close();
+    }
+    connectWebSocket(agentId);
+    loadTokenUsage();
+    loadChatSkills();
+
+    if (!currentSessionId) {
+        currentAiModelId = null;
+        selectedModelId = null;
+        selectedModelName = '';
+        updateModelSelectLabel();
+        var agent = allAgents.find(function(a) { return a.id === agentId; });
+        if (agent && agent.aiModelId) {
+            currentAiModelId = agent.aiModelId;
+            updateModelSelectLabel();
+        }
+    }
+
+    updateAgentSelectLabel(agentName);
+}
+
+function updateAgentSelectLabel(name) {
+    var label = document.getElementById('agentSelectLabel');
+    var btn = document.getElementById('agentSelectBtn');
+    if (label) label.textContent = name || '选择Agent';
+    if (btn) {
+        if (name) {
+            btn.classList.add('has-value');
+        } else {
+            btn.classList.remove('has-value');
+        }
+    }
+}
+
+function initModelDropdown() {
+    var modelBtn = document.getElementById('modelSelectBtn');
+    var modelDropdown = document.getElementById('modelDropdown');
+    if (!modelBtn || !modelDropdown) return;
+
+    modelBtn.addEventListener('click', function(e) {
+        e.stopPropagation();
+        e.preventDefault();
+        var isOpen = modelDropdown.classList.contains('open');
+        modelDropdown.classList.toggle('open');
+        modelBtn.classList.toggle('open');
+        var agentDropdown = document.getElementById('agentDropdown');
+        var agentBtn = document.getElementById('agentSelectBtn');
+        if (agentDropdown) agentDropdown.classList.remove('open');
+        if (agentBtn) agentBtn.classList.remove('open');
+        if (!isOpen) {
+            loadModelDropdownContent();
+        }
+    });
+}
+
+function loadModelDropdownContent() {
+    var providerList = document.getElementById('modelProviderList');
+    var modelList = document.getElementById('modelList');
+    if (!providerList || !modelList) return;
+
+    fetch('/api/providers')
+        .then(function(r) { return r.json(); })
+        .then(function(providers) {
+            allProviders = providers.filter(function(p) { return p.apiKey && p.url; });
+
+            var providerHtml = '';
+            var hasActive = false;
+            allProviders.forEach(function(p, idx) {
+                var activeClass = '';
+                if (selectedProviderId === p.id) {
+                    activeClass = ' active';
+                    hasActive = true;
+                } else if (!hasActive && idx === 0) {
+                    activeClass = ' active';
+                    selectedProviderId = p.id;
+                    hasActive = true;
+                }
+                providerHtml += '<button class="model-provider-item' + activeClass + '" data-provider-id="' + p.id + '">' +
+                    '<span class="provider-dot"></span>' + escapeHtml(p.name) + '</button>';
+            });
+            providerList.innerHTML = providerHtml;
+
+            providerList.querySelectorAll('.model-provider-item').forEach(function(item) {
+                item.addEventListener('click', function() {
+                    var pid = parseInt(this.getAttribute('data-provider-id'));
+                    selectedProviderId = pid;
+                    providerList.querySelectorAll('.model-provider-item').forEach(function(p) {
+                        p.classList.toggle('active', parseInt(p.getAttribute('data-provider-id')) === pid);
+                    });
+                    loadModelsForProvider(pid);
+                });
+            });
+
+            if (allProviders.length > 0) {
+                loadModelsForProvider(selectedProviderId);
+            } else {
+                modelList.innerHTML = '<div class="model-dropdown-empty">暂无可用模型</div>';
+            }
+        });
+}
+
+function loadModelsForProvider(providerId) {
+    var modelList = document.getElementById('modelList');
+    if (!modelList) return;
+
+    fetch('/api/providers/' + providerId + '/models')
+        .then(function(r) { return r.json(); })
+        .then(function(models) {
+            if (!models || models.length === 0) {
+                modelList.innerHTML = '<div class="model-dropdown-empty">该提供商暂无模型</div>';
+                return;
+            }
+            var html = '';
+            var effectiveModelId = selectedModelId || currentAiModelId;
+            models.forEach(function(m) {
+                var selectedClass = m.id === effectiveModelId ? ' selected' : '';
+                html += '<button class="model-item' + selectedClass + '" data-model-id="' + m.id + '" data-model-name="' + escapeHtml(m.modelName || '') + '">' +
+                    escapeHtml(m.modelName || m.name || '') + '</button>';
+            });
+            modelList.innerHTML = html;
+
+            modelList.querySelectorAll('.model-item').forEach(function(item) {
+                item.addEventListener('click', function() {
+                    selectModel(parseInt(this.getAttribute('data-model-id')), this.getAttribute('data-model-name'));
+                    var modelDropdown = document.getElementById('modelDropdown');
+                    var modelBtn = document.getElementById('modelSelectBtn');
+                    if (modelDropdown) modelDropdown.classList.remove('open');
+                    if (modelBtn) modelBtn.classList.remove('open');
+                });
+            });
+        });
+}
+
+function selectModel(modelId, modelName) {
+    selectedModelId = modelId;
+    selectedModelName = modelName;
+    currentAiModelId = modelId;
+    updateModelSelectLabel();
+
+    var modelList = document.getElementById('modelList');
+    if (modelList) {
+        modelList.querySelectorAll('.model-item').forEach(function(item) {
+            item.classList.toggle('selected', parseInt(item.getAttribute('data-model-id')) === modelId);
+        });
+    }
+}
+
+function updateModelSelectLabel() {
+    var label = document.getElementById('modelSelectLabel');
+    var btn = document.getElementById('modelSelectBtn');
+    var modelId = selectedModelId || currentAiModelId;
+
+    if (modelId && selectedModelName) {
+        if (label) label.textContent = selectedModelName;
+        if (btn) btn.classList.add('has-value');
+    } else if (modelId) {
+        fetch('/api/models/' + modelId)
+            .then(function(r) { return r.json(); })
+            .then(function(model) {
+                selectedModelName = model.modelName || model.name || '';
+                if (label) label.textContent = selectedModelName;
+                if (btn && selectedModelName) btn.classList.add('has-value');
+            })
+            .catch(function() {
+                if (label) label.textContent = '选择模型';
+                if (btn) btn.classList.remove('has-value');
+            });
+    } else {
+        if (label) label.textContent = '选择模型';
+        if (btn) btn.classList.remove('has-value');
+    }
+}
+
+function forceStopSession(agentId) {
+    forceStopAgent(agentId);
+}
 
 function loadChatSkills() {
     fetch('/skills/api/list')

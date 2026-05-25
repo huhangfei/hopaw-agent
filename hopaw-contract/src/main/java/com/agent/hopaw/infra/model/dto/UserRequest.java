@@ -8,9 +8,10 @@ public class UserRequest {
     private String userId;
     private Long agentId;
     private String message;
-
+    private String sessionId;
+    private Long aiModelId;
+    private Boolean enableThinking;
     private List<String> skillNames;
-
     private Agent agent;
 
     public String getUserId() {
@@ -35,6 +36,30 @@ public class UserRequest {
 
     public void setMessage(String message) {
         this.message = message;
+    }
+
+    public String getSessionId() {
+        return sessionId;
+    }
+
+    public void setSessionId(String sessionId) {
+        this.sessionId = sessionId;
+    }
+
+    public Long getAiModelId() {
+        return aiModelId;
+    }
+
+    public void setAiModelId(Long aiModelId) {
+        this.aiModelId = aiModelId;
+    }
+
+    public Boolean getEnableThinking() {
+        return enableThinking;
+    }
+
+    public void setEnableThinking(Boolean enableThinking) {
+        this.enableThinking = enableThinking;
     }
 
     public List<String> getSkillNames() {

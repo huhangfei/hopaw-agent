@@ -64,6 +64,10 @@ public class ChatSessionService {
         chatSessionMapper.updateTitle(id, title);
     }
 
+    public void updateSessionConfig(String sessionId, Long agentId, Long aiModelId, Boolean enableThinking, String skills) {
+        chatSessionMapper.updateConfig(sessionId, agentId, aiModelId, enableThinking, skills);
+    }
+
     public void deleteSession(Long id) {
         ChatSession session = chatSessionMapper.findById(id);
         if (session != null) {

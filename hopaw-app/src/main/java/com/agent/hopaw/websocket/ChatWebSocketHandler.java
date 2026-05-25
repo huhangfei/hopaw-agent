@@ -4,6 +4,7 @@ import com.agent.hopaw.constant.DefaultUser;
 import com.agent.hopaw.infra.executor.IAgentExecutor;
 import com.agent.hopaw.infra.model.dto.UserRequest;
 import com.agent.hopaw.infra.service.AgentService;
+import com.agent.hopaw.infra.service.ChatSessionService;
 import com.agent.hopaw.infra.service.IAgentService;
 import com.alibaba.fastjson2.JSON;
 import org.slf4j.Logger;
@@ -20,16 +21,17 @@ import java.util.concurrent.ConcurrentHashMap;
 
 @Component
 public class ChatWebSocketHandler extends TextWebSocketHandler {
-    // 每个session绑定一个锁
     private static final ConcurrentHashMap<String, Object> SESSION_LOCK_MAP = new ConcurrentHashMap<>();
 
     private static final Logger logger = LoggerFactory.getLogger(ChatWebSocketHandler.class);
     private final IAgentService agentService;
+    private final ChatSessionService chatSessionService;
     private static final Map<Long, String> sessionAgentMap = new ConcurrentHashMap<>();
     private static final Map<String, WebSocketSession> sessionMap = new ConcurrentHashMap<>();
 
-    public ChatWebSocketHandler(AgentService agentService) {
+    public ChatWebSocketHandler(AgentService agentService, ChatSessionService chatSessionService) {
         this.agentService = agentService;
+        this.chatSessionService = chatSessionService;
     }
 
     @Override
@@ -63,19 +65,54 @@ public class ChatWebSocketHandler extends TextWebSocketHandler {
                 return;
             }
 
+            Object sessionIdObj = payload.get("sessionId");
+            Object aiModelIdObj = payload.get("aiModelId");
+            Object enableThinkingObj = payload.get("enableThinking");
+
+            String sessionId = null;
+            if (sessionIdObj != null && !sessionIdObj.toString().isEmpty()) {
+                sessionId = sessionIdObj.toString();
+            }
+
+            Long aiModelId = null;
+            if (aiModelIdObj != null) {
+                if (aiModelIdObj instanceof Number) {
+                    aiModelId = ((Number) aiModelIdObj).longValue();
+                } else {
+                    aiModelId = Long.parseLong(aiModelIdObj.toString());
+                }
+            }
+
+            Boolean enableThinking = null;
+            if (enableThinkingObj != null) {
+                if (enableThinkingObj instanceof Boolean) {
+                    enableThinking = (Boolean) enableThinkingObj;
+                } else {
+                    enableThinking = Boolean.parseBoolean(enableThinkingObj.toString());
+                }
+            }
+
             @SuppressWarnings("unchecked")
             List<String> skillNames = (List<String>) payload.get("skills");
 
+            Long agentId = Long.parseLong(agentIdStr);
+
             UserRequest userRequest = new UserRequest();
-            userRequest.setAgentId(Long.parseLong(agentIdStr));
+            userRequest.setAgentId(agentId);
             userRequest.setUserId(DefaultUser.USER);
             userRequest.setMessage(userMessage);
             userRequest.setSkillNames(skillNames);
+            userRequest.setSessionId(sessionId);
+            userRequest.setAiModelId(aiModelId);
+            userRequest.setEnableThinking(enableThinking);
 
-            //回复一个已收到消息，开始处理
+            String skillsStr = skillNames != null && !skillNames.isEmpty() ? String.join(",", skillNames) : null;
+            if (sessionId != null && !sessionId.isEmpty()) {
+                chatSessionService.updateSessionConfig(sessionId, agentId, aiModelId, enableThinking, skillsStr);
+            }
+
             sendFirstState(session);
 
-            Long agentId = Long.parseLong(agentIdStr);
             IAgentExecutor executor = agentService.getAgentExecutor(userRequest);
 
             if (executor == null) {
@@ -85,18 +122,17 @@ public class ChatWebSocketHandler extends TextWebSocketHandler {
 
             executor.executeStreaming(userRequest, aiMessageJson->{
                 try {
-                    String sessionId = sessionAgentMap.get(agentId);
-                    if(sessionId == null){
+                    String currentSessionId = sessionAgentMap.get(agentId);
+                    if(currentSessionId == null){
                         return;
                     }
-                    WebSocketSession currentSession = sessionMap.get(sessionId);
+                    WebSocketSession currentSession = sessionMap.get(currentSessionId);
                     if(currentSession == null){
                         return;
                     }
                    if(currentSession.isOpen()) {
 
-                       Object lock = SESSION_LOCK_MAP.computeIfAbsent(sessionId, k -> new Object());
-                       // 同一session串行发送
+                       Object lock = SESSION_LOCK_MAP.computeIfAbsent(currentSessionId, k -> new Object());
                        synchronized (lock) {
                            currentSession.sendMessage(new TextMessage(aiMessageJson));
 

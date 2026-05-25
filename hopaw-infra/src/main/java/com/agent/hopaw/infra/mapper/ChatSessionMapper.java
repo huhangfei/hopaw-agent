@@ -22,6 +22,12 @@ public interface ChatSessionMapper {
 
     int update(ChatSession chatSession);
 
+    int updateConfig(@Param("sessionId") String sessionId,
+                     @Param("agentId") Long agentId,
+                     @Param("aiModelId") Long aiModelId,
+                     @Param("enableThinking") Boolean enableThinking,
+                     @Param("skills") String skills);
+
     int updateTitle(@Param("id") Long id, @Param("title") String title);
 
     int deleteById(@Param("id") Long id);

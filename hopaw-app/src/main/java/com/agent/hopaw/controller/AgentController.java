@@ -5,10 +5,14 @@ import com.agent.hopaw.infra.mapper.ChatHistoryMapper;
 import com.agent.hopaw.infra.mapper.ChatMemoryMapper;
 import com.agent.hopaw.infra.model.entity.Agent;
 import com.agent.hopaw.infra.model.entity.ChatHistory;
+import com.agent.hopaw.infra.model.entity.ChatSession;
+import com.agent.hopaw.infra.model.entity.TokenUsage;
 import com.agent.hopaw.infra.model.dto.ResponseBean;
 import com.agent.hopaw.infra.model.dto.ToolSetInfo;
 import com.agent.hopaw.infra.service.AgentService;
+import com.agent.hopaw.infra.service.ChatSessionService;
 import com.agent.hopaw.infra.service.IAgentExecutorService;
+import com.agent.hopaw.infra.service.ITokenUsageService;
 import com.agent.hopaw.infra.tool.IAgentToolService;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
@@ -31,21 +35,26 @@ public class AgentController {
     private final IAgentToolService agentToolService;
     private final ChatHistoryMapper chatHistoryMapper;
     private final ChatMemoryMapper chatMemoryMapper;
-
     private final IAgentExecutorService agentExecutorService;
+    private final ChatSessionService chatSessionService;
+    private final ITokenUsageService tokenUsageService;
 
     public AgentController(AgentService agentService, IAgentToolService agentToolService,
                            ChatHistoryMapper chatHistoryMapper, ChatMemoryMapper chatMemoryMapper,
-                           IAgentExecutorService agentExecutorService) {
+                           IAgentExecutorService agentExecutorService,
+                           ChatSessionService chatSessionService,
+                           ITokenUsageService tokenUsageService) {
         this.agentService = agentService;
         this.agentToolService = agentToolService;
         this.chatHistoryMapper = chatHistoryMapper;
         this.chatMemoryMapper = chatMemoryMapper;
         this.agentExecutorService = agentExecutorService;
+        this.chatSessionService = chatSessionService;
+        this.tokenUsageService = tokenUsageService;
     }
 
     @GetMapping("/")
-    public String index(@RequestParam(required = false) Long agentId,
+    public String index(@RequestParam(required = false) String sessionId,
                        Model model) {
         List<Agent> agents = agentService.getAllAgents();
         model.addAttribute("agents", agents);
@@ -53,18 +62,29 @@ public class AgentController {
         List<ToolSetInfo> toolSets = agentToolService.getToolSets();
         model.addAttribute("toolSets", toolSets);
 
-        if(agents.size() > 0 && agentId == null){
-            agentId = agents.get(0).getId();
-        }
-        if (agentId != null) {
-            Agent agent = agentService.getAgentById(agentId);
-            model.addAttribute("selectedAgent", agent);
-            model.addAttribute("selectedAgentId", agentId);
+        List<ChatSession> sessions = chatSessionService.getSessionsByUserId(DefaultUser.USER);
+        model.addAttribute("sessions", sessions);
 
-            List<ChatHistory> chatHistory = chatHistoryMapper.findByAgentId(agentId, 100);
-            Collections.reverse(chatHistory);
-            model.addAttribute("chatHistory", chatHistory);
-            model.addAttribute("agentExecutorState", agentService.isAgentExecutorRunning(agentId,DefaultUser.USER));
+        if (!sessions.isEmpty()) {
+            ChatSession selectedSession;
+            if (sessionId != null && !sessionId.isEmpty()) {
+                selectedSession = chatSessionService.getSessionBySessionId(sessionId);
+            } else {
+                selectedSession = sessions.get(0);
+            }
+
+            if (selectedSession != null) {
+                model.addAttribute("selectedSession", selectedSession);
+
+                List<ChatHistory> chatHistory = chatSessionService.getChatHistoryBySessionId(selectedSession.getSessionId(), 100);
+                Collections.reverse(chatHistory);
+                model.addAttribute("chatHistory", chatHistory);
+
+                TokenUsage summary = tokenUsageService.summary(null, null, DefaultUser.USER, selectedSession.getAgentId(), null, "chat");
+                model.addAttribute("tokenUsage", summary);
+
+                model.addAttribute("agentExecutorState", agentService.isAgentExecutorRunning(selectedSession.getAgentId(), DefaultUser.USER));
+            }
         }
 
         return "index";
@@ -118,6 +138,13 @@ public class AgentController {
     public ResponseBean isRunning(@PathVariable Long id) {
         boolean running = agentService.isAgentExecutorRunning(id, DefaultUser.USER);
         return ResponseBean.success(running);
+    }
+
+    @GetMapping("/api/agents")
+    @ResponseBody
+    public ResponseBean listAgents() {
+        List<Agent> agents = agentService.getAllAgents();
+        return ResponseBean.success(agents);
     }
 
     @PutMapping("/api/agents/{id}/thinking")

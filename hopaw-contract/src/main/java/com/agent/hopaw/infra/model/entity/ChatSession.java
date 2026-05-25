@@ -8,6 +8,9 @@ public class ChatSession {
     private Long agentId;
     private String userId;
     private String title;
+    private Long aiModelId;
+    private Boolean enableThinking;
+    private String skills;
     private LocalDateTime createTime;
     private LocalDateTime lastUpdateTime;
 
@@ -60,6 +63,30 @@ public class ChatSession {
 
     public void setTitle(String title) {
         this.title = title;
+    }
+
+    public Long getAiModelId() {
+        return aiModelId;
+    }
+
+    public void setAiModelId(Long aiModelId) {
+        this.aiModelId = aiModelId;
+    }
+
+    public Boolean getEnableThinking() {
+        return enableThinking;
+    }
+
+    public void setEnableThinking(Boolean enableThinking) {
+        this.enableThinking = enableThinking;
+    }
+
+    public String getSkills() {
+        return skills;
+    }
+
+    public void setSkills(String skills) {
+        this.skills = skills;
     }
 
     public LocalDateTime getCreateTime() {
