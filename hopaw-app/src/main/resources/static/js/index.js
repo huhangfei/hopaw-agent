@@ -53,7 +53,7 @@ function renderAllMessages() {
 function setCurrentAgentId(agentId) {
     currentAgentId = agentId;
 }
-
+var lastDataType='';
 function connectWebSocket(agentId) {
     var protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
     var wsUrl = protocol + '//' + window.location.host + '/ws/chat/' + agentId;
@@ -86,6 +86,10 @@ function connectWebSocket(agentId) {
             loadTokenUsage(lastTokenId || undefined);
         } else if (data.type === 'error') {
             handleStreamingError(data.content || data.message, requestId);
+        }
+        if(lastDataType!=data.type){
+            lastDataType=data.type;
+            loadTokenUsage(lastTokenId || undefined);
         }
     };
     
@@ -578,19 +582,20 @@ function sendMessage() {
 }
 
 function disableInput() {
-    var input = document.getElementById('messageInput');
+    var wrapper = document.querySelector('.chat-input-wrapper');
     var sendBtn = document.getElementById('sendBtn');
     var runningBtn = document.getElementById('runningBtn');
-    if (input) input.disabled = true;
+    if (wrapper) wrapper.classList.add('disabled');
     if (sendBtn) sendBtn.classList.add('hide');
     if (runningBtn) runningBtn.classList.remove('hide');
 }
 
 function enableInput() {
+    var wrapper = document.querySelector('.chat-input-wrapper');
     var input = document.getElementById('messageInput');
     var sendBtn = document.getElementById('sendBtn');
     var runningBtn = document.getElementById('runningBtn');
-    if (input) input.disabled = false;
+    if (wrapper) wrapper.classList.remove('disabled');
     if (sendBtn) sendBtn.classList.remove('hide');
     if (runningBtn) runningBtn.classList.add('hide');
     if (input) input.focus();

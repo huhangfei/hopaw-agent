@@ -112,7 +112,7 @@
         <div th:if="${selectedAgent != null}" class="chat-input-area">
             <form th:action="@{/chat}" method="post" class="chat-form" id="chatForm">
                 <input type="hidden" name="agentId" th:value="${selectedAgent.id}">
-                <div class="chat-input-wrapper">
+                <div class="chat-input-wrapper" th:classappend="${agentExecutorState} ? 'disabled' : ''">
                     <textarea name="message" id="messageInput" placeholder="输入消息..." required
                            th:disabled="${agentExecutorState}" rows="2"></textarea>
                     <div class="chat-input-tools">

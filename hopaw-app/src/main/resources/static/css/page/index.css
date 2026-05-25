@@ -323,11 +323,17 @@
 .chat-input-wrapper:focus-within {
     border-color: #667eea;
 }
-.chat-input-wrapper textarea:disabled {
+.chat-input-wrapper.disabled {
+    pointer-events: none;
+    opacity: 0.6;
+    background: #f0f0f0;
+    cursor: not-allowed;
+}
+
+.chat-input-wrapper.disabled textarea {
     background: #f0f0f0;
     color: #aaa;
     cursor: not-allowed;
-    opacity: 0.6;
 }
 
 .chat-input-wrapper textarea {
@@ -1136,8 +1142,13 @@ body.dark-theme .chat-input-wrapper:focus-within {
     border-color: #8ba3ff;
 }
 
-body.dark-theme .chat-input-wrapper textarea {
-    color: #e0e0e0;
+body.dark-theme .chat-input-wrapper.disabled {
+    opacity: 0.5;
+}
+
+body.dark-theme .chat-input-wrapper.disabled textarea {
+    background: #16213e;
+    color: #888;
 }
 
 body.dark-theme .chat-btn-plus {
