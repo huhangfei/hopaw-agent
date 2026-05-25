@@ -184,6 +184,42 @@
 .btn-delete:hover {
     background: rgba(211, 47, 47, 0.1);
 }
+.modal-skill {
+    width: 80%;
+    max-width: 1100px;
+}
+
+.modal-body-skill {
+    display: flex;
+    padding: 20px;
+}
+
+.skill-form-left {
+    flex: 0 0 40%;
+    min-width: 0;
+    overflow-y: auto;
+}
+
+.skill-form-right {
+    flex: 0 0 60%;
+    min-width: 0;
+    border-left: 1px solid #e0e0e0;
+    padding-left: 24px;
+    display: flex;
+    flex-direction: column;
+}
+
+.skill-form-right .form-group {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+}
+
+.skill-form-right .form-group textarea {
+    flex: 1;
+    min-height: 300px;
+}
+
 .skill-content-preview {
     display: none;
     width: 100%;
@@ -415,5 +451,13 @@ body.dark-theme .skill-content-preview a {
 
 body.dark-theme .skill-content-preview hr {
     border-top-color: #2a2a3e;
+}
+
+body.dark-theme .skill-form-right {
+    border-left-color: #2a2a3e;
+}
+
+body.dark-theme .modal-body-skill {
+    background: #16213e;
 }
 

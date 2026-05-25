@@ -38,7 +38,7 @@
     </div>
 
     <div class="modal-overlay" id="skillModal">
-        <div class="modal" style="width: 60%;">
+        <div class="modal modal-skill">
             <div class="modal-header">
                 <h3 id="modalTitle">技能详情</h3>
                 <button class="modal-close" onclick="closeModal()">
@@ -48,35 +48,39 @@
                     </svg>
                 </button>
             </div>
-            <div class="modal-body">
-                <div class="form-group">
-                    <label>名称 <span class="required">*</span></label>
-                    <input type="text" id="skillName" placeholder="技能名称">
+            <div class="modal-body modal-body-skill">
+                <div class="skill-form-left">
+                    <div class="form-group">
+                        <label>名称 <span class="required">*</span></label>
+                        <input type="text" id="skillName" placeholder="技能名称">
+                    </div>
+                    <div class="form-group">
+                        <label>描述</label>
+                        <textarea id="skillDesc" rows="2" placeholder="技能描述"></textarea>
+                    </div>
+                    <div class="form-group">
+                        <label>Slug (目录名，留空则自动生成)</label>
+                        <input type="text" id="skillSlug" placeholder="例如: word-docx">
+                    </div>
+                    <div class="form-group">
+                        <label>版本号 <span class="required">*</span></label>
+                        <input type="text" id="skillVersion" placeholder="例如: 1.0.0" required>
+                    </div>
+                    <div class="form-group">
+                        <label>主页</label>
+                        <input type="text" id="skillHomepage" placeholder="例如: https://example.com">
+                    </div>
+                    <div class="form-group">
+                        <label>更新日志</label>
+                        <textarea id="skillChangelog" rows="3" placeholder="版本更新日志"></textarea>
+                    </div>
                 </div>
-                <div class="form-group">
-                    <label>描述</label>
-                    <input type="text" id="skillDesc" placeholder="技能描述">
-                </div>
-                <div class="form-group">
-                    <label>Slug (目录名，留空则自动生成)</label>
-                    <input type="text" id="skillSlug" placeholder="例如: word-docx">
-                </div>
-                <div class="form-group">
-                    <label>版本号 <span class="required">*</span></label>
-                    <input type="text" id="skillVersion" placeholder="例如: 1.0.0" required>
-                </div>
-                <div class="form-group">
-                    <label>主页</label>
-                    <input type="text" id="skillHomepage" placeholder="例如: https://example.com">
-                </div>
-                <div class="form-group">
-                    <label>更新日志</label>
-                    <textarea id="skillChangelog" rows="3" placeholder="版本更新日志"></textarea>
-                </div>
-                <div class="form-group">
-                    <label>内容 (Markdown)</label>
-                    <textarea id="skillContent" rows="18" placeholder="技能内容（支持 Markdown 格式，可包含 YAML frontmatter）"></textarea>
-                    <div id="skillContentPreview" class="skill-content-preview"></div>
+                <div class="skill-form-right">
+                    <div class="form-group">
+                        <label>内容 (Markdown)</label>
+                        <textarea id="skillContent" rows="18" placeholder="技能内容（支持 Markdown 格式，可包含 YAML frontmatter）"></textarea>
+                        <div id="skillContentPreview" class="skill-content-preview"></div>
+                    </div>
                 </div>
             </div>
             <div class="modal-footer">
