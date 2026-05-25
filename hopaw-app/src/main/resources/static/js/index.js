@@ -789,6 +789,7 @@ function stopAgent() {
 
 var lastTokenId = 0;
 var tokenChartData = [];
+var tokenChart = null;
 
 function loadTokenUsage(minId) {
     if (!currentAgentId) return;
@@ -826,56 +827,106 @@ function loadTokenUsage(minId) {
 
 function renderTokenChart(data) {
     var container = document.getElementById('tokenUsage');
-    if (!container || !data || data.length === 0) {
-        if (container) container.innerHTML = '<div style="padding:14px;text-align:center;color:#999;font-size:12px;">今日暂无用量</div>';
+    if (!container) return;
+
+    if (!data || data.length === 0) {
+        if (tokenChart) {
+            tokenChart.destroy();
+            tokenChart = null;
+        }
+        container.innerHTML = '<div style="padding:14px;text-align:center;color:#999;font-size:12px;">今日暂无用量</div>';
         return;
     }
-    
-    // Find max total for scaling
-    var maxTotal = 0;
-    data.forEach(function(d) { maxTotal = Math.max(maxTotal, d.totalTokens || 0); });
-    if (maxTotal === 0) maxTotal = 1;
-    
-    var html = '<div style="display:flex;align-items:flex-end;gap:3px;height:100%;padding:2px 4px;position:relative;">';
-    
-    // Y-axis labels
-    html += '<div style="display:flex;flex-direction:column;justify-content:space-between;height:100%;font-size:9px;color:#999;padding-right:4px;flex-shrink:0;min-width:32px;text-align:right;">';
-    for (var i = 4; i >= 0; i--) {
-        html += '<span>' + Math.round(maxTotal * i / 4) + '</span>';
-    }
-    html += '</div>';
-    
-    // Bars
-    data.forEach(function(d, idx) {
-        var ratio = maxTotal > 0 ? Math.max((d.totalTokens || 0) / maxTotal, 0.02) : 0.02;
-        var inputH = d.totalTokens > 0 ? ((d.inputTokens || 0) / d.totalTokens * 100) : 50;
-        var outputH = 100 - inputH;
-        var timeStr = d.createTime ? d.createTime.substring(11, 16) : '';
-        
-        html += '<div style="flex:1;min-width:6px;height:100%;display:flex;flex-direction:column;justify-content:flex-end;position:relative;cursor:pointer;"';
-        html += ' onmouseenter="showTokenTooltip(event, ' + (d.inputTokens||0) + ', ' + (d.outputTokens||0) + ', ' + (d.totalTokens||0) + ',\' '+( timeStr )+'\')"';
-        html += ' onmouseleave="hideTokenTooltip()">';
-        html += '<div style="height:' + (ratio * 100) + '%;display:flex;flex-direction:column;justify-content:flex-end;">';
-        html += '<div style="height:' + outputH + '%;background:#4CAF50;border-radius:2px 2px 0 0;min-height:2px;"></div>';
-        html += '<div style="height:' + inputH + '%;background:#2196F3;border-radius:2px 2px 0 0;min-height:2px;"></div>';
-        html += '</div>';
-        // Time label
-        html += '<div style="font-size:8px;color:#999;text-align:center;margin-top:2px;transform:rotate(-45deg);transform-origin:top left;white-space:nowrap;position:absolute;bottom:-14px;left:0;"></div>';
-        html += '</div>';
+
+    var labels = data.map(function(d) {
+        return d.createTime ? d.createTime.substring(11, 16) : '';
     });
-    
-    html += '</div>';
-    // Tooltip
-    
-    // Ensure tooltip exists in body
-    if (!document.getElementById('tokenTooltip')) {
-        var tip = document.createElement('div');
-        tip.id = 'tokenTooltip';
-        tip.style.cssText = 'display:none;position:fixed;background:#333;color:#fff;padding:4px 8px;border-radius:4px;font-size:11px;pointer-events:none;z-index:1000;white-space:nowrap;';
-        document.body.appendChild(tip);
+    var inputData = data.map(function(d) { return d.inputTokens || 0; });
+    var outputData = data.map(function(d) { return d.outputTokens || 0; });
+
+    if (tokenChart) {
+        tokenChart.data.labels = labels;
+        tokenChart.data.datasets[0].data = inputData;
+        tokenChart.data.datasets[1].data = outputData;
+        tokenChart.update('active');
+    } else {
+        container.innerHTML = '<canvas id="tokenUsageChart"></canvas>';
+        var canvas = document.getElementById('tokenUsageChart');
+        var isDark = document.body.classList.contains('dark-theme');
+
+        tokenChart = new Chart(canvas, {
+            type: 'bar',
+            data: {
+                labels: labels,
+                datasets: [
+                    {
+                        label: '输入',
+                        data: inputData,
+                        backgroundColor: '#2196F3',
+                        borderRadius: 3
+                    },
+                    {
+                        label: '输出',
+                        data: outputData,
+                        backgroundColor: '#4CAF50',
+                        borderRadius: 3
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                animation: {
+                    duration: 600,
+                    easing: 'easeOutQuart'
+                },
+                plugins: {
+                    legend: {
+                        display: false
+                    },
+                    tooltip: {
+                        callbacks: {
+                            label: function(ctx) {
+                                return ctx.dataset.label + ': ' + ctx.raw.toLocaleString();
+                            },
+                            footer: function(items) {
+                                var total = items.reduce(function(sum, item) { return sum + item.raw; }, 0);
+                                return '总量: ' + total.toLocaleString();
+                            }
+                        }
+                    }
+                },
+                scales: {
+                    x: {
+                        stacked: true,
+                        grid: { display: false },
+                        ticks: {
+                            font: { size: 9 },
+                            color: isDark ? '#888' : '#999',
+                            maxRotation: 45
+                        }
+                    },
+                    y: {
+                        stacked: true,
+                        beginAtZero: true,
+                        ticks: {
+                            font: { size: 9 },
+                            color: isDark ? '#888' : '#999',
+                            callback: function(v) {
+                                return v >= 1000 ? (v / 1000).toFixed(0) + 'k' : v;
+                            }
+                        },
+                        grid: { color: isDark ? '#2d2d44' : '#f0f0f0' }
+                    }
+                },
+                interaction: {
+                    intersect: false,
+                    mode: 'index'
+                }
+            }
+        });
     }
-    container.innerHTML = html;
-    // Update title with latest record
+
     var titleEl = document.getElementById('tokenLastStats');
     if (titleEl && data.length > 0) {
         var last = data[data.length - 1];
@@ -897,25 +948,6 @@ function updateTokenTitle(input, output, total) {
 function formatTokenCount(n) {
     if (n >= 1000) return (n / 1000).toFixed(1) + 'K';
     return n.toString();
-}
-
-function showTokenTooltip(e, input, output, total, timeStr) {
-    var tip = document.getElementById('tokenTooltip');
-    if (!tip) return;
-    tip.innerHTML = '<span style="color:#2196F3">输入: ' + input + '</span> <span style="color:#4CAF50">输出: ' + output + '</span> <span style="color:#fff">总量: ' + total + '</span><br><span style="color:#aaa;font-size:10px;">' + (timeStr || '') + '</span>';
-    tip.style.display = 'block';
-    var left = e.clientX + 10;
-    var top = e.clientY - 40;
-    // Keep tooltip within viewport
-    var tw = tip.offsetWidth || 200;
-    if (left + tw > window.innerWidth) left = e.clientX - tw - 10;
-    if (top < 0) top = e.clientY + 15;
-    tip.style.left = left + 'px';
-    tip.style.top = top + 'px';
-}
-function hideTokenTooltip() {
-    var tip = document.getElementById('tokenTooltip');
-    if (tip) tip.style.display = 'none';
 }
 
 window.onload = function() {

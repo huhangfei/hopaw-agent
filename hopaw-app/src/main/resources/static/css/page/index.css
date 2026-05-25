@@ -815,10 +815,15 @@
 
 #tokenUsage {
     padding: 4px 2px;
-    overflow: auto;
+    overflow: hidden;
+    position: relative;
+    min-height: 60px;
 }
-#tokenUsage .token-bar-input { background: #2196F3; }
-#tokenUsage .token-bar-output { background: #4CAF50; }
+
+#tokenUsageChart {
+    width: 100% !important;
+    height: 100% !important;
+}
 
 /* Tool calls in sidebar panel */
 .tool-panel-body .tool-call-container-static,
