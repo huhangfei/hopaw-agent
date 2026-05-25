@@ -644,7 +644,7 @@ public class FileOperationTool implements AgentTool {
             for (Map.Entry<String, List<LineMatch>> entry : resultsByFile.entrySet()) {
                 result.append(entry.getKey()).append(" (").append(entry.getValue().size()).append("处匹配):\n");
                 for (LineMatch m : entry.getValue()) {
-                    result.append(String.format("%6d: %s%n", m.lineNumber, m.line));
+                    result.append(String.format("%6d: %s%n", m.lineNumber, truncateLine(m.line, kwArray)));
                 }
                 result.append("\n");
             }
@@ -654,6 +654,31 @@ public class FileOperationTool implements AgentTool {
             log.error("搜索文件失败: {}", targetPath, e);
             return "错误: 搜索失败 - " + e.getMessage();
         }
+    }
+
+    private static String truncateLine(String line, String[] keywords) {
+        final int contextChars = 50;
+        final int maxLen = contextChars * 2 + 20;
+        if (line == null || line.length() <= maxLen) {
+            return line;
+        }
+        int matchStart = -1;
+        for (String kw : keywords) {
+            int pos = line.toLowerCase().indexOf(kw.toLowerCase());
+            if (pos >= 0 && (matchStart < 0 || pos < matchStart)) {
+                matchStart = pos;
+            }
+        }
+        if (matchStart < 0) {
+            return line.substring(0, contextChars) + "..." + line.substring(line.length() - contextChars);
+        }
+        int start = Math.max(0, matchStart - contextChars);
+        int end = Math.min(line.length(), matchStart + contextChars);
+        StringBuilder sb = new StringBuilder();
+        if (start > 0) sb.append("...");
+        sb.append(line, start, end);
+        if (end < line.length()) sb.append("...");
+        return sb.toString();
     }
 
     @Override
