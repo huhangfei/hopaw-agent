@@ -1,4 +1,4 @@
-package com.agent.hopaw.biz.tool.command;
+package com.agent.hopaw.tool.command;
 
 import com.agent.hopaw.infra.service.IAgentExecutorService;
 import com.agent.hopaw.infra.util.InvocationParametersWrapper;
@@ -8,7 +8,7 @@ import dev.langchain4j.invocation.InvocationParameters;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import com.agent.hopaw.infra.tool.AgentTool;
-import org.springframework.stereotype.Component;
+import org.springframework.beans.factory.annotation.Autowired;
 
 import java.io.BufferedReader;
 import java.io.IOException;
@@ -19,17 +19,14 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 
-@Component("commandExecutor")
 public class CommandExecutorTool implements AgentTool {
 
-    private final IAgentExecutorService agentExecutorService;
+    @Autowired
+    private IAgentExecutorService agentExecutorService;
+
     private final Logger logger = LoggerFactory.getLogger(CommandExecutorTool.class);
     private static final int TIMEOUT_SECONDS = 30;
     private static final int MAX_OUTPUT_LINES = 500;
-
-    public CommandExecutorTool(IAgentExecutorService agentExecutorService) {
-        this.agentExecutorService = agentExecutorService;
-    }
 
     @Tool("获取本地操作系统的名称，例如 Windows 10 或 Ubuntu 20.04")
     public String getOsName() {
@@ -48,9 +45,6 @@ public class CommandExecutorTool implements AgentTool {
         if (command == null || command.trim().isEmpty()) {
             return "错误: 命令不能为空";
         }
-//        if (isDangerousCommand(command)) {
-//            return "错误: 检测到危险命令，已拒绝执行。出于安全考虑，不允许在用户未授权的情况下执行可能破坏系统的命令。";
-//        }
         if (timeout == null) {
             timeout = TIMEOUT_SECONDS;
         }
@@ -65,7 +59,6 @@ public class CommandExecutorTool implements AgentTool {
                 processBuilder = new ProcessBuilder("/bin/sh", "-c", command);
             }
             processBuilder.redirectErrorStream(true);
-            //进程开始
             Process process = processBuilder.start();
 
             agentExecutorService.addToolStopHook(agentId, userId, toolCallId, (callId) -> {
@@ -75,13 +68,12 @@ public class CommandExecutorTool implements AgentTool {
                             .forEach(ProcessHandle::destroyForcibly);
                     processHandle.destroyForcibly();
                 } catch (Exception e) {
-                    process.destroyForcibly(); // 降级方案
+                    process.destroyForcibly();
                 }
             });
 
             StringBuilder output = new StringBuilder();
             try (BufferedReader reader = new BufferedReader(new InputStreamReader(process.getInputStream(), determineEncoding(os)))) {
-                //异步读取
                 CompletableFuture<Void> outputReader = CompletableFuture.runAsync(() -> {
                     String line;
                     int lineCount = 0;
@@ -98,7 +90,6 @@ public class CommandExecutorTool implements AgentTool {
                             agentExecutorService.sendToolRunningContent(agentId, userId, toolCallId, line + "\n");
                             output.append(line).append("\n");
                             lineCount++;
-
                         }
                     } catch (Exception ex) {
                         logger.error("Error reading process output: {}", ex.getMessage(), ex);
@@ -106,9 +97,8 @@ public class CommandExecutorTool implements AgentTool {
                     }
                 });
                 if (process.waitFor(timeout, TimeUnit.SECONDS)) {
-                    // 进程正常结束等待输出读取完成
                     outputReader.get(5, TimeUnit.SECONDS);
-                    int exitCode= process.exitValue();
+                    int exitCode = process.exitValue();
                     if (output.isEmpty()) {
                         return "命令执行成功 (退出码: " + exitCode + ")，无输出";
                     }
@@ -120,17 +110,15 @@ public class CommandExecutorTool implements AgentTool {
                                 .forEach(ProcessHandle::destroyForcibly);
                         processHandle.destroyForcibly();
                     } catch (Exception e) {
-                        process.destroyForcibly(); // 降级方案
+                        process.destroyForcibly();
                     }
-                    return "错误: 超时未执行完成，已强制退出。\n"+ (output.isEmpty() ? "本次无输出" :"输出："+ output);
+                    return "错误: 超时未执行完成，已强制退出。\n" + (output.isEmpty() ? "本次无输出" : "输出：" + output);
                 }
-            }catch (TimeoutException e) {
+            } catch (TimeoutException e) {
                 process.destroyForcibly();
                 return "错误: 命令执行超时 (超过 " + timeout + " 秒)，已强制终止\n";
             } catch (IOException e) {
-                // 进程被强制杀死时可能会触发 IOException，属于正常现象
-                if (process.isAlive()){
-                    //线程是活动就不正常
+                if (process.isAlive()) {
                     throw new RuntimeException(e);
                 }
             }
@@ -151,25 +139,6 @@ public class CommandExecutorTool implements AgentTool {
         } else {
             return StandardCharsets.UTF_8;
         }
-    }
-
-    private boolean isDangerousCommand(String command) {
-        String cmd = command.toLowerCase().trim();
-
-        String[] dangerousPatterns = {
-                "format", "del /f", "del /s", "rd /s", "rmdir /s",
-                "rm -rf /", "rm -rf /*", "mkfs", "dd if=",
-                "shutdown -s", "shutdown -r", "init 0", "init 6",
-                ":(){:|:&};:", "> /dev/sda", "chmod -R 777 /"
-        };
-
-        for (String pattern : dangerousPatterns) {
-            if (cmd.contains(pattern)) {
-                return true;
-            }
-        }
-
-        return false;
     }
 
     @Override

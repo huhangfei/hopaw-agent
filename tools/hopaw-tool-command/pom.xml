@@ -10,12 +10,17 @@
         <relativePath>../../pom.xml</relativePath>
     </parent>
 
-    <artifactId>hopaw-tool-webpage</artifactId>
+    <groupId>com.hopaw.agent</groupId>
+    <artifactId>hopaw-tool-command</artifactId>
     <version>1.0.0</version>
     <packaging>jar</packaging>
+
+    <name>hopaw-tool-command</name>
+    <description>命令行执行工具，支持在本地系统执行命令并获取输出</description>
     <properties>
         <maven.install.skip>true</maven.install.skip>
     </properties>
+
     <dependencies>
         <dependency>
             <groupId>com.hopaw.agent</groupId>
@@ -23,23 +28,22 @@
             <scope>provided</scope>
         </dependency>
         <dependency>
-            <groupId>org.springframework.boot</groupId>
-            <artifactId>spring-boot-starter</artifactId>
+            <groupId>dev.langchain4j</groupId>
+            <artifactId>langchain4j</artifactId>
             <scope>provided</scope>
         </dependency>
         <dependency>
-            <groupId>dev.langchain4j</groupId>
-            <artifactId>langchain4j</artifactId>
+            <groupId>org.slf4j</groupId>
+            <artifactId>slf4j-api</artifactId>
+            <scope>provided</scope>
         </dependency>
         <dependency>
-            <groupId>org.jsoup</groupId>
-            <artifactId>jsoup</artifactId>
-        </dependency>
-        <dependency>
-            <groupId>com.microsoft.playwright</groupId>
-            <artifactId>playwright</artifactId>
+            <groupId>org.springframework</groupId>
+            <artifactId>spring-beans</artifactId>
+            <scope>provided</scope>
         </dependency>
     </dependencies>
+
     <build>
         <finalName>${project.artifactId}-${project.version}</finalName>
         <plugins>
@@ -48,7 +52,6 @@
                 <artifactId>maven-compiler-plugin</artifactId>
                 <version>3.11.0</version>
             </plugin>
-            <!-- 使用 shade 插件打包所有依赖 -->
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-shade-plugin</artifactId>
@@ -62,9 +65,8 @@
                         <configuration>
                             <artifactSet>
                                 <excludes>
-                                    <exclude>org.springframework:*</exclude>
-                                    <exclude>org.springframework.boot:*</exclude>
                                     <exclude>dev.langchain4j:*</exclude>
+                                    <exclude>org.slf4j:*</exclude>
                                 </excludes>
                             </artifactSet>
                             <filters>

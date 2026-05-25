@@ -27,6 +27,8 @@
         <module>tools/hopaw-tool-demo</module>
         <module>tools/hopaw-tool-dingtalk</module>
         <module>tools/hopaw-tool-baidusearch</module>
+        <module>tools/hopaw-tool-file</module>
+        <module>tools/hopaw-tool-command</module>
     </modules>
 
     <properties>

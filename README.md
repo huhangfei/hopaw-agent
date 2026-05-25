@@ -1,6 +1,6 @@
 # Hopaw Agent
 
-基于 Java 和 LangChain4j 的智能 Agent 开发框架，支持多 Agent 管理、工具调用和流式响应。
+基于 Java 和 LangChain4j 的智能 Agent ，支持多 Agent 管理、工具调用和流式响应、记忆整理、向量存储、Skills管理、Tool插件式安装等。
 
 ## 技术栈
 
@@ -30,18 +30,8 @@ hopaw-agent/
 
 ## 快速开始
 
-### 1. 配置 AI Provider
 
-编辑 `hopaw-app/src/main/resources/application.properties`：
-
-```properties
-api.provider=openai
-openai.api.key=your_api_key_here
-openai.base.url=https://api.openai.com/v1
-openai.model.name=gpt-3.5-turbo
-```
-
-### 2. 构建与运行
+### 1. 构建与运行
 
 ```bash
 # 构建项目
@@ -51,7 +41,7 @@ mvn clean install
 mvn -pl hopaw-app spring-boot:run
 ```
 
-### 3. 访问应用
+### 2. 访问应用
 
 浏览器打开：http://localhost:8080
 
@@ -78,25 +68,14 @@ public class MyTool implements AgentTool {
 }
 ```
 
-## API 接口
-
-| 方法 | 路径 | 说明 |
-|------|------|------|
-| GET | `/` | 首页 |
-| POST | `/agent/create` | 创建 Agent |
-| POST | `/agent/update` | 更新 Agent |
-| POST | `/agent/delete` | 删除 Agent |
-| POST | `/chat` | 发送消息 |
-| WS | `/ws/chat` | WebSocket 实时通信 |
-
 ## 开发指南
 
 ### 模块依赖关系
 
 ```
 hopaw-contract ← hopaw-infra ← hopaw-biz ← hopaw-app
-                        ↖ hopaw-tool-webpage
-                        ↖ hopaw-tool-ssh
+          ↖ hopaw-tool-webpage
+          ↖ hopaw-tool-ssh
 ```
 
 - **hopaw-contract**: 定义接口、DTO、枚举
@@ -109,15 +88,4 @@ hopaw-contract ← hopaw-infra ← hopaw-biz ← hopaw-app
 1. 在 `tools/` 目录创建模块
 2. 实现 `AgentTool` 接口
 3. 在父 pom.xml 中添加 module
-4. 在 `hopaw-biz/pom.xml` 中引入依赖
-
-## 常见问题
-
-**Q: API 调用失败？**  
-A: 检查 `application.properties` 中的 API 配置和网络连接。
-
-**Q: 如何扩展 AI 厂商？**  
-A: 实现 `ChatModelFactory` 接口并在配置中注册。
-
-**Q: SSH 连接失败？**  
-A: 确认目标服务器 SSH 服务正常，凭据正确。
+4. 将jar包生成到plugins
