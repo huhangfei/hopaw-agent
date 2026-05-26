@@ -364,7 +364,7 @@ public class LongTermMemoryTaskHandler implements TaskHandler {
                 }
 
                 String label = String.format("[%s] %s", role, text);
-                vectorMemoryService.store(label,chat.getSessionId(), chat.getAgentId(), chat.getUserId(), VectorMemoryTypeEnum.CHAT_HISTORY);
+                vectorMemoryService.store(label,chat.getSessionId(), chat.getAgentId(), chat.getUserId(), VectorMemoryTypeEnum.CHAT_HISTORY.getCode(), chat.getCreateTime());
                 logger.info("Stored chat history messages to vector store, sessionId={}, agentId={}, userId={}", chat.getSessionId(), chat.getAgentId(), chat.getUserId());
             }
         } catch (Exception e) {
@@ -381,9 +381,6 @@ public class LongTermMemoryTaskHandler implements TaskHandler {
             if (expiredRecords == null || expiredRecords.isEmpty()) {
                 return;
             }
-
-            List<String> contents = new java.util.ArrayList<>();
-            List<Long> ids = new java.util.ArrayList<>();
             for (LongTermMemory record : expiredRecords) {
                 String summary = record.getSummary();
                 String memory = record.getMemory();
@@ -399,16 +396,8 @@ public class LongTermMemoryTaskHandler implements TaskHandler {
                 }
                 String text = sb.toString();
                 if (!text.isBlank()) {
-                    contents.add(text);
-                    ids.add(record.getId());
+                    vectorMemoryService.store(text,sessionId,null, userId, VectorMemoryTypeEnum.TASK_RECORDS.getCode(), record.getCreateTime());
                 }
-            }
-
-            if (!contents.isEmpty()) {
-                vectorMemoryService.storeBatch(contents,sessionId,null, userId,
-                        VectorMemoryTypeEnum.TASK_RECORDS);
-                logger.info("Stored {} expired task records to vector store, sessionId={}, agentId={}, userId={}",
-                        contents.size(), sessionId, null, userId);
             }
         } catch (Exception e) {
             logger.error("Failed to store expired task records to vector store, sessionId={}, agentId={}, userId={}",

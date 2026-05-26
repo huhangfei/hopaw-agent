@@ -5,19 +5,25 @@ public class VectorSearchResult {
     private double score;
     private String text;
     private String agentId;
+    private String sessionId;
     private String userId;
     private String memoryType;
+    private String memoryDate;
 
     public VectorSearchResult() {}
 
     public VectorSearchResult(String embeddingId, double score, String text,
-                              String agentId, String userId, String memoryType) {
+                              String sessionId,
+                              String agentId, String userId, String memoryType, String memoryDate) {
         this.embeddingId = embeddingId;
         this.score = score;
         this.text = text;
+        this.sessionId = sessionId;
         this.agentId = agentId;
         this.userId = userId;
         this.memoryType = memoryType;
+        this.memoryDate = memoryDate;
+
     }
 
     public String getEmbeddingId() { return embeddingId; }
@@ -37,4 +43,20 @@ public class VectorSearchResult {
 
     public String getMemoryType() { return memoryType; }
     public void setMemoryType(String memoryType) { this.memoryType = memoryType; }
+
+    public String getMemoryDate() {
+        return memoryDate;
+    }
+
+    public void setMemoryDate(String memoryDate) {
+        this.memoryDate = memoryDate;
+    }
+
+    public String getSessionId() {
+        return sessionId;
+    }
+
+    public void setSessionId(String sessionId) {
+        this.sessionId = sessionId;
+    }
 }

@@ -17,6 +17,8 @@ import org.springframework.context.event.EventListener;
 import org.springframework.stereotype.Service;
 
 import javax.annotation.PreDestroy;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -28,6 +30,7 @@ public class VectorMemoryService implements IVectorMemoryService {
     private static final String METADATA_AGENT_ID = "agentId";
     private static final String METADATA_USER_ID = "userId";
     private static final String METADATA_MEMORY_TYPE = "memoryType";
+    private static final String METADATA_MEMORY_DATE = "memoryDate";
 
     private final SysConfigService sysConfigService;
     private final EmbeddingModel embeddingModel;
@@ -119,15 +122,17 @@ public class VectorMemoryService implements IVectorMemoryService {
      * 将内容写入向量库，附带 agent、用户、记忆类型、记忆ID 等分类信息
      */
     @Override
-    public void store(String content, String sessionId, Long agentId, String userId, VectorMemoryTypeEnum memoryType) {
+    public void store(String content, String sessionId, Long agentId, String userId, String memoryType, LocalDateTime timestamp) {
         if (content == null || content.isBlank()) {
             return;
         }
         try {
             TextSegment segment = TextSegment.from(content);
             segment.metadata().put(METADATA_AGENT_ID, String.valueOf(agentId));
+            segment.metadata().put(METADATA_SESSION_ID, sessionId);
             segment.metadata().put(METADATA_USER_ID, userId);
-            segment.metadata().put(METADATA_MEMORY_TYPE, memoryType.getCode());
+            segment.metadata().put(METADATA_MEMORY_TYPE, memoryType);
+            segment.metadata().put(METADATA_MEMORY_DATE, timestamp.format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss")));
 
             Embedding embedding = embeddingModel.embed(segment).content();
             embeddingStore.add(embedding, segment);
@@ -143,20 +148,24 @@ public class VectorMemoryService implements IVectorMemoryService {
      * 批量写入向量库
      */
     @Override
-    public void storeBatch(List<String> contents,String sessionId, Long agentId, String userId, VectorMemoryTypeEnum memoryType) {
+    public void storeBatch(List<String> contents,String sessionId, Long agentId, String userId, String memoryType, LocalDateTime timestamp) {
         if (contents == null || contents.isEmpty()) {
             return;
         }
         try {
             List<TextSegment> segments = new java.util.ArrayList<>();
+            DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
             for (String content : contents) {
                 if (content == null || content.isBlank()) {
                     continue;
                 }
                 TextSegment segment = TextSegment.from(content);
                 segment.metadata().put(METADATA_AGENT_ID, String.valueOf(agentId));
+                segment.metadata().put(METADATA_SESSION_ID, sessionId);
                 segment.metadata().put(METADATA_USER_ID, userId);
-                segment.metadata().put(METADATA_MEMORY_TYPE, memoryType.getCode());
+                segment.metadata().put(METADATA_MEMORY_TYPE, memoryType);
+                segment.metadata().put(METADATA_MEMORY_DATE, timestamp.format(formatter));
+
                 segments.add(segment);
             }
 
@@ -273,9 +282,11 @@ public class VectorMemoryService implements IVectorMemoryService {
                                 match.embeddingId(),
                                 match.score(),
                                 match.embedded().text(),
+                                m != null ? m.getString(METADATA_SESSION_ID) : null,
                                 m != null ? m.getString(METADATA_AGENT_ID) : null,
                                 m != null ? m.getString(METADATA_USER_ID) : null,
-                                m != null ? m.getString(METADATA_MEMORY_TYPE) : null
+                                m != null ? m.getString(METADATA_MEMORY_TYPE) : null,
+                                m != null ? m.getString(METADATA_MEMORY_DATE) : null
                         );
                     })
                     .collect(Collectors.toList());
