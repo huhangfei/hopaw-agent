@@ -1,4 +1,3 @@
-var currentAgentId = '';
 var currentMemoryId = null;
 var currentMemoryType = null;
 var currentNode = null;
@@ -6,28 +5,20 @@ var allMemories = [];
 var memoryTypes = [];
 
 function loadTree() {
-    var agentId = document.getElementById('agentSelect').value;
-    if (!agentId) {
-        showToast('请选择智能体', 'warning');
-        return;
-    }
-    currentAgentId = agentId;
     currentMemoryId = null;
     currentNode = null;
     document.getElementById('editorContent').innerHTML = '<div class="empty-state">请在左侧选择一条记忆</div>';
 
-    Promise.all([
-        fetch('/api/memory-manage/types?agentId=' + encodeURIComponent(agentId)).then(function(r) { return r.json(); }),
-        fetch('/api/memory-manage/tree?agentId=' + encodeURIComponent(agentId)).then(function(r) { return r.json(); })
-    ])
-    .then(function(results) {
-        if (results[0].code === 200) {
-            memoryTypes = results[0].data || [];
+    fetch('/api/memory-manage/tree')
+    .then(function(r) { return r.json(); })
+    .then(function(res) {
+        if (res.code === 200) {
+            memoryTypes = res.data.types || [];
+            allMemories = res.data.memories || [];
+            renderTree();
+        } else {
+            showToast(res.msg || '加载失败', 'error');
         }
-        if (results[1].code === 200) {
-            allMemories = results[1].data || [];
-        }
-        renderTree();
     })
     .catch(function(err) {
         showToast('网络错误: ' + err.message, 'error');
@@ -393,15 +384,10 @@ function saveNewMemory(parentId) {
         showToast('请输入概要', 'warning');
         return;
     }
-    if (!memory) {
-        showToast('请输入记忆内容', 'warning');
-        return;
-    }
     fetch('/api/memory-manage', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-            agentId: currentAgentId,
             memory: memory,
             summary: summary,
             memoryType: memoryType,
@@ -423,10 +409,6 @@ function saveNewMemory(parentId) {
 }
 
 function addRootMemory() {
-    if (!currentAgentId) {
-        showToast('请先选择智能体并查询', 'warning');
-        return;
-    }
     var container = document.getElementById('editorContent');
     container.innerHTML =
         '<div class="editor-field">' +
@@ -459,7 +441,6 @@ function saveRootMemory() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-            agentId: currentAgentId,
             memoryType: memoryType,
             summary: summary,
             memory: memory,
@@ -488,6 +469,10 @@ function renderTypeSelect(selectedType) {
     var html = '<select id="memoryTypeSelect" class="form-select">';
     for (var i = 0; i < memoryTypes.length; i++) {
         var t = memoryTypes[i];
+        // 限制不能选择任务记录类型
+        if (t.code === 'taskRecords') {
+            continue;
+        }
         var sel = t.code === selectedType ? ' selected' : '';
         html += '<option value="' + escapeHtml(t.code) + '"' + sel + '>' + escapeHtml(t.name) + ' (' + escapeHtml(t.code) + ')</option>';
     }
@@ -498,3 +483,8 @@ function renderTypeSelect(selectedType) {
 function escapeAttr(str) {
     return str.replace(/'/g, "\\'").replace(/"/g, '&quot;');
 }
+
+// 页面加载时自动加载数据
+document.addEventListener('DOMContentLoaded', function() {
+    loadTree();
+});

@@ -10,14 +10,7 @@
 
 <main layout:fragment="content" class="memory-manage-container">
     <div class="toolbar">
-        <div class="toolbar-group">
-            <label>智能体</label>
-            <select id="agentSelect">
-                <option value="">请选择智能体</option>
-                <option th:each="agent : ${agents}" th:value="${agent.id}" th:text="${agent.name}"></option>
-            </select>
-        </div>
-        <button class="btn btn-primary" onclick="loadTree()">查询</button>
+        <button class="btn btn-primary" onclick="loadTree()">刷新</button>
     </div>
     <div class="memory-panels">
         <div class="tree-panel">
@@ -26,7 +19,7 @@
                 <button class="btn btn-sm btn-primary" onclick="addRootMemory()">+ 添加记忆</button>
             </div>
             <div class="tree-container" id="treeContainer">
-                <div class="empty-state">请选择智能体并点击查询</div>
+                <div class="empty-state">暂无记忆数据</div>
             </div>
         </div>
         <div class="editor-panel">

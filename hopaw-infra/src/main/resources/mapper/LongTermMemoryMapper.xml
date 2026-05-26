@@ -19,27 +19,28 @@
         SELECT id,memory_type, summary, memory, memory_hash, parent_id, session_id, create_time, update_time, user_id
         FROM long_term_memory
         WHERE user_id = #{userId}
-        <if test="agentId!=null">
+        <if test="sessionId!=null">
             AND session_id = #{sessionId}
         </if>
-          <if test="memoryType!=null">
-              AND memory_type = #{memoryType}
-          </if>
+        <if test="memoryType!=null">
+            AND memory_type = #{memoryType}
+        </if>
         <if test="beginDateTime!=null">
-            AND (update_time > #{beginDateTime} ||  memory_type!='taskRecords')
+            AND (update_time > #{beginDateTime} OR memory_type!='taskRecords')
         </if>
         ORDER BY update_time desc
     </select>
+
     <select id="findBySessionIdAndUserIdAndMemoryTypeAndEndDateTime" resultMap="LongTermMemoryResultMap">
         SELECT id, memory_type, summary, memory, memory_hash, parent_id, session_id, create_time, update_time, user_id
         FROM long_term_memory
         WHERE user_id = #{userId}
-        <if test="agentId!=null">
+        <if test="sessionId!=null">
             AND session_id = #{sessionId}
         </if>
-          <if test="memoryType!=null">
-              AND memory_type = #{memoryType}
-          </if>
+        <if test="memoryType!=null">
+            AND memory_type = #{memoryType}
+        </if>
         <if test="endDateTime!=null">
             AND update_time &lt; #{endDateTime}
         </if>
@@ -96,9 +97,11 @@
     </update>
     <delete id="deleteBySessionIdAndUserIdAndMemoryTypeAndEndDateTime">
         DELETE FROM long_term_memory
-        WHERE session_id = #{sessionId}
-          AND user_id = #{userId}
-          AND memory_type = #{memoryType}
-          AND update_time &lt; #{endDateTime}
+        WHERE user_id = #{userId}
+        <if test="sessionId!=null">
+            AND session_id = #{sessionId}
+        </if>
+        AND memory_type = #{memoryType}
+        AND update_time &lt; #{endDateTime}
     </delete>
 </mapper>

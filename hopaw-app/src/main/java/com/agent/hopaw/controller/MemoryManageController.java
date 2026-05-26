@@ -37,15 +37,17 @@ public class MemoryManageController {
     @ResponseBody
     public ResponseBean tree() {
         List<LongTermMemory> list = longTermMemoryService.queryUserAllMemories(null, DefaultUser.USER);
-        List<Map<String, Object>> result = new ArrayList<>();
+        List<Map<String, Object>> types = new ArrayList<>();
         for (LongTermMemoryTypeEnum typeEnum : LongTermMemoryTypeEnum.values()) {
             Map<String, Object> item = new LinkedHashMap<>();
             item.put("code", typeEnum.getCode());
             item.put("name", typeEnum.getName());
             item.put("count", list.stream().filter(m -> typeEnum.getCode().equals(m.getMemoryType())).count());
-            item.put("list", list.stream().filter(m -> typeEnum.getCode().equals(m.getMemoryType())).collect(Collectors.toList()));
-            result.add(item);
+            types.add(item);
         }
+        Map<String, Object> result = new LinkedHashMap<>();
+        result.put("types", types);
+        result.put("memories", list);
         return ResponseBean.success(result);
     }
 
@@ -69,6 +71,11 @@ public class MemoryManageController {
         String memoryType = (String) body.get("memoryType");
         String summary = (String) body.get("summary");
 
+        // 限制不能添加任务记录类型
+        if (LongTermMemoryTypeEnum.TASK_RECORDS.getCode().equals(memoryType)) {
+            return ResponseBean.fail("不能添加任务记录类型的记忆");
+        }
+
         LongTermMemory entity = longTermMemoryService.createMemory(sessionId, memory, parentId, DefaultUser.USER, memoryType, summary);
         return ResponseBean.success(entity);
     }
@@ -88,7 +95,12 @@ public class MemoryManageController {
             entity.setSummary(body.get("summary"));
         }
         if (body.containsKey("memoryType")) {
-            entity.setMemoryType(body.get("memoryType"));
+            String newType = body.get("memoryType");
+            // 限制不能修改为任务记录类型
+            if (LongTermMemoryTypeEnum.TASK_RECORDS.getCode().equals(newType)) {
+                return ResponseBean.fail("不能修改为任务记录类型的记忆");
+            }
+            entity.setMemoryType(newType);
         }
         longTermMemoryService.update(entity);
         return ResponseBean.success(null);
