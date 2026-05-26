@@ -218,6 +218,12 @@
     font-size: 11px;
 }
 
+.date-cell {
+    color: #666;
+    font-size: 11px;
+    white-space: nowrap;
+}
+
 .type-tag {
     display: inline-block;
     padding: 1px 8px;
@@ -353,6 +359,12 @@
     font-size: 11px;
 }
 
+.detail-date {
+    font-size: 11px;
+    color: #666;
+    margin-left: auto;
+}
+
 .detail-text {
     white-space: pre-wrap;
     word-break: break-word;
@@ -470,6 +482,10 @@ body.dark-theme .score-cell {
     color: #8ba3ff;
 }
 
+body.dark-theme .date-cell {
+    color: #888;
+}
+
 body.dark-theme .type-tag.chatHistory {
     background: #1e3a5f;
     color: #8ba3ff;
@@ -544,6 +560,10 @@ body.dark-theme .detail-id {
 body.dark-theme .detail-id code {
     background: #2d2d44;
     color: #c0c0c0;
+}
+
+body.dark-theme .detail-date {
+    color: #888;
 }
 
 body.dark-theme .detail-text {
