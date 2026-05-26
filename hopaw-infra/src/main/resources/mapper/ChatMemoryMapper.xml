@@ -9,18 +9,19 @@
         <result property="messageId" column="message_id"/>
         <result property="messageJson" column="message_json"/>
         <result property="status" column="status"/>
+        <result property="sessionId" column="session_id"/>
         <result property="createTime" column="create_time"/>
     </resultMap>
 
     <select id="findByAgentId" resultMap="ChatMemoryResultMap">
-        SELECT id, agent_id, user_id, message_id, message_json, status, create_time
+        SELECT id, agent_id, user_id, message_id, message_json, status, session_id, create_time
         FROM chat_memory
         WHERE agent_id = #{agentId}
         ORDER BY create_time ASC
     </select>
 
     <select id="findByAgentIdAndUserIdInStatus" resultMap="ChatMemoryResultMap">
-        SELECT id, agent_id, user_id, message_id, message_json, status, create_time
+        SELECT id, agent_id, user_id, message_id, message_json, status, session_id, create_time
         FROM chat_memory
         WHERE agent_id = #{agentId} AND user_id = #{userId}
         <if test="status!=null and status.size()>0">
@@ -32,22 +33,36 @@
         ORDER BY create_time ASC
     </select>
 
+
+    <select id="findBySessionIdAndStatus" resultMap="ChatMemoryResultMap">
+        SELECT id, agent_id, user_id, message_id, message_json, status, session_id, create_time
+        FROM chat_memory
+        WHERE session_id = #{sessionId}
+        <if test="status!=null and status.size()>0">
+            AND status in
+            <foreach collection="status" separator="," item="item" close=")" open="(">
+                #{item}
+            </foreach>
+        </if>
+        ORDER BY create_time ASC
+    </select>
+
     <select id="findByAgentIdAndUserId" resultMap="ChatMemoryResultMap">
-        SELECT id, agent_id, user_id, message_id, message_json, status, create_time
+        SELECT id, agent_id, user_id, message_id, message_json, status, session_id, create_time
         FROM chat_memory
         WHERE agent_id = #{agentId} AND user_id = #{userId}
         ORDER BY create_time ASC
     </select>
     <select id="findByAgentIdAndUserIdAndStatus" resultMap="ChatMemoryResultMap">
-        SELECT id, agent_id, user_id, message_id, message_json, status, create_time
+        SELECT id, agent_id, user_id, message_id, message_json, status, session_id, create_time
         FROM chat_memory
         WHERE agent_id = #{agentId} AND user_id = #{userId} AND status = #{status}
         ORDER BY create_time ASC
     </select>
 
     <insert id="insert">
-        INSERT INTO chat_memory (agent_id, user_id, message_id, message_json, status, create_time)
-        VALUES (#{agentId}, #{userId}, #{messageId}, #{messageJson}, 0, #{createTime})
+        INSERT INTO chat_memory (agent_id, user_id, message_id, message_json, status, session_id, create_time)
+        VALUES (#{agentId}, #{userId}, #{messageId}, #{messageJson}, 0, #{sessionId}, #{createTime})
         <selectKey resultType="long" keyProperty="id" order="AFTER">
             SELECT last_insert_rowid()
         </selectKey>
@@ -56,12 +71,12 @@
     <update id="updateStatus">
         UPDATE chat_memory
         SET status = #{status}
-        WHERE agent_id = #{agentId} AND user_id = #{userId} AND message_id = #{messageId}
+        WHERE user_id = #{userId} AND session_id = #{sessionId} AND message_id = #{messageId}
     </update>
     <update id="updateStatusByStatus">
         UPDATE chat_memory
         SET status = #{status}
-        WHERE agent_id = #{agentId} AND user_id = #{userId} AND status = #{oldStatus}
+        WHERE session_id = #{sessionId} AND user_id = #{userId} AND status = #{oldStatus}
     </update>
 
     <update id="updateByMessageId">
@@ -75,15 +90,20 @@
         SET status = #{status}
         WHERE agent_id = #{agentId}
     </update>
+    <update id="updateStatusBySessionId">
+        UPDATE chat_memory
+        SET status = #{status}
+        WHERE session_id = #{sessionId}
+    </update>
 
     <delete id="deleteByMessageId">
         DELETE FROM chat_memory
-        WHERE agent_id = #{agentId} AND user_id = #{userId} AND message_id = #{messageId}
+        WHERE user_id = #{userId} AND session_id = #{sessionId} AND message_id = #{messageId}
     </delete>
 
-    <delete id="deleteByAgentIdAndUserId">
+    <delete id="deleteBySessionIdAndUserId">
         DELETE FROM chat_memory
-        WHERE agent_id = #{agentId} AND user_id = #{userId}
+        WHERE session_id = #{sessionId} AND user_id = #{userId}
     </delete>
 
     <delete id="deleteByIds">
@@ -99,8 +119,8 @@
         WHERE agent_id = #{agentId}
     </delete>
 
-    <select id="findDistinctAgentUserPairs" resultMap="ChatMemoryResultMap">
-        SELECT DISTINCT agent_id, user_id
+    <select id="findDistinctSessionUserPairs" resultMap="ChatMemoryResultMap">
+        SELECT DISTINCT session_id, user_id
         FROM chat_memory
     </select>
 

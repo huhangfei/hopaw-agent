@@ -56,6 +56,7 @@ public class VectorHistoryController {
     public ResponseBean search(
             @RequestParam(required = false) String query,
             @RequestParam(required = false) Long agentId,
+            @RequestParam(required = false) String sessionId,
             @RequestParam(required = false) String userId,
             @RequestParam(required = false) String memoryType,
             @RequestParam(defaultValue = "20") int maxResults,
@@ -64,17 +65,8 @@ public class VectorHistoryController {
         if (query == null || query.isBlank()) {
             return ResponseBean.fail("查询关键词不能为空");
         }
-
-        VectorMemoryTypeEnum typeEnum = null;
-        if (memoryType != null && !memoryType.isBlank()) {
-            typeEnum = VectorMemoryTypeEnum.fromCode(memoryType);
-            if (typeEnum == null) {
-                return ResponseBean.fail("无效的记忆类型: " + memoryType);
-            }
-        }
-
         List<VectorSearchResult> results = vectorMemoryService.search(
-                query, agentId, userId, typeEnum, maxResults, minScore);
+                query,sessionId, agentId, userId, memoryType, maxResults, minScore);
 
         return ResponseBean.success(results);
     }

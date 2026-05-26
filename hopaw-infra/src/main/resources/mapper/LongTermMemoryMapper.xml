@@ -4,33 +4,23 @@
 
     <resultMap id="LongTermMemoryResultMap" type="com.agent.hopaw.infra.model.entity.LongTermMemory">
         <id property="id" column="id"/>
-        <result property="agentId" column="agent_id"/>
         <result property="memoryType" column="memory_type"/>
         <result property="summary" column="summary"/>
         <result property="memory" column="memory"/>
         <result property="memoryHash" column="memory_hash"/>
         <result property="parentId" column="parent_id"/>
         <result property="userId" column="user_id"/>
+        <result property="sessionId" column="session_id"/>
         <result property="createTime" column="create_time"/>
         <result property="updateTime" column="update_time"/>
     </resultMap>
 
-    <select id="findByAgentIdAndUserId" resultMap="LongTermMemoryResultMap">
-        SELECT id, agent_id, memory_type, summary, memory, memory_hash, parent_id, create_time, update_time, user_id
+    <select id="findBySessionIdAndUserIdAndMemoryTypeAndTime" resultMap="LongTermMemoryResultMap">
+        SELECT id,memory_type, summary, memory, memory_hash, parent_id, session_id, create_time, update_time, user_id
         FROM long_term_memory
         WHERE user_id = #{userId}
         <if test="agentId!=null">
-            AND agent_id = #{agentId}
-        </if>
-        ORDER BY parent_id ASC NULLS FIRST, id ASC
-    </select>
-
-    <select id="findByAgentIdAndUserIdAndMemoryTypeAndTime" resultMap="LongTermMemoryResultMap">
-        SELECT id, agent_id, memory_type, summary, memory, memory_hash, parent_id, create_time, update_time, user_id
-        FROM long_term_memory
-        WHERE user_id = #{userId}
-        <if test="agentId!=null">
-            AND agent_id = #{agentId}
+            AND session_id = #{sessionId}
         </if>
           <if test="memoryType!=null">
               AND memory_type = #{memoryType}
@@ -40,12 +30,12 @@
         </if>
         ORDER BY update_time desc
     </select>
-    <select id="findByAgentIdAndUserIdAndMemoryTypeAndEndDateTime" resultMap="LongTermMemoryResultMap">
-        SELECT id, agent_id, memory_type, summary, memory, memory_hash, parent_id, create_time, update_time, user_id
+    <select id="findBySessionIdAndUserIdAndMemoryTypeAndEndDateTime" resultMap="LongTermMemoryResultMap">
+        SELECT id, memory_type, summary, memory, memory_hash, parent_id, session_id, create_time, update_time, user_id
         FROM long_term_memory
         WHERE user_id = #{userId}
         <if test="agentId!=null">
-            AND agent_id = #{agentId}
+            AND session_id = #{sessionId}
         </if>
           <if test="memoryType!=null">
               AND memory_type = #{memoryType}
@@ -57,7 +47,7 @@
     </select>
 
     <select id="findByParentId" resultMap="LongTermMemoryResultMap">
-        SELECT id, agent_id, memory_type, summary, memory, memory_hash, parent_id, create_time, update_time, user_id
+        SELECT id, memory_type, summary, memory, memory_hash, parent_id, session_id, create_time, update_time, user_id
         FROM long_term_memory
         WHERE parent_id = #{parentId}
         ORDER BY id ASC
@@ -65,20 +55,20 @@
 
 
     <select id="findByUserIdAndMemoryType" resultMap="LongTermMemoryResultMap">
-        SELECT id, agent_id, memory_type, summary, memory, memory_hash, parent_id, create_time, update_time, user_id
+        SELECT id, memory_type, summary, memory, memory_hash, parent_id, session_id, create_time, update_time, user_id
         FROM long_term_memory
         WHERE user_id = #{userId} AND memory_type = #{memoryType}
     </select>
 
     <select id="findById" resultMap="LongTermMemoryResultMap">
-        SELECT id, agent_id, memory_type, summary, memory, memory_hash, parent_id, create_time, update_time, user_id
+        SELECT id,memory_type, summary, memory, memory_hash, parent_id, session_id, create_time, update_time, user_id
         FROM long_term_memory
         WHERE id = #{id}
     </select>
 
     <insert id="insert" parameterType="com.agent.hopaw.infra.model.entity.LongTermMemory">
-        INSERT INTO long_term_memory (agent_id, memory_type, summary, memory, memory_hash, parent_id, user_id, create_time, update_time)
-        VALUES (#{agentId}, #{memoryType}, #{summary}, #{memory}, #{memoryHash}, #{parentId}, #{userId}, datetime('now', 'localtime'), datetime('now', 'localtime'))
+        INSERT INTO long_term_memory (memory_type, summary, memory, memory_hash, parent_id, user_id, session_id, create_time, update_time)
+        VALUES (#{memoryType}, #{summary}, #{memory}, #{memoryHash}, #{parentId}, #{userId}, #{sessionId}, datetime('now', 'localtime'), datetime('now', 'localtime'))
         <selectKey resultType="long" keyProperty="id" order="AFTER">
             SELECT last_insert_rowid()
         </selectKey>
@@ -104,9 +94,9 @@
         SET parent_id = #{parentId}, update_time = datetime('now', 'localtime')
         WHERE id = #{id}
     </update>
-    <delete id="deleteByAgentIdAndUserIdAndMemoryTypeAndEndDateTime">
+    <delete id="deleteBySessionIdAndUserIdAndMemoryTypeAndEndDateTime">
         DELETE FROM long_term_memory
-        WHERE agent_id = #{agentId}
+        WHERE session_id = #{sessionId}
           AND user_id = #{userId}
           AND memory_type = #{memoryType}
           AND update_time &lt; #{endDateTime}

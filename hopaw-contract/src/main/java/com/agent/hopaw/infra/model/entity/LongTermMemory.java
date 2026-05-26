@@ -4,7 +4,6 @@ import java.time.LocalDateTime;
 
 public class LongTermMemory {
     private Long id;
-    private String agentId;
     /**
      * 记忆类型
      * LongTermMemoryTypeEnum
@@ -15,13 +14,17 @@ public class LongTermMemory {
     private String memoryHash;
     private Long parentId;
     private String userId;
+    private String sessionId;
     private LocalDateTime createTime;
     private LocalDateTime updateTime;
 
     public LongTermMemory() {}
 
-    public LongTermMemory(String agentId, String memory, Long parentId) {
-        this.agentId = agentId;
+    public LongTermMemory(String sessionId,String userId,String memoryType,String summary,String memory, Long parentId) {
+        this.sessionId = sessionId;
+        this.userId = userId;
+        this.memoryType = memoryType;
+        this.summary = summary;
         this.memory = memory;
         this.memoryHash = String.valueOf(memory.hashCode());
         this.parentId = parentId;
@@ -35,14 +38,6 @@ public class LongTermMemory {
 
     public void setId(Long id) {
         this.id = id;
-    }
-
-    public String getAgentId() {
-        return agentId;
-    }
-
-    public void setAgentId(String agentId) {
-        this.agentId = agentId;
     }
 
     public String getMemoryType() {
@@ -107,5 +102,13 @@ public class LongTermMemory {
 
     public void setUpdateTime(LocalDateTime updateTime) {
         this.updateTime = updateTime;
+    }
+
+    public String getSessionId() {
+        return sessionId;
+    }
+
+    public void setSessionId(String sessionId) {
+        this.sessionId = sessionId;
     }
 }

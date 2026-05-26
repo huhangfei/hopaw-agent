@@ -1,7 +1,6 @@
-package com.agent.hopaw.biz.storage;
+package com.agent.hopaw.infra.storage;
 
 import com.agent.hopaw.infra.mapper.ChatHistoryMapper;
-import com.agent.hopaw.infra.storage.ChatHistoryStore;
 import com.agent.hopaw.infra.model.entity.ChatHistory;
 import org.springframework.stereotype.Service;
 

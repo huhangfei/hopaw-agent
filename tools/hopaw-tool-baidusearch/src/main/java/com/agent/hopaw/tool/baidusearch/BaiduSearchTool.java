@@ -18,6 +18,9 @@ import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
 
+/**
+ * @author hhf
+ */
 public class BaiduSearchTool implements AgentTool {
     private static final String CONFIG_KEY_API_KEYS = "apiKeys";
     private static final String CONFIG_KEY_EDITION = "edition";
@@ -52,7 +55,7 @@ public class BaiduSearchTool implements AgentTool {
         int to = timeout != null ? timeout : TIMEOUT_MS;
 
         try {
-            String result = QianFanWebSearchUtil.search(apiKey, query, mr, to, edition);
+            String result = com.agent.hopaw.tool.baidusearch.QianFanWebSearchUtil.search(apiKey, query, mr, to, edition);
             if (result != null) {
                 return result;
             }
@@ -136,7 +139,9 @@ public class BaiduSearchTool implements AgentTool {
     }
 
     private String selectKey(List<String> keys) {
-        if (keys.isEmpty()) return null;
+        if (keys.isEmpty()) {
+            return null;
+        }
         int index = keyIndex.getAndUpdate(i -> (i + 1) % keys.size());
         return keys.get(index);
     }

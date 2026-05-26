@@ -24,7 +24,7 @@ import java.util.stream.Collectors;
 public class VectorMemoryService implements IVectorMemoryService {
 
     private static final Logger logger = LoggerFactory.getLogger(IVectorMemoryService.class);
-
+    private static final String METADATA_SESSION_ID = "sessionId";
     private static final String METADATA_AGENT_ID = "agentId";
     private static final String METADATA_USER_ID = "userId";
     private static final String METADATA_MEMORY_TYPE = "memoryType";
@@ -118,7 +118,8 @@ public class VectorMemoryService implements IVectorMemoryService {
     /**
      * 将内容写入向量库，附带 agent、用户、记忆类型、记忆ID 等分类信息
      */
-    public void store(String content, Long agentId, String userId, VectorMemoryTypeEnum memoryType) {
+    @Override
+    public void store(String content, String sessionId, Long agentId, String userId, VectorMemoryTypeEnum memoryType) {
         if (content == null || content.isBlank()) {
             return;
         }
@@ -141,7 +142,8 @@ public class VectorMemoryService implements IVectorMemoryService {
     /**
      * 批量写入向量库
      */
-    public void storeBatch(List<String> contents, Long agentId, String userId, VectorMemoryTypeEnum memoryType) {
+    @Override
+    public void storeBatch(List<String> contents,String sessionId, Long agentId, String userId, VectorMemoryTypeEnum memoryType) {
         if (contents == null || contents.isEmpty()) {
             return;
         }
@@ -194,6 +196,7 @@ public class VectorMemoryService implements IVectorMemoryService {
     /**
      * 根据 embeddingId 删除向量库中的单条记录
      */
+    @Override
     public boolean deleteByEmbeddingId(String embeddingId) {
         if (embeddingId == null || embeddingId.isBlank()) {
             return false;
@@ -219,8 +222,9 @@ public class VectorMemoryService implements IVectorMemoryService {
      * @param maxResults 最大返回数
      * @param minScore   最低相似度阈值
      */
-    public List<VectorSearchResult> search(String query, Long agentId, String userId,
-                                          VectorMemoryTypeEnum memoryType, int maxResults, double minScore) {
+    @Override
+    public List<VectorSearchResult> search(String query,String sessionId, Long agentId, String userId,
+                                          String memoryType, int maxResults, double minScore) {
         try {
             Embedding queryEmbedding = embeddingModel.embed(TextSegment.from(query)).content();
 
@@ -237,7 +241,12 @@ public class VectorMemoryService implements IVectorMemoryService {
             return result.matches().stream()
                     .filter(match -> {
                         dev.langchain4j.data.document.Metadata metadata = match.embedded().metadata();
-                        if (agentId != null) {
+                        if (sessionId != null) {
+                            String storedSessionId = metadata.getString(METADATA_SESSION_ID);
+                            if (!sessionId.equals(storedSessionId)) {
+                                return false;
+                            }
+                        }if (agentId != null) {
                             String storedAgentId = metadata.getString(METADATA_AGENT_ID);
                             if (!String.valueOf(agentId).equals(storedAgentId)) {
                                 return false;
@@ -251,7 +260,7 @@ public class VectorMemoryService implements IVectorMemoryService {
                         }
                         if (memoryType != null) {
                             String storedType = metadata.getString(METADATA_MEMORY_TYPE);
-                            if (!memoryType.getCode().equals(storedType)) {
+                            if (!memoryType.equals(storedType)) {
                                 return false;
                             }
                         }

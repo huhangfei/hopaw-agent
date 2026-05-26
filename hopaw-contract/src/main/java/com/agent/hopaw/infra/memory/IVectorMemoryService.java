@@ -7,12 +7,12 @@ import java.util.List;
 
 public interface IVectorMemoryService {
 
-    void store(String content, Long agentId, String userId, VectorMemoryTypeEnum memoryType);
+    void store(String content,String sessionId, Long agentId, String userId, VectorMemoryTypeEnum memoryType);
 
-    void storeBatch(List<String> contents, Long agentId, String userId, VectorMemoryTypeEnum memoryType);
+    void storeBatch(List<String> contents,String sessionId, Long agentId, String userId, VectorMemoryTypeEnum memoryType);
 
-    List<VectorSearchResult> search(String query, Long agentId, String userId,
-                                    VectorMemoryTypeEnum memoryType, int maxResults, double minScore);
+    List<VectorSearchResult> search(String query,String sessionId, Long agentId, String userId,
+                                    String memoryType, int maxResults, double minScore);
 
     boolean deleteByEmbeddingId(String embeddingId);
 }

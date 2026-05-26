@@ -1,7 +1,7 @@
 package com.agent.hopaw.biz.tool.memory;
 
 import com.agent.hopaw.infra.constant.VectorMemoryTypeEnum;
-import com.agent.hopaw.infra.memory.LongTermMemoryService;
+import com.agent.hopaw.infra.memory.ILongTermMemoryService;
 import com.agent.hopaw.infra.memory.IVectorMemoryService;
 import com.agent.hopaw.infra.model.dto.VectorSearchResult;
 import com.agent.hopaw.infra.util.InvocationParametersWrapper;
@@ -21,10 +21,10 @@ import java.util.List;
 @Component("memoryTool")
 public class MemoryTool implements AgentTool {
 
-    private final LongTermMemoryService longTermMemoryService;
+    private final ILongTermMemoryService longTermMemoryService;
     private final IVectorMemoryService vectorMemoryService;
 
-    public MemoryTool(LongTermMemoryService longTermMemoryService, IVectorMemoryService vectorMemoryService) {
+    public MemoryTool(ILongTermMemoryService longTermMemoryService, IVectorMemoryService vectorMemoryService) {
         this.longTermMemoryService = longTermMemoryService;
         this.vectorMemoryService = vectorMemoryService;
     }
@@ -62,13 +62,13 @@ public class MemoryTool implements AgentTool {
     @Tool(value = "查询用户任务记录记忆，如果不是特别需要不要包含详情",searchBehavior = SearchBehavior.ALWAYS_VISIBLE)
     public String queryUserTaskRecordsMemory(@P(description="是否包括详情",required = false) Boolean includeDetail, InvocationParameters invocationParameters){
         InvocationParametersWrapper invocationParametersWrapper = InvocationParametersWrapper.create(invocationParameters);
-        String memory = longTermMemoryService.queryUserTaskRecordsMemoryContent(invocationParametersWrapper.getAgentId(), invocationParametersWrapper.getUserId(), includeDetail);
+        String memory = longTermMemoryService.queryUserTaskRecordsMemoryContent(invocationParametersWrapper.getSessionId(), invocationParametersWrapper.getUserId(), includeDetail);
         return memory;
     }
     @Tool(value = "查询用户扩展知识记忆，如果不是特别需要不要包含详情",searchBehavior = SearchBehavior.ALWAYS_VISIBLE)
     public String queryUserExpandKnowledgeMemory(@P(description="是否包括详情",required = false) Boolean includeDetail, InvocationParameters invocationParameters){
         InvocationParametersWrapper invocationParametersWrapper = InvocationParametersWrapper.create(invocationParameters);
-        String memory = longTermMemoryService.queryUserExpandKnowledgeMemoryContent(invocationParametersWrapper.getAgentId(), invocationParametersWrapper.getUserId(), includeDetail);
+        String memory = longTermMemoryService.queryUserExpandKnowledgeMemoryContent(invocationParametersWrapper.getSessionId(), invocationParametersWrapper.getUserId(), includeDetail);
         return memory;
     }
     @Tool(value = "查询用户记忆详细内容,根据指定Id查询",searchBehavior = SearchBehavior.ALWAYS_VISIBLE)
@@ -103,7 +103,7 @@ public class MemoryTool implements AgentTool {
         double minScoreVal = minScore != null ? minScore : 0.5;
 
         List<VectorSearchResult> results =
-                vectorMemoryService.search(query, agentId, userId, VectorMemoryTypeEnum.fromCode(memoryType), maxResultsVal, minScoreVal);
+                vectorMemoryService.search(query, wrapper.getSessionId(), null, userId, memoryType, maxResultsVal, minScoreVal);
 
         if (results.isEmpty()) {
             return "向量库中未找到相关历史记忆";

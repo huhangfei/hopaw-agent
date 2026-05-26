@@ -17,7 +17,10 @@
             <groupId>com.hopaw.agent</groupId>
             <artifactId>hopaw-biz</artifactId>
         </dependency>
-
+        <dependency>
+            <groupId>com.hopaw.agent</groupId>
+            <artifactId>hopaw-infra</artifactId>
+        </dependency>
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-web</artifactId>

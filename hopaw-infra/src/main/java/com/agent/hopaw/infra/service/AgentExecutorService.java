@@ -4,78 +4,78 @@ import com.agent.hopaw.infra.constant.AiModelCallSourceEnum;
 import com.agent.hopaw.infra.constant.LongTermMemoryTypeEnum;
 import com.agent.hopaw.infra.executor.AgentExecutor;
 import com.agent.hopaw.infra.executor.IAgentExecutor;
-import com.agent.hopaw.infra.memory.SQLiteChatMemoryStore;
+import com.agent.hopaw.infra.memory.IChatMemoryService;
+import com.agent.hopaw.infra.memory.ILongTermMemoryService;
+import com.agent.hopaw.infra.model.dto.AgentExecutorParams;
 import com.agent.hopaw.infra.model.dto.SkillInfo;
 import com.agent.hopaw.infra.model.dto.UserRequest;
 import com.agent.hopaw.infra.monitor.LangChain4jMonitor;
 import com.agent.hopaw.infra.storage.ChatHistoryStore;
-import com.agent.hopaw.infra.memory.LongTermMemoryService;
 import com.agent.hopaw.infra.model.entity.Agent;
 import com.agent.hopaw.infra.tool.AgentTool;
 import com.agent.hopaw.infra.tool.IAgentToolService;
-import dev.langchain4j.model.chat.ChatModel;
-import dev.langchain4j.model.chat.StreamingChatModel;
 import dev.langchain4j.model.embedding.EmbeddingModel;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 
 import java.util.*;
 import java.util.function.Consumer;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 
 @Service
 public class AgentExecutorService implements IAgentExecutorService {
+    private final IAgentService agentService;
     private final AiModelService aiModelService;
     private final ChatHistoryStore chatHistoryStore;
-
     private final TokenUsageService tokenUsageService;
-    private final SQLiteChatMemoryStore memoryStore;
+    private final IChatMemoryService chatMemoryService;
     private final IAgentToolService agentToolService;
-
-    private final LongTermMemoryService longTermMemoryService;
+    private final ILongTermMemoryService longTermMemoryService;
     private final EmbeddingModel embeddingModel;
-    private final SkillService skillService;
+    private final ISkillService ISkillService;
 
     private final Map<String, IAgentExecutor> agentExecutors = new HashMap<>();
 
-    public AgentExecutorService(AiModelService aiModelService, ChatHistoryStore chatHistoryStore, TokenUsageService tokenUsageService, SQLiteChatMemoryStore memoryStore, IAgentToolService agentToolService, LongTermMemoryService longTermMemoryService, EmbeddingModel embeddingModel, SkillService skillService) {
+    public AgentExecutorService(IAgentService agentService, AiModelService aiModelService, ChatHistoryStore chatHistoryStore, TokenUsageService tokenUsageService, IChatMemoryService chatMemoryService, IAgentToolService agentToolService, ILongTermMemoryService longTermMemoryService, EmbeddingModel embeddingModel, ISkillService ISkillService) {
+        this.agentService = agentService;
         this.aiModelService = aiModelService;
         this.chatHistoryStore = chatHistoryStore;
         this.tokenUsageService = tokenUsageService;
-        this.memoryStore = memoryStore;
+        this.chatMemoryService = chatMemoryService;
         this.agentToolService = agentToolService;
         this.longTermMemoryService = longTermMemoryService;
         this.embeddingModel = embeddingModel;
-        this.skillService = skillService;
+        this.ISkillService = ISkillService;
     }
 
     @Override
-    public void addToolStopHook(Long agentId, String userId, String callId, Consumer<String> hook) {
-        IAgentExecutor IAgentExecutor = agentExecutors.get(agentId + "_" + userId);
+    public void addToolStopHook(String sessionId, String callId, Consumer<String> hook) {
+        IAgentExecutor IAgentExecutor = agentExecutors.get(sessionId);
         if (IAgentExecutor != null) {
             IAgentExecutor.addToolStopHook(callId, hook);
         }
     }
 
     @Override
-    public void sendToolRunningContent(Long agentId, String userId, String callId, Object resultPartial) {
-        IAgentExecutor IAgentExecutor = agentExecutors.get(agentId + "_" + userId);
+    public void sendToolRunningContent(String sessionId, String callId, Object resultPartial) {
+        IAgentExecutor IAgentExecutor = agentExecutors.get(sessionId);
         if (IAgentExecutor != null) {
             IAgentExecutor.sendToolRunningContent(callId, resultPartial);
         }
     }
 
     @Override
-    public void stopTool(Long agentId, String userId, String callId) {
-        IAgentExecutor IAgentExecutor = agentExecutors.get(agentId + "_" + userId);
+    public void stopTool(String sessionId, String callId) {
+        IAgentExecutor IAgentExecutor = agentExecutors.get(sessionId);
         if (IAgentExecutor != null) {
             IAgentExecutor.stopTool(callId);
         }
     }
 
     @Override
-    public boolean toolIsCancelled(Long agentId, String userId, String callId) {
-        IAgentExecutor IAgentExecutor = agentExecutors.get(agentId + "_" + userId);
+    public boolean toolIsCancelled(String sessionId, String callId) {
+        IAgentExecutor IAgentExecutor = agentExecutors.get(sessionId);
         if (IAgentExecutor != null) {
             return IAgentExecutor.toolIsCancelled(callId);
         }
@@ -85,64 +85,77 @@ public class AgentExecutorService implements IAgentExecutorService {
     @Override
     public void clearAndStopAgentExecutorByAiModel(Long aiModelId) {
         List<IAgentExecutor> list = agentExecutors.values().stream().collect(Collectors.toList());
-        for (IAgentExecutor IAgentExecutor : list) {
-            Agent agent1 = IAgentExecutor.getAgent();
-            if (agent1.getAiModelId() != null && agent1.getAiModelId().equals(aiModelId)) {
-                stopAndRemoveAgentExecutor(agent1.getId(), agent1.getUserId());
+        for (IAgentExecutor agentExecutor : list) {
+            if (agentExecutor.getAiModelId() != null && agentExecutor.getAiModelId().equals(aiModelId)) {
+                stopAndRemoveAgentExecutor(agentExecutor.getSessionId());
             }
         }
     }
 
     @Override
-    public void stopAgentExecutor(Long agentId, String userId) {
-        IAgentExecutor IAgentExecutor = agentExecutors.get(agentId + "_" + userId);
+    public void stopAgentExecutor(String sessionId) {
+        IAgentExecutor IAgentExecutor = agentExecutors.get(sessionId);
         if (IAgentExecutor != null) {
             IAgentExecutor.stop();
         }
     }
 
     @Override
-    public void stopAndRemoveAgentExecutor(Long agentId, String userId) {
-        stopAgentExecutor(agentId, userId);
-        agentExecutors.remove(agentId + "_" + userId);
+    public void stopAndRemoveAgentExecutor(String sessionId) {
+        stopAgentExecutor(sessionId);
+        agentExecutors.remove(sessionId);
     }
 
     @Override
-    public boolean isAgentExecutorRunning(Long agentId, String userId) {
-        IAgentExecutor IAgentExecutor = agentExecutors.get(agentId + "_" + userId);
+    public boolean isAgentExecutorRunning(String sessionId) {
+        IAgentExecutor IAgentExecutor = agentExecutors.get(sessionId);
         return IAgentExecutor != null && IAgentExecutor.running();
     }
 
     @Override
     public IAgentExecutor getAgentExecutor(UserRequest userRequest) {
-        Agent agent = userRequest.getAgent();
-        String userId = userRequest.getUserId();
-        return agentExecutors.computeIfAbsent(agent.getId() + "_" + userId, id -> {
+        return agentExecutors.computeIfAbsent(userRequest.getSessionId(), id -> {
             return createAgentExecutor(userRequest);
         });
     }
 
     @Override
     public IAgentExecutor createAgentExecutor(UserRequest userRequest) {
-        LangChain4jMonitor langChain4jMonitor = new LangChain4jMonitor(AiModelCallSourceEnum.Chat)
-                .setAgentId(userRequest.getAgent().getId())
-                .setUserId(userRequest.getUserId())
-                .setTokenUsageService(tokenUsageService);
-        Agent agent = userRequest.getAgent();
-        if(agent.getAiModelId() == null){
+        Agent agent = userRequest.getAgentId() != null ? agentService.getAgentById(userRequest.getAgentId()) : null;
+        if(agent == null){
+            throw new RuntimeException("智能体不存在");
+        }
+        if(userRequest.getAiModelId() == null){
             throw new RuntimeException("智能体没有设置AI模型");
         }
-        ChatModel chatModel = aiModelService.createChatModel(agent.getAiModelId(), agent.getEnableThinking(), langChain4jMonitor);
-        StreamingChatModel streamingModel = aiModelService.createStreamingChatModel(agent.getAiModelId(), agent.getEnableThinking(), langChain4jMonitor);
+        LangChain4jMonitor langChain4jMonitor = new LangChain4jMonitor(AiModelCallSourceEnum.Chat)
+                .setSessionId(userRequest.getSessionId())
+                .setAgentId(userRequest.getAgentId())
+                .setUserId(userRequest.getUserId())
+                .setTokenUsageService(tokenUsageService);
         List<String> selectedToolNames = parseToolNames(agent.getTools());
         List<AgentTool> selectedTools = agentToolService.getAgentTools().stream()
                 .filter(t -> selectedToolNames.contains(t.getName()))
                 .collect(Collectors.toList());
-        return new AgentExecutor(UUID.randomUUID().toString(),agent, userRequest.getUserId(), chatModel, streamingModel,selectedTools, memoryStore, embeddingModel, a -> this.getSystemMessage(a, userRequest.getUserId(), selectedTools, userRequest.getSkillNames()), chatHistoryStore);
+        AgentExecutorParams agentExecutorParams=new AgentExecutorParams();
+        agentExecutorParams.setSessionId(userRequest.getSessionId());
+        agentExecutorParams.setAgentId(agent.getId());
+        agentExecutorParams.setUserId(userRequest.getUserId());
+        agentExecutorParams.setAiModelId(userRequest.getAiModelId());
+        agentExecutorParams.setMaxMemoryRecords(agent.getMaxMemoryRecords() != null ? agent.getMaxMemoryRecords() : 10);
+        agentExecutorParams.setMaxToolInvocations(agent.getMaxToolInvocations() != null ? agent.getMaxToolInvocations() : 3);
+        agentExecutorParams.setEnableThinking(userRequest.getEnableThinking());
+        agentExecutorParams.setVectorToolSearch(agent.getVectorToolSearch() != null ? agent.getVectorToolSearch() : false);
+        agentExecutorParams.setVectorToolSearchMaxResults(agent.getVectorToolSearchMaxResults() != null ? agent.getVectorToolSearchMaxResults() : 5);
+        agentExecutorParams.setSkillNames(userRequest.getSkillNames());
+        agentExecutorParams.setToolSets(selectedTools);
+        Function<Long, String> systemMessageProvider=aId->{
+            return getSystemMessage(userRequest.getSessionId(),agent, userRequest.getUserId(), selectedTools, userRequest.getSkillNames());
+        };
+        return new AgentExecutor(agentExecutorParams, chatMemoryService, embeddingModel,systemMessageProvider, chatHistoryStore, aiModelService,langChain4jMonitor);
     }
 
-    @Override
-    public String getSystemMessage(Agent agent, String userId, List<AgentTool> selectedTools,List<String> skillNames) {
+    private String getSystemMessage(String sessionId,Agent agent, String userId, List<AgentTool> selectedTools,List<String> skillNames) {
         String systemMessage = "你是一个智能助手，名字叫" + agent.getName() + "," +
                 "主要工作是" + agent.getDescription() + "," +
                 "你的agentId是" + agent.getId() + "。\n" +
@@ -153,7 +166,7 @@ public class AgentExecutorService implements IAgentExecutorService {
         if (agent.getVectorToolSearch() != null && agent.getVectorToolSearch() && selectedTools != null && !selectedTools.isEmpty()) {
             systemMessage += "当需要[" + getToolKeywords(selectedTools) + "]这些能力时，先使用tool_search_tool搜一下对应关键词，拿到工具详情再做决定使用。\n";
         }
-        String memoryContent = longTermMemoryService.queryUserAllMemoriesContent(agent.getId(), userId, memory -> {
+        String memoryContent = longTermMemoryService.queryUserAllMemoriesContent(sessionId, userId, memory -> {
             if (LongTermMemoryTypeEnum.USER_PROFILE.getCode().equals(memory.getMemoryType())) {
                 return true;
             }
@@ -174,7 +187,7 @@ public class AgentExecutorService implements IAgentExecutorService {
         StringBuilder sb = new StringBuilder();
         sb.append("你将使用以下技能完成任务，请严格遵循技能中定义的指令：\n\n");
         for (String name : skillNames) {
-            SkillInfo skill = skillService.getSkill(name);
+            SkillInfo skill = ISkillService.getSkill(name);
             if (skill == null || skill.getContent() == null) {
                 continue;
             }
@@ -189,4 +202,13 @@ public class AgentExecutorService implements IAgentExecutorService {
         return sb.toString();
     }
 
+    private String getToolKeywords(List<AgentTool> selectedTools) {
+        return selectedTools.stream().map(AgentTool::getKeyword).collect(Collectors.joining(","));
+    }
+    private List<String> parseToolNames(String toolsStr) {
+        if (toolsStr == null || toolsStr.isEmpty()) {
+            return new ArrayList<>();
+        }
+        return Arrays.asList(toolsStr.split(","));
+    }
 }

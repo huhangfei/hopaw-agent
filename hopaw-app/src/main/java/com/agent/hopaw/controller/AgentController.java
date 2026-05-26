@@ -44,30 +44,12 @@ public class AgentController {
         this.agentExecutorService = agentExecutorService;
     }
 
-    @GetMapping("/")
+    @GetMapping("/agents")
     public String index(@RequestParam(required = false) Long agentId,
                        Model model) {
         List<Agent> agents = agentService.getAllAgents();
         model.addAttribute("agents", agents);
-
-        List<ToolSetInfo> toolSets = agentToolService.getToolSets();
-        model.addAttribute("toolSets", toolSets);
-
-        if(agents.size() > 0 && agentId == null){
-            agentId = agents.get(0).getId();
-        }
-        if (agentId != null) {
-            Agent agent = agentService.getAgentById(agentId);
-            model.addAttribute("selectedAgent", agent);
-            model.addAttribute("selectedAgentId", agentId);
-
-            List<ChatHistory> chatHistory = chatHistoryMapper.findByAgentId(agentId, 100);
-            Collections.reverse(chatHistory);
-            model.addAttribute("chatHistory", chatHistory);
-            model.addAttribute("agentExecutorState", agentService.isAgentExecutorRunning(agentId,DefaultUser.USER));
-        }
-
-        return "index";
+        return "agents";
     }
 
     @PostMapping("/agent/create")
@@ -92,44 +74,6 @@ public class AgentController {
         agentService.deleteAgent(id,DefaultUser.USER);
         return "redirect:/";
     }
-    @PostMapping("/agent/stop")
-    @ResponseBody
-    public ResponseBean stopAgent(@RequestParam Long id) {
-        agentService.stopAgentExecutor(id,DefaultUser.USER);
-        return ResponseBean.success();
-    }
-
-    @PostMapping("/agent/force-stop")
-    @ResponseBody
-    public ResponseBean forceStopAgent(@RequestParam Long id) {
-        agentExecutorService.stopAndRemoveAgentExecutor(id, DefaultUser.USER);
-        return ResponseBean.success();
-    }
-
-    @PostMapping("/agent/tool/stop")
-    @ResponseBody
-    public ResponseBean stopTool(@RequestParam Long agentId, @RequestParam String callId) {
-        agentExecutorService.stopTool(agentId, DefaultUser.USER, callId);
-        return ResponseBean.success();
-    }
-
-    @GetMapping("/api/agent/{id}/running")
-    @ResponseBody
-    public ResponseBean isRunning(@PathVariable Long id) {
-        boolean running = agentService.isAgentExecutorRunning(id, DefaultUser.USER);
-        return ResponseBean.success(running);
-    }
-
-    @PutMapping("/api/agents/{id}/thinking")
-    @ResponseBody
-    public ResponseBean updateThinking(@PathVariable Long id, @RequestBody Map<String, Boolean> body) {
-        Boolean enabled = body.get("enabled");
-        if (enabled == null) {
-            return ResponseBean.fail("参数错误");
-        }
-        agentService.updateThinking(id, enabled,DefaultUser.USER);
-        return ResponseBean.success();
-    }
 
     @PostMapping("/agent/update")
     public String updateAgent(@RequestParam Long id,
@@ -145,21 +89,5 @@ public class AgentController {
         String toolsStr = tools != null ? tools : "";
         agentService.updateAgent(DefaultUser.USER,id, name, description, toolsStr, maxMemoryRecords, maxToolInvocations, aiModelId, enableThinking, vectorToolSearch, vectorToolSearchMaxResults);
         return "redirect:/?agentId=" + id;
-    }
-
-    @PostMapping("/chat")
-    public String chat(@RequestParam Long agentId,
-                      Model model) {
-        Agent agent = agentService.getAgentById(agentId);
-        return "redirect:/?agentId=" + agentId;
-    }
-
-
-
-    @GetMapping("/chat/clear")
-    public String clearChat(@RequestParam Long agentId) {
-        chatHistoryMapper.deleteByAgentId(agentId);
-        chatMemoryMapper.updateStatusByAgentId(agentId,2);
-        return "redirect:/?agentId=" + agentId;
     }
 }

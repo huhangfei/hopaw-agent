@@ -83,6 +83,7 @@ public class DatabaseInitializer implements CommandLineRunner {
                     "message_id TEXT NOT NULL, " +
                     "message_json TEXT NOT NULL, " +
                     "status INTEGER DEFAULT 0, " +
+                    "session_id TEXT, " +
                     "create_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP" +
                     ")");
             stmt.execute("CREATE INDEX IF NOT EXISTS idx_chat_memory_agent ON chat_memory(agent_id)");
@@ -91,17 +92,17 @@ public class DatabaseInitializer implements CommandLineRunner {
 
             stmt.execute("CREATE TABLE IF NOT EXISTS long_term_memory (" +
                     "id INTEGER PRIMARY KEY AUTOINCREMENT, " +
-                    "agent_id TEXT NOT NULL, " +
                     "memory TEXT, " +
                     "memory_hash TEXT, " +
                     "parent_id INTEGER, " +
                     "user_id TEXT, " +
                     "memory_type TEXT, " +
                     "summary TEXT, " +
+                    "session_id TEXT, " +
                     "create_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP, " +
                     "update_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP" +
                     ")");
-            stmt.execute("CREATE INDEX IF NOT EXISTS idx_long_term_memory_agent ON long_term_memory(agent_id)");
+            stmt.execute("CREATE INDEX IF NOT EXISTS idx_long_term_memory_session ON long_term_memory(session_id)");
             stmt.execute("CREATE INDEX IF NOT EXISTS idx_long_term_memory_parent ON long_term_memory(parent_id)");
 
             stmt.execute("CREATE TABLE IF NOT EXISTS ai_model_providers (" +
@@ -136,6 +137,7 @@ public class DatabaseInitializer implements CommandLineRunner {
                     "output_tokens INTEGER DEFAULT 0, " +
                     "total_tokens INTEGER DEFAULT 0, " +
                     "user_id TEXT, " +
+                    "session_id TEXT, " +
                     "source TEXT, " +
                     "create_time DATETIME DEFAULT CURRENT_TIMESTAMP" +
                     ")");
@@ -160,6 +162,7 @@ public class DatabaseInitializer implements CommandLineRunner {
                     "ext_params TEXT, " +
                     "user_id TEXT, " +
                     "agent_id TEXT, " +
+                    "session_id TEXT, " +
                     "builtin INTEGER DEFAULT 0, " +
                     "create_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP, " +
                     "update_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP" +

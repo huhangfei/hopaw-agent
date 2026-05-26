@@ -2,21 +2,20 @@ package com.agent.hopaw.biz.tool.agenttask;
 
 
 import com.agent.hopaw.infra.model.entity.ScheduledTask;
-import com.agent.hopaw.infra.service.ScheduledTaskService;
+import com.agent.hopaw.infra.service.IScheduledTaskService;
 import com.agent.hopaw.infra.util.InvocationParametersWrapper;
 import dev.langchain4j.agent.tool.P;
 import dev.langchain4j.agent.tool.Tool;
 import dev.langchain4j.invocation.InvocationParameters;
 import com.agent.hopaw.infra.tool.AgentTool;
 import org.springframework.stereotype.Component;
-import org.springframework.stereotype.Service;
 
 import java.time.format.DateTimeFormatter;
 import java.util.List;
 @Component("agentTaskTool")
 public class AgentTaskTool implements AgentTool {
-    private final ScheduledTaskService scheduledTaskService;
-    public AgentTaskTool(ScheduledTaskService scheduledTaskService) {
+    private final IScheduledTaskService scheduledTaskService;
+    public AgentTaskTool(IScheduledTaskService scheduledTaskService) {
         this.scheduledTaskService = scheduledTaskService;
     }
     @Override

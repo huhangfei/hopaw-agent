@@ -19,11 +19,12 @@ import java.util.concurrent.atomic.AtomicReference;
 /**
  * SSH远程连接工具插件
  * 注意：作为插件使用时，不要加 @Component 注解，由插件加载器实例化并通过 @Autowired 注入依赖
+ * @author hhf
  */
 public class SshTool implements AgentTool {
     private static final Logger logger = LoggerFactory.getLogger(SshTool.class);
-    private static final Map<String, Session> sessionCache = new ConcurrentHashMap<>();
-    
+    private static final Map<String, Session> SESSION_CACHE = new ConcurrentHashMap<>();
+
     @Autowired
     private IAgentExecutorService agentExecutorService;
 
@@ -72,8 +73,8 @@ public class SshTool implements AgentTool {
         int portVal = (port != null && port > 0) ? port : 22;
         String sessionKey = host + ":" + portVal;
 
-        if (sessionCache.containsKey(sessionKey)) {
-            Session existing = sessionCache.get(sessionKey);
+        if (SESSION_CACHE.containsKey(sessionKey)) {
+            Session existing = SESSION_CACHE.get(sessionKey);
             if (existing.isConnected()) {
                 return "成功：已存在连接，sessionKey=" + sessionKey;
             }
@@ -86,7 +87,7 @@ public class SshTool implements AgentTool {
             session.setConfig("StrictHostKeyChecking", "no");
             session.connect(30000);
 
-            sessionCache.put(sessionKey, session);
+            SESSION_CACHE.put(sessionKey, session);
             return "成功：连接已建立，sessionKey=" + sessionKey;
         } catch (JSchException e) {
             logger.error("SSH connection failed", e);
@@ -106,14 +107,14 @@ public class SshTool implements AgentTool {
             return "错误：command 不能为空";
         }
 
-        Session session = sessionCache.get(sessionKey);
+        Session session = SESSION_CACHE.get(sessionKey);
         if (session == null || !session.isConnected()) {
             return "错误：会话未连接或不存在，sessionKey=" + sessionKey;
         }
         InvocationParametersWrapper invocationParametersWrapper = InvocationParametersWrapper.create(invocationParameters);
         String toolCallId = invocationParametersWrapper.getToolCallId();
         String userId = invocationParametersWrapper.getUserId();
-        Long agentId = invocationParametersWrapper.getAgentId();
+        String sessionId = invocationParametersWrapper.getSessionId();
         int timeoutSec = (timeout != null && timeout > 0) ? timeout : 60;
         long deadline = System.currentTimeMillis() + timeoutSec * 1000L;
         AtomicReference<Boolean> userCancelled = new AtomicReference<>(false);
@@ -127,25 +128,27 @@ public class SshTool implements AgentTool {
             int connectTimeout = Math.min(timeoutSec * 1000, 30000);
             channel.connect(connectTimeout);
 
-            agentExecutorService.addToolStopHook(agentId, userId, toolCallId, (callId) -> { userCancelled.set(true); channel.disconnect();  });
+            agentExecutorService.addToolStopHook(sessionId, toolCallId, (callId) -> { userCancelled.set(true); channel.disconnect();  });
 
             StringBuilder output = new StringBuilder();
             byte[] tmp = new byte[1024];
             boolean timedOut = false;
             while (true) {
                 while (in.available() > 0) {
-                    if (agentExecutorService.toolIsCancelled(agentId, userId, toolCallId)) {
+                    if (agentExecutorService.toolIsCancelled(sessionId, toolCallId)) {
                         output.append("退出: 用户取消执行");
                         break;
                     }
 
                     int i = in.read(tmp, 0, 1024);
-                    if (i < 0) break;
+                    if (i < 0) {
+                        break;
+                    }
                     String msg = new String(tmp, 0, i);
                     output.append(msg);
-                    agentExecutorService.sendToolRunningContent(agentId, userId, toolCallId, msg);
+                    agentExecutorService.sendToolRunningContent(sessionId, toolCallId, msg);
                 }
-                if (agentExecutorService.toolIsCancelled(agentId, userId, toolCallId)) {
+                if (agentExecutorService.toolIsCancelled(sessionId, toolCallId)) {
                     output.append("退出: 用户取消执行");
                     break;
                 }
@@ -185,14 +188,13 @@ public class SshTool implements AgentTool {
             return "错误：sessionKey、localPath、remotePath 不能为空";
         }
 
-        Session session = sessionCache.get(sessionKey);
+        Session session = SESSION_CACHE.get(sessionKey);
         if (session == null || !session.isConnected()) {
             return "错误：会话未连接或不存在，sessionKey=" + sessionKey;
         }
 
         InvocationParametersWrapper wrapper = InvocationParametersWrapper.create(invocationParameters);
-        Long agentId = wrapper.getAgentId();
-        String userId = wrapper.getUserId();
+        String sessionId = wrapper.getSessionId();
         String toolCallId = wrapper.getToolCallId();
 
         int timeoutSec = (timeout != null && timeout > 0) ? timeout : 300;
@@ -200,12 +202,11 @@ public class SshTool implements AgentTool {
         AtomicReference<Boolean> userCancelled = new AtomicReference<>(false);
 
         try {
-            SftpProgressMonitor monitor = new SftpProgressReporter(
-                    agentExecutorService, agentId, userId, toolCallId, "上传");
+            SftpProgressMonitor monitor = new SftpProgressReporter(agentExecutorService, sessionId, toolCallId, "上传");
             java.util.concurrent.Future<String> future = executor.submit(() -> {
             ChannelSftp sftp = (ChannelSftp) session.openChannel("sftp");
             sftp.connect(Math.min(timeoutSec * 1000, 30000));
-            agentExecutorService.addToolStopHook(agentId, userId, toolCallId, (callId) -> {userCancelled.set(true);sftp.disconnect(); });
+            agentExecutorService.addToolStopHook(sessionId, toolCallId, (callId) -> {userCancelled.set(true);sftp.disconnect(); });
 
             sftp.put(localPath, remotePath, monitor);
             sftp.disconnect();
@@ -237,14 +238,13 @@ public class SshTool implements AgentTool {
             return "错误：sessionKey、remotePath、localPath 不能为空";
         }
 
-        Session session = sessionCache.get(sessionKey);
+        Session session = SESSION_CACHE.get(sessionKey);
         if (session == null || !session.isConnected()) {
             return "错误：会话未连接或不存在，sessionKey=" + sessionKey;
         }
 
         InvocationParametersWrapper wrapper = InvocationParametersWrapper.create(invocationParameters);
-        Long agentId = wrapper.getAgentId();
-        String userId = wrapper.getUserId();
+        String sessionId = wrapper.getSessionId();
         String toolCallId = wrapper.getToolCallId();
         AtomicReference<Boolean> userCancelled = new AtomicReference<>(false);
 
@@ -252,11 +252,11 @@ public class SshTool implements AgentTool {
         ExecutorService executor = Executors.newSingleThreadExecutor();
         try {
             SftpProgressMonitor monitor = new SftpProgressReporter(
-                    agentExecutorService, agentId, userId, toolCallId, "下载");
+                    agentExecutorService, sessionId, toolCallId, "下载");
             java.util.concurrent.Future<String> future = executor.submit(() -> {
             ChannelSftp sftp = (ChannelSftp) session.openChannel("sftp");
                 sftp.connect(Math.min(timeoutSec * 1000, 30000));
-            agentExecutorService.addToolStopHook(agentId, userId, toolCallId, (callId) -> {userCancelled.set(true);sftp.disconnect(); });
+            agentExecutorService.addToolStopHook(sessionId, toolCallId, (callId) -> {userCancelled.set(true);sftp.disconnect(); });
             sftp.get(remotePath, localPath, monitor);
             sftp.disconnect();
             return "成功：文件已下载至 " + localPath;
@@ -282,7 +282,7 @@ public class SshTool implements AgentTool {
             return "错误：sessionKey 不能为空";
         }
 
-        Session session = sessionCache.remove(sessionKey);
+        Session session = SESSION_CACHE.remove(sessionKey);
         if (session != null && session.isConnected()) {
             session.disconnect();
             return "成功：连接已断开，sessionKey=" + sessionKey;
@@ -294,14 +294,14 @@ public class SshTool implements AgentTool {
     @Tool("断开所有SSH远程连接，清理所有会话资源")
     public String sshDisconnectAll() {
         int count = 0;
-        for (Map.Entry<String, Session> entry : sessionCache.entrySet()) {
+        for (Map.Entry<String, Session> entry : SESSION_CACHE.entrySet()) {
             Session session = entry.getValue();
             if (session != null && session.isConnected()) {
                 session.disconnect();
                 count++;
             }
         }
-        sessionCache.clear();
+        SESSION_CACHE.clear();
         return "成功：已断开全部 " + count + " 个连接";
     }
 
@@ -312,19 +312,17 @@ public class SshTool implements AgentTool {
 
     private static class SftpProgressReporter implements SftpProgressMonitor {
         private final IAgentExecutorService executorService;
-        private final Long agentId;
-        private final String userId;
+        private final String sessionId;
         private final String toolCallId;
         private final String direction;
         private long max;
         private long transferred;
         private int lastPercent = -1;
 
-        SftpProgressReporter(IAgentExecutorService executorService, Long agentId, String userId,
+        SftpProgressReporter(IAgentExecutorService executorService, String sessionId,
                              String toolCallId, String direction) {
             this.executorService = executorService;
-            this.agentId = agentId;
-            this.userId = userId;
+            this.sessionId = sessionId;
             this.toolCallId = toolCallId;
             this.direction = direction;
         }
@@ -334,7 +332,7 @@ public class SshTool implements AgentTool {
             this.max = max;
             if (max > 0) {
                 String msg = "[" + direction + "] 开始传输，文件大小: " + formatSize(max);
-                executorService.sendToolRunningContent(agentId, userId, toolCallId, msg);
+                executorService.sendToolRunningContent(sessionId, toolCallId, msg);
             }
         }
 
@@ -347,7 +345,7 @@ public class SshTool implements AgentTool {
                     lastPercent = percent;
                     String msg = "\n[" + direction + "进度] " + percent + "% ("
                             + formatSize(transferred) + " / " + formatSize(max) + ")";
-                    executorService.sendToolRunningContent(agentId, userId, toolCallId, msg);
+                    executorService.sendToolRunningContent(sessionId, toolCallId, msg);
                 }
             }
             return true;
@@ -356,13 +354,19 @@ public class SshTool implements AgentTool {
         @Override
         public void end() {
             String msg = "\n[" + direction + "] 传输完成";
-            executorService.sendToolRunningContent(agentId, userId, toolCallId, msg);
+            executorService.sendToolRunningContent(sessionId, toolCallId, msg);
         }
 
         private String formatSize(long bytes) {
-            if (bytes < 1024) return bytes + "B";
-            if (bytes < 1024 * 1024) return String.format("%.1fKB", bytes / 1024.0);
-            if (bytes < 1024 * 1024 * 1024) return String.format("%.1fMB", bytes / (1024.0 * 1024));
+            if (bytes < 1024) {
+                return bytes + "B";
+            }
+            if (bytes < 1024 * 1024) {
+                return String.format("%.1fKB", bytes / 1024.0);
+            }
+            if (bytes < 1024 * 1024 * 1024) {
+                return String.format("%.1fMB", bytes / (1024.0 * 1024));
+            }
             return String.format("%.1fGB", bytes / (1024.0 * 1024 * 1024));
         }
     }

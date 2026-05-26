@@ -25,6 +25,9 @@ public class InvocationParametersWrapper {
     public  String getRequestId(){
         return invocationParameters.get("requestId");
     }
+    public  String getSessionId(){
+        return invocationParameters.get("sessionId");
+    }
     public  InvocationParametersWrapper setUserId(String userId){
          invocationParameters.put("userId",userId);
          return this;

@@ -1,18 +1,18 @@
 package com.agent.hopaw.infra.model.dto;
 
-import com.agent.hopaw.infra.model.entity.Agent;
-
 import java.util.List;
 
+/**
+ * @author hhf
+ */
 public class UserRequest {
+    private String sessionId;
     private String userId;
     private Long agentId;
     private String message;
-
     private List<String> skillNames;
-
-    private Agent agent;
-
+    private Long aiModelId;
+    private Boolean enableThinking;
     public String getUserId() {
         return userId;
     }
@@ -45,11 +45,27 @@ public class UserRequest {
         this.skillNames = skillNames;
     }
 
-    public Agent getAgent() {
-        return agent;
+    public String getSessionId() {
+        return sessionId;
     }
 
-    public void setAgent(Agent agent) {
-        this.agent = agent;
+    public void setSessionId(String sessionId) {
+        this.sessionId = sessionId;
+    }
+
+    public Long getAiModelId() {
+        return aiModelId;
+    }
+
+    public void setAiModelId(Long aiModelId) {
+        this.aiModelId = aiModelId;
+    }
+
+    public Boolean getEnableThinking() {
+        return enableThinking;
+    }
+
+    public void setEnableThinking(Boolean enableThinking) {
+        this.enableThinking = enableThinking;
     }
 }

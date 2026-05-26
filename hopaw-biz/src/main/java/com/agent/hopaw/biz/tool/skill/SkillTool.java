@@ -1,7 +1,7 @@
 package com.agent.hopaw.biz.tool.skill;
 
 import com.agent.hopaw.infra.model.dto.SkillInfo;
-import com.agent.hopaw.infra.service.SkillService;
+import com.agent.hopaw.infra.service.ISkillService;
 import dev.langchain4j.agent.tool.P;
 import dev.langchain4j.agent.tool.Tool;
 import com.agent.hopaw.infra.tool.AgentTool;
@@ -9,12 +9,15 @@ import org.springframework.stereotype.Component;
 
 import java.util.List;
 
+/**
+ * @author hhf
+ */
 @Component("skillTool")
 public class SkillTool implements AgentTool {
 
-    private final SkillService skillService;
+    private final ISkillService skillService;
 
-    public SkillTool(SkillService skillService) {
+    public SkillTool(ISkillService skillService) {
         this.skillService = skillService;
     }
 

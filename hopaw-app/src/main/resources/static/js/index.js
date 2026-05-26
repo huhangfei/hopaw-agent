@@ -7,6 +7,7 @@ var lastMessageType = null;
 var streamingMessages = {};
 var toolCallTimers = {};
 var loadingMessageDiv = null;
+var currentModelId = null;
 
 if (typeof marked !== 'undefined') {
     marked.setOptions({
@@ -322,7 +323,7 @@ function handleToolCall(data, requestId) {
 
 function showLoadingMessage() {
     if (loadingMessageDiv) return;
-    var agentName = (function(){ var s = document.querySelector('.chat-header .agent-select'); return s ? s.options[s.selectedIndex].text : 'Agent'; })();
+    var agentName = (function(){ var s = document.querySelector('.agent-select-toolbar'); return s ? s.options[s.selectedIndex].text : 'Agent'; })();
     var messagesDiv = document.getElementById('chatMessages');
 
     loadingMessageDiv = document.createElement('div');
@@ -357,7 +358,7 @@ function escapeHtml(text) {
 
 function handleThinking(data, requestId) {
     var messagesDiv = document.getElementById('chatMessages');
-    var agentName = (function(){ var s = document.querySelector('.chat-header .agent-select'); return s ? s.options[s.selectedIndex].text : 'Agent'; })();
+    var agentName = (function(){ var s = document.querySelector('.agent-select-toolbar'); return s ? s.options[s.selectedIndex].text : 'Agent'; })();
     
     var msgState = streamingMessages[requestId];
     if (!msgState) {
@@ -409,7 +410,7 @@ function handleThinking(data, requestId) {
 
 function handleStreamingChunk(content, requestId) {
     var messagesDiv = document.getElementById('chatMessages');
-    var agentName = (function(){ var s = document.querySelector('.chat-header .agent-select'); return s ? s.options[s.selectedIndex].text : 'Agent'; })();
+    var agentName = (function(){ var s = document.querySelector('.agent-select-toolbar'); return s ? s.options[s.selectedIndex].text : 'Agent'; })();
     
     var msgState = streamingMessages[requestId];
     if (!msgState) {
@@ -461,7 +462,7 @@ function handleStreamingChunk(content, requestId) {
 }
 
 function handleStreamingDone(userMessage, response, requestId) {
-    var agentName = (function(){ var s = document.querySelector('.chat-header .agent-select'); return s ? s.options[s.selectedIndex].text : 'Agent'; })();
+    var agentName = (function(){ var s = document.querySelector('.agent-select-toolbar'); return s ? s.options[s.selectedIndex].text : 'Agent'; })();
     var msgState = streamingMessages[requestId];
     if (!msgState || !msgState.currentStreamingMessage) {
         isStreaming = false;
@@ -496,7 +497,7 @@ function handleStreamingDone(userMessage, response, requestId) {
 
 function handleStreamingError(errorMessage, requestId) {
     var messagesDiv = document.getElementById('chatMessages');
-    var agentName = (function(){ var s = document.querySelector('.chat-header .agent-select'); return s ? s.options[s.selectedIndex].text : 'Agent'; })();
+    var agentName = (function(){ var s = document.querySelector('.agent-select-toolbar'); return s ? s.options[s.selectedIndex].text : 'Agent'; })();
 
     var errorDiv = document.createElement('div');
     errorDiv.className = 'message agent error-message';
@@ -571,7 +572,8 @@ function sendMessage() {
             var payload = {
                 agentId: currentAgentId.toString(),
                 message: message,
-                skills: getSelectedSkills()
+                skills: getSelectedSkills(),
+                modelId: currentModelId
             };
 
             ws.send(JSON.stringify(payload));
@@ -985,6 +987,7 @@ window.onload = function() {
     }
 
     loadChatSkills();
+    loadModelSelector();
 
     var skillBtn = document.getElementById('skillSelectBtn');
     if (skillBtn) {
@@ -995,10 +998,26 @@ window.onload = function() {
         });
     }
 
+    var modelBtn = document.getElementById('modelSelectBtn');
+    if (modelBtn) {
+        modelBtn.addEventListener('click', function(e) {
+            e.stopPropagation();
+            var menu = document.getElementById('modelDropdownMenu');
+            var skillsMenu = document.getElementById('skillsDropdownMenu');
+            if (skillsMenu) skillsMenu.classList.remove('open');
+            menu.classList.toggle('open');
+        });
+    }
+
     document.addEventListener('click', function(e) {
         var dropdown = document.getElementById('skillsDropdown');
         if (dropdown && !dropdown.contains(e.target)) {
             var menu = document.getElementById('skillsDropdownMenu');
+            if (menu) menu.classList.remove('open');
+        }
+        var modelDropdown = document.getElementById('modelDropdown');
+        if (modelDropdown && !modelDropdown.contains(e.target)) {
+            var menu = document.getElementById('modelDropdownMenu');
             if (menu) menu.classList.remove('open');
         }
     });
@@ -1111,4 +1130,83 @@ function getSelectedSkills() {
         names.push(cb.getAttribute('data-folder'));
     });
     return names;
+}
+
+function loadModelSelector() {
+    var providerList = document.getElementById('modelProviderList');
+    if (!providerList) return;
+
+    fetch('/api/models/all')
+        .then(function(r) { return r.json(); })
+        .then(function(allModels) {
+            fetch('/api/providers')
+                .then(function(r) { return r.json(); })
+                .then(function(providers) {
+                    var configuredProviders = providers.filter(function(p) {
+                        return p.apiKey && p.url;
+                    });
+
+                    if (configuredProviders.length === 0) {
+                        providerList.innerHTML = '<div class="model-dropdown-empty">暂无已配置的模型提供商</div>';
+                        return;
+                    }
+
+                    var html = '';
+                    configuredProviders.forEach(function(provider) {
+                        var models = allModels[provider.id] || [];
+                        html += '<div class="model-provider-item">';
+                        html += '<span class="model-provider-item-name">' + escapeHtml(provider.name) + '</span>';
+                        html += '<span class="model-provider-item-arrow">▶</span>';
+                        html += '<div class="model-sub-menu">';
+                        if (models.length === 0) {
+                            html += '<div class="model-dropdown-empty">暂无模型</div>';
+                        } else {
+                            models.forEach(function(model) {
+                                var activeClass = (currentModelId === model.id) ? ' active' : '';
+                                html += '<div class="model-sub-item' + activeClass + '" data-model-id="' + model.id + '" data-model-name="' + escapeHtml(model.modelName) + '">';
+                                html += '<span class="model-sub-item-check">✓</span>';
+                                html += '<span class="model-sub-item-name">' + escapeHtml(model.modelName) + '</span>';
+                                html += '</div>';
+                            });
+                        }
+                        html += '</div>';
+                        html += '</div>';
+                    });
+                    providerList.innerHTML = html;
+
+                    var subItems = providerList.querySelectorAll('.model-sub-item');
+                    subItems.forEach(function(item) {
+                        item.addEventListener('click', function(e) {
+                            e.stopPropagation();
+                            var modelId = this.getAttribute('data-model-id');
+                            var modelName = this.getAttribute('data-model-name');
+                            selectModel(modelId, modelName);
+                        });
+                    });
+                });
+        });
+}
+
+function selectModel(modelId, modelName) {
+    currentModelId = parseInt(modelId);
+    var nameSpan = document.getElementById('selectedModelName');
+    var btn = document.getElementById('modelSelectBtn');
+    if (nameSpan) {
+        nameSpan.textContent = modelName;
+    }
+    if (btn) {
+        btn.classList.add('has-selected');
+    }
+
+    var allSubItems = document.querySelectorAll('.model-sub-item');
+    allSubItems.forEach(function(item) {
+        if (item.getAttribute('data-model-id') == modelId) {
+            item.classList.add('active');
+        } else {
+            item.classList.remove('active');
+        }
+    });
+
+    var menu = document.getElementById('modelDropdownMenu');
+    if (menu) menu.classList.remove('open');
 }

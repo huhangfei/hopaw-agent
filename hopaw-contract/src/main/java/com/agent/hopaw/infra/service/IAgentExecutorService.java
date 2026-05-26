@@ -12,36 +12,24 @@ import java.util.function.Consumer;
 import java.util.stream.Collectors;
 
 public interface IAgentExecutorService {
-    void addToolStopHook(Long agentId, String userId, String callId, Consumer<String> hook);
+    void addToolStopHook(String sessionId, String callId, Consumer<String> hook);
 
-    void sendToolRunningContent(Long agentId, String userId, String callId, Object resultPartial);
+    void sendToolRunningContent(String sessionId, String callId, Object resultPartial);
 
-    void stopTool(Long agentId, String userId, String callId);
+    void stopTool(String sessionId, String callId);
 
-    boolean toolIsCancelled(Long agentId, String userId, String callId);
+    boolean toolIsCancelled(String sessionId, String callId);
 
     void clearAndStopAgentExecutorByAiModel(Long aiModelId);
 
-    void stopAgentExecutor(Long agentId, String userId);
+    void stopAgentExecutor(String sessionId);
 
-    void stopAndRemoveAgentExecutor(Long agentId, String userId);
+    void stopAndRemoveAgentExecutor(String sessionId);
 
-    boolean isAgentExecutorRunning(Long agentId, String userId);
+    boolean isAgentExecutorRunning(String sessionId);
 
     IAgentExecutor getAgentExecutor(UserRequest userRequest);
 
     IAgentExecutor createAgentExecutor(UserRequest userRequest);
 
-    String getSystemMessage(Agent agent, String userId, List<AgentTool> selectedTools, List<String> skillNames);
-
-    default String getToolKeywords(List<AgentTool> selectedTools) {
-        return selectedTools.stream().map(AgentTool::getKeyword).collect(Collectors.joining(","));
-    }
-
-    default List<String> parseToolNames(String toolsStr) {
-        if (toolsStr == null || toolsStr.isEmpty()) {
-            return new ArrayList<>();
-        }
-        return Arrays.asList(toolsStr.split(","));
-    }
 }

@@ -12,6 +12,7 @@
         <result property="extParams" column="ext_params"/>
         <result property="userId" column="user_id"/>
         <result property="agentId" column="agent_id"/>
+        <result property="sessionId" column="session_id"/>
         <result property="builtin" column="builtin"/>
         <result property="createTime" column="create_time"/>
         <result property="updateTime" column="update_time"/>
@@ -47,8 +48,8 @@
         <selectKey keyProperty="id" resultType="long" order="AFTER">
             SELECT last_insert_rowid()
         </selectKey>
-        INSERT INTO scheduled_tasks (task_name, task_type, cron_expression, enabled, description, ext_params, user_id, agent_id, builtin)
-        VALUES (#{taskName}, #{taskType}, #{cronExpression}, #{enabled}, #{description}, #{extParams}, #{userId}, #{agentId}, #{builtin})
+        INSERT INTO scheduled_tasks (task_name, task_type, cron_expression, enabled, description, ext_params, user_id, agent_id, session_id, builtin)
+        VALUES (#{taskName}, #{taskType}, #{cronExpression}, #{enabled}, #{description}, #{extParams}, #{userId}, #{agentId}, #{sessionId}, #{builtin})
     </insert>
 
     <update id="update">
@@ -61,6 +62,7 @@
             ext_params = #{extParams},
             user_id = #{userId},
             agent_id = #{agentId},
+            session_id = #{sessionId},
             builtin = #{builtin},
             update_time = datetime('now', 'localtime')
         WHERE id = #{id}

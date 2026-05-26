@@ -23,11 +23,14 @@
     </parent>
 
     <artifactId>hopaw-biz</artifactId>
-
     <dependencies>
         <dependency>
             <groupId>com.hopaw.agent</groupId>
-            <artifactId>hopaw-infra</artifactId>
+            <artifactId>hopaw-contract</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>com.alibaba.fastjson2</groupId>
+            <artifactId>fastjson2</artifactId>
         </dependency>
         <dependency>
             <groupId>org.springframework.boot</groupId>

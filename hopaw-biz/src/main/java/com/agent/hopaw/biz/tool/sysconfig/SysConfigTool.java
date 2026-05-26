@@ -2,7 +2,7 @@ package com.agent.hopaw.biz.tool.sysconfig;
 
 import com.agent.hopaw.infra.model.dto.ToolConfigItem;
 import com.agent.hopaw.infra.model.entity.SysConfig;
-import com.agent.hopaw.infra.service.SysConfigService;
+import com.agent.hopaw.infra.service.ISysConfigService;
 import dev.langchain4j.agent.tool.P;
 import dev.langchain4j.agent.tool.Tool;
 import com.agent.hopaw.infra.tool.AgentTool;
@@ -13,9 +13,9 @@ import java.util.List;
 
 @Component("sysConfigTool")
 public class SysConfigTool implements AgentTool {
-    private final SysConfigService sysConfigService;
+    private final ISysConfigService sysConfigService;
 
-    public SysConfigTool(SysConfigService sysConfigService) {
+    public SysConfigTool(ISysConfigService sysConfigService) {
         this.sysConfigService = sysConfigService;
     }
 
