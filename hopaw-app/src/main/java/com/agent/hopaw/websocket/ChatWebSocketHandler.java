@@ -77,7 +77,7 @@ public class ChatWebSocketHandler extends TextWebSocketHandler {
 
             UserRequest userRequest = new UserRequest();
             userRequest.setAgentId(agentId);
-            userRequest.setUserId(DefaultUser.USER);
+            userRequest.setUserId(getUserIdFromSession(session));
             userRequest.setMessage(userMessage);
             userRequest.setSkillNames(skillNames);
             userRequest.setSessionId(sessionId);

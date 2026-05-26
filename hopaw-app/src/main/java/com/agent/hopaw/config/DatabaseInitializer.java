@@ -175,12 +175,25 @@ public class DatabaseInitializer implements CommandLineRunner {
                     "agent_id INTEGER NOT NULL, " +
                     "user_id TEXT NOT NULL, " +
                     "title TEXT, " +
+                    "enable_thinking INTEGER DEFAULT 1, " +
+                    "skill_names TEXT, " +
+                    "ai_model_id INTEGER, " +
                     "create_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP, " +
                     "last_update_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP" +
                     ")");
             stmt.execute("CREATE INDEX IF NOT EXISTS idx_chat_sessions_user ON chat_sessions(user_id)");
             stmt.execute("CREATE INDEX IF NOT EXISTS idx_chat_sessions_agent ON chat_sessions(agent_id)");
             stmt.execute("CREATE INDEX IF NOT EXISTS idx_chat_sessions_user_agent ON chat_sessions(user_id, agent_id)");
+
+            try {
+                stmt.execute("ALTER TABLE chat_sessions ADD COLUMN enable_thinking INTEGER DEFAULT 1");
+            } catch (Exception ignored) {}
+            try {
+                stmt.execute("ALTER TABLE chat_sessions ADD COLUMN skill_names TEXT");
+            } catch (Exception ignored) {}
+            try {
+                stmt.execute("ALTER TABLE chat_sessions ADD COLUMN ai_model_id INTEGER");
+            } catch (Exception ignored) {}
 
             log.info("Database tables created");
         }

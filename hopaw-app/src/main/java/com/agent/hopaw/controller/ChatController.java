@@ -44,11 +44,18 @@ public class ChatController {
     @GetMapping("/")
     public String index(@RequestParam(required = false) String sessionId,Model model) {
 
+        model.addAttribute("agentExecutorState", false);
+        model.addAttribute("chatHistory", Collections.emptyList());
+
         List<ChatSession> chatSessions = chatSessionService.getSessionsByUserId(DefaultUser.USER);
         model.addAttribute("chatSessions", chatSessions);
         if(sessionId == null && !chatSessions.isEmpty()){
             sessionId=chatSessions.get(0).getSessionId();
         }
+        List<Agent> agents = agentService.getAllAgents();
+        model.addAttribute("agents", agents);
+
+        Agent selectedAgent=null;
         if(sessionId != null){
             ChatSession session = chatSessionService.getSessionBySessionId(sessionId);
             if(session != null){
@@ -58,14 +65,16 @@ public class ChatController {
                 Collections.reverse(chatHistory);
                 model.addAttribute("chatHistory", chatHistory);
                 model.addAttribute("agentExecutorState", agentExecutorService.isAgentExecutorRunning(session.getSessionId()));
+                selectedAgent=agents.stream().filter(agent -> agent.getId().equals(session.getAgentId())).findFirst().orElse(null);
             }
         }
-        List<Agent> agents = agentService.getAllAgents();
-        model.addAttribute("agents", agents);
+        if(selectedAgent==null && !agents.isEmpty()){
+            selectedAgent=agents.get(0);
+        }
+        model.addAttribute("selectedAgent", selectedAgent);
 
         List<ToolSetInfo> toolSets = agentToolService.getToolSets();
         model.addAttribute("toolSets", toolSets);
-
         return "index";
     }
 

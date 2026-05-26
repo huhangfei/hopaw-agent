@@ -617,6 +617,9 @@ public class AgentExecutor implements IAgentExecutor {
         TokenStream streamingChat(@dev.langchain4j.service.UserMessage List<Content> contents,
                                   // ChatRequestParameters requestParameters, // 模型参数
                                   InvocationParameters invocationParameters);
+
+        //分析用户意图
+        String analyzeUserIntent(@dev.langchain4j.service.UserMessage List<Content> contents);
     }
 
 }
