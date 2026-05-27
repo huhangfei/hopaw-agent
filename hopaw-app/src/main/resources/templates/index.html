@@ -16,37 +16,52 @@
             </div>
             <div class="header-actions">
                 <button class="btn-stop-header" th:attr="onclick=|forceStopAgent(${selectedAgent.id})|" title="强停">
-                    <svg viewBox="0 0 24 24" fill="currentColor"><rect x="4" y="4" width="16" height="16" rx="2"/></svg>
+                    <svg viewBox="0 0 24 24" fill="currentColor">
+                        <rect x="4" y="4" width="16" height="16" rx="2"/>
+                    </svg>
                     强停
                 </button>
                 <div class="header-dropdown">
                     <button class="btn-more" title="更多操作">
-                        <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor"><path d="M12 8c1.1 0 2-.9 2-2s-.9-2-2-2-2 .9-2 2 .9 2 2 2zm0 2c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2zm0 6c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2z"/></svg>
+                        <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor">
+                            <path d="M12 8c1.1 0 2-.9 2-2s-.9-2-2-2-2 .9-2 2 .9 2 2 2zm0 2c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2zm0 6c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2z"/>
+                        </svg>
                     </button>
-                    <div class="dropdown-menu"><div class="dropdown-menu-inner">
-                        <button class="dropdown-item" onclick="showAddModal()">
-                            <svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor"><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/></svg>
-                            添加
-                        </button>
-                        <button class="dropdown-item"
-                                th:attr="onclick=|showEditModal(${selectedAgent.id}, '${#strings.escapeJava(selectedAgent.name)}', '${#strings.escapeJava(selectedAgent.description)}', '${#strings.escapeJava(selectedAgent.tools)}', ${selectedAgent.maxMemoryRecords != null ? selectedAgent.maxMemoryRecords : 20}, ${selectedAgent.maxToolInvocations != null ? selectedAgent.maxToolInvocations : 10}, ${selectedAgent.aiModelId}, ${selectedAgent.enableThinking != null ? selectedAgent.enableThinking : true}, ${selectedAgent.vectorToolSearch != null ? selectedAgent.vectorToolSearch : true}, ${selectedAgent.vectorToolSearchMaxResults != null ? selectedAgent.vectorToolSearchMaxResults : 5})|">
-                            <svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor"><path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/></svg>
-                            编辑
-                        </button>
-                        <button class="dropdown-item" th:attr="onclick=|deleteAgent(${selectedAgent.id})|">
-                            <svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor"><path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/></svg>
-                            删除
-                        </button>
-                        <button class="dropdown-item" th:attr="onclick=|clearHistory(${selectedAgent.id})|">
-                            <svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor"><path d="M19.36 2.72l1.42 1.42-5.72 5.71c1.07 1.54 1.22 3.39.32 4.59L9.06 8.12c1.2-.9 3.05-.75 4.59.32l5.71-5.72zM5.93 17.57c-2.01-2.01-3.24-4.41-3.58-6.65l4.88-2.09 7.44 7.44-2.09 4.88c-2.24-.34-4.64-1.57-6.65-3.58z"/></svg>
-                            清空对话
-                        </button>
-                    </div></div>
+                    <div class="dropdown-menu">
+                        <div class="dropdown-menu-inner">
+                            <button class="dropdown-item" onclick="showAddModal()">
+                                <svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor">
+                                    <path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/>
+                                </svg>
+                                添加
+                            </button>
+                            <button class="dropdown-item"
+                                    th:attr="onclick=|showEditModal(${selectedAgent.id}, '${#strings.escapeJava(selectedAgent.name)}', '${#strings.escapeJava(selectedAgent.description)}', '${#strings.escapeJava(selectedAgent.tools)}', ${selectedAgent.maxMemoryRecords != null ? selectedAgent.maxMemoryRecords : 20}, ${selectedAgent.maxToolInvocations != null ? selectedAgent.maxToolInvocations : 10}, ${selectedAgent.aiModelId}, ${selectedAgent.enableThinking != null ? selectedAgent.enableThinking : true}, ${selectedAgent.vectorToolSearch != null ? selectedAgent.vectorToolSearch : true}, ${selectedAgent.vectorToolSearchMaxResults != null ? selectedAgent.vectorToolSearchMaxResults : 5})|">
+                                <svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor">
+                                    <path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/>
+                                </svg>
+                                编辑
+                            </button>
+                            <button class="dropdown-item" th:attr="onclick=|deleteAgent(${selectedAgent.id})|">
+                                <svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor">
+                                    <path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/>
+                                </svg>
+                                删除
+                            </button>
+                            <button class="dropdown-item" th:attr="onclick=|clearHistory(${selectedAgent.id})|">
+                                <svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor">
+                                    <path d="M19.36 2.72l1.42 1.42-5.72 5.71c1.07 1.54 1.22 3.39.32 4.59L9.06 8.12c1.2-.9 3.05-.75 4.59.32l5.71-5.72zM5.93 17.57c-2.01-2.01-3.24-4.41-3.58-6.65l4.88-2.09 7.44 7.44-2.09 4.88c-2.24-.34-4.64-1.57-6.65-3.58z"/>
+                                </svg>
+                                清空对话
+                            </button>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
         <div th:if="${selectedAgent != null}" class="chat-messages" id="chatMessages">
-            <div th:each="chat : ${chatHistory}" th:if="${chat.messageType != 'tool_call'}" th:switch="${chat.messageType}"
+            <div th:each="chat : ${chatHistory}" th:if="${chat.messageType != 'tool_call'}"
+                 th:switch="${chat.messageType}"
                  th:classappend="${chat.role == 'user' ? 'user' : 'agent'}" class="message">
                 <div th:case="'text'">
                     <div class="message-label" th:text="${chat.role == 'user' ? '你' : selectedAgent.name}"></div>
@@ -78,7 +93,8 @@
                                 <span class="tool-call-status" th:switch="${chat.toolCallStatus}"
                                       th:classappend="${chat.toolCallStatus == 'tool_call_end' ? 'completed' : ''}">
                                         <span th:case="'tool_call_start'">执行中...</span>
-                                        <span th:case="'tool_call_end'" th:text="${chat.toolExecutionTime != null ? '执行完成(' + #numbers.formatDecimal(chat.toolExecutionTime / 1000.0, 1, 1) + 's)' : '执行完成'}">执行完成</span>
+                                        <span th:case="'tool_call_end'"
+                                              th:text="${chat.toolExecutionTime != null ? '执行完成(' + #numbers.formatDecimal(chat.toolExecutionTime / 1000.0, 1, 1) + 's)' : '执行完成'}">执行完成</span>
                                         <span th:case="'tool_call_failed'">执行失败</span>
                                         <span th:case="*" th:text="${chat.toolCallStatus}">执行完成</span>
                                     </span>
@@ -108,7 +124,7 @@
                 <input type="hidden" name="agentId" th:value="${selectedAgent.id}">
                 <div class="chat-input-wrapper" th:classappend="${agentExecutorState} ? 'disabled' : ''">
                     <textarea name="message" id="messageInput" placeholder="输入消息..." required
-                           th:disabled="${agentExecutorState}" rows="2"></textarea>
+                              th:disabled="${agentExecutorState}" rows="2"></textarea>
                     <div class="chat-input-tools">
                         <select class="agent-select agent-select-toolbar" onchange="selectAgent(this.value)">
                             <option th:each="a : ${agents}"
@@ -119,28 +135,40 @@
                         <button type="button" class="chat-btn-deep" id="deepThinkBtn"
                                 th:attr="data-agent-id=${selectedAgent.id}, data-enabled=${selectedAgent.enableThinking}"
                                 th:classappend="${selectedAgent.enableThinking ? 'active' : ''}">
-                            <svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg>
+                            <svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16">
+                                <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/>
+                            </svg>
                             深度思考
                         </button>
+                        <div class="model-dropdown" id="modelDropdown">
+                            <button type="button" class="chat-btn-model" id="modelSelectBtn">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14"
+                                     height="14">
+                                    <rect x="2" y="3" width="20" height="14" rx="2" ry="2"/>
+                                    <line x1="8" y1="21" x2="16" y2="21"/>
+                                    <line x1="12" y1="17" x2="12" y2="21"/>
+                                </svg>
+                                <span id="selectedModelName">模型</span>
+                            </button>
+                            <div class="model-dropdown-menu" id="modelDropdownMenu">
+                                <div class="model-dropdown-list" id="modelProviderList"></div>
+                            </div>
+                            <input type="hidden" id="selectedAiModelId" th:value="${selectedAiModelId}"/>
+                            <input type="hidden" id="currentSessionId" th:value="${currentSessionId}" />
+                        </div>
                         <div class="skills-dropdown" id="skillsDropdown">
                             <button type="button" class="chat-btn-skill" id="skillSelectBtn">
-                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg>
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14"
+                                     height="14">
+                                    <path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/>
+                                </svg>
                                 技能
                             </button>
                             <div class="skills-dropdown-menu" id="skillsDropdownMenu">
                                 <div class="skills-dropdown-list" id="skillsCheckboxList"></div>
                             </div>
                         </div>
-                        <div class="model-dropdown" id="modelDropdown">
-                            <button type="button" class="chat-btn-model" id="modelSelectBtn">
-                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
-                                <span id="selectedModelName">模型</span>
-                            </button>
-                            <div class="model-dropdown-menu" id="modelDropdownMenu">
-                                <div class="model-dropdown-list" id="modelProviderList"></div>
-                            </div>
-                            <input type="hidden" id="selectedAiModelId" th:value="${selectedAiModelId}" />
-                        </div>
+
                     </div>
                 </div>
                 <button type="submit" id="sendBtn" class="chat-form-send-button"
@@ -177,17 +205,18 @@
                                         <span th:case="'tool_call_failed'">❌</span>
                                         <span th:case="*">🔧</span>
                                     </span>
-                                    <span class="tool-call-name" th:text="${chat.toolName}"></span>
-                                    <span class="tool-call-status" th:switch="${chat.toolCallStatus}"
-                                          th:classappend="${chat.toolCallStatus == 'tool_call_end' or chat.toolCallStatus == 'tool_call_failed' ? 'completed' : ''}">
+                                <span class="tool-call-name" th:text="${chat.toolName}"></span>
+                                <span class="tool-call-status" th:switch="${chat.toolCallStatus}"
+                                      th:classappend="${chat.toolCallStatus == 'tool_call_end' or chat.toolCallStatus == 'tool_call_failed' ? 'completed' : ''}">
                                         <span th:case="'tool_call_start'">执行中...</span>
-                                        <span th:case="'tool_call_end'" th:text="${chat.toolExecutionTime != null ? '已完成(' + #numbers.formatDecimal(chat.toolExecutionTime / 1000.0, 1, 1) + 's)' : '已完成'}">已完成</span>
+                                        <span th:case="'tool_call_end'"
+                                              th:text="${chat.toolExecutionTime != null ? '已完成(' + #numbers.formatDecimal(chat.toolExecutionTime / 1000.0, 1, 1) + 's)' : '已完成'}">已完成</span>
                                         <span th:case="'tool_call_failed'">执行失败</span>
                                         <span th:case="*" th:text="${chat.toolCallStatus}">未知</span>
                                     </span>
-                                    <span th:if="${chat.toolCallStatus == 'tool_call_end' or chat.toolCallStatus == 'tool_call_failed'}"
-                                          class="tool-call-toggle">▼</span>
-                                </div>
+                                <span th:if="${chat.toolCallStatus == 'tool_call_end' or chat.toolCallStatus == 'tool_call_failed'}"
+                                      class="tool-call-toggle">▼</span>
+                            </div>
                             <div class="tool-call-body"
                                  th:classappend="${chat.toolCallStatus == 'tool_call_start' ? '' : 'collapsed'}">
                                 <div class="tool-call-args" th:if="${chat.toolArguments}">
@@ -244,11 +273,13 @@
                         <div class="form-row">
                             <div class="form-group">
                                 <label>最大记忆</label>
-                                <input type="number" name="maxMemoryRecords" value="20" min="1" max="100" placeholder="20">
+                                <input type="number" name="maxMemoryRecords" value="20" min="1" max="100"
+                                       placeholder="20">
                             </div>
                             <div class="form-group">
                                 <label>最大工具调用</label>
-                                <input type="number" name="maxToolInvocations" value="10" min="1" max="50" placeholder="10">
+                                <input type="number" name="maxToolInvocations" value="10" min="1" max="50"
+                                       placeholder="10">
                             </div>
                         </div>
                         <div class="form-row">
@@ -278,7 +309,8 @@
                             </div>
                             <div class="form-group form-inline" id="addVectorToolSearchResultsGroup">
                                 <label>最大数量</label>
-                                <input type="number" name="vectorToolSearchMaxResults" value="10" min="1" max="500" placeholder="10">
+                                <input type="number" name="vectorToolSearchMaxResults" value="10" min="1" max="500"
+                                       placeholder="10">
                             </div>
                         </div>
                     </div>
@@ -287,8 +319,12 @@
                             <div class="tool-header">
                                 <label>工具</label>
                                 <div class="tool-toggle-bar">
-                                    <button type="button" class="btn-tool-toggle" onclick="selectAllTools('#addAgentModal .checkbox-group')">全选</button>
-                                    <button type="button" class="btn-tool-toggle" onclick="deselectAllTools('#addAgentModal .checkbox-group')">取消</button>
+                                    <button type="button" class="btn-tool-toggle"
+                                            onclick="selectAllTools('#addAgentModal .checkbox-group')">全选
+                                    </button>
+                                    <button type="button" class="btn-tool-toggle"
+                                            onclick="deselectAllTools('#addAgentModal .checkbox-group')">取消
+                                    </button>
                                 </div>
                             </div>
                             <div class="checkbox-group">
@@ -301,11 +337,13 @@
                                                 <span th:utext="${ts.icon}"></span>
                                             </th:block>
                                             <th:block th:unless="${ts.iconIsSvgCode()}">
-                                                <img th:src="@{/icons/tools/__${ts.icon}__}" alt="icon" onerror="this.style.display='none'">
+                                                <img th:src="@{/icons/tools/__${ts.icon}__}" alt="icon"
+                                                     onerror="this.style.display='none'">
                                             </th:block>
                                         </div>
                                         <span class="tool-item-name" th:text="${ts.name}"></span>
-                                        <span class="tool-item-count" th:text="${#lists.size(ts.tools)} + ' 个方法'"></span>
+                                        <span class="tool-item-count"
+                                              th:text="${#lists.size(ts.tools)} + ' 个方法'"></span>
                                     </div>
                                     <span class="tool-item-desc" th:text="${ts.description}"></span>
                                 </label>
@@ -353,7 +391,8 @@
                         <div class="form-row">
                             <div class="form-group">
                                 <label>最大记忆</label>
-                                <input type="number" name="maxMemoryRecords" id="editMaxMemoryRecords" value="20" min="1"
+                                <input type="number" name="maxMemoryRecords" id="editMaxMemoryRecords" value="20"
+                                       min="1"
                                        max="50000000" placeholder="20">
                             </div>
                             <div class="form-group">
@@ -389,7 +428,9 @@
                             </div>
                             <div class="form-group form-inline" id="editVectorToolSearchResultsGroup">
                                 <label>最大数量</label>
-                                <input type="number" name="vectorToolSearchMaxResults" id="editVectorToolSearchMaxResults" value="10" min="1" max="500" placeholder="10">
+                                <input type="number" name="vectorToolSearchMaxResults"
+                                       id="editVectorToolSearchMaxResults" value="10" min="1" max="500"
+                                       placeholder="10">
                             </div>
                         </div>
                     </div>
@@ -398,25 +439,32 @@
                             <div class="tool-header">
                                 <label>工具</label>
                                 <div class="tool-toggle-bar">
-                                    <button type="button" class="btn-tool-toggle" onclick="selectAllTools('#editToolList')">全选</button>
-                                    <button type="button" class="btn-tool-toggle" onclick="deselectAllTools('#editToolList')">取消</button>
+                                    <button type="button" class="btn-tool-toggle"
+                                            onclick="selectAllTools('#editToolList')">全选
+                                    </button>
+                                    <button type="button" class="btn-tool-toggle"
+                                            onclick="deselectAllTools('#editToolList')">取消
+                                    </button>
                                 </div>
                             </div>
                             <div class="checkbox-group" id="editToolList">
                                 <label th:each="ts : ${toolSets}" class="checkbox-item">
                                     <div class="tool-item-row">
-                                        <input type="checkbox" name="tools" th:value="${ts.name}" class="edit-tool-checkbox">
+                                        <input type="checkbox" name="tools" th:value="${ts.name}"
+                                               class="edit-tool-checkbox">
                                         <div class="tool-item-icon">
                                             <!-- 判断 icon 是否为 SVG 内容 -->
                                             <th:block th:if="${ts.iconIsSvgCode()}">
                                                 <span th:utext="${ts.icon}"></span>
                                             </th:block>
                                             <th:block th:unless="${ts.iconIsSvgCode()}">
-                                                <img th:src="@{/icons/tools/__${ts.icon}__}" alt="icon" onerror="this.style.display='none'">
+                                                <img th:src="@{/icons/tools/__${ts.icon}__}" alt="icon"
+                                                     onerror="this.style.display='none'">
                                             </th:block>
                                         </div>
                                         <span class="tool-item-name" th:text="${ts.name}"></span>
-                                        <span class="tool-item-count" th:text="${#lists.size(ts.tools)} + ' 个方法'"></span>
+                                        <span class="tool-item-count"
+                                              th:text="${#lists.size(ts.tools)} + ' 个方法'"></span>
                                     </div>
                                     <span class="tool-item-desc" th:text="${ts.description}"></span>
                                 </label>
@@ -444,6 +492,7 @@
     <script th:src="@{/js/chart.umd.min.js}"></script>
     <script th:inline="javascript">
         setCurrentAgentId(/*[[${selectedAgentId}]]*/ null);
+
     </script>
 </th:block>
 </body>

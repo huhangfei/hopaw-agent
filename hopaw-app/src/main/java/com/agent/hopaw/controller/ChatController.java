@@ -57,17 +57,17 @@ public class ChatController {
 
         Agent selectedAgent=null;
         Long aiModelId=null;
+        Boolean enableThinking=true;
         if(sessionId != null){
             ChatSession session = chatSessionService.getSessionBySessionId(sessionId);
             if(session != null){
-                model.addAttribute("currentSessionId", sessionId);
-                model.addAttribute("currentSession", session);
                 List<ChatHistory> chatHistory = chatHistoryMapper.findBySessionId(sessionId, 100);
                 Collections.reverse(chatHistory);
                 model.addAttribute("chatHistory", chatHistory);
                 model.addAttribute("agentExecutorState", agentExecutorService.isAgentExecutorRunning(session.getSessionId()));
                 selectedAgent=agents.stream().filter(agent -> agent.getId().equals(session.getAgentId())).findFirst().orElse(null);
                 aiModelId=session.getAiModelId();
+                enableThinking=session.getEnableThinking();
             }
         }
         if(selectedAgent==null && !agents.isEmpty()){
@@ -77,8 +77,10 @@ public class ChatController {
             aiModelId=selectedAgent.getAiModelId();
         }
         model.addAttribute("selectedAgent", selectedAgent);
+        model.addAttribute("selectedAgentId", selectedAgent.getId());
         model.addAttribute("selectedAiModelId", aiModelId);
-
+        model.addAttribute("enableThinking", enableThinking);
+        model.addAttribute("currentSessionId", sessionId);
         List<ToolSetInfo> toolSets = agentToolService.getToolSets();
         model.addAttribute("toolSets", toolSets);
         return "index";

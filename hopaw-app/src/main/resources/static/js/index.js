@@ -8,6 +8,7 @@ var streamingMessages = {};
 var toolCallTimers = {};
 var loadingMessageDiv = null;
 var currentModelId = null;
+var currentSessionId = null;
 
 if (typeof marked !== 'undefined') {
     marked.setOptions({
@@ -55,14 +56,14 @@ function setCurrentAgentId(agentId) {
     currentAgentId = agentId;
 }
 var lastDataType='';
-function connectWebSocket(agentId) {
+function connectWebSocket() {
     var protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-    var wsUrl = protocol + '//' + window.location.host + '/ws/chat/' + agentId;
+    var wsUrl = protocol + '//' + window.location.host + '/ws/chat';
 
     ws = new WebSocket(wsUrl);
 
     ws.onopen = function() {
-        console.log('WebSocket 连接已建立, agentId:', agentId);
+        console.log('WebSocket 连接已建立');
     };
     
     ws.onmessage = function(event) {
@@ -97,7 +98,7 @@ function connectWebSocket(agentId) {
     ws.onclose = function() {
         console.log('WebSocket 连接已关闭');
         setTimeout(function() {
-            connectWebSocket(currentAgentId);
+            connectWebSocket();
         }, 3000);
     };
     
@@ -535,6 +536,11 @@ function sendMessage() {
         return;
     }
 
+    if (!currentModelId) {
+        showToast('请先选择一个模型', 'warning');
+        return;
+    }
+
     fetch('/api/agent/' + currentAgentId + '/running')
         .then(function(r) { return r.json(); })
         .then(function(res) {
@@ -569,11 +575,14 @@ function sendMessage() {
             messagesDiv.appendChild(userMessageDiv);
             messagesDiv.scrollTop = messagesDiv.scrollHeight;
 
+            var deepBtn = document.getElementById('deepThinkBtn');
             var payload = {
-                agentId: currentAgentId.toString(),
+                sessionId: currentSessionId,
+                agentId: currentAgentId,
                 message: message,
                 skills: getSelectedSkills(),
-                modelId: currentModelId
+                aiModelId: currentModelId,
+                enableThinking: deepBtn ? deepBtn.getAttribute('data-enabled') === 'true' : true
             };
 
             ws.send(JSON.stringify(payload));
@@ -954,6 +963,11 @@ function formatTokenCount(n) {
 
 window.onload = function() {
 
+    var sessionIdInput = document.getElementById('currentSessionId');
+    if (sessionIdInput && sessionIdInput.value) {
+        currentSessionId = sessionIdInput.value;
+    }
+
     document.getElementById('addAgentModal').addEventListener('click', function(e) {
         if (e.target === this) {
             hideAddModal();
@@ -982,7 +996,7 @@ window.onload = function() {
     }
 
     if (currentAgentId) {
-        connectWebSocket(currentAgentId);
+        connectWebSocket();
         loadTokenUsage();
     }
 
@@ -1074,21 +1088,10 @@ window.onload = function() {
     var deepBtn = document.getElementById('deepThinkBtn');
     if (deepBtn) {
         deepBtn.addEventListener('click', function() {
-            var agentId = this.getAttribute('data-agent-id');
             var current = this.getAttribute('data-enabled') === 'true';
             var newEnabled = !current;
-            fetch('/api/agents/' + agentId + '/thinking', {
-                method: 'PUT',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ enabled: newEnabled })
-            })
-            .then(function(r) { return r.json(); })
-            .then(function(resp) {
-                if (resp.msg === 'success') {
-                    deepBtn.setAttribute('data-enabled', newEnabled);
-                    deepBtn.classList.toggle('active', newEnabled);
-                }
-            });
+            this.setAttribute('data-enabled', newEnabled);
+            this.classList.toggle('active', newEnabled);
         });
     }
 
