@@ -14,11 +14,13 @@ import com.agent.hopaw.infra.storage.ChatHistoryStore;
 import com.agent.hopaw.infra.model.entity.Agent;
 import com.agent.hopaw.infra.tool.AgentTool;
 import com.agent.hopaw.infra.tool.IAgentToolService;
+import dev.langchain4j.data.message.TextContent;
 import dev.langchain4j.model.embedding.EmbeddingModel;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 
 import java.util.*;
+import java.util.function.BiConsumer;
 import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.stream.Collectors;
@@ -34,10 +36,11 @@ public class AgentExecutorService implements IAgentExecutorService {
     private final ILongTermMemoryService longTermMemoryService;
     private final EmbeddingModel embeddingModel;
     private final ISkillService ISkillService;
+    private final IChatSessionService chatSessionService;
 
     private final Map<String, IAgentExecutor> agentExecutors = new HashMap<>();
 
-    public AgentExecutorService(IAgentService agentService, AiModelService aiModelService, ChatHistoryStore chatHistoryStore, TokenUsageService tokenUsageService, IChatMemoryService chatMemoryService, IAgentToolService agentToolService, ILongTermMemoryService longTermMemoryService, EmbeddingModel embeddingModel, ISkillService ISkillService) {
+    public AgentExecutorService(IAgentService agentService, AiModelService aiModelService, ChatHistoryStore chatHistoryStore, TokenUsageService tokenUsageService, IChatMemoryService chatMemoryService, IAgentToolService agentToolService, ILongTermMemoryService longTermMemoryService, EmbeddingModel embeddingModel, ISkillService ISkillService, IChatSessionService chatSessionService) {
         this.agentService = agentService;
         this.aiModelService = aiModelService;
         this.chatHistoryStore = chatHistoryStore;
@@ -47,6 +50,7 @@ public class AgentExecutorService implements IAgentExecutorService {
         this.longTermMemoryService = longTermMemoryService;
         this.embeddingModel = embeddingModel;
         this.ISkillService = ISkillService;
+        this.chatSessionService = chatSessionService;
     }
 
     @Override
@@ -113,14 +117,12 @@ public class AgentExecutorService implements IAgentExecutorService {
     }
 
     @Override
-    public IAgentExecutor getAgentExecutor(UserRequest userRequest) {
-        return agentExecutors.computeIfAbsent(userRequest.getSessionId(), id -> {
-            return createAgentExecutor(userRequest);
-        });
+    public IAgentExecutor getAgentExecutor(String sessionId) {
+        return agentExecutors.get(sessionId);
     }
 
     @Override
-    public IAgentExecutor createAgentExecutor(UserRequest userRequest) {
+    public IAgentExecutor createAgentExecutor(UserRequest userRequest, BiConsumer<String, String> messageConsumer) {
         Agent agent = userRequest.getAgentId() != null ? agentService.getAgentById(userRequest.getAgentId()) : null;
         if(agent == null){
             throw new RuntimeException("智能体不存在");
@@ -149,10 +151,13 @@ public class AgentExecutorService implements IAgentExecutorService {
         agentExecutorParams.setVectorToolSearchMaxResults(agent.getVectorToolSearchMaxResults() != null ? agent.getVectorToolSearchMaxResults() : 5);
         agentExecutorParams.setSkillNames(userRequest.getSkillNames());
         agentExecutorParams.setToolSets(selectedTools);
+        agentExecutorParams.setContents(Arrays.asList(new TextContent(userRequest.getMessage())));
         Function<Long, String> systemMessageProvider=aId->{
             return getSystemMessage(userRequest.getSessionId(),agent, userRequest.getUserId(), selectedTools, userRequest.getSkillNames());
         };
-        return new AgentExecutor(agentExecutorParams, chatMemoryService, embeddingModel,systemMessageProvider, chatHistoryStore, aiModelService,langChain4jMonitor);
+        AgentExecutor agentExecutor = new AgentExecutor(agentExecutorParams, chatMemoryService, embeddingModel, systemMessageProvider, chatHistoryStore, aiModelService, langChain4jMonitor, messageConsumer, chatSessionService);
+        agentExecutors.put(userRequest.getSessionId(), agentExecutor);
+        return agentExecutor;
     }
 
     private String getSystemMessage(String sessionId,Agent agent, String userId, List<AgentTool> selectedTools,List<String> skillNames) {

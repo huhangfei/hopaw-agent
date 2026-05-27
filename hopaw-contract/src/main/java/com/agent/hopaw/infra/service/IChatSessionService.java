@@ -31,4 +31,6 @@ public interface IChatSessionService {
     void deleteSessionBySessionId(String sessionId);
 
     void deleteSessionsByAgentId(Long agentId);
+
+    ChatSession insertSession(ChatSession chatSession);
 }

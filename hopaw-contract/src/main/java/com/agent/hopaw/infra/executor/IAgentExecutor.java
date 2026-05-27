@@ -18,6 +18,5 @@ public interface IAgentExecutor {
     boolean toolIsCancelled(String callId);
     void sendToolRunningContent(String callId, Object resultPartial);
     boolean running();
-    String execute(UserRequest userRequest);
-    void executeStreaming(UserRequest userRequest, BiConsumer<String, String> consumer);
+    void execute();
 }

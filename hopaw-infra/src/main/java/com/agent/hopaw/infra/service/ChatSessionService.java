@@ -97,4 +97,10 @@ public class ChatSessionService implements IChatSessionService {
         }
         chatSessionMapper.deleteByAgentId(agentId);
     }
+
+    @Override
+    public ChatSession insertSession(ChatSession chatSession) {
+        chatSessionMapper.insert(chatSession);
+        return chatSession;
+    }
 }

@@ -83,12 +83,7 @@ public class ChatWebSocketHandler extends TextWebSocketHandler {
             userRequest.setSessionId(sessionId);
             //回复一个已收到消息，开始处理
             sendFirstState(session);
-            IAgentExecutor executor = agentExecutorService.getAgentExecutor(userRequest);
-            if (executor == null) {
-                sendError(session, "Agent 初始化执行失败，请检查相关配置。");
-                return;
-            }
-            executor.executeStreaming(userRequest, (sId,aiMessageJson)->{
+            IAgentExecutor executor = agentExecutorService.createAgentExecutor(userRequest,(sId,aiMessageJson)->{
                 try {
                     ConcurrentLinkedQueue<String> sessionIds = userSessionMap.get(sId);
                     if (sessionIds == null || sessionIds.isEmpty()) {
@@ -111,6 +106,7 @@ public class ChatWebSocketHandler extends TextWebSocketHandler {
                     logger.error("error", e);
                 }
             });
+            executor.execute();
         } catch (Exception e) {
             logger.error("handleTextMessage error", e);
             sendError(session, "处理消息失败: " + e.getMessage());

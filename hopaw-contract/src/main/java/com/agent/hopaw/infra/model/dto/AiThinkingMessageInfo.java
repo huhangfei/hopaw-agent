@@ -3,8 +3,6 @@ package com.agent.hopaw.infra.model.dto;
 public class AiThinkingMessageInfo extends AiMessageBaseInfo{
     public static final String TYPE_THINKING = "thinking";
     private String status;
-    private String content;
-
     public AiThinkingMessageInfo() {
         super(TYPE_THINKING);
     }
@@ -32,13 +30,5 @@ public class AiThinkingMessageInfo extends AiMessageBaseInfo{
 
     public void setStatus(String status) {
         this.status = status;
-    }
-
-    public String getContent() {
-        return content;
-    }
-
-    public void setContent(String content) {
-        this.content = content;
     }
 }

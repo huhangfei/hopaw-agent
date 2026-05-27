@@ -8,6 +8,9 @@ import java.time.LocalDateTime;
 import java.time.temporal.ChronoUnit;
 import java.util.List;
 
+/**
+ * @author hhf
+ */
 @Service
 public class SqliteChatHistoryDbStore implements ChatHistoryStore {
 

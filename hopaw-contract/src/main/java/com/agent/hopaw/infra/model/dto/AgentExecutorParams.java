@@ -1,6 +1,7 @@
 package com.agent.hopaw.infra.model.dto;
 
 import com.agent.hopaw.infra.tool.AgentTool;
+import dev.langchain4j.data.message.Content;
 
 import java.util.List;
 
@@ -20,6 +21,7 @@ public class AgentExecutorParams {
     private String extParams;
     private List<AgentTool> toolSets;
     private List<String> skillNames;
+    private List<Content> contents;
     public Long getAgentId() {
         return agentId;
     }
@@ -114,5 +116,13 @@ public class AgentExecutorParams {
 
     public void setToolSets(List<AgentTool> toolSets) {
         this.toolSets = toolSets;
+    }
+
+    public List<Content> getContents() {
+        return contents;
+    }
+
+    public void setContents(List<Content> contents) {
+        this.contents = contents;
     }
 }
