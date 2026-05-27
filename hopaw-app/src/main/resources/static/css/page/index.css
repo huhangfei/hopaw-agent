@@ -150,6 +150,10 @@
     overflow: hidden;
     height: 100%;
 }
+
+.chat-area {
+    position: relative;
+}
 .chat-wrapper {
     display: flex;
     flex: 1;
@@ -323,6 +327,8 @@
     border-top: 1px solid #e0e0e0;
     background: #fafafa;
     height: 130px;
+    overflow: visible;
+    position: relative;
 }
 .chat-form {
     display: flex;
@@ -337,7 +343,7 @@
     border-radius: 25px;
     background: #fff;
     transition: border-color 0.2s;
-    overflow: hidden;
+    overflow: visible;
 }
 .chat-input-wrapper:focus-within {
     border-color: #667eea;
@@ -553,11 +559,13 @@
     white-space: nowrap;
 }
 
+.model-dropdown {
+    position: relative;
+}
+
 .model-dropdown-menu {
     display: none;
-    position: absolute;
-    bottom: calc(100% + 6px);
-    right: 0;
+    position: fixed;
     min-width: 200px;
     max-width: 300px;
     max-height: 320px;
@@ -565,7 +573,8 @@
     border: 1px solid #e0e0e0;
     border-radius: 8px;
     box-shadow: 0 4px 16px rgba(0,0,0,0.12);
-    z-index: 1000;
+    z-index: 9999;
+    overflow: visible;
 }
 
 .model-dropdown-menu.open {
@@ -573,8 +582,6 @@
 }
 
 .model-dropdown-list {
-    max-height: 320px;
-    overflow-y: auto;
     padding: 4px 0;
 }
 
@@ -616,13 +623,19 @@
     top: 0;
     min-width: 180px;
     max-width: 240px;
-    max-height: 280px;
+    max-height: 40vh; /* 视口高度的40%作为最大高度 */
     background: #fff;
     border: 1px solid #e0e0e0;
     border-radius: 8px;
     box-shadow: 0 4px 16px rgba(0,0,0,0.12);
-    z-index: 1001;
+    z-index: 9999;
     overflow-y: auto;
+}
+
+/* 如果子菜单向右展开超出屏幕，则向左展开 */
+.model-sub-menu.right-edge {
+    left: auto;
+    right: calc(100% + 2px);
 }
 
 .model-provider-item:hover .model-sub-menu,

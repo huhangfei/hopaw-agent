@@ -1005,7 +1005,35 @@ window.onload = function() {
             var menu = document.getElementById('modelDropdownMenu');
             var skillsMenu = document.getElementById('skillsDropdownMenu');
             if (skillsMenu) skillsMenu.classList.remove('open');
-            menu.classList.toggle('open');
+            
+            // 检查菜单是否已经打开
+            var isOpen = menu.classList.contains('open');
+            if (isOpen) {
+                // 直接关闭
+                menu.classList.remove('open');
+                return;
+            }
+            
+            // 先显示菜单以便获取正确的尺寸
+            menu.style.display = 'block';
+            menu.style.visibility = 'hidden';
+            
+            // 计算菜单位置
+            var rect = modelBtn.getBoundingClientRect();
+            menu.style.left = rect.left + 'px';
+            menu.style.top = (rect.top - 6 - menu.offsetHeight) + 'px';
+            // 检查是否超出屏幕顶部，如果是则显示在按钮下方
+            if (rect.top - 6 - menu.offsetHeight < 0) {
+                menu.style.top = (rect.bottom + 6) + 'px';
+            }
+            // 确保菜单不会超出屏幕右侧
+            if (rect.left + menu.offsetWidth > window.innerWidth) {
+                menu.style.left = (window.innerWidth - menu.offsetWidth - 10) + 'px';
+            }
+            
+            // 恢复可见性并打开菜单
+            menu.style.visibility = 'visible';
+            menu.classList.add('open');
         });
     }
 
@@ -1018,7 +1046,11 @@ window.onload = function() {
         var modelDropdown = document.getElementById('modelDropdown');
         if (modelDropdown && !modelDropdown.contains(e.target)) {
             var menu = document.getElementById('modelDropdownMenu');
-            if (menu) menu.classList.remove('open');
+            if (menu) {
+                menu.classList.remove('open');
+                menu.style.display = ''; // 重置内联样式
+                menu.style.visibility = '';
+            }
         }
     });
     
@@ -1136,6 +1168,13 @@ function loadModelSelector() {
     var providerList = document.getElementById('modelProviderList');
     if (!providerList) return;
 
+    // 获取默认选中的模型ID
+    var selectedModelIdInput = document.getElementById('selectedAiModelId');
+    var defaultModelId = null;
+    if (selectedModelIdInput && selectedModelIdInput.value) {
+        defaultModelId = parseInt(selectedModelIdInput.value);
+    }
+
     fetch('/api/models/all')
         .then(function(r) { return r.json(); })
         .then(function(allModels) {
@@ -1151,6 +1190,7 @@ function loadModelSelector() {
                         return;
                     }
 
+                    var defaultModelName = null;
                     var html = '';
                     configuredProviders.forEach(function(provider) {
                         var models = allModels[provider.id] || [];
@@ -1162,7 +1202,11 @@ function loadModelSelector() {
                             html += '<div class="model-dropdown-empty">暂无模型</div>';
                         } else {
                             models.forEach(function(model) {
-                                var activeClass = (currentModelId === model.id) ? ' active' : '';
+                                var activeClass = '';
+                                if (defaultModelId && defaultModelId === model.id) {
+                                    activeClass = ' active';
+                                    defaultModelName = model.modelName;
+                                }
                                 html += '<div class="model-sub-item' + activeClass + '" data-model-id="' + model.id + '" data-model-name="' + escapeHtml(model.modelName) + '">';
                                 html += '<span class="model-sub-item-check">✓</span>';
                                 html += '<span class="model-sub-item-name">' + escapeHtml(model.modelName) + '</span>';
@@ -1183,6 +1227,38 @@ function loadModelSelector() {
                             selectModel(modelId, modelName);
                         });
                     });
+                    
+                    // 为每个供应商项添加子菜单位置检测
+                    var providerItems = providerList.querySelectorAll('.model-provider-item');
+                    providerItems.forEach(function(item) {
+                        item.addEventListener('mouseenter', function() {
+                            var subMenu = this.querySelector('.model-sub-menu');
+                            if (subMenu) {
+                                var itemRect = this.getBoundingClientRect();
+                                
+                                // 检查子菜单向右展开是否会超出屏幕右侧
+                                if (itemRect.right + subMenu.offsetWidth > window.innerWidth) {
+                                    subMenu.classList.add('right-edge');
+                                } else {
+                                    subMenu.classList.remove('right-edge');
+                                }
+                                
+                                // 检查子菜单是否会超出屏幕底部
+                                if (itemRect.top + subMenu.offsetHeight > window.innerHeight) {
+                                    subMenu.style.top = 'auto';
+                                    subMenu.style.bottom = '0';
+                                } else {
+                                    subMenu.style.top = '0';
+                                    subMenu.style.bottom = 'auto';
+                                }
+                            }
+                        });
+                    });
+
+                    // 如果有默认模型ID，设置默认选中
+                    if (defaultModelId && defaultModelName) {
+                        selectModel(defaultModelId, defaultModelName);
+                    }
                 });
         });
 }
@@ -1208,5 +1284,9 @@ function selectModel(modelId, modelName) {
     });
 
     var menu = document.getElementById('modelDropdownMenu');
-    if (menu) menu.classList.remove('open');
+    if (menu) {
+        menu.classList.remove('open');
+        menu.style.display = ''; // 重置内联样式
+        menu.style.visibility = '';
+    }
 }

@@ -56,6 +56,7 @@ public class ChatController {
         model.addAttribute("agents", agents);
 
         Agent selectedAgent=null;
+        Long aiModelId=null;
         if(sessionId != null){
             ChatSession session = chatSessionService.getSessionBySessionId(sessionId);
             if(session != null){
@@ -66,12 +67,17 @@ public class ChatController {
                 model.addAttribute("chatHistory", chatHistory);
                 model.addAttribute("agentExecutorState", agentExecutorService.isAgentExecutorRunning(session.getSessionId()));
                 selectedAgent=agents.stream().filter(agent -> agent.getId().equals(session.getAgentId())).findFirst().orElse(null);
+                aiModelId=session.getAiModelId();
             }
         }
         if(selectedAgent==null && !agents.isEmpty()){
             selectedAgent=agents.get(0);
         }
+        if(aiModelId == null){
+            aiModelId=selectedAgent.getAiModelId();
+        }
         model.addAttribute("selectedAgent", selectedAgent);
+        model.addAttribute("selectedAiModelId", aiModelId);
 
         List<ToolSetInfo> toolSets = agentToolService.getToolSets();
         model.addAttribute("toolSets", toolSets);
