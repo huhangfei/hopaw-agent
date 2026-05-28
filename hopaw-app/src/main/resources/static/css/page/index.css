@@ -177,6 +177,13 @@
 }
 
 .tool-panel-top {
+    flex-shrink: 0;
+    border-bottom: 1px solid #e0e0e0;
+    display: flex;
+    flex-direction: column;
+}
+
+.tool-panel-mid {
     flex: 1;
     border-bottom: 1px solid #e0e0e0;
 }
@@ -211,6 +218,57 @@
     padding: 10px 14px;
     font-size: 13px;
     color: #555;
+}
+
+.session-list-body {
+    padding: 4px 8px;
+    max-height: 150px;
+}
+
+.session-list-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 7px 10px;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: background 0.15s;
+    font-size: 13px;
+    color: #555;
+}
+
+.session-list-item:hover {
+    background: #f0f2ff;
+}
+
+.session-list-item.active {
+    background: #eef0ff;
+    color: #667eea;
+    font-weight: 500;
+}
+
+.session-list-item-title {
+    flex: 1;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.session-list-item-time {
+    font-size: 11px;
+    color: #bbb;
+    flex-shrink: 0;
+}
+
+.session-list-item.active .session-list-item-time {
+    color: #a0a8e0;
+}
+
+.session-list-empty {
+    padding: 12px;
+    text-align: center;
+    color: #999;
+    font-size: 12px;
 }
 
 
@@ -1308,6 +1366,36 @@ body.dark-theme .chat-area {
 body.dark-theme .tool-panel {
     border-left-color: #3d3d6b;
     background: #16213e;
+}
+
+body.dark-theme .tool-panel-top,
+body.dark-theme .tool-panel-mid {
+    border-bottom-color: #3d3d6b;
+}
+
+body.dark-theme .session-list-item {
+    color: #ccc;
+}
+
+body.dark-theme .session-list-item:hover {
+    background: #2d2d44;
+}
+
+body.dark-theme .session-list-item.active {
+    background: #2d2d44;
+    color: #8ba3ff;
+}
+
+body.dark-theme .session-list-item-time {
+    color: #777;
+}
+
+body.dark-theme .session-list-item.active .session-list-item-time {
+    color: #7a8ac0;
+}
+
+body.dark-theme .session-list-empty {
+    color: #777;
 }
 
 body.dark-theme .tool-panel-title {

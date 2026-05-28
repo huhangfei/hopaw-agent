@@ -578,7 +578,10 @@ function sendMessage() {
                 aiModelId: currentModelId,
                 enableThinking: deepBtn ? deepBtn.getAttribute('data-enabled') === 'true' : true
             };
-            document.getElementById('chatHistoryEmptyState').classList.add("hide");
+            var emptyState = document.getElementById('chatHistoryEmptyState');
+            if(emptyState){
+                emptyState.classList.add("hide");
+            }
             ws.send(JSON.stringify(payload));
         })
         .catch(function(err) {
@@ -952,6 +955,11 @@ window.onload = function() {
     if (sessionIdInput && sessionIdInput.value) {
         currentSessionId = sessionIdInput.value;
     }
+    if (!currentSessionId && initialCurrentSessionId) {
+        currentSessionId = initialCurrentSessionId;
+    }
+
+    renderSessionList(initialChatSessions);
 
     document.getElementById('addAgentModal').addEventListener('click', function(e) {
         if (e.target === this) {
@@ -1277,4 +1285,88 @@ function selectModel(modelId, modelName) {
         menu.style.display = ''; // 重置内联样式
         menu.style.visibility = '';
     }
+}
+
+function renderSessionList(sessions) {
+    var container = document.getElementById('sessionList');
+    if (!container) return;
+
+    if (!sessions || sessions.length === 0) {
+        container.innerHTML = '<div class="session-list-empty">暂无会话</div>';
+        return;
+    }
+
+    var html = '';
+    sessions.forEach(function(s) {
+        var activeClass = (s.sessionId === currentSessionId) ? ' active' : '';
+        var title = s.title || '未命名会话';
+        var timeStr = formatSessionTime(s.lastUpdateTime || s.createTime);
+        html += '<div class="session-list-item' + activeClass + '" data-session-id="' + escapeHtml(s.sessionId) + '">';
+        html += '<span class="session-list-item-title">' + escapeHtml(title) + '</span>';
+        html += '<span class="session-list-item-time">' + escapeHtml(timeStr) + '</span>';
+        html += '</div>';
+    });
+    container.innerHTML = html;
+
+    var items = container.querySelectorAll('.session-list-item');
+    items.forEach(function(item) {
+        item.addEventListener('click', function() {
+            var sessionId = this.getAttribute('data-session-id');
+            if (sessionId && sessionId !== currentSessionId) {
+                window.location.href = '/?sessionId=' + sessionId;
+            }
+        });
+    });
+
+    var activeItem = container.querySelector('.session-list-item.active');
+    if (activeItem) {
+        activeItem.scrollIntoView({ block: 'nearest' });
+    }
+}
+
+function formatSessionTime(dateStr) {
+    if (!dateStr) return '';
+    var d = new Date(dateStr);
+    if (isNaN(d.getTime())) return '';
+    var now = new Date();
+    var diffMs = now - d;
+    var diffMin = Math.floor(diffMs / 60000);
+    if (diffMin < 1) return '刚刚';
+    if (diffMin < 60) return diffMin + '分钟前';
+    var diffHour = Math.floor(diffMin / 60);
+    if (diffHour < 24) return diffHour + '小时前';
+    var diffDay = Math.floor(diffHour / 24);
+    if (diffDay < 7) return diffDay + '天前';
+    var month = d.getMonth() + 1;
+    var day = d.getDate();
+    return month + '/' + day;
+}
+
+function createNewSession() {
+    var url = '/chat/newSession';
+    var params = [];
+
+    if (currentAgentId) {
+        params.push('agentId=' + encodeURIComponent(currentAgentId));
+    }
+
+    var skills = getSelectedSkills();
+    if (skills.length > 0) {
+        params.push('skillNames=' + encodeURIComponent(skills.join(',')));
+    }
+
+    if (currentModelId) {
+        params.push('aiModelId=' + encodeURIComponent(currentModelId));
+    }
+
+    var deepBtn = document.getElementById('deepThinkBtn');
+    if (deepBtn) {
+        var enableThinking = deepBtn.getAttribute('data-enabled') === 'true';
+        params.push('enableThinking=' + enableThinking);
+    }
+
+    if (params.length > 0) {
+        url += '?' + params.join('&');
+    }
+    window.location.href = url;
 }

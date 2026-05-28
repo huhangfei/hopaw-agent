@@ -14,6 +14,7 @@ import com.agent.hopaw.infra.service.IAgentExecutorService;
 import com.agent.hopaw.infra.service.IChatHistoryService;
 import com.agent.hopaw.infra.service.IChatSessionService;
 import com.agent.hopaw.infra.tool.IAgentToolService;
+import com.agent.hopaw.infra.util.UuidUtil;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.*;
@@ -43,21 +44,35 @@ public class ChatController {
         this.chatMemoryMapper = chatMemoryMapper;
         this.agentExecutorService = agentExecutorService;
     }
-
+    @GetMapping("/chat/newSession")
+    public String newSession(@RequestParam(required = false) Long agentId,
+                             @RequestParam(required = false) String skillNames,
+                             @RequestParam(required = false) Long aiModelId,
+                             @RequestParam(required = false) Boolean enableThinking) {
+        String sessionId = UuidUtil.generateSimpleUUID();
+        ChatSession session = chatSessionService.createSessionWithId(DefaultUser.USER, "新任务", sessionId);
+        if (agentId != null) session.setAgentId(agentId);
+        if (skillNames != null && !skillNames.isEmpty()) session.setSkillNames(skillNames);
+        if (aiModelId != null) session.setAiModelId(aiModelId);
+        if (enableThinking != null) session.setEnableThinking(enableThinking);
+        if (agentId != null || skillNames != null || aiModelId != null || enableThinking != null) {
+            chatSessionService.updateSession(session);
+        }
+        return "redirect:/?sessionId=" + sessionId;
+    }
     @GetMapping("/")
     public String index(@RequestParam(required = false) String sessionId,Model model) {
-
         model.addAttribute("agentExecutorState", false);
         model.addAttribute("chatHistory", Collections.emptyList());
 
         List<ChatSession> chatSessions = chatSessionService.getSessionsByUserId(DefaultUser.USER);
         model.addAttribute("chatSessions", chatSessions);
+
+        List<Agent> agents = agentService.getAllAgents();
+        model.addAttribute("agents", agents);
         if(sessionId == null && !chatSessions.isEmpty()){
             sessionId=chatSessions.get(0).getSessionId();
         }
-        List<Agent> agents = agentService.getAllAgents();
-        model.addAttribute("agents", agents);
-
         Agent selectedAgent=null;
         Long aiModelId=null;
         Boolean enableThinking=true;

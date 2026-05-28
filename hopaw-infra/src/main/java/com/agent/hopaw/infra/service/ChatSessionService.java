@@ -58,8 +58,8 @@ public class ChatSessionService implements IChatSessionService {
     }
 
     @Override
-    public ChatSession createSessionWithId(Long agentId, String userId, String title, String sessionId) {
-        ChatSession chatSession = new ChatSession(sessionId, agentId, userId, title);
+    public ChatSession createSessionWithId(String userId, String title, String sessionId) {
+        ChatSession chatSession = new ChatSession(sessionId, userId, title);
         chatSessionMapper.insert(chatSession);
         return chatSession;
     }

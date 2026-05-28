@@ -172,8 +172,8 @@ public class DatabaseInitializer implements CommandLineRunner {
             stmt.execute("CREATE TABLE IF NOT EXISTS chat_sessions (" +
                     "id INTEGER PRIMARY KEY AUTOINCREMENT, " +
                     "session_id TEXT NOT NULL UNIQUE, " +
-                    "agent_id INTEGER NOT NULL, " +
                     "user_id TEXT NOT NULL, " +
+                    "agent_id INTEGER, " +
                     "title TEXT, " +
                     "enable_thinking INTEGER DEFAULT 1, " +
                     "skill_names TEXT, " +
@@ -182,8 +182,8 @@ public class DatabaseInitializer implements CommandLineRunner {
                     "last_update_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP" +
                     ")");
             stmt.execute("CREATE INDEX IF NOT EXISTS idx_chat_sessions_user ON chat_sessions(user_id)");
-            stmt.execute("CREATE INDEX IF NOT EXISTS idx_chat_sessions_agent ON chat_sessions(agent_id)");
-            stmt.execute("CREATE INDEX IF NOT EXISTS idx_chat_sessions_user_agent ON chat_sessions(user_id, agent_id)");
+            stmt.execute("CREATE INDEX IF NOT EXISTS idx_chat_sessions_session ON chat_sessions(session_id)");
+            stmt.execute("CREATE INDEX IF NOT EXISTS idx_chat_sessions_user_session ON chat_sessions(user_id, session_id)");
 
             try {
                 stmt.execute("ALTER TABLE chat_sessions ADD COLUMN enable_thinking INTEGER DEFAULT 1");

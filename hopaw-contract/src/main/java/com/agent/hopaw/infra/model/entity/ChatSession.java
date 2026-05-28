@@ -15,6 +15,13 @@ public class ChatSession {
     private Long aiModelId;
     public ChatSession() {}
 
+    public ChatSession(String sessionId, String userId, String title) {
+        this.sessionId = sessionId;
+        this.userId = userId;
+        this.title = title;
+        this.createTime = LocalDateTime.now();
+        this.lastUpdateTime = LocalDateTime.now();
+    }
     public ChatSession(String sessionId, Long agentId, String userId, String title) {
         this.sessionId = sessionId;
         this.agentId = agentId;

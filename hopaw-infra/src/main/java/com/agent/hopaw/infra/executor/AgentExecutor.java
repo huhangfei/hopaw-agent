@@ -9,6 +9,7 @@ import com.agent.hopaw.infra.service.IChatSessionService;
 import com.agent.hopaw.infra.storage.ChatHistoryStore;
 import com.agent.hopaw.infra.tool.AgentTool;
 import com.agent.hopaw.infra.util.InvocationParametersWrapper;
+import com.agent.hopaw.infra.util.UuidUtil;
 import com.alibaba.fastjson2.JSON;
 import dev.langchain4j.data.message.*;
 import dev.langchain4j.invocation.InvocationParameters;
@@ -100,8 +101,8 @@ public class AgentExecutor implements IAgentExecutor {
         this.userId = agentExecutorParams.getUserId();
         this.aiModelId = agentExecutorParams.getAiModelId();
         this.contents = agentExecutorParams.getContents();
-        this.sessionId = agentExecutorParams.getSessionId() != null ? agentExecutorParams.getSessionId() : UUID.randomUUID().toString();
-        this.requestId = UUID.randomUUID().toString();
+        this.sessionId = agentExecutorParams.getSessionId() != null ? agentExecutorParams.getSessionId() : UuidUtil.generateSimpleUUID();
+        this.requestId = UuidUtil.generateSimpleUUID();
 
         this.chatSessionService = chatSessionService;
         this.chatHistoryStore = chatHistoryStore;
@@ -335,7 +336,7 @@ public class AgentExecutor implements IAgentExecutor {
 
             ChatAgentAssistant assistant = AiServices.builder(ChatAgentAssistant.class)
                     .chatModel(chatModel)
-                    .systemMessageProvider(chatMemoryId -> "你只需要通过用户输入的内容来分析用户意图，直接返回给我一个15字以内的简要说明")
+                    .systemMessageProvider(chatMemoryId -> "你只需要通过用户输入的内容来分析用户意图，不需要为用户的提问给出答案，直接返回给我一个15字以内的简要说明，不要带人称和句号。")
                     .build();
             ChatRequestParameters chatRequestParameters = ChatRequestParameters.builder()
                     .temperature(0.1)
@@ -382,12 +383,15 @@ public class AgentExecutor implements IAgentExecutor {
     private void saveChatSession() {
 
 
+        boolean sendSessionTitle = false;
         ChatSession chatSession=chatSessionService.getSessionBySessionId(sessionId);
         if (chatSession == null) {
             chatSession = new ChatSession();
             String userIntent = analyzeUserIntent();
             if (userIntent == null) {
                 userIntent = "新任务";
+            }else{
+                sendSessionTitle=true;
             }
             chatSession.setSessionId(sessionId);
             chatSession.setAgentId(agentId);
@@ -401,6 +405,13 @@ public class AgentExecutor implements IAgentExecutor {
             chatSessionService.insertSession(chatSession);
             agentMessageHandler.sendMessageToChannel(AiMessageBaseInfo.sessionTitle(sessionId, requestId, userIntent));
         } else {
+            if(chatSession.getTitle().equals("新任务")){
+                String userIntent = analyzeUserIntent();
+                if (userIntent !=null) {
+                    chatSession.setTitle(userIntent);
+                    sendSessionTitle=true;
+                }
+            }
             chatSession.setSessionId(sessionId);
             chatSession.setAgentId(agentId);
             chatSession.setUserId(userId);
@@ -409,6 +420,9 @@ public class AgentExecutor implements IAgentExecutor {
             chatSession.setSkillNames(String.join(",", agentExecutorParams.getSkillNames() == null ? new ArrayList<>() : agentExecutorParams.getSkillNames()));
             chatSession.setLastUpdateTime(LocalDateTime.now());
             chatSessionService.updateSession(chatSession);
+        }
+        if(sendSessionTitle){
+            agentMessageHandler.sendMessageToChannel(AiMessageBaseInfo.sessionTitle(sessionId, requestId, chatSession.getTitle()));
         }
 
     }
@@ -632,7 +646,6 @@ public class AgentExecutor implements IAgentExecutor {
     }
 
     public interface ChatAgentAssistant {
-        @UserMessage("{{content}}")
         String analyzeUserIntent(@dev.langchain4j.service.UserMessage List<Content> contents,
                                  ChatRequestParameters chatRequestParameters, InvocationParameters invocationParameters);
 

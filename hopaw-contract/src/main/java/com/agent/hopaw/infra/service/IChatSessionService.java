@@ -20,7 +20,7 @@ public interface IChatSessionService {
 
     ChatSession createSession(Long agentId, String userId, String title);
 
-    ChatSession createSessionWithId(Long agentId, String userId, String title, String sessionId);
+    ChatSession createSessionWithId(String userId, String title, String sessionId);
 
     void updateSession(ChatSession chatSession);
 

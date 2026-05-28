@@ -53,19 +53,6 @@ public class ChatSessionController {
         return ResponseBean.success(session);
     }
 
-    @PostMapping("/create-with-id")
-    public ResponseBean createWithId(@RequestParam Long agentId,
-                                    @RequestParam String sessionId,
-                                    @RequestParam(required = false) String title) {
-        String sessionTitle = title != null && !title.isEmpty() ? title : "新会话";
-        ChatSession existingSession = IChatSessionService.getSessionBySessionId(sessionId);
-        if (existingSession != null) {
-            return ResponseBean.success(existingSession);
-        }
-        ChatSession session = IChatSessionService.createSessionWithId(agentId, DefaultUser.USER, sessionTitle, sessionId);
-        return ResponseBean.success(session);
-    }
-
     @PostMapping("/update-title")
     public ResponseBean updateTitle(@RequestParam Long id,
                                    @RequestParam String title) {

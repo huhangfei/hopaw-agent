@@ -15,6 +15,10 @@
                 <span class="chat-header-desc" id="chat-header-desc" th:text="${selectedAgent.description}"></span>
             </div>
             <div class="header-actions">
+                <button class="btn-add-header" onclick="createNewSession()" title="新会话">
+                    <svg viewBox="0 0 24 24" fill="currentColor" width="14" height="14"><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/></svg>
+                    新会话
+                </button>
                 <button class="btn-stop-header" th:attr="onclick=|forceStopCurrentSession(${currentSessionId})|" title="强停">
                     <svg viewBox="0 0 24 24" fill="currentColor">
                         <rect x="4" y="4" width="16" height="16" rx="2"/>
@@ -145,6 +149,11 @@
     </main>
     <aside class="tool-panel">
         <div class="tool-panel-section tool-panel-top">
+            <div class="tool-panel-title">会话列表</div>
+            <div class="tool-panel-body session-list-body" id="sessionList">
+            </div>
+        </div>
+        <div class="tool-panel-section tool-panel-mid">
             <div class="tool-panel-title">工具执行列表</div>
             <div class="tool-panel-body" id="toolExecList">
                 <div th:each="chat : ${chatHistory}" th:if="${chat.messageType == 'tool_call'}">
@@ -446,8 +455,8 @@
     <script th:src="@{/js/chart.umd.min.js}"></script>
     <script th:inline="javascript">
         setCurrentAgentId(/*[[${selectedAgentId}]]*/ null);
-
+        var initialChatSessions = /*[[${chatSessions}]]*/ [];
+        var initialCurrentSessionId = /*[[${currentSessionId}]]*/ null;
     </script>
-</th:block>
 </body>
 </html>
