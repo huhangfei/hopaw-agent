@@ -74,4 +74,24 @@
         ORDER BY id DESC
     </select>
 
+    <select id="findByUserIdWithKeyword" resultMap="AgentResultMap">
+        SELECT id, name, description, tools, max_memory_records, max_tool_invocations, vector_tool_search, vector_tool_search_max_results, ai_model_id, enable_thinking, ext_params, user_id
+        FROM agents
+        WHERE user_id = #{userId}
+        <if test="keyword != null and keyword != ''">
+            AND name LIKE CONCAT('%', #{keyword}, '%')
+        </if>
+        ORDER BY id DESC
+        LIMIT #{size} OFFSET #{offset}
+    </select>
+
+    <select id="countByUserIdWithKeyword" resultType="int">
+        SELECT COUNT(*)
+        FROM agents
+        WHERE user_id = #{userId}
+        <if test="keyword != null and keyword != ''">
+            AND name LIKE CONCAT('%', #{keyword}, '%')
+        </if>
+    </select>
+
 </mapper>

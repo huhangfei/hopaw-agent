@@ -20,4 +20,12 @@ public interface AgentMapper {
     int deleteById(@Param("id") Long id);
 
     List<Agent> findByUserId(@Param("userId") String userId);
+
+    List<Agent> findByUserIdWithKeyword(@Param("userId") String userId,
+                                        @Param("keyword") String keyword,
+                                        @Param("offset") int offset,
+                                        @Param("size") int size);
+
+    int countByUserIdWithKeyword(@Param("userId") String userId,
+                                 @Param("keyword") String keyword);
 }

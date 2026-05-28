@@ -88,4 +88,15 @@ public class AgentService implements IAgentService {
 
 
     }
+
+    @Override
+    public List<Agent> getAgentsPage(String userId, String keyword, int page, int size) {
+        int offset = (page - 1) * size;
+        return agentMapper.findByUserIdWithKeyword(userId, keyword, offset, size);
+    }
+
+    @Override
+    public int countAgents(String userId, String keyword) {
+        return agentMapper.countByUserIdWithKeyword(userId, keyword);
+    }
 }

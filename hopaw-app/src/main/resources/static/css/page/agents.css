@@ -1,0 +1,375 @@
+.agents-container {
+    flex: 1;
+    padding: 20px;
+    overflow-y: auto;
+    background: #f5f5f5;
+}
+
+.agents-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+    flex-wrap: wrap;
+    gap: 12px;
+}
+
+.agents-header h2 {
+    font-size: 20px;
+    color: #333;
+}
+
+.agents-toolbar {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.agents-search {
+    position: relative;
+    display: flex;
+    align-items: center;
+}
+
+.agents-search .search-icon {
+    position: absolute;
+    left: 10px;
+    width: 16px;
+    height: 16px;
+    color: #999;
+    pointer-events: none;
+}
+
+.agents-search input {
+    width: 240px;
+    padding: 8px 12px 8px 34px;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    font-size: 14px;
+    background: white;
+    color: #333;
+    outline: none;
+    transition: border-color 0.2s;
+}
+
+.agents-search input:focus {
+    border-color: #667eea;
+}
+
+.agents-search input::placeholder {
+    color: #aaa;
+}
+
+.btn-add-agent {
+    background: #667eea;
+    color: white;
+    border: none;
+    padding: 10px 20px;
+    border-radius: 8px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 14px;
+    transition: background 0.2s;
+    white-space: nowrap;
+}
+
+.btn-add-agent:hover {
+    background: #5a6fd6;
+}
+
+.btn-add-agent svg {
+    width: 20px;
+    height: 20px;
+}
+
+.agents-card {
+    background: white;
+    border-radius: 12px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+    overflow: hidden;
+}
+
+.agents-table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.agents-table thead {
+    background: #f8f9fa;
+}
+
+.agents-table th {
+    padding: 12px 15px;
+    text-align: left;
+    font-size: 13px;
+    color: #666;
+    font-weight: 600;
+    border-bottom: 2px solid #e0e0e0;
+}
+
+.agents-table td {
+    padding: 12px 15px;
+    font-size: 14px;
+    color: #333;
+    border-bottom: 1px solid #f0f0f0;
+    vertical-align: middle;
+}
+
+.agents-table tbody tr:hover {
+    background: #f8f9fa;
+}
+
+.agent-name-cell {
+    font-weight: 600;
+    color: #333;
+}
+
+.agent-desc-cell {
+    color: #666;
+    max-width: 300px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.agent-model-cell {
+    color: #555;
+}
+
+.agent-tools-cell {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+}
+
+.agent-tool-tag {
+    display: inline-block;
+    background: #e8f5e9;
+    color: #2e7d32;
+    padding: 2px 8px;
+    border-radius: 4px;
+    font-size: 12px;
+    white-space: nowrap;
+}
+
+.agent-tool-tag-more {
+    display: inline-block;
+    background: #f5f5f5;
+    color: #999;
+    padding: 2px 8px;
+    border-radius: 4px;
+    font-size: 12px;
+    cursor: default;
+}
+
+.agent-actions {
+    display: flex;
+    gap: 4px;
+    align-items: center;
+}
+
+.btn-icon {
+    width: 32px;
+    height: 32px;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: transparent;
+    transition: background 0.2s;
+}
+
+.btn-icon svg {
+    width: 18px;
+    height: 18px;
+}
+
+.btn-edit-agent {
+    color: #1976d2;
+}
+
+.btn-edit-agent:hover {
+    background: #e3f2fd;
+}
+
+.btn-delete-agent {
+    color: #d32f2f;
+}
+
+.btn-delete-agent:hover {
+    background: #ffebee;
+}
+
+.agents-empty {
+    text-align: center;
+    padding: 40px;
+    color: #999;
+}
+
+.agents-pagination {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-top: 16px;
+    padding: 12px 0;
+    flex-wrap: wrap;
+    gap: 12px;
+}
+
+.pagination-info {
+    color: #666;
+    font-size: 13px;
+}
+
+.pagination-btns {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.pagination-btn {
+    padding: 6px 12px;
+    border: 1px solid #ddd;
+    border-radius: 6px;
+    background: white;
+    color: #666;
+    font-size: 13px;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.pagination-btn:hover:not(:disabled) {
+    border-color: #667eea;
+    color: #667eea;
+}
+
+.pagination-btn:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+}
+
+.pagination-current {
+    padding: 6px 12px;
+    font-size: 13px;
+    color: #667eea;
+    font-weight: 600;
+}
+
+/* ==================== Dark Theme ==================== */
+body.dark-theme .agents-container {
+    background: #1a1a2e;
+}
+
+body.dark-theme .agents-header h2 {
+    color: #e0e0e0;
+}
+
+body.dark-theme .agents-search input {
+    background: #2d2d44;
+    border-color: #3d3d6b;
+    color: #c0c0c0;
+}
+
+body.dark-theme .agents-search input:focus {
+    border-color: #8ba3ff;
+}
+
+body.dark-theme .agents-search input::placeholder {
+    color: #666;
+}
+
+body.dark-theme .agents-search .search-icon {
+    color: #666;
+}
+
+body.dark-theme .btn-add-agent {
+    background: #5a6fd6;
+}
+
+body.dark-theme .btn-add-agent:hover {
+    background: #667eea;
+}
+
+body.dark-theme .agents-card {
+    background: #16213e;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+}
+
+body.dark-theme .agents-table thead {
+    background: #1e3a5f;
+}
+
+body.dark-theme .agents-table th {
+    color: #b0b0b0;
+    border-bottom-color: #2d2d44;
+}
+
+body.dark-theme .agents-table td {
+    color: #c0c0c0;
+    border-bottom-color: #2d2d44;
+}
+
+body.dark-theme .agents-table tbody tr:hover {
+    background: #2d2d44;
+}
+
+body.dark-theme .agent-name-cell {
+    color: #e0e0e0;
+}
+
+body.dark-theme .agent-desc-cell {
+    color: #999;
+}
+
+body.dark-theme .agent-model-cell {
+    color: #aaa;
+}
+
+body.dark-theme .agent-tool-tag {
+    background: #1b3d1b;
+    color: #66bb6a;
+}
+
+body.dark-theme .agent-tool-tag-more {
+    background: #2d2d44;
+    color: #888;
+}
+
+body.dark-theme .btn-edit-agent:hover {
+    background: #1e3a5f;
+}
+
+body.dark-theme .btn-delete-agent:hover {
+    background: #3d2020;
+}
+
+body.dark-theme .agents-empty {
+    color: #888;
+}
+
+body.dark-theme .pagination-info {
+    color: #999;
+}
+
+body.dark-theme .pagination-btn {
+    background: #2d2d44;
+    border-color: #3d3d6b;
+    color: #c0c0c0;
+}
+
+body.dark-theme .pagination-btn:hover:not(:disabled) {
+    border-color: #8ba3ff;
+    color: #8ba3ff;
+}
+
+body.dark-theme .pagination-btn:disabled {
+    opacity: 0.3;
+}
+
+body.dark-theme .pagination-current {
+    color: #8ba3ff;
+}

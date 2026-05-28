@@ -12,4 +12,6 @@ public interface IAgentService {
     void deleteAgent(Long id, String userId);
     void updateAgent(String userId, Long id, String name, String description, String tools, Integer maxMemoryRecords, Integer maxToolInvocations, Long aiModelId, Boolean enableThinking, Boolean vectorToolSearch, Integer vectorToolSearchMaxResults);
     void updateThinking(Long id, Boolean enabled, String userId);
+    List<Agent> getAgentsPage(String userId, String keyword, int page, int size);
+    int countAgents(String userId, String keyword);
 }
