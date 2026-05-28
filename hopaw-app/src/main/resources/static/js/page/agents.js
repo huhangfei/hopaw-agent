@@ -157,8 +157,7 @@ function goToPage(page) {
 }
 
 function editAgent(id) {
-    setCurrentAgentId(id);
-    showEditAgentModal();
+    showEditAgentModal(id);
 }
 
 function deleteAgent(id) {

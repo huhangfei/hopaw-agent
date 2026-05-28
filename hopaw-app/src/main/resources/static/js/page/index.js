@@ -353,11 +353,6 @@ function removeLoadingMessage() {
     }
 }
 
-function escapeHtml(text) {
-    var div = document.createElement('div');
-    div.textContent = text;
-    return div.innerHTML;
-}
 
 function handleThinking(data, requestId) {
     var messagesDiv = document.getElementById('chatMessages');
@@ -633,84 +628,6 @@ function clearHistory(sessionId) {
     });
 }
 
-function selectAllTools(containerSelector) {
-    document.querySelectorAll(containerSelector + ' input[type="checkbox"]').forEach(function(cb) {
-        cb.checked = true;
-    });
-}
-
-function deselectAllTools(containerSelector) {
-    document.querySelectorAll(containerSelector + ' input[type="checkbox"]').forEach(function(cb) {
-        cb.checked = false;
-    });
-}
-
-function showAddAgentModal() {
-    fetch('/agent/modal/add')
-        .then(function(r) { return r.text(); })
-        .then(function(html) {
-            var container = document.createElement('div');
-            container.innerHTML = html;
-            var modalEl = container.firstElementChild;
-            document.body.appendChild(modalEl);
-
-            modalEl.addEventListener('click', function(e) {
-                if (e.target === modalEl) {
-                    closeAndRemoveModal(modalEl);
-                }
-            });
-            modalEl.style.display = 'flex';
-            loadProviders('addProviderSelectFragment', null, 'addModelSelectFragment', null);
-        });
-}
-
-function showEditAgentModal() {
-    fetch('/agent/modal/edit/' + currentAgentId)
-        .then(function(r) { return r.text(); })
-        .then(function(html) {
-            var container = document.createElement('div');
-            container.innerHTML = html;
-            var modalEl = container.firstElementChild;
-            document.body.appendChild(modalEl);
-
-            modalEl.addEventListener('click', function(e) {
-                if (e.target === modalEl) {
-                    closeAndRemoveModal(modalEl);
-                }
-            });
-            modalEl.style.display = 'flex';
-            var defaultProviderId = document.getElementById('editModelProviderId').value;
-            var defaultModelId = document.getElementById('editModelId').value;
-            loadProviders('editProviderSelectFragment', defaultProviderId, 'editModelSelectFragment', defaultModelId);
-
-        });
-}
-
-function hideAddModalFragment() {
-    var modal = document.getElementById('addAgentModalFragment');
-    if (modal) closeAndRemoveModal(modal);
-}
-
-function hideEditModalFragment() {
-    var modal = document.getElementById('editAgentModalFragment');
-    if (modal) closeAndRemoveModal(modal);
-}
-
-function closeAndRemoveModal(modalEl) {
-    if (modalEl && modalEl.parentNode) {
-        modalEl.parentNode.removeChild(modalEl);
-    }
-}
-
-function hideAddModal() {
-    var modal = document.getElementById('addAgentModal');
-    if (modal) closeAndRemoveModal(modal);
-}
-
-function hideEditModal() {
-    var modal = document.getElementById('editAgentModal');
-    if (modal) closeAndRemoveModal(modal);
-}
 
 function forceStopAgent(sessionId) {
     showConfirm('确定要强停智能体吗？强停后将移除执行器并刷新页面。').then(function(confirmed) {
@@ -1342,4 +1259,8 @@ function createNewSession() {
         url += '?' + params.join('&');
     }
     window.location.href = url;
+}
+
+function editCurrentAgent(){
+    showEditAgentModal(currentAgentId);
 }
