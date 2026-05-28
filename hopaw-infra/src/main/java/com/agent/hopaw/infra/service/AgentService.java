@@ -1,9 +1,6 @@
 package com.agent.hopaw.infra.service;
 
-import com.agent.hopaw.infra.executor.IAgentExecutor;
 import com.agent.hopaw.infra.mapper.AgentMapper;
-import com.agent.hopaw.infra.mapper.ChatMemoryMapper;
-import com.agent.hopaw.infra.model.dto.UserRequest;
 import com.agent.hopaw.infra.model.entity.Agent;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -16,12 +13,9 @@ import java.util.List;
 public class AgentService implements IAgentService {
     private final static Logger logger = LoggerFactory.getLogger(AgentService.class);
     private final AgentMapper agentMapper;
-    private final ChatMemoryMapper chatMemoryMapper;
 
-
-    public AgentService(AgentMapper agentMapper, ChatMemoryMapper chatMemoryMapper) {
+    public AgentService(AgentMapper agentMapper) {
         this.agentMapper = agentMapper;
-        this.chatMemoryMapper = chatMemoryMapper;
     }
 
     @Override
@@ -56,7 +50,6 @@ public class AgentService implements IAgentService {
     @Override
     public void deleteAgent(Long id, String userId) {
         agentMapper.deleteById(id);
-        chatMemoryMapper.deleteByAgentId(id);
     }
 
     @Override

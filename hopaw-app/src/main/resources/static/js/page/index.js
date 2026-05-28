@@ -252,7 +252,7 @@ function handleToolCall(data, requestId) {
             stopBtn.onclick = function(e) {
                 e.stopPropagation();
                 e.preventDefault();
-                fetch('/agent/tool/stop', {
+                fetch('/api/session/tool/stop', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
                     body: 'agentId=' + currentAgentId + '&callId=' + data.toolCallId
@@ -534,7 +534,7 @@ function sendMessage() {
         return;
     }
 
-    fetch('/chat/session/' + currentAgentId + '/running')
+    fetch('/api/session/' + currentAgentId + '/running')
         .then(function(r) { return r.json(); })
         .then(function(res) {
             if (res.code === 200 && res.data === true) {
@@ -623,7 +623,18 @@ function selectAgent(selectElement) {
 function clearHistory(sessionId) {
     showConfirm('确定要清空对话历史吗？').then(function(confirmed) {
         if (confirmed) {
-            window.location.href = '/chat/clear?sessionId=' + sessionId;
+            fetch('/api/session/' + encodeURIComponent(sessionId) + '/clear' , { method: 'POST' })
+            .then(function(r) { return r.json(); })
+            .then(function(resp) {
+                if (resp.code === 200) {
+                    window.location.href = '/?sessionId=' + encodeURIComponent(sessionId);
+                } else {
+                    showToast(resp.msg || '清空历史失败', 'error');
+                }
+            })
+            .catch(function(err) {
+                showToast('清空历史失败: ' + err.message, 'error');
+            });
         }
     });
 }
@@ -632,7 +643,7 @@ function clearHistory(sessionId) {
 function forceStopAgent(sessionId) {
     showConfirm('确定要强停智能体吗？强停后将移除执行器并刷新页面。').then(function(confirmed) {
         if (!confirmed) return;
-        fetch('/chat/session/force-stop', {
+        fetch('/api/session/force-stop', {
             method: 'POST',
             headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
             body: 'sessionId=' + sessionId
@@ -646,11 +657,11 @@ function forceStopAgent(sessionId) {
     });
 }
 
-function stopAgent() {
-    showConfirm('确定要停止智能体运行吗？').then(function(confirmed) {
+function stopCurrentSession() {
+    showConfirm('确定要停止运行吗？').then(function(confirmed) {
         if (!confirmed) return;
         var agentId = document.querySelector('input[name="agentId"]').value;
-        fetch('/agent/stop', {
+        fetch('/api/session/stop', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/x-www-form-urlencoded',
@@ -1233,32 +1244,31 @@ function formatSessionTime(dateStr) {
 }
 
 function createNewSession() {
-    var url = '/chat/newSession';
-    var params = [];
-
-    if (currentAgentId) {
-        params.push('agentId=' + encodeURIComponent(currentAgentId));
-    }
-
-    var skills = getSelectedSkills();
-    if (skills.length > 0) {
-        params.push('skillNames=' + encodeURIComponent(skills.join(',')));
-    }
-
-    if (currentModelId) {
-        params.push('aiModelId=' + encodeURIComponent(currentModelId));
-    }
-
     var deepBtn = document.getElementById('deepThinkBtn');
-    if (deepBtn) {
-        var enableThinking = deepBtn.getAttribute('data-enabled') === 'true';
-        params.push('enableThinking=' + enableThinking);
-    }
+    var payload = {
+        userId: 'defaultUser',
+        agentId: currentAgentId || null,
+        aiModelId: currentModelId || null,
+        enableThinking: deepBtn ? deepBtn.getAttribute('data-enabled') === 'true' : true,
+        skillNames: getSelectedSkills().join(',') || null
+    };
 
-    if (params.length > 0) {
-        url += '?' + params.join('&');
-    }
-    window.location.href = url;
+    fetch('/api/session/create', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+    })
+    .then(function(r) { return r.json(); })
+    .then(function(resp) {
+        if (resp.code === 200 && resp.data) {
+            window.location.href = '/?sessionId=' + resp.data;
+        } else {
+            showToast(resp.msg || '创建会话失败', 'error');
+        }
+    })
+    .catch(function(err) {
+        showToast('创建会话失败: ' + err.message, 'error');
+    });
 }
 
 function editCurrentAgent(){

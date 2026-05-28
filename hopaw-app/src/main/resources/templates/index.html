@@ -140,7 +140,7 @@
                         th:classappend="${agentExecutorState  ? 'hide' : ''}">发送
                 </button>
                 <button type="button" id="runningBtn" class="chat-form-running-btn"
-                        th:classappend="${agentExecutorState  ? '' : 'hide'}" onclick="stopAgent()">
+                        th:classappend="${agentExecutorState  ? '' : 'hide'}" onclick="stopCurrentSession()">
                     <span class="chat-form-running-btn-dot"></span>
                     运行中...
                 </button>

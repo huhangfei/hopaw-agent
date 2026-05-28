@@ -1,10 +1,14 @@
 package com.agent.hopaw.controller;
 
 import com.agent.hopaw.constant.DefaultUser;
+import com.agent.hopaw.infra.memory.IChatMemoryService;
 import com.agent.hopaw.infra.model.dto.ResponseBean;
 import com.agent.hopaw.infra.model.entity.ChatHistory;
 import com.agent.hopaw.infra.model.entity.ChatSession;
+import com.agent.hopaw.infra.service.IAgentExecutorService;
+import com.agent.hopaw.infra.service.IChatHistoryService;
 import com.agent.hopaw.infra.service.IChatSessionService;
+import com.agent.hopaw.infra.util.UuidUtil;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -13,26 +17,31 @@ import java.util.List;
 @RequestMapping("/api/session")
 public class ChatSessionController {
 
-    private final IChatSessionService IChatSessionService;
-
-    public ChatSessionController(IChatSessionService IChatSessionService) {
-        this.IChatSessionService = IChatSessionService;
+    private final IChatSessionService chatSessionService;
+    private final IAgentExecutorService agentExecutorService;
+    private final IChatHistoryService chatHistoryService;
+    private final IChatMemoryService chatMemoryService;
+    public ChatSessionController(IChatSessionService chatSessionService, IAgentExecutorService agentExecutorService, IChatHistoryService chatHistoryService, IChatMemoryService chatMemoryService) {
+        this.chatSessionService = chatSessionService;
+        this.agentExecutorService = agentExecutorService;
+        this.chatHistoryService = chatHistoryService;
+        this.chatMemoryService = chatMemoryService;
     }
 
     @GetMapping("/list")
     public ResponseBean list(@RequestParam(required = false) Long agentId) {
         List<ChatSession> sessions;
         if (agentId != null) {
-            sessions = IChatSessionService.getSessionsByUserIdAndAgentId(DefaultUser.USER, agentId);
+            sessions = chatSessionService.getSessionsByUserIdAndAgentId(DefaultUser.USER, agentId);
         } else {
-            sessions = IChatSessionService.getSessionsByUserId(DefaultUser.USER);
+            sessions = chatSessionService.getSessionsByUserId(DefaultUser.USER);
         }
         return ResponseBean.success(sessions);
     }
 
     @GetMapping("/get")
     public ResponseBean get(@RequestParam String sessionId) {
-        ChatSession session = IChatSessionService.getSessionBySessionId(sessionId);
+        ChatSession session = chatSessionService.getSessionBySessionId(sessionId);
         if (session == null) {
             return ResponseBean.fail("会话不存在");
         }
@@ -41,34 +50,79 @@ public class ChatSessionController {
     
     @GetMapping("/history")
     public ResponseBean getHistory(@RequestParam String sessionId, @RequestParam(defaultValue = "100") int limit) {
-        List<ChatHistory> history = IChatSessionService.getChatHistoryBySessionId(sessionId, limit);
+        List<ChatHistory> history = chatSessionService.getChatHistoryBySessionId(sessionId, limit);
         return ResponseBean.success(history);
     }
 
+    @PostMapping("/stop")
+    @ResponseBody
+    public ResponseBean stopAgent(@RequestParam String sessionId) {
+        agentExecutorService.stopAgentExecutor(sessionId);
+        return ResponseBean.success();
+    }
+
+    @PostMapping("/force-stop")
+    @ResponseBody
+    public ResponseBean forceStopAgent(@RequestParam String sessionId) {
+        agentExecutorService.stopAndRemoveAgentExecutor(sessionId);
+        return ResponseBean.success();
+    }
+
     @PostMapping("/create")
-    public ResponseBean create(@RequestParam Long agentId,
-                              @RequestParam(required = false) String title) {
-        String sessionTitle = title != null && !title.isEmpty() ? title : "新会话";
-        ChatSession session = IChatSessionService.createSession(agentId, DefaultUser.USER, sessionTitle);
-        return ResponseBean.success(session);
+    @ResponseBody
+    public ResponseBean create(ChatSession session) {
+        session.setUserId(DefaultUser.USER);
+        session.setSessionId(UuidUtil.generateSimpleUUID());
+        session.setCreateTime(java.time.LocalDateTime.now());
+        session.setLastUpdateTime(java.time.LocalDateTime.now());
+        chatSessionService.insertSession(session);
+        return ResponseBean.success(session.getSessionId());
     }
 
     @PostMapping("/update-title")
     public ResponseBean updateTitle(@RequestParam Long id,
                                    @RequestParam String title) {
-        IChatSessionService.updateSessionTitle(id, title);
+        chatSessionService.updateSessionTitle(id, title);
         return ResponseBean.success();
     }
 
-    @PostMapping("/delete")
-    public ResponseBean delete(@RequestParam Long id) {
-        IChatSessionService.deleteSession(id);
+    @DeleteMapping("/{id}")
+    public ResponseBean delete(@PathVariable Long id) {
+        ChatSession session = chatSessionService.getSessionById(id);
+        chatSessionService.deleteSession(id);
+        chatHistoryService.deleteBySessionId(session.getSessionId());
+        chatMemoryService.updateStatusBySessionId(session.getSessionId(),2);
         return ResponseBean.success();
     }
 
     @PostMapping("/delete-by-session-id")
     public ResponseBean deleteBySessionId(@RequestParam String sessionId) {
-        IChatSessionService.deleteSessionBySessionId(sessionId);
+        chatSessionService.deleteSessionBySessionId(sessionId);
+        chatHistoryService.deleteBySessionId(sessionId);
+        chatMemoryService.updateStatusBySessionId(sessionId,2);
+        return ResponseBean.success();
+    }
+
+
+    @PostMapping("/tool/stop")
+    @ResponseBody
+    public ResponseBean stopTool(@RequestParam String sessionId, @RequestParam String callId) {
+        agentExecutorService.stopTool(sessionId, callId);
+        return ResponseBean.success();
+    }
+
+    @GetMapping("/{sessionId}/running")
+    @ResponseBody
+    public ResponseBean isRunning(@PathVariable String sessionId) {
+        boolean running = agentExecutorService.isAgentExecutorRunning(sessionId);
+        return ResponseBean.success(running);
+    }
+
+    @PostMapping("/{sessionId}/clear")
+    @ResponseBody
+    public ResponseBean clearChat(@PathVariable String sessionId) {
+        chatHistoryService.deleteBySessionId(sessionId);
+        chatMemoryService.updateStatusBySessionId(sessionId,2);
         return ResponseBean.success();
     }
 }

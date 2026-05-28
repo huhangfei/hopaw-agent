@@ -1,31 +1,17 @@
 package com.agent.hopaw.controller;
 
 import com.agent.hopaw.constant.DefaultUser;
-import com.agent.hopaw.infra.mapper.ChatHistoryMapper;
-import com.agent.hopaw.infra.mapper.ChatMemoryMapper;
-import com.agent.hopaw.infra.model.entity.Agent;
-import com.agent.hopaw.infra.model.entity.AiModel;
-import com.agent.hopaw.infra.model.entity.AiModelProvider;
-import com.agent.hopaw.infra.model.entity.ChatHistory;
 import com.agent.hopaw.infra.model.dto.ResponseBean;
 import com.agent.hopaw.infra.model.dto.ToolSetInfo;
+import com.agent.hopaw.infra.model.entity.Agent;
+import com.agent.hopaw.infra.model.entity.AiModel;
 import com.agent.hopaw.infra.service.AgentService;
-import com.agent.hopaw.infra.service.AiModelProviderService;
 import com.agent.hopaw.infra.service.AiModelService;
-import com.agent.hopaw.infra.service.IAgentExecutorService;
 import com.agent.hopaw.infra.tool.IAgentToolService;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
-import org.springframework.web.bind.annotation.DeleteMapping;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.ResponseBody;
-import org.springframework.web.bind.annotation.PutMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.*;
 
-import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -35,23 +21,13 @@ public class AgentController {
 
     private final AgentService agentService;
     private final IAgentToolService agentToolService;
-    private final ChatHistoryMapper chatHistoryMapper;
-    private final ChatMemoryMapper chatMemoryMapper;
-    private final AiModelProviderService aiModelProviderService;
     private final AiModelService aiModelService;
-    private final IAgentExecutorService agentExecutorService;
 
     public AgentController(AgentService agentService, IAgentToolService agentToolService,
-                           ChatHistoryMapper chatHistoryMapper, ChatMemoryMapper chatMemoryMapper,
-                           AiModelProviderService aiModelProviderService, AiModelService aiModelService,
-                           IAgentExecutorService agentExecutorService) {
+                           AiModelService aiModelService) {
         this.agentService = agentService;
         this.agentToolService = agentToolService;
-        this.chatHistoryMapper = chatHistoryMapper;
-        this.chatMemoryMapper = chatMemoryMapper;
-        this.aiModelProviderService = aiModelProviderService;
         this.aiModelService = aiModelService;
-        this.agentExecutorService = agentExecutorService;
     }
 
     @GetMapping("/agents")
@@ -144,8 +120,6 @@ public class AgentController {
         if (total <= 1) {
             return ResponseBean.fail("必须保留至少一个智能体");
         }
-        chatHistoryMapper.deleteByAgentId(id);
-        chatMemoryMapper.deleteByAgentId(id);
         agentService.deleteAgent(id, DefaultUser.USER);
         return ResponseBean.success();
     }

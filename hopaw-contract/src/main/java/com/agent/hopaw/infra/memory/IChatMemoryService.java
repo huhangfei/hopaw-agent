@@ -18,4 +18,6 @@ public interface IChatMemoryService extends ChatMemoryStore {
      * @param memoryId
      */
     void orphanCleanup(ChatMemoryId memoryId);
+
+    int updateStatusBySessionId(String sessionId,Integer status);
 }

@@ -160,6 +160,11 @@ public class SQLiteChatMemoryStore implements IChatMemoryService {
     }
 
     @Override
+    public int updateStatusBySessionId(String sessionId, Integer status) {
+        return chatMemoryMapper.updateStatusBySessionId(sessionId, status);
+    }
+
+    @Override
     public List<ChatMemory> findDistinctSessionUserPairs() {
         return chatMemoryMapper.findDistinctSessionUserPairs();
     }

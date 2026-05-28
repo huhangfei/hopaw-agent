@@ -1,27 +1,22 @@
 package com.agent.hopaw.controller;
 
 import com.agent.hopaw.constant.DefaultUser;
-import com.agent.hopaw.infra.mapper.ChatHistoryMapper;
-import com.agent.hopaw.infra.mapper.ChatMemoryMapper;
 import com.agent.hopaw.infra.model.dto.ChatHistoryVO;
-import com.agent.hopaw.infra.model.dto.ResponseBean;
 import com.agent.hopaw.infra.model.dto.ToolSetInfo;
 import com.agent.hopaw.infra.model.entity.Agent;
-import com.agent.hopaw.infra.model.entity.ChatHistory;
 import com.agent.hopaw.infra.model.entity.ChatSession;
 import com.agent.hopaw.infra.service.AgentService;
 import com.agent.hopaw.infra.service.IAgentExecutorService;
 import com.agent.hopaw.infra.service.IChatHistoryService;
 import com.agent.hopaw.infra.service.IChatSessionService;
 import com.agent.hopaw.infra.tool.IAgentToolService;
-import com.agent.hopaw.infra.util.UuidUtil;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 
 import java.util.Collections;
 import java.util.List;
-import java.util.Map;
 import java.util.UUID;
 
 @Controller
@@ -31,35 +26,18 @@ public class ChatController {
     private final AgentService agentService;
     private final IAgentToolService agentToolService;
     private final IChatHistoryService chatHistoryService;
-    private final ChatMemoryMapper chatMemoryMapper;
     private final IAgentExecutorService agentExecutorService;
 
     public ChatController(IChatSessionService chatSessionService, AgentService agentService, IAgentToolService agentToolService,
-                          IChatHistoryService chatHistoryService, ChatMemoryMapper chatMemoryMapper,
+                          IChatHistoryService chatHistoryService,
                           IAgentExecutorService agentExecutorService) {
         this.chatSessionService = chatSessionService;
         this.agentService = agentService;
         this.agentToolService = agentToolService;
         this.chatHistoryService = chatHistoryService;
-        this.chatMemoryMapper = chatMemoryMapper;
         this.agentExecutorService = agentExecutorService;
     }
-    @GetMapping("/chat/newSession")
-    public String newSession(@RequestParam(required = false) Long agentId,
-                             @RequestParam(required = false) String skillNames,
-                             @RequestParam(required = false) Long aiModelId,
-                             @RequestParam(required = false) Boolean enableThinking) {
-        String sessionId = UuidUtil.generateSimpleUUID();
-        ChatSession session = chatSessionService.createSessionWithId(DefaultUser.USER, "新任务", sessionId);
-        if (agentId != null) session.setAgentId(agentId);
-        if (skillNames != null && !skillNames.isEmpty()) session.setSkillNames(skillNames);
-        if (aiModelId != null) session.setAiModelId(aiModelId);
-        if (enableThinking != null) session.setEnableThinking(enableThinking);
-        if (agentId != null || skillNames != null || aiModelId != null || enableThinking != null) {
-            chatSessionService.updateSession(session);
-        }
-        return "redirect:/?sessionId=" + sessionId;
-    }
+
     @GetMapping("/")
     public String index(@RequestParam(required = false) String sessionId,Model model) {
         model.addAttribute("agentExecutorState", false);
@@ -67,8 +45,6 @@ public class ChatController {
 
         List<ChatSession> chatSessions = chatSessionService.getSessionsByUserId(DefaultUser.USER);
         model.addAttribute("chatSessions", chatSessions);
-
-
 
         List<Agent> agents = agentService.getAllAgents();
         model.addAttribute("agents", agents);
@@ -110,38 +86,5 @@ public class ChatController {
         return "index";
     }
 
-    @PostMapping("/chat/session/stop")
-    @ResponseBody
-    public ResponseBean stopAgent(@RequestParam String sessionId) {
-        agentExecutorService.stopAgentExecutor(sessionId);
-        return ResponseBean.success();
-    }
 
-    @PostMapping("/chat/session/force-stop")
-    @ResponseBody
-    public ResponseBean forceStopAgent(@RequestParam String sessionId) {
-        agentExecutorService.stopAndRemoveAgentExecutor(sessionId);
-        return ResponseBean.success();
-    }
-
-    @PostMapping("/chat/session/tool/stop")
-    @ResponseBody
-    public ResponseBean stopTool(@RequestParam String sessionId, @RequestParam String callId) {
-        agentExecutorService.stopTool(sessionId, callId);
-        return ResponseBean.success();
-    }
-
-    @GetMapping("/chat/session/{sessionId}/running")
-    @ResponseBody
-    public ResponseBean isRunning(@PathVariable String sessionId) {
-        boolean running = agentExecutorService.isAgentExecutorRunning(sessionId);
-        return ResponseBean.success(running);
-    }
-
-    @GetMapping("/chat/clear")
-    public String clearChat(@RequestParam String sessionId) {
-        chatHistoryService.deleteBySessionId(sessionId);
-        chatMemoryMapper.updateStatusBySessionId(sessionId,2);
-        return "redirect:/?sessionId=" + sessionId;
-    }
 }
