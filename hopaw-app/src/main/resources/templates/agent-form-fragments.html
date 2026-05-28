@@ -8,7 +8,7 @@
             <button class="modal-close" onclick="hideAddModalFragment()">&times;</button>
         </div>
         <div class="modal-body">
-            <form th:action="@{/agent/create}" method="post" class="modal-form" id="addAgentFormFragment">
+            <form th:action="@{/agent/create}" method="post" class="modal-form" id="addAgentFormFragment" onsubmit="return false;">
                 <div class="form-left">
                     <div class="form-group">
                         <label>名称 *</label>
@@ -112,43 +112,18 @@
         </div>
         <div class="modal-footer">
             <button type="button" class="btn-cancel" onclick="hideAddModalFragment()">取消</button>
-            <button type="submit" form="addAgentFormFragment" class="btn-submit">创建</button>
+            <button type="button" class="btn-submit" onclick="submitAddAgentForm(document.getElementById('addAgentFormFragment'))">创建</button>
         </div>
     </div>
-    <script>
-        (function() {
-            var providerSelect = document.getElementById('addProviderSelectFragment');
-            var modelSelect = document.getElementById('addModelSelectFragment');
-            if (providerSelect && modelSelect) {
-                providerSelect.addEventListener('change', function() {
-                    var providerId = this.value;
-                    modelSelect.disabled = !providerId;
-                    if (!providerId) {
-                        modelSelect.innerHTML = '<option value="">先选提供商</option>';
-                        return;
-                    }
-                    fetch('/api/providers/' + providerId + '/models')
-                        .then(function(r) { return r.json(); })
-                        .then(function(models) {
-                            var html = '<option value="">选择模型</option>';
-                            models.forEach(function(m) {
-                                html += '<option value="' + m.id + '">' + m.name + '</option>';
-                            });
-                            modelSelect.innerHTML = html;
-                        });
-                });
-            }
-        })();
-    </script>
 </div>
-<div th:fragment="editAgentModal(agent)" class="modal-overlay" id="editAgentModalFragment">
+<div th:fragment="editAgentModal (agent, vendors, modelsMap)" class="modal-overlay" id="editAgentModalFragment">
     <div class="modal">
         <div class="modal-header">
             <h3>编辑 Agent</h3>
             <button class="modal-close" onclick="hideEditModalFragment()">&times;</button>
         </div>
         <div class="modal-body">
-            <form th:action="@{/agent/update}" method="post" class="modal-form" id="editAgentFormFragment">
+            <form th:action="@{/agent/update}" method="post" class="modal-form" id="editAgentFormFragment" onsubmit="return false;">
                 <input type="hidden" name="id" id="editAgentIdFragment" th:value="${agent.id}">
                 <div class="form-left">
                     <div class="form-group">
@@ -268,7 +243,7 @@
         </div>
         <div class="modal-footer">
             <button type="button" class="btn-cancel" onclick="hideEditModalFragment()">取消</button>
-            <button type="submit" form="editAgentFormFragment" class="btn-submit">保存</button>
+            <button type="button" class="btn-submit" onclick="submitEditAgentForm(document.getElementById('editAgentFormFragment'))">保存</button>
         </div>
     </div>
 </div>
