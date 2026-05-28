@@ -11,7 +11,8 @@ public interface AgentMapper {
     List<Agent> findAll();
     
     Agent findById(@Param("id") Long id);
-    
+    List<Agent> findByIds(@Param("ids") List<Long> ids);
+
     int insert(Agent agent);
     
     int update(Agent agent);

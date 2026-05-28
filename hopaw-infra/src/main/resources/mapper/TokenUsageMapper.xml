@@ -16,8 +16,10 @@
     </resultMap>
 
     <insert id="insert" parameterType="com.agent.hopaw.infra.model.entity.TokenUsage">
-        INSERT INTO token_usage (agent_id, model_name, input_tokens, output_tokens, total_tokens, user_id, session_id, source, create_time)
-        VALUES (#{agentId}, #{modelName}, #{inputTokens}, #{outputTokens}, #{totalTokens}, #{userId}, #{sessionId}, #{source}, #{createTime})
+        INSERT INTO token_usage (agent_id, model_name, input_tokens, output_tokens, total_tokens, user_id, session_id,
+                                 source, create_time)
+        VALUES (#{agentId}, #{modelName}, #{inputTokens}, #{outputTokens}, #{totalTokens}, #{userId}, #{sessionId},
+                #{source}, #{createTime})
     </insert>
 
     <sql id="timeRangeFilter">
@@ -30,10 +32,12 @@
         <if test="agentId != null">AND agent_id = #{agentId}</if>
         <if test="modelName != null and modelName != ''">AND model_name = #{modelName}</if>
         <if test="source != null and source != ''">AND source = #{source}</if>
+        <if test="sessionId != null and sessionId != ''">AND session_id = #{sessionId}</if>
     </sql>
 
     <select id="findByTimeRange" resultMap="TokenUsageResultMap">
-        SELECT id, agent_id, model_name, input_tokens, output_tokens, total_tokens, user_id, session_id, source, create_time
+        SELECT id, agent_id, model_name, input_tokens, output_tokens, total_tokens, user_id, session_id, source,
+        create_time
         FROM token_usage
         WHERE 1=1
         <include refid="timeRangeFilter"/>
@@ -52,10 +56,10 @@
 
     <select id="summaryByTimeRange" resultMap="TokenUsageResultMap">
         SELECT
-            COALESCE(SUM(input_tokens), 0) AS input_tokens,
-            COALESCE(SUM(output_tokens), 0) AS output_tokens,
-            COALESCE(SUM(total_tokens), 0) AS total_tokens,
-            COUNT(*) AS id
+        COALESCE(SUM(input_tokens), 0) AS input_tokens,
+        COALESCE(SUM(output_tokens), 0) AS output_tokens,
+        COALESCE(SUM(total_tokens), 0) AS total_tokens,
+        COUNT(*) AS id
         FROM token_usage
         WHERE 1=1
         <include refid="timeRangeFilter"/>
@@ -64,10 +68,10 @@
 
     <select id="dailyStatsByTimeRange" resultType="java.util.HashMap">
         SELECT
-            strftime('%Y-%m-%d', create_time) AS date,
-            COALESCE(SUM(input_tokens), 0) AS inputTokens,
-            COALESCE(SUM(output_tokens), 0) AS outputTokens,
-            COALESCE(SUM(total_tokens), 0) AS totalTokens
+        strftime('%Y-%m-%d', create_time) AS date,
+        COALESCE(SUM(input_tokens), 0) AS inputTokens,
+        COALESCE(SUM(output_tokens), 0) AS outputTokens,
+        COALESCE(SUM(total_tokens), 0) AS totalTokens
         FROM token_usage
         WHERE 1=1
         <include refid="timeRangeFilter"/>
@@ -77,14 +81,19 @@
     </select>
 
     <select id="findTodayByAgentUser" resultMap="TokenUsageResultMap">
-        SELECT id, agent_id, model_name, input_tokens, output_tokens, total_tokens, user_id, session_id, source, create_time
+        SELECT id, agent_id, model_name, input_tokens, output_tokens, total_tokens, user_id, session_id, source,
+        create_time
         FROM token_usage
-        WHERE agent_id = #{agentId}
-          AND user_id = #{userId}
-          AND create_time >= datetime('now', 'start of day', 'localtime')
-          AND create_time &lt; datetime('now', 'start of day', '+1 day', 'localtime')
-          <if test="minId != null">AND id > #{minId}</if>
-          <if test="source != null">AND source = #{source}</if>
+        WHERE
+        user_id = #{userId}
+        <if test="agentId!=null">
+            AND agent_id = #{agentId}
+        </if>
+        AND create_time >= datetime('now', 'start of day', 'localtime')
+        AND create_time &lt; datetime('now', 'start of day', '+1 day', 'localtime')
+        <if test="minId != null">AND id > #{minId}</if>
+        <if test="source != null">AND source = #{source}</if>
+        <if test="sessionId != null and sessionId != ''">AND session_id = #{sessionId}</if>
         ORDER BY id desc
         LIMIT #{limit}
     </select>

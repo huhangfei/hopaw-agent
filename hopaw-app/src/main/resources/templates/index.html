@@ -12,10 +12,10 @@
     <main class="chat-area">
         <div th:if="${selectedAgent != null}" class="chat-header">
             <div class="chat-header-title">
-                <span class="chat-header-desc" th:text="${selectedAgent.description}"></span>
+                <span class="chat-header-desc" id="chat-header-desc" th:text="${selectedAgent.description}"></span>
             </div>
             <div class="header-actions">
-                <button class="btn-stop-header" th:attr="onclick=|forceStopAgent(${selectedAgent.id})|" title="强停">
+                <button class="btn-stop-header" th:attr="onclick=|forceStopCurrentSession(${currentSessionId})|" title="强停">
                     <svg viewBox="0 0 24 24" fill="currentColor">
                         <rect x="4" y="4" width="16" height="16" rx="2"/>
                     </svg>
@@ -33,22 +33,16 @@
                                 <svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor">
                                     <path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/>
                                 </svg>
-                                添加
+                                添加 Agent
                             </button>
                             <button class="dropdown-item"
                                     th:attr="onclick=|showEditModal(${selectedAgent.id}, '${#strings.escapeJava(selectedAgent.name)}', '${#strings.escapeJava(selectedAgent.description)}', '${#strings.escapeJava(selectedAgent.tools)}', ${selectedAgent.maxMemoryRecords != null ? selectedAgent.maxMemoryRecords : 20}, ${selectedAgent.maxToolInvocations != null ? selectedAgent.maxToolInvocations : 10}, ${selectedAgent.aiModelId}, ${selectedAgent.enableThinking != null ? selectedAgent.enableThinking : true}, ${selectedAgent.vectorToolSearch != null ? selectedAgent.vectorToolSearch : true}, ${selectedAgent.vectorToolSearchMaxResults != null ? selectedAgent.vectorToolSearchMaxResults : 5})|">
                                 <svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor">
                                     <path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/>
                                 </svg>
-                                编辑
+                                编辑 Agent
                             </button>
-                            <button class="dropdown-item" th:attr="onclick=|deleteAgent(${selectedAgent.id})|">
-                                <svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor">
-                                    <path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/>
-                                </svg>
-                                删除
-                            </button>
-                            <button class="dropdown-item" th:attr="onclick=|clearHistory(${selectedAgent.id})|">
+                            <button class="dropdown-item" th:attr="onclick=|clearHistory('${currentSessionId}')|">
                                 <svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor">
                                     <path d="M19.36 2.72l1.42 1.42-5.72 5.71c1.07 1.54 1.22 3.39.32 4.59L9.06 8.12c1.2-.9 3.05-.75 4.59.32l5.71-5.72zM5.93 17.57c-2.01-2.01-3.24-4.41-3.58-6.65l4.88-2.09 7.44 7.44-2.09 4.88c-2.24-.34-4.64-1.57-6.65-3.58z"/>
                                 </svg>
@@ -64,61 +58,27 @@
                  th:switch="${chat.messageType}"
                  th:classappend="${chat.role == 'user' ? 'user' : 'agent'}" class="message">
                 <div th:case="'text'">
-                    <div class="message-label" th:text="${chat.role == 'user' ? '你' : selectedAgent.name}"></div>
+                    <div class="message-label" th:text="${chat.role == 'user' ? '你' : (chat.agent != null ? chat.agent.name : 'Agent')}"></div>
                     <div th:text="${chat.content}" class="message-content"
                          th:attr="data-is-agent=${chat.role == 'agent'}"></div>
                     <div class="message-time"
                          th:text="${chat.createTime.toLocalDate().equals(T(java.time.LocalDate).now()) ? #temporals.format(chat.createTime, 'HH:mm:ss') : #temporals.format(chat.createTime, 'yyyy-MM-dd HH:mm:ss')}"></div>
                 </div>
                 <div th:case="'thinking'">
-                    <div class="message-label" th:text="${selectedAgent.name} + ' (思考)'"></div>
+                    <div class="message-label" th:text="${chat.agent != null ? chat.agent.name : 'Agent'} + ' (思考)'"></div>
                     <div th:text="${chat.content}" class="message-content thinking-content"></div>
                     <div class="message-time"
                          th:text="${chat.createTime.toLocalDate().equals(T(java.time.LocalDate).now()) ? #temporals.format(chat.createTime, 'HH:mm:ss') : #temporals.format(chat.createTime, 'yyyy-MM-dd HH:mm:ss')}"></div>
                 </div>
-                <div th:case="'tool_call'" class="tool-call-message-content">
-                    <div class="message-label" th:text="${selectedAgent.name}"></div>
-                    <div class="tool-call-container-static">
-                        <div class="tool-call"
-                             th:attr="data-tool-call-id=${chat.toolCallId}, data-status=${chat.toolCallStatus == 'tool_call_start' ? 'starting' : (chat.toolCallStatus == 'tool_call_end' ? 'executed' : (chat.toolCallStatus == 'tool_call_failed' ? 'executed' : 'unknown'))}">
-                            <div class="tool-call-header">
-                                    <span class="tool-call-icon" th:switch="${chat.toolCallStatus}"
-                                          th:classappend="${chat.toolCallStatus == 'tool_call_end' ? 'completed' : ''}">
-                                        <span th:case="'tool_call_start'">🔧</span>
-                                        <span th:case="'tool_call_end'">✅</span>
-                                        <span th:case="'tool_call_failed'">❌</span>
-                                        <span th:case="*">🔧</span>
-                                    </span>
-                                <span class="tool-call-name" th:text="${chat.toolName}"></span>
-                                <span class="tool-call-status" th:switch="${chat.toolCallStatus}"
-                                      th:classappend="${chat.toolCallStatus == 'tool_call_end' ? 'completed' : ''}">
-                                        <span th:case="'tool_call_start'">执行中...</span>
-                                        <span th:case="'tool_call_end'"
-                                              th:text="${chat.toolExecutionTime != null ? '执行完成(' + #numbers.formatDecimal(chat.toolExecutionTime / 1000.0, 1, 1) + 's)' : '执行完成'}">执行完成</span>
-                                        <span th:case="'tool_call_failed'">执行失败</span>
-                                        <span th:case="*" th:text="${chat.toolCallStatus}">执行完成</span>
-                                    </span>
-                                <span th:if="${chat.toolCallStatus == 'tool_call_end' or chat.toolCallStatus == 'tool_call_failed'}"
-                                      class="tool-call-toggle">▼</span>
-                            </div>
-                            <div class="tool-call-body"
-                                 th:classappend="${chat.toolCallStatus == 'tool_call_start' ? '' : 'collapsed'}">
-                                <div class="tool-call-args" th:if="${chat.toolArguments}">
-                                    <div class="args-label">参数:</div>
-                                    <pre class="args-content" th:text="${chat.toolArguments}"></pre>
-                                </div>
-                                <div class="tool-call-result" th:if="${chat.content}">
-                                    <div class="result-label">结果:</div>
-                                    <pre class="result-content" th:text="${chat.content}"></pre>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="message-time"
-                         th:text="${chat.createTime.toLocalDate().equals(T(java.time.LocalDate).now()) ? #temporals.format(chat.createTime, 'HH:mm:ss') : #temporals.format(chat.createTime, 'yyyy-MM-dd HH:mm:ss')}"></div>
-                </div>
             </div>
+            <div th:if="${chatHistory.size()==0}" class="empty-state" id="chatHistoryEmptyState">
+            <svg viewBox="0 0 24 24" fill="currentColor">
+                <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/>
+            </svg>
+            <p>有什么问题尽管问。</p>
         </div>
+        </div>
+
         <div th:if="${selectedAgent != null}" class="chat-input-area">
             <form th:action="@{/chat}" method="post" class="chat-form" id="chatForm">
                 <input type="hidden" name="agentId" th:value="${selectedAgent.id}">
@@ -126,10 +86,11 @@
                     <textarea name="message" id="messageInput" placeholder="输入消息..." required
                               th:disabled="${agentExecutorState}" rows="2"></textarea>
                     <div class="chat-input-tools">
-                        <select class="agent-select agent-select-toolbar" onchange="selectAgent(this.value)">
+                        <select class="agent-select agent-select-toolbar" onchange="selectAgent(this)">
                             <option th:each="a : ${agents}"
                                     th:value="${a.id}"
                                     th:text="${a.name}"
+                                    th:data-desc="${a.description}"
                                     th:selected="${selectedAgentId == a.id}"></option>
                         </select>
                         <button type="button" class="chat-btn-deep" id="deepThinkBtn"
@@ -180,13 +141,6 @@
                     运行中...
                 </button>
             </form>
-        </div>
-
-        <div th:if="${selectedAgent == null}" class="empty-state">
-            <svg viewBox="0 0 24 24" fill="currentColor">
-                <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/>
-            </svg>
-            <p>选择一个 Agent 开始对话</p>
         </div>
     </main>
     <aside class="tool-panel">

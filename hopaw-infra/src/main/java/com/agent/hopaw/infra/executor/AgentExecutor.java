@@ -98,9 +98,10 @@ public class AgentExecutor implements IAgentExecutor {
         this.agentExecutorParams = agentExecutorParams;
         this.agentId = agentExecutorParams.getAgentId();
         this.userId = agentExecutorParams.getUserId();
-        this.sessionId = agentExecutorParams.getSessionId();
         this.aiModelId = agentExecutorParams.getAiModelId();
         this.contents = agentExecutorParams.getContents();
+        this.sessionId = agentExecutorParams.getSessionId() != null ? agentExecutorParams.getSessionId() : UUID.randomUUID().toString();
+        this.requestId = UUID.randomUUID().toString();
 
         this.chatSessionService = chatSessionService;
         this.chatHistoryStore = chatHistoryStore;
@@ -114,7 +115,7 @@ public class AgentExecutor implements IAgentExecutor {
         this.memoryId = new ChatMemoryId(sessionId, agentId, userId);
         // 创建工具执行线程池
         this.toolExecutor = createToolExecutor();
-        this.agentMessageHandler = new AgentMessageHandler(this.sessionId, messageConsumer, chatHistory -> chatHistoryStore.saveChatHistory(chatHistory));
+        this.agentMessageHandler = new AgentMessageHandler(this.sessionId, this.requestId, messageConsumer, chatHistory -> chatHistoryStore.saveChatHistory(chatHistory));
     }
 
     @Override
@@ -227,7 +228,7 @@ public class AgentExecutor implements IAgentExecutor {
     @Override
     public void execute() {
         try {
-            this.requestId = UUID.randomUUID().toString();
+
             saveChatSession();
             saveChatHistory();
 
@@ -309,6 +310,7 @@ public class AgentExecutor implements IAgentExecutor {
                         agentMessageHandler.toolExecutionHandler(toolExecution);
                     });
             tokenStream.start();
+            taskLatch.await(600, TimeUnit.SECONDS);
         } catch (Exception e) {
             logger.error("\n(注: 流式响应失败: " + e.getMessage() + ")\n可以尝试清理对话或强停试试。", e);
             agentMessageHandler.onErrorHandler(e);
@@ -318,6 +320,7 @@ public class AgentExecutor implements IAgentExecutor {
             toolCancelInvocations.clear();
             toolStopHooks.clear();
             taskLatch.countDown();
+            agentMessageHandler.taskDone();
         }
     }
 
@@ -379,7 +382,7 @@ public class AgentExecutor implements IAgentExecutor {
     private void saveChatSession() {
 
 
-        ChatSession chatSession = chatSessionService.getSessionBySessionId(sessionId);
+        ChatSession chatSession=chatSessionService.getSessionBySessionId(sessionId);
         if (chatSession == null) {
             chatSession = new ChatSession();
             String userIntent = analyzeUserIntent();
@@ -478,21 +481,20 @@ public class AgentExecutor implements IAgentExecutor {
      */
     public class AgentMessageHandler {
         private final String sessionId;
+        private final String requestId;
         private String lastMessageType = "";
         private String currentMessageType = "";
         private StringBuilder messageBuilder = new StringBuilder();
         private StringBuilder thinkingBuilder = new StringBuilder();
         private AiToolCallMessageInfo aiToolCallMessageInfo;
-        private BiConsumer<String, String> messageConsumer;
-        private Consumer<ChatHistory> chatHistoryConsumer;
-        private String requestId;
-
-        public AgentMessageHandler(String sessionId) {
+        private final BiConsumer<String, String> messageConsumer;
+        private final Consumer<ChatHistory> chatHistoryConsumer;
+        public AgentMessageHandler(String sessionId,
+                                   String requestId,
+                                   BiConsumer<String, String> messageConsumer,
+                                   Consumer<ChatHistory> chatHistoryConsumer) {
             this.sessionId = sessionId;
-        }
-
-        public AgentMessageHandler(String sessionId, BiConsumer<String, String> messageConsumer, Consumer<ChatHistory> chatHistoryConsumer) {
-            this.sessionId = sessionId;
+            this.requestId = requestId;
             this.messageConsumer = messageConsumer;
             this.chatHistoryConsumer = chatHistoryConsumer;
         }
@@ -501,22 +503,8 @@ public class AgentExecutor implements IAgentExecutor {
             return messageConsumer;
         }
 
-        public void setMessageConsumer(BiConsumer<String, String> messageConsumer) {
-            this.messageConsumer = messageConsumer == null ? (sId, r) -> {
-            } : messageConsumer;
-        }
-
-        public void setRequestId(String requestId) {
-            this.requestId = requestId;
-        }
-
-        public void setChatHistoryConsumer(Consumer<ChatHistory> chatHistoryConsumer) {
-            this.chatHistoryConsumer = chatHistoryConsumer == null ? (h) -> {
-            } : chatHistoryConsumer;
-        }
-
         public void sendMessageToChannel(Object message) {
-            messageConsumer.accept(sessionId, JSON.toJSONString(message));
+            messageConsumer.accept(userId, JSON.toJSONString(message));
         }
 
         public void done() {

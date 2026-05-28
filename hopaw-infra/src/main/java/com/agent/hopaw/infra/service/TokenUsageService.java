@@ -24,10 +24,10 @@ public class TokenUsageService implements ITokenUsageService {
         tokenUsageMapper.insert(tokenUsage);
     }
 
-    public Map<String, Object> queryPage(LocalDateTime startTime, LocalDateTime endTime, String userId, Long agentId, String modelName, String source, int page, int size) {
+    public Map<String, Object> queryPage(LocalDateTime startTime, LocalDateTime endTime, String userId, Long agentId, String modelName, String source, String sessionId, int page, int size) {
         int offset = (page - 1) * size;
-        List<TokenUsage> list = tokenUsageMapper.findByTimeRange(startTime, endTime, userId, agentId, modelName, source, size, offset);
-        long total = tokenUsageMapper.countByTimeRange(startTime, endTime, userId, agentId, modelName, source);
+        List<TokenUsage> list = tokenUsageMapper.findByTimeRange(startTime, endTime, userId, agentId, modelName, source, sessionId, size, offset);
+        long total = tokenUsageMapper.countByTimeRange(startTime, endTime, userId, agentId, modelName, source, sessionId);
 
         Map<String, Object> result = new HashMap<>();
         result.put("list", list);
@@ -37,14 +37,14 @@ public class TokenUsageService implements ITokenUsageService {
         return result;
     }
 
-    public TokenUsage summary(LocalDateTime startTime, LocalDateTime endTime, String userId, Long agentId, String modelName, String source) {
-        return tokenUsageMapper.summaryByTimeRange(startTime, endTime, userId, agentId, modelName, source);
+    public TokenUsage summary(LocalDateTime startTime, LocalDateTime endTime, String userId, Long agentId, String modelName, String source, String sessionId) {
+        return tokenUsageMapper.summaryByTimeRange(startTime, endTime, userId, agentId, modelName, source, sessionId);
     }
 
-    public List<Map<String, Object>> dailyStats(LocalDateTime startTime, LocalDateTime endTime, String userId, Long agentId, String modelName, String source) {
-        return tokenUsageMapper.dailyStatsByTimeRange(startTime, endTime, userId, agentId, modelName, source);
+    public List<Map<String, Object>> dailyStats(LocalDateTime startTime, LocalDateTime endTime, String userId, Long agentId, String modelName, String source, String sessionId) {
+        return tokenUsageMapper.dailyStatsByTimeRange(startTime, endTime, userId, agentId, modelName, source, sessionId);
     }
-    public List<TokenUsage> findTodayByAgentUser(Long agentId, String userId, String source, Long minId, int limit) {
-        return tokenUsageMapper.findTodayByAgentUser(agentId, userId, source, minId, limit);
+    public List<TokenUsage> findTodayByAgentUser(Long agentId, String userId, String source, String sessionId, Long minId, int limit) {
+        return tokenUsageMapper.findTodayByAgentUser(agentId, userId, source, sessionId, minId, limit);
     }
 }

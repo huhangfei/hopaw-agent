@@ -87,9 +87,9 @@ public class ChatWebSocketHandler extends TextWebSocketHandler {
             userRequest.setEnableThinking(enableThinking);
             //回复一个已收到消息，开始处理
             sendFirstState(session);
-            IAgentExecutor executor = agentExecutorService.createAgentExecutor(userRequest,(sId,aiMessageJson)->{
+            IAgentExecutor executor = agentExecutorService.createAgentExecutor(userRequest,(userId,aiMessageJson)->{
                 try {
-                    ConcurrentLinkedQueue<String> sessionIds = userSessionMap.get(sId);
+                    ConcurrentLinkedQueue<String> sessionIds = userSessionMap.get(userId);
                     if (sessionIds == null || sessionIds.isEmpty()) {
                         return;
                     }

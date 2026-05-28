@@ -18,6 +18,7 @@ public interface TokenUsageMapper {
                                      @Param("agentId") Long agentId,
                                      @Param("modelName") String modelName,
                                      @Param("source") String source,
+                                     @Param("sessionId") String sessionId,
                                      @Param("limit") int limit,
                                      @Param("offset") int offset);
 
@@ -26,25 +27,29 @@ public interface TokenUsageMapper {
                           @Param("userId") String userId,
                           @Param("agentId") Long agentId,
                           @Param("modelName") String modelName,
-                          @Param("source") String source);
+                          @Param("source") String source,
+                          @Param("sessionId") String sessionId);
 
     TokenUsage summaryByTimeRange(@Param("startTime") LocalDateTime startTime,
                                   @Param("endTime") LocalDateTime endTime,
                                   @Param("userId") String userId,
                                   @Param("agentId") Long agentId,
                                   @Param("modelName") String modelName,
-                                  @Param("source") String source);
+                                  @Param("source") String source,
+                                  @Param("sessionId") String sessionId);
 
     List<Map<String, Object>> dailyStatsByTimeRange(@Param("startTime") LocalDateTime startTime,
                                                      @Param("endTime") LocalDateTime endTime,
                                                      @Param("userId") String userId,
                                                      @Param("agentId") Long agentId,
                                                      @Param("modelName") String modelName,
-                                                     @Param("source") String source);
+                                                     @Param("source") String source,
+                                                     @Param("sessionId") String sessionId);
 
     List<TokenUsage> findTodayByAgentUser(@Param("agentId") Long agentId,
                                           @Param("userId") String userId,
                                           @Param("source") String source,
+                                          @Param("sessionId") String sessionId,
                                           @Param("minId") Long minId,
                                           @Param("limit") int limit);
 

@@ -3,6 +3,7 @@ package com.agent.hopaw.controller;
 import com.agent.hopaw.constant.DefaultUser;
 import com.agent.hopaw.infra.mapper.ChatHistoryMapper;
 import com.agent.hopaw.infra.mapper.ChatMemoryMapper;
+import com.agent.hopaw.infra.model.dto.ChatHistoryVO;
 import com.agent.hopaw.infra.model.dto.ResponseBean;
 import com.agent.hopaw.infra.model.dto.ToolSetInfo;
 import com.agent.hopaw.infra.model.entity.Agent;
@@ -10,6 +11,7 @@ import com.agent.hopaw.infra.model.entity.ChatHistory;
 import com.agent.hopaw.infra.model.entity.ChatSession;
 import com.agent.hopaw.infra.service.AgentService;
 import com.agent.hopaw.infra.service.IAgentExecutorService;
+import com.agent.hopaw.infra.service.IChatHistoryService;
 import com.agent.hopaw.infra.service.IChatSessionService;
 import com.agent.hopaw.infra.tool.IAgentToolService;
 import org.springframework.stereotype.Controller;
@@ -19,6 +21,7 @@ import org.springframework.web.bind.annotation.*;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.util.UUID;
 
 @Controller
 public class ChatController {
@@ -26,17 +29,17 @@ public class ChatController {
     private final IChatSessionService chatSessionService;
     private final AgentService agentService;
     private final IAgentToolService agentToolService;
-    private final ChatHistoryMapper chatHistoryMapper;
+    private final IChatHistoryService chatHistoryService;
     private final ChatMemoryMapper chatMemoryMapper;
     private final IAgentExecutorService agentExecutorService;
 
     public ChatController(IChatSessionService chatSessionService, AgentService agentService, IAgentToolService agentToolService,
-                          ChatHistoryMapper chatHistoryMapper, ChatMemoryMapper chatMemoryMapper,
+                          IChatHistoryService chatHistoryService, ChatMemoryMapper chatMemoryMapper,
                           IAgentExecutorService agentExecutorService) {
         this.chatSessionService = chatSessionService;
         this.agentService = agentService;
         this.agentToolService = agentToolService;
-        this.chatHistoryMapper = chatHistoryMapper;
+        this.chatHistoryService = chatHistoryService;
         this.chatMemoryMapper = chatMemoryMapper;
         this.agentExecutorService = agentExecutorService;
     }
@@ -58,10 +61,11 @@ public class ChatController {
         Agent selectedAgent=null;
         Long aiModelId=null;
         Boolean enableThinking=true;
+        model.addAttribute("chatHistory", Collections.emptyList());
         if(sessionId != null){
             ChatSession session = chatSessionService.getSessionBySessionId(sessionId);
             if(session != null){
-                List<ChatHistory> chatHistory = chatHistoryMapper.findBySessionId(sessionId, 100);
+                List<ChatHistoryVO> chatHistory = chatHistoryService.findBySessionId(sessionId, 100);
                 Collections.reverse(chatHistory);
                 model.addAttribute("chatHistory", chatHistory);
                 model.addAttribute("agentExecutorState", agentExecutorService.isAgentExecutorRunning(session.getSessionId()));
@@ -80,7 +84,7 @@ public class ChatController {
         model.addAttribute("selectedAgentId", selectedAgent.getId());
         model.addAttribute("selectedAiModelId", aiModelId);
         model.addAttribute("enableThinking", enableThinking);
-        model.addAttribute("currentSessionId", sessionId);
+        model.addAttribute("currentSessionId", sessionId==null? UUID.randomUUID().toString() :sessionId);
         List<ToolSetInfo> toolSets = agentToolService.getToolSets();
         model.addAttribute("toolSets", toolSets);
         return "index";
@@ -116,7 +120,7 @@ public class ChatController {
 
     @GetMapping("/chat/clear")
     public String clearChat(@RequestParam String sessionId) {
-        chatHistoryMapper.deleteBySessionId(sessionId);
+        chatHistoryService.deleteBySessionId(sessionId);
         chatMemoryMapper.updateStatusBySessionId(sessionId,2);
         return "redirect:/?sessionId=" + sessionId;
     }

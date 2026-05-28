@@ -9,6 +9,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 
+import java.util.ArrayList;
 import java.util.List;
 
 @Service
@@ -30,6 +31,13 @@ public class AgentService implements IAgentService {
     @Override
     public Agent getAgentById(Long id) {
         return agentMapper.findById(id);
+    }
+    @Override
+    public List<Agent> getAgentByIds(List<Long> ids) {
+        if(ids==null || ids.isEmpty()){
+            return new ArrayList<>(0);
+        }
+        return agentMapper.findByIds(ids);
     }
 
     @Override

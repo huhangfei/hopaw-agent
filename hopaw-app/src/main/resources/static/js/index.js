@@ -1,6 +1,5 @@
 var currentAgentId = null;
 var ws = null;
-var isStreaming = false;
 var currentStreamingMessage = null;
 var streamingMarkdownContent = '';
 var lastMessageType = null;
@@ -86,6 +85,7 @@ function connectWebSocket() {
             handleStreamingDone(data.message, data.response, requestId);
         } else if (data.type === 'task-done') {
             loadTokenUsage(lastTokenId || undefined);
+            enableInput();
         } else if (data.type === 'error') {
             handleStreamingError(data.content || data.message, requestId);
         }
@@ -466,7 +466,6 @@ function handleStreamingDone(userMessage, response, requestId) {
     var agentName = (function(){ var s = document.querySelector('.agent-select-toolbar'); return s ? s.options[s.selectedIndex].text : 'Agent'; })();
     var msgState = streamingMessages[requestId];
     if (!msgState || !msgState.currentStreamingMessage) {
-        isStreaming = false;
         enableInput();
         return;
     }
@@ -492,7 +491,6 @@ function handleStreamingDone(userMessage, response, requestId) {
     msgState.currentStreamingMessage.appendChild(timeDiv);
     
     delete streamingMessages[requestId];
-    isStreaming = false;
     enableInput();
 }
 
@@ -523,8 +521,6 @@ function handleStreamingError(errorMessage, requestId) {
 
     messagesDiv.appendChild(errorDiv);
     messagesDiv.scrollTop = messagesDiv.scrollHeight;
-
-    isStreaming = false;
     enableInput();
 }
 
@@ -532,7 +528,7 @@ function sendMessage() {
     var input = document.getElementById('messageInput');
     var message = input.value.trim();
 
-    if (!message || !currentAgentId || isStreaming) {
+    if (!message || !currentAgentId) {
         return;
     }
 
@@ -541,7 +537,7 @@ function sendMessage() {
         return;
     }
 
-    fetch('/api/agent/' + currentAgentId + '/running')
+    fetch('/chat/session/' + currentAgentId + '/running')
         .then(function(r) { return r.json(); })
         .then(function(res) {
             if (res.code === 200 && res.data === true) {
@@ -552,8 +548,6 @@ function sendMessage() {
 
             input.value = '';
             disableInput();
-            isStreaming = true;
-
             var userMessageDiv = document.createElement('div');
             userMessageDiv.className = 'message user';
 
@@ -584,7 +578,7 @@ function sendMessage() {
                 aiModelId: currentModelId,
                 enableThinking: deepBtn ? deepBtn.getAttribute('data-enabled') === 'true' : true
             };
-
+            document.getElementById('chatHistoryEmptyState').classList.add("hide");
             ws.send(JSON.stringify(payload));
         })
         .catch(function(err) {
@@ -612,34 +606,25 @@ function enableInput() {
     if (input) input.focus();
 }
 
-function selectAgent(agentId) {
-    window.location.href = '/?agentId=' + agentId;
+function selectAgent(selectElement) {
+    setCurrentAgentId(selectElement.value);
+    const index = selectElement.selectedIndex;
+
+    // 如果下标不为 -1（表示有选项被选中），则获取该 option 元素
+    if (index !== -1) {
+        const selectedOption = selectElement.options[index];
+        // 同样使用 getAttribute 读取你代码中的 'data' 属性
+        const dataValue = selectedOption.getAttribute('data-desc');
+        var descEl = document.getElementById('chat-header-desc');
+        descEl.innerHTML=dataValue;
+    }
 }
 
-function clearHistory(agentId) {
+function clearHistory(sessionId) {
     showConfirm('确定要清空对话历史吗？').then(function(confirmed) {
         if (confirmed) {
-            window.location.href = '/chat/clear?agentId=' + agentId;
+            window.location.href = '/chat/clear?sessionId=' + sessionId;
         }
-    });
-}
-
-function deleteAgent(agentId) {
-    showConfirm('确定要删除这个 Agent 吗？').then(function(confirmed) {
-        if (confirmed) {
-         var form = document.createElement('form');
-            form.method = 'POST';
-            form.action = '/agent/delete';
-
-            var input = document.createElement('input');
-            input.type = 'hidden';
-            input.name = 'id';
-            input.value = agentId;
-            form.appendChild(input);
-
-            document.body.appendChild(form);
-            form.submit();
-      }
     });
 }
 
@@ -754,16 +739,16 @@ function hideEditModal() {
     Modal.close('editAgentModal');
 }
 
-function forceStopAgent(agentId) {
+function forceStopAgent(sessionId) {
     showConfirm('确定要强停智能体吗？强停后将移除执行器并刷新页面。').then(function(confirmed) {
         if (!confirmed) return;
-        fetch('/agent/force-stop', {
+        fetch('/chat/session/force-stop', {
             method: 'POST',
             headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-            body: 'id=' + agentId
+            body: 'sessionId=' + sessionId
         }).then(function(r) { return r.json(); }).then(function(res) {
             if (res.code === 200) {
-                window.location.href = '/?agentId=' + agentId;
+                window.location.href = '/?sessionId=' + sessionId;
             } else {
                 showToast(res.msg || '强停失败', 'warning');
             }
@@ -804,7 +789,7 @@ var tokenChart = null;
 
 function loadTokenUsage(minId) {
     if (!currentAgentId) return;
-    var url = '/api/token-usage/today?agentId=' + currentAgentId+"&source=chat";
+    var url = '/api/token-usage/today?sessionId=' + currentSessionId+"&source=chat";
     if (minId) url += '&minId=' + minId;
     fetch(url).then(function(r) { return r.json(); }).then(function(res) {
         if (res.code === 200 && res.data) {
@@ -827,7 +812,7 @@ function loadTokenUsage(minId) {
     var pad = function(n) { return String(n).padStart(2, '0'); };
     var startStr = now.getFullYear() + '-' + pad(now.getMonth()+1) + '-' + pad(now.getDate()) + ' 00:00:00';
     var endStr = now.getFullYear() + '-' + pad(now.getMonth()+1) + '-' + pad(now.getDate()) + ' 23:59:59';
-    var statsUrl = '/api/token-usage/daily-stats?startTime=' + encodeURIComponent(startStr) + '&endTime=' + encodeURIComponent(endStr) + '&agentId=' + currentAgentId+'&source=chat';
+    var statsUrl = '/api/token-usage/daily-stats?startTime=' + encodeURIComponent(startStr) + '&endTime=' + encodeURIComponent(endStr) + '&sessionId=' + currentSessionId+'&source=chat';
     fetch(statsUrl).then(function(r) { return r.json(); }).then(function(sres) {
         if (sres.code === 200 && sres.data && sres.data.length > 0) {
             var today = sres.data[0];

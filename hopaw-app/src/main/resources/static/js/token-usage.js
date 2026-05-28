@@ -11,6 +11,13 @@ document.addEventListener('DOMContentLoaded', function() {
     var startStr = formatDateTime(start);
     document.getElementById('startTime').value = startStr;
     document.getElementById('endTime').value = endStr;
+
+    var urlParams = new URLSearchParams(window.location.search);
+    var sessionId = urlParams.get('sessionId');
+    if (sessionId) {
+        document.getElementById('filterSessionId').value = sessionId;
+    }
+
     queryData();
 });
 
@@ -54,10 +61,12 @@ function getFilterParams() {
     var agentId = document.getElementById('filterAgent').value;
     var modelName = document.getElementById('filterModel').value.trim();
     var source = document.getElementById('filterSource').value;
+    var sessionId = document.getElementById('filterSessionId').value.trim();
     if (userId) params.userId = userId;
     if (agentId) params.agentId = agentId;
     if (modelName) params.modelName = modelName;
     if (source) params.source = source;
+    if (sessionId) params.sessionId = sessionId;
     return params;
 }
 
