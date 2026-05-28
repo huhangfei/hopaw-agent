@@ -633,52 +633,6 @@ function clearHistory(sessionId) {
     });
 }
 
-function loadProviders(providerSelect, modelSelect, selectedAiModelId) {
-    fetch('/api/providers')
-        .then(function(r) { return r.json(); })
-        .then(function(providers) {
-            providerSelect.innerHTML = '<option value="">选择提供商</option>';
-            providers.forEach(function(p) {
-                if (!p.apiKey || !p.url) return;
-                var opt = document.createElement('option');
-                opt.value = p.id;
-                opt.textContent = p.name;
-                providerSelect.appendChild(opt);
-            });
-            if (selectedAiModelId) {
-                fetch('/api/models/' + selectedAiModelId)
-                    .then(function(r) { return r.json(); })
-                    .then(function(model) {
-                        providerSelect.value = model.providerId;
-                        var changeEvent = new Event('change');
-                        providerSelect.dispatchEvent(changeEvent);
-                        setTimeout(function() {
-                            modelSelect.value = selectedAiModelId;
-                        }, 100);
-                    });
-            }
-        });
-}
-
-function setupCascading(providerSelect, modelSelect) {
-    providerSelect.addEventListener('change', function() {
-        var providerId = this.value;
-        modelSelect.innerHTML = '<option value="">选择模型</option>';
-        modelSelect.disabled = !providerId;
-        if (!providerId) return;
-        fetch('/api/providers/' + providerId + '/models')
-            .then(function(r) { return r.json(); })
-            .then(function(models) {
-                models.forEach(function(m) {
-                    var opt = document.createElement('option');
-                    opt.value = m.id;
-                    opt.textContent = m.modelName;
-                    modelSelect.appendChild(opt);
-                });
-            });
-    });
-}
-
 function selectAllTools(containerSelector) {
     document.querySelectorAll(containerSelector + ' input[type="checkbox"]').forEach(function(cb) {
         cb.checked = true;
@@ -691,57 +645,71 @@ function deselectAllTools(containerSelector) {
     });
 }
 
-function showAddModal() {
-    Modal.open('addAgentModal');
-    var providerSelect = document.getElementById('addProviderSelect');
-    var modelSelect = document.getElementById('addModelSelect');
-    modelSelect.disabled = true;
-    loadProviders(providerSelect, modelSelect, null);
+function showAddAgentModal() {
+    fetch('/agent/modal/add')
+        .then(function(r) { return r.text(); })
+        .then(function(html) {
+            var container = document.createElement('div');
+            container.innerHTML = html;
+            var modalEl = container.firstElementChild;
+            document.body.appendChild(modalEl);
+
+            modalEl.addEventListener('click', function(e) {
+                if (e.target === modalEl) {
+                    closeAndRemoveModal(modalEl);
+                }
+            });
+            modalEl.style.display = 'flex';
+            loadProviders('addProviderSelectFragment', null, 'addModelSelectFragment', null);
+        });
+}
+
+function showEditAgentModal() {
+    fetch('/agent/modal/edit/' + currentAgentId)
+        .then(function(r) { return r.text(); })
+        .then(function(html) {
+            var container = document.createElement('div');
+            container.innerHTML = html;
+            var modalEl = container.firstElementChild;
+            document.body.appendChild(modalEl);
+
+            modalEl.addEventListener('click', function(e) {
+                if (e.target === modalEl) {
+                    closeAndRemoveModal(modalEl);
+                }
+            });
+            modalEl.style.display = 'flex';
+            var defaultProviderId = document.getElementById('editModelProviderId').value;
+            var defaultModelId = document.getElementById('editModelId').value;
+            loadProviders('editProviderSelectFragment', defaultProviderId, 'editModelSelectFragment', defaultModelId);
+
+        });
+}
+
+function hideAddModalFragment() {
+    var modal = document.getElementById('addAgentModalFragment');
+    if (modal) closeAndRemoveModal(modal);
+}
+
+function hideEditModalFragment() {
+    var modal = document.getElementById('editAgentModalFragment');
+    if (modal) closeAndRemoveModal(modal);
+}
+
+function closeAndRemoveModal(modalEl) {
+    if (modalEl && modalEl.parentNode) {
+        modalEl.parentNode.removeChild(modalEl);
+    }
 }
 
 function hideAddModal() {
-    Modal.close('addAgentModal');
+    var modal = document.getElementById('addAgentModal');
+    if (modal) closeAndRemoveModal(modal);
 }
 
-function showEditModal(id, name, description, tools, maxMemoryRecords, maxToolInvocations, aiModelId, enableThinking, vectorToolSearch, vectorToolSearchMaxResults) {
-    // 以深度思考按钮的实时状态为准，而非页面加载时的固化值
-    var deepBtn = document.getElementById('deepThinkBtn');
-    if (deepBtn) {
-        enableThinking = deepBtn.getAttribute('data-enabled') === 'true';
-    }
-    document.getElementById('editAgentId').value = id;
-    document.getElementById('editAgentName').value = name;
-    document.getElementById('editAgentDescription').value = description;
-    document.getElementById('editMaxMemoryRecords').value = maxMemoryRecords || 20;
-    document.getElementById('editMaxToolInvocations').value = maxToolInvocations || 10;
-    var editEnableCb = document.getElementById('editEnableThinkingCheckbox');
-    editEnableCb.checked = enableThinking !== false;
-    document.getElementById('editEnableThinking').value = editEnableCb.checked ? 'true' : 'false';
-
-    var editVectorCb = document.getElementById('editVectorToolSearchCheckbox');
-    editVectorCb.checked = vectorToolSearch !== false;
-    document.getElementById('editVectorToolSearch').value = editVectorCb.checked ? 'true' : 'false';
-    document.getElementById('editVectorToolSearchMaxResults').value = vectorToolSearchMaxResults || 5;
-    document.getElementById('editVectorToolSearchResultsGroup').style.display = editVectorCb.checked ? '' : 'none';
-
-    var checkboxes = document.querySelectorAll('.edit-tool-checkbox');
-    checkboxes.forEach(function(checkbox) {
-        checkbox.checked = tools && tools.indexOf(checkbox.value) !== -1;
-    });
-
-    var providerSelect = document.getElementById('editProviderSelect');
-    var modelSelect = document.getElementById('editModelSelect');
-    modelSelect.disabled = true;
-    loadProviders(providerSelect, modelSelect, aiModelId);
-
-    Modal.open('editAgentModal');
-}
-
-/**
- * 显示停止智能体确认对话框
- */
 function hideEditModal() {
-    Modal.close('editAgentModal');
+    var modal = document.getElementById('editAgentModal');
+    if (modal) closeAndRemoveModal(modal);
 }
 
 function forceStopAgent(sessionId) {
@@ -962,21 +930,6 @@ window.onload = function() {
     }
 
     renderSessionList(initialChatSessions);
-
-    document.getElementById('addAgentModal').addEventListener('click', function(e) {
-        if (e.target === this) {
-            hideAddModal();
-        }
-    });
-
-    document.getElementById('editAgentModal').addEventListener('click', function(e) {
-        if (e.target === this) {
-            hideEditModal();
-        }
-    });
-
-    setupCascading(document.getElementById('addProviderSelect'), document.getElementById('addModelSelect'));
-    setupCascading(document.getElementById('editProviderSelect'), document.getElementById('editModelSelect'));
 
 
     var messagesDiv = document.getElementById('chatMessages');
