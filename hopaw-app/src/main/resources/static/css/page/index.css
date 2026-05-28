@@ -38,7 +38,7 @@
 }
 
 .agent-select-toolbar {
-    font-size: 13px;
+    font-size: 16px;
     font-weight: 500;
     padding: 4px 28px 4px 10px;
     min-width: auto;
@@ -48,6 +48,7 @@
     border-color: #e0e0e0;
     color: #666;
     background-color: transparent;
+    height: 30px;
 }
 
 .agent-select-toolbar:hover {
@@ -435,6 +436,7 @@
     align-items: center;
     gap: 4px;
     padding: 0 8px 8px;
+    height: 30px;
 }
 .chat-btn-plus {
     width: 32px;
@@ -470,6 +472,7 @@
     font-size: 13px;
     cursor: pointer;
     transition: all 0.2s;
+    height: 30px;
 }
 .chat-btn-deep:hover {
     border-color: #667eea;
@@ -499,6 +502,7 @@
     font-size: 13px;
     cursor: pointer;
     transition: all 0.2s;
+    height: 30px;
 }
 
 .chat-btn-skill:hover {
@@ -597,6 +601,7 @@
     max-width: 180px;
     overflow: hidden;
     white-space: nowrap;
+    height: 30px;
 }
 
 .chat-btn-model:hover {
@@ -1326,7 +1331,7 @@ body.dark-theme .agent-select {
 
 body.dark-theme .agent-select-toolbar {
     color: #999;
-    border-color: #3d3d6b;
+    border-color: #999;
     background: transparent;
 }
 
@@ -1444,6 +1449,10 @@ body.dark-theme .chat-input-wrapper:focus-within {
     border-color: #8ba3ff;
 }
 
+body.dark-theme .chat-input-wrapper textarea {
+    color: #e0e0e0;
+}
+
 body.dark-theme .chat-input-wrapper.disabled {
     opacity: 0.5;
 }
@@ -1463,7 +1472,7 @@ body.dark-theme .chat-btn-plus:hover {
 }
 
 body.dark-theme .chat-btn-deep {
-    border-color: #3d3d6b;
+    border: 1px solid #7d7dab;
     color: #999;
 }
 
@@ -1619,7 +1628,7 @@ body.dark-theme .modal-form .form-right {
 }
 
 body.dark-theme .chat-btn-skill {
-    border-color: #3d3d6b;
+    border: 1px solid #7d7dab;
     color: #999;
 }
 
@@ -1637,7 +1646,7 @@ body.dark-theme .chat-btn-skill.has-selected {
 
 body.dark-theme .skills-dropdown-menu {
     background: #1e3a5f;
-    border-color: #3d3d6b;
+    border: 1px solid #7d7dab;
     box-shadow: 0 4px 16px rgba(0,0,0,0.4);
 }
 
@@ -1655,7 +1664,7 @@ body.dark-theme .skills-dropdown-empty {
 
 body.dark-theme .model-dropdown-menu {
     background: #1e3a5f;
-    border-color: #3d3d6b;
+    border: 1px solid #7d7dab;
     box-shadow: 0 4px 16px rgba(0,0,0,0.4);
 }
 
@@ -1673,7 +1682,7 @@ body.dark-theme .model-provider-item-arrow {
 
 body.dark-theme .model-sub-menu {
     background: #1e3a5f;
-    border-color: #3d3d6b;
+    border: 1px solid #7d7dab;
     box-shadow: 0 4px 16px rgba(0,0,0,0.4);
 }
 
@@ -1696,7 +1705,7 @@ body.dark-theme .model-sub-item-check {
 }
 
 body.dark-theme .chat-btn-model {
-    border-color: #3d3d6b;
+    border: 1px solid #7d7dab;
     color: #999;
 }
 

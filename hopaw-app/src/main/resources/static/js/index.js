@@ -83,6 +83,8 @@ function connectWebSocket() {
             handleThinking(data, requestId);
         } else if (data.type === 'done') {
             handleStreamingDone(data.message, data.response, requestId);
+        } else if (data.type === 'session-title') {
+            updateSessionTitle(data.sessionId, data.content);
         } else if (data.type === 'task-done') {
             loadTokenUsage(lastTokenId || undefined);
             enableInput();
@@ -1126,10 +1128,18 @@ function loadChatSkills() {
             });
             list.innerHTML = html;
 
+            var selectedSkillsArr = (initialSelectedSkills && typeof initialSelectedSkills === 'string')
+                ? initialSelectedSkills.split(',').map(function(s) { return s.trim(); })
+                : [];
             var checkboxes = list.querySelectorAll('input[type="checkbox"]');
             checkboxes.forEach(function(cb) {
+                var folder = cb.getAttribute('data-folder') || '';
+                if (selectedSkillsArr.indexOf(folder) !== -1) {
+                    cb.checked = true;
+                }
                 cb.addEventListener('change', updateSkillBtnState);
             });
+            updateSkillBtnState();
         });
 }
 
@@ -1321,6 +1331,16 @@ function renderSessionList(sessions) {
     var activeItem = container.querySelector('.session-list-item.active');
     if (activeItem) {
         activeItem.scrollIntoView({ block: 'nearest' });
+    }
+}
+
+function updateSessionTitle(sessionId, newTitle) {
+    var container = document.getElementById('sessionList');
+    if (!container) return;
+
+    var titleSpan = container.querySelector('.session-list-item[data-session-id="' + escapeHtml(sessionId) + '"] .session-list-item-title');
+    if (titleSpan) {
+        titleSpan.textContent = newTitle || '未命名会话';
     }
 }
 

@@ -68,6 +68,8 @@ public class ChatController {
         List<ChatSession> chatSessions = chatSessionService.getSessionsByUserId(DefaultUser.USER);
         model.addAttribute("chatSessions", chatSessions);
 
+
+
         List<Agent> agents = agentService.getAllAgents();
         model.addAttribute("agents", agents);
         if(sessionId == null && !chatSessions.isEmpty()){
@@ -76,6 +78,7 @@ public class ChatController {
         Agent selectedAgent=null;
         Long aiModelId=null;
         Boolean enableThinking=true;
+        String selectedSkills = "";
         model.addAttribute("chatHistory", Collections.emptyList());
         if(sessionId != null){
             ChatSession session = chatSessionService.getSessionBySessionId(sessionId);
@@ -87,6 +90,7 @@ public class ChatController {
                 selectedAgent=agents.stream().filter(agent -> agent.getId().equals(session.getAgentId())).findFirst().orElse(null);
                 aiModelId=session.getAiModelId();
                 enableThinking=session.getEnableThinking();
+                selectedSkills=session.getSkillNames();
             }
         }
         if(selectedAgent==null && !agents.isEmpty()){
@@ -96,6 +100,7 @@ public class ChatController {
             aiModelId=selectedAgent.getAiModelId();
         }
         model.addAttribute("selectedAgent", selectedAgent);
+        model.addAttribute("selectedSkills", selectedSkills);
         model.addAttribute("selectedAgentId", selectedAgent.getId());
         model.addAttribute("selectedAiModelId", aiModelId);
         model.addAttribute("enableThinking", enableThinking);
