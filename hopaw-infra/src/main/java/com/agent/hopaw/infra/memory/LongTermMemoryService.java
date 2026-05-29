@@ -20,10 +20,12 @@ import java.util.function.Function;
 public class LongTermMemoryService implements ILongTermMemoryService {
 
     private final LongTermMemoryMapper longTermMemoryMapper;
-    private final SysConfigService sysConfigService;
+    private final IVectorMemoryService vectorMemoryService;
+    private final SysConfigService sysConfigService; // Injected dependency
 
-    public LongTermMemoryService(LongTermMemoryMapper longTermMemoryMapper, SysConfigService sysConfigService) {
+    public LongTermMemoryService(LongTermMemoryMapper longTermMemoryMapper, IVectorMemoryService vectorMemoryService, SysConfigService sysConfigService) {
         this.longTermMemoryMapper = longTermMemoryMapper;
+        this.vectorMemoryService = vectorMemoryService;
         this.sysConfigService = sysConfigService;
     }
 
@@ -42,18 +44,24 @@ public class LongTermMemoryService implements ILongTermMemoryService {
     public LongTermMemory createMemory(String sessionId, String memory, Long parentId, String userId,
                                        String memoryType, String summary) {
         LongTermMemory entity = new LongTermMemory(sessionId,userId,memoryType,summary,memory,parentId);
+        entity.setStatus(0);
         longTermMemoryMapper.insert(entity);
         return entity;
     }
 
     @Override
     public void deleteMemory(Long id) {
+        LongTermMemory entity = longTermMemoryMapper.findById(id);
         longTermMemoryMapper.deleteById(id);
+        if(entity != null && entity.getEmbeddingId() != null){
+            vectorMemoryService.deleteByEmbeddingId(entity.getEmbeddingId());
+        }
     }
 
     @Override
     public void update(LongTermMemory entity) {
         entity.setMemoryHash(String.valueOf(entity.getMemory().hashCode()));
+        entity.setStatus(0);
         longTermMemoryMapper.update(entity);
     }
 
@@ -71,7 +79,7 @@ public class LongTermMemoryService implements ILongTermMemoryService {
         LocalDateTime beginDateTime = LocalDateTime.now().minusHours(taskRecordsArrangeTimeoutHour);
         List<LongTermMemory> taskRecords = longTermMemoryMapper.findBySessionIdAndUserIdAndMemoryTypeAndTime(sessionId, userId, LongTermMemoryTypeEnum.TASK_RECORDS.getCode(), beginDateTime);
         //扩展知识
-        List<LongTermMemory> expandKnowledge = longTermMemoryMapper.findBySessionIdAndUserIdAndMemoryTypeAndTime(sessionId, userId, LongTermMemoryTypeEnum.EXPAND_KNOWLEDGE.getCode(), null);
+        List<LongTermMemory> expandKnowledge = longTermMemoryMapper.findBySessionIdAndUserIdAndMemoryTypeAndTime(sessionId, userId, LongTermMemoryTypeEnum.EMPIRICAL_KNOWLEDGE.getCode(), null);
         List<LongTermMemory> result=new ArrayList<>();
         result.addAll(userProfile);
         result.addAll(taskRecords);
@@ -84,6 +92,11 @@ public class LongTermMemoryService implements ILongTermMemoryService {
         int taskRecordsClearTimeoutDay = Integer.parseInt(sysConfigService.getValueByKey("taskRecordsClearTimeoutDay", "7"));
         LocalDateTime endDateTime = LocalDate.now().atStartOfDay().minusDays(taskRecordsClearTimeoutDay);
         longTermMemoryMapper.deleteBySessionIdAndUserIdAndMemoryTypeAndEndDateTime(sessionId, userId, LongTermMemoryTypeEnum.TASK_RECORDS.getCode(),endDateTime);
+    }
+
+    @Override
+    public List<LongTermMemory> findByStatus(Integer status) {
+        return null;
     }
 
     @Override
@@ -108,7 +121,7 @@ public class LongTermMemoryService implements ILongTermMemoryService {
         LocalDateTime beginDateTime = LocalDateTime.now().minusHours(taskRecordsArrangeTimeoutHour);
         List<LongTermMemory> taskRecords = longTermMemoryMapper.findBySessionIdAndUserIdAndMemoryTypeAndTime(sessionId, userId, LongTermMemoryTypeEnum.TASK_RECORDS.getCode(), beginDateTime);
         //扩展知识
-        List<LongTermMemory> expandKnowledge = longTermMemoryMapper.findBySessionIdAndUserIdAndMemoryTypeAndTime(sessionId, userId, LongTermMemoryTypeEnum.EXPAND_KNOWLEDGE.getCode(), null);
+        List<LongTermMemory> expandKnowledge = longTermMemoryMapper.findBySessionIdAndUserIdAndMemoryTypeAndTime(sessionId, userId, LongTermMemoryTypeEnum.EMPIRICAL_KNOWLEDGE.getCode(), null);
         List<LongTermMemory> result=new ArrayList<>();
         result.addAll(userProfile);
         result.addAll(taskRecords);
@@ -172,7 +185,7 @@ public class LongTermMemoryService implements ILongTermMemoryService {
      */
     @Override
     public List<LongTermMemory> queryUserExpandKnowledgeMemory(String sessionId, String userId){
-        List<LongTermMemory> expandKnowledge = longTermMemoryMapper.findBySessionIdAndUserIdAndMemoryTypeAndTime(sessionId, userId, LongTermMemoryTypeEnum.EXPAND_KNOWLEDGE.getCode(), null);
+        List<LongTermMemory> expandKnowledge = longTermMemoryMapper.findBySessionIdAndUserIdAndMemoryTypeAndTime(sessionId, userId, LongTermMemoryTypeEnum.EMPIRICAL_KNOWLEDGE.getCode(), null);
         return expandKnowledge;
     }
     /**
@@ -184,7 +197,7 @@ public class LongTermMemoryService implements ILongTermMemoryService {
      */
     @Override
     public String queryUserExpandKnowledgeMemoryContent(String sessionId, String userId, Boolean includeDetail){
-        List<LongTermMemory> expandKnowledge = longTermMemoryMapper.findBySessionIdAndUserIdAndMemoryTypeAndTime(sessionId, userId, LongTermMemoryTypeEnum.EXPAND_KNOWLEDGE.getCode(), null);
+        List<LongTermMemory> expandKnowledge = longTermMemoryMapper.findBySessionIdAndUserIdAndMemoryTypeAndTime(sessionId, userId, LongTermMemoryTypeEnum.EMPIRICAL_KNOWLEDGE.getCode(), null);
         return buildMemoryContent(expandKnowledge,includeDetail);
     }
 
@@ -318,6 +331,7 @@ public class LongTermMemoryService implements ILongTermMemoryService {
             memoryEntity.setMemory(memory);
             memoryEntity.setMemoryHash(memoryHash);
             memoryEntity.setUpdateTime(LocalDateTime.now());
+            memoryEntity.setStatus(0);
             longTermMemoryMapper.update(memoryEntity);
         } else {
             memoryEntity = new LongTermMemory();
@@ -328,6 +342,7 @@ public class LongTermMemoryService implements ILongTermMemoryService {
             memoryEntity.setMemory(memory);
             memoryEntity.setMemoryHash(memoryHash);
             memoryEntity.setCreateTime(LocalDateTime.now());
+            memoryEntity.setStatus(0);
             longTermMemoryMapper.insert(memoryEntity);
         }
 

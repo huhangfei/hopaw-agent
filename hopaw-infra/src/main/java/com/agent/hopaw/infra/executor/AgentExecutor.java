@@ -1,6 +1,7 @@
 package com.agent.hopaw.infra.executor;
 
 
+import com.agent.hopaw.infra.constant.ChatMemoryStatusEnum;
 import com.agent.hopaw.infra.memory.IChatMemoryService;
 import com.agent.hopaw.infra.model.entity.*;
 import com.agent.hopaw.infra.model.dto.*;
@@ -113,10 +114,14 @@ public class AgentExecutor implements IAgentExecutor {
         this.embeddingModel = embeddingModel;
         this.systemMessageProvider = systemMessageProvider;
 
-        this.memoryId = new ChatMemoryId(sessionId, agentId, userId);
+        this.memoryId = new ChatMemoryId(sessionId,this.requestId, agentId, userId);
         // 创建工具执行线程池
         this.toolExecutor = createToolExecutor();
-        this.agentMessageHandler = new AgentMessageHandler(this.sessionId, this.requestId, messageConsumer, chatHistory -> chatHistoryStore.saveChatHistory(chatHistory));
+        this.agentMessageHandler = new AgentMessageHandler(this.sessionId, this.requestId, messageConsumer, chatHistory -> {
+            chatHistory.setUserId(userId);
+            chatHistoryStore.saveChatHistory(chatHistory);
+
+        });
     }
 
     @Override
@@ -322,6 +327,15 @@ public class AgentExecutor implements IAgentExecutor {
             toolStopHooks.clear();
             taskLatch.countDown();
             agentMessageHandler.taskDone();
+            updateMemoryStateToDone();
+        }
+    }
+
+    private void updateMemoryStateToDone() {
+        try {
+            this.memoryStore.updateStatusBySessionIdAndRequestId(sessionId, requestId,ChatMemoryStatusEnum.DEFAULT, ChatMemoryStatusEnum.TASK_DONE);
+        }catch (Exception ex){
+            logger.error("Error updating memory state to done", ex);
         }
     }
 

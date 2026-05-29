@@ -639,6 +639,26 @@ function clearHistory(sessionId) {
     });
 }
 
+function deleteSession(sessionId) {
+    showConfirm('确定要删除该会话吗？此操作不可恢复。').then(function(confirmed) {
+        if (!confirmed) return;
+        fetch('/api/session/' + encodeURIComponent(sessionId) + '/delete-by-session-id', { method: 'DELETE' })
+            .then(function(r) { return r.json(); })
+            .then(function(resp) {
+                if (resp.code === 200) {
+                    showToast('会话已删除', 'info');
+                    setTimeout(function() {
+                        window.location.href = '/';
+                    }, 1000);
+                } else {
+                    showToast(resp.msg || '删除失败', 'error');
+                }
+            })
+            .catch(function(err) {
+                showToast('删除失败: ' + err.message, 'error');
+            });
+    });
+}
 
 function forceStopAgent(sessionId) {
     showConfirm('确定要强停智能体吗？强停后将移除执行器并刷新页面。').then(function(confirmed) {
@@ -1219,10 +1239,41 @@ function updateSessionTitle(sessionId, newTitle) {
     var container = document.getElementById('sessionList');
     if (!container) return;
 
-    var titleSpan = container.querySelector('.session-list-item[data-session-id="' + escapeHtml(sessionId) + '"] .session-list-item-title');
-    if (titleSpan) {
-        titleSpan.textContent = newTitle || '未命名会话';
+    var existingItem = container.querySelector('.session-list-item[data-session-id="' + escapeHtml(sessionId) + '"]');
+    if (existingItem) {
+        var titleSpan = existingItem.querySelector('.session-list-item-title');
+        if (titleSpan) {
+            titleSpan.textContent = newTitle || '未命名会话';
+        }
+        return;
     }
+
+    var emptyEl = container.querySelector('.session-list-empty');
+    if (emptyEl) {
+        emptyEl.remove();
+    }
+
+    var item = document.createElement('div');
+    item.className = 'session-list-item' + (sessionId === currentSessionId ? ' active' : '');
+    item.setAttribute('data-session-id', sessionId);
+
+    var titleSpan = document.createElement('span');
+    titleSpan.className = 'session-list-item-title';
+    titleSpan.textContent = newTitle || '未命名会话';
+    item.appendChild(titleSpan);
+
+    var timeSpan = document.createElement('span');
+    timeSpan.className = 'session-list-item-time';
+    timeSpan.textContent = '刚刚';
+    item.appendChild(timeSpan);
+
+    item.addEventListener('click', function() {
+        if (sessionId !== currentSessionId) {
+            window.location.href = '/?sessionId=' + sessionId;
+        }
+    });
+
+    container.insertBefore(item, container.firstChild);
 }
 
 function formatSessionTime(dateStr) {

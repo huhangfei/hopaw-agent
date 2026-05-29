@@ -1,5 +1,7 @@
 package com.agent.hopaw.infra.memory;
 
+import com.agent.hopaw.infra.constant.ChatMemoryStatusEnum;
+import com.agent.hopaw.infra.constant.VectorMemoryTypeEnum;
 import com.agent.hopaw.infra.mapper.ChatMemoryMapper;
 import com.agent.hopaw.infra.service.IScheduledTaskService;
 import com.agent.hopaw.infra.model.entity.ChatMemory;
@@ -24,17 +26,16 @@ public class SQLiteChatMemoryStore implements IChatMemoryService {
     private final ChatMemoryMapper chatMemoryMapper;
 
     private final IScheduledTaskService scheduledTaskService;
-    public SQLiteChatMemoryStore(ChatMemoryMapper chatMemoryMapper,@Lazy IScheduledTaskService scheduledTaskService) {
+    public SQLiteChatMemoryStore(ChatMemoryMapper chatMemoryMapper, @Lazy IScheduledTaskService scheduledTaskService) {
         this.chatMemoryMapper = chatMemoryMapper;
         this.scheduledTaskService = scheduledTaskService;
     }
 
     private List<ChatMemory> getChatMemories(ChatMemoryId memoryId) {
         List<Integer> status=new ArrayList<>();
-        status.add(0);
+        status.add(ChatMemoryStatusEnum.DEFAULT.getCode());
+        status.add(ChatMemoryStatusEnum.TASK_DONE.getCode());
         if(scheduledTaskService.isTaskRunning("longTermMemory")){
-            status.add(1);
-            status.add(3);
         }
         List<ChatMemory> records = chatMemoryMapper.findBySessionIdAndStatus(memoryId.getSessionId(), status);
         return records;
@@ -69,6 +70,10 @@ public class SQLiteChatMemoryStore implements IChatMemoryService {
         return messages.values().stream().toList();
     }
 
+    /**
+     * @param memoryIdObj
+     * @param messages
+     */
     @Override
     public void updateMessages(Object memoryIdObj, List<ChatMessage> messages) {
         ChatMemoryId memoryId = (ChatMemoryId) memoryIdObj;
@@ -83,13 +88,14 @@ public class SQLiteChatMemoryStore implements IChatMemoryService {
             String messageJson = ChatMessageSerializer.messageToJson(message);
             messageIds.add(messageId);
             if (!memoryMap.containsKey(messageId)) {
-                chatMemoryMapper.insert(memoryId.getAgentId(), memoryId.getUserId(), messageId, messageJson, memoryId.getSessionId(), LocalDateTime.now());
-            }
+                //持久化到数据库
+                chatMemoryMapper.insert(memoryId.getAgentId(), memoryId.getUserId(), messageId, messageJson, memoryId.getSessionId(),memoryId.getRequestId(), LocalDateTime.now());
+              }
         }
         for (String messageId : memoryMap.keySet()) {
             if (!messageIds.contains(messageId)) {
                 if(longTermMemoryTaskRunning){
-                    chatMemoryMapper.updateStatus(memoryId.getSessionId(),memoryId.getUserId(), messageId, 1);
+                    chatMemoryMapper.updateStatus(memoryId.getSessionId(),memoryId.getUserId(), messageId, ChatMemoryStatusEnum.AUTO_CLEANUP.getCode());
                 }else{
                     chatMemoryMapper.deleteByMessageId(memoryId.getSessionId(), memoryId.getUserId(),  messageId);
                 }
@@ -109,7 +115,7 @@ public class SQLiteChatMemoryStore implements IChatMemoryService {
     }
 
     /**
-     * 清理历史孤儿信息，同时将状态1的消息转到状态3
+     * 清理历史孤儿信息
      * @param memoryId
      */
     @Override
@@ -149,19 +155,22 @@ public class SQLiteChatMemoryStore implements IChatMemoryService {
                         String messageId = generateMessageId(errorMsg);
                         String messageJson = ChatMessageSerializer.messageToJson(errorMsg);
                         LocalDateTime time = callToolRequestCreateTime.getOrDefault(req.id(), LocalDateTime.now());
-                        chatMemoryMapper.insert(memoryId.getAgentId(), memoryId.getUserId(),messageId, messageJson, memoryId.getSessionId(), time.plus(1, ChronoUnit.MILLIS));
+                        chatMemoryMapper.insert(memoryId.getAgentId(), memoryId.getUserId(), messageId, messageJson, memoryId.getSessionId(), memoryId.getRequestId(), time.plus(1, ChronoUnit.MILLIS));
                         logger.info("为tool call {} 创建了错误结果 {}", req.id(), messageId);
                     }
                 }
             }
         }
-
-        chatMemoryMapper.updateStatusByStatus(memoryId.getSessionId(), memoryId.getUserId(), 1, 3);
     }
 
     @Override
-    public int updateStatusBySessionId(String sessionId, Integer status) {
-        return chatMemoryMapper.updateStatusBySessionId(sessionId, status);
+    public int updateStatusBySessionId(String sessionId, ChatMemoryStatusEnum status) {
+        return chatMemoryMapper.updateStatusBySessionId(sessionId, status.getCode());
+    }
+
+    @Override
+    public int updateStatusBySessionIdAndRequestId(String sessionId, String requestId, ChatMemoryStatusEnum status, ChatMemoryStatusEnum newStatus) {
+        return chatMemoryMapper.updateStatusBySessionIdAndRequestId(sessionId, requestId, status.getCode(),newStatus.getCode());
     }
 
     @Override

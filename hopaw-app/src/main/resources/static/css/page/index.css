@@ -141,6 +141,13 @@
 .dropdown-item svg {
     flex-shrink: 0;
 }
+.dropdown-item-danger {
+    color: #d32f2f;
+}
+.dropdown-item-danger:hover {
+    background: #ffebee;
+    color: #c62828;
+}
 
 
 .chat-area {
@@ -1239,6 +1246,14 @@ body.dark-theme .dropdown-item {
 
 body.dark-theme .dropdown-item:hover {
     background: #2d2d44;
+}
+
+body.dark-theme .dropdown-item-danger {
+    color: #ef5350;
+}
+body.dark-theme .dropdown-item-danger:hover {
+    background: #3d2020;
+    color: #f44336;
 }
 
 body.dark-theme .chat-area {

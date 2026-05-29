@@ -64,8 +64,21 @@ public class LongTermMemoryTaskHandler implements TaskHandler {
         this.tokenUsageService = tokenUsageService;
     }
 
+    private void saveToVectorMemory() {
+        List<LongTermMemory> longTermMemories = longTermMemoryService.findByStatus(0);
+        for (LongTermMemory longTermMemory : longTermMemories) {
+            String memory = "id:" + longTermMemory.getId()+"\nsummary:" + longTermMemory.getSummary() + "\nmemory:" + longTermMemory.getMemory();
+            String storeId = vectorMemoryService.store(memory, longTermMemory.getSessionId(), null, longTermMemory.getUserId(), VectorMemoryTypeEnum.fromCode(longTermMemory.getMemoryType()), longTermMemory.getCreateTime());
+            longTermMemory.setEmbeddingId(storeId);
+            longTermMemory.setStatus(1);
+            longTermMemoryService.update(longTermMemory);
+        }
+    }
+
     public void processAgentMemories() {
         try {
+            saveToVectorMemory();
+
             List<ChatMemory> pairs = chatMemoryService.findDistinctSessionUserPairs();
             for (ChatMemory pair : pairs) {
                 try {
@@ -228,9 +241,6 @@ public class LongTermMemoryTaskHandler implements TaskHandler {
             storeChatHistoryToVector(cleanedMessages);
             chatMemoryService.deleteByIds(cleanedMessages.stream().map(ChatMemory::getId).toList());
         }
-
-        storeExpiredTaskRecordsToVector(sessionId, userId);
-
         longTermMemoryService.deleteExpiredTaskRecordsMemories(sessionId, userId);
 
         logger.info("Processing memory for sessionId: {}, cleaned messages count: {}", sessionId, cleanedMessages.size());
@@ -364,44 +374,11 @@ public class LongTermMemoryTaskHandler implements TaskHandler {
                 }
 
                 String label = String.format("[%s] %s", role, text);
-                vectorMemoryService.store(label,chat.getSessionId(), chat.getAgentId(), chat.getUserId(), VectorMemoryTypeEnum.CHAT_HISTORY.getCode(), chat.getCreateTime());
+                vectorMemoryService.store(label,chat.getSessionId(), chat.getAgentId(), chat.getUserId(), VectorMemoryTypeEnum.CHAT_HISTORY, chat.getCreateTime());
                 logger.info("Stored chat history messages to vector store, sessionId={}, agentId={}, userId={}", chat.getSessionId(), chat.getAgentId(), chat.getUserId());
             }
         } catch (Exception e) {
             logger.error("Failed to store chat history to vector store, msg{}", JSON.toJSONString(cleanedMessages), e);
-        }
-    }
-
-    /**
-     * 将被清理的过期任务记录写入向量库
-     */
-    private void storeExpiredTaskRecordsToVector(String sessionId, String userId) {
-        try {
-            List<LongTermMemory> expiredRecords = longTermMemoryService.findExpiredTaskRecordsMemories(sessionId, userId);
-            if (expiredRecords == null || expiredRecords.isEmpty()) {
-                return;
-            }
-            for (LongTermMemory record : expiredRecords) {
-                String summary = record.getSummary();
-                String memory = record.getMemory();
-                StringBuilder sb = new StringBuilder();
-                if (summary != null && !summary.isBlank()) {
-                    sb.append(summary);
-                }
-                if (memory != null && !memory.isBlank()) {
-                    if (!sb.isEmpty()) {
-                        sb.append(" - ");
-                    }
-                    sb.append(memory);
-                }
-                String text = sb.toString();
-                if (!text.isBlank()) {
-                    vectorMemoryService.store(text,sessionId,null, userId, VectorMemoryTypeEnum.TASK_RECORDS.getCode(), record.getCreateTime());
-                }
-            }
-        } catch (Exception e) {
-            logger.error("Failed to store expired task records to vector store, sessionId={}, agentId={}, userId={}",
-                    sessionId, null, userId, e);
         }
     }
 

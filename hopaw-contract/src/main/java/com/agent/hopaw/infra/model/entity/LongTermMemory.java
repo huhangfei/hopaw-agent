@@ -2,6 +2,9 @@ package com.agent.hopaw.infra.model.entity;
 
 import java.time.LocalDateTime;
 
+/**
+ * @author hhf
+ */
 public class LongTermMemory {
     private Long id;
     /**
@@ -17,7 +20,11 @@ public class LongTermMemory {
     private String sessionId;
     private LocalDateTime createTime;
     private LocalDateTime updateTime;
-
+    private String embeddingId;
+    /**
+     * 状态：0 未向量化，1 已向量化
+     */
+    private Integer status;
     public LongTermMemory() {}
 
     public LongTermMemory(String sessionId,String userId,String memoryType,String summary,String memory, Long parentId) {
@@ -110,5 +117,19 @@ public class LongTermMemory {
 
     public void setSessionId(String sessionId) {
         this.sessionId = sessionId;
+    }
+
+    public String getEmbeddingId() {
+        return embeddingId;
+    }
+
+    public void setEmbeddingId(String embeddingId) {
+        this.embeddingId = embeddingId;
+    }
+    public Integer getStatus() {
+        return status;
+    }
+    public void setStatus(Integer status) {
+        this.status = status;
     }
 }

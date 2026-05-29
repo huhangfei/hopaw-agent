@@ -80,6 +80,7 @@ public class MemoryTool implements AgentTool {
         longTermMemoryService.deleteMemory(id);
         return "成功";
     }
+    
     @Tool(value = "保存用户记忆,如果有记忆Id则为更新，如果记忆Id不存在则为新增。",searchBehavior = SearchBehavior.ALWAYS_VISIBLE)
     public String saveUserMemory(@P(description = "记忆类型:userProfile、taskRecords、expandKnowledge",required = false) String memoryType,
                                  @P(description = "记忆概要") String summary,
@@ -93,18 +94,14 @@ public class MemoryTool implements AgentTool {
     public String searchHistoricalMemory(@P(description = "搜索查询关键词") String query,
                                          @P(description = "最大返回结果数量，默认5", required = false) Integer maxResults,
                                          @P(description = "最低相似度阈值(0-1)，默认0.5", required = false) Double minScore,
-                                         @P(description = "限定记忆类型(taskRecords/chatHistory)，不限定不填", required = false) String memoryType,
+                                         @P(description = "限定记忆类型(taskRecords/chatHistory/empiricalKnowledge)，不限定不填", required = false) String memoryType,
                                          InvocationParameters invocationParameters) {
         InvocationParametersWrapper wrapper = InvocationParametersWrapper.create(invocationParameters);
-        Long agentId = wrapper.getAgentId();
         String userId = wrapper.getUserId();
-
         int maxResultsVal = maxResults != null ? maxResults : 5;
         double minScoreVal = minScore != null ? minScore : 0.5;
-
         List<VectorSearchResult> results =
                 vectorMemoryService.search(query, wrapper.getSessionId(), null, userId, memoryType, maxResultsVal, minScoreVal);
-
         if (results.isEmpty()) {
             return "向量库中未找到相关历史记忆";
         }
@@ -117,6 +114,7 @@ public class MemoryTool implements AgentTool {
             sb.append("[").append(idx++).append("] 相似度: ").append(String.format("%.4f", result.getScore())).append("\n");
             sb.append("记忆类型: ").append(result.getMemoryType()).append("\n");
             sb.append("内容: ").append(result.getText()).append("\n");
+            sb.append("时间: ").append(result.getMemoryDate()).append("\n");
             sb.append("---\n");
         }
 

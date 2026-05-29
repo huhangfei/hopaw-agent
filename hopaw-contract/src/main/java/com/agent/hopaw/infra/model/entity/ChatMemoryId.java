@@ -7,11 +7,12 @@ public class ChatMemoryId {
     private  Long agentId;
     private  String userId;
     private String sessionId;
-
-    public ChatMemoryId(String sessionId,Long agentId, String userId) {
+    private String requestId;
+    public ChatMemoryId(String sessionId, String requestId,Long agentId, String userId) {
         this.sessionId = sessionId;
         this.agentId = agentId;
         this.userId = userId;
+        this.requestId = requestId;
     }
 
 
@@ -37,5 +38,12 @@ public class ChatMemoryId {
 
     public void setSessionId(String sessionId) {
         this.sessionId = sessionId;
+    }
+
+    public String getRequestId() {
+        return requestId;
+    }
+    public void setRequestId(String requestId) {
+        this.requestId = requestId;
     }
 }

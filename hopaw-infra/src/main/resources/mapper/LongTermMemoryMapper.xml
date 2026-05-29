@@ -13,10 +13,12 @@
         <result property="sessionId" column="session_id"/>
         <result property="createTime" column="create_time"/>
         <result property="updateTime" column="update_time"/>
+        <result property="embeddingId" column="embedding_id"/>
+        <result property="status" column="status"/>
     </resultMap>
 
     <select id="findBySessionIdAndUserIdAndMemoryTypeAndTime" resultMap="LongTermMemoryResultMap">
-        SELECT id,memory_type, summary, memory, memory_hash, parent_id, session_id, create_time, update_time, user_id
+        SELECT id,memory_type, summary, memory, memory_hash, parent_id, session_id, create_time, update_time, user_id, status
         FROM long_term_memory
         WHERE user_id = #{userId}
         <if test="sessionId!=null">
@@ -32,7 +34,7 @@
     </select>
 
     <select id="findBySessionIdAndUserIdAndMemoryTypeAndEndDateTime" resultMap="LongTermMemoryResultMap">
-        SELECT id, memory_type, summary, memory, memory_hash, parent_id, session_id, create_time, update_time, user_id
+        SELECT id, memory_type, summary, memory, memory_hash, parent_id, session_id, create_time, update_time, user_id, status
         FROM long_term_memory
         WHERE user_id = #{userId}
         <if test="sessionId!=null">
@@ -47,8 +49,14 @@
         ORDER BY update_time desc
     </select>
 
+    <select id="findByStatus" resultMap="LongTermMemoryResultMap">
+        SELECT id, memory_type, summary, memory, memory_hash, parent_id, session_id, create_time, update_time, user_id, status
+        FROM long_term_memory
+        WHERE status = #{status}
+        ORDER BY id ASC
+    </select>
     <select id="findByParentId" resultMap="LongTermMemoryResultMap">
-        SELECT id, memory_type, summary, memory, memory_hash, parent_id, session_id, create_time, update_time, user_id
+        SELECT id, memory_type, summary, memory, memory_hash, parent_id, session_id, create_time, update_time, user_id, status
         FROM long_term_memory
         WHERE parent_id = #{parentId}
         ORDER BY id ASC
@@ -56,20 +64,20 @@
 
 
     <select id="findByUserIdAndMemoryType" resultMap="LongTermMemoryResultMap">
-        SELECT id, memory_type, summary, memory, memory_hash, parent_id, session_id, create_time, update_time, user_id
+        SELECT id, memory_type, summary, memory, memory_hash, parent_id, session_id, create_time, update_time, user_id, status
         FROM long_term_memory
         WHERE user_id = #{userId} AND memory_type = #{memoryType}
     </select>
 
     <select id="findById" resultMap="LongTermMemoryResultMap">
-        SELECT id,memory_type, summary, memory, memory_hash, parent_id, session_id, create_time, update_time, user_id
+        SELECT id,memory_type, summary, memory, memory_hash, parent_id, session_id, create_time, update_time, user_id, embedding_id,status
         FROM long_term_memory
         WHERE id = #{id}
     </select>
 
     <insert id="insert" parameterType="com.agent.hopaw.infra.model.entity.LongTermMemory">
-        INSERT INTO long_term_memory (memory_type, summary, memory, memory_hash, parent_id, user_id, session_id, create_time, update_time)
-        VALUES (#{memoryType}, #{summary}, #{memory}, #{memoryHash}, #{parentId}, #{userId}, #{sessionId}, datetime('now', 'localtime'), datetime('now', 'localtime'))
+        INSERT INTO long_term_memory (memory_type, summary, memory, memory_hash, parent_id, user_id, session_id, create_time, update_time,embedding_id,status)
+        VALUES (#{memoryType}, #{summary}, #{memory}, #{memoryHash}, #{parentId}, #{userId}, #{sessionId}, datetime('now', 'localtime'), datetime('now', 'localtime'), #{embeddingId}, #{status})
         <selectKey resultType="long" keyProperty="id" order="AFTER">
             SELECT last_insert_rowid()
         </selectKey>
@@ -82,7 +90,9 @@
             memory = #{memory},
             memory_hash = #{memoryHash},
             parent_id = #{parentId},
-            update_time = datetime('now', 'localtime')
+            update_time = datetime('now', 'localtime'),
+            embedding_id = #{embeddingId},
+            status = #{status}
         WHERE id = #{id}
     </update>
 

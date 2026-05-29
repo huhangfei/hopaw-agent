@@ -24,6 +24,7 @@ public interface ILongTermMemoryService {
 
     void deleteExpiredTaskRecordsMemories(String sessionId, String userId);
 
+    List<LongTermMemory> findByStatus(Integer status);
     List<LongTermMemory> findExpiredTaskRecordsMemories(String sessionId, String userId);
 
     List<LongTermMemory> queryUserAllMemories(String sessionId, String userId);

@@ -61,8 +61,8 @@
     </select>
 
     <insert id="insert">
-        INSERT INTO chat_memory (agent_id, user_id, message_id, message_json, status, session_id, create_time)
-        VALUES (#{agentId}, #{userId}, #{messageId}, #{messageJson}, 0, #{sessionId}, #{createTime})
+        INSERT INTO chat_memory (agent_id, user_id, message_id, message_json, status, session_id, request_id, create_time)
+        VALUES (#{agentId}, #{userId}, #{messageId}, #{messageJson}, 0, #{sessionId}, #{requestId}, #{createTime})
         <selectKey resultType="long" keyProperty="id" order="AFTER">
             SELECT last_insert_rowid()
         </selectKey>
@@ -94,6 +94,11 @@
         UPDATE chat_memory
         SET status = #{status}
         WHERE session_id = #{sessionId}
+    </update>
+    <update id="updateStatusBySessionIdAndRequestId">
+        UPDATE chat_memory
+        SET status = #{newStatus}
+        WHERE session_id = #{sessionId} AND request_id = #{requestId} and status = #{status}
     </update>
 
     <delete id="deleteByMessageId">

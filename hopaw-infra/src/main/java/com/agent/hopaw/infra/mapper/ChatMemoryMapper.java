@@ -1,5 +1,6 @@
 package com.agent.hopaw.infra.mapper;
 
+import com.agent.hopaw.infra.constant.ChatMemoryStatusEnum;
 import com.agent.hopaw.infra.model.entity.ChatMemory;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
@@ -19,13 +20,15 @@ public interface ChatMemoryMapper {
 
     List<ChatMemory> findByAgentIdAndUserIdAndStatus(@Param("agentId") Long agentId, @Param("userId") String userId, @Param("status") Integer status);
 
-    int insert(@Param("agentId") Long agentId, @Param("userId") String userId, @Param("messageId") String messageId, @Param("messageJson") String messageJson, @Param("sessionId") String sessionId, @Param("createTime") LocalDateTime createTime);
+    int insert(@Param("agentId") Long agentId, @Param("userId") String userId, @Param("messageId") String messageId, @Param("messageJson") String messageJson, @Param("sessionId") String sessionId, @Param("requestId") String requestId, @Param("createTime") LocalDateTime createTime);
 
     int updateByMessageId(@Param("agentId") Long agentId, @Param("userId") String userId, @Param("messageId") String messageId, @Param("messageJson") String messageJson);
 
     int updateStatusByAgentId(@Param("agentId") Long agentId, @Param("status") Integer status);
 
     int updateStatusBySessionId(@Param("sessionId") String sessionId, @Param("status") Integer status);
+
+    int updateStatusBySessionIdAndRequestId(@Param("sessionId") String sessionId, @Param("requestId") String requestId, @Param("status") Integer status,@Param("newStatus") Integer newStatus);
 
     int deleteByMessageId(@Param("sessionId") String sessionId, @Param("userId") String userId,  @Param("messageId") String messageId);
 

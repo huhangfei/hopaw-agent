@@ -84,11 +84,12 @@ public class DatabaseInitializer implements CommandLineRunner {
                     "message_json TEXT NOT NULL, " +
                     "status INTEGER DEFAULT 0, " +
                     "session_id TEXT, " +
+                    "request_id TEXT, " +
                     "create_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP" +
                     ")");
-            stmt.execute("CREATE INDEX IF NOT EXISTS idx_chat_memory_agent ON chat_memory(agent_id)");
-            stmt.execute("CREATE INDEX IF NOT EXISTS idx_chat_memory_agent_user ON chat_memory(agent_id, user_id)");
-            stmt.execute("CREATE INDEX IF NOT EXISTS idx_chat_memory_message_id ON chat_memory(message_id)");
+            stmt.execute("CREATE INDEX IF NOT EXISTS idx_chat_memory_session ON chat_memory(session_id)");
+            stmt.execute("CREATE INDEX IF NOT EXISTS idx_chat_memory_request ON chat_memory(request_id)");
+            stmt.execute("CREATE INDEX IF NOT EXISTS idx_chat_memory_user ON chat_memory(user_id)");
 
             stmt.execute("CREATE TABLE IF NOT EXISTS long_term_memory (" +
                     "id INTEGER PRIMARY KEY AUTOINCREMENT, " +
@@ -99,11 +100,13 @@ public class DatabaseInitializer implements CommandLineRunner {
                     "memory_type TEXT, " +
                     "summary TEXT, " +
                     "session_id TEXT, " +
+                    "embedding_id TEXT, " +
+                    "status INTEGER DEFAULT 0, " +
                     "create_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP, " +
                     "update_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP" +
                     ")");
             stmt.execute("CREATE INDEX IF NOT EXISTS idx_long_term_memory_session ON long_term_memory(session_id)");
-            stmt.execute("CREATE INDEX IF NOT EXISTS idx_long_term_memory_parent ON long_term_memory(parent_id)");
+            stmt.execute("CREATE INDEX IF NOT EXISTS idx_long_term_memory_embedding ON long_term_memory(embedding_id)");
 
             stmt.execute("CREATE TABLE IF NOT EXISTS ai_model_providers (" +
                     "id INTEGER PRIMARY KEY AUTOINCREMENT, " +

@@ -1,6 +1,7 @@
 package com.agent.hopaw.controller;
 
 import com.agent.hopaw.constant.DefaultUser;
+import com.agent.hopaw.infra.constant.ChatMemoryStatusEnum;
 import com.agent.hopaw.infra.memory.IChatMemoryService;
 import com.agent.hopaw.infra.model.dto.ResponseBean;
 import com.agent.hopaw.infra.model.entity.ChatHistory;
@@ -9,6 +10,7 @@ import com.agent.hopaw.infra.service.IAgentExecutorService;
 import com.agent.hopaw.infra.service.IChatHistoryService;
 import com.agent.hopaw.infra.service.IChatSessionService;
 import com.agent.hopaw.infra.util.UuidUtil;
+import org.springframework.util.StringUtils;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -71,6 +73,9 @@ public class ChatSessionController {
     @PostMapping("/create")
     @ResponseBody
     public ResponseBean create(ChatSession session) {
+        if(!StringUtils.hasLength(session.getTitle())){
+            session.setTitle("新任务");
+        }
         session.setUserId(DefaultUser.USER);
         session.setSessionId(UuidUtil.generateSimpleUUID());
         session.setCreateTime(java.time.LocalDateTime.now());
@@ -91,15 +96,15 @@ public class ChatSessionController {
         ChatSession session = chatSessionService.getSessionById(id);
         chatSessionService.deleteSession(id);
         chatHistoryService.deleteBySessionId(session.getSessionId());
-        chatMemoryService.updateStatusBySessionId(session.getSessionId(),2);
+        chatMemoryService.updateStatusBySessionId(session.getSessionId(), ChatMemoryStatusEnum.MANUAL_CLEANUP);
         return ResponseBean.success();
     }
 
-    @PostMapping("/delete-by-session-id")
-    public ResponseBean deleteBySessionId(@RequestParam String sessionId) {
+    @DeleteMapping("/{sessionId}/delete-by-session-id")
+    public ResponseBean deleteBySessionId(@PathVariable String sessionId) {
         chatSessionService.deleteSessionBySessionId(sessionId);
         chatHistoryService.deleteBySessionId(sessionId);
-        chatMemoryService.updateStatusBySessionId(sessionId,2);
+        chatMemoryService.updateStatusBySessionId(sessionId, ChatMemoryStatusEnum.MANUAL_CLEANUP);
         return ResponseBean.success();
     }
 
@@ -122,7 +127,7 @@ public class ChatSessionController {
     @ResponseBody
     public ResponseBean clearChat(@PathVariable String sessionId) {
         chatHistoryService.deleteBySessionId(sessionId);
-        chatMemoryService.updateStatusBySessionId(sessionId,2);
+        chatMemoryService.updateStatusBySessionId(sessionId, ChatMemoryStatusEnum.MANUAL_CLEANUP);
         return ResponseBean.success();
     }
 }
