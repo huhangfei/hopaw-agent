@@ -10,7 +10,7 @@ import java.util.List;
 
 @Mapper
 public interface ChatMemoryMapper {
-    List<ChatMemory> findByAgentId(@Param("agentId") Long agentId);
+    List<ChatMemory> findBySessionId(@Param("sessionId") String agentId);
 
     List<ChatMemory> findByAgentIdAndUserId(@Param("agentId") Long agentId, @Param("userId") String userId);
 
@@ -42,5 +42,21 @@ public interface ChatMemoryMapper {
 
     int updateStatusByStatus(@Param("sessionId") String sessionId, @Param("userId") String userId, @Param("oldStatus")Integer oldStatus, @Param("status") Integer status);
 
-    List<ChatMemory> findDistinctSessionUserPairs();
+    List<ChatMemory> findObsoleteDistinctSessionUserPairs();
+
+
+    /**
+     * 查询会话根据会话和用户编号
+     * @param sessionId
+     * @param userId
+     * @return
+     */
+    List<ChatMemory> findObsoleteChatMemoryBySessionIdAndUserId(String sessionId,String userId);
+
+
+    /**
+     * @param ids
+     * @return
+     */
+    int deleteObsoleteChatMemoryByIds(@Param("ids") List<Long> ids);
 }

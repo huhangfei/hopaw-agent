@@ -1,6 +1,5 @@
 package com.agent.hopaw.infra.mapper;
 
-import com.agent.hopaw.infra.constant.LongTermMemoryTypeEnum;
 import com.agent.hopaw.infra.model.entity.LongTermMemory;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
@@ -29,5 +28,4 @@ public interface LongTermMemoryMapper {
     int updateParentId(@Param("id") Long id, @Param("parentId") Long parentId);
 
     int deleteBySessionIdAndUserIdAndMemoryTypeAndEndDateTime(@Param("sessionId") String sessionId, @Param("userId") String userId, @Param("memoryType") String memoryType, @Param("endDateTime") LocalDateTime endDateTime);
-    List<LongTermMemory> findByStatus(Integer status);
 }

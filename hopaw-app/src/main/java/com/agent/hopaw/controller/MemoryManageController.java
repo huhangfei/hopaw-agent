@@ -1,7 +1,7 @@
 package com.agent.hopaw.controller;
 
 import com.agent.hopaw.constant.DefaultUser;
-import com.agent.hopaw.infra.constant.LongTermMemoryTypeEnum;
+import com.agent.hopaw.infra.constant.UserMemoryTypeEnum;
 import com.agent.hopaw.infra.memory.ILongTermMemoryService;
 import com.agent.hopaw.infra.memory.LongTermMemoryService;
 import com.agent.hopaw.infra.model.dto.ResponseBean;
@@ -15,17 +15,14 @@ import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.stream.Collectors;
 
 @Controller
 public class MemoryManageController {
 
     private final ILongTermMemoryService longTermMemoryService;
-    private final ChatSessionService chatSessionService;
 
-    public MemoryManageController(LongTermMemoryService longTermMemoryService,ChatSessionService chatSessionService) {
+    public MemoryManageController(LongTermMemoryService longTermMemoryService) {
         this.longTermMemoryService = longTermMemoryService;
-        this.chatSessionService = chatSessionService;
     }
 
     @GetMapping("/memory-manage")
@@ -38,7 +35,7 @@ public class MemoryManageController {
     public ResponseBean tree() {
         List<LongTermMemory> list = longTermMemoryService.queryUserAllMemories(null, DefaultUser.USER);
         List<Map<String, Object>> types = new ArrayList<>();
-        for (LongTermMemoryTypeEnum typeEnum : LongTermMemoryTypeEnum.values()) {
+        for (UserMemoryTypeEnum typeEnum : UserMemoryTypeEnum.values()) {
             Map<String, Object> item = new LinkedHashMap<>();
             item.put("code", typeEnum.getCode());
             item.put("name", typeEnum.getName());
@@ -71,12 +68,11 @@ public class MemoryManageController {
         String memoryType = (String) body.get("memoryType");
         String summary = (String) body.get("summary");
 
-        // 限制不能添加任务记录类型
-        if (LongTermMemoryTypeEnum.TASK_RECORDS.getCode().equals(memoryType)) {
-            return ResponseBean.fail("不能添加任务记录类型的记忆");
+        // 限制不能添加任务记录和聊天历史类型
+        if (UserMemoryTypeEnum.TASK_RECORDS.getCode().equals(memoryType) || UserMemoryTypeEnum.CHAT_HISTORY.getCode().equals(memoryType)) {
+            return ResponseBean.fail("不能添加该类型的记忆");
         }
-
-        LongTermMemory entity = longTermMemoryService.createMemory(sessionId, memory, parentId, DefaultUser.USER, memoryType, summary);
+        LongTermMemory entity = longTermMemoryService.createMemory(sessionId, memory, parentId, DefaultUser.USER, UserMemoryTypeEnum.fromCode(memoryType), summary);
         return ResponseBean.success(entity);
     }
 
@@ -97,7 +93,7 @@ public class MemoryManageController {
         if (body.containsKey("memoryType")) {
             String newType = body.get("memoryType");
             // 限制不能修改为任务记录类型
-            if (LongTermMemoryTypeEnum.TASK_RECORDS.getCode().equals(newType)) {
+            if (UserMemoryTypeEnum.TASK_RECORDS.getCode().equals(newType) || UserMemoryTypeEnum.CHAT_HISTORY.getCode().equals(newType)) {
                 return ResponseBean.fail("不能修改为任务记录类型的记忆");
             }
             entity.setMemoryType(newType);

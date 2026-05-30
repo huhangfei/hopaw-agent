@@ -1,6 +1,6 @@
 package com.agent.hopaw.infra.storage;
 
-import com.agent.hopaw.infra.constant.VectorMemoryTypeEnum;
+import com.agent.hopaw.infra.constant.UserMemoryTypeEnum;
 import com.agent.hopaw.infra.mapper.ChatHistoryMapper;
 import com.agent.hopaw.infra.memory.IVectorMemoryService;
 import com.agent.hopaw.infra.model.entity.ChatHistory;
@@ -42,7 +42,7 @@ public class SqliteChatHistoryDbStore implements ChatHistoryStore {
             chatHistoryMapper.insert(chatHistory);
         }
         //存储到向量数据库
-        vectorMemoryService.store(formatMemoryContent(chatHistory), chatHistory.getSessionId(), chatHistory.getAgentId(), chatHistory.getUserId(), VectorMemoryTypeEnum.CHAT_HISTORY, LocalDateTime.now());
+        vectorMemoryService.store(formatMemoryContent(chatHistory), chatHistory.getSessionId(), chatHistory.getUserId(), UserMemoryTypeEnum.CHAT_HISTORY, LocalDateTime.now());
     }
 
     @Override
@@ -53,7 +53,7 @@ public class SqliteChatHistoryDbStore implements ChatHistoryStore {
         chatHistoryMapper.insertBatch(chatHistories);
         for (ChatHistory chatHistory : chatHistories) {
             //存储到向量数据库
-            vectorMemoryService.store(formatMemoryContent(chatHistory), chatHistory.getSessionId(), chatHistory.getAgentId(), chatHistory.getUserId(), VectorMemoryTypeEnum.CHAT_HISTORY, LocalDateTime.now());
+            vectorMemoryService.store(formatMemoryContent(chatHistory), chatHistory.getSessionId(), chatHistory.getUserId(), UserMemoryTypeEnum.CHAT_HISTORY, LocalDateTime.now());
         }
 
     }

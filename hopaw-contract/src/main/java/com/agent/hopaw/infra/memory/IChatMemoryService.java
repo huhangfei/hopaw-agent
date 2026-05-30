@@ -11,10 +11,6 @@ import java.util.List;
  * @author hhf
  */
 public interface IChatMemoryService extends ChatMemoryStore {
-    /**
-     * @return
-     */
-    List<ChatMemory> findDistinctSessionUserPairs();
 
     /**
      * @param sessionId
@@ -34,12 +30,8 @@ public interface IChatMemoryService extends ChatMemoryStore {
      */
     void orphanCleanup(ChatMemoryId memoryId);
 
-    /**
-     * @param sessionId
-     * @param status
-     * @return
-     */
-    int updateStatusBySessionId(String sessionId,ChatMemoryStatusEnum status);
+
+    void clear(String sessionId);
 
     /**
      * @param sessionId

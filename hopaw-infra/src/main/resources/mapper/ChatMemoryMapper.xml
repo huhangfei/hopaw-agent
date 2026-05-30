@@ -13,10 +13,10 @@
         <result property="createTime" column="create_time"/>
     </resultMap>
 
-    <select id="findByAgentId" resultMap="ChatMemoryResultMap">
+    <select id="findBySessionId" resultMap="ChatMemoryResultMap">
         SELECT id, agent_id, user_id, message_id, message_json, status, session_id, create_time
         FROM chat_memory
-        WHERE agent_id = #{agentId}
+        WHERE session_id = #{sessionId}
         ORDER BY create_time ASC
     </select>
 
@@ -95,6 +95,14 @@
         SET status = #{status}
         WHERE session_id = #{sessionId}
     </update>
+    <delete id="deleteBySessionIdAndUserId">
+        DELETE FROM chat_memory
+        WHERE session_id = #{sessionId}
+        <if test="userId!=null">
+            AND user_id = #{userId}
+        </if>
+    </delete>
+
     <update id="updateStatusBySessionIdAndRequestId">
         UPDATE chat_memory
         SET status = #{newStatus}
@@ -106,11 +114,6 @@
         WHERE user_id = #{userId} AND session_id = #{sessionId} AND message_id = #{messageId}
     </delete>
 
-    <delete id="deleteBySessionIdAndUserId">
-        DELETE FROM chat_memory
-        WHERE session_id = #{sessionId} AND user_id = #{userId}
-    </delete>
-
     <delete id="deleteByIds">
         DELETE FROM chat_memory
         WHERE  id IN
@@ -118,15 +121,25 @@
             #{id}
         </foreach>
     </delete>
-
     <delete id="deleteByAgentId">
         DELETE FROM chat_memory
         WHERE agent_id = #{agentId}
     </delete>
-
-    <select id="findDistinctSessionUserPairs" resultMap="ChatMemoryResultMap">
+    <select id="findObsoleteDistinctSessionUserPairs" resultMap="ChatMemoryResultMap">
         SELECT DISTINCT session_id, user_id
-        FROM chat_memory
+        FROM chat_memory_obsolete
     </select>
-
+    <select id="findObsoleteChatMemoryBySessionIdAndUserId" resultMap="ChatMemoryResultMap">
+        SELECT id, agent_id, user_id, message_id, message_json, status, session_id, create_time
+        FROM chat_memory_obsolete
+        WHERE session_id = #{sessionId} AND user_id = #{userId}
+        ORDER BY create_time ASC
+    </select>
+    <delete id="deleteObsoleteChatMemoryByIds">
+        DELETE FROM chat_memory_obsolete
+        WHERE  id IN
+        <foreach collection="ids" item="id" open="(" separator="," close=")">
+            #{id}
+        </foreach>
+    </delete>
 </mapper>

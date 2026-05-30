@@ -1,15 +1,12 @@
 package com.agent.hopaw.infra.memory;
 
 import com.agent.hopaw.infra.constant.ChatMemoryStatusEnum;
-import com.agent.hopaw.infra.constant.VectorMemoryTypeEnum;
 import com.agent.hopaw.infra.mapper.ChatMemoryMapper;
-import com.agent.hopaw.infra.service.IScheduledTaskService;
 import com.agent.hopaw.infra.model.entity.ChatMemory;
 import com.agent.hopaw.infra.model.entity.ChatMemoryId;
 import dev.langchain4j.agent.tool.ToolExecutionRequest;
 import dev.langchain4j.data.message.*;
 import org.slf4j.Logger;
-import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
@@ -24,20 +21,14 @@ import java.util.stream.Collectors;
 public class SQLiteChatMemoryStore implements IChatMemoryService {
     private final Logger logger = org.slf4j.LoggerFactory.getLogger(SQLiteChatMemoryStore.class);
     private final ChatMemoryMapper chatMemoryMapper;
-
-    private final IScheduledTaskService scheduledTaskService;
-    public SQLiteChatMemoryStore(ChatMemoryMapper chatMemoryMapper, @Lazy IScheduledTaskService scheduledTaskService) {
+    private final ILongTermMemoryProvider longTermMemoryProvider;
+    public SQLiteChatMemoryStore(ChatMemoryMapper chatMemoryMapper, ILongTermMemoryProvider longTermMemoryProvider) {
         this.chatMemoryMapper = chatMemoryMapper;
-        this.scheduledTaskService = scheduledTaskService;
+        this.longTermMemoryProvider = longTermMemoryProvider;
     }
 
     private List<ChatMemory> getChatMemories(ChatMemoryId memoryId) {
-        List<Integer> status=new ArrayList<>();
-        status.add(ChatMemoryStatusEnum.DEFAULT.getCode());
-        status.add(ChatMemoryStatusEnum.TASK_DONE.getCode());
-        if(scheduledTaskService.isTaskRunning("longTermMemory")){
-        }
-        List<ChatMemory> records = chatMemoryMapper.findBySessionIdAndStatus(memoryId.getSessionId(), status);
+        List<ChatMemory> records = chatMemoryMapper.findBySessionId(memoryId.getSessionId());
         return records;
     }
 
@@ -80,7 +71,6 @@ public class SQLiteChatMemoryStore implements IChatMemoryService {
         List<ChatMemory> existingRecords = chatMemoryMapper.findBySessionIdAndStatus(memoryId.getSessionId(), Arrays.asList(0));
         Map<String, ChatMemory> memoryMap = existingRecords.stream()
                 .collect(Collectors.toMap(ChatMemory::getMessageId, record -> record));
-        boolean longTermMemoryTaskRunning=scheduledTaskService.isTaskRunning("longTermMemory");
 
         Set<String> messageIds = new HashSet<>(messages.size());
         for (ChatMessage message : messages) {
@@ -92,14 +82,17 @@ public class SQLiteChatMemoryStore implements IChatMemoryService {
                 chatMemoryMapper.insert(memoryId.getAgentId(), memoryId.getUserId(), messageId, messageJson, memoryId.getSessionId(),memoryId.getRequestId(), LocalDateTime.now());
               }
         }
-        for (String messageId : memoryMap.keySet()) {
-            if (!messageIds.contains(messageId)) {
-                if(longTermMemoryTaskRunning){
-                    chatMemoryMapper.updateStatus(memoryId.getSessionId(),memoryId.getUserId(), messageId, ChatMemoryStatusEnum.AUTO_CLEANUP.getCode());
-                }else{
-                    chatMemoryMapper.deleteByMessageId(memoryId.getSessionId(), memoryId.getUserId(),  messageId);
-                }
+        List<ChatMemory> deletedMemoryList=new ArrayList<>();
+        for (Map.Entry<String, ChatMemory> item : memoryMap.entrySet()) {
+            if (!messageIds.contains(item.getKey())) {
+                //在窗口记忆中移除
+                chatMemoryMapper.deleteByMessageId(memoryId.getSessionId(), memoryId.getUserId(),item.getKey());
+                deletedMemoryList.add(item.getValue());
             }
+        }
+        if(!deletedMemoryList.isEmpty()){
+            //写入长时记忆
+            longTermMemoryProvider.receiveUserTempMemory(deletedMemoryList);
         }
     }
 
@@ -164,18 +157,18 @@ public class SQLiteChatMemoryStore implements IChatMemoryService {
     }
 
     @Override
-    public int updateStatusBySessionId(String sessionId, ChatMemoryStatusEnum status) {
-        return chatMemoryMapper.updateStatusBySessionId(sessionId, status.getCode());
+    public void clear(String sessionId) {
+        List<ChatMemory> records = chatMemoryMapper.findBySessionId(sessionId);
+        if(records.isEmpty()){
+            return;
+        }
+        longTermMemoryProvider.receiveUserTempMemory(records);
+        chatMemoryMapper.deleteBySessionIdAndUserId(sessionId,null);
     }
 
     @Override
     public int updateStatusBySessionIdAndRequestId(String sessionId, String requestId, ChatMemoryStatusEnum status, ChatMemoryStatusEnum newStatus) {
         return chatMemoryMapper.updateStatusBySessionIdAndRequestId(sessionId, requestId, status.getCode(),newStatus.getCode());
-    }
-
-    @Override
-    public List<ChatMemory> findDistinctSessionUserPairs() {
-        return chatMemoryMapper.findDistinctSessionUserPairs();
     }
 
     @Override

@@ -1,7 +1,7 @@
 package com.agent.hopaw.controller;
 
 import com.agent.hopaw.constant.DefaultUser;
-import com.agent.hopaw.infra.constant.VectorMemoryTypeEnum;
+import com.agent.hopaw.infra.constant.UserMemoryTypeEnum;
 import com.agent.hopaw.infra.mapper.AgentMapper;
 import com.agent.hopaw.infra.memory.IVectorMemoryService;
 import com.agent.hopaw.infra.model.dto.VectorSearchResult;
@@ -42,7 +42,7 @@ public class VectorHistoryController {
     @ResponseBody
     public ResponseBean memoryTypes() {
         List<Map<String, String>> result = new ArrayList<>();
-        for (VectorMemoryTypeEnum type : VectorMemoryTypeEnum.values()) {
+        for (UserMemoryTypeEnum type : UserMemoryTypeEnum.values()) {
             Map<String, String> item = new LinkedHashMap<>();
             item.put("code", type.getCode());
             item.put("name", type.getName());
@@ -55,7 +55,6 @@ public class VectorHistoryController {
     @ResponseBody
     public ResponseBean search(
             @RequestParam(required = false) String query,
-            @RequestParam(required = false) Long agentId,
             @RequestParam(required = false) String sessionId,
             @RequestParam(required = false) String userId,
             @RequestParam(required = false) String memoryType,
@@ -66,7 +65,7 @@ public class VectorHistoryController {
             return ResponseBean.fail("查询关键词不能为空");
         }
         List<VectorSearchResult> results = vectorMemoryService.search(
-                query,sessionId, agentId, userId, memoryType, maxResults, minScore);
+                query,sessionId, userId, memoryType, maxResults, minScore);
 
         return ResponseBean.success(results);
     }

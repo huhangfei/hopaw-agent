@@ -1,18 +1,14 @@
 package com.agent.hopaw.infra.constant;
 
 /**
- * 向量记忆类型枚举
+ * 用户记忆类型枚举
  * @author hhf
  */
-public enum VectorMemoryTypeEnum {
+public enum UserMemoryTypeEnum {
     /**
-     * 任务记录:区分智能体
+     * 任务记录
      */
     TASK_RECORDS("taskRecords", "任务记录"),
-    /**
-     * 聊天历史:区分智能体
-     */
-    CHAT_HISTORY("chatHistory", "聊天历史"),
     /**
      * 经验知识
      */
@@ -20,11 +16,15 @@ public enum VectorMemoryTypeEnum {
     /**
      * 用户画像
      */
-    USER_PROFILE("userProfile", "用户画像");
+    USER_PROFILE("userProfile", "用户画像"),
+    /**
+     * 聊天历史
+     */
+    CHAT_HISTORY("chatHistory", "聊天历史");
 
     private final String code;
     private final String name;
-    VectorMemoryTypeEnum(String code, String name) {
+    UserMemoryTypeEnum(String code, String name) {
         this.code = code;
         this.name = name;
     }
@@ -36,8 +36,8 @@ public enum VectorMemoryTypeEnum {
         return name;
     }
 
-    public static VectorMemoryTypeEnum fromCode(String code) {
-        for (VectorMemoryTypeEnum type : values()) {
+    public static UserMemoryTypeEnum fromCode(String code) {
+        for (UserMemoryTypeEnum type : values()) {
             if (type.code.equals(code)) {
                 return type;
             }

@@ -1,18 +1,22 @@
 package com.agent.hopaw.infra.memory;
 
+import com.agent.hopaw.infra.constant.UserMemoryTypeEnum;
+import com.agent.hopaw.infra.model.entity.ChatMemory;
 import com.agent.hopaw.infra.model.entity.LongTermMemory;
 import dev.langchain4j.invocation.InvocationParameters;
 
 import java.util.List;
 import java.util.function.Function;
 
-public interface ILongTermMemoryService {
+public interface ILongTermMemoryService extends ILongTermMemoryProvider{
+
+
     List<LongTermMemory> getChildMemories(Long parentId);
 
     LongTermMemory getMemoryById(Long id);
 
     LongTermMemory createMemory(String sessionId, String memory, Long parentId, String userId,
-                                String memoryType, String summary);
+                                UserMemoryTypeEnum memoryType, String summary);
 
     void deleteMemory(Long id);
 
@@ -24,8 +28,6 @@ public interface ILongTermMemoryService {
 
     void deleteExpiredTaskRecordsMemories(String sessionId, String userId);
 
-    List<LongTermMemory> findByStatus(Integer status);
-    List<LongTermMemory> findExpiredTaskRecordsMemories(String sessionId, String userId);
 
     List<LongTermMemory> queryUserAllMemories(String sessionId, String userId);
 
@@ -57,7 +59,7 @@ public interface ILongTermMemoryService {
 
     String getMemoryContentById(Long id);
 
-    String saveMemory(String memoryType,
+    String saveMemory(UserMemoryTypeEnum memoryType,
                       String summary,
                       String memory,
                       Long id,

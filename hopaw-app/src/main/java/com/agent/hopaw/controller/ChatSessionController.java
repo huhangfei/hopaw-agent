@@ -96,7 +96,7 @@ public class ChatSessionController {
         ChatSession session = chatSessionService.getSessionById(id);
         chatSessionService.deleteSession(id);
         chatHistoryService.deleteBySessionId(session.getSessionId());
-        chatMemoryService.updateStatusBySessionId(session.getSessionId(), ChatMemoryStatusEnum.MANUAL_CLEANUP);
+        chatMemoryService.clear(session.getSessionId());
         return ResponseBean.success();
     }
 
@@ -104,7 +104,7 @@ public class ChatSessionController {
     public ResponseBean deleteBySessionId(@PathVariable String sessionId) {
         chatSessionService.deleteSessionBySessionId(sessionId);
         chatHistoryService.deleteBySessionId(sessionId);
-        chatMemoryService.updateStatusBySessionId(sessionId, ChatMemoryStatusEnum.MANUAL_CLEANUP);
+        chatMemoryService.clear(sessionId);
         return ResponseBean.success();
     }
 
@@ -127,7 +127,7 @@ public class ChatSessionController {
     @ResponseBody
     public ResponseBean clearChat(@PathVariable String sessionId) {
         chatHistoryService.deleteBySessionId(sessionId);
-        chatMemoryService.updateStatusBySessionId(sessionId, ChatMemoryStatusEnum.MANUAL_CLEANUP);
+        chatMemoryService.clear(sessionId);
         return ResponseBean.success();
     }
 }
