@@ -26,7 +26,7 @@
     </header>
 
     <div class="main-container">
-        <nav class="menu-sidebar" id="mainMenu">
+        <nav class="menu-sidebar" id="mainMenu" th:classappend="${menuCollapsed} ? 'collapsed' : ''">
             <a href="/" class="menu-btn" th:classappend="${activePage == 'index' ? 'active' : ''}" title="会话">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
                     <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
@@ -147,11 +147,12 @@
             </a>
 
             <div class="menu-collapse-wrapper">
-                <button class="menu-collapse-btn" onclick="toggleMenu()" title="收缩菜单">
+                <button class="menu-collapse-btn" th:title="${menuCollapsed ? '展开菜单' : '收缩菜单'}" onclick="toggleMenu()">
                     <svg class="collapse-icon" viewBox="0 0 24 24" fill="currentColor" width="18" height="18">
-                        <path d="M15.41 7.41L14 6l-6 6 6 6 1.41-1.41L10.83 12z"/>
+                        <path th:if="${!menuCollapsed}" d="M15.41 7.41L14 6l-6 6 6 6 1.41-1.41L10.83 12z"/>
+                        <path th:if="${menuCollapsed}" d="M8.59 16.59L10 18l6-6-6-6-1.41 1.41L13.17 12z"/>
                     </svg>
-                    <span class="menu-label">收缩菜单</span>
+                    <span class="menu-label" th:text="${menuCollapsed ? '展开菜单' : '收缩菜单'}">收缩菜单</span>
                 </button>
             </div>
         </nav>
@@ -162,12 +163,18 @@
     <div id="toast-container" class="toast-container"></div>
 
     <script>
+        function setMenuCookie(collapsed) {
+            var expires = new Date();
+            expires.setFullYear(expires.getFullYear() + 1);
+            document.cookie = 'menuCollapsed=' + collapsed + ';path=/;expires=' + expires.toUTCString() + ';SameSite=Lax';
+        }
+
         function toggleMenu() {
             var menu = document.getElementById('mainMenu');
             menu.classList.add('with-anim');
             menu.classList.toggle('collapsed');
             updateMenuUI(menu);
-            localStorage.setItem('menuCollapsed', menu.classList.contains('collapsed'));
+            setMenuCookie(menu.classList.contains('collapsed'));
         }
 
         function updateMenuUI(menu) {
@@ -184,18 +191,6 @@
                 icon.innerHTML = '<path d="M15.41 7.41L14 6l-6 6 6 6 1.41-1.41L10.83 12z"/>';
             }
         }
-
-        (function initMenu() {
-            var menu = document.getElementById('mainMenu');
-            if (!menu) return;
-            var collapsed = localStorage.getItem('menuCollapsed');
-            if (collapsed === 'true') {
-                menu.classList.add('collapsed');
-            } else if (collapsed === 'false') {
-                menu.classList.remove('collapsed');
-            }
-            updateMenuUI(menu);
-        })();
 
         (function initSubMenu() {
             var group = document.getElementById('menuGroupMemory');

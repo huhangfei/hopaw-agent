@@ -480,6 +480,7 @@
     cursor: pointer;
     transition: all 0.2s;
     height: 30px;
+    margin-left: auto;
 }
 .chat-btn-deep:hover {
     border-color: #667eea;

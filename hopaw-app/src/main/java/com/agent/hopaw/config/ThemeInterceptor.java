@@ -20,6 +20,9 @@ public class ThemeInterceptor implements HandlerInterceptor {
     public static final String THEME_DARK = "dark";
     public static final String THEME_LIGHT = "light";
 
+    public static final String MENU_COLLAPSED_COOKIE = "menuCollapsed";
+    public static final String MENU_COLLAPSED_MODEL_KEY = "menuCollapsed";
+
     @Override
     public boolean preHandle(HttpServletRequest request, HttpServletResponse response, Object handler) throws Exception {
         String theme = getThemeFromCookie(request);
@@ -37,6 +40,7 @@ public class ThemeInterceptor implements HandlerInterceptor {
             }
             modelAndView.addObject(THEME_MODEL_ATTRIBUTE, theme);
             modelAndView.addObject("activePage", resolveActivePage(request));
+            modelAndView.addObject(MENU_COLLAPSED_MODEL_KEY, isMenuCollapsed(request));
             logger.debug("ThemeInterceptor postHandle: modelAndView={}, theme={}", modelAndView.getViewName(), theme);
         }
     }
@@ -70,5 +74,17 @@ public class ThemeInterceptor implements HandlerInterceptor {
         }
         logger.debug("No theme cookie found, returning default: light");
         return THEME_LIGHT;
+    }
+
+    private boolean isMenuCollapsed(HttpServletRequest request) {
+        Cookie[] cookies = request.getCookies();
+        if (cookies != null) {
+            for (Cookie cookie : cookies) {
+                if (MENU_COLLAPSED_COOKIE.equals(cookie.getName())) {
+                    return "true".equals(cookie.getValue());
+                }
+            }
+        }
+        return false;
     }
 }

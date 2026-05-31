@@ -103,14 +103,6 @@
                                     th:data-desc="${a.description}"
                                     th:selected="${selectedAgentId == a.id}"></option>
                         </select>
-                        <button type="button" class="chat-btn-deep" id="deepThinkBtn"
-                                th:attr="data-agent-id=${selectedAgent.id}, data-enabled=${selectedAgent.enableThinking}"
-                                th:classappend="${selectedAgent.enableThinking ? 'active' : ''}">
-                            <svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16">
-                                <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/>
-                            </svg>
-                            深度思考
-                        </button>
                         <div class="model-dropdown" id="modelDropdown">
                             <button type="button" class="chat-btn-model" id="modelSelectBtn">
                                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14"
@@ -139,7 +131,14 @@
                                 <div class="skills-dropdown-list" id="skillsCheckboxList"></div>
                             </div>
                         </div>
-
+                        <button type="button" class="chat-btn-deep" id="deepThinkBtn"
+                                th:attr="data-agent-id=${selectedAgent.id}, data-enabled=${selectedAgent.enableThinking}"
+                                th:classappend="${selectedAgent.enableThinking ? 'active' : ''}">
+                            <svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16">
+                                <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/>
+                            </svg>
+                            深度思考
+                        </button>
                     </div>
                 </div>
                 <button type="submit" id="sendBtn" class="chat-form-send-button"
