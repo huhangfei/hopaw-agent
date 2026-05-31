@@ -1,7 +1,9 @@
 package com.agent.hopaw.infra.service;
 
+import com.agent.hopaw.infra.event.TokenUsageEvent;
 import com.agent.hopaw.infra.mapper.TokenUsageMapper;
 import com.agent.hopaw.infra.model.entity.TokenUsage;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import java.time.LocalDateTime;
 import java.util.HashMap;
@@ -12,9 +14,11 @@ import java.util.Map;
 public class TokenUsageService implements ITokenUsageService {
 
     private final TokenUsageMapper tokenUsageMapper;
+    private final ApplicationEventPublisher eventPublisher;
 
-    public TokenUsageService(TokenUsageMapper tokenUsageMapper) {
+    public TokenUsageService(TokenUsageMapper tokenUsageMapper, ApplicationEventPublisher eventPublisher) {
         this.tokenUsageMapper = tokenUsageMapper;
+        this.eventPublisher = eventPublisher;
     }
 
     public void save(TokenUsage tokenUsage) {
@@ -22,6 +26,7 @@ public class TokenUsageService implements ITokenUsageService {
             tokenUsage.setCreateTime(LocalDateTime.now());
         }
         tokenUsageMapper.insert(tokenUsage);
+        eventPublisher.publishEvent(new TokenUsageEvent(tokenUsage));
     }
 
     public Map<String, Object> queryPage(LocalDateTime startTime, LocalDateTime endTime, String userId, Long agentId, String modelName, String source, String sessionId, int page, int size) {

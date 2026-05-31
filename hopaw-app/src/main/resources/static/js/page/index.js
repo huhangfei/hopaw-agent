@@ -54,7 +54,6 @@ function renderAllMessages() {
 function setCurrentAgentId(agentId) {
     currentAgentId = agentId;
 }
-var lastDataType='';
 function connectWebSocket() {
     var protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
     var wsUrl = protocol + '//' + window.location.host + '/ws/chat';
@@ -86,14 +85,11 @@ function connectWebSocket() {
         } else if (data.type === 'session-title') {
             updateSessionTitle(data.sessionId, data.content);
         } else if (data.type === 'task-done') {
-            loadTokenUsage(lastTokenId || undefined);
             enableInput();
         } else if (data.type === 'error') {
             handleStreamingError(data.content || data.message, requestId);
-        }
-        if(lastDataType!=data.type){
-            lastDataType=data.type;
-            loadTokenUsage(lastTokenId || undefined);
+        } else if (data.type === 'token_usage') {
+            handleTokenUsageMessage(data);
         }
     };
     
@@ -707,6 +703,32 @@ function stopCurrentSession() {
 var lastTokenId = 0;
 var tokenChartData = [];
 var tokenChart = null;
+
+function handleTokenUsageMessage(data) {
+    if (!currentAgentId) return;
+    if (data.sessionId !== currentSessionId) return;
+    if (data.source !== 'chat') return;
+
+    var entry = {
+        id: data.id,
+        inputTokens: data.inputTokens || 0,
+        outputTokens: data.outputTokens || 0,
+        totalTokens: data.totalTokens || 0,
+        createTime: data.createTime || ''
+    };
+    tokenChartData.push(entry);
+    lastTokenId = data.id;
+
+    renderTokenChart(tokenChartData);
+
+    var inputSum = 0, outputSum = 0, totalSum = 0;
+    for (var i = 0; i < tokenChartData.length; i++) {
+        inputSum += tokenChartData[i].inputTokens || 0;
+        outputSum += tokenChartData[i].outputTokens || 0;
+        totalSum += tokenChartData[i].totalTokens || 0;
+    }
+    updateTokenTitle(inputSum, outputSum, totalSum);
+}
 
 function loadTokenUsage(minId) {
     if (!currentAgentId) return;

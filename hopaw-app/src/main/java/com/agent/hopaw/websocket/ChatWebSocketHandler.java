@@ -1,13 +1,16 @@
 package com.agent.hopaw.websocket;
 
 import com.agent.hopaw.constant.DefaultUser;
+import com.agent.hopaw.infra.event.TokenUsageEvent;
 import com.agent.hopaw.infra.executor.IAgentExecutor;
 import com.agent.hopaw.infra.model.dto.UserRequest;
+import com.agent.hopaw.infra.model.entity.TokenUsage;
 import com.agent.hopaw.infra.service.IAgentExecutorService;
 import com.alibaba.fastjson2.JSON;
 import com.alibaba.fastjson2.JSONObject;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.context.event.EventListener;
 import org.springframework.stereotype.Component;
 import org.springframework.web.socket.CloseStatus;
 import org.springframework.web.socket.TextMessage;
@@ -153,5 +156,43 @@ public class ChatWebSocketHandler extends TextWebSocketHandler {
         sessionMap.remove(session.getId());
         SESSION_LOCK_MAP.remove(session.getId());
         logger.info("Session closed: {}", session.getId());
+    }
+
+    @EventListener
+    public void onTokenUsageEvent(TokenUsageEvent event) {
+        TokenUsage tokenUsage = event.getTokenUsage();
+        String userId = tokenUsage.getUserId();
+        if (userId == null) {
+            return;
+        }
+        ConcurrentLinkedQueue<String> sessionIds = userSessionMap.get(userId);
+        if (sessionIds == null || sessionIds.isEmpty()) {
+            return;
+        }
+        Map<String, Object> data = new HashMap<>();
+        data.put("type", "token_usage");
+        data.put("id", tokenUsage.getId());
+        data.put("agentId", tokenUsage.getAgentId());
+        data.put("modelName", tokenUsage.getModelName());
+        data.put("inputTokens", tokenUsage.getInputTokens());
+        data.put("outputTokens", tokenUsage.getOutputTokens());
+        data.put("totalTokens", tokenUsage.getTotalTokens());
+        data.put("sessionId", tokenUsage.getSessionId());
+        data.put("source", tokenUsage.getSource());
+        data.put("createTime", tokenUsage.getCreateTime() != null ? tokenUsage.getCreateTime().toString() : null);
+        String message = JSON.toJSONString(data);
+        for (String id : sessionIds) {
+            WebSocketSession wsSession = sessionMap.get(id);
+            if (wsSession != null && wsSession.isOpen()) {
+                try {
+                    Object lock = SESSION_LOCK_MAP.computeIfAbsent(id, k -> new Object());
+                    synchronized (lock) {
+                        wsSession.sendMessage(new TextMessage(message));
+                    }
+                } catch (IOException e) {
+                    logger.error("Failed to send token_usage event to session {}: {}", id, e.getMessage());
+                }
+            }
+        }
     }
 }
