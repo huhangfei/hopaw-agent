@@ -26,11 +26,6 @@ function doSearch() {
     var params = new URLSearchParams();
     params.append('query', query);
 
-    var agentId = document.getElementById('searchAgentId').value;
-    if (agentId) {
-        params.append('agentId', agentId);
-    }
-
     var userId = document.getElementById('searchUserId').value;
     if (userId) {
         params.append('userId', userId);
@@ -86,9 +81,7 @@ function renderResults(results) {
 
     results.forEach(function(item, idx) {
         var memType = item.memoryType || '';
-        var typeLabel = memType === 'chatHistory' ? '聊天历史'
-                      : memType === 'taskRecords' ? '任务记录'
-                      : memType || '未知';
+        var typeLabel = item.memTypeName || memType;
         var typeClass = memType || 'unknown';
 
         var text = item.text || '';
@@ -97,6 +90,7 @@ function renderResults(results) {
 
         var score = item.score != null ? item.score.toFixed(4) : '-';
         var embeddingId = item.embeddingId || '';
+        var memoryDate = item.memoryDate || '-';
 
         var row = document.createElement('tr');
         row.innerHTML =
@@ -105,6 +99,7 @@ function renderResults(results) {
             '<td>' + (item.agentId || '-') + '</td>' +
             '<td>' + (item.userId || '-') + '</td>' +
             '<td><div class="text-preview">' + textPreview + '</div></td>' +
+            '<td class="date-cell">' + memoryDate + '</td>' +
             '<td class="score-cell">' + score + '</td>' +
             '<td class="action-cell">' +
             '  <button class="btn-detail" onclick="showDetail(' + idx + ')">详情</button>' +
@@ -129,6 +124,7 @@ function showDetail(idx) {
     document.getElementById('detailType').textContent = typeLabel;
     document.getElementById('detailType').className = 'detail-tag type-tag ' + typeClass;
     document.getElementById('detailEmbeddingId').textContent = item.embeddingId || '-';
+    document.getElementById('detailDate').textContent = item.memoryDate || '-';
     document.getElementById('detailText').textContent = item.text || '(空)';
     document.getElementById('detailModal').style.display = '';
 }

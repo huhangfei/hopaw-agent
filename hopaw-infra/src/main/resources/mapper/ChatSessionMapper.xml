@@ -8,45 +8,48 @@
         <result property="agentId" column="agent_id"/>
         <result property="userId" column="user_id"/>
         <result property="title" column="title"/>
+        <result property="enableThinking" column="enable_thinking"/>
+        <result property="skillNames" column="skill_names"/>
+        <result property="aiModelId" column="ai_model_id"/>
         <result property="createTime" column="create_time"/>
         <result property="lastUpdateTime" column="last_update_time"/>
     </resultMap>
 
     <select id="findAll" resultMap="ChatSessionResultMap">
-        SELECT id, session_id, agent_id, user_id, title, create_time, last_update_time
+        SELECT id, session_id, agent_id, user_id, title, enable_thinking, skill_names, ai_model_id, create_time, last_update_time
         FROM chat_sessions
         ORDER BY last_update_time DESC
     </select>
 
     <select id="findByUserId" resultMap="ChatSessionResultMap">
-        SELECT id, session_id, agent_id, user_id, title, create_time, last_update_time
+        SELECT id, session_id, agent_id, user_id, title, enable_thinking, skill_names, ai_model_id, create_time, last_update_time
         FROM chat_sessions
         WHERE user_id = #{userId}
         ORDER BY last_update_time DESC
     </select>
 
     <select id="findByUserIdAndAgentId" resultMap="ChatSessionResultMap">
-        SELECT id, session_id, agent_id, user_id, title, create_time, last_update_time
+        SELECT id, session_id, agent_id, user_id, title, enable_thinking, skill_names, ai_model_id, create_time, last_update_time
         FROM chat_sessions
         WHERE user_id = #{userId} AND agent_id = #{agentId}
         ORDER BY last_update_time DESC
     </select>
 
     <select id="findById" resultMap="ChatSessionResultMap">
-        SELECT id, session_id, agent_id, user_id, title, create_time, last_update_time
+        SELECT id, session_id, agent_id, user_id, title, enable_thinking, skill_names, ai_model_id, create_time, last_update_time
         FROM chat_sessions
         WHERE id = #{id}
     </select>
 
     <select id="findBySessionId" resultMap="ChatSessionResultMap">
-        SELECT id, session_id, agent_id, user_id, title, create_time, last_update_time
+        SELECT id, session_id, agent_id, user_id, title, enable_thinking, skill_names, ai_model_id, create_time, last_update_time
         FROM chat_sessions
         WHERE session_id = #{sessionId}
     </select>
 
     <insert id="insert" parameterType="com.agent.hopaw.infra.model.entity.ChatSession">
-        INSERT INTO chat_sessions (session_id, agent_id, user_id, title, create_time, last_update_time)
-        VALUES (#{sessionId}, #{agentId}, #{userId}, #{title}, #{createTime}, #{lastUpdateTime})
+        INSERT INTO chat_sessions (session_id, agent_id, user_id, title, enable_thinking, skill_names, ai_model_id, create_time, last_update_time)
+        VALUES (#{sessionId}, #{agentId}, #{userId}, #{title}, #{enableThinking}, #{skillNames}, #{aiModelId}, #{createTime}, #{lastUpdateTime})
         <selectKey resultType="long" keyProperty="id" order="AFTER">
             SELECT last_insert_rowid()
         </selectKey>
@@ -58,6 +61,9 @@
             agent_id = #{agentId},
             user_id = #{userId},
             title = #{title},
+            enable_thinking = #{enableThinking},
+            skill_names = #{skillNames},
+            ai_model_id = #{aiModelId},
             last_update_time = #{lastUpdateTime}
         WHERE id = #{id}
     </update>

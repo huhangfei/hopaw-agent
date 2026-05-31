@@ -1,21 +1,19 @@
-package com.agent.hopaw.biz.task;
+package com.agent.hopaw.infra.memory;
 
 import com.agent.hopaw.infra.constant.AiModelCallSourceEnum;
-import com.agent.hopaw.infra.constant.LongTermMemoryTypeEnum;
-import com.agent.hopaw.infra.constant.VectorMemoryTypeEnum;
-import com.agent.hopaw.infra.mapper.AgentMapper;
-import com.agent.hopaw.infra.mapper.ChatMemoryMapper;
-import com.agent.hopaw.infra.memory.LongTermMemoryService;
-import com.agent.hopaw.infra.memory.IVectorMemoryService;
-import com.agent.hopaw.infra.model.entity.Agent;
+import com.agent.hopaw.infra.constant.UserMemoryTypeEnum;
+import com.agent.hopaw.infra.mapper.ChatMemoryObsoleteMapper;
 import com.agent.hopaw.infra.model.entity.ChatMemory;
 import com.agent.hopaw.infra.model.entity.LongTermMemory;
 import com.agent.hopaw.infra.model.entity.ScheduledTask;
-import com.agent.hopaw.infra.service.*;
-import com.agent.hopaw.infra.monitor.*;
-import com.agent.hopaw.biz.tool.memory.MemoryTool;
+import com.agent.hopaw.infra.service.IAiModelService;
+import com.agent.hopaw.infra.service.ISysConfigService;
+import com.agent.hopaw.infra.service.ITokenUsageService;
 import com.agent.hopaw.infra.task.TaskHandler;
 import com.agent.hopaw.infra.util.InvocationParametersWrapper;
+import dev.langchain4j.agent.tool.P;
+import dev.langchain4j.agent.tool.SearchBehavior;
+import dev.langchain4j.agent.tool.Tool;
 import dev.langchain4j.agent.tool.ToolExecutionRequest;
 import dev.langchain4j.data.message.*;
 import dev.langchain4j.invocation.InvocationParameters;
@@ -30,50 +28,42 @@ import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
 
 import java.time.LocalDateTime;
-import java.util.*;
+import java.util.Arrays;
+import java.util.List;
+import java.util.Objects;
+import java.util.UUID;
 
 @Component
 public class LongTermMemoryTaskHandler implements TaskHandler {
-    private final AiModelService aiModelService;
     private static final Logger logger = LoggerFactory.getLogger(LongTermMemoryTaskHandler.class);
 
-    private final com.agent.hopaw.infra.memory.LongTermMemoryService longTermMemoryService;
-    private final IVectorMemoryService vectorMemoryService;
-    private final MemoryTool memoryTool;
-    private final ChatMemoryMapper chatMemoryMapper;
-    private final AgentMapper agentMapper;
-    private final SysConfigService sysConfigService;
-    private final TokenUsageService tokenUsageService;
+    private final IAiModelService aiModelService;
+    private final ILongTermMemoryService longTermMemoryService;
+    private final ISysConfigService sysConfigService;
+    private final ITokenUsageService tokenUsageService;
+    private final ChatMemoryObsoleteMapper chatMemoryMapper;
     
     // 运行中标记，防止并发执行
     private volatile boolean running = false;
 
-    public LongTermMemoryTaskHandler(AiModelService aiModelService,
-                                     LongTermMemoryService longTermMemoryService,
-                                     IVectorMemoryService vectorMemoryService,
-                                     MemoryTool memoryTool,
-                                     ChatMemoryMapper chatMemoryMapper, AgentMapper agentMapper,
-                                     SysConfigService sysConfigService, TokenUsageService tokenUsageService) {
+    public LongTermMemoryTaskHandler(IAiModelService aiModelService,
+                                     ILongTermMemoryService longTermMemoryService,
+                                     ISysConfigService sysConfigService,
+                                     ITokenUsageService tokenUsageService,
+                                     ChatMemoryObsoleteMapper chatMemoryMapper) {
         this.aiModelService = aiModelService;
         this.longTermMemoryService = longTermMemoryService;
-        this.vectorMemoryService = vectorMemoryService;
-        this.memoryTool = memoryTool;
-        this.chatMemoryMapper = chatMemoryMapper;
-        this.agentMapper = agentMapper;
         this.sysConfigService = sysConfigService;
         this.tokenUsageService = tokenUsageService;
+        this.chatMemoryMapper = chatMemoryMapper;
     }
-
     public void processAgentMemories() {
         try {
-            List<ChatMemory> pairs = chatMemoryMapper.findDistinctAgentUserPairs();
+            //会话和用户分组信息
+            List<ChatMemory> pairs = chatMemoryMapper.findObsoleteDistinctSessionUserPairs();
             for (ChatMemory pair : pairs) {
                 try {
-                    Agent agent = agentMapper.findById(pair.getAgentId());
-                    if (agent == null) {
-                        continue;
-                    }
-                    processMemoryForIdentity(agent, pair.getUserId());
+                    processMemoryForIdentity(pair.getSessionId(), pair.getUserId());
                 } catch (Exception e) {
                     logger.error("Error processing memory for agentId {} userId {}", pair.getAgentId(), pair.getUserId(), e);
                 }
@@ -190,35 +180,34 @@ public class LongTermMemoryTaskHandler implements TaskHandler {
         return conversationBuilder.toString();
     }
 
-    private void processMemoryForIdentity(Agent agent, String userId) {
+    private void processMemoryForIdentity(String sessionId, String userId) {
         //已标记清理的消息
-        List<ChatMemory> cleanedMessages = chatMemoryMapper.findByAgentIdAndUserIdInStatus(agent.getId(), userId, Arrays.asList(2, 3));
+        List<ChatMemory> cleanedMessages = chatMemoryMapper.findObsoleteChatMemoryBySessionIdAndUserId(sessionId, userId);
         if (cleanedMessages.isEmpty()) {
             return;
         }
-        int batchSize = agent.getMaxMemoryRecords() / 2;
-        if (batchSize <= 0) {
-            batchSize = 5;
-        }
+        String memoryMaxBatchSize = getConfig("memory_max_batch_size", "10");
+        int batchSize = Integer.parseInt(memoryMaxBatchSize);
+        //获取时间配置
+        String memoryTimeConfig = getConfig("memory_time_config", "5");
+        int timeConfig = Integer.parseInt(memoryTimeConfig);
         LocalDateTime latestTime = cleanedMessages.stream()
                 .map(ChatMemory::getCreateTime)
                 .filter(Objects::nonNull)
                 .max(LocalDateTime::compareTo)
                 .orElse(LocalDateTime.now());
-        LocalDateTime fiveMinutesAgo = LocalDateTime.now().minusMinutes(5);
-        if (cleanedMessages.size() < batchSize && latestTime.isAfter(fiveMinutesAgo)) {
+        LocalDateTime timeAgo = LocalDateTime.now().minusMinutes(timeConfig);
+        if (cleanedMessages.size() < batchSize && latestTime.isAfter(timeAgo)) {
             return;
         }
         //这是新消息
         String newConversation = buildMessageSummary(cleanedMessages);
-        String agentIdStr = String.valueOf(agent.getId());
-
         //现有记忆
-        List<LongTermMemory> longTermMemories = longTermMemoryService.queryUserAllMemories(agent.getId(), userId);
+        List<LongTermMemory> longTermMemories = longTermMemoryService.queryUserAllMemories(sessionId, userId);
 
         //扩展知识往往较大，不输入详情
         String longTermMemoryContent = longTermMemoryService.buildMemoryContent(longTermMemories, longTermMemory -> {
-            if (LongTermMemoryTypeEnum.USER_PROFILE.getCode().equals(longTermMemory.getMemoryType()) || LongTermMemoryTypeEnum.TASK_RECORDS.getCode().equals(longTermMemory.getMemoryType())) {
+            if (UserMemoryTypeEnum.USER_PROFILE.getCode().equals(longTermMemory.getMemoryType()) || UserMemoryTypeEnum.TASK_RECORDS.getCode().equals(longTermMemory.getMemoryType())) {
                 return true;
             }
             return false;
@@ -228,20 +217,16 @@ public class LongTermMemoryTaskHandler implements TaskHandler {
         content += newConversation;
         content +=("\n===========================");
 
-        boolean handle = handle(agent.getId(), userId, longTermMemoryContent,content);
+        boolean handle = handle(sessionId, userId, longTermMemoryContent,content);
         if (handle) {
-            storeChatHistoryToVector(agent.getId(), userId, cleanedMessages);
-            chatMemoryMapper.deleteByIds(cleanedMessages.stream().map(ChatMemory::getId).toList());
+            chatMemoryMapper.deleteObsoleteChatMemoryByIds(cleanedMessages.stream().map(ChatMemory::getId).toList());
         }
+        longTermMemoryService.deleteExpiredTaskRecordsMemories(sessionId, userId);
 
-        storeExpiredTaskRecordsToVector(agent.getId(), userId);
-
-        longTermMemoryService.deleteExpiredTaskRecordsMemories(agent.getId(), userId);
-
-        logger.info("Processing memory for agentId: {}, cleaned messages count: {}", agentIdStr, cleanedMessages.size());
+        logger.info("Processing memory for sessionId: {}, cleaned messages count: {}", sessionId, cleanedMessages.size());
     }
 
-    private boolean handle(Long agentId, String userId,String longTermMemoriesContent, String content) {
+    private boolean handle(String sessionId, String userId,String longTermMemoriesContent, String content) {
         try {
             String modelIdStr = getConfig("memory_ai_model_id", "");
             Long modelId = null;
@@ -251,7 +236,10 @@ public class LongTermMemoryTaskHandler implements TaskHandler {
                 } catch (NumberFormatException ignored) {
                 }
             }
-            LangChain4jMonitor langChain4jMonitor = new LangChain4jMonitor(AiModelCallSourceEnum.MEMORYORGANIZE).setAgentId(agentId).setUserId(userId).setTokenUsageService(tokenUsageService);
+            com.agent.hopaw.infra.monitor.LangChain4jMonitor langChain4jMonitor = new com.agent.hopaw.infra.monitor.LangChain4jMonitor(AiModelCallSourceEnum.MEMORYORGANIZE)
+                    .setSessionId(sessionId)
+                    .setUserId(userId)
+                    .setTokenUsageService(tokenUsageService);
 
             ChatModel chatModel = aiModelService.createChatModel(modelId, true, langChain4jMonitor);
 
@@ -262,17 +250,16 @@ public class LongTermMemoryTaskHandler implements TaskHandler {
             }
             systemMessage+= "\n========现有记忆========\n" + longTermMemoriesContent;
             InvocationParametersWrapper invocationParametersWrapper = InvocationParametersWrapper.create()
-                    .setAgentId(agentId)
+                    .setSessionId(sessionId)
                     .setUserId(userId)
-                    .setRequestId(UUID.randomUUID().toString())
-                    .setSessionId(UUID.randomUUID().toString());
+                    .setRequestId(UUID.randomUUID().toString());
 
             String finalSystemMessage = systemMessage;
 
             MemoryAssistant assistant = AiServices.builder(MemoryAssistant.class)
                     .chatModel(chatModel)
                     .systemMessageProvider(chatMemoryId -> finalSystemMessage)
-                    .tools(Arrays.asList(memoryTool))
+                    .tools(Arrays.asList(new MemoryTool(longTermMemoryService)))
                     .build();
             logger.info("开始汇总记忆 \n {}", content);
             ChatRequestParameters chatRequestParameters = ChatRequestParameters.builder()
@@ -282,7 +269,7 @@ public class LongTermMemoryTaskHandler implements TaskHandler {
             logger.info("记忆汇总完毕：{}", result);
             return true;
         } catch (Exception ex) {
-            logger.error("Error processing memory for agentId {}", agentId, ex);
+            logger.error("Error processing memory for sessionId {}", sessionId, ex);
             return false;
         }
     }
@@ -328,111 +315,30 @@ public class LongTermMemoryTaskHandler implements TaskHandler {
     }
 
 
-    /**
-     * 将被清理的聊天历史记录写入向量库
-     */
-    private void storeChatHistoryToVector(Long agentId, String userId, List<ChatMemory> cleanedMessages) {
-        if (cleanedMessages == null || cleanedMessages.isEmpty()) {
-            return;
+    public class MemoryTool{
+        private final ILongTermMemoryService longTermMemoryService;
+
+        public MemoryTool(ILongTermMemoryService longTermMemoryService) {
+            this.longTermMemoryService = longTermMemoryService;
         }
-        try {
-            for (ChatMemory chat : cleanedMessages) {
-                if (chat == null || chat.getMessageJson() == null) {
-                    continue;
-                }
-                ChatMessage message = ChatMessageDeserializer.messageFromJson(chat.getMessageJson());
-                if (message == null) {
-                    continue;
-                }
-                String role = "";
-                String text = "";
-                if (message instanceof dev.langchain4j.data.message.UserMessage) {
-                    role = "User";
-                    text = extractTextContent(message);
-                } else if (message instanceof AiMessage) {
-                    role = "Ai";
-                    text = ((AiMessage) message).text();
-                } else if (message instanceof SystemMessage) {
-                    role = "System";
-                    text = ((SystemMessage) message).text();
-                } else if (message instanceof ToolExecutionResultMessage) {
-                    role = "Tool";
-                    text = ((ToolExecutionResultMessage) message).text();
-                } else {
-                    continue;
-                }
 
-                if (text == null || text.isBlank()) {
-                    continue;
-                }
-
-                String label = String.format("[%s] %s", role, text);
-                vectorMemoryService.store(label, agentId, userId, VectorMemoryTypeEnum.CHAT_HISTORY);
-            }
-            logger.info("Stored {} chat history messages to vector store, agentId={}, userId={}",
-                    cleanedMessages.size(), agentId, userId);
-        } catch (Exception e) {
-            logger.error("Failed to store chat history to vector store, agentId={}, userId={}",
-                    agentId, userId, e);
+        @Tool(value = "查询用户记忆详细内容,根据指定Id查询",searchBehavior = SearchBehavior.ALWAYS_VISIBLE)
+        public String queryUserMemoryById(@P(description="记忆Id")Long id){
+            return longTermMemoryService.getMemoryContentById(id);
         }
-    }
-
-    /**
-     * 将被清理的过期任务记录写入向量库
-     */
-    private void storeExpiredTaskRecordsToVector(Long agentId, String userId) {
-        try {
-            List<LongTermMemory> expiredRecords =
-                    longTermMemoryService.findExpiredTaskRecordsMemories(agentId, userId);
-            if (expiredRecords == null || expiredRecords.isEmpty()) {
-                return;
-            }
-
-            List<String> contents = new java.util.ArrayList<>();
-            List<Long> ids = new java.util.ArrayList<>();
-            for (LongTermMemory record : expiredRecords) {
-                String summary = record.getSummary();
-                String memory = record.getMemory();
-                StringBuilder sb = new StringBuilder();
-                if (summary != null && !summary.isBlank()) {
-                    sb.append(summary);
-                }
-                if (memory != null && !memory.isBlank()) {
-                    if (!sb.isEmpty()) {
-                        sb.append(" - ");
-                    }
-                    sb.append(memory);
-                }
-                String text = sb.toString();
-                if (!text.isBlank()) {
-                    contents.add(text);
-                    ids.add(record.getId());
-                }
-            }
-
-            if (!contents.isEmpty()) {
-                vectorMemoryService.storeBatch(contents, agentId, userId,
-                        VectorMemoryTypeEnum.TASK_RECORDS);
-                logger.info("Stored {} expired task records to vector store, agentId={}, userId={}",
-                        contents.size(), agentId, userId);
-            }
-        } catch (Exception e) {
-            logger.error("Failed to store expired task records to vector store, agentId={}, userId={}",
-                    agentId, userId, e);
+        @Tool(value = "删除用户记忆内容，根据指定id删除",searchBehavior = SearchBehavior.ALWAYS_VISIBLE)
+        public String deleteUserMemoryById(@P(description="记忆Id") Long id){
+            longTermMemoryService.deleteMemory(id);
+            return "成功";
         }
-    }
+        @Tool(value = "保存用户记忆,如果有记忆Id则为更新，如果记忆Id不存在则为新增。",searchBehavior = SearchBehavior.ALWAYS_VISIBLE)
+        public String saveUserMemory(@P(description = "记忆类型:userProfile、taskRecords、empiricalKnowledge",required = false) String memoryType,
+                                     @P(description = "记忆概要") String summary,
+                                     @P(description = "记忆内容") String memory,
+                                     @P(description = "记忆Id，如果传入记忆Id则为更新，如果不传记忆Id则为新增。",required = false) Long id,
+                                     InvocationParameters invocationParameters) {
+            return longTermMemoryService.saveMemory(UserMemoryTypeEnum.fromCode(memoryType),summary,memory,id,invocationParameters);
+        }
 
-    private String extractTextContent(ChatMessage message) {
-        if (!(message instanceof dev.langchain4j.data.message.UserMessage)) {
-            return "";
-        }
-        dev.langchain4j.data.message.UserMessage userMessage = (dev.langchain4j.data.message.UserMessage) message;
-        StringBuilder sb = new StringBuilder();
-        for (Content content : userMessage.contents()) {
-            if (content instanceof TextContent) {
-                sb.append(((TextContent) content).text());
-            }
-        }
-        return sb.toString();
     }
 }

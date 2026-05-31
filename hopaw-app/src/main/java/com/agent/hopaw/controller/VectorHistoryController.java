@@ -1,7 +1,7 @@
 package com.agent.hopaw.controller;
 
 import com.agent.hopaw.constant.DefaultUser;
-import com.agent.hopaw.infra.constant.VectorMemoryTypeEnum;
+import com.agent.hopaw.infra.constant.UserMemoryTypeEnum;
 import com.agent.hopaw.infra.mapper.AgentMapper;
 import com.agent.hopaw.infra.memory.IVectorMemoryService;
 import com.agent.hopaw.infra.model.dto.VectorSearchResult;
@@ -26,23 +26,14 @@ public class VectorHistoryController {
 
     @GetMapping("/vector-history")
     public String page(Model model) {
-        List<Agent> agents = agentMapper.findByUserId(DefaultUser.USER);
-        model.addAttribute("agents", agents);
         return "vector-history";
-    }
-
-    @GetMapping("/api/vector-history/agents")
-    @ResponseBody
-    public ResponseBean agents() {
-        List<Agent> agents = agentMapper.findByUserId(DefaultUser.USER);
-        return ResponseBean.success(agents);
     }
 
     @GetMapping("/api/vector-history/types")
     @ResponseBody
     public ResponseBean memoryTypes() {
         List<Map<String, String>> result = new ArrayList<>();
-        for (VectorMemoryTypeEnum type : VectorMemoryTypeEnum.values()) {
+        for (UserMemoryTypeEnum type : UserMemoryTypeEnum.values()) {
             Map<String, String> item = new LinkedHashMap<>();
             item.put("code", type.getCode());
             item.put("name", type.getName());
@@ -55,7 +46,7 @@ public class VectorHistoryController {
     @ResponseBody
     public ResponseBean search(
             @RequestParam(required = false) String query,
-            @RequestParam(required = false) Long agentId,
+            @RequestParam(required = false) String sessionId,
             @RequestParam(required = false) String userId,
             @RequestParam(required = false) String memoryType,
             @RequestParam(defaultValue = "20") int maxResults,
@@ -64,17 +55,8 @@ public class VectorHistoryController {
         if (query == null || query.isBlank()) {
             return ResponseBean.fail("查询关键词不能为空");
         }
-
-        VectorMemoryTypeEnum typeEnum = null;
-        if (memoryType != null && !memoryType.isBlank()) {
-            typeEnum = VectorMemoryTypeEnum.fromCode(memoryType);
-            if (typeEnum == null) {
-                return ResponseBean.fail("无效的记忆类型: " + memoryType);
-            }
-        }
-
         List<VectorSearchResult> results = vectorMemoryService.search(
-                query, agentId, userId, typeEnum, maxResults, minScore);
+                query,sessionId, userId, memoryType, maxResults, minScore);
 
         return ResponseBean.success(results);
     }

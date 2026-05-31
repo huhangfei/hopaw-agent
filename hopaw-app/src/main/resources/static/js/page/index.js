@@ -1,12 +1,13 @@
 var currentAgentId = null;
 var ws = null;
-var isStreaming = false;
 var currentStreamingMessage = null;
 var streamingMarkdownContent = '';
 var lastMessageType = null;
 var streamingMessages = {};
 var toolCallTimers = {};
 var loadingMessageDiv = null;
+var currentModelId = null;
+var currentSessionId = null;
 
 if (typeof marked !== 'undefined') {
     marked.setOptions({
@@ -53,15 +54,14 @@ function renderAllMessages() {
 function setCurrentAgentId(agentId) {
     currentAgentId = agentId;
 }
-var lastDataType='';
-function connectWebSocket(agentId) {
+function connectWebSocket() {
     var protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-    var wsUrl = protocol + '//' + window.location.host + '/ws/chat/' + agentId;
+    var wsUrl = protocol + '//' + window.location.host + '/ws/chat';
 
     ws = new WebSocket(wsUrl);
 
     ws.onopen = function() {
-        console.log('WebSocket 连接已建立, agentId:', agentId);
+        console.log('WebSocket 连接已建立');
     };
     
     ws.onmessage = function(event) {
@@ -82,21 +82,21 @@ function connectWebSocket(agentId) {
             handleThinking(data, requestId);
         } else if (data.type === 'done') {
             handleStreamingDone(data.message, data.response, requestId);
+        } else if (data.type === 'session-title') {
+            updateSessionTitle(data.sessionId, data.content);
         } else if (data.type === 'task-done') {
-            loadTokenUsage(lastTokenId || undefined);
+            enableInput();
         } else if (data.type === 'error') {
             handleStreamingError(data.content || data.message, requestId);
-        }
-        if(lastDataType!=data.type){
-            lastDataType=data.type;
-            loadTokenUsage(lastTokenId || undefined);
+        } else if (data.type === 'token_usage') {
+            handleTokenUsageMessage(data);
         }
     };
     
     ws.onclose = function() {
         console.log('WebSocket 连接已关闭');
         setTimeout(function() {
-            connectWebSocket(currentAgentId);
+            connectWebSocket();
         }, 3000);
     };
     
@@ -248,7 +248,7 @@ function handleToolCall(data, requestId) {
             stopBtn.onclick = function(e) {
                 e.stopPropagation();
                 e.preventDefault();
-                fetch('/agent/tool/stop', {
+                fetch('/api/session/tool/stop', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
                     body: 'agentId=' + currentAgentId + '&callId=' + data.toolCallId
@@ -322,7 +322,7 @@ function handleToolCall(data, requestId) {
 
 function showLoadingMessage() {
     if (loadingMessageDiv) return;
-    var agentName = (function(){ var s = document.querySelector('.chat-header .agent-select'); return s ? s.options[s.selectedIndex].text : 'Agent'; })();
+    var agentName = (function(){ var s = document.querySelector('.agent-select-toolbar'); return s ? s.options[s.selectedIndex].text : 'Agent'; })();
     var messagesDiv = document.getElementById('chatMessages');
 
     loadingMessageDiv = document.createElement('div');
@@ -349,15 +349,10 @@ function removeLoadingMessage() {
     }
 }
 
-function escapeHtml(text) {
-    var div = document.createElement('div');
-    div.textContent = text;
-    return div.innerHTML;
-}
 
 function handleThinking(data, requestId) {
     var messagesDiv = document.getElementById('chatMessages');
-    var agentName = (function(){ var s = document.querySelector('.chat-header .agent-select'); return s ? s.options[s.selectedIndex].text : 'Agent'; })();
+    var agentName = (function(){ var s = document.querySelector('.agent-select-toolbar'); return s ? s.options[s.selectedIndex].text : 'Agent'; })();
     
     var msgState = streamingMessages[requestId];
     if (!msgState) {
@@ -409,7 +404,7 @@ function handleThinking(data, requestId) {
 
 function handleStreamingChunk(content, requestId) {
     var messagesDiv = document.getElementById('chatMessages');
-    var agentName = (function(){ var s = document.querySelector('.chat-header .agent-select'); return s ? s.options[s.selectedIndex].text : 'Agent'; })();
+    var agentName = (function(){ var s = document.querySelector('.agent-select-toolbar'); return s ? s.options[s.selectedIndex].text : 'Agent'; })();
     
     var msgState = streamingMessages[requestId];
     if (!msgState) {
@@ -461,10 +456,9 @@ function handleStreamingChunk(content, requestId) {
 }
 
 function handleStreamingDone(userMessage, response, requestId) {
-    var agentName = (function(){ var s = document.querySelector('.chat-header .agent-select'); return s ? s.options[s.selectedIndex].text : 'Agent'; })();
+    var agentName = (function(){ var s = document.querySelector('.agent-select-toolbar'); return s ? s.options[s.selectedIndex].text : 'Agent'; })();
     var msgState = streamingMessages[requestId];
     if (!msgState || !msgState.currentStreamingMessage) {
-        isStreaming = false;
         enableInput();
         return;
     }
@@ -490,13 +484,12 @@ function handleStreamingDone(userMessage, response, requestId) {
     msgState.currentStreamingMessage.appendChild(timeDiv);
     
     delete streamingMessages[requestId];
-    isStreaming = false;
     enableInput();
 }
 
 function handleStreamingError(errorMessage, requestId) {
     var messagesDiv = document.getElementById('chatMessages');
-    var agentName = (function(){ var s = document.querySelector('.chat-header .agent-select'); return s ? s.options[s.selectedIndex].text : 'Agent'; })();
+    var agentName = (function(){ var s = document.querySelector('.agent-select-toolbar'); return s ? s.options[s.selectedIndex].text : 'Agent'; })();
 
     var errorDiv = document.createElement('div');
     errorDiv.className = 'message agent error-message';
@@ -521,8 +514,6 @@ function handleStreamingError(errorMessage, requestId) {
 
     messagesDiv.appendChild(errorDiv);
     messagesDiv.scrollTop = messagesDiv.scrollHeight;
-
-    isStreaming = false;
     enableInput();
 }
 
@@ -530,11 +521,16 @@ function sendMessage() {
     var input = document.getElementById('messageInput');
     var message = input.value.trim();
 
-    if (!message || !currentAgentId || isStreaming) {
+    if (!message || !currentAgentId) {
         return;
     }
 
-    fetch('/api/agent/' + currentAgentId + '/running')
+    if (!currentModelId) {
+        showToast('请先选择一个模型', 'warning');
+        return;
+    }
+
+    fetch('/api/session/' + currentAgentId + '/running')
         .then(function(r) { return r.json(); })
         .then(function(res) {
             if (res.code === 200 && res.data === true) {
@@ -545,8 +541,6 @@ function sendMessage() {
 
             input.value = '';
             disableInput();
-            isStreaming = true;
-
             var userMessageDiv = document.createElement('div');
             userMessageDiv.className = 'message user';
 
@@ -568,12 +562,19 @@ function sendMessage() {
             messagesDiv.appendChild(userMessageDiv);
             messagesDiv.scrollTop = messagesDiv.scrollHeight;
 
+            var deepBtn = document.getElementById('deepThinkBtn');
             var payload = {
-                agentId: currentAgentId.toString(),
+                sessionId: currentSessionId,
+                agentId: currentAgentId,
                 message: message,
-                skills: getSelectedSkills()
+                skills: getSelectedSkills(),
+                aiModelId: currentModelId,
+                enableThinking: deepBtn ? deepBtn.getAttribute('data-enabled') === 'true' : true
             };
-
+            var emptyState = document.getElementById('chatHistoryEmptyState');
+            if(emptyState){
+                emptyState.classList.add("hide");
+            }
             ws.send(JSON.stringify(payload));
         })
         .catch(function(err) {
@@ -601,158 +602,70 @@ function enableInput() {
     if (input) input.focus();
 }
 
-function selectAgent(agentId) {
-    window.location.href = '/?agentId=' + agentId;
+function selectAgent(selectElement) {
+    setCurrentAgentId(selectElement.value);
+    const index = selectElement.selectedIndex;
+
+    // 如果下标不为 -1（表示有选项被选中），则获取该 option 元素
+    if (index !== -1) {
+        const selectedOption = selectElement.options[index];
+        // 同样使用 getAttribute 读取你代码中的 'data' 属性
+        const dataValue = selectedOption.getAttribute('data-desc');
+        var descEl = document.getElementById('chat-header-desc');
+        descEl.innerHTML=dataValue;
+    }
 }
 
-function clearHistory(agentId) {
+function clearHistory(sessionId) {
     showConfirm('确定要清空对话历史吗？').then(function(confirmed) {
         if (confirmed) {
-            window.location.href = '/chat/clear?agentId=' + agentId;
+            fetch('/api/session/' + encodeURIComponent(sessionId) + '/clear' , { method: 'POST' })
+            .then(function(r) { return r.json(); })
+            .then(function(resp) {
+                if (resp.code === 200) {
+                    window.location.href = '/?sessionId=' + encodeURIComponent(sessionId);
+                } else {
+                    showToast(resp.msg || '清空历史失败', 'error');
+                }
+            })
+            .catch(function(err) {
+                showToast('清空历史失败: ' + err.message, 'error');
+            });
         }
     });
 }
 
-function deleteAgent(agentId) {
-    showConfirm('确定要删除这个 Agent 吗？').then(function(confirmed) {
-        if (confirmed) {
-         var form = document.createElement('form');
-            form.method = 'POST';
-            form.action = '/agent/delete';
-
-            var input = document.createElement('input');
-            input.type = 'hidden';
-            input.name = 'id';
-            input.value = agentId;
-            form.appendChild(input);
-
-            document.body.appendChild(form);
-            form.submit();
-      }
-    });
-}
-
-function loadProviders(providerSelect, modelSelect, selectedAiModelId) {
-    fetch('/api/providers')
-        .then(function(r) { return r.json(); })
-        .then(function(providers) {
-            providerSelect.innerHTML = '<option value="">选择提供商</option>';
-            providers.forEach(function(p) {
-                if (!p.apiKey || !p.url) return;
-                var opt = document.createElement('option');
-                opt.value = p.id;
-                opt.textContent = p.name;
-                providerSelect.appendChild(opt);
-            });
-            if (selectedAiModelId) {
-                fetch('/api/models/' + selectedAiModelId)
-                    .then(function(r) { return r.json(); })
-                    .then(function(model) {
-                        providerSelect.value = model.providerId;
-                        var changeEvent = new Event('change');
-                        providerSelect.dispatchEvent(changeEvent);
-                        setTimeout(function() {
-                            modelSelect.value = selectedAiModelId;
-                        }, 100);
-                    });
-            }
-        });
-}
-
-function setupCascading(providerSelect, modelSelect) {
-    providerSelect.addEventListener('change', function() {
-        var providerId = this.value;
-        modelSelect.innerHTML = '<option value="">选择模型</option>';
-        modelSelect.disabled = !providerId;
-        if (!providerId) return;
-        fetch('/api/providers/' + providerId + '/models')
+function deleteSession(sessionId) {
+    showConfirm('确定要删除该会话吗？此操作不可恢复。').then(function(confirmed) {
+        if (!confirmed) return;
+        fetch('/api/session/' + encodeURIComponent(sessionId) + '/delete-by-session-id', { method: 'DELETE' })
             .then(function(r) { return r.json(); })
-            .then(function(models) {
-                models.forEach(function(m) {
-                    var opt = document.createElement('option');
-                    opt.value = m.id;
-                    opt.textContent = m.modelName;
-                    modelSelect.appendChild(opt);
-                });
+            .then(function(resp) {
+                if (resp.code === 200) {
+                    showToast('会话已删除', 'info');
+                    setTimeout(function() {
+                        window.location.href = '/';
+                    }, 1000);
+                } else {
+                    showToast(resp.msg || '删除失败', 'error');
+                }
+            })
+            .catch(function(err) {
+                showToast('删除失败: ' + err.message, 'error');
             });
     });
 }
 
-function selectAllTools(containerSelector) {
-    document.querySelectorAll(containerSelector + ' input[type="checkbox"]').forEach(function(cb) {
-        cb.checked = true;
-    });
-}
-
-function deselectAllTools(containerSelector) {
-    document.querySelectorAll(containerSelector + ' input[type="checkbox"]').forEach(function(cb) {
-        cb.checked = false;
-    });
-}
-
-function showAddModal() {
-    Modal.open('addAgentModal');
-    var providerSelect = document.getElementById('addProviderSelect');
-    var modelSelect = document.getElementById('addModelSelect');
-    modelSelect.disabled = true;
-    loadProviders(providerSelect, modelSelect, null);
-}
-
-function hideAddModal() {
-    Modal.close('addAgentModal');
-}
-
-function showEditModal(id, name, description, tools, maxMemoryRecords, maxToolInvocations, aiModelId, enableThinking, vectorToolSearch, vectorToolSearchMaxResults) {
-    // 以深度思考按钮的实时状态为准，而非页面加载时的固化值
-    var deepBtn = document.getElementById('deepThinkBtn');
-    if (deepBtn) {
-        enableThinking = deepBtn.getAttribute('data-enabled') === 'true';
-    }
-    document.getElementById('editAgentId').value = id;
-    document.getElementById('editAgentName').value = name;
-    document.getElementById('editAgentDescription').value = description;
-    document.getElementById('editMaxMemoryRecords').value = maxMemoryRecords || 20;
-    document.getElementById('editMaxToolInvocations').value = maxToolInvocations || 10;
-    var editEnableCb = document.getElementById('editEnableThinkingCheckbox');
-    editEnableCb.checked = enableThinking !== false;
-    document.getElementById('editEnableThinking').value = editEnableCb.checked ? 'true' : 'false';
-
-    var editVectorCb = document.getElementById('editVectorToolSearchCheckbox');
-    editVectorCb.checked = vectorToolSearch !== false;
-    document.getElementById('editVectorToolSearch').value = editVectorCb.checked ? 'true' : 'false';
-    document.getElementById('editVectorToolSearchMaxResults').value = vectorToolSearchMaxResults || 5;
-    document.getElementById('editVectorToolSearchResultsGroup').style.display = editVectorCb.checked ? '' : 'none';
-
-    var checkboxes = document.querySelectorAll('.edit-tool-checkbox');
-    checkboxes.forEach(function(checkbox) {
-        checkbox.checked = tools && tools.indexOf(checkbox.value) !== -1;
-    });
-
-    var providerSelect = document.getElementById('editProviderSelect');
-    var modelSelect = document.getElementById('editModelSelect');
-    modelSelect.disabled = true;
-    loadProviders(providerSelect, modelSelect, aiModelId);
-
-    Modal.open('editAgentModal');
-}
-
-/**
- * 显示停止智能体确认对话框
- */
-function hideEditModal() {
-    Modal.close('editAgentModal');
-}
-
-function forceStopAgent(agentId) {
+function forceStopAgent(sessionId) {
     showConfirm('确定要强停智能体吗？强停后将移除执行器并刷新页面。').then(function(confirmed) {
         if (!confirmed) return;
-        fetch('/agent/force-stop', {
+        fetch('/api/session/force-stop', {
             method: 'POST',
             headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-            body: 'id=' + agentId
+            body: 'sessionId=' + sessionId
         }).then(function(r) { return r.json(); }).then(function(res) {
             if (res.code === 200) {
-                window.location.href = '/?agentId=' + agentId;
+                window.location.href = '/?sessionId=' + sessionId;
             } else {
                 showToast(res.msg || '强停失败', 'warning');
             }
@@ -760,11 +673,11 @@ function forceStopAgent(agentId) {
     });
 }
 
-function stopAgent() {
-    showConfirm('确定要停止智能体运行吗？').then(function(confirmed) {
+function stopCurrentSession() {
+    showConfirm('确定要停止运行吗？').then(function(confirmed) {
         if (!confirmed) return;
         var agentId = document.querySelector('input[name="agentId"]').value;
-        fetch('/agent/stop', {
+        fetch('/api/session/stop', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/x-www-form-urlencoded',
@@ -791,9 +704,35 @@ var lastTokenId = 0;
 var tokenChartData = [];
 var tokenChart = null;
 
+function handleTokenUsageMessage(data) {
+    if (!currentAgentId) return;
+    if (data.sessionId !== currentSessionId) return;
+    if (data.source !== 'chat') return;
+
+    var entry = {
+        id: data.id,
+        inputTokens: data.inputTokens || 0,
+        outputTokens: data.outputTokens || 0,
+        totalTokens: data.totalTokens || 0,
+        createTime: data.createTime || ''
+    };
+    tokenChartData.push(entry);
+    lastTokenId = data.id;
+
+    renderTokenChart(tokenChartData);
+
+    var inputSum = 0, outputSum = 0, totalSum = 0;
+    for (var i = 0; i < tokenChartData.length; i++) {
+        inputSum += tokenChartData[i].inputTokens || 0;
+        outputSum += tokenChartData[i].outputTokens || 0;
+        totalSum += tokenChartData[i].totalTokens || 0;
+    }
+    updateTokenTitle(inputSum, outputSum, totalSum);
+}
+
 function loadTokenUsage(minId) {
     if (!currentAgentId) return;
-    var url = '/api/token-usage/today?agentId=' + currentAgentId+"&source=chat";
+    var url = '/api/token-usage/today?sessionId=' + currentSessionId+"&source=chat";
     if (minId) url += '&minId=' + minId;
     fetch(url).then(function(r) { return r.json(); }).then(function(res) {
         if (res.code === 200 && res.data) {
@@ -816,7 +755,7 @@ function loadTokenUsage(minId) {
     var pad = function(n) { return String(n).padStart(2, '0'); };
     var startStr = now.getFullYear() + '-' + pad(now.getMonth()+1) + '-' + pad(now.getDate()) + ' 00:00:00';
     var endStr = now.getFullYear() + '-' + pad(now.getMonth()+1) + '-' + pad(now.getDate()) + ' 23:59:59';
-    var statsUrl = '/api/token-usage/daily-stats?startTime=' + encodeURIComponent(startStr) + '&endTime=' + encodeURIComponent(endStr) + '&agentId=' + currentAgentId+'&source=chat';
+    var statsUrl = '/api/token-usage/daily-stats?startTime=' + encodeURIComponent(startStr) + '&endTime=' + encodeURIComponent(endStr) + '&sessionId=' + currentSessionId+'&source=chat';
     fetch(statsUrl).then(function(r) { return r.json(); }).then(function(sres) {
         if (sres.code === 200 && sres.data && sres.data.length > 0) {
             var today = sres.data[0];
@@ -952,20 +891,15 @@ function formatTokenCount(n) {
 
 window.onload = function() {
 
-    document.getElementById('addAgentModal').addEventListener('click', function(e) {
-        if (e.target === this) {
-            hideAddModal();
-        }
-    });
+    var sessionIdInput = document.getElementById('currentSessionId');
+    if (sessionIdInput && sessionIdInput.value) {
+        currentSessionId = sessionIdInput.value;
+    }
+    if (!currentSessionId && initialCurrentSessionId) {
+        currentSessionId = initialCurrentSessionId;
+    }
 
-    document.getElementById('editAgentModal').addEventListener('click', function(e) {
-        if (e.target === this) {
-            hideEditModal();
-        }
-    });
-
-    setupCascading(document.getElementById('addProviderSelect'), document.getElementById('addModelSelect'));
-    setupCascading(document.getElementById('editProviderSelect'), document.getElementById('editModelSelect'));
+    renderSessionList(initialChatSessions);
 
 
     var messagesDiv = document.getElementById('chatMessages');
@@ -980,11 +914,12 @@ window.onload = function() {
     }
 
     if (currentAgentId) {
-        connectWebSocket(currentAgentId);
+        connectWebSocket();
         loadTokenUsage();
     }
 
     loadChatSkills();
+    loadModelSelector();
 
     var skillBtn = document.getElementById('skillSelectBtn');
     if (skillBtn) {
@@ -995,11 +930,59 @@ window.onload = function() {
         });
     }
 
+    var modelBtn = document.getElementById('modelSelectBtn');
+    if (modelBtn) {
+        modelBtn.addEventListener('click', function(e) {
+            e.stopPropagation();
+            var menu = document.getElementById('modelDropdownMenu');
+            var skillsMenu = document.getElementById('skillsDropdownMenu');
+            if (skillsMenu) skillsMenu.classList.remove('open');
+            
+            // 检查菜单是否已经打开
+            var isOpen = menu.classList.contains('open');
+            if (isOpen) {
+                // 直接关闭
+                menu.classList.remove('open');
+                return;
+            }
+            
+            // 先显示菜单以便获取正确的尺寸
+            menu.style.display = 'block';
+            menu.style.visibility = 'hidden';
+            
+            // 计算菜单位置
+            var rect = modelBtn.getBoundingClientRect();
+            menu.style.left = rect.left + 'px';
+            menu.style.top = (rect.top - 6 - menu.offsetHeight) + 'px';
+            // 检查是否超出屏幕顶部，如果是则显示在按钮下方
+            if (rect.top - 6 - menu.offsetHeight < 0) {
+                menu.style.top = (rect.bottom + 6) + 'px';
+            }
+            // 确保菜单不会超出屏幕右侧
+            if (rect.left + menu.offsetWidth > window.innerWidth) {
+                menu.style.left = (window.innerWidth - menu.offsetWidth - 10) + 'px';
+            }
+            
+            // 恢复可见性并打开菜单
+            menu.style.visibility = 'visible';
+            menu.classList.add('open');
+        });
+    }
+
     document.addEventListener('click', function(e) {
         var dropdown = document.getElementById('skillsDropdown');
         if (dropdown && !dropdown.contains(e.target)) {
             var menu = document.getElementById('skillsDropdownMenu');
             if (menu) menu.classList.remove('open');
+        }
+        var modelDropdown = document.getElementById('modelDropdown');
+        if (modelDropdown && !modelDropdown.contains(e.target)) {
+            var menu = document.getElementById('modelDropdownMenu');
+            if (menu) {
+                menu.classList.remove('open');
+                menu.style.display = ''; // 重置内联样式
+                menu.style.visibility = '';
+            }
         }
     });
     
@@ -1023,21 +1006,10 @@ window.onload = function() {
     var deepBtn = document.getElementById('deepThinkBtn');
     if (deepBtn) {
         deepBtn.addEventListener('click', function() {
-            var agentId = this.getAttribute('data-agent-id');
             var current = this.getAttribute('data-enabled') === 'true';
             var newEnabled = !current;
-            fetch('/api/agents/' + agentId + '/thinking', {
-                method: 'PUT',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ enabled: newEnabled })
-            })
-            .then(function(r) { return r.json(); })
-            .then(function(resp) {
-                if (resp.msg === 'success') {
-                    deepBtn.setAttribute('data-enabled', newEnabled);
-                    deepBtn.classList.toggle('active', newEnabled);
-                }
-            });
+            this.setAttribute('data-enabled', newEnabled);
+            this.classList.toggle('active', newEnabled);
         });
     }
 
@@ -1079,10 +1051,18 @@ function loadChatSkills() {
             });
             list.innerHTML = html;
 
+            var selectedSkillsArr = (initialSelectedSkills && typeof initialSelectedSkills === 'string')
+                ? initialSelectedSkills.split(',').map(function(s) { return s.trim(); })
+                : [];
             var checkboxes = list.querySelectorAll('input[type="checkbox"]');
             checkboxes.forEach(function(cb) {
+                var folder = cb.getAttribute('data-folder') || '';
+                if (selectedSkillsArr.indexOf(folder) !== -1) {
+                    cb.checked = true;
+                }
                 cb.addEventListener('change', updateSkillBtnState);
             });
+            updateSkillBtnState();
         });
 }
 
@@ -1111,4 +1091,258 @@ function getSelectedSkills() {
         names.push(cb.getAttribute('data-folder'));
     });
     return names;
+}
+
+function loadModelSelector() {
+    var providerList = document.getElementById('modelProviderList');
+    if (!providerList) return;
+
+    // 获取默认选中的模型ID
+    var selectedModelIdInput = document.getElementById('selectedAiModelId');
+    var defaultModelId = null;
+    if (selectedModelIdInput && selectedModelIdInput.value) {
+        defaultModelId = parseInt(selectedModelIdInput.value);
+    }
+
+    fetch('/api/models/all')
+        .then(function(r) { return r.json(); })
+        .then(function(allModels) {
+            fetch('/api/providers')
+                .then(function(r) { return r.json(); })
+                .then(function(providers) {
+                    var configuredProviders = providers.filter(function(p) {
+                        return p.apiKey && p.url;
+                    });
+
+                    if (configuredProviders.length === 0) {
+                        providerList.innerHTML = '<div class="model-dropdown-empty">暂无已配置的模型提供商</div>';
+                        return;
+                    }
+
+                    var defaultModelName = null;
+                    var html = '';
+                    configuredProviders.forEach(function(provider) {
+                        var models = allModels[provider.id] || [];
+                        html += '<div class="model-provider-item">';
+                        html += '<span class="model-provider-item-name">' + escapeHtml(provider.name) + '</span>';
+                        html += '<span class="model-provider-item-arrow">▶</span>';
+                        html += '<div class="model-sub-menu">';
+                        if (models.length === 0) {
+                            html += '<div class="model-dropdown-empty">暂无模型</div>';
+                        } else {
+                            models.forEach(function(model) {
+                                var activeClass = '';
+                                if (defaultModelId && defaultModelId === model.id) {
+                                    activeClass = ' active';
+                                    defaultModelName = model.modelName;
+                                }
+                                html += '<div class="model-sub-item' + activeClass + '" data-model-id="' + model.id + '" data-model-name="' + escapeHtml(model.modelName) + '">';
+                                html += '<span class="model-sub-item-check">✓</span>';
+                                html += '<span class="model-sub-item-name">' + escapeHtml(model.modelName) + '</span>';
+                                html += '</div>';
+                            });
+                        }
+                        html += '</div>';
+                        html += '</div>';
+                    });
+                    providerList.innerHTML = html;
+
+                    var subItems = providerList.querySelectorAll('.model-sub-item');
+                    subItems.forEach(function(item) {
+                        item.addEventListener('click', function(e) {
+                            e.stopPropagation();
+                            var modelId = this.getAttribute('data-model-id');
+                            var modelName = this.getAttribute('data-model-name');
+                            selectModel(modelId, modelName);
+                        });
+                    });
+                    
+                    // 为每个供应商项添加子菜单位置检测
+                    var providerItems = providerList.querySelectorAll('.model-provider-item');
+                    providerItems.forEach(function(item) {
+                        item.addEventListener('mouseenter', function() {
+                            var subMenu = this.querySelector('.model-sub-menu');
+                            if (subMenu) {
+                                var itemRect = this.getBoundingClientRect();
+                                
+                                // 检查子菜单向右展开是否会超出屏幕右侧
+                                if (itemRect.right + subMenu.offsetWidth > window.innerWidth) {
+                                    subMenu.classList.add('right-edge');
+                                } else {
+                                    subMenu.classList.remove('right-edge');
+                                }
+                                
+                                // 检查子菜单是否会超出屏幕底部
+                                if (itemRect.top + subMenu.offsetHeight > window.innerHeight) {
+                                    subMenu.style.top = 'auto';
+                                    subMenu.style.bottom = '0';
+                                } else {
+                                    subMenu.style.top = '0';
+                                    subMenu.style.bottom = 'auto';
+                                }
+                            }
+                        });
+                    });
+
+                    // 如果有默认模型ID，设置默认选中
+                    if (defaultModelId && defaultModelName) {
+                        selectModel(defaultModelId, defaultModelName);
+                    }
+                });
+        });
+}
+
+function selectModel(modelId, modelName) {
+    currentModelId = parseInt(modelId);
+    var nameSpan = document.getElementById('selectedModelName');
+    var btn = document.getElementById('modelSelectBtn');
+    if (nameSpan) {
+        nameSpan.textContent = modelName;
+    }
+    if (btn) {
+        btn.classList.add('has-selected');
+    }
+
+    var allSubItems = document.querySelectorAll('.model-sub-item');
+    allSubItems.forEach(function(item) {
+        if (item.getAttribute('data-model-id') == modelId) {
+            item.classList.add('active');
+        } else {
+            item.classList.remove('active');
+        }
+    });
+
+    var menu = document.getElementById('modelDropdownMenu');
+    if (menu) {
+        menu.classList.remove('open');
+        menu.style.display = ''; // 重置内联样式
+        menu.style.visibility = '';
+    }
+}
+
+function renderSessionList(sessions) {
+    var container = document.getElementById('sessionList');
+    if (!container) return;
+
+    if (!sessions || sessions.length === 0) {
+        container.innerHTML = '<div class="session-list-empty">暂无会话</div>';
+        return;
+    }
+
+    var html = '';
+    sessions.forEach(function(s) {
+        var activeClass = (s.sessionId === currentSessionId) ? ' active' : '';
+        var title = s.title || '未命名会话';
+        var timeStr = formatSessionTime(s.lastUpdateTime || s.createTime);
+        html += '<div class="session-list-item' + activeClass + '" data-session-id="' + escapeHtml(s.sessionId) + '">';
+        html += '<span class="session-list-item-title">' + escapeHtml(title) + '</span>';
+        html += '<span class="session-list-item-time">' + escapeHtml(timeStr) + '</span>';
+        html += '</div>';
+    });
+    container.innerHTML = html;
+
+    var items = container.querySelectorAll('.session-list-item');
+    items.forEach(function(item) {
+        item.addEventListener('click', function() {
+            var sessionId = this.getAttribute('data-session-id');
+            if (sessionId && sessionId !== currentSessionId) {
+                window.location.href = '/?sessionId=' + sessionId;
+            }
+        });
+    });
+
+    var activeItem = container.querySelector('.session-list-item.active');
+    if (activeItem) {
+        activeItem.scrollIntoView({ block: 'nearest' });
+    }
+}
+
+function updateSessionTitle(sessionId, newTitle) {
+    var container = document.getElementById('sessionList');
+    if (!container) return;
+
+    var existingItem = container.querySelector('.session-list-item[data-session-id="' + escapeHtml(sessionId) + '"]');
+    if (existingItem) {
+        var titleSpan = existingItem.querySelector('.session-list-item-title');
+        if (titleSpan) {
+            titleSpan.textContent = newTitle || '未命名会话';
+        }
+        return;
+    }
+
+    var emptyEl = container.querySelector('.session-list-empty');
+    if (emptyEl) {
+        emptyEl.remove();
+    }
+
+    var item = document.createElement('div');
+    item.className = 'session-list-item' + (sessionId === currentSessionId ? ' active' : '');
+    item.setAttribute('data-session-id', sessionId);
+
+    var titleSpan = document.createElement('span');
+    titleSpan.className = 'session-list-item-title';
+    titleSpan.textContent = newTitle || '未命名会话';
+    item.appendChild(titleSpan);
+
+    var timeSpan = document.createElement('span');
+    timeSpan.className = 'session-list-item-time';
+    timeSpan.textContent = '刚刚';
+    item.appendChild(timeSpan);
+
+    item.addEventListener('click', function() {
+        if (sessionId !== currentSessionId) {
+            window.location.href = '/?sessionId=' + sessionId;
+        }
+    });
+
+    container.insertBefore(item, container.firstChild);
+}
+
+function formatSessionTime(dateStr) {
+    if (!dateStr) return '';
+    var d = new Date(dateStr);
+    if (isNaN(d.getTime())) return '';
+    var now = new Date();
+    var diffMs = now - d;
+    var diffMin = Math.floor(diffMs / 60000);
+    if (diffMin < 1) return '刚刚';
+    if (diffMin < 60) return diffMin + '分钟前';
+    var diffHour = Math.floor(diffMin / 60);
+    if (diffHour < 24) return diffHour + '小时前';
+    var diffDay = Math.floor(diffHour / 24);
+    if (diffDay < 7) return diffDay + '天前';
+    var month = d.getMonth() + 1;
+    var day = d.getDate();
+    return month + '/' + day;
+}
+
+function createNewSession() {
+    var deepBtn = document.getElementById('deepThinkBtn');
+    var payload = {
+        agentId: currentAgentId || null,
+        aiModelId: currentModelId || null,
+        enableThinking: deepBtn ? deepBtn.getAttribute('data-enabled') === 'true' : true,
+        skillNames: getSelectedSkills().join(',') || null
+    };
+
+    fetch('/api/session/create', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+    })
+    .then(function(r) { return r.json(); })
+    .then(function(resp) {
+        if (resp.code === 200 && resp.data) {
+            window.location.href = '/?sessionId=' + resp.data;
+        } else {
+            showToast(resp.msg || '创建会话失败', 'error');
+        }
+    })
+    .catch(function(err) {
+        showToast('创建会话失败: ' + err.message, 'error');
+    });
+}
+
+function editCurrentAgent(){
+    showEditAgentModal(currentAgentId);
 }

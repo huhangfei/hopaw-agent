@@ -16,13 +16,6 @@
                 <input type="text" id="queryText" class="search-input" placeholder="输入语义查询关键词">
             </div>
             <div class="search-item">
-                <label for="searchAgentId">智能体</label>
-                <select id="searchAgentId" class="filter-select">
-                    <option value="">全部</option>
-                    <option th:each="agent : ${agents}" th:value="${agent.id}" th:text="${agent.name}"></option>
-                </select>
-            </div>
-            <div class="search-item">
                 <label for="searchMemoryType">记忆类型</label>
                 <select id="searchMemoryType" class="filter-select">
                     <option value="">所有类型</option>
@@ -62,9 +55,10 @@
                     <tr>
                         <th style="width:50px;">#</th>
                         <th style="width:90px;">记忆类型</th>
-                        <th style="width:70px;">智能体</th>
-                        <th style="width:80px;">用户</th>
+                        <th style="width:80px;">智能体</th>
+                        <th style="width:70px;">用户</th>
                         <th>内容</th>
+                        <th style="width:90px;">时间</th>
                         <th style="width:65px;">相似度</th>
                         <th style="width:130px;">操作</th>
                     </tr>
@@ -93,6 +87,7 @@
                     <span class="detail-tag" id="detailType"></span>
                     <span class="detail-id"><strong>embeddingId:</strong> <code id="detailEmbeddingId"></code></span>
                 </div>
+                <div class="detail-date"><strong>时间:</strong> <span id="detailDate"></span></div>
                 <div class="detail-text" id="detailText"></div>
             </div>
             <div class="modal-footer">
@@ -107,7 +102,7 @@
 </th:block>
 
 <th:block layout:fragment="extraScripts">
-    <script th:src="@{/js/vector-history.js}"></script>
+    <script th:src="@{/js/page/vector-history.js}"></script>
 </th:block>
 </body>
 </html>

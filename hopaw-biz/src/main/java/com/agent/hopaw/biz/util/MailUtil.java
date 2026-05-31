@@ -1,7 +1,7 @@
 package com.agent.hopaw.biz.util;
 
 import com.agent.hopaw.infra.model.entity.SysConfig;
-import com.agent.hopaw.infra.service.SysConfigService;
+import com.agent.hopaw.infra.service.ISysConfigService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.mail.SimpleMailMessage;
@@ -28,9 +28,9 @@ public class MailUtil {
     private static final String KEY_PASSWORD = "mail_password";
     private static final String KEY_FROM = "mail_from";
 
-    private final SysConfigService sysConfigService;
+    private final ISysConfigService sysConfigService;
 
-    public MailUtil(SysConfigService sysConfigService) {
+    public MailUtil(ISysConfigService sysConfigService) {
         this.sysConfigService = sysConfigService;
         this.sysConfigService.setSensitiveKeys( KEY_PASSWORD);
     }
@@ -82,7 +82,9 @@ public class MailUtil {
         JavaMailSenderImpl sender = buildSender(cfg);
         SimpleMailMessage message = new SimpleMailMessage();
         String from = cfg.get(KEY_FROM);
-        if (from != null && !from.isBlank()) message.setFrom(from);
+        if (from != null && !from.isBlank()) {
+            message.setFrom(from);
+        }
         message.setTo(to);
         message.setSubject(subject);
         message.setText(text);
@@ -100,7 +102,9 @@ public class MailUtil {
         try {
             MimeMessageHelper helper = new MimeMessageHelper(mimeMessage, true, "UTF-8");
             String from = cfg.get(KEY_FROM);
-            if (from != null && !from.isBlank()) helper.setFrom(from);
+            if (from != null && !from.isBlank()) {
+                helper.setFrom(from);
+            }
             helper.setTo(to);
             helper.setSubject(subject);
             helper.setText(html, true);
@@ -121,7 +125,9 @@ public class MailUtil {
         try {
             MimeMessageHelper helper = new MimeMessageHelper(mimeMessage, true, "UTF-8");
             String from = cfg.get(KEY_FROM);
-            if (from != null && !from.isBlank()) helper.setFrom(from);
+            if (from != null && !from.isBlank()) {
+                helper.setFrom(from);
+            }
             helper.setTo(to);
             helper.setSubject(subject);
             helper.setText(text, true);

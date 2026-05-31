@@ -11,7 +11,8 @@ public interface AgentMapper {
     List<Agent> findAll();
     
     Agent findById(@Param("id") Long id);
-    
+    List<Agent> findByIds(@Param("ids") List<Long> ids);
+
     int insert(Agent agent);
     
     int update(Agent agent);
@@ -19,4 +20,12 @@ public interface AgentMapper {
     int deleteById(@Param("id") Long id);
 
     List<Agent> findByUserId(@Param("userId") String userId);
+
+    List<Agent> findByUserIdWithKeyword(@Param("userId") String userId,
+                                        @Param("keyword") String keyword,
+                                        @Param("offset") int offset,
+                                        @Param("size") int size);
+
+    int countByUserIdWithKeyword(@Param("userId") String userId,
+                                 @Param("keyword") String keyword);
 }

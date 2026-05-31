@@ -83,26 +83,44 @@ public class DatabaseInitializer implements CommandLineRunner {
                     "message_id TEXT NOT NULL, " +
                     "message_json TEXT NOT NULL, " +
                     "status INTEGER DEFAULT 0, " +
+                    "session_id TEXT, " +
+                    "request_id TEXT, " +
                     "create_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP" +
                     ")");
-            stmt.execute("CREATE INDEX IF NOT EXISTS idx_chat_memory_agent ON chat_memory(agent_id)");
-            stmt.execute("CREATE INDEX IF NOT EXISTS idx_chat_memory_agent_user ON chat_memory(agent_id, user_id)");
-            stmt.execute("CREATE INDEX IF NOT EXISTS idx_chat_memory_message_id ON chat_memory(message_id)");
+            stmt.execute("CREATE INDEX IF NOT EXISTS idx_chat_memory_session ON chat_memory(session_id)");
+            stmt.execute("CREATE INDEX IF NOT EXISTS idx_chat_memory_request ON chat_memory(request_id)");
+            stmt.execute("CREATE INDEX IF NOT EXISTS idx_chat_memory_user ON chat_memory(user_id)");
+
+            stmt.execute("CREATE TABLE IF NOT EXISTS chat_memory_obsolete (" +
+                    "id INTEGER PRIMARY KEY AUTOINCREMENT, " +
+                    "agent_id INTEGER NOT NULL, " +
+                    "user_id TEXT DEFAULT 'user1', " +
+                    "message_id TEXT NOT NULL, " +
+                    "message_json TEXT NOT NULL, " +
+                    "status INTEGER DEFAULT 0, " +
+                    "session_id TEXT, " +
+                    "request_id TEXT, " +
+                    "create_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP" +
+                    ")");
+            stmt.execute("CREATE INDEX IF NOT EXISTS idx_chat_memory_session ON chat_memory_obsolete(session_id)");
+            stmt.execute("CREATE INDEX IF NOT EXISTS idx_chat_memory_request ON chat_memory_obsolete(request_id)");
+            stmt.execute("CREATE INDEX IF NOT EXISTS idx_chat_memory_user ON chat_memory_obsolete(user_id)");
 
             stmt.execute("CREATE TABLE IF NOT EXISTS long_term_memory (" +
                     "id INTEGER PRIMARY KEY AUTOINCREMENT, " +
-                    "agent_id TEXT NOT NULL, " +
                     "memory TEXT, " +
                     "memory_hash TEXT, " +
                     "parent_id INTEGER, " +
                     "user_id TEXT, " +
                     "memory_type TEXT, " +
                     "summary TEXT, " +
+                    "session_id TEXT, " +
+                    "embedding_id TEXT, " +
                     "create_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP, " +
                     "update_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP" +
                     ")");
-            stmt.execute("CREATE INDEX IF NOT EXISTS idx_long_term_memory_agent ON long_term_memory(agent_id)");
-            stmt.execute("CREATE INDEX IF NOT EXISTS idx_long_term_memory_parent ON long_term_memory(parent_id)");
+            stmt.execute("CREATE INDEX IF NOT EXISTS idx_long_term_memory_session ON long_term_memory(session_id)");
+            stmt.execute("CREATE INDEX IF NOT EXISTS idx_long_term_memory_embedding ON long_term_memory(embedding_id)");
 
             stmt.execute("CREATE TABLE IF NOT EXISTS ai_model_providers (" +
                     "id INTEGER PRIMARY KEY AUTOINCREMENT, " +
@@ -136,6 +154,7 @@ public class DatabaseInitializer implements CommandLineRunner {
                     "output_tokens INTEGER DEFAULT 0, " +
                     "total_tokens INTEGER DEFAULT 0, " +
                     "user_id TEXT, " +
+                    "session_id TEXT, " +
                     "source TEXT, " +
                     "create_time DATETIME DEFAULT CURRENT_TIMESTAMP" +
                     ")");
@@ -160,6 +179,7 @@ public class DatabaseInitializer implements CommandLineRunner {
                     "ext_params TEXT, " +
                     "user_id TEXT, " +
                     "agent_id TEXT, " +
+                    "session_id TEXT, " +
                     "builtin INTEGER DEFAULT 0, " +
                     "create_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP, " +
                     "update_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP" +
@@ -169,15 +189,28 @@ public class DatabaseInitializer implements CommandLineRunner {
             stmt.execute("CREATE TABLE IF NOT EXISTS chat_sessions (" +
                     "id INTEGER PRIMARY KEY AUTOINCREMENT, " +
                     "session_id TEXT NOT NULL UNIQUE, " +
-                    "agent_id INTEGER NOT NULL, " +
                     "user_id TEXT NOT NULL, " +
+                    "agent_id INTEGER, " +
                     "title TEXT, " +
+                    "enable_thinking INTEGER DEFAULT 1, " +
+                    "skill_names TEXT, " +
+                    "ai_model_id INTEGER, " +
                     "create_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP, " +
                     "last_update_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP" +
                     ")");
             stmt.execute("CREATE INDEX IF NOT EXISTS idx_chat_sessions_user ON chat_sessions(user_id)");
-            stmt.execute("CREATE INDEX IF NOT EXISTS idx_chat_sessions_agent ON chat_sessions(agent_id)");
-            stmt.execute("CREATE INDEX IF NOT EXISTS idx_chat_sessions_user_agent ON chat_sessions(user_id, agent_id)");
+            stmt.execute("CREATE INDEX IF NOT EXISTS idx_chat_sessions_session ON chat_sessions(session_id)");
+            stmt.execute("CREATE INDEX IF NOT EXISTS idx_chat_sessions_user_session ON chat_sessions(user_id, session_id)");
+
+            try {
+                stmt.execute("ALTER TABLE chat_sessions ADD COLUMN enable_thinking INTEGER DEFAULT 1");
+            } catch (Exception ignored) {}
+            try {
+                stmt.execute("ALTER TABLE chat_sessions ADD COLUMN skill_names TEXT");
+            } catch (Exception ignored) {}
+            try {
+                stmt.execute("ALTER TABLE chat_sessions ADD COLUMN ai_model_id INTEGER");
+            } catch (Exception ignored) {}
 
             log.info("Database tables created");
         }
@@ -286,8 +319,8 @@ public class DatabaseInitializer implements CommandLineRunner {
                         "分类2，任务记录\n" +
                         "内容包含：正在做的什么事情（开始时间、任务说明、任务过程主要节点、结果、结束时间）。\n" +
                         "整理限制: 每次可以汇总出一条或多条不同任务记录，要根据具体的对话场景和已有的任务记录做判断，那些是旧任务的延续，哪些是新任务的开始；旧任务就更新内容新任务就新增内容；" +
-                        "每条任务都要汇总出一段简短的任务概要；内容要抓住终点，涵盖完整任务内容但不要啰嗦。\n" +
-                        "分类3，扩展知识\n" +
+                        "每条任务都要汇总出一段简短的任务概要；内容要抓住重点，涵盖完整任务内容但不要啰嗦。\n" +
+                        "分类3，经验知识\n" +
                         "内容包含：解决问题的经验、操作指导说明、明确的操作步骤。\n" +
                         "整理限制: 请给出一个简短的问题对象描述作为概要(比如，安装git经验、docker镜像源超时等);内容：要从对话中总结解决问题的正确经验，汇总出操作指导说明，梳理出明确的操作步骤。过于简单的问题（通过搜索可以快速找到答案的、经过3步以内尝试解决的），请勿记录，发现多个知识属于同一类型或者同一技术方向的请合并。\n" +
                         "========\n" +

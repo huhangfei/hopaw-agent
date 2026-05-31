@@ -1,6 +1,7 @@
 package com.agent.hopaw.infra.tool;
 
 import com.agent.hopaw.infra.constant.AgentToolSourceEnum;
+import com.agent.hopaw.infra.event.ConfigChangeEvent;
 import com.agent.hopaw.infra.model.dto.PluginExportInfo;
 import com.agent.hopaw.infra.model.dto.PluginInstallResult;
 import com.agent.hopaw.infra.model.dto.PluginUpdateInfo;
@@ -18,6 +19,7 @@ import dev.langchain4j.invocation.InvocationParameters;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.context.ApplicationContext;
+import org.springframework.context.event.EventListener;
 import org.springframework.stereotype.Service;
 
 import java.io.ByteArrayInputStream;
@@ -68,6 +70,25 @@ public class AgentToolService implements IAgentToolService {
         tools.addAll(dynamicToolRegistry.getAllDynamicTools());
         tools.sort(Comparator.comparing(AgentTool::getName));
         return tools;
+    }
+
+    @EventListener
+    public void onConfigChange(ConfigChangeEvent event) {
+        List<AgentTool> allTools = getAgentTools();
+        for (AgentTool tool : allTools) {
+            String prefix = tool.getConfigPrefix();
+            for (String key : event.getChangedKeys()) {
+                if (key.startsWith(prefix)) {
+                    try {
+                        tool.onConfigChanged();
+                        log.info("Config changed for tool [{}], onConfigChanged called", tool.getName());
+                    } catch (Exception e) {
+                        log.error("Error calling onConfigChanged for tool [{}]", tool.getName(), e);
+                    }
+                    break;
+                }
+            }
+        }
     }
 
     @Override

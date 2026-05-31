@@ -8,6 +8,7 @@ public class ChatMemory {
     private String userId;
     private String messageId;
     private String messageJson;
+    private String sessionId;
     /**
      * 状态 0 未清理，1 已过期等待确认是否整理的，2 主动丢弃和待整理记忆后删除，3 已确认需要整理记忆后删除
      */
@@ -79,5 +80,13 @@ public class ChatMemory {
 
     public void setCreateTime(LocalDateTime createTime) {
         this.createTime = createTime;
+    }
+
+    public String getSessionId() {
+        return sessionId;
+    }
+
+    public void setSessionId(String sessionId) {
+        this.sessionId = sessionId;
     }
 }

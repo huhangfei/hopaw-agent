@@ -54,6 +54,34 @@ header h1 {
 .theme-icon .moon-path {
     display: none;
 }
+.header-actions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+.open-source-btn {
+    background: rgba(255, 255, 255, 0.2);
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    border-radius: 20px;
+    padding: 6px 10px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.3s ease;
+    color: white;
+    text-decoration: none;
+}
+.open-source-btn:hover {
+    background: rgba(255, 255, 255, 0.3);
+    transform: scale(1.05);
+    text-decoration: none;
+    color: white;
+}
+.open-source-icon {
+    width: 20px;
+    height: 20px;
+}
 .main-container {
     display: flex;
     flex: 1;
@@ -315,6 +343,15 @@ body.dark-theme .theme-icon .sun-path {
 
 body.dark-theme .theme-icon .moon-path {
     display: block;
+}
+
+body.dark-theme .open-source-btn {
+    background: rgba(255, 255, 255, 0.1);
+    border-color: rgba(255, 255, 255, 0.2);
+}
+
+body.dark-theme .open-source-btn:hover {
+    background: rgba(255, 255, 255, 0.15);
 }
 
 body.dark-theme .menu-sidebar {

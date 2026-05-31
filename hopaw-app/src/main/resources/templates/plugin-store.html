@@ -33,7 +33,7 @@
             <h2>插件商店</h2>
             <p>从左侧列表选择插件查看详情。可安装未安装的插件，或更新已有插件到新版本。</p>
             <p class="welcome-hint" id="storeNoSource" style="display:none;">
-                ⚠ 尚未配置商店源地址，请先在 <a href="/settings">设置 → 插件商店源</a> 中配置。
+                ⚠ 尚未配置商店源地址，请先在 <a href="/settings?tab=pluginStore">设置 → 插件商店源</a> 中配置。
             </p>
         </div>
         <div class="tool-detail active" id="storeDetail" style="display:none;">
@@ -79,7 +79,7 @@
 </th:block>
 
 <th:block layout:fragment="extraScripts">
-    <script src="/js/plugin-store.js"></script>
+    <script src="/js/page/plugin-store.js"></script>
 </th:block>
 </body>
 </html>

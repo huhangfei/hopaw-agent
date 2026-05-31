@@ -16,29 +16,47 @@
     <header>
         <div class="header-content">
             <h1 layout:fragment="pageTitle">🤖 HoPaw</h1>
-            <button id="theme-toggle" class="theme-toggle-btn" title="切换主题" onclick="toggleTheme()">
+            <div class="header-actions">
+                <a href="https://gitee.com/hgflydream/hopaw-agent" target="_blank" class="open-source-btn" title="开源地址">
+                    <svg class="open-source-icon" viewBox="0 0 24 24" fill="currentColor">
+                        <path d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z"/>
+                    </svg>
+                </a>
+                <button id="theme-toggle" class="theme-toggle-btn" title="切换主题" onclick="toggleTheme()">
                 <svg class="theme-icon" viewBox="0 0 24 24" fill="currentColor">
                     <path class="sun-path" th:style="${currentTheme == 'dark' ? 'display: none;' : 'display: block;'}" d="M12 7c-2.76 0-5 2.24-5 5s2.24 5 5 5 5-2.24 5-5-2.24-5-5-5zM2 13h2c.55 0 1-.45 1-1s-.45-1-1-1H2c-.55 0-1 .45-1 1s.45 1 1 1zm18 0h2c.55 0 1-.45 1-1s-.45-1-1-1h-2c-.55 0-1 .45-1 1s.45 1 1 1zM11 2v2c0 .55.45 1 1 1s1-.45 1-1V2c0-.55-.45-1-1-1s-1 .45-1 1zm0 18v2c0 .55.45 1 1 1s1-.45 1-1v-2c0-.55-.45-1-1-1s-1 .45-1 1zM5.99 4.58a.996.996 0 00-1.41 0 .996.996 0 000 1.41l1.06 1.06c.39.39 1.03.39 1.41 0 .38-.39.39-1.03 0-1.41L5.99 4.58zm12.37 12.37a.996.996 0 00-1.41 0 .996.996 0 000 1.41l1.06 1.06c.39.39 1.03.39 1.41 0 .38-.39.39-1.03 0-1.41l-1.06-1.06zM20 11h-2c-.55 0-1 .45-1 1s.45 1 1 1h2c.55 0 1-.45 1-1s-.45-1-1-1zM4 11H2c-.55 0-1 .45-1 1s.45 1 1 1h2c.55 0 1-.45 1-1s-.45-1-1-1zM12 16.99c-.38 0-.69-.28-.72-.66-.02-.24.16-.48.38-.64l2.03-1.51c.37-.28.48-.76.21-1.12-.27-.36-.76-.47-1.12-.21l-1.37 1.02c-.56.42-1.31.42-1.87 0l-1.37-1.02c-.36-.27-.85-.16-1.12.21-.27.36-.16.85.21 1.12l2.03 1.51c.22.16.4.4.38.64-.03.38-.34.66-.72.66z"/>
                     <path class="moon-path" th:style="${currentTheme == 'dark' ? 'display: block;' : 'display: none;'}" d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>
                 </svg>
             </button>
+            </div>
         </div>
     </header>
 
     <div class="main-container">
-        <nav class="menu-sidebar" id="mainMenu">
-            <a href="/" class="menu-btn" th:classappend="${activePage == 'index' ? 'active' : ''}" title="首页">
+        <nav class="menu-sidebar" id="mainMenu" th:classappend="${menuCollapsed} ? 'collapsed' : ''">
+            <a href="/" class="menu-btn" th:classappend="${activePage == 'index' ? 'active' : ''}" title="会话">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
-                    <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>
-                    <polyline points="9 22 9 12 15 12 15 22"/>
+                    <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
                 </svg>
-                <span class="menu-label">首页</span>
+                <span class="menu-label">会话</span>
+            </a>
+            <a href="/agents" class="menu-btn" th:classappend="${activePage == 'agents' ? 'active' : ''}" title="智能体管理">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                    <rect x="3" y="7" width="18" height="13" rx="2"/>
+                    <circle cx="8" cy="12" r="1.5" fill="currentColor"/>
+                    <circle cx="16" cy="12" r="1.5" fill="currentColor"/>
+                    <path d="M12 18h.01"/>
+                    <line x1="9" y1="4" x2="15" y2="4"/>
+                    <circle cx="12" cy="3" r="1" fill="currentColor"/>
+                </svg>
+                <span class="menu-label">智能体</span>
             </a>
             <a href="/models" class="menu-btn" th:classappend="${activePage == 'models' ? 'active' : ''}" title="模型管理">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
-                    <rect x="2" y="3" width="20" height="14" rx="2" ry="2"/>
-                    <line x1="8" y1="21" x2="16" y2="21"/>
-                    <line x1="12" y1="17" x2="12" y2="21"/>
+                    <rect x="2" y="2" width="9" height="9" rx="2"/>
+                    <rect x="13" y="2" width="9" height="9" rx="2"/>
+                    <rect x="2" y="13" width="9" height="9" rx="2"/>
+                    <rect x="13" y="13" width="9" height="9" rx="2"/>
                 </svg>
                 <span class="menu-label">模型管理</span>
             </a>
@@ -136,11 +154,12 @@
             </a>
 
             <div class="menu-collapse-wrapper">
-                <button class="menu-collapse-btn" onclick="toggleMenu()" title="收缩菜单">
+                <button class="menu-collapse-btn" th:title="${menuCollapsed ? '展开菜单' : '收缩菜单'}" onclick="toggleMenu()">
                     <svg class="collapse-icon" viewBox="0 0 24 24" fill="currentColor" width="18" height="18">
-                        <path d="M15.41 7.41L14 6l-6 6 6 6 1.41-1.41L10.83 12z"/>
+                        <path th:if="${!menuCollapsed}" d="M15.41 7.41L14 6l-6 6 6 6 1.41-1.41L10.83 12z"/>
+                        <path th:if="${menuCollapsed}" d="M8.59 16.59L10 18l6-6-6-6-1.41 1.41L13.17 12z"/>
                     </svg>
-                    <span class="menu-label">收缩菜单</span>
+                    <span class="menu-label" th:text="${menuCollapsed ? '展开菜单' : '收缩菜单'}">收缩菜单</span>
                 </button>
             </div>
         </nav>
@@ -151,12 +170,18 @@
     <div id="toast-container" class="toast-container"></div>
 
     <script>
+        function setMenuCookie(collapsed) {
+            var expires = new Date();
+            expires.setFullYear(expires.getFullYear() + 1);
+            document.cookie = 'menuCollapsed=' + collapsed + ';path=/;expires=' + expires.toUTCString() + ';SameSite=Lax';
+        }
+
         function toggleMenu() {
             var menu = document.getElementById('mainMenu');
             menu.classList.add('with-anim');
             menu.classList.toggle('collapsed');
             updateMenuUI(menu);
-            localStorage.setItem('menuCollapsed', menu.classList.contains('collapsed'));
+            setMenuCookie(menu.classList.contains('collapsed'));
         }
 
         function updateMenuUI(menu) {
@@ -173,18 +198,6 @@
                 icon.innerHTML = '<path d="M15.41 7.41L14 6l-6 6 6 6 1.41-1.41L10.83 12z"/>';
             }
         }
-
-        (function initMenu() {
-            var menu = document.getElementById('mainMenu');
-            if (!menu) return;
-            var collapsed = localStorage.getItem('menuCollapsed');
-            if (collapsed === 'true') {
-                menu.classList.add('collapsed');
-            } else if (collapsed === 'false') {
-                menu.classList.remove('collapsed');
-            }
-            updateMenuUI(menu);
-        })();
 
         (function initSubMenu() {
             var group = document.getElementById('menuGroupMemory');
@@ -250,7 +263,7 @@
             });
         })();
     </script>
-    <script th:src="@{/js/site.js}"></script>
+    <script th:src="@{/js/common.js}"></script>
     <script th:src="@{/js/toast.js}"></script>
     <script th:src="@{/js/modal.js}"></script>
     <script th:src="@{/js/confirm-dialog.js}"></script>

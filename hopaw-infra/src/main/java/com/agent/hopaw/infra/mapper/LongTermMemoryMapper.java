@@ -1,6 +1,5 @@
 package com.agent.hopaw.infra.mapper;
 
-import com.agent.hopaw.infra.constant.LongTermMemoryTypeEnum;
 import com.agent.hopaw.infra.model.entity.LongTermMemory;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
@@ -11,12 +10,10 @@ import java.util.List;
 @Mapper
 public interface LongTermMemoryMapper {
 
-    List<LongTermMemory> findByAgentIdAndUserId(@Param("agentId") Long agentId, @Param("userId") String userId);
-
     List<LongTermMemory> findByParentId(@Param("parentId") Long parentId);
 
-    List<LongTermMemory> findByAgentIdAndUserIdAndMemoryTypeAndTime(@Param("agentId") Long agentId, @Param("userId") String userId, @Param("memoryType") String memoryType, @Param("beginDateTime") LocalDateTime beginDateTime);
-    List<LongTermMemory> findByAgentIdAndUserIdAndMemoryTypeAndEndDateTime(@Param("agentId") Long agentId, @Param("userId") String userId, @Param("memoryType") String memoryType, @Param("endDateTime") LocalDateTime endDateTime);
+    List<LongTermMemory> findBySessionIdAndUserIdAndMemoryTypeAndTime(@Param("sessionId") String sessionId, @Param("userId") String userId, @Param("memoryType") String memoryType, @Param("beginDateTime") LocalDateTime beginDateTime);
+    List<LongTermMemory> findBySessionIdAndUserIdAndMemoryTypeAndEndDateTime(@Param("sessionId") String sessionId, @Param("userId") String userId, @Param("memoryType") String memoryType, @Param("endDateTime") LocalDateTime endDateTime);
 
     List<LongTermMemory> findByUserIdAndMemoryType(@Param("userId") String userId, @Param("memoryType") String memoryType);
 
@@ -30,5 +27,5 @@ public interface LongTermMemoryMapper {
 
     int updateParentId(@Param("id") Long id, @Param("parentId") Long parentId);
 
-    int deleteByAgentIdAndUserIdAndMemoryTypeAndEndDateTime(@Param("agentId") Long agentId, @Param("userId") String userId, @Param("memoryType") String memoryType, @Param("endDateTime") LocalDateTime endDateTime);
+    int deleteBySessionIdAndUserIdAndMemoryTypeAndEndDateTime(@Param("sessionId") String sessionId, @Param("userId") String userId, @Param("memoryType") String memoryType, @Param("endDateTime") LocalDateTime endDateTime);
 }

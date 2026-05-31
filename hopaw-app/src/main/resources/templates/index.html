@@ -3,156 +3,162 @@
       xmlns:th="http://www.thymeleaf.org"
       layout:decorate="~{layouts/default}">
 <head>
-    <title>🤖 HoPaw - 你的智能小帮手</title>
+    <title>🤖 HoPaw</title>
 </head>
 <body>
-<div layout:fragment="pageTitle">🤖 HoPaw - 你的智能小帮手</div>
+<div layout:fragment="pageTitle">🤖 HoPaw</div>
 
 <div class="chat-wrapper" layout:fragment="content">
     <main class="chat-area">
         <div th:if="${selectedAgent != null}" class="chat-header">
             <div class="chat-header-title">
-                <select class="agent-select" onchange="selectAgent(this.value)">
-                    <option th:each="a : ${agents}"
-                            th:value="${a.id}"
-                            th:text="${a.name}"
-                            th:selected="${selectedAgentId == a.id}"></option>
-                </select>
-                <span class="chat-header-desc" th:text="${selectedAgent.description}"></span>
+                <span class="chat-header-desc" id="chat-header-desc" th:text="${selectedAgent.description}"></span>
             </div>
             <div class="header-actions">
-                <button class="btn-stop-header" th:attr="onclick=|forceStopAgent(${selectedAgent.id})|" title="强停">
-                    <svg viewBox="0 0 24 24" fill="currentColor"><rect x="4" y="4" width="16" height="16" rx="2"/></svg>
+                <button class="btn-add-header" onclick="createNewSession()" title="新会话">
+                    <svg viewBox="0 0 24 24" fill="currentColor" width="14" height="14"><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/></svg>
+                    新会话
+                </button>
+                <button class="btn-stop-header" th:attr="onclick=|forceStopCurrentSession(${currentSessionId})|" title="强停">
+                    <svg viewBox="0 0 24 24" fill="currentColor">
+                        <rect x="4" y="4" width="16" height="16" rx="2"/>
+                    </svg>
                     强停
                 </button>
                 <div class="header-dropdown">
                     <button class="btn-more" title="更多操作">
-                        <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor"><path d="M12 8c1.1 0 2-.9 2-2s-.9-2-2-2-2 .9-2 2 .9 2 2 2zm0 2c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2zm0 6c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2z"/></svg>
+                        <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor">
+                            <path d="M12 8c1.1 0 2-.9 2-2s-.9-2-2-2-2 .9-2 2 .9 2 2 2zm0 2c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2zm0 6c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2z"/>
+                        </svg>
                     </button>
-                    <div class="dropdown-menu"><div class="dropdown-menu-inner">
-                        <button class="dropdown-item" onclick="showAddModal()">
-                            <svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor"><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/></svg>
-                            添加
-                        </button>
-                        <button class="dropdown-item"
-                                th:attr="onclick=|showEditModal(${selectedAgent.id}, '${#strings.escapeJava(selectedAgent.name)}', '${#strings.escapeJava(selectedAgent.description)}', '${#strings.escapeJava(selectedAgent.tools)}', ${selectedAgent.maxMemoryRecords != null ? selectedAgent.maxMemoryRecords : 20}, ${selectedAgent.maxToolInvocations != null ? selectedAgent.maxToolInvocations : 10}, ${selectedAgent.aiModelId}, ${selectedAgent.enableThinking != null ? selectedAgent.enableThinking : true}, ${selectedAgent.vectorToolSearch != null ? selectedAgent.vectorToolSearch : true}, ${selectedAgent.vectorToolSearchMaxResults != null ? selectedAgent.vectorToolSearchMaxResults : 5})|">
-                            <svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor"><path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/></svg>
-                            编辑
-                        </button>
-                        <button class="dropdown-item" th:attr="onclick=|deleteAgent(${selectedAgent.id})|">
-                            <svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor"><path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/></svg>
-                            删除
-                        </button>
-                        <button class="dropdown-item" th:attr="onclick=|clearHistory(${selectedAgent.id})|">
-                            <svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor"><path d="M19.36 2.72l1.42 1.42-5.72 5.71c1.07 1.54 1.22 3.39.32 4.59L9.06 8.12c1.2-.9 3.05-.75 4.59.32l5.71-5.72zM5.93 17.57c-2.01-2.01-3.24-4.41-3.58-6.65l4.88-2.09 7.44 7.44-2.09 4.88c-2.24-.34-4.64-1.57-6.65-3.58z"/></svg>
-                            清空对话
-                        </button>
-                    </div></div>
+                    <div class="dropdown-menu">
+                        <div class="dropdown-menu-inner">
+                            <button class="dropdown-item" onclick="showAddAgentModal()">
+                                <svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor">
+                                    <path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/>
+                                </svg>
+                                添加 Agent
+                            </button>
+                            <button class="dropdown-item"
+                                    th:attr="onclick=|editCurrentAgent()|">
+                                <svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor">
+                                    <path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/>
+                                </svg>
+                                编辑 Agent
+                            </button>
+                            <button class="dropdown-item" th:attr="onclick=|clearHistory('${currentSessionId}')|">
+                                <svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor">
+                                    <path d="M19.36 2.72l1.42 1.42-5.72 5.71c1.07 1.54 1.22 3.39.32 4.59L9.06 8.12c1.2-.9 3.05-.75 4.59.32l5.71-5.72zM5.93 17.57c-2.01-2.01-3.24-4.41-3.58-6.65l4.88-2.09 7.44 7.44-2.09 4.88c-2.24-.34-4.64-1.57-6.65-3.58z"/>
+                                </svg>
+                                清空对话
+                            </button>
+                            <button class="dropdown-item dropdown-item-danger" th:attr="onclick=|deleteSession('${currentSessionId}')|">
+                                <svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor">
+                                    <path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/>
+                                </svg>
+                                删除会话
+                            </button>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
         <div th:if="${selectedAgent != null}" class="chat-messages" id="chatMessages">
-            <div th:each="chat : ${chatHistory}" th:if="${chat.messageType != 'tool_call'}" th:switch="${chat.messageType}"
+            <div th:each="chat : ${chatHistory}" th:if="${chat.messageType != 'tool_call'}"
+                 th:switch="${chat.messageType}"
                  th:classappend="${chat.role == 'user' ? 'user' : 'agent'}" class="message">
                 <div th:case="'text'">
-                    <div class="message-label" th:text="${chat.role == 'user' ? '你' : selectedAgent.name}"></div>
+                    <div class="message-label" th:text="${chat.role == 'user' ? '你' : (chat.agent != null ? chat.agent.name : 'Agent')}"></div>
                     <div th:text="${chat.content}" class="message-content"
                          th:attr="data-is-agent=${chat.role == 'agent'}"></div>
                     <div class="message-time"
                          th:text="${chat.createTime.toLocalDate().equals(T(java.time.LocalDate).now()) ? #temporals.format(chat.createTime, 'HH:mm:ss') : #temporals.format(chat.createTime, 'yyyy-MM-dd HH:mm:ss')}"></div>
                 </div>
                 <div th:case="'thinking'">
-                    <div class="message-label" th:text="${selectedAgent.name} + ' (思考)'"></div>
+                    <div class="message-label" th:text="${chat.agent != null ? chat.agent.name : 'Agent'} + ' (思考)'"></div>
                     <div th:text="${chat.content}" class="message-content thinking-content"></div>
                     <div class="message-time"
                          th:text="${chat.createTime.toLocalDate().equals(T(java.time.LocalDate).now()) ? #temporals.format(chat.createTime, 'HH:mm:ss') : #temporals.format(chat.createTime, 'yyyy-MM-dd HH:mm:ss')}"></div>
                 </div>
-                <div th:case="'tool_call'" class="tool-call-message-content">
-                    <div class="message-label" th:text="${selectedAgent.name}"></div>
-                    <div class="tool-call-container-static">
-                        <div class="tool-call"
-                             th:attr="data-tool-call-id=${chat.toolCallId}, data-status=${chat.toolCallStatus == 'tool_call_start' ? 'starting' : (chat.toolCallStatus == 'tool_call_end' ? 'executed' : (chat.toolCallStatus == 'tool_call_failed' ? 'executed' : 'unknown'))}">
-                            <div class="tool-call-header">
-                                    <span class="tool-call-icon" th:switch="${chat.toolCallStatus}"
-                                          th:classappend="${chat.toolCallStatus == 'tool_call_end' ? 'completed' : ''}">
-                                        <span th:case="'tool_call_start'">🔧</span>
-                                        <span th:case="'tool_call_end'">✅</span>
-                                        <span th:case="'tool_call_failed'">❌</span>
-                                        <span th:case="*">🔧</span>
-                                    </span>
-                                <span class="tool-call-name" th:text="${chat.toolName}"></span>
-                                <span class="tool-call-status" th:switch="${chat.toolCallStatus}"
-                                      th:classappend="${chat.toolCallStatus == 'tool_call_end' ? 'completed' : ''}">
-                                        <span th:case="'tool_call_start'">执行中...</span>
-                                        <span th:case="'tool_call_end'" th:text="${chat.toolExecutionTime != null ? '执行完成(' + #numbers.formatDecimal(chat.toolExecutionTime / 1000.0, 1, 1) + 's)' : '执行完成'}">执行完成</span>
-                                        <span th:case="'tool_call_failed'">执行失败</span>
-                                        <span th:case="*" th:text="${chat.toolCallStatus}">执行完成</span>
-                                    </span>
-                                <span th:if="${chat.toolCallStatus == 'tool_call_end' or chat.toolCallStatus == 'tool_call_failed'}"
-                                      class="tool-call-toggle">▼</span>
-                            </div>
-                            <div class="tool-call-body"
-                                 th:classappend="${chat.toolCallStatus == 'tool_call_start' ? '' : 'collapsed'}">
-                                <div class="tool-call-args" th:if="${chat.toolArguments}">
-                                    <div class="args-label">参数:</div>
-                                    <pre class="args-content" th:text="${chat.toolArguments}"></pre>
-                                </div>
-                                <div class="tool-call-result" th:if="${chat.content}">
-                                    <div class="result-label">结果:</div>
-                                    <pre class="result-content" th:text="${chat.content}"></pre>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="message-time"
-                         th:text="${chat.createTime.toLocalDate().equals(T(java.time.LocalDate).now()) ? #temporals.format(chat.createTime, 'HH:mm:ss') : #temporals.format(chat.createTime, 'yyyy-MM-dd HH:mm:ss')}"></div>
-                </div>
             </div>
+            <div th:if="${chatHistory.size()==0}" class="empty-state" id="chatHistoryEmptyState">
+            <svg viewBox="0 0 24 24" fill="currentColor">
+                <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/>
+            </svg>
+            <p>有什么问题尽管问。</p>
         </div>
+        </div>
+
         <div th:if="${selectedAgent != null}" class="chat-input-area">
             <form th:action="@{/chat}" method="post" class="chat-form" id="chatForm">
                 <input type="hidden" name="agentId" th:value="${selectedAgent.id}">
                 <div class="chat-input-wrapper" th:classappend="${agentExecutorState} ? 'disabled' : ''">
                     <textarea name="message" id="messageInput" placeholder="输入消息..." required
-                           th:disabled="${agentExecutorState}" rows="2"></textarea>
+                              th:disabled="${agentExecutorState}" rows="2"></textarea>
                     <div class="chat-input-tools">
-                        <button type="button" class="chat-btn-deep" id="deepThinkBtn"
-                                th:attr="data-agent-id=${selectedAgent.id}, data-enabled=${selectedAgent.enableThinking}"
-                                th:classappend="${selectedAgent.enableThinking ? 'active' : ''}">
-                            <svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg>
-                            深度思考
-                        </button>
+                        <select class="agent-select agent-select-toolbar" onchange="selectAgent(this)">
+                            <option th:each="a : ${agents}"
+                                    th:value="${a.id}"
+                                    th:text="${a.name}"
+                                    th:data-desc="${a.description}"
+                                    th:selected="${selectedAgentId == a.id}"></option>
+                        </select>
+                        <div class="model-dropdown" id="modelDropdown">
+                            <button type="button" class="chat-btn-model" id="modelSelectBtn">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14"
+                                     height="14">
+                                    <rect x="2" y="3" width="20" height="14" rx="2" ry="2"/>
+                                    <line x1="8" y1="21" x2="16" y2="21"/>
+                                    <line x1="12" y1="17" x2="12" y2="21"/>
+                                </svg>
+                                <span id="selectedModelName">模型</span>
+                            </button>
+                            <div class="model-dropdown-menu" id="modelDropdownMenu">
+                                <div class="model-dropdown-list" id="modelProviderList"></div>
+                            </div>
+                            <input type="hidden" id="selectedAiModelId" th:value="${selectedAiModelId}"/>
+                            <input type="hidden" id="currentSessionId" th:value="${currentSessionId}" />
+                        </div>
                         <div class="skills-dropdown" id="skillsDropdown">
                             <button type="button" class="chat-btn-skill" id="skillSelectBtn">
-                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg>
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14"
+                                     height="14">
+                                    <path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/>
+                                </svg>
                                 技能
                             </button>
                             <div class="skills-dropdown-menu" id="skillsDropdownMenu">
                                 <div class="skills-dropdown-list" id="skillsCheckboxList"></div>
                             </div>
                         </div>
+                        <button type="button" class="chat-btn-deep" id="deepThinkBtn"
+                                th:attr="data-agent-id=${selectedAgent.id}, data-enabled=${selectedAgent.enableThinking}"
+                                th:classappend="${selectedAgent.enableThinking ? 'active' : ''}">
+                            <svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16">
+                                <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/>
+                            </svg>
+                            深度思考
+                        </button>
                     </div>
                 </div>
                 <button type="submit" id="sendBtn" class="chat-form-send-button"
                         th:classappend="${agentExecutorState  ? 'hide' : ''}">发送
                 </button>
                 <button type="button" id="runningBtn" class="chat-form-running-btn"
-                        th:classappend="${agentExecutorState  ? '' : 'hide'}" onclick="stopAgent()">
+                        th:classappend="${agentExecutorState  ? '' : 'hide'}" onclick="stopCurrentSession()">
                     <span class="chat-form-running-btn-dot"></span>
                     运行中...
                 </button>
             </form>
         </div>
-
-        <div th:if="${selectedAgent == null}" class="empty-state">
-            <svg viewBox="0 0 24 24" fill="currentColor">
-                <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/>
-            </svg>
-            <p>选择一个 Agent 开始对话</p>
-        </div>
     </main>
     <aside class="tool-panel">
         <div class="tool-panel-section tool-panel-top">
+            <div class="tool-panel-title">会话列表</div>
+            <div class="tool-panel-body session-list-body" id="sessionList">
+            </div>
+        </div>
+        <div class="tool-panel-section tool-panel-mid">
             <div class="tool-panel-title">工具执行列表</div>
             <div class="tool-panel-body" id="toolExecList">
                 <div th:each="chat : ${chatHistory}" th:if="${chat.messageType == 'tool_call'}">
@@ -167,17 +173,18 @@
                                         <span th:case="'tool_call_failed'">❌</span>
                                         <span th:case="*">🔧</span>
                                     </span>
-                                    <span class="tool-call-name" th:text="${chat.toolName}"></span>
-                                    <span class="tool-call-status" th:switch="${chat.toolCallStatus}"
-                                          th:classappend="${chat.toolCallStatus == 'tool_call_end' or chat.toolCallStatus == 'tool_call_failed' ? 'completed' : ''}">
+                                <span class="tool-call-name" th:text="${chat.toolName}"></span>
+                                <span class="tool-call-status" th:switch="${chat.toolCallStatus}"
+                                      th:classappend="${chat.toolCallStatus == 'tool_call_end' or chat.toolCallStatus == 'tool_call_failed' ? 'completed' : ''}">
                                         <span th:case="'tool_call_start'">执行中...</span>
-                                        <span th:case="'tool_call_end'" th:text="${chat.toolExecutionTime != null ? '已完成(' + #numbers.formatDecimal(chat.toolExecutionTime / 1000.0, 1, 1) + 's)' : '已完成'}">已完成</span>
+                                        <span th:case="'tool_call_end'"
+                                              th:text="${chat.toolExecutionTime != null ? '已完成(' + #numbers.formatDecimal(chat.toolExecutionTime / 1000.0, 1, 1) + 's)' : '已完成'}">已完成</span>
                                         <span th:case="'tool_call_failed'">执行失败</span>
                                         <span th:case="*" th:text="${chat.toolCallStatus}">未知</span>
                                     </span>
-                                    <span th:if="${chat.toolCallStatus == 'tool_call_end' or chat.toolCallStatus == 'tool_call_failed'}"
-                                          class="tool-call-toggle">▼</span>
-                                </div>
+                                <span th:if="${chat.toolCallStatus == 'tool_call_end' or chat.toolCallStatus == 'tool_call_failed'}"
+                                      class="tool-call-toggle">▼</span>
+                            </div>
                             <div class="tool-call-body"
                                  th:classappend="${chat.toolCallStatus == 'tool_call_start' ? '' : 'collapsed'}">
                                 <div class="tool-call-args" th:if="${chat.toolArguments}">
@@ -203,238 +210,25 @@
             </div>
         </div>
     </aside>
-    <div id="addAgentModal" class="modal-overlay">
-        <div class="modal">
-            <div class="modal-header">
-                <h3>添加新 Agent</h3>
-                <button class="modal-close" onclick="hideAddModal()">&times;</button>
-            </div>
-            <div class="modal-body">
-                <form th:action="@{/agent/create}" method="post" class="modal-form" id="addAgentForm">
-                    <div class="form-left">
-                        <div class="form-group">
-                            <label>名称 *</label>
-                            <input type="text" name="name" placeholder="输入 Agent 名称" required>
-                        </div>
-                        <div class="form-group">
-                            <label>描述 *</label>
-                            <textarea name="description" placeholder="输入 Agent 描述" required></textarea>
-                        </div>
-                        <div class="form-group">
-                            <label>模型 *</label>
-                            <div class="flex-container">
-                                <select id="addProviderSelect" class="model-select" required>
-                                    <option value="">选择提供商</option>
-                                </select>
-                                <select name="aiModelId" id="addModelSelect" class="model-select" required>
-                                    <option value="">选择模型</option>
-                                </select>
-                            </div>
-                        </div>
-                        <div class="form-row">
-                            <div class="form-group">
-                                <label>最大记忆</label>
-                                <input type="number" name="maxMemoryRecords" value="20" min="1" max="100" placeholder="20">
-                            </div>
-                            <div class="form-group">
-                                <label>最大工具调用</label>
-                                <input type="number" name="maxToolInvocations" value="10" min="1" max="50" placeholder="10">
-                            </div>
-                        </div>
-                        <div class="form-row">
-                            <div class="form-group">
-                                <div class="toggle-wrapper">
-                                    <input type="hidden" name="enableThinking" id="addEnableThinking" value="true">
-                                    <label class="toggle">
-                                        <input type="checkbox" checked
-                                               onchange="document.getElementById('addEnableThinking').value=this.checked?'true':'false'">
-                                        <span class="slider"></span>
-                                    </label>
-                                    <span class="toggle-label">启用思考（Thinking）</span>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="form-row">
-                            <div class="form-group">
-                                <div class="toggle-wrapper">
-                                    <input type="hidden" name="vectorToolSearch" id="addVectorToolSearch" value="true">
-                                    <label class="toggle">
-                                        <input type="checkbox" checked
-                                               onchange="document.getElementById('addVectorToolSearch').value=this.checked?'true':'false';document.getElementById('addVectorToolSearchResultsGroup').style.display=this.checked?'':'none'">
-                                        <span class="slider"></span>
-                                    </label>
-                                    <span class="toggle-label">启用搜索工具</span>
-                                </div>
-                            </div>
-                            <div class="form-group form-inline" id="addVectorToolSearchResultsGroup">
-                                <label>最大数量</label>
-                                <input type="number" name="vectorToolSearchMaxResults" value="10" min="1" max="500" placeholder="10">
-                            </div>
-                        </div>
-                    </div>
-                    <div class="form-right">
-                        <div class="form-group">
-                            <div class="tool-header">
-                                <label>工具</label>
-                                <div class="tool-toggle-bar">
-                                    <button type="button" class="btn-tool-toggle" onclick="selectAllTools('#addAgentModal .checkbox-group')">全选</button>
-                                    <button type="button" class="btn-tool-toggle" onclick="deselectAllTools('#addAgentModal .checkbox-group')">取消</button>
-                                </div>
-                            </div>
-                            <div class="checkbox-group">
-                                <label th:each="ts : ${toolSets}" class="checkbox-item">
-                                    <div class="tool-item-row">
-                                        <input type="checkbox" name="tools" th:value="${ts.name}">
-                                        <div class="tool-item-icon">
-                                            <!-- 判断 icon 是否为 SVG 内容 -->
-                                            <th:block th:if="${ts.iconIsSvgCode()}">
-                                                <span th:utext="${ts.icon}"></span>
-                                            </th:block>
-                                            <th:block th:unless="${ts.iconIsSvgCode()}">
-                                                <img th:src="@{/icons/tools/__${ts.icon}__}" alt="icon" onerror="this.style.display='none'">
-                                            </th:block>
-                                        </div>
-                                        <span class="tool-item-name" th:text="${ts.name}"></span>
-                                        <span class="tool-item-count" th:text="${#lists.size(ts.tools)} + ' 个方法'"></span>
-                                    </div>
-                                    <span class="tool-item-desc" th:text="${ts.description}"></span>
-                                </label>
-                            </div>
-                        </div>
-                    </div>
-                </form>
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn-cancel" onclick="hideAddModal()">取消</button>
-                <button type="submit" form="addAgentForm" class="btn-submit">创建</button>
-            </div>
-        </div>
-    </div>
-    <div id="editAgentModal" class="modal-overlay">
-        <div class="modal">
-            <div class="modal-header">
-                <h3>编辑 Agent</h3>
-                <button class="modal-close" onclick="hideEditModal()">&times;</button>
-            </div>
-            <div class="modal-body">
-                <form th:action="@{/agent/update}" method="post" class="modal-form" id="editAgentForm">
-                    <input type="hidden" name="id" id="editAgentId">
-                    <div class="form-left">
-                        <div class="form-group">
-                            <label>名称</label>
-                            <input type="text" name="name" id="editAgentName" placeholder="输入 Agent 名称" required>
-                        </div>
-                        <div class="form-group">
-                            <label>描述</label>
-                            <textarea name="description" id="editAgentDescription" placeholder="输入 Agent 描述"
-                                      required></textarea>
-                        </div>
-                        <div class="form-group">
-                            <label>模型 *</label>
-                            <div class="flex-container">
-                                <select id="editProviderSelect" class="model-select" required>
-                                    <option value="">选择提供商</option>
-                                </select>
-                                <select name="aiModelId" id="editModelSelect" class="model-select" required>
-                                    <option value="">选择模型</option>
-                                </select>
-                            </div>
-                        </div>
-                        <div class="form-row">
-                            <div class="form-group">
-                                <label>最大记忆</label>
-                                <input type="number" name="maxMemoryRecords" id="editMaxMemoryRecords" value="20" min="1"
-                                       max="50000000" placeholder="20">
-                            </div>
-                            <div class="form-group">
-                                <label>最大工具调用</label>
-                                <input type="number" name="maxToolInvocations" id="editMaxToolInvocations" value="10"
-                                       min="1" max="50000000" placeholder="10">
-                            </div>
-                        </div>
-                        <div class="form-row">
-                            <div class="form-group">
-                                <div class="toggle-wrapper">
-                                    <input type="hidden" name="enableThinking" id="editEnableThinking" value="true">
-                                    <label class="toggle">
-                                        <input type="checkbox" id="editEnableThinkingCheckbox"
-                                               onchange="document.getElementById('editEnableThinking').value=this.checked?'true':'false'">
-                                        <span class="slider"></span>
-                                    </label>
-                                    <span class="toggle-label">启用思考（Thinking）</span>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="form-row">
-                            <div class="form-group">
-                                <div class="toggle-wrapper">
-                                    <input type="hidden" name="vectorToolSearch" id="editVectorToolSearch" value="true">
-                                    <label class="toggle">
-                                        <input type="checkbox" id="editVectorToolSearchCheckbox"
-                                               onchange="document.getElementById('editVectorToolSearch').value=this.checked?'true':'false';document.getElementById('editVectorToolSearchResultsGroup').style.display=this.checked?'':'none'">
-                                        <span class="slider"></span>
-                                    </label>
-                                    <span class="toggle-label">启用搜索工具</span>
-                                </div>
-                            </div>
-                            <div class="form-group form-inline" id="editVectorToolSearchResultsGroup">
-                                <label>最大数量</label>
-                                <input type="number" name="vectorToolSearchMaxResults" id="editVectorToolSearchMaxResults" value="10" min="1" max="500" placeholder="10">
-                            </div>
-                        </div>
-                    </div>
-                    <div class="form-right">
-                        <div class="form-group">
-                            <div class="tool-header">
-                                <label>工具</label>
-                                <div class="tool-toggle-bar">
-                                    <button type="button" class="btn-tool-toggle" onclick="selectAllTools('#editToolList')">全选</button>
-                                    <button type="button" class="btn-tool-toggle" onclick="deselectAllTools('#editToolList')">取消</button>
-                                </div>
-                            </div>
-                            <div class="checkbox-group" id="editToolList">
-                                <label th:each="ts : ${toolSets}" class="checkbox-item">
-                                    <div class="tool-item-row">
-                                        <input type="checkbox" name="tools" th:value="${ts.name}" class="edit-tool-checkbox">
-                                        <div class="tool-item-icon">
-                                            <!-- 判断 icon 是否为 SVG 内容 -->
-                                            <th:block th:if="${ts.iconIsSvgCode()}">
-                                                <span th:utext="${ts.icon}"></span>
-                                            </th:block>
-                                            <th:block th:unless="${ts.iconIsSvgCode()}">
-                                                <img th:src="@{/icons/tools/__${ts.icon}__}" alt="icon" onerror="this.style.display='none'">
-                                            </th:block>
-                                        </div>
-                                        <span class="tool-item-name" th:text="${ts.name}"></span>
-                                        <span class="tool-item-count" th:text="${#lists.size(ts.tools)} + ' 个方法'"></span>
-                                    </div>
-                                    <span class="tool-item-desc" th:text="${ts.description}"></span>
-                                </label>
-                            </div>
-                        </div>
-                    </div>
-                </form>
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn-cancel" onclick="hideEditModal()">取消</button>
-                <button type="submit" form="editAgentForm" class="btn-submit">保存</button>
-            </div>
-        </div>
-    </div>
 </div>
 
 
 <th:block layout:fragment="extraCss">
+    <link rel="stylesheet" th:href="@{/css/page/agent-form.css}">
     <link rel="stylesheet" th:href="@{/css/page/index.css}">
 </th:block>
 
 <th:block layout:fragment="extraScripts">
-    <script th:src="@{/js/index.js}"></script>
+    <script th:src="@{/js/page/index.js}"></script>
+    <script th:src="@{/js/agents-modal.js}"></script>
+    <script th:src="@{/js/model-select.js}"></script>
     <script th:src="@{/js/marked.min.js}"></script>
     <script th:src="@{/js/chart.umd.min.js}"></script>
     <script th:inline="javascript">
         setCurrentAgentId(/*[[${selectedAgentId}]]*/ null);
+        var initialChatSessions = /*[[${chatSessions}]]*/ [];
+        var initialCurrentSessionId = /*[[${currentSessionId}]]*/ null;
+        var initialSelectedSkills = /*[[${selectedSkills}]]*/ '';
     </script>
-</th:block>
 </body>
 </html>

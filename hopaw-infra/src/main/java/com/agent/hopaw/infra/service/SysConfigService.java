@@ -1,8 +1,10 @@
 package com.agent.hopaw.infra.service;
 
+import com.agent.hopaw.infra.event.ConfigChangeEvent;
 import com.agent.hopaw.infra.mapper.SysConfigMapper;
 import com.agent.hopaw.infra.model.entity.SysConfig;
 import com.agent.hopaw.infra.util.AesEncryptionUtil;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 
 import java.util.HashSet;
@@ -17,9 +19,11 @@ public class SysConfigService implements ISysConfigService {
 
 
     private final SysConfigMapper sysConfigMapper;
+    private final ApplicationEventPublisher eventPublisher;
 
-    public SysConfigService(SysConfigMapper sysConfigMapper) {
+    public SysConfigService(SysConfigMapper sysConfigMapper, ApplicationEventPublisher eventPublisher) {
         this.sysConfigMapper = sysConfigMapper;
+        this.eventPublisher = eventPublisher;
     }
     @Override
     public void setSensitiveKeys(String... keys){
@@ -72,13 +76,14 @@ public class SysConfigService implements ISysConfigService {
     }
 
     @Override
-    public int save(SysConfig sysConfig) {
+    public int insert(SysConfig sysConfig) {
         String plainValue = sysConfig.getConfigValue();
         if (SENSITIVE_KEYS.contains(sysConfig.getConfigKey())) {
             sysConfig.setConfigValue(AesEncryptionUtil.encrypt(plainValue));
         }
         int result = sysConfigMapper.insert(sysConfig);
         sysConfig.setConfigValue(plainValue);
+        eventPublisher.publishEvent(new ConfigChangeEvent(Set.of(sysConfig.getConfigKey())));
         return result;
     }
 
@@ -90,6 +95,7 @@ public class SysConfigService implements ISysConfigService {
         }
         int result = sysConfigMapper.update(sysConfig);
         sysConfig.setConfigValue(plainValue);
+        eventPublisher.publishEvent(new ConfigChangeEvent(Set.of(sysConfig.getConfigKey())));
         return result;
     }
     @Override

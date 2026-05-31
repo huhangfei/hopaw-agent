@@ -17,9 +17,9 @@ import java.util.stream.Collectors;
 public class ToolConfigService {
 
     private final AgentToolService agentToolService;
-    private final SysConfigService sysConfigService;
+    private final ISysConfigService sysConfigService;
 
-    public ToolConfigService(AgentToolService agentToolService, SysConfigService sysConfigService) {
+    public ToolConfigService(AgentToolService agentToolService, ISysConfigService sysConfigService) {
         this.agentToolService = agentToolService;
         this.sysConfigService = sysConfigService;
     }
@@ -96,9 +96,6 @@ public class ToolConfigService {
                 }
             }
         }
-        
-        // 通知工具配置已变更
-        tool.onConfigChanged();
     }
 
     private void validateAndSave(ToolConfigItem item, String value, String key, String description) {
@@ -113,7 +110,7 @@ public class ToolConfigService {
         SysConfig config = sysConfigService.getByKey(key);
         if (config == null) {
             config = new SysConfig(key, value, description);
-            sysConfigService.save(config);
+            sysConfigService.insert(config);
         } else {
             config.setConfigValue(value);
             sysConfigService.update(config);

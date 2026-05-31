@@ -43,9 +43,10 @@ public class TokenUsageController {
                               @RequestParam(required = false) Long agentId,
                               @RequestParam(required = false) String modelName,
                               @RequestParam(required = false) String source,
+                              @RequestParam(required = false) String sessionId,
                               @RequestParam(defaultValue = "1") int page,
                               @RequestParam(defaultValue = "10") int size) {
-        Map<String, Object> data = tokenUsageService.queryPage(startTime, endTime, userId, agentId, modelName, source, page, size);
+        Map<String, Object> data = tokenUsageService.queryPage(startTime, endTime, userId, agentId, modelName, source, sessionId, page, size);
         return ResponseBean.success(data);
     }
 
@@ -56,8 +57,9 @@ public class TokenUsageController {
                                 @RequestParam(required = false) String userId,
                                 @RequestParam(required = false) Long agentId,
                                 @RequestParam(required = false) String modelName,
-                                @RequestParam(required = false) String source) {
-        TokenUsage summary = tokenUsageService.summary(startTime, endTime, userId, agentId, modelName, source);
+                                @RequestParam(required = false) String source,
+                                @RequestParam(required = false) String sessionId) {
+        TokenUsage summary = tokenUsageService.summary(startTime, endTime, userId, agentId, modelName, source, sessionId);
         return ResponseBean.success(summary);
     }
 
@@ -68,17 +70,19 @@ public class TokenUsageController {
                                    @RequestParam(required = false) String userId,
                                    @RequestParam(required = false) Long agentId,
                                    @RequestParam(required = false) String modelName,
-                                   @RequestParam(required = false) String source) {
-        List<Map<String, Object>> stats = tokenUsageService.dailyStats(startTime, endTime, userId, agentId, modelName, source);
+                                   @RequestParam(required = false) String source,
+                                   @RequestParam(required = false) String sessionId) {
+        List<Map<String, Object>> stats = tokenUsageService.dailyStats(startTime, endTime, userId, agentId, modelName, source, sessionId);
         return ResponseBean.success(stats);
     }
 
     @GetMapping("/api/token-usage/today")
     @ResponseBody
-    public ResponseBean tokenUsageToday(@RequestParam Long agentId,
+    public ResponseBean tokenUsageToday(@RequestParam(required = false) Long agentId,
                                         @RequestParam(required = false) String source,
+                                        @RequestParam(required = false) String sessionId,
                                         @RequestParam(required = false) Long minId) {
-        java.util.List<TokenUsage> list = tokenUsageService.findTodayByAgentUser(agentId, DefaultUser.USER, source, minId, 30);
+        java.util.List<TokenUsage> list = tokenUsageService.findTodayByAgentUser(agentId, DefaultUser.USER, source, sessionId, minId, 30);
         return ResponseBean.success(list);
     }
 }

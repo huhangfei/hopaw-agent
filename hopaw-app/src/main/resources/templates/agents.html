@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+      xmlns:th="http://www.thymeleaf.org"
+      layout:decorate="~{layouts/default}">
+<head>
+    <title>智能体管理 - HoPaw</title>
+</head>
+<body>
+<div layout:fragment="pageTitle">🤖 HoPaw - 智能体管理</div>
+
+<main layout:fragment="content" class="agents-container">
+    <div class="agents-header">
+        <h2>智能体管理</h2>
+        <div class="agents-toolbar">
+            <div class="agents-search">
+                <svg viewBox="0 0 24 24" fill="currentColor" class="search-icon">
+                    <path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/>
+                </svg>
+                <input type="text" id="agentSearchInput" placeholder="搜索智能体名称..." onkeyup="handleSearchKeyup(event)">
+            </div>
+            <button class="btn-add-agent" onclick="showAddAgentModal()">
+                <svg viewBox="0 0 24 24" fill="currentColor"><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/></svg>
+                添加智能体
+            </button>
+        </div>
+    </div>
+
+    <div class="agents-card">
+        <table class="agents-table">
+            <thead>
+                <tr>
+                    <th style="width: 15%;">名称</th>
+                    <th style="width: 30%;">描述</th>
+                    <th style="width: 20%;">模型</th>
+                    <th style="width: 20%;">工具</th>
+                    <th style="width: 15%;">操作</th>
+                </tr>
+            </thead>
+            <tbody id="agentsTableBody">
+            </tbody>
+        </table>
+        <div class="agents-empty" id="agentsEmpty" style="display: none;">
+            <p>暂无智能体，点击"添加智能体"按钮开始创建</p>
+        </div>
+    </div>
+
+    <div class="agents-pagination" id="agentsPagination" style="display: none;">
+        <span class="pagination-info" id="paginationInfo"></span>
+        <div class="pagination-btns">
+            <button class="pagination-btn" id="btnFirstPage" onclick="goToPage(1)">首页</button>
+            <button class="pagination-btn" id="btnPrevPage" onclick="goToPage(currentPage - 1)">上一页</button>
+            <span class="pagination-current" id="paginationCurrent"></span>
+            <button class="pagination-btn" id="btnNextPage" onclick="goToPage(currentPage + 1)">下一页</button>
+            <button class="pagination-btn" id="btnLastPage" onclick="goToPage(totalPages)">末页</button>
+        </div>
+    </div>
+</main>
+
+<th:block layout:fragment="extraCss">
+    <link rel="stylesheet" th:href="@{/css/page/agent-form.css}">
+    <link rel="stylesheet" th:href="@{/css/page/agents.css}">
+</th:block>
+
+<th:block layout:fragment="extraScripts">
+    <script th:src="@{/js/page/agents.js}"></script>
+    <script th:src="@{/js/model-select.js}"></script>
+    <script th:src="@{/js/agents-modal.js}"></script>
+</th:block>
+</body>
+</html>

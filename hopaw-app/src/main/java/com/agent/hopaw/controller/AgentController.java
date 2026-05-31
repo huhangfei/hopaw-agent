@@ -1,26 +1,18 @@
 package com.agent.hopaw.controller;
 
 import com.agent.hopaw.constant.DefaultUser;
-import com.agent.hopaw.infra.mapper.ChatHistoryMapper;
-import com.agent.hopaw.infra.mapper.ChatMemoryMapper;
-import com.agent.hopaw.infra.model.entity.Agent;
-import com.agent.hopaw.infra.model.entity.ChatHistory;
 import com.agent.hopaw.infra.model.dto.ResponseBean;
 import com.agent.hopaw.infra.model.dto.ToolSetInfo;
+import com.agent.hopaw.infra.model.entity.Agent;
+import com.agent.hopaw.infra.model.entity.AiModel;
 import com.agent.hopaw.infra.service.AgentService;
-import com.agent.hopaw.infra.service.IAgentExecutorService;
+import com.agent.hopaw.infra.service.AiModelService;
 import com.agent.hopaw.infra.tool.IAgentToolService;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.ResponseBody;
-import org.springframework.web.bind.annotation.PutMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.*;
 
-import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -29,45 +21,19 @@ public class AgentController {
 
     private final AgentService agentService;
     private final IAgentToolService agentToolService;
-    private final ChatHistoryMapper chatHistoryMapper;
-    private final ChatMemoryMapper chatMemoryMapper;
-
-    private final IAgentExecutorService agentExecutorService;
+    private final AiModelService aiModelService;
 
     public AgentController(AgentService agentService, IAgentToolService agentToolService,
-                           ChatHistoryMapper chatHistoryMapper, ChatMemoryMapper chatMemoryMapper,
-                           IAgentExecutorService agentExecutorService) {
+                           AiModelService aiModelService) {
         this.agentService = agentService;
         this.agentToolService = agentToolService;
-        this.chatHistoryMapper = chatHistoryMapper;
-        this.chatMemoryMapper = chatMemoryMapper;
-        this.agentExecutorService = agentExecutorService;
+        this.aiModelService = aiModelService;
     }
 
-    @GetMapping("/")
-    public String index(@RequestParam(required = false) Long agentId,
-                       Model model) {
-        List<Agent> agents = agentService.getAllAgents();
-        model.addAttribute("agents", agents);
-
-        List<ToolSetInfo> toolSets = agentToolService.getToolSets();
-        model.addAttribute("toolSets", toolSets);
-
-        if(agents.size() > 0 && agentId == null){
-            agentId = agents.get(0).getId();
-        }
-        if (agentId != null) {
-            Agent agent = agentService.getAgentById(agentId);
-            model.addAttribute("selectedAgent", agent);
-            model.addAttribute("selectedAgentId", agentId);
-
-            List<ChatHistory> chatHistory = chatHistoryMapper.findByAgentId(agentId, 100);
-            Collections.reverse(chatHistory);
-            model.addAttribute("chatHistory", chatHistory);
-            model.addAttribute("agentExecutorState", agentService.isAgentExecutorRunning(agentId,DefaultUser.USER));
-        }
-
-        return "index";
+    @GetMapping("/agents")
+    public String index(Model model) {
+        model.addAttribute("activePage", "agents");
+        return "agents";
     }
 
     @PostMapping("/agent/create")
@@ -85,51 +51,6 @@ public class AgentController {
         return "redirect:/";
     }
 
-    @PostMapping("/agent/delete")
-    public String deleteAgent(@RequestParam Long id) {
-        chatHistoryMapper.deleteByAgentId(id);
-        chatMemoryMapper.deleteByAgentId(id);
-        agentService.deleteAgent(id,DefaultUser.USER);
-        return "redirect:/";
-    }
-    @PostMapping("/agent/stop")
-    @ResponseBody
-    public ResponseBean stopAgent(@RequestParam Long id) {
-        agentService.stopAgentExecutor(id,DefaultUser.USER);
-        return ResponseBean.success();
-    }
-
-    @PostMapping("/agent/force-stop")
-    @ResponseBody
-    public ResponseBean forceStopAgent(@RequestParam Long id) {
-        agentExecutorService.stopAndRemoveAgentExecutor(id, DefaultUser.USER);
-        return ResponseBean.success();
-    }
-
-    @PostMapping("/agent/tool/stop")
-    @ResponseBody
-    public ResponseBean stopTool(@RequestParam Long agentId, @RequestParam String callId) {
-        agentExecutorService.stopTool(agentId, DefaultUser.USER, callId);
-        return ResponseBean.success();
-    }
-
-    @GetMapping("/api/agent/{id}/running")
-    @ResponseBody
-    public ResponseBean isRunning(@PathVariable Long id) {
-        boolean running = agentService.isAgentExecutorRunning(id, DefaultUser.USER);
-        return ResponseBean.success(running);
-    }
-
-    @PutMapping("/api/agents/{id}/thinking")
-    @ResponseBody
-    public ResponseBean updateThinking(@PathVariable Long id, @RequestBody Map<String, Boolean> body) {
-        Boolean enabled = body.get("enabled");
-        if (enabled == null) {
-            return ResponseBean.fail("参数错误");
-        }
-        agentService.updateThinking(id, enabled,DefaultUser.USER);
-        return ResponseBean.success();
-    }
 
     @PostMapping("/agent/update")
     public String updateAgent(@RequestParam Long id,
@@ -147,19 +68,59 @@ public class AgentController {
         return "redirect:/?agentId=" + id;
     }
 
-    @PostMapping("/chat")
-    public String chat(@RequestParam Long agentId,
-                      Model model) {
-        Agent agent = agentService.getAgentById(agentId);
-        return "redirect:/?agentId=" + agentId;
+    @GetMapping("/agent/modal/add")
+    public String addAgentModal(Model model) {
+        List<ToolSetInfo> toolSets = agentToolService.getToolSets();
+        model.addAttribute("toolSets", toolSets);
+        return "agent-form-fragments :: addAgentModal";
     }
 
+    @GetMapping("/agent/modal/edit/{id}")
+    public String editAgentModal(@PathVariable Long id, Model model) {
+        Agent agent = agentService.getAgentById(id);
+        List<ToolSetInfo> toolSets = agentToolService.getToolSets();
+        if(agent.getAiModelId()!=null){
+            AiModel aiModel = aiModelService.findById(agent.getAiModelId());
+            if(aiModel!=null){
+                model.addAttribute("aiModelProviderId", aiModel.getProviderId());
+                model.addAttribute("aiModelId", aiModel.getId());
+            }
+        }
+        model.addAttribute("agent", agent);
+        model.addAttribute("toolSets", toolSets);
+        return "agent-form-fragments :: editAgentModal";
+    }
 
+    @GetMapping("/api/agents/page")
+    @ResponseBody
+    public ResponseBean getAgentsPage(@RequestParam(required = false, defaultValue = "") String keyword,
+                                      @RequestParam(required = false, defaultValue = "1") int page,
+                                      @RequestParam(required = false, defaultValue = "10") int size) {
+        List<Agent> list = agentService.getAgentsPage(DefaultUser.USER, keyword, page, size);
+        int total = agentService.countAgents(DefaultUser.USER, keyword);
+        Map<String, Object> result = new HashMap<>();
+        result.put("list", list);
+        result.put("total", total);
+        result.put("page", page);
+        result.put("size", size);
+        return ResponseBean.success(result);
+    }
 
-    @GetMapping("/chat/clear")
-    public String clearChat(@RequestParam Long agentId) {
-        chatHistoryMapper.deleteByAgentId(agentId);
-        chatMemoryMapper.updateStatusByAgentId(agentId,2);
-        return "redirect:/?agentId=" + agentId;
+    @GetMapping("/api/agents/count")
+    @ResponseBody
+    public ResponseBean getAgentsCount() {
+        int total = agentService.countAgents(DefaultUser.USER, null);
+        return ResponseBean.success(total);
+    }
+
+    @DeleteMapping("/api/agents/{id}")
+    @ResponseBody
+    public ResponseBean deleteAgent(@PathVariable Long id) {
+        int total = agentService.countAgents(DefaultUser.USER, null);
+        if (total <= 1) {
+            return ResponseBean.fail("必须保留至少一个智能体");
+        }
+        agentService.deleteAgent(id, DefaultUser.USER);
+        return ResponseBean.success();
     }
 }

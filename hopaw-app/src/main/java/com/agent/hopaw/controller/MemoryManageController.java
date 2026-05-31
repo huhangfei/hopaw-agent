@@ -1,56 +1,51 @@
 package com.agent.hopaw.controller;
 
 import com.agent.hopaw.constant.DefaultUser;
-import com.agent.hopaw.infra.constant.LongTermMemoryTypeEnum;
-import com.agent.hopaw.infra.mapper.AgentMapper;
-import com.agent.hopaw.infra.model.entity.Agent;
-import com.agent.hopaw.infra.model.entity.LongTermMemory;
-import com.agent.hopaw.infra.model.dto.ResponseBean;
+import com.agent.hopaw.infra.constant.UserMemoryTypeEnum;
+import com.agent.hopaw.infra.memory.ILongTermMemoryService;
 import com.agent.hopaw.infra.memory.LongTermMemoryService;
+import com.agent.hopaw.infra.model.dto.ResponseBean;
+import com.agent.hopaw.infra.model.entity.LongTermMemory;
+import com.agent.hopaw.infra.service.ChatSessionService;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
 
 @Controller
 public class MemoryManageController {
 
-    private final LongTermMemoryService longTermMemoryService;
-    private final AgentMapper agentMapper;
+    private final ILongTermMemoryService longTermMemoryService;
 
-    public MemoryManageController(LongTermMemoryService longTermMemoryService, AgentMapper agentMapper) {
+    public MemoryManageController(LongTermMemoryService longTermMemoryService) {
         this.longTermMemoryService = longTermMemoryService;
-        this.agentMapper = agentMapper;
     }
 
     @GetMapping("/memory-manage")
     public String page(Model model) {
-        List<Agent> agents = agentMapper.findByUserId(DefaultUser.USER);
-        model.addAttribute("agents", agents);
         return "memory-manage";
-    }
-
-    @GetMapping("/api/memory-manage/types")
-    @ResponseBody
-    public ResponseBean memoryTypes(@RequestParam Long agentId) {
-        List<LongTermMemory> list = longTermMemoryService.queryUserAllMemories(agentId, DefaultUser.USER);
-        List<Map<String, Object>> result = new ArrayList<>();
-        for (LongTermMemoryTypeEnum typeEnum : LongTermMemoryTypeEnum.values()) {
-            Map<String, Object> item = new LinkedHashMap<>();
-            item.put("code", typeEnum.getCode());
-            item.put("name", typeEnum.getName());
-            item.put("count", list.stream().filter(m -> typeEnum.getCode().equals(m.getMemoryType())).count());
-            result.add(item);
-        }
-        return ResponseBean.success(result);
     }
 
     @GetMapping("/api/memory-manage/tree")
     @ResponseBody
-    public ResponseBean tree(@RequestParam Long agentId) {
-        List<LongTermMemory> list = longTermMemoryService.queryUserAllMemories(agentId, DefaultUser.USER);
-        return ResponseBean.success(list);
+    public ResponseBean tree() {
+        List<LongTermMemory> list = longTermMemoryService.queryUserAllMemories(null, DefaultUser.USER);
+        List<Map<String, Object>> types = new ArrayList<>();
+        for (UserMemoryTypeEnum typeEnum : UserMemoryTypeEnum.values()) {
+            Map<String, Object> item = new LinkedHashMap<>();
+            item.put("code", typeEnum.getCode());
+            item.put("name", typeEnum.getName());
+            item.put("count", list.stream().filter(m -> typeEnum.getCode().equals(m.getMemoryType())).count());
+            types.add(item);
+        }
+        Map<String, Object> result = new LinkedHashMap<>();
+        result.put("types", types);
+        result.put("memories", list);
+        return ResponseBean.success(result);
     }
 
     @GetMapping("/api/memory-manage/{id}")
@@ -66,14 +61,18 @@ public class MemoryManageController {
     @PostMapping("/api/memory-manage")
     @ResponseBody
     public ResponseBean create(@RequestBody Map<String, Object> body) {
-        String agentId = (String) body.get("agentId");
+        String sessionId = (String) body.get("sessionId");
         String memory = (String) body.get("memory");
         Object parentIdObj = body.get("parentId");
         Long parentId = parentIdObj != null ? Long.valueOf(parentIdObj.toString()) : null;
         String memoryType = (String) body.get("memoryType");
         String summary = (String) body.get("summary");
 
-        LongTermMemory entity = longTermMemoryService.createMemory(agentId, memory, parentId, DefaultUser.USER, memoryType, summary);
+        // 限制不能添加任务记录和聊天历史类型
+        if (UserMemoryTypeEnum.TASK_RECORDS.getCode().equals(memoryType)) {
+            return ResponseBean.fail("不能添加该类型的记忆");
+        }
+        LongTermMemory entity = longTermMemoryService.createMemory(sessionId, memory, parentId, DefaultUser.USER, UserMemoryTypeEnum.fromCode(memoryType), summary);
         return ResponseBean.success(entity);
     }
 
@@ -92,7 +91,12 @@ public class MemoryManageController {
             entity.setSummary(body.get("summary"));
         }
         if (body.containsKey("memoryType")) {
-            entity.setMemoryType(body.get("memoryType"));
+            String newType = body.get("memoryType");
+            // 限制不能修改为任务记录类型
+            if (UserMemoryTypeEnum.TASK_RECORDS.getCode().equals(newType)) {
+                return ResponseBean.fail("不能修改为该类型的记忆");
+            }
+            entity.setMemoryType(newType);
         }
         longTermMemoryService.update(entity);
         return ResponseBean.success(null);

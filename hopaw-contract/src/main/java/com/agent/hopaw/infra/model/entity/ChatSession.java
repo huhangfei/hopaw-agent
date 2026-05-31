@@ -10,9 +10,18 @@ public class ChatSession {
     private String title;
     private LocalDateTime createTime;
     private LocalDateTime lastUpdateTime;
-
+    private Boolean enableThinking;
+    private String skillNames;
+    private Long aiModelId;
     public ChatSession() {}
 
+    public ChatSession(String sessionId, String userId, String title) {
+        this.sessionId = sessionId;
+        this.userId = userId;
+        this.title = title;
+        this.createTime = LocalDateTime.now();
+        this.lastUpdateTime = LocalDateTime.now();
+    }
     public ChatSession(String sessionId, Long agentId, String userId, String title) {
         this.sessionId = sessionId;
         this.agentId = agentId;
@@ -76,5 +85,29 @@ public class ChatSession {
 
     public void setLastUpdateTime(LocalDateTime lastUpdateTime) {
         this.lastUpdateTime = lastUpdateTime;
+    }
+
+    public Boolean getEnableThinking() {
+        return enableThinking;
+    }
+
+    public void setEnableThinking(Boolean enableThinking) {
+        this.enableThinking = enableThinking;
+    }
+
+    public String getSkillNames() {
+        return skillNames;
+    }
+
+    public void setSkillNames(String skillNames) {
+        this.skillNames = skillNames;
+    }
+
+    public Long getAiModelId() {
+        return aiModelId;
+    }
+
+    public void setAiModelId(Long aiModelId) {
+        this.aiModelId = aiModelId;
     }
 }

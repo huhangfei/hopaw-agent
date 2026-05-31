@@ -39,8 +39,7 @@ public class CommandExecutorTool implements AgentTool {
     public String executeCommand(@P(description = "要执行的命令") String command, @P(description = "超时时间（秒）", required = false) Integer timeout, InvocationParameters invocationParameters) {
         InvocationParametersWrapper invocationParametersWrapper = InvocationParametersWrapper.create(invocationParameters);
         String toolCallId = invocationParametersWrapper.getToolCallId();
-        String userId = invocationParametersWrapper.getUserId();
-        Long agentId = invocationParametersWrapper.getAgentId();
+        String sessionId =  invocationParametersWrapper.getSessionId();
         logger.info("Executing command: {} with toolCallId: {}", command, toolCallId);
         if (command == null || command.trim().isEmpty()) {
             return "错误: 命令不能为空";
@@ -61,7 +60,7 @@ public class CommandExecutorTool implements AgentTool {
             processBuilder.redirectErrorStream(true);
             Process process = processBuilder.start();
 
-            agentExecutorService.addToolStopHook(agentId, userId, toolCallId, (callId) -> {
+            agentExecutorService.addToolStopHook(sessionId, toolCallId, (callId) -> {
                 try {
                     ProcessHandle processHandle = process.toHandle();
                     processHandle.descendants()
@@ -79,7 +78,7 @@ public class CommandExecutorTool implements AgentTool {
                     int lineCount = 0;
                     try {
                         while ((line = reader.readLine()) != null) {
-                            if (agentExecutorService.toolIsCancelled(agentId, userId, toolCallId)) {
+                            if (agentExecutorService.toolIsCancelled(sessionId, toolCallId)) {
                                 output.append("错误: 命令执行被用户取消");
                                 break;
                             }
@@ -87,7 +86,7 @@ public class CommandExecutorTool implements AgentTool {
                                 output.append("\n... (输出已截断，超过 ").append(MAX_OUTPUT_LINES).append(" 行)");
                                 break;
                             }
-                            agentExecutorService.sendToolRunningContent(agentId, userId, toolCallId, line + "\n");
+                            agentExecutorService.sendToolRunningContent(sessionId, toolCallId, line + "\n");
                             output.append(line).append("\n");
                             lineCount++;
                         }

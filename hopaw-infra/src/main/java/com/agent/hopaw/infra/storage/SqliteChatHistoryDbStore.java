@@ -1,7 +1,6 @@
-package com.agent.hopaw.biz.storage;
+package com.agent.hopaw.infra.storage;
 
 import com.agent.hopaw.infra.mapper.ChatHistoryMapper;
-import com.agent.hopaw.infra.storage.ChatHistoryStore;
 import com.agent.hopaw.infra.model.entity.ChatHistory;
 import org.springframework.stereotype.Service;
 
@@ -9,6 +8,9 @@ import java.time.LocalDateTime;
 import java.time.temporal.ChronoUnit;
 import java.util.List;
 
+/**
+ * @author hhf
+ */
 @Service
 public class SqliteChatHistoryDbStore implements ChatHistoryStore {
 
@@ -43,5 +45,12 @@ public class SqliteChatHistoryDbStore implements ChatHistoryStore {
             return;
         }
         chatHistoryMapper.insertBatch(chatHistories);
+    }
+
+    private String formatMemoryContent(ChatHistory chatHistory) {
+        if (chatHistory.getMessageType().equals("tool_call")) {
+            return chatHistory.getRole() + ": " + chatHistory.getMessageType() + ": " + chatHistory.getToolName() + ": " + chatHistory.getToolArguments()+ ": " + chatHistory.getContent();
+        }
+        return chatHistory.getRole() + ": " + chatHistory.getMessageType() + ": " + chatHistory.getContent();
     }
 }
