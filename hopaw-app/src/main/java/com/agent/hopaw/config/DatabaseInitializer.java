@@ -296,7 +296,7 @@ public class DatabaseInitializer implements CommandLineRunner {
             long agentCount = countTableRows(stmt, "agents");
             if (agentCount == 0) {
                 log.info("Initializing default agent...");
-                String tools = "agentTaskTool,commandExecutor,getCurrentTime,mailTool,memoryTool,sysConfigTool,baiduSearch";
+                String tools = "agentTaskTool,getCurrentTime,memoryTool,sysConfigTool,skillTool,mailTool,commandExecutor,baiduSearch,webPage,sshTool,fileOperation,dingtalkNotify";
                 stmt.execute(String.format(
                         "INSERT INTO agents (name, description, tools, max_memory_records, max_tool_invocations, vector_tool_search, vector_tool_search_max_results, user_id, enable_thinking) VALUES ('%s', '%s', '%s', %d, %d, %d, %d, '%s', %d)",
                         escapeSQL("大虾\uD83E\uDD90"),

@@ -3,6 +3,7 @@ package com.agent.hopaw.biz.tool.skill;
 import com.agent.hopaw.infra.model.dto.SkillInfo;
 import com.agent.hopaw.infra.service.ISkillService;
 import dev.langchain4j.agent.tool.P;
+import dev.langchain4j.agent.tool.SearchBehavior;
 import dev.langchain4j.agent.tool.Tool;
 import com.agent.hopaw.infra.tool.AgentTool;
 import org.springframework.stereotype.Component;
@@ -36,7 +37,7 @@ public class SkillTool implements AgentTool {
         return "技能";
     }
 
-    @Tool("查询所有技能列表，仅返回每个技能的 名称、Slug 和 描述")
+    @Tool(value = "查询所有技能列表，仅返回每个技能的 名称、Slug 和 描述",searchBehavior = SearchBehavior.ALWAYS_VISIBLE)
     public String listSkills() {
         List<SkillInfo> skills = skillService.listSkills();
         if (skills == null || skills.isEmpty()) {
@@ -54,7 +55,7 @@ public class SkillTool implements AgentTool {
         return sb.toString();
     }
 
-    @Tool("根据 Slug 查询技能的具体内容，返回技能的名称、版本、描述、主页和完整内容")
+    @Tool(value = "根据 Slug 查询技能的具体内容，返回技能的名称、版本、描述、主页和完整内容",searchBehavior = SearchBehavior.ALWAYS_VISIBLE)
     public String getSkillBySlug(@P(description = "技能的 Slug 标识") String slug) {
         SkillInfo found = skillService.getSkill(slug);
 
