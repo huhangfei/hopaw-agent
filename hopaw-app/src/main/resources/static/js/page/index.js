@@ -1297,7 +1297,6 @@ function formatSessionTime(dateStr) {
 function createNewSession() {
     var deepBtn = document.getElementById('deepThinkBtn');
     var payload = {
-        userId: 'defaultUser',
         agentId: currentAgentId || null,
         aiModelId: currentModelId || null,
         enableThinking: deepBtn ? deepBtn.getAttribute('data-enabled') === 'true' : true,

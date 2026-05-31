@@ -27,12 +27,11 @@
 
     <div class="main-container">
         <nav class="menu-sidebar" id="mainMenu">
-            <a href="/" class="menu-btn" th:classappend="${activePage == 'index' ? 'active' : ''}" title="首页">
+            <a href="/" class="menu-btn" th:classappend="${activePage == 'index' ? 'active' : ''}" title="会话">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
-                    <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>
-                    <polyline points="9 22 9 12 15 12 15 22"/>
+                    <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
                 </svg>
-                <span class="menu-label">首页</span>
+                <span class="menu-label">会话</span>
             </a>
             <a href="/agents" class="menu-btn" th:classappend="${activePage == 'agents' ? 'active' : ''}" title="智能体管理">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">

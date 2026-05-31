@@ -1570,3 +1570,19 @@ body.dark-theme .chat-btn-model.has-selected {
 body.dark-theme .model-dropdown-empty {
     color: #777;
 }
+
+body.dark-theme .btn-add-header {
+    background: #2d5a2d;
+    color: #a8d4a8;
+}
+body.dark-theme .btn-add-header:hover {
+    background: #3d7a3d;
+}
+
+body.dark-theme .btn-stop-header {
+    background: #8b2635;
+    color: #e8b4b4;
+}
+body.dark-theme .btn-stop-header:hover {
+    background: #a63344;
+}

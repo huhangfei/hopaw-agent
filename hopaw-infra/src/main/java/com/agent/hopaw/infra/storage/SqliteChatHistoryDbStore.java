@@ -1,8 +1,6 @@
 package com.agent.hopaw.infra.storage;
 
-import com.agent.hopaw.infra.constant.UserMemoryTypeEnum;
 import com.agent.hopaw.infra.mapper.ChatHistoryMapper;
-import com.agent.hopaw.infra.memory.IVectorMemoryService;
 import com.agent.hopaw.infra.model.entity.ChatHistory;
 import org.springframework.stereotype.Service;
 
@@ -18,10 +16,8 @@ public class SqliteChatHistoryDbStore implements ChatHistoryStore {
 
     private final ChatHistoryMapper chatHistoryMapper;
 
-    private final IVectorMemoryService vectorMemoryService;
-    public SqliteChatHistoryDbStore(ChatHistoryMapper chatHistoryMapper, IVectorMemoryService vectorMemoryService) {
+    public SqliteChatHistoryDbStore(ChatHistoryMapper chatHistoryMapper) {
         this.chatHistoryMapper = chatHistoryMapper;
-        this.vectorMemoryService = vectorMemoryService;
     }
 
     @Override
@@ -41,8 +37,6 @@ public class SqliteChatHistoryDbStore implements ChatHistoryStore {
         }else{
             chatHistoryMapper.insert(chatHistory);
         }
-        //存储到向量数据库
-        vectorMemoryService.store(formatMemoryContent(chatHistory), chatHistory.getSessionId(), chatHistory.getUserId(), UserMemoryTypeEnum.CHAT_HISTORY, LocalDateTime.now());
     }
 
     @Override
@@ -51,11 +45,6 @@ public class SqliteChatHistoryDbStore implements ChatHistoryStore {
             return;
         }
         chatHistoryMapper.insertBatch(chatHistories);
-        for (ChatHistory chatHistory : chatHistories) {
-            //存储到向量数据库
-            vectorMemoryService.store(formatMemoryContent(chatHistory), chatHistory.getSessionId(), chatHistory.getUserId(), UserMemoryTypeEnum.CHAT_HISTORY, LocalDateTime.now());
-        }
-
     }
 
     private String formatMemoryContent(ChatHistory chatHistory) {

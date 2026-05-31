@@ -288,7 +288,7 @@ public class VectorMemoryService implements IVectorMemoryService {
                     .limit(maxResults)
                     .map(match -> {
                         Metadata m = match.embedded().metadata();
-                        return new VectorSearchResult(
+                        var r= new VectorSearchResult(
                                 match.score(),
                                 match.embedded().text(),
                                 m != null ? m.getString(METADATA_SESSION_ID) : null,
@@ -297,6 +297,10 @@ public class VectorMemoryService implements IVectorMemoryService {
                                 m != null ? m.getString(METADATA_MEMORY_DATE) : null,
                                 match.embeddingId()
                         );
+                        if(r.getMemoryType() != null){
+                            r.setMemoryTypeName(UserMemoryTypeEnum.fromCode(r.getMemoryType()).getName());
+                        }
+                        return r;
                     })
                     .collect(Collectors.toList());
 

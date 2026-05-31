@@ -16,11 +16,7 @@ public enum UserMemoryTypeEnum {
     /**
      * 用户画像
      */
-    USER_PROFILE("userProfile", "用户画像"),
-    /**
-     * 聊天历史
-     */
-    CHAT_HISTORY("chatHistory", "聊天历史");
+    USER_PROFILE("userProfile", "用户画像");
 
     private final String code;
     private final String name;

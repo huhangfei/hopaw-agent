@@ -16,13 +16,6 @@
                 <input type="text" id="queryText" class="search-input" placeholder="输入语义查询关键词">
             </div>
             <div class="search-item">
-                <label for="searchAgentId">智能体</label>
-                <select id="searchAgentId" class="filter-select">
-                    <option value="">全部</option>
-                    <option th:each="agent : ${agents}" th:value="${agent.id}" th:text="${agent.name}"></option>
-                </select>
-            </div>
-            <div class="search-item">
                 <label for="searchMemoryType">记忆类型</label>
                 <select id="searchMemoryType" class="filter-select">
                     <option value="">所有类型</option>

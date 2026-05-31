@@ -5,7 +5,16 @@ document.addEventListener('DOMContentLoaded', function() {
     loadProviders();
     setupCascading();
     loadMemoryTaskStatus();
+    initTabFromUrl();
 });
+
+function initTabFromUrl() {
+    var params = new URLSearchParams(window.location.search);
+    var tab = params.get('tab');
+    if (tab && ['memory', 'mail', 'pluginStore'].includes(tab)) {
+        switchTab(tab);
+    }
+}
 
 function switchTab(name) {
     document.querySelectorAll('.settings-tab').forEach(function(t) {

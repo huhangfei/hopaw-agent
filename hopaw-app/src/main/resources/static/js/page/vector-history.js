@@ -26,11 +26,6 @@ function doSearch() {
     var params = new URLSearchParams();
     params.append('query', query);
 
-    var agentId = document.getElementById('searchAgentId').value;
-    if (agentId) {
-        params.append('agentId', agentId);
-    }
-
     var userId = document.getElementById('searchUserId').value;
     if (userId) {
         params.append('userId', userId);
@@ -86,9 +81,7 @@ function renderResults(results) {
 
     results.forEach(function(item, idx) {
         var memType = item.memoryType || '';
-        var typeLabel = memType === 'chatHistory' ? '聊天历史'
-                      : memType === 'taskRecords' ? '任务记录'
-                      : memType || '未知';
+        var typeLabel = item.memTypeName || memType;
         var typeClass = memType || 'unknown';
 
         var text = item.text || '';

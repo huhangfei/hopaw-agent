@@ -4,6 +4,9 @@ public class VectorSearchResult  extends MemorySearchResult{
 
     private String embeddingId;
 
+
+    private String memoryTypeName;
+
     public VectorSearchResult() {}
 
     public VectorSearchResult(String embeddingId) {
@@ -19,4 +22,6 @@ public class VectorSearchResult  extends MemorySearchResult{
     public String getEmbeddingId() { return embeddingId; }
     public void setEmbeddingId(String embeddingId) { this.embeddingId = embeddingId; }
 
+    public String getMemoryTypeName() { return memoryTypeName; }
+    public void setMemoryTypeName(String memoryTypeName) { this.memoryTypeName = memoryTypeName; }
 }

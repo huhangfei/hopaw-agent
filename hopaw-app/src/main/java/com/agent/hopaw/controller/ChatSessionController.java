@@ -72,7 +72,7 @@ public class ChatSessionController {
 
     @PostMapping("/create")
     @ResponseBody
-    public ResponseBean create(ChatSession session) {
+    public ResponseBean create(@RequestBody ChatSession session) {
         if(!StringUtils.hasLength(session.getTitle())){
             session.setTitle("新任务");
         }

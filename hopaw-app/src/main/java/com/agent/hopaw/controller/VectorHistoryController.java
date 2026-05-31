@@ -26,16 +26,7 @@ public class VectorHistoryController {
 
     @GetMapping("/vector-history")
     public String page(Model model) {
-        List<Agent> agents = agentMapper.findByUserId(DefaultUser.USER);
-        model.addAttribute("agents", agents);
         return "vector-history";
-    }
-
-    @GetMapping("/api/vector-history/agents")
-    @ResponseBody
-    public ResponseBean agents() {
-        List<Agent> agents = agentMapper.findByUserId(DefaultUser.USER);
-        return ResponseBean.success(agents);
     }
 
     @GetMapping("/api/vector-history/types")

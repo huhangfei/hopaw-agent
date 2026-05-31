@@ -69,7 +69,7 @@ public class MemoryManageController {
         String summary = (String) body.get("summary");
 
         // 限制不能添加任务记录和聊天历史类型
-        if (UserMemoryTypeEnum.TASK_RECORDS.getCode().equals(memoryType) || UserMemoryTypeEnum.CHAT_HISTORY.getCode().equals(memoryType)) {
+        if (UserMemoryTypeEnum.TASK_RECORDS.getCode().equals(memoryType)) {
             return ResponseBean.fail("不能添加该类型的记忆");
         }
         LongTermMemory entity = longTermMemoryService.createMemory(sessionId, memory, parentId, DefaultUser.USER, UserMemoryTypeEnum.fromCode(memoryType), summary);
@@ -93,8 +93,8 @@ public class MemoryManageController {
         if (body.containsKey("memoryType")) {
             String newType = body.get("memoryType");
             // 限制不能修改为任务记录类型
-            if (UserMemoryTypeEnum.TASK_RECORDS.getCode().equals(newType) || UserMemoryTypeEnum.CHAT_HISTORY.getCode().equals(newType)) {
-                return ResponseBean.fail("不能修改为任务记录类型的记忆");
+            if (UserMemoryTypeEnum.TASK_RECORDS.getCode().equals(newType)) {
+                return ResponseBean.fail("不能修改为该类型的记忆");
             }
             entity.setMemoryType(newType);
         }
