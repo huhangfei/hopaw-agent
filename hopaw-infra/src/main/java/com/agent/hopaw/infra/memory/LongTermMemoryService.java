@@ -1,14 +1,13 @@
 package com.agent.hopaw.infra.memory;
 
 import com.agent.hopaw.infra.constant.UserMemoryTypeEnum;
-import com.agent.hopaw.infra.mapper.ChatMemoryMapper;
 import com.agent.hopaw.infra.mapper.ChatMemoryObsoleteMapper;
 import com.agent.hopaw.infra.mapper.LongTermMemoryMapper;
 import com.agent.hopaw.infra.model.dto.MemorySearchResult;
 import com.agent.hopaw.infra.model.dto.VectorSearchResult;
 import com.agent.hopaw.infra.model.entity.ChatMemory;
-import com.agent.hopaw.infra.service.SysConfigService;
 import com.agent.hopaw.infra.model.entity.LongTermMemory;
+import com.agent.hopaw.infra.service.ISysConfigService;
 import com.agent.hopaw.infra.util.InvocationParametersWrapper;
 import dev.langchain4j.invocation.InvocationParameters;
 import org.springframework.stereotype.Service;
@@ -27,11 +26,11 @@ public class LongTermMemoryService implements ILongTermMemoryService {
 
     private final LongTermMemoryMapper longTermMemoryMapper;
     private final IVectorMemoryService vectorMemoryService;
-    private final SysConfigService sysConfigService; // Injected dependency
+    private final ISysConfigService sysConfigService; // Injected dependency
 
     private final ChatMemoryObsoleteMapper chatMemoryObsoleteMapper;
 
-    public LongTermMemoryService(LongTermMemoryMapper longTermMemoryMapper, IVectorMemoryService vectorMemoryService, SysConfigService sysConfigService, ChatMemoryObsoleteMapper chatMemoryObsoleteMapper) {
+    public LongTermMemoryService(LongTermMemoryMapper longTermMemoryMapper, IVectorMemoryService vectorMemoryService, ISysConfigService sysConfigService, ChatMemoryObsoleteMapper chatMemoryObsoleteMapper) {
         this.longTermMemoryMapper = longTermMemoryMapper;
         this.vectorMemoryService = vectorMemoryService;
         this.sysConfigService = sysConfigService;

@@ -10,7 +10,7 @@ public interface ISysConfigService {
     SysConfig getByKey(String key);
     List<SysConfig> getByKeys(List<String> keys);
     String getValueByKey(String key, String defaultValue);
-    int save(SysConfig sysConfig);
+    int insert(SysConfig sysConfig);
     int update(SysConfig sysConfig);
     int deleteById(Long id);
     int deleteByKey(String key);

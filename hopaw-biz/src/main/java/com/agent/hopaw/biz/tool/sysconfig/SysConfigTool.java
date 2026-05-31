@@ -8,7 +8,6 @@ import dev.langchain4j.agent.tool.SearchBehavior;
 import dev.langchain4j.agent.tool.Tool;
 import com.agent.hopaw.infra.tool.AgentTool;
 import org.springframework.stereotype.Component;
-import org.springframework.stereotype.Service;
 
 import java.util.List;
 
@@ -89,7 +88,7 @@ public class SysConfigTool implements AgentTool {
             return "已更新配置项：" + key;
         } else {
             SysConfig newConfig = new SysConfig(key, value, description != null ? description : "");
-            sysConfigService.save(newConfig);
+            sysConfigService.insert(newConfig);
             return "已新增配置项：" + key;
         }
     }

@@ -2,7 +2,8 @@ package com.agent.hopaw.infra.memory;
 
 import com.agent.hopaw.infra.constant.UserMemoryTypeEnum;
 import com.agent.hopaw.infra.model.dto.VectorSearchResult;
-import com.agent.hopaw.infra.service.SysConfigService;
+import com.agent.hopaw.infra.service.ISysConfigService;
+import dev.langchain4j.community.store.embedding.jvector.JVectorEmbeddingStore;
 import dev.langchain4j.data.document.Metadata;
 import dev.langchain4j.data.embedding.Embedding;
 import dev.langchain4j.data.segment.TextSegment;
@@ -10,7 +11,6 @@ import dev.langchain4j.model.embedding.EmbeddingModel;
 import dev.langchain4j.store.embedding.EmbeddingSearchRequest;
 import dev.langchain4j.store.embedding.EmbeddingSearchResult;
 import dev.langchain4j.store.embedding.EmbeddingStore;
-import dev.langchain4j.community.store.embedding.jvector.JVectorEmbeddingStore;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.boot.context.event.ApplicationReadyEvent;
@@ -35,11 +35,11 @@ public class VectorMemoryService implements IVectorMemoryService {
     private static final String METADATA_MEMORY_DATE = "memoryDate";
     private static final String METADATA_MEMORY_ID = "memoryId";
 
-    private final SysConfigService sysConfigService;
+    private final ISysConfigService sysConfigService;
     private final EmbeddingModel embeddingModel;
     private EmbeddingStore<TextSegment> embeddingStore;
 
-    public VectorMemoryService(SysConfigService sysConfigService, EmbeddingModel embeddingModel) {
+    public VectorMemoryService(ISysConfigService sysConfigService, EmbeddingModel embeddingModel) {
         this.sysConfigService = sysConfigService;
         this.embeddingModel = embeddingModel;
     }

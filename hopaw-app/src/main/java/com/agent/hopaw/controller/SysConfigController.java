@@ -2,7 +2,7 @@ package com.agent.hopaw.controller;
 
 import com.agent.hopaw.infra.model.dto.ResponseBean;
 import com.agent.hopaw.infra.model.entity.SysConfig;
-import com.agent.hopaw.infra.service.SysConfigService;
+import com.agent.hopaw.infra.service.ISysConfigService;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -11,9 +11,9 @@ import java.util.List;
 @RequestMapping("/api/config")
 public class SysConfigController {
 
-    private final SysConfigService sysConfigService;
+    private final ISysConfigService sysConfigService;
 
-    public SysConfigController(SysConfigService sysConfigService) {
+    public SysConfigController(ISysConfigService sysConfigService) {
         this.sysConfigService = sysConfigService;
     }
 
@@ -40,7 +40,7 @@ public class SysConfigController {
         if (sysConfigService.getByKey(sysConfig.getConfigKey()) != null) {
             return ResponseBean.fail("配置键已存在: " + sysConfig.getConfigKey());
         }
-        sysConfigService.save(sysConfig);
+        sysConfigService.insert(sysConfig);
         return ResponseBean.success(sysConfig);
     }
 
