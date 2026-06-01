@@ -263,6 +263,70 @@ function handleToolCall(data, requestId) {
             }
         }
 
+    } else if (data.status === 'approval') {
+        toolCallDiv.setAttribute('data-status', 'approval');
+        if (statusEl) { statusEl.textContent = '等待审批'; statusEl.classList.remove('completed'); }
+        if (iconEl) { iconEl.textContent = '⏳'; iconEl.style.animation = ''; }
+
+        var existingFooter = toolCallDiv.querySelector('.tool-call-footer');
+        if (!existingFooter) {
+            var footerDiv = document.createElement('div');
+            footerDiv.className = 'tool-call-footer';
+
+            var footerText = document.createElement('span');
+            footerText.className = 'tool-call-footer-text';
+            footerText.textContent = '⚠️ 此工具调用需要审批';
+            footerDiv.appendChild(footerText);
+
+            var btnGroup = document.createElement('div');
+            btnGroup.className = 'tool-call-footer-btns';
+
+            var approveBtn = document.createElement('button');
+            approveBtn.className = 'tool-call-approve-btn';
+            approveBtn.textContent = '通过';
+            approveBtn.onclick = function(e) {
+                e.stopPropagation();
+                e.preventDefault();
+                approveBtn.disabled = true;
+                rejectBtn.disabled = true;
+                fetch('/api/session/tool/approval', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                    body: 'sessionId=' + encodeURIComponent(data.sessionId || currentSessionId) + '&callId=' + encodeURIComponent(data.toolCallId) + '&allowed=true'
+                }).then(function() {
+                    footerDiv.remove();
+                }).catch(function() {
+                    approveBtn.disabled = false;
+                    rejectBtn.disabled = false;
+                });
+            };
+
+            var rejectBtn = document.createElement('button');
+            rejectBtn.className = 'tool-call-reject-btn';
+            rejectBtn.textContent = '拒绝';
+            rejectBtn.onclick = function(e) {
+                e.stopPropagation();
+                e.preventDefault();
+                approveBtn.disabled = true;
+                rejectBtn.disabled = true;
+                fetch('/api/session/tool/approval', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                    body: 'sessionId=' + encodeURIComponent(data.sessionId || currentSessionId) + '&callId=' + encodeURIComponent(data.toolCallId) + '&allowed=false'
+                }).then(function() {
+                    footerDiv.remove();
+                }).catch(function() {
+                    approveBtn.disabled = false;
+                    rejectBtn.disabled = false;
+                });
+            };
+
+            btnGroup.appendChild(approveBtn);
+            btnGroup.appendChild(rejectBtn);
+            footerDiv.appendChild(btnGroup);
+            toolCallDiv.appendChild(footerDiv);
+        }
+
     } else if (data.status === 'executed') {
         delete msgState.toolCallArgsBuffer[data.toolCallId];
         delete msgState.toolCallResultBuffer[data.toolCallId];
