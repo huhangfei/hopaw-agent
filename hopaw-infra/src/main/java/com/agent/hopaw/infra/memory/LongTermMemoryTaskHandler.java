@@ -6,9 +6,9 @@ import com.agent.hopaw.infra.mapper.ChatMemoryObsoleteMapper;
 import com.agent.hopaw.infra.model.entity.ChatMemory;
 import com.agent.hopaw.infra.model.entity.LongTermMemory;
 import com.agent.hopaw.infra.model.entity.ScheduledTask;
+import com.agent.hopaw.infra.monitor.LangChain4jChatModelListener;
 import com.agent.hopaw.infra.service.IAiModelService;
 import com.agent.hopaw.infra.service.ISysConfigService;
-import com.agent.hopaw.infra.service.ITokenUsageService;
 import com.agent.hopaw.infra.task.TaskHandler;
 import com.agent.hopaw.infra.util.InvocationParametersWrapper;
 import dev.langchain4j.agent.tool.P;
@@ -24,6 +24,7 @@ import dev.langchain4j.service.UserMessage;
 import dev.langchain4j.service.V;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
 
@@ -40,21 +41,21 @@ public class LongTermMemoryTaskHandler implements TaskHandler {
     private final IAiModelService aiModelService;
     private final ILongTermMemoryService longTermMemoryService;
     private final ISysConfigService sysConfigService;
-    private final ITokenUsageService tokenUsageService;
+    private final ApplicationEventPublisher eventPublisher;
     private final ChatMemoryObsoleteMapper chatMemoryMapper;
-    
+
     // 运行中标记，防止并发执行
     private volatile boolean running = false;
 
     public LongTermMemoryTaskHandler(IAiModelService aiModelService,
                                      ILongTermMemoryService longTermMemoryService,
                                      ISysConfigService sysConfigService,
-                                     ITokenUsageService tokenUsageService,
+                                     ApplicationEventPublisher eventPublisher,
                                      ChatMemoryObsoleteMapper chatMemoryMapper) {
         this.aiModelService = aiModelService;
         this.longTermMemoryService = longTermMemoryService;
         this.sysConfigService = sysConfigService;
-        this.tokenUsageService = tokenUsageService;
+        this.eventPublisher = eventPublisher;
         this.chatMemoryMapper = chatMemoryMapper;
     }
     public void processAgentMemories() {
@@ -236,12 +237,12 @@ public class LongTermMemoryTaskHandler implements TaskHandler {
                 } catch (NumberFormatException ignored) {
                 }
             }
-            com.agent.hopaw.infra.monitor.LangChain4jMonitor langChain4jMonitor = new com.agent.hopaw.infra.monitor.LangChain4jMonitor(AiModelCallSourceEnum.MEMORYORGANIZE)
+            LangChain4jChatModelListener langChain4JChatModelListener = new LangChain4jChatModelListener(AiModelCallSourceEnum.MEMORYORGANIZE)
                     .setSessionId(sessionId)
                     .setUserId(userId)
-                    .setTokenUsageService(tokenUsageService);
+                    .setEventPublisher(eventPublisher);
 
-            ChatModel chatModel = aiModelService.createChatModel(modelId, true, langChain4jMonitor);
+            ChatModel chatModel = aiModelService.createChatModel(modelId, true, langChain4JChatModelListener);
 
             String systemMessage = buildSystemMessage();
             if (!StringUtils.hasLength(systemMessage)) {

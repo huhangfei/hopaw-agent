@@ -1,7 +1,7 @@
 package com.agent.hopaw.infra.monitor;
 
 import com.agent.hopaw.infra.constant.AiModelCallSourceEnum;
-import com.agent.hopaw.infra.service.ITokenUsageService;
+import com.agent.hopaw.infra.event.TokenUsageEvent;
 import dev.langchain4j.data.message.*;
 import dev.langchain4j.model.chat.listener.ChatModelErrorContext;
 import dev.langchain4j.model.chat.listener.ChatModelListener;
@@ -12,6 +12,7 @@ import dev.langchain4j.model.chat.response.ChatResponse;
 import dev.langchain4j.model.chat.response.ChatResponseMetadata;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.context.ApplicationEventPublisher;
 
 import java.time.LocalDateTime;
 import java.util.stream.Collectors;
@@ -20,11 +21,11 @@ import java.util.stream.Collectors;
  * 监控
  * @author hhf
  */
-public class LangChain4jMonitor implements ChatModelListener {
+public class LangChain4jChatModelListener implements ChatModelListener {
 
-    private static final Logger logger = LoggerFactory.getLogger(LangChain4jMonitor.class);
+    private static final Logger logger = LoggerFactory.getLogger(LangChain4jChatModelListener.class);
 
-    public LangChain4jMonitor(AiModelCallSourceEnum source) {
+    public LangChain4jChatModelListener(AiModelCallSourceEnum source) {
         this.source = source;
     }
 
@@ -42,22 +43,22 @@ public class LangChain4jMonitor implements ChatModelListener {
      */
     private String userId;
 
-    public LangChain4jMonitor setTokenUsageService(ITokenUsageService tokenUsageService) {
-        this.tokenUsageService = tokenUsageService;
-        return this;
-    }
-
-    private ITokenUsageService tokenUsageService;
-
-    public LangChain4jMonitor setAgentId(Long agentId) {
+    public LangChain4jChatModelListener setAgentId(Long agentId) {
         this.agentId = agentId;
         return this;
     }
 
-    public LangChain4jMonitor setUserId(String userId) {
+    public LangChain4jChatModelListener setUserId(String userId) {
         this.userId = userId;
         return this;
     }
+
+    public LangChain4jChatModelListener setEventPublisher(ApplicationEventPublisher eventPublisher) {
+        this.eventPublisher = eventPublisher;
+        return this;
+    }
+
+    private ApplicationEventPublisher eventPublisher;
 
     @Override
     public void onRequest(ChatModelRequestContext requestContext) {
@@ -128,21 +129,22 @@ public class LangChain4jMonitor implements ChatModelListener {
             logger.debug("  - 输出 tokens: {}", tokenUsage.outputTokenCount());
             logger.debug("  - 总 tokens: {}", tokenUsage.totalTokenCount());
 
-            if(tokenUsageService!=null){
+            if(eventPublisher!=null){
                 try {
-                    com.agent.hopaw.infra.model.entity.TokenUsage record = new com.agent.hopaw.infra.model.entity.TokenUsage();
-                    record.setSessionId(sessionId);
-                    record.setAgentId(agentId);
-                    record.setUserId(userId);
-                    record.setSource(source.getValue());
-                    record.setModelName(metadata.modelName());
-                    record.setInputTokens(tokenUsage.inputTokenCount());
-                    record.setOutputTokens(tokenUsage.outputTokenCount());
-                    record.setTotalTokens(tokenUsage.totalTokenCount());
-                    record.setCreateTime(LocalDateTime.now());
-                    tokenUsageService.save(record);
+                    TokenUsageEvent message = new TokenUsageEvent(
+                            agentId,
+                            metadata.modelName(),
+                            tokenUsage.inputTokenCount(),
+                            tokenUsage.outputTokenCount(),
+                            tokenUsage.totalTokenCount(),
+                            userId,
+                            sessionId,
+                            source.getValue(),
+                            LocalDateTime.now()
+                    );
+                    eventPublisher.publishEvent(message);
                 } catch (Exception e) {
-                    logger.error("保存 Token 用量记录失败", e);
+                    logger.error("发布 Token 用量消息失败", e);
                 }
             }
         }
@@ -160,7 +162,7 @@ public class LangChain4jMonitor implements ChatModelListener {
         return sessionId;
     }
 
-    public LangChain4jMonitor setSessionId(String sessionId) {
+    public LangChain4jChatModelListener setSessionId(String sessionId) {
         this.sessionId = sessionId;
         return this;
     }

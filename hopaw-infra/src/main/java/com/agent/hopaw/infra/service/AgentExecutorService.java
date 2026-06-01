@@ -8,12 +8,11 @@ import com.agent.hopaw.infra.model.dto.AgentExecutorParams;
 import com.agent.hopaw.infra.model.dto.SkillInfo;
 import com.agent.hopaw.infra.model.dto.ToolSetInfo;
 import com.agent.hopaw.infra.model.dto.UserRequest;
-import com.agent.hopaw.infra.monitor.LangChain4jMonitor;
 import com.agent.hopaw.infra.storage.ChatHistoryStore;
 import com.agent.hopaw.infra.model.entity.Agent;
-import com.agent.hopaw.infra.tool.AgentTool;
 import com.agent.hopaw.infra.tool.IAgentToolService;
 import dev.langchain4j.data.message.TextContent;
+import dev.langchain4j.model.chat.listener.ChatModelListener;
 import dev.langchain4j.model.embedding.EmbeddingModel;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
@@ -35,11 +34,13 @@ public class AgentExecutorService implements IAgentExecutorService {
     private final ISkillService ISkillService;
     private final IChatSessionService chatSessionService;
 
-    private final ApplicationEventPublisher eventPublisher;
+    private final IChatModelListenerProvider chatModelListenerProvider;
+
+    private final  ApplicationEventPublisher eventPublisher;
 
     private final Map<String, IAgentExecutor> agentExecutors = new HashMap<>();
 
-    public AgentExecutorService(IAgentService agentService, AiModelService aiModelService, ChatHistoryStore chatHistoryStore, TokenUsageService tokenUsageService, IChatMemoryService chatMemoryService, IAgentToolService agentToolService, EmbeddingModel embeddingModel, ISkillService ISkillService, IChatSessionService chatSessionService, ApplicationEventPublisher eventPublisher) {
+    public AgentExecutorService(IAgentService agentService, AiModelService aiModelService, ChatHistoryStore chatHistoryStore, TokenUsageService tokenUsageService, IChatMemoryService chatMemoryService, IAgentToolService agentToolService, EmbeddingModel embeddingModel, ISkillService ISkillService, IChatSessionService chatSessionService, IChatModelListenerProvider chatModelListenerProvider, ApplicationEventPublisher eventPublisher) {
         this.agentService = agentService;
         this.aiModelService = aiModelService;
         this.chatHistoryStore = chatHistoryStore;
@@ -49,6 +50,7 @@ public class AgentExecutorService implements IAgentExecutorService {
         this.embeddingModel = embeddingModel;
         this.ISkillService = ISkillService;
         this.chatSessionService = chatSessionService;
+        this.chatModelListenerProvider = chatModelListenerProvider;
         this.eventPublisher = eventPublisher;
     }
 
@@ -137,11 +139,7 @@ public class AgentExecutorService implements IAgentExecutorService {
         if (userRequest.getAiModelId() == null) {
             throw new RuntimeException("智能体没有设置AI模型");
         }
-        LangChain4jMonitor langChain4jMonitor = new LangChain4jMonitor(AiModelCallSourceEnum.Chat)
-                .setSessionId(userRequest.getSessionId())
-                .setAgentId(userRequest.getAgentId())
-                .setUserId(userRequest.getUserId())
-                .setTokenUsageService(tokenUsageService);
+        ChatModelListener chatModelListener = chatModelListenerProvider.getChatModelListener(AiModelCallSourceEnum.Chat, userRequest.getSessionId(), userRequest.getUserId(), userRequest.getAgentId());
         List<String> selectedToolNames = parseToolNames(agent.getTools());
         List<ToolSetInfo> selectedTools = agentToolService.getToolSets().stream()
                 .filter(t -> selectedToolNames.contains(t.getName()))
@@ -163,7 +161,7 @@ public class AgentExecutorService implements IAgentExecutorService {
         Function<Long, String> systemMessageProvider = aId -> {
             return getSystemMessage(userRequest.getSessionId(), agent, userRequest.getUserId(), selectedTools, userRequest.getSkillNames());
         };
-        AgentExecutor agentExecutor = new AgentExecutor(agentExecutorParams, chatMemoryService, embeddingModel, systemMessageProvider, chatHistoryStore, aiModelService, langChain4jMonitor, eventPublisher, chatSessionService);
+        AgentExecutor agentExecutor = new AgentExecutor(agentExecutorParams, chatMemoryService, embeddingModel, systemMessageProvider, chatHistoryStore, aiModelService, chatModelListener, eventPublisher, chatSessionService);
         agentExecutors.put(userRequest.getSessionId(), agentExecutor);
         return agentExecutor;
     }

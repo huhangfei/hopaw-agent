@@ -2,7 +2,7 @@ package com.agent.hopaw.infra.service;
 
 import com.agent.hopaw.infra.constant.AiModelCallSourceEnum;
 import com.agent.hopaw.infra.mapper.AiModelMapper;
-import com.agent.hopaw.infra.monitor.LangChain4jMonitor;
+import com.agent.hopaw.infra.monitor.LangChain4jChatModelListener;
 import com.agent.hopaw.infra.model.entity.*;
 import com.agent.hopaw.infra.model.dto.*;
 import com.agent.hopaw.infra.chat.ChatModelFactory;
@@ -12,6 +12,7 @@ import dev.langchain4j.model.chat.StreamingChatModel;
 import dev.langchain4j.model.chat.listener.ChatModelListener;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 
 import java.util.HashMap;
@@ -24,13 +25,13 @@ public class AiModelService implements IAiModelService {
     private static final Logger log = LoggerFactory.getLogger(AiModelService.class);
     private final AiModelMapper aiModelMapper;
     private final AiModelProviderService aiModelProviderService;
+    private final IChatModelListenerProvider chatModelListenerProvider;
 
     private final Map<String, ChatModelFactory> factories = new HashMap<>();
-    private final TokenUsageService tokenUsageService;
-    public AiModelService(AiModelMapper aiModelMapper, AiModelProviderService aiModelProviderService, List<ChatModelFactory> factoryList, TokenUsageService tokenUsageService) {
+    public AiModelService(AiModelMapper aiModelMapper, AiModelProviderService aiModelProviderService, List<ChatModelFactory> factoryList, IChatModelListenerProvider chatModelListenerProvider) {
         this.aiModelMapper = aiModelMapper;
         this.aiModelProviderService = aiModelProviderService;
-        this.tokenUsageService = tokenUsageService;
+        this.chatModelListenerProvider = chatModelListenerProvider;
         for (ChatModelFactory factory : factoryList) {
             factories.put(factory.getProviderName().toLowerCase(), factory);
         }
@@ -88,7 +89,8 @@ public class AiModelService implements IAiModelService {
             org.springframework.beans.BeanUtils.copyProperties(aiModel, aiModelVO);
             aiModelVO.setAiModelProvider(provider);
             ChatModelFactory factory = factories.get(aiModelVO.getAiModelProvider().getSdkName().toLowerCase());
-            ChatModel chatModel = factory.createChatModel(aiModelVO, false, new LangChain4jMonitor(AiModelCallSourceEnum.ModelTEST).setTokenUsageService(tokenUsageService));
+            ChatModelListener chatModelListener = chatModelListenerProvider.getChatModelListener(AiModelCallSourceEnum.ModelTEST, null, null, null);
+            ChatModel chatModel = factory.createChatModel(aiModelVO, false, chatModelListener);
             ModelCapabilityTestResult result = factory.testModelCapability(chatModel);
 
             log.info("模型能力测试结果 [{}]: {}", aiModel.getModelName(), result.getMessage());
@@ -125,16 +127,16 @@ public class AiModelService implements IAiModelService {
         return aiModelVO;
     }
 
-    public ChatModel createChatModel(Long aiModelId,boolean enableThinking, ChatModelListener langChain4jMonitor) {
+    public ChatModel createChatModel(Long aiModelId,boolean enableThinking, ChatModelListener chatModelListener) {
         AiModelVO aiModelVO = findAiModelVOById(aiModelId);
         ChatModelFactory chatModelFactory = factories.get(aiModelVO.getAiModelProvider().getSdkName().toLowerCase());
-        return chatModelFactory.createChatModel(aiModelVO, enableThinking, langChain4jMonitor);
+        return chatModelFactory.createChatModel(aiModelVO, enableThinking, chatModelListener);
     }
 
-    public StreamingChatModel createStreamingChatModel(Long aiModelId,boolean enableThinking, ChatModelListener langChain4jMonitor) {
+    public StreamingChatModel createStreamingChatModel(Long aiModelId,boolean enableThinking, ChatModelListener chatModelListener) {
         AiModelVO aiModelVO = findAiModelVOById(aiModelId);
         ChatModelFactory chatModelFactory = factories.get(aiModelVO.getAiModelProvider().getSdkName().toLowerCase());
-        return chatModelFactory.createStreamingChatModel(aiModelVO, enableThinking, langChain4jMonitor);
+        return chatModelFactory.createStreamingChatModel(aiModelVO, enableThinking, chatModelListener);
     }
 
     public Map<String, ChatModelFactory> getAllFactories() {

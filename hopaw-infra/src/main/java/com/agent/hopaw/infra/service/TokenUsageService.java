@@ -3,7 +3,7 @@ package com.agent.hopaw.infra.service;
 import com.agent.hopaw.infra.event.TokenUsageEvent;
 import com.agent.hopaw.infra.mapper.TokenUsageMapper;
 import com.agent.hopaw.infra.model.entity.TokenUsage;
-import org.springframework.context.ApplicationEventPublisher;
+import org.springframework.context.event.EventListener;
 import org.springframework.stereotype.Service;
 import java.time.LocalDateTime;
 import java.util.HashMap;
@@ -14,11 +14,24 @@ import java.util.Map;
 public class TokenUsageService implements ITokenUsageService {
 
     private final TokenUsageMapper tokenUsageMapper;
-    private final ApplicationEventPublisher eventPublisher;
 
-    public TokenUsageService(TokenUsageMapper tokenUsageMapper, ApplicationEventPublisher eventPublisher) {
+    public TokenUsageService(TokenUsageMapper tokenUsageMapper) {
         this.tokenUsageMapper = tokenUsageMapper;
-        this.eventPublisher = eventPublisher;
+    }
+
+    @EventListener
+    public void onTokenUsageMessage(TokenUsageEvent message) {
+        TokenUsage tokenUsage = new TokenUsage();
+        tokenUsage.setAgentId(message.getAgentId());
+        tokenUsage.setModelName(message.getModelName());
+        tokenUsage.setInputTokens(message.getInputTokens());
+        tokenUsage.setOutputTokens(message.getOutputTokens());
+        tokenUsage.setTotalTokens(message.getTotalTokens());
+        tokenUsage.setUserId(message.getUserId());
+        tokenUsage.setSessionId(message.getSessionId());
+        tokenUsage.setSource(message.getSource());
+        tokenUsage.setCreateTime(message.getCreateTime() != null ? message.getCreateTime() : LocalDateTime.now());
+        tokenUsageMapper.insert(tokenUsage);
     }
 
     public void save(TokenUsage tokenUsage) {
@@ -26,7 +39,6 @@ public class TokenUsageService implements ITokenUsageService {
             tokenUsage.setCreateTime(LocalDateTime.now());
         }
         tokenUsageMapper.insert(tokenUsage);
-        eventPublisher.publishEvent(new TokenUsageEvent(tokenUsage));
     }
 
     public Map<String, Object> queryPage(LocalDateTime startTime, LocalDateTime endTime, String userId, Long agentId, String modelName, String source, String sessionId, int page, int size) {

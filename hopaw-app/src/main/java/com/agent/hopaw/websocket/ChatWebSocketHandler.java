@@ -5,7 +5,6 @@ import com.agent.hopaw.infra.event.TokenUsageEvent;
 import com.agent.hopaw.infra.executor.IAgentExecutor;
 import com.agent.hopaw.infra.model.dto.AiMessageBaseInfo;
 import com.agent.hopaw.infra.model.dto.UserRequest;
-import com.agent.hopaw.infra.model.entity.TokenUsage;
 import com.agent.hopaw.infra.service.IAgentExecutorService;
 import com.alibaba.fastjson2.JSON;
 import com.alibaba.fastjson2.JSONObject;
@@ -140,9 +139,8 @@ public class ChatWebSocketHandler extends TextWebSocketHandler {
     }
 
     @EventListener
-    public void onTokenUsageEvent(TokenUsageEvent event) {
-        TokenUsage tokenUsage = event.getTokenUsage();
-        String userId = tokenUsage.getUserId();
+    public void onTokenUsageMessage(TokenUsageEvent message) {
+        String userId = message.getUserId();
         if (userId == null) {
             return;
         }
@@ -152,26 +150,26 @@ public class ChatWebSocketHandler extends TextWebSocketHandler {
         }
         Map<String, Object> data = new HashMap<>();
         data.put("type", "token_usage");
-        data.put("id", tokenUsage.getId());
-        data.put("agentId", tokenUsage.getAgentId());
-        data.put("modelName", tokenUsage.getModelName());
-        data.put("inputTokens", tokenUsage.getInputTokens());
-        data.put("outputTokens", tokenUsage.getOutputTokens());
-        data.put("totalTokens", tokenUsage.getTotalTokens());
-        data.put("sessionId", tokenUsage.getSessionId());
-        data.put("source", tokenUsage.getSource());
-        data.put("createTime", tokenUsage.getCreateTime() != null ? tokenUsage.getCreateTime().toString() : null);
-        String message = JSON.toJSONString(data);
+        data.put("id", null);
+        data.put("agentId", message.getAgentId());
+        data.put("modelName", message.getModelName());
+        data.put("inputTokens", message.getInputTokens());
+        data.put("outputTokens", message.getOutputTokens());
+        data.put("totalTokens", message.getTotalTokens());
+        data.put("sessionId", message.getSessionId());
+        data.put("source", message.getSource());
+        data.put("createTime", message.getCreateTime() != null ? message.getCreateTime().toString() : null);
+        String messageJson = JSON.toJSONString(data);
         for (String id : sessionIds) {
             WebSocketSession wsSession = sessionMap.get(id);
             if (wsSession != null && wsSession.isOpen()) {
                 try {
                     Object lock = SESSION_LOCK_MAP.computeIfAbsent(id, k -> new Object());
                     synchronized (lock) {
-                        wsSession.sendMessage(new TextMessage(message));
+                        wsSession.sendMessage(new TextMessage(messageJson));
                     }
                 } catch (IOException e) {
-                    logger.error("Failed to send token_usage event to session {}: {}", id, e.getMessage());
+                    logger.error("Failed to send token_usage message to session {}: {}", id, e.getMessage());
                 }
             }
         }

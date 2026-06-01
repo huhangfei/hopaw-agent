@@ -5,12 +5,13 @@ import com.agent.hopaw.infra.model.entity.Agent;
 import com.agent.hopaw.infra.model.entity.ScheduledTask;
 import com.agent.hopaw.infra.service.IAgentService;
 import com.agent.hopaw.infra.service.IAiModelService;
-import com.agent.hopaw.infra.service.ITokenUsageService;
+import com.agent.hopaw.infra.service.IChatModelListenerProvider;
 import com.agent.hopaw.infra.task.TaskHandler;
 import com.agent.hopaw.infra.tool.AgentTool;
 import com.agent.hopaw.infra.util.InvocationParametersWrapper;
 import dev.langchain4j.invocation.InvocationParameters;
 import dev.langchain4j.model.chat.ChatModel;
+import dev.langchain4j.model.chat.listener.ChatModelListener;
 import dev.langchain4j.model.chat.request.ChatRequestParameters;
 import dev.langchain4j.service.AiServices;
 import dev.langchain4j.service.UserMessage;
@@ -31,12 +32,12 @@ public class AgentTaskHandler implements TaskHandler {
     private final IAiModelService aiModelService;
     private final IAgentService agentService;
     private final List<AgentTool> allTools;
-    private final ITokenUsageService tokenUsageService;
-    public AgentTaskHandler(IAiModelService aiModelService, IAgentService agentService, @Lazy List<AgentTool> allTools, ITokenUsageService tokenUsageService) {
+    private final IChatModelListenerProvider chatModelListenerProvider;
+    public AgentTaskHandler(IAiModelService aiModelService, IAgentService agentService, @Lazy List<AgentTool> allTools, IChatModelListenerProvider chatModelListenerProvider) {
         this.aiModelService = aiModelService;
         this.agentService = agentService;
         this.allTools = allTools;
-        this.tokenUsageService = tokenUsageService;
+        this.chatModelListenerProvider = chatModelListenerProvider;
     }
 
 
@@ -64,8 +65,8 @@ public class AgentTaskHandler implements TaskHandler {
         if(agentIdStr != null && !agentIdStr.isEmpty() && task.getDescription() != null && !task.getDescription().isEmpty()){
             Long agentId = Long.parseLong(agentIdStr);
             Agent agent = agentService.getAgentById(agentId);
-            com.agent.hopaw.infra.monitor.LangChain4jMonitor langChain4jMonitor = new com.agent.hopaw.infra.monitor.LangChain4jMonitor(AiModelCallSourceEnum.AgentTask).setAgentId(agentId).setUserId(task.getUserId()).setTokenUsageService(tokenUsageService);
-            ChatModel chatModel = aiModelService.createChatModel(agent.getAiModelId(), agent.getEnableThinking(),langChain4jMonitor);
+            ChatModelListener chatModelListener = chatModelListenerProvider.getChatModelListener(AiModelCallSourceEnum.AgentTask, task.getSessionId(), task.getUserId(), agentId);
+            ChatModel chatModel = aiModelService.createChatModel(agent.getAiModelId(), agent.getEnableThinking(),chatModelListener);
             List<String> selectTools = parseToolNames(agent.getTools());
 
             List<AgentTool> selectedTools = allTools.stream()

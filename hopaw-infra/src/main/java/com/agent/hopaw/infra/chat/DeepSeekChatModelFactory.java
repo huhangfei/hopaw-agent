@@ -3,7 +3,6 @@ package com.agent.hopaw.infra.chat;
 import com.agent.hopaw.infra.constant.ModelProviderEnum;
 import com.agent.hopaw.infra.model.entity.AiModelProvider;
 import com.agent.hopaw.infra.model.dto.AiModelVO;
-import com.agent.hopaw.infra.monitor.LangChain4jMonitor;
 import dev.langchain4j.model.chat.ChatModel;
 import dev.langchain4j.model.chat.StreamingChatModel;
 import dev.langchain4j.model.chat.listener.ChatModelListener;
