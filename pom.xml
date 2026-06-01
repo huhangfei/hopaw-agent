@@ -20,6 +20,7 @@
         <module>hopaw-contract</module>
         <module>hopaw-infra</module>
         <module>hopaw-biz</module>
+        <module>hopaw-avatar</module>
         <module>hopaw-app</module>
         <module>hopaw-plugin-repo</module>
 <!--        <module>tools/hopaw-tool-webpage</module>-->
@@ -53,6 +54,11 @@
             <dependency>
                 <groupId>com.hopaw.agent</groupId>
                 <artifactId>hopaw-infra</artifactId>
+                <version>${parent.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.hopaw.agent</groupId>
+                <artifactId>hopaw-avatar</artifactId>
                 <version>${parent.version}</version>
             </dependency>
             <dependency>

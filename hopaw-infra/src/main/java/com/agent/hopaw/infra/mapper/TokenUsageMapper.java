@@ -53,4 +53,6 @@ public interface TokenUsageMapper {
                                           @Param("minId") Long minId,
                                           @Param("limit") int limit);
 
+    TokenUsage summaryByUserId(@Param("userId") String userId);
+
 }

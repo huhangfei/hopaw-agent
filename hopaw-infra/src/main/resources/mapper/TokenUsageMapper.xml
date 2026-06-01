@@ -97,4 +97,14 @@
         ORDER BY id desc
         LIMIT #{limit}
     </select>
+
+    <select id="summaryByUserId" resultMap="TokenUsageResultMap">
+        SELECT
+        COALESCE(SUM(input_tokens), 0) AS input_tokens,
+        COALESCE(SUM(output_tokens), 0) AS output_tokens,
+        COALESCE(SUM(total_tokens), 0) AS total_tokens,
+        COUNT(*) AS id
+        FROM token_usage
+        WHERE user_id = #{userId}
+    </select>
 </mapper>
