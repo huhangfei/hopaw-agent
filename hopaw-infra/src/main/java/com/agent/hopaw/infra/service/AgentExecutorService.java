@@ -65,6 +65,14 @@ public class AgentExecutorService implements IAgentExecutorService {
     }
 
     @Override
+    public void toolApprovalComplete(String sessionId, String callId, Boolean allowed) {
+        IAgentExecutor IAgentExecutor = agentExecutors.get(sessionId);
+        if (IAgentExecutor != null) {
+            IAgentExecutor.toolApprovalComplete(callId, allowed);
+        }
+    }
+
+    @Override
     public void stopTool(String sessionId, String callId) {
         IAgentExecutor IAgentExecutor = agentExecutors.get(sessionId);
         if (IAgentExecutor != null) {

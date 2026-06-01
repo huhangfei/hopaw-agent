@@ -19,6 +19,12 @@ public class AgentExecutorParams {
     private Boolean vectorToolSearch;
     private Integer vectorToolSearchMaxResults;
     private String extParams;
+    /**
+     * 工具执行权限
+     * user_control 用户控制
+     * smart_call 智能调用
+     * auto 完全自动
+     */
     private String toolCallPermission;
     private List<AgentTool> toolSets;
     private List<String> skillNames;

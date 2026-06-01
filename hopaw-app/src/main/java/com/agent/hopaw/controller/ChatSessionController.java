@@ -116,6 +116,13 @@ public class ChatSessionController {
         return ResponseBean.success();
     }
 
+    @PostMapping("/tool/approval")
+    @ResponseBody
+    public ResponseBean stopTool(@RequestParam String sessionId, @RequestParam String callId, @RequestParam Boolean allowed) {
+        agentExecutorService.toolApprovalComplete(sessionId, callId,allowed);
+        return ResponseBean.success();
+    }
+
     @GetMapping("/{sessionId}/running")
     @ResponseBody
     public ResponseBean isRunning(@PathVariable String sessionId) {

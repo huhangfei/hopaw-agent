@@ -16,7 +16,7 @@ public interface IAgentExecutorService {
     void addToolStopHook(String sessionId, String callId, Consumer<String> hook);
 
     void sendToolRunningContent(String sessionId, String callId, Object resultPartial);
-
+    void toolApprovalComplete(String sessionId, String callId, Boolean allowed);
     void stopTool(String sessionId, String callId);
 
     boolean toolIsCancelled(String sessionId, String callId);

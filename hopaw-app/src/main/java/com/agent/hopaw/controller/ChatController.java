@@ -10,6 +10,7 @@ import com.agent.hopaw.infra.service.IAgentExecutorService;
 import com.agent.hopaw.infra.service.IChatHistoryService;
 import com.agent.hopaw.infra.service.IChatSessionService;
 import com.agent.hopaw.infra.tool.IAgentToolService;
+import com.agent.hopaw.infra.util.UuidUtil;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -83,7 +84,7 @@ public class ChatController {
         model.addAttribute("selectedAiModelId", aiModelId);
         model.addAttribute("enableThinking", enableThinking);
         model.addAttribute("toolCallPermission", toolCallPermission);
-        model.addAttribute("currentSessionId", sessionId==null? UUID.randomUUID().toString() :sessionId);
+        model.addAttribute("currentSessionId", sessionId==null? UuidUtil.generateSimpleUUID() :sessionId);
         List<ToolSetInfo> toolSets = agentToolService.getToolSets();
         model.addAttribute("toolSets", toolSets);
         return "index";

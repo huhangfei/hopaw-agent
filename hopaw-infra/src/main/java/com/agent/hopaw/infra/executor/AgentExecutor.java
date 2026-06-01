@@ -2,6 +2,7 @@ package com.agent.hopaw.infra.executor;
 
 
 import com.agent.hopaw.infra.constant.ChatMemoryStatusEnum;
+import com.agent.hopaw.infra.constant.ToolCallStatus;
 import com.agent.hopaw.infra.memory.IChatMemoryService;
 import com.agent.hopaw.infra.model.entity.*;
 import com.agent.hopaw.infra.model.dto.*;
@@ -10,6 +11,7 @@ import com.agent.hopaw.infra.service.IChatSessionService;
 import com.agent.hopaw.infra.storage.ChatHistoryStore;
 import com.agent.hopaw.infra.tool.AgentTool;
 import com.agent.hopaw.infra.util.InvocationParametersWrapper;
+import com.agent.hopaw.infra.util.PendingResponse;
 import com.agent.hopaw.infra.util.UuidUtil;
 import com.alibaba.fastjson2.JSON;
 import dev.langchain4j.data.message.*;
@@ -76,6 +78,7 @@ public class AgentExecutor implements IAgentExecutor {
     private final java.util.concurrent.ConcurrentMap<String, AtomicBoolean> toolCancelInvocations = new ConcurrentHashMap<>();
     private final java.util.concurrent.ConcurrentMap<String, CountDownLatch> toolCancelLatch = new ConcurrentHashMap<>();
     private final java.util.concurrent.ConcurrentMap<String, Consumer<String>> toolStopHooks = new ConcurrentHashMap<>();
+    private final java.util.concurrent.ConcurrentMap<String, PendingResponse<Boolean>> toolApprovalLocks = new ConcurrentHashMap<>();
     private final ChatMemoryId memoryId;
     private final EmbeddingModel embeddingModel;
     private final ThreadPoolExecutor toolExecutor;
@@ -146,6 +149,11 @@ public class AgentExecutor implements IAgentExecutor {
 
     @Override
     public void stop() {
+
+        //拒绝所有审批
+        toolApprovalLocks.values().forEach(x->{
+            x.complete(false);
+        });
         //停止所有工具
         toolCancelInvocations.values().forEach(atomicBoolean -> atomicBoolean.set(true));
         toolStopHooks.entrySet().forEach(entry -> {
@@ -160,6 +168,7 @@ public class AgentExecutor implements IAgentExecutor {
                 logger.error("Tool cancellation latch await interrupted", e);
             }
         });
+
         //停止任务
         cancelTask.set(true);
 
@@ -224,6 +233,18 @@ public class AgentExecutor implements IAgentExecutor {
     public void sendToolRunningContent(String callId, Object resultPartial) {
         AiToolCallMessageInfo aiToolCallMessageInfo = AiToolCallMessageInfo.running(sessionId, requestId, callId, resultPartial);
         agentMessageHandler.sendMessageToChannel(aiToolCallMessageInfo);
+    }
+
+    private void sendToolApprovalMessage(String sessionId,String callId, String toolName, Object arguments){
+        AiToolCallMessageInfo aiToolCallMessageInfo = AiToolCallMessageInfo.approval(sessionId, requestId, callId, toolName,arguments);
+        agentMessageHandler.sendMessageToChannel(aiToolCallMessageInfo);
+    }
+    @Override
+    public void toolApprovalComplete(String callId,Boolean allowed){
+        String approvalId = callId;
+        if(toolApprovalLocks.containsKey(approvalId)){
+            toolApprovalLocks.get(approvalId).complete(allowed);
+        }
     }
 
     @Override
@@ -298,9 +319,33 @@ public class AgentExecutor implements IAgentExecutor {
                         }
                     })
                     .beforeToolExecution(toolExecution -> {
-                        toolExecution.invocationContext().invocationParameters().put("toolCallId", toolExecution.request().id());
-                        // 任务开始
-                        agentMessageHandler.beforeToolExecutionHandler(toolExecution);
+                        String toolCallId = toolExecution.request().id();
+                        toolExecution.invocationContext().invocationParameters().put("toolCallId", toolCallId);
+                        //拦截执行
+                        boolean allowed=false;
+                        if("auto".equals(agentExecutorParams.getToolCallPermission())){
+                            allowed=true;
+                        }else if("smart_call".equals(agentExecutorParams.getToolCallPermission())){
+
+                        }else{
+
+                        }
+                        if(!allowed){
+                            //需要审批
+                            String approvalId=toolCallId;
+                            // 这个对象会阻塞工具的进一步执行，直到被外部完成
+                            PendingResponse<Boolean> pending = new PendingResponse<>(approvalId);
+                            toolApprovalLocks.put(approvalId,pending);
+                            agentMessageHandler.beforeToolExecutionHandler(toolExecution,"tool_call_approval");
+                            //审批结果
+                            allowed = pending.blockingGet();
+                        }
+                        if(allowed){
+                            // 任务开始
+                            agentMessageHandler.beforeToolExecutionHandler(toolExecution,"tool_call_start");
+                        }
+
+
                     })
                     .onToolExecuted(toolExecution -> {
                         //任务完成
@@ -323,8 +368,10 @@ public class AgentExecutor implements IAgentExecutor {
         } finally {
             cancelTask.set(true);
             toolCancelLatch.values().forEach(latch -> latch.countDown());
+            toolCancelLatch.clear();
             toolCancelInvocations.clear();
             toolStopHooks.clear();
+            toolApprovalLocks.clear();
             taskLatch.countDown();
             agentMessageHandler.taskDone();
             updateMemoryStateToDone();
@@ -566,17 +613,25 @@ public class AgentExecutor implements IAgentExecutor {
                     toolCall.partialArguments(),
                     toolCall.index()
             );
-            messageTypeChangedChatHistoryHandler("tool_call_preparing");
+            messageTypeChangedChatHistoryHandler(ToolCallStatus.TOOL_CALL_PREPARING);
         }
 
-        private void beforeToolExecutionHandler(BeforeToolExecution toolExecution) {
+        private void beforeToolExecutionHandler(BeforeToolExecution toolExecution,String status) {
 
-            this.aiToolCallMessageInfo = AiToolCallMessageInfo.starting(sessionId, requestId,
-                    toolExecution.request().id(),
-                    toolExecution.request().name(),
-                    JSON.parseObject(toolExecution.request().arguments())
-            );
-            messageTypeChangedChatHistoryHandler("tool_call_start");
+            if(ToolCallStatus.TOOL_CALL_START.equals(status)){
+                this.aiToolCallMessageInfo = AiToolCallMessageInfo.starting(sessionId, requestId,
+                        toolExecution.request().id(),
+                        toolExecution.request().name(),
+                        JSON.parseObject(toolExecution.request().arguments())
+                );
+            }else if(ToolCallStatus.TOOL_CALL_APPROVAL.equals(status)){
+                this.aiToolCallMessageInfo = AiToolCallMessageInfo.approval(sessionId, requestId,
+                        toolExecution.request().id(),
+                        toolExecution.request().name(),
+                        JSON.parseObject(toolExecution.request().arguments())
+                );
+            }
+            messageTypeChangedChatHistoryHandler(status);
         }
 
         private void toolExecutionHandler(ToolExecution toolExecution) {
@@ -587,7 +642,7 @@ public class AgentExecutor implements IAgentExecutor {
                     JSON.parseObject(toolExecution.request().arguments()),
                     toolExecution.result()
             );
-            messageTypeChangedChatHistoryHandler("tool_call_end");
+            messageTypeChangedChatHistoryHandler(ToolCallStatus.TOOL_CALL_END);
         }
 
         private void thinkingHandler(PartialThinking thinking) {
@@ -644,12 +699,16 @@ public class AgentExecutor implements IAgentExecutor {
             //开始调用 和 结束调用
             if (currentMessageType.startsWith("tool_call")) {
                 sendMessageToChannel(aiToolCallMessageInfo);
-                if (currentMessageType.equals("tool_call_start") || currentMessageType.equals("tool_call_end")) {
+                if (currentMessageType.equals(ToolCallStatus.TOOL_CALL_APPROVAL) ||
+                        currentMessageType.equals(ToolCallStatus.TOOL_CALL_START) ||
+                        currentMessageType.equals(ToolCallStatus.TOOL_CALL_END)) {
                     //入库
                     ChatHistory toolChat = new ChatHistory(
                             agentId, "agent", "tool_call",
-                            aiToolCallMessageInfo.getToolCallId(), aiToolCallMessageInfo.getToolName(),
-                            (aiToolCallMessageInfo.getArguments() != null ? aiToolCallMessageInfo.getArguments().toString() : null), aiToolCallMessageInfo.getResult() != null ? (String) aiToolCallMessageInfo.getResult() : null
+                            aiToolCallMessageInfo.getToolCallId(),
+                            aiToolCallMessageInfo.getToolName(),
+                            (aiToolCallMessageInfo.getArguments() != null ? aiToolCallMessageInfo.getArguments().toString() : null),
+                            aiToolCallMessageInfo.getResult() != null ? (String) aiToolCallMessageInfo.getResult() : null
                     );
                     toolChat.setToolCallStatus(currentMessageType);
                     toolChat.setSessionId(sessionId);

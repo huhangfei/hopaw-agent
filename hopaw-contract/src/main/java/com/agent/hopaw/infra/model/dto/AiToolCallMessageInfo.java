@@ -8,6 +8,7 @@ public class AiToolCallMessageInfo extends AiMessageBaseInfo{
     public static final String STATUS_EXECUTED = "executed";
     public static final String STATUS_STOPPABLE = "stoppable";
     public static final String STATUS_STOPPING = "stopping";
+    public static final String STATUS_APPROVAL = "approval";
 
     private String status;
     private String toolCallId;
@@ -39,6 +40,16 @@ public class AiToolCallMessageInfo extends AiMessageBaseInfo{
         info.setSessionId(sessionId);
         info.setRequestId(requestId);
         info.setStatus(STATUS_STARTING);
+        info.setToolCallId(toolCallId);
+        info.setToolName(toolName);
+        info.setArguments(arguments);
+        return info;
+    }
+    public static AiToolCallMessageInfo approval(String sessionId, String requestId, String toolCallId, String toolName, Object arguments) {
+        AiToolCallMessageInfo info = new AiToolCallMessageInfo();
+        info.setSessionId(sessionId);
+        info.setRequestId(requestId);
+        info.setStatus(STATUS_APPROVAL);
         info.setToolCallId(toolCallId);
         info.setToolName(toolName);
         info.setArguments(arguments);

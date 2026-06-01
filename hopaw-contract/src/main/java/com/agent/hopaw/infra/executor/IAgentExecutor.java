@@ -17,6 +17,7 @@ public interface IAgentExecutor {
     boolean toolHaveCall(String callId);
     boolean toolIsCancelled(String callId);
     void sendToolRunningContent(String callId, Object resultPartial);
+    void toolApprovalComplete(String callId,Boolean allowed);
     boolean running();
     void execute();
 }
