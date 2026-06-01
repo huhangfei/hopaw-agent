@@ -13,6 +13,7 @@ public class UserRequest {
     private List<String> skillNames;
     private Long aiModelId;
     private Boolean enableThinking;
+    private String toolCallPermission;
     public String getUserId() {
         return userId;
     }
@@ -67,5 +68,13 @@ public class UserRequest {
 
     public void setEnableThinking(Boolean enableThinking) {
         this.enableThinking = enableThinking;
+    }
+
+    public String getToolCallPermission() {
+        return toolCallPermission;
+    }
+
+    public void setToolCallPermission(String toolCallPermission) {
+        this.toolCallPermission = toolCallPermission;
     }
 }

@@ -19,6 +19,7 @@ public class AgentExecutorParams {
     private Boolean vectorToolSearch;
     private Integer vectorToolSearchMaxResults;
     private String extParams;
+    private String toolCallPermission;
     private List<AgentTool> toolSets;
     private List<String> skillNames;
     private List<Content> contents;
@@ -100,6 +101,14 @@ public class AgentExecutorParams {
 
     public void setExtParams(String extParams) {
         this.extParams = extParams;
+    }
+
+    public String getToolCallPermission() {
+        return toolCallPermission;
+    }
+
+    public void setToolCallPermission(String toolCallPermission) {
+        this.toolCallPermission = toolCallPermission;
     }
 
     public List<String> getSkillNames() {

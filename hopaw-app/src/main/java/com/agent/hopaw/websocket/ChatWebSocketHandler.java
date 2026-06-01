@@ -76,6 +76,7 @@ public class ChatWebSocketHandler extends TextWebSocketHandler {
             String sessionId = payload.getString("sessionId");
             Long aiModelId = payload.getLong("aiModelId");
             Boolean enableThinking = payload.getBoolean("enableThinking");
+            String toolCallPermission = payload.getString("toolCallPermission");
 
             @SuppressWarnings("unchecked")
             List<String> skillNames = payload.getJSONArray("skills").toJavaList(String.class);
@@ -88,6 +89,7 @@ public class ChatWebSocketHandler extends TextWebSocketHandler {
             userRequest.setSessionId(sessionId);
             userRequest.setAiModelId(aiModelId);
             userRequest.setEnableThinking(enableThinking);
+            userRequest.setToolCallPermission(toolCallPermission);
             //回复一个已收到消息，开始处理
             sendFirstState(session);
             IAgentExecutor executor = agentExecutorService.createAgentExecutor(userRequest,(userId,aiMessageJson)->{

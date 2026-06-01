@@ -8,6 +8,7 @@ var toolCallTimers = {};
 var loadingMessageDiv = null;
 var currentModelId = null;
 var currentSessionId = null;
+var currentToolCallPermission = 'smart_call';
 
 if (typeof marked !== 'undefined') {
     marked.setOptions({
@@ -569,7 +570,8 @@ function sendMessage() {
                 message: message,
                 skills: getSelectedSkills(),
                 aiModelId: currentModelId,
-                enableThinking: deepBtn ? deepBtn.getAttribute('data-enabled') === 'true' : true
+                enableThinking: deepBtn ? deepBtn.getAttribute('data-enabled') === 'true' : true,
+                toolCallPermission: currentToolCallPermission
             };
             var emptyState = document.getElementById('chatHistoryEmptyState');
             if(emptyState){
@@ -899,6 +901,11 @@ window.onload = function() {
         currentSessionId = initialCurrentSessionId;
     }
 
+    if (initialToolCallPermission) {
+        currentToolCallPermission = initialToolCallPermission;
+        selectToolPermission(initialToolCallPermission);
+    }
+
     renderSessionList(initialChatSessions);
 
 
@@ -984,6 +991,11 @@ window.onload = function() {
                 menu.style.visibility = '';
             }
         }
+        var toolPermissionDropdown = document.getElementById('toolPermissionDropdown');
+        if (toolPermissionDropdown && !toolPermissionDropdown.contains(e.target)) {
+            var menu = document.getElementById('toolPermissionDropdownMenu');
+            if (menu) menu.classList.remove('open');
+        }
     });
     
     var form = document.getElementById('chatForm');
@@ -1010,6 +1022,15 @@ window.onload = function() {
             var newEnabled = !current;
             this.setAttribute('data-enabled', newEnabled);
             this.classList.toggle('active', newEnabled);
+        });
+    }
+
+    var toolPermissionBtn = document.getElementById('toolPermissionBtn');
+    if (toolPermissionBtn) {
+        toolPermissionBtn.addEventListener('click', function(e) {
+            e.stopPropagation();
+            var menu = document.getElementById('toolPermissionDropdownMenu');
+            menu.classList.toggle('open');
         });
     }
 
@@ -1322,7 +1343,8 @@ function createNewSession() {
         agentId: currentAgentId || null,
         aiModelId: currentModelId || null,
         enableThinking: deepBtn ? deepBtn.getAttribute('data-enabled') === 'true' : true,
-        skillNames: getSelectedSkills().join(',') || null
+        skillNames: getSelectedSkills().join(',') || null,
+        toolCallPermission: currentToolCallPermission || 'smart_call'
     };
 
     fetch('/api/session/create', {
@@ -1345,4 +1367,34 @@ function createNewSession() {
 
 function editCurrentAgent(){
     showEditAgentModal(currentAgentId);
+}
+
+function selectToolPermission(value) {
+    currentToolCallPermission = value;
+    var labelMap = {
+        'user_control': '用户控制',
+        'smart_call': '智能调用',
+        'auto': '完全自动'
+    };
+    var label = document.getElementById('toolPermissionLabel');
+    if (label) {
+        label.textContent = labelMap[value] || value;
+    }
+    var btn = document.getElementById('toolPermissionBtn');
+    if (btn) {
+        btn.classList.remove('user_control', 'smart_call', 'auto');
+        btn.classList.add(value);
+    }
+    var checks = document.querySelectorAll('.tool-permission-item-check');
+    checks.forEach(function(check) {
+        check.style.opacity = '0';
+    });
+    var activeCheck = document.getElementById('check_' + value);
+    if (activeCheck) {
+        activeCheck.style.opacity = '1';
+    }
+    var menu = document.getElementById('toolPermissionDropdownMenu');
+    if (menu) {
+        menu.classList.remove('open');
+    }
 }

@@ -145,6 +145,7 @@ public class AgentExecutorService implements IAgentExecutorService {
         agentExecutorParams.setVectorToolSearch(agent.getVectorToolSearch() != null ? agent.getVectorToolSearch() : false);
         agentExecutorParams.setVectorToolSearchMaxResults(agent.getVectorToolSearchMaxResults() != null ? agent.getVectorToolSearchMaxResults() : 5);
         agentExecutorParams.setSkillNames(userRequest.getSkillNames());
+        agentExecutorParams.setToolCallPermission(userRequest.getToolCallPermission());
         agentExecutorParams.setToolSets(selectedTools);
         agentExecutorParams.setContents(Arrays.asList(new TextContent(userRequest.getMessage())));
         Function<Long, String> systemMessageProvider = aId -> {

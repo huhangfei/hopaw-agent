@@ -13,6 +13,7 @@ public class ChatSession {
     private Boolean enableThinking;
     private String skillNames;
     private Long aiModelId;
+    private String toolCallPermission;
     public ChatSession() {}
 
     public ChatSession(String sessionId, String userId, String title) {
@@ -109,5 +110,13 @@ public class ChatSession {
 
     public void setAiModelId(Long aiModelId) {
         this.aiModelId = aiModelId;
+    }
+
+    public String getToolCallPermission() {
+        return toolCallPermission;
+    }
+
+    public void setToolCallPermission(String toolCallPermission) {
+        this.toolCallPermission = toolCallPermission;
     }
 }

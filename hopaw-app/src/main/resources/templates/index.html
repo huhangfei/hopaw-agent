@@ -139,6 +139,31 @@
                             </svg>
                             深度思考
                         </button>
+                        <div class="tool-permission-dropdown" id="toolPermissionDropdown">
+                            <button type="button" class="chat-btn-permission" id="toolPermissionBtn">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14">
+                                    <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+                                </svg>
+                                <span id="toolPermissionLabel">智能调用</span>
+                            </button>
+                            <div class="tool-permission-dropdown-menu" id="toolPermissionDropdownMenu">
+                                <div class="tool-permission-item user_control" data-value="user_control" onclick="selectToolPermission('user_control')">
+                                    <span class="tool-permission-item-dot user_control"></span>
+                                    <span class="tool-permission-item-name">用户控制</span>
+                                    <span class="tool-permission-item-check" id="check_user_control">✓</span>
+                                </div>
+                                <div class="tool-permission-item smart_call" data-value="smart_call" onclick="selectToolPermission('smart_call')">
+                                    <span class="tool-permission-item-dot smart_call"></span>
+                                    <span class="tool-permission-item-name">智能调用</span>
+                                    <span class="tool-permission-item-check" id="check_smart_call">✓</span>
+                                </div>
+                                <div class="tool-permission-item auto" data-value="auto" onclick="selectToolPermission('auto')">
+                                    <span class="tool-permission-item-dot auto"></span>
+                                    <span class="tool-permission-item-name">完全自动</span>
+                                    <span class="tool-permission-item-check" id="check_auto">✓</span>
+                                </div>
+                            </div>
+                        </div>
                     </div>
                 </div>
                 <button type="submit" id="sendBtn" class="chat-form-send-button"
@@ -229,6 +254,7 @@
         var initialChatSessions = /*[[${chatSessions}]]*/ [];
         var initialCurrentSessionId = /*[[${currentSessionId}]]*/ null;
         var initialSelectedSkills = /*[[${selectedSkills}]]*/ '';
+        var initialToolCallPermission = /*[[${toolCallPermission}]]*/ 'smart_call';
     </script>
 </body>
 </html>

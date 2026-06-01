@@ -493,6 +493,149 @@
     color: #fff;
 }
 
+.tool-permission-dropdown {
+    position: relative;
+    display: inline-flex;
+}
+
+.chat-btn-permission {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 4px 10px;
+    border: 1px solid #e0e0e0;
+    border-radius: 14px;
+    background: transparent;
+    color: #666;
+    font-size: 13px;
+    cursor: pointer;
+    transition: all 0.2s;
+    height: 30px;
+}
+
+.chat-btn-permission:hover {
+    border-color: #667eea;
+    color: #667eea;
+    background: #f8f9ff;
+}
+
+.chat-btn-permission.user_control {
+    border-color: #4caf50;
+    color: #4caf50;
+    background: #e8f5e9;
+}
+
+.chat-btn-permission.user_control:hover {
+    border-color: #388e3c;
+    color: #388e3c;
+    background: #c8e6c9;
+}
+
+.chat-btn-permission.smart_call {
+    border-color: #667eea;
+    color: #667eea;
+    background: #eef0ff;
+}
+
+.chat-btn-permission.smart_call:hover {
+    border-color: #5a6fd6;
+    color: #5a6fd6;
+    background: #dde0ff;
+}
+
+.chat-btn-permission.auto {
+    border-color: #ff9800;
+    color: #ff9800;
+    background: #fff3e0;
+}
+
+.chat-btn-permission.auto:hover {
+    border-color: #f57c00;
+    color: #f57c00;
+    background: #ffe0b2;
+}
+
+.tool-permission-dropdown-menu {
+    display: none;
+    position: absolute;
+    bottom: calc(100% + 6px);
+    right: 0;
+    min-width: 140px;
+    background: #fff;
+    border: 1px solid #e0e0e0;
+    border-radius: 8px;
+    box-shadow: 0 4px 16px rgba(0,0,0,0.12);
+    z-index: 9999;
+    overflow: hidden;
+}
+
+.tool-permission-dropdown-menu.open {
+    display: block;
+}
+
+.tool-permission-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 14px;
+    cursor: pointer;
+    font-size: 13px;
+    color: #333;
+    transition: background 0.15s;
+}
+
+.tool-permission-item:hover {
+    background: #f0f2ff;
+    color: #667eea;
+}
+
+.tool-permission-item.user_control:hover {
+    background: #e8f5e9;
+    color: #4caf50;
+}
+
+.tool-permission-item.auto:hover {
+    background: #fff3e0;
+    color: #ff9800;
+}
+
+.tool-permission-item-name {
+    flex: 1;
+}
+
+.tool-permission-item-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    flex-shrink: 0;
+}
+
+.tool-permission-item-dot.user_control {
+    background: #4caf50;
+}
+
+.tool-permission-item-dot.smart_call {
+    background: #667eea;
+}
+
+.tool-permission-item-dot.auto {
+    background: #ff9800;
+}
+
+.tool-permission-item-check {
+    font-size: 12px;
+    color: #667eea;
+    opacity: 0;
+}
+
+.tool-permission-item.user_control .tool-permission-item-check {
+    color: #4caf50;
+}
+
+.tool-permission-item.auto .tool-permission-item-check {
+    color: #ff9800;
+}
+
 .skills-dropdown {
     position: relative;
     display: inline-flex;
@@ -1379,6 +1522,89 @@ body.dark-theme .chat-btn-deep.active {
     border-color: #8ba3ff;
     background: #8ba3ff;
     color: #fff;
+}
+
+body.dark-theme .chat-btn-permission {
+    border: 1px solid #7d7dab;
+    color: #999;
+}
+
+body.dark-theme .chat-btn-permission:hover {
+    border-color: #8ba3ff;
+    color: #8ba3ff;
+    background: #2d2d44;
+}
+
+body.dark-theme .chat-btn-permission.user_control {
+    border-color: #66bb6a;
+    color: #66bb6a;
+    background: rgba(76, 175, 80, 0.12);
+}
+
+body.dark-theme .chat-btn-permission.user_control:hover {
+    border-color: #81c784;
+    color: #81c784;
+    background: rgba(76, 175, 80, 0.2);
+}
+
+body.dark-theme .chat-btn-permission.smart_call {
+    border-color: #8ba3ff;
+    color: #8ba3ff;
+    background: rgba(139, 163, 255, 0.12);
+}
+
+body.dark-theme .chat-btn-permission.smart_call:hover {
+    border-color: #a0b5ff;
+    color: #a0b5ff;
+    background: rgba(139, 163, 255, 0.2);
+}
+
+body.dark-theme .chat-btn-permission.auto {
+    border-color: #ffa726;
+    color: #ffa726;
+    background: rgba(255, 152, 0, 0.12);
+}
+
+body.dark-theme .chat-btn-permission.auto:hover {
+    border-color: #ffb74d;
+    color: #ffb74d;
+    background: rgba(255, 152, 0, 0.2);
+}
+
+body.dark-theme .tool-permission-dropdown-menu {
+    background: #1e3a5f;
+    border-color: #3d3d6b;
+}
+
+body.dark-theme .tool-permission-item {
+    color: #e0e0e0;
+}
+
+body.dark-theme .tool-permission-item:hover {
+    background: #2d2d44;
+    color: #8ba3ff;
+}
+
+body.dark-theme .tool-permission-item.user_control:hover {
+    background: rgba(76, 175, 80, 0.15);
+    color: #66bb6a;
+}
+
+body.dark-theme .tool-permission-item.auto:hover {
+    background: rgba(255, 152, 0, 0.15);
+    color: #ffa726;
+}
+
+body.dark-theme .tool-permission-item-check {
+    color: #8ba3ff;
+}
+
+body.dark-theme .tool-permission-item.user_control .tool-permission-item-check {
+    color: #66bb6a;
+}
+
+body.dark-theme .tool-permission-item.auto .tool-permission-item-check {
+    color: #ffa726;
 }
 
 body.dark-theme .tool-call {

@@ -55,6 +55,7 @@ public class ChatController {
         Long aiModelId=null;
         Boolean enableThinking=true;
         String selectedSkills = "";
+        String toolCallPermission = "smart_call";
         model.addAttribute("chatHistory", Collections.emptyList());
         if(sessionId != null){
             ChatSession session = chatSessionService.getSessionBySessionId(sessionId);
@@ -67,6 +68,7 @@ public class ChatController {
                 aiModelId=session.getAiModelId();
                 enableThinking=session.getEnableThinking();
                 selectedSkills=session.getSkillNames();
+                toolCallPermission = session.getToolCallPermission();
             }
         }
         if(selectedAgent==null && !agents.isEmpty()){
@@ -80,6 +82,7 @@ public class ChatController {
         model.addAttribute("selectedAgentId", selectedAgent.getId());
         model.addAttribute("selectedAiModelId", aiModelId);
         model.addAttribute("enableThinking", enableThinking);
+        model.addAttribute("toolCallPermission", toolCallPermission);
         model.addAttribute("currentSessionId", sessionId==null? UUID.randomUUID().toString() :sessionId);
         List<ToolSetInfo> toolSets = agentToolService.getToolSets();
         model.addAttribute("toolSets", toolSets);

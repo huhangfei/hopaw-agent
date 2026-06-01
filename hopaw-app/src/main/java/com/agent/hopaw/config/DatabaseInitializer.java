@@ -195,6 +195,7 @@ public class DatabaseInitializer implements CommandLineRunner {
                     "enable_thinking INTEGER DEFAULT 1, " +
                     "skill_names TEXT, " +
                     "ai_model_id INTEGER, " +
+                    "tool_call_permission TEXT, " +
                     "create_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP, " +
                     "last_update_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP" +
                     ")");
@@ -210,6 +211,9 @@ public class DatabaseInitializer implements CommandLineRunner {
             } catch (Exception ignored) {}
             try {
                 stmt.execute("ALTER TABLE chat_sessions ADD COLUMN ai_model_id INTEGER");
+            } catch (Exception ignored) {}
+            try {
+                stmt.execute("ALTER TABLE chat_sessions ADD COLUMN tool_call_permission TEXT");
             } catch (Exception ignored) {}
 
             log.info("Database tables created");
