@@ -26,7 +26,7 @@ public class AgentExecutorParams {
      * auto 完全自动
      */
     private String toolCallPermission;
-    private List<AgentTool> toolSets;
+    private List<ToolSetInfo> toolSets;
     private List<String> skillNames;
     private List<Content> contents;
     public Long getAgentId() {
@@ -125,11 +125,11 @@ public class AgentExecutorParams {
         this.skillNames = skillNames;
     }
 
-    public List<AgentTool> getToolSets() {
+    public List<ToolSetInfo> getToolSets() {
         return toolSets;
     }
 
-    public void setToolSets(List<AgentTool> toolSets) {
+    public void setToolSets(List<ToolSetInfo> toolSets) {
         this.toolSets = toolSets;
     }
 

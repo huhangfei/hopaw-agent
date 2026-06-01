@@ -10,6 +10,7 @@ import com.agent.hopaw.infra.service.AiModelService;
 import com.agent.hopaw.infra.service.IChatSessionService;
 import com.agent.hopaw.infra.storage.ChatHistoryStore;
 import com.agent.hopaw.infra.tool.AgentTool;
+import com.agent.hopaw.infra.tool.ToolSecurityLevel;
 import com.agent.hopaw.infra.util.InvocationParametersWrapper;
 import com.agent.hopaw.infra.util.PendingResponse;
 import com.agent.hopaw.infra.util.UuidUtil;
@@ -45,6 +46,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.BiConsumer;
 import java.util.function.Consumer;
 import java.util.function.Function;
+import java.util.stream.Collectors;
 
 public class AgentExecutor implements IAgentExecutor {
     private final Logger logger = LoggerFactory.getLogger(AgentExecutor.class);
@@ -77,6 +79,7 @@ public class AgentExecutor implements IAgentExecutor {
     private final java.util.concurrent.ConcurrentMap<String, CountDownLatch> toolCancelLatch = new ConcurrentHashMap<>();
     private final java.util.concurrent.ConcurrentMap<String, Consumer<String>> toolStopHooks = new ConcurrentHashMap<>();
     private final java.util.concurrent.ConcurrentMap<String, PendingResponse<Boolean>> toolApprovalLocks = new ConcurrentHashMap<>();
+    private final Map<String, ToolSecurityLevel.Level> toolSecurityLevels = new HashMap<>();
     private final ChatMemoryId memoryId;
     private final EmbeddingModel embeddingModel;
     private final ThreadPoolExecutor toolExecutor;
@@ -123,6 +126,11 @@ public class AgentExecutor implements IAgentExecutor {
             chatHistoryStore.saveChatHistory(chatHistory);
 
         });
+        for (ToolSetInfo toolSet : agentExecutorParams.getToolSets()) {
+            for (ToolInfo tool : toolSet.getTools()) {
+                toolSecurityLevels.put(toolSet.getName()+"_"+tool.getName(),tool.getSecurityLevel());
+            }
+        }
     }
 
     @Override
@@ -424,7 +432,7 @@ public class AgentExecutor implements IAgentExecutor {
                 .systemMessageProvider(chatMemoryId -> systemMessageProvider.apply(agentId))
                 .chatMemory(memoryBuilder.build())
                 .executeToolsConcurrently(toolExecutor);
-        List<AgentTool> selectedTools = agentExecutorParams.getToolSets();
+        List<AgentTool> selectedTools = agentExecutorParams.getToolSets().stream().map(x->x.getAgentTool()).collect(Collectors.toList());
         if (selectedTools != null && agentExecutorParams.getVectorToolSearch() != null && agentExecutorParams.getVectorToolSearch()) {
             int maxResults = agentExecutorParams.getVectorToolSearchMaxResults() != null ? agentExecutorParams.getVectorToolSearchMaxResults() : 10;
             aiBuilder.toolSearchStrategy(

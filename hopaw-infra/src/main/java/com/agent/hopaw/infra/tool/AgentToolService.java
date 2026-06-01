@@ -149,7 +149,12 @@ public class AgentToolService implements IAgentToolService {
             }
             params.sort(Comparator.comparing(p -> p.isRequired() ? 0 : 1));
 
-            tools.add(new ToolInfo(toolName, description, params));
+            ToolInfo toolInfo = new ToolInfo(toolName, description, params);
+            ToolSecurityLevel methodSecurityAnn = method.getAnnotation(ToolSecurityLevel.class);
+            if (methodSecurityAnn != null) {
+                toolInfo.setSecurityLevel(methodSecurityAnn.value());
+            }
+            tools.add(toolInfo);
         }
         ToolSetInfo toolSetInfo = new ToolSetInfo(agentTool.getName(), agentTool.getDescription(), agentTool.getIcon(), tools, source);
         toolSetInfo.setVersion(agentTool.getVersion());
@@ -158,6 +163,7 @@ public class AgentToolService implements IAgentToolService {
         toolSetInfo.setKeyword(agentTool.getKeyword());
         toolSetInfo.setHasConfigItems(!agentTool.getConfigItems().isEmpty());
         toolSetInfo.setAgentTool(agentTool);
+
         return toolSetInfo;
     }
 

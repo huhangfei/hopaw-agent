@@ -6,6 +6,7 @@ import com.agent.hopaw.infra.executor.IAgentExecutor;
 import com.agent.hopaw.infra.memory.IChatMemoryService;
 import com.agent.hopaw.infra.model.dto.AgentExecutorParams;
 import com.agent.hopaw.infra.model.dto.SkillInfo;
+import com.agent.hopaw.infra.model.dto.ToolSetInfo;
 import com.agent.hopaw.infra.model.dto.UserRequest;
 import com.agent.hopaw.infra.monitor.LangChain4jMonitor;
 import com.agent.hopaw.infra.storage.ChatHistoryStore;
@@ -139,7 +140,7 @@ public class AgentExecutorService implements IAgentExecutorService {
                 .setUserId(userRequest.getUserId())
                 .setTokenUsageService(tokenUsageService);
         List<String> selectedToolNames = parseToolNames(agent.getTools());
-        List<AgentTool> selectedTools = agentToolService.getAgentTools().stream()
+        List<ToolSetInfo> selectedTools = agentToolService.getToolSets().stream()
                 .filter(t -> selectedToolNames.contains(t.getName()))
                 .collect(Collectors.toList());
         AgentExecutorParams agentExecutorParams = new AgentExecutorParams();
@@ -164,7 +165,7 @@ public class AgentExecutorService implements IAgentExecutorService {
         return agentExecutor;
     }
 
-    private String getSystemMessage(String sessionId, Agent agent, String userId, List<AgentTool> selectedTools, List<String> skillNames) {
+    private String getSystemMessage(String sessionId, Agent agent, String userId, List<ToolSetInfo> selectedTools, List<String> skillNames) {
         String systemMessage = "你是一个智能助手，名字叫" + agent.getName() + "," +
                 "主要工作是" + agent.getDescription() + "," +
                 "你的agentId是" + agent.getId() + "。\n" +
@@ -201,8 +202,8 @@ public class AgentExecutorService implements IAgentExecutorService {
         return sb.toString();
     }
 
-    private String getToolKeywords(List<AgentTool> selectedTools) {
-        return selectedTools.stream().map(AgentTool::getKeyword).collect(Collectors.joining(","));
+    private String getToolKeywords(List<ToolSetInfo> selectedTools) {
+        return selectedTools.stream().map(ToolSetInfo::getKeyword).collect(Collectors.joining(","));
     }
 
     private List<String> parseToolNames(String toolsStr) {
