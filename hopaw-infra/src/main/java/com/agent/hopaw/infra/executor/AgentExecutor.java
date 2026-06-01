@@ -2,6 +2,7 @@ package com.agent.hopaw.infra.executor;
 
 
 import com.agent.hopaw.infra.constant.ChatMemoryStatusEnum;
+import com.agent.hopaw.infra.event.AgentMessageEvent;
 import com.agent.hopaw.infra.exception.ToolCallRejectedException;
 import com.agent.hopaw.infra.memory.IChatMemoryService;
 import com.agent.hopaw.infra.model.entity.*;
@@ -15,6 +16,7 @@ import com.agent.hopaw.infra.util.InvocationParametersWrapper;
 import com.agent.hopaw.infra.util.PendingResponse;
 import com.agent.hopaw.infra.util.UuidUtil;
 import com.alibaba.fastjson2.JSON;
+import org.springframework.context.ApplicationEventPublisher;
 import dev.langchain4j.agent.tool.ToolExecutionRequest;
 import dev.langchain4j.data.message.*;
 import dev.langchain4j.invocation.InvocationParameters;
@@ -43,7 +45,6 @@ import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.function.BiConsumer;
 import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.stream.Collectors;
@@ -86,7 +87,7 @@ public class AgentExecutor implements IAgentExecutor {
     private final AiModelService aiModelService;
     private CountDownLatch taskLatch = new CountDownLatch(0);
     private String requestId;
-    private final BiConsumer<String, String> messageConsumer;
+    private final ApplicationEventPublisher eventPublisher;
     private final List<Content> contents;
     private final IChatSessionService chatSessionService;
     private final AgentExecutorParams agentExecutorParams;
@@ -99,7 +100,7 @@ public class AgentExecutor implements IAgentExecutor {
                          ChatHistoryStore chatHistoryStore,
                          AiModelService aiModelService,
                          ChatModelListener langChain4jMonitor,
-                         BiConsumer<String, String> messageConsumer,
+                         ApplicationEventPublisher eventPublisher,
                          IChatSessionService chatSessionService) {
         this.agentExecutorParams = agentExecutorParams;
         this.agentId = agentExecutorParams.getAgentId();
@@ -112,7 +113,7 @@ public class AgentExecutor implements IAgentExecutor {
         this.chatSessionService = chatSessionService;
         this.chatHistoryStore = chatHistoryStore;
         this.langChain4jMonitor = langChain4jMonitor;
-        this.messageConsumer = messageConsumer;
+        this.eventPublisher = eventPublisher;
         this.aiModelService = aiModelService;
         this.memoryStore = memoryStore;
         this.embeddingModel = embeddingModel;
@@ -121,7 +122,7 @@ public class AgentExecutor implements IAgentExecutor {
         this.memoryId = new ChatMemoryId(sessionId,this.requestId, agentId, userId);
         // 创建工具执行线程池
         this.toolExecutor = createToolExecutor();
-        this.agentMessageHandler = new AgentMessageHandler(this.sessionId, this.requestId, messageConsumer, chatHistory -> {
+        this.agentMessageHandler = new AgentMessageHandler(this.sessionId, this.requestId, eventPublisher, chatHistory -> {
             chatHistory.setUserId(userId);
             chatHistoryStore.saveChatHistory(chatHistory);
 
@@ -576,24 +577,20 @@ public class AgentExecutor implements IAgentExecutor {
         private StringBuilder messageBuilder = new StringBuilder();
         private StringBuilder thinkingBuilder = new StringBuilder();
         private AiToolCallMessageInfo aiToolCallMessageInfo;
-        private final BiConsumer<String, String> messageConsumer;
+        private final ApplicationEventPublisher eventPublisher;
         private final Consumer<ChatHistory> chatHistoryConsumer;
         public AgentMessageHandler(String sessionId,
                                    String requestId,
-                                   BiConsumer<String, String> messageConsumer,
+                                   ApplicationEventPublisher eventPublisher,
                                    Consumer<ChatHistory> chatHistoryConsumer) {
             this.sessionId = sessionId;
             this.requestId = requestId;
-            this.messageConsumer = messageConsumer;
+            this.eventPublisher = eventPublisher;
             this.chatHistoryConsumer = chatHistoryConsumer;
         }
 
-        public BiConsumer<String, String> getMessageConsumer() {
-            return messageConsumer;
-        }
-
-        public void sendMessageToChannel(Object message) {
-            messageConsumer.accept(userId, JSON.toJSONString(message));
+        public void sendMessageToChannel(AiMessageBaseInfo message) {
+            eventPublisher.publishEvent(new AgentMessageEvent(userId, message));
         }
 
         public void done() {

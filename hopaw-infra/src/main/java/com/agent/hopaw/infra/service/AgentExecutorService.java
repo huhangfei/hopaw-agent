@@ -15,10 +15,10 @@ import com.agent.hopaw.infra.tool.AgentTool;
 import com.agent.hopaw.infra.tool.IAgentToolService;
 import dev.langchain4j.data.message.TextContent;
 import dev.langchain4j.model.embedding.EmbeddingModel;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 
 import java.util.*;
-import java.util.function.BiConsumer;
 import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.stream.Collectors;
@@ -35,9 +35,11 @@ public class AgentExecutorService implements IAgentExecutorService {
     private final ISkillService ISkillService;
     private final IChatSessionService chatSessionService;
 
+    private final ApplicationEventPublisher eventPublisher;
+
     private final Map<String, IAgentExecutor> agentExecutors = new HashMap<>();
 
-    public AgentExecutorService(IAgentService agentService, AiModelService aiModelService, ChatHistoryStore chatHistoryStore, TokenUsageService tokenUsageService, IChatMemoryService chatMemoryService, IAgentToolService agentToolService, EmbeddingModel embeddingModel, ISkillService ISkillService, IChatSessionService chatSessionService) {
+    public AgentExecutorService(IAgentService agentService, AiModelService aiModelService, ChatHistoryStore chatHistoryStore, TokenUsageService tokenUsageService, IChatMemoryService chatMemoryService, IAgentToolService agentToolService, EmbeddingModel embeddingModel, ISkillService ISkillService, IChatSessionService chatSessionService, ApplicationEventPublisher eventPublisher) {
         this.agentService = agentService;
         this.aiModelService = aiModelService;
         this.chatHistoryStore = chatHistoryStore;
@@ -47,6 +49,7 @@ public class AgentExecutorService implements IAgentExecutorService {
         this.embeddingModel = embeddingModel;
         this.ISkillService = ISkillService;
         this.chatSessionService = chatSessionService;
+        this.eventPublisher = eventPublisher;
     }
 
     @Override
@@ -126,7 +129,7 @@ public class AgentExecutorService implements IAgentExecutorService {
     }
 
     @Override
-    public IAgentExecutor createAgentExecutor(UserRequest userRequest, BiConsumer<String, String> messageConsumer) {
+    public IAgentExecutor createAgentExecutor(UserRequest userRequest) {
         Agent agent = userRequest.getAgentId() != null ? agentService.getAgentById(userRequest.getAgentId()) : null;
         if (agent == null) {
             throw new RuntimeException("智能体不存在");
@@ -160,7 +163,7 @@ public class AgentExecutorService implements IAgentExecutorService {
         Function<Long, String> systemMessageProvider = aId -> {
             return getSystemMessage(userRequest.getSessionId(), agent, userRequest.getUserId(), selectedTools, userRequest.getSkillNames());
         };
-        AgentExecutor agentExecutor = new AgentExecutor(agentExecutorParams, chatMemoryService, embeddingModel, systemMessageProvider, chatHistoryStore, aiModelService, langChain4jMonitor, messageConsumer, chatSessionService);
+        AgentExecutor agentExecutor = new AgentExecutor(agentExecutorParams, chatMemoryService, embeddingModel, systemMessageProvider, chatHistoryStore, aiModelService, langChain4jMonitor, eventPublisher, chatSessionService);
         agentExecutors.put(userRequest.getSessionId(), agentExecutor);
         return agentExecutor;
     }

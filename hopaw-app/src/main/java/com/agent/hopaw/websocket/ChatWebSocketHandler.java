@@ -1,8 +1,9 @@
 package com.agent.hopaw.websocket;
 
-import com.agent.hopaw.constant.DefaultUser;
+import com.agent.hopaw.infra.event.AgentMessageEvent;
 import com.agent.hopaw.infra.event.TokenUsageEvent;
 import com.agent.hopaw.infra.executor.IAgentExecutor;
+import com.agent.hopaw.infra.model.dto.AiMessageBaseInfo;
 import com.agent.hopaw.infra.model.dto.UserRequest;
 import com.agent.hopaw.infra.model.entity.TokenUsage;
 import com.agent.hopaw.infra.service.IAgentExecutorService;
@@ -92,29 +93,7 @@ public class ChatWebSocketHandler extends TextWebSocketHandler {
             userRequest.setToolCallPermission(toolCallPermission);
             //回复一个已收到消息，开始处理
             sendFirstState(session);
-            IAgentExecutor executor = agentExecutorService.createAgentExecutor(userRequest,(userId,aiMessageJson)->{
-                try {
-                    ConcurrentLinkedQueue<String> sessionIds = userSessionMap.get(userId);
-                    if (sessionIds == null || sessionIds.isEmpty()) {
-                        return;
-                    }
-                    for (String id : sessionIds) {
-                        WebSocketSession currentSession = sessionMap.get(id);
-                        if(currentSession == null){
-                            return;
-                        }
-                        if(currentSession.isOpen()) {
-                            Object lock = SESSION_LOCK_MAP.computeIfAbsent(id, k -> new Object());
-                            // 同一session串行发送
-                            synchronized (lock) {
-                                currentSession.sendMessage(new TextMessage(aiMessageJson));
-                            }
-                        }
-                    }
-                } catch (IOException e) {
-                    logger.error("error", e);
-                }
-            });
+            IAgentExecutor executor = agentExecutorService.createAgentExecutor(userRequest);
             executor.execute();
         } catch (Exception e) {
             logger.error("handleTextMessage error", e);
@@ -193,6 +172,32 @@ public class ChatWebSocketHandler extends TextWebSocketHandler {
                     }
                 } catch (IOException e) {
                     logger.error("Failed to send token_usage event to session {}: {}", id, e.getMessage());
+                }
+            }
+        }
+    }
+
+    @EventListener
+    public void onAgentMessageEvent(AgentMessageEvent event) {
+        String userId = event.getUserId();
+        if (userId == null) {
+            return;
+        }
+        ConcurrentLinkedQueue<String> sessionIds = userSessionMap.get(userId);
+        if (sessionIds == null || sessionIds.isEmpty()) {
+            return;
+        }
+        AiMessageBaseInfo message = event.getMessage();
+        for (String id : sessionIds) {
+            WebSocketSession wsSession = sessionMap.get(id);
+            if (wsSession != null && wsSession.isOpen()) {
+                try {
+                    Object lock = SESSION_LOCK_MAP.computeIfAbsent(id, k -> new Object());
+                    synchronized (lock) {
+                        wsSession.sendMessage(new TextMessage(JSON.toJSONString(message)));
+                    }
+                } catch (IOException e) {
+                    logger.error("Failed to send agent message to session {}: {}", id, e.getMessage());
                 }
             }
         }
