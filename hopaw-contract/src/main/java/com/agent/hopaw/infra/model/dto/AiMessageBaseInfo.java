@@ -1,5 +1,8 @@
 package com.agent.hopaw.infra.model.dto;
 
+
+
+
 public class AiMessageBaseInfo {
     private String type;
     private String sessionId;
@@ -46,8 +49,8 @@ public class AiMessageBaseInfo {
     }
 
     public AiMessageBaseInfo content(String content) {
-         this.setContent(content);
-         return this;
+        this.setContent(content);
+        return this;
     }
 
     public String getContent() {
@@ -73,6 +76,9 @@ public class AiMessageBaseInfo {
     }
     public static AiMessageBaseInfo error(String sessionId, String requestId,String content) {
         return AiMessageBaseInfo.build("error", sessionId, requestId).content(content);
+    }
+    public static AiMessageBaseInfo warn(String sessionId, String requestId,String content) {
+        return AiMessageBaseInfo.build("warn", sessionId, requestId).content(content);
     }
     public static AiMessageBaseInfo chunk(String sessionId, String requestId,String content) {
         return AiMessageBaseInfo.build("chunk", sessionId, requestId).content(content);

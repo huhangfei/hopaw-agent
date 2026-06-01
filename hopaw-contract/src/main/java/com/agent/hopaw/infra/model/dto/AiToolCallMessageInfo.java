@@ -2,13 +2,42 @@ package com.agent.hopaw.infra.model.dto;
 
 public class AiToolCallMessageInfo extends AiMessageBaseInfo{
     public static final String TYPE_TOOL_CALL = "tool_call";
+    /**
+     * 构建参数中
+     */
     public static final String STATUS_PREPARING = "preparing";
-    public static final String STATUS_STARTING = "starting";
+    /**
+     * 已启动
+     */
+    public static final String STATUS_STARTING = "started";
+    /**
+     * 运行中
+     */
     public static final String STATUS_RUNNING = "running";
+    /**
+     * 执行结束
+     */
     public static final String STATUS_EXECUTED = "executed";
+    /**
+     * 可停止
+     */
     public static final String STATUS_STOPPABLE = "stoppable";
+    /**
+     * 停止中
+     */
     public static final String STATUS_STOPPING = "stopping";
+    /**
+     * 审批中
+     */
     public static final String STATUS_APPROVAL = "approval";
+    /**
+     * 拒绝执行
+     */
+    public static final String STATUS_REJECTED = "rejected";
+    /**
+     * 执行失败
+     */
+    public static final String STATUS_FAILED = "failed";
 
     private String status;
     private String toolCallId;
@@ -90,6 +119,24 @@ public class AiToolCallMessageInfo extends AiMessageBaseInfo{
         info.setSessionId(sessionId);
         info.setRequestId(requestId);
         info.setStatus(STATUS_EXECUTED);
+        info.setToolCallId(toolCallId);
+        info.setToolName(toolName);
+        info.setArguments(arguments);
+        info.setResult(result);
+        return info;
+    }
+    public static AiToolCallMessageInfo build(
+                                            String status,
+                                            String sessionId,
+                                              String requestId,
+                                              String toolCallId,
+                                              String toolName,
+                                              Object arguments,
+                                              Object result) {
+        AiToolCallMessageInfo info = new AiToolCallMessageInfo();
+        info.setSessionId(sessionId);
+        info.setRequestId(requestId);
+        info.setStatus(status);
         info.setToolCallId(toolCallId);
         info.setToolName(toolName);
         info.setArguments(arguments);

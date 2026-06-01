@@ -1203,8 +1203,19 @@
 .error-message .message-label {
     color: #ff4757 !important;
 }
+.warn-message {
+    border-color: rgba(255, 71, 87, 0.3) !important;
+    background: linear-gradient(135deg, rgba(255, 71, 87, 0.1) 0%, rgba(255, 107, 129, 0.05) 100%) !important;
+}
+.warn-message .message-label {
+    color: #ff9800 !important;
+}
 .error-content {
     color: #ff6b81;
+    font-weight: 500;
+}
+.warn-content {
+    color: #ff9800;
     font-weight: 500;
 }
 .empty-state {

@@ -189,29 +189,33 @@
                 <div th:each="chat : ${chatHistory}" th:if="${chat.messageType == 'tool_call'}">
                     <div class="tool-call-container-static">
                         <div class="tool-call"
-                             th:attr="data-tool-call-id=${chat.toolCallId}, data-status=${chat.toolCallStatus == 'tool_call_start' ? 'starting' : (chat.toolCallStatus == 'tool_call_end' ? 'executed' : (chat.toolCallStatus == 'tool_call_failed' ? 'executed' : 'unknown'))}">
+                             th:attr="data-tool-call-id=${chat.toolCallId}, data-status=${chat.toolCallStatus}">
                             <div class="tool-call-header">
                                     <span class="tool-call-icon" th:switch="${chat.toolCallStatus}"
-                                          th:classappend="${chat.toolCallStatus == 'tool_call_end' or chat.toolCallStatus == 'tool_call_failed' ? 'completed' : ''}">
-                                        <span th:case="'tool_call_start'">⚙</span>
-                                        <span th:case="'tool_call_end'">✅</span>
-                                        <span th:case="'tool_call_failed'">❌</span>
+                                          th:classappend="${chat.toolCallStatus == 'executed' or chat.toolCallStatus == 'rejected' or chat.toolCallStatus == 'failed' ? 'completed' : ''}">
+                                        <span th:case="'started'">⚙</span>
+                                        <span th:case="'executed'">✅</span>
+                                        <span th:case="'failed'">❌</span>
+                                        <span th:case="'rejected'">🚫</span>
+                                        <span th:case="'approval'">⏳</span>
                                         <span th:case="*">🔧</span>
                                     </span>
                                 <span class="tool-call-name" th:text="${chat.toolName}"></span>
                                 <span class="tool-call-status" th:switch="${chat.toolCallStatus}"
-                                      th:classappend="${chat.toolCallStatus == 'tool_call_end' or chat.toolCallStatus == 'tool_call_failed' ? 'completed' : ''}">
-                                        <span th:case="'tool_call_start'">执行中...</span>
-                                        <span th:case="'tool_call_end'"
+                                      th:classappend="${chat.toolCallStatus == 'executed' or chat.toolCallStatus == 'rejected' or chat.toolCallStatus == 'failed' ? 'completed' : ''}">
+                                        <span th:case="'started'">执行中...</span>
+                                        <span th:case="'executed'"
                                               th:text="${chat.toolExecutionTime != null ? '已完成(' + #numbers.formatDecimal(chat.toolExecutionTime / 1000.0, 1, 1) + 's)' : '已完成'}">已完成</span>
-                                        <span th:case="'tool_call_failed'">执行失败</span>
+                                        <span th:case="'failed'">执行失败</span>
+                                        <span th:case="'approval'">等待审批</span>
+                                        <span th:case="'rejected'">拒绝执行</span>
                                         <span th:case="*" th:text="${chat.toolCallStatus}">未知</span>
                                     </span>
-                                <span th:if="${chat.toolCallStatus == 'tool_call_end' or chat.toolCallStatus == 'tool_call_failed'}"
+                                <span th:if="${chat.toolCallStatus == 'executed' or chat.toolCallStatus == 'rejected' or chat.toolCallStatus == 'failed'}"
                                       class="tool-call-toggle">▼</span>
                             </div>
                             <div class="tool-call-body"
-                                 th:classappend="${chat.toolCallStatus == 'tool_call_start' ? '' : 'collapsed'}">
+                                 th:classappend="${chat.toolCallStatus == 'started' ? '' : 'collapsed'}">
                                 <div class="tool-call-args" th:if="${chat.toolArguments}">
                                     <div class="args-label">参数:</div>
                                     <pre class="args-content" th:text="${chat.toolArguments}"></pre>
@@ -219,6 +223,13 @@
                                 <div class="tool-call-result" th:if="${chat.content}">
                                     <div class="result-label">结果:</div>
                                     <pre class="result-content" th:text="${chat.content}"></pre>
+                                </div>
+                            </div>
+                            <div th:if="${chat.toolCallStatus == 'approval'}" class="tool-call-footer">
+                                <span class="tool-call-footer-text">⚠️ 此工具调用需要审批</span>
+                                <div class="tool-call-footer-btns">
+                                    <button type="button" class="tool-call-approve-btn" th:attr="data-session-id=${chat.sessionId}, data-call-id=${chat.toolCallId}" onclick="handleApprovalClick(this, true)">通过</button>
+                                    <button type="button" class="tool-call-reject-btn" th:attr="data-session-id=${chat.sessionId}, data-call-id=${chat.toolCallId}" onclick="handleApprovalClick(this, false)">拒绝</button>
                                 </div>
                             </div>
                         </div>

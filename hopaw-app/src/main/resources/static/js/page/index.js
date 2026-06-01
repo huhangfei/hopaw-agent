@@ -69,7 +69,7 @@ function connectWebSocket() {
         var data = JSON.parse(event.data);
         var requestId = data.requestId;
 
-        if (data.type !== 'received') {
+        if (data.type !== 'received' && data.type !== 'session-title'&& data.type !== 'token_usage') {
             removeLoadingMessage();
         }
 
@@ -89,6 +89,8 @@ function connectWebSocket() {
             enableInput();
         } else if (data.type === 'error') {
             handleStreamingError(data.content || data.message, requestId);
+        }  else if (data.type === 'warn') {
+            handleStreamingWarn(data.content || data.message, requestId);
         } else if (data.type === 'token_usage') {
             handleTokenUsageMessage(data);
         }
@@ -191,10 +193,10 @@ function handleToolCall(data, requestId) {
             preEl.scrollTop = preEl.scrollHeight;
         }
 
-    } else if (data.status === 'starting') {
+    } else if (data.status === 'started') {
         delete msgState.toolCallArgsBuffer[data.toolCallId];
 
-        toolCallDiv.setAttribute('data-status', 'starting');
+        toolCallDiv.setAttribute('data-status', 'started');
         if (statusEl) { statusEl.textContent = '执行中...'; statusEl.classList.remove('completed'); }
         if (iconEl) { iconEl.textContent = '⚙'; iconEl.style.animation = ''; }
 
@@ -326,6 +328,14 @@ function handleToolCall(data, requestId) {
             footerDiv.appendChild(btnGroup);
             toolCallDiv.appendChild(footerDiv);
         }
+
+    } else if (data.status === 'rejected') {
+        var existingFooter = toolCallDiv.querySelector('.tool-call-footer');
+        if (existingFooter) existingFooter.remove();
+
+        toolCallDiv.setAttribute('data-status', 'rejected');
+        if (statusEl) { statusEl.textContent = '已拒绝'; statusEl.classList.add('completed'); }
+        if (iconEl) { iconEl.style.animation = 'none'; iconEl.textContent = '🚫'; }
 
     } else if (data.status === 'executed') {
         delete msgState.toolCallArgsBuffer[data.toolCallId];
@@ -578,6 +588,35 @@ function handleStreamingError(errorMessage, requestId) {
     errorDiv.appendChild(timeDiv);
 
     messagesDiv.appendChild(errorDiv);
+    messagesDiv.scrollTop = messagesDiv.scrollHeight;
+    enableInput();
+}
+function handleStreamingWarn(warnMessage, requestId) {
+    var messagesDiv = document.getElementById('chatMessages');
+    var agentName = (function(){ var s = document.querySelector('.agent-select-toolbar'); return s ? s.options[s.selectedIndex].text : 'Agent'; })();
+
+    var warnDiv = document.createElement('div');
+    warnDiv.className = 'message agent warn-message';
+    if (requestId) {
+        warnDiv.setAttribute('data-request-id', requestId);
+    }
+
+    var label = document.createElement('div');
+    label.className = 'message-label';
+    label.textContent = agentName + ' (警告)';
+    warnDiv.appendChild(label);
+
+    var contentDiv = document.createElement('div');
+    contentDiv.className = 'message-content warn-content';
+    contentDiv.textContent = warnMessage;
+    warnDiv.appendChild(contentDiv);
+
+    var timeDiv = document.createElement('div');
+    timeDiv.className = 'message-time';
+    timeDiv.textContent = formatMessageTime(new Date());
+    warnDiv.appendChild(timeDiv);
+
+    messagesDiv.appendChild(warnDiv);
     messagesDiv.scrollTop = messagesDiv.scrollHeight;
     enableInput();
 }
@@ -1461,4 +1500,26 @@ function selectToolPermission(value) {
     if (menu) {
         menu.classList.remove('open');
     }
+}
+
+function handleApprovalClick(btn, allowed) {
+    var sessionId = btn.getAttribute('data-session-id');
+    var callId = btn.getAttribute('data-call-id');
+    var footer = btn.closest('.tool-call-footer');
+    var approveBtn = footer.querySelector('.tool-call-approve-btn');
+    var rejectBtn = footer.querySelector('.tool-call-reject-btn');
+    btn.disabled = true;
+    if (approveBtn) approveBtn.disabled = true;
+    if (rejectBtn) rejectBtn.disabled = true;
+    fetch('/api/session/tool/approval', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: 'sessionId=' + encodeURIComponent(sessionId || currentSessionId) + '&callId=' + encodeURIComponent(callId) + '&allowed=' + allowed
+    }).then(function() {
+        footer.remove();
+    }).catch(function() {
+        btn.disabled = false;
+        if (approveBtn) approveBtn.disabled = false;
+        if (rejectBtn) rejectBtn.disabled = false;
+    });
 }
