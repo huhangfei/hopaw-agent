@@ -15,6 +15,7 @@
         <button class="settings-tab active" data-tab="memory" onclick="switchTab('memory')">记忆设置</button>
         <button class="settings-tab" data-tab="mail" onclick="switchTab('mail')">邮件配置</button>
         <button class="settings-tab" data-tab="pluginStore" onclick="switchTab('pluginStore')">插件商店源</button>
+        <button class="settings-tab" data-tab="avatar" onclick="switchTab('avatar')">虚拟人设置</button>
     </div>
 
     <div class="settings-panel active" id="tab-memory">
@@ -131,6 +132,48 @@
             </div>
             <div class="settings-actions">
                 <button class="btn-save-settings" onclick="savePluginStoreSettings()">保存设置</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="settings-panel" id="tab-avatar">
+        <div class="settings-form">
+            <div class="form-group">
+                <label>定时任务状态</label>
+                <div class="task-status-row">
+                    <span class="task-status-badge" id="avatarTaskStatus">检测中...</span>
+                    <button class="btn-toggle-task" id="avatarTaskToggleBtn" onclick="toggleAvatarTask()">启用</button>
+                </div>
+                <p class="form-hint">虚拟人定时任务默认每 30 秒执行一次，具体任务逻辑可在后续版本中扩展。</p>
+            </div>
+
+            <div class="form-group">
+                <label>是否关闭虚拟人</label>
+                <div class="switch-row">
+                    <label class="switch">
+                        <input type="checkbox" id="avatarDisabled">
+                        <span class="slider"></span>
+                    </label>
+                    <span class="switch-label" id="avatarDisabledLabel">启用</span>
+                </div>
+                <p class="form-hint">关闭后，虚拟人模块相关功能将整体停用。</p>
+            </div>
+
+            <div class="form-group">
+                <label for="avatarModelSetting">虚拟人模型设置</label>
+                <select id="avatarModelSetting" class="settings-input">
+                    <option value="">随机选择（所有模型）</option>
+                </select>
+                <p class="form-hint">选择模型组后，虚拟人只会从该组中随机选择模型；留空则从所有模型中随机抽取。</p>
+            </div>
+
+            <div class="form-group">
+                <label for="avatarPersonaSetting">虚拟人人设设置</label>
+                <textarea id="avatarPersonaSetting" class="memory-prompt-input" rows="6" placeholder="描述虚拟人的性格、语气、称呼等，留空使用默认人设"></textarea>
+            </div>
+
+            <div class="settings-actions">
+                <button class="btn-save-settings" onclick="saveAvatarSettings()">保存设置</button>
             </div>
         </div>
     </div>

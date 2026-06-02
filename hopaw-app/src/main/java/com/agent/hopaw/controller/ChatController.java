@@ -1,5 +1,6 @@
 package com.agent.hopaw.controller;
 
+import com.agent.hopaw.avatar.service.AvatarSettingsService;
 import com.agent.hopaw.constant.DefaultUser;
 import com.agent.hopaw.infra.model.dto.ChatHistoryVO;
 import com.agent.hopaw.infra.model.dto.ToolSetInfo;
@@ -28,21 +29,25 @@ public class ChatController {
     private final IAgentToolService agentToolService;
     private final IChatHistoryService chatHistoryService;
     private final IAgentExecutorService agentExecutorService;
+    private final AvatarSettingsService avatarSettingsService;
 
     public ChatController(IChatSessionService chatSessionService, AgentService agentService, IAgentToolService agentToolService,
                           IChatHistoryService chatHistoryService,
-                          IAgentExecutorService agentExecutorService) {
+                          IAgentExecutorService agentExecutorService,
+                          AvatarSettingsService avatarSettingsService) {
         this.chatSessionService = chatSessionService;
         this.agentService = agentService;
         this.agentToolService = agentToolService;
         this.chatHistoryService = chatHistoryService;
         this.agentExecutorService = agentExecutorService;
+        this.avatarSettingsService = avatarSettingsService;
     }
 
     @GetMapping("/")
     public String index(@RequestParam(required = false) String sessionId,Model model) {
         model.addAttribute("agentExecutorState", false);
         model.addAttribute("chatHistory", Collections.emptyList());
+        model.addAttribute("avatarDisabled", avatarSettingsService.isAvatarDisabled(DefaultUser.USER));
 
         List<ChatSession> chatSessions = chatSessionService.getSessionsByUserId(DefaultUser.USER);
         model.addAttribute("chatSessions", chatSessions);

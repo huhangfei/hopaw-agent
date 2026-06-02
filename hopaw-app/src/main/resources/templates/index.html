@@ -246,7 +246,7 @@
             </div>
         </div>
     </aside>
-    <div class="avatar-widget" id="avatarWidget">
+    <div class="avatar-widget" id="avatarWidget" th:if="${!avatarDisabled}">
         <button type="button" class="avatar-minimize-btn" id="avatarMinimizeBtn" title="最小化" aria-label="最小化">
             <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round">
                 <line x1="5" y1="12" x2="19" y2="12"/>
@@ -284,7 +284,7 @@
 <th:block layout:fragment="extraCss">
     <link rel="stylesheet" th:href="@{/css/page/agent-form.css}">
     <link rel="stylesheet" th:href="@{/css/page/index.css}">
-    <link rel="stylesheet" th:href="@{/css/page/avatar.css}">
+    <link rel="stylesheet" th:href="@{/css/page/avatar.css}" th:if="${!avatarDisabled}">
 </th:block>
 
 <th:block layout:fragment="extraScripts">
@@ -302,8 +302,8 @@
         var initialToolCallPermission = /*[[${toolCallPermission}]]*/ 'smart_call';
         var currentUserId = /*[[${T(com.agent.hopaw.constant.DefaultUser).USER}]]*/ 'user1';
     </script>
-    <script th:src="@{/js/avatar/live2d.js}"></script>
-    <script th:src="@{/js/avatar/main.js}"></script>
+    <script th:src="@{/js/avatar/live2d.js}" th:if="${!avatarDisabled}"></script>
+    <script th:src="@{/js/avatar/main.js}" th:if="${!avatarDisabled}"></script>
 </th:block>
 </body>
 </html>

@@ -6,12 +6,15 @@ document.addEventListener('DOMContentLoaded', function() {
     setupCascading();
     loadMemoryTaskStatus();
     initTabFromUrl();
+    loadAvatarTaskStatus();
+    loadAvatarSettings();
+    setupAvatarSwitch();
 });
 
 function initTabFromUrl() {
     var params = new URLSearchParams(window.location.search);
     var tab = params.get('tab');
-    if (tab && ['memory', 'mail', 'pluginStore'].includes(tab)) {
+    if (tab && ['memory', 'mail', 'pluginStore', 'avatar'].includes(tab)) {
         switchTab(tab);
     }
 }
@@ -356,4 +359,163 @@ function savePluginStoreSettings() {
                 showToast('保存失败', 'error');
             }
         });
+}
+
+function loadAvatarTaskStatus() {
+    fetch('/api/avatar/task/status')
+        .then(function(r) { return r.json(); })
+        .then(function(resp) {
+            if (resp.msg !== 'success' || !resp.data) {
+                setAvatarTaskStatusUI('error', '获取失败');
+                return;
+            }
+            var running = resp.data.running;
+            var task = resp.data.task;
+            setAvatarTaskStatusUI(running, running ? '运行中' : '已关闭', task.id, task.enabled);
+        })
+        .catch(function() {
+            setAvatarTaskStatusUI('error', '获取失败');
+        });
+}
+
+function setAvatarTaskStatusUI(running, label, taskId, enabled) {
+    var badge = document.getElementById('avatarTaskStatus');
+    var btn = document.getElementById('avatarTaskToggleBtn');
+    if (!badge || !btn) return;
+    badge.className = 'task-status-badge ' + (running === 'error' ? 'loading' : (running ? 'running' : 'stopped'));
+    badge.textContent = label;
+    if (taskId) {
+        btn.style.display = '';
+        var isRunning = running === true || running === 'true';
+        btn.textContent = isRunning ? '禁用' : '启用';
+        btn.className = 'btn-toggle-task' + (isRunning ? ' running' : '');
+        btn._taskId = taskId;
+        btn._newEnabled = isRunning ? 0 : 1;
+    } else {
+        btn.style.display = 'none';
+    }
+    if (typeof enabled === 'number' || typeof enabled === 'string') {
+        // 持久化展示当前 enabled 标志，供调试/扩展
+        btn._enabled = enabled;
+    }
+}
+
+function toggleAvatarTask() {
+    var btn = document.getElementById('avatarTaskToggleBtn');
+    if (!btn || !btn._taskId) return;
+    var taskId = btn._taskId;
+    var newEnabled = btn._newEnabled;
+    var action = newEnabled === 1 ? '启用' : '禁用';
+
+    showConfirm('确定要' + action + '虚拟人定时任务吗？').then(function(confirmed) {
+        if (!confirmed) return;
+        fetch('/api/tasks/' + taskId + '/enabled', {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ enabled: newEnabled })
+        })
+        .then(function(r) { return r.json(); })
+        .then(function(resp) {
+            if (resp.msg === 'success') {
+                showToast(action + '成功', 'success');
+                loadAvatarTaskStatus();
+            } else {
+                showToast(action + '失败', 'error');
+            }
+        })
+        .catch(function() {
+            showToast(action + '失败', 'error');
+        });
+    });
+}
+
+function loadAvatarSettings() {
+    Promise.all([
+        fetch('/api/avatar/settings').then(function(r) { return r.json(); }),
+        fetch('/api/avatar/models').then(function(r) { return r.json(); })
+    ]).then(function(results) {
+        var settingsResp = results[0];
+        var modelsResp = results[1];
+
+        if (modelsResp && modelsResp.msg === 'success' && modelsResp.data) {
+            renderAvatarModelOptions(modelsResp.data.groups || [], modelsResp.data.selected || '');
+        }
+
+        if (settingsResp && settingsResp.msg === 'success' && settingsResp.data) {
+            var s = settingsResp.data;
+            var checkbox = document.getElementById('avatarDisabled');
+            if (checkbox) checkbox.checked = !!s.disabled;
+            updateAvatarDisabledLabel();
+            document.getElementById('avatarPersonaSetting').value = s.personaSetting || '';
+            var select = document.getElementById('avatarModelSetting');
+            if (select && (s.modelGroup !== undefined && s.modelGroup !== null)) {
+                select.value = s.modelGroup || '';
+            }
+        }
+    }).catch(function(e) {
+        console.error('加载虚拟人设置失败:', e);
+    });
+}
+
+function renderAvatarModelOptions(groups, selected) {
+    var select = document.getElementById('avatarModelSetting');
+    if (!select) return;
+    while (select.options.length > 1) {
+        select.remove(1);
+    }
+    groups.forEach(function(g) {
+        if (!g || !g.name) return;
+        var opt = document.createElement('option');
+        opt.value = g.name;
+        opt.textContent = g.name + (g.models && g.models.length ? '（' + g.models.length + ' 个）' : '');
+        select.appendChild(opt);
+    });
+    var value = selected || '';
+    if (value && !groups.some(function(g) { return g && g.name === value; })) {
+        var opt = document.createElement('option');
+        opt.value = value;
+        opt.textContent = value + '（未匹配）';
+        select.appendChild(opt);
+    }
+    select.value = value;
+}
+
+function setupAvatarSwitch() {
+    var checkbox = document.getElementById('avatarDisabled');
+    if (!checkbox) return;
+    checkbox.addEventListener('change', updateAvatarDisabledLabel);
+}
+
+function updateAvatarDisabledLabel() {
+    var checkbox = document.getElementById('avatarDisabled');
+    var label = document.getElementById('avatarDisabledLabel');
+    if (!checkbox || !label) return;
+    label.textContent = checkbox.checked ? '已关闭' : '启用';
+}
+
+function saveAvatarSettings() {
+    var checkbox = document.getElementById('avatarDisabled');
+    var select = document.getElementById('avatarModelSetting');
+    var payload = {
+        disabled: !!(checkbox && checkbox.checked),
+        modelSetting: '',
+        modelGroup: select ? (select.value || '') : '',
+        personaSetting: document.getElementById('avatarPersonaSetting').value
+    };
+    fetch('/api/avatar/settings', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+    })
+    .then(function(r) { return r.json(); })
+    .then(function(resp) {
+        if (resp.msg === 'success') {
+            showToast('虚拟人设置保存成功', 'success');
+        } else {
+            showToast('保存失败: ' + (resp.msg || ''), 'error');
+        }
+    })
+    .catch(function() {
+        showToast('保存失败', 'error');
+    });
 }

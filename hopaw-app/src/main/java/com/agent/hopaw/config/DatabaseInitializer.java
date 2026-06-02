@@ -169,6 +169,24 @@ public class DatabaseInitializer implements CommandLineRunner {
                     ")");
             stmt.execute("CREATE INDEX IF NOT EXISTS idx_sys_config_key ON sys_config(config_key)");
 
+            stmt.execute("CREATE TABLE IF NOT EXISTS user_config (" +
+                    "id INTEGER PRIMARY KEY AUTOINCREMENT, " +
+                    "user_id TEXT NOT NULL, " +
+                    "config_key TEXT NOT NULL, " +
+                    "config_value TEXT, " +
+                    "description TEXT, " +
+                    "create_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP, " +
+                    "update_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP" +
+                    ")");
+            stmt.execute("CREATE UNIQUE INDEX IF NOT EXISTS idx_user_config_user_key ON user_config(user_id, config_key)");
+            stmt.execute("CREATE INDEX IF NOT EXISTS idx_user_config_user ON user_config(user_id)");
+
+            stmt.execute("INSERT OR IGNORE INTO user_config (user_id, config_key, config_value, description) " +
+                    "SELECT 'user1', config_key, config_value, description " +
+                    "FROM sys_config " +
+                    "WHERE config_key LIKE 'avatar_%'");
+            stmt.execute("DELETE FROM sys_config WHERE config_key LIKE 'avatar_%'");
+
             stmt.execute("CREATE TABLE IF NOT EXISTS scheduled_tasks (" +
                     "id INTEGER PRIMARY KEY AUTOINCREMENT, " +
                     "task_name TEXT NOT NULL, " +
@@ -367,6 +385,9 @@ public class DatabaseInitializer implements CommandLineRunner {
                 stmt.execute("INSERT INTO scheduled_tasks (task_name, task_type, cron_expression, enabled, description, builtin) " +
                         "SELECT 'Long Term Memory', 'longTermMemory', '0/50 * * * * *', 0, 'Execute memory cleanup every 50 seconds', 1 " +
                         "WHERE NOT EXISTS (SELECT 1 FROM scheduled_tasks WHERE task_type = 'longTermMemory')");
+                stmt.execute("INSERT INTO scheduled_tasks (task_name, task_type, cron_expression, enabled, description, builtin) " +
+                        "SELECT 'Avatar Task', 'avatar', '0/30 * * * * *', 0, 'Execute avatar module task every 30 seconds', 1 " +
+                        "WHERE NOT EXISTS (SELECT 1 FROM scheduled_tasks WHERE task_type = 'avatar')");
             }
 
             log.info("Default data initialization completed");

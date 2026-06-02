@@ -17,30 +17,9 @@ var LAppDefine = {
     MINIMIZED_STORAGE_KEY: "hopaw_avatar_minimized",
     WS_URL: "/ws/avatar",
     INTIMACY_API: "/api/avatar/intimacy",
+    MODELS_API: "/api/avatar/models/pool",
     BUBBLE_DEFAULT_DURATION: 3500,
-    BUBBLE_LONG_DURATION: 6000,
-    MODELS: [
-        [   "js/avatar/model/22/model.default.json",
-            "js/avatar/model/22/model.2016.xmas.1.json",
-            "js/avatar/model/22/model.2016.xmas.2.json",
-            "js/avatar/model/22/model.2017.cba-normal.json",
-            "js/avatar/model/22/model.2017.cba-super.json",
-            "js/avatar/model/22/model.2017.newyear.json",
-            "js/avatar/model/22/model.2017.school.json",
-            "js/avatar/model/22/model.2017.summer.normal.1.json",
-            "js/avatar/model/22/model.2017.summer.normal.2.json",
-            "js/avatar/model/22/model.2017.summer.super.1.json",
-            "js/avatar/model/22/model.2017.summer.super.2.json",
-            "js/avatar/model/22/model.2017.tomo-bukatsu.high.json",
-            "js/avatar/model/22/model.2017.tomo-bukatsu.low.json",
-            "js/avatar/model/22/model.2017.valley.json",
-            "js/avatar/model/22/model.2017.vdays.json",
-            "js/avatar/model/22/model.2018.bls-summer.json",
-            "js/avatar/model/22/model.2018.bls-winter.json",
-            "js/avatar/model/22/model.2018.lover.json",
-            "js/avatar/model/22/model.2018.spring.json"],
-            ["js/avatar/model/haru/haru_01.model.json", "js/avatar/model/haru/haru_02.model.json"],
-    ]
+    BUBBLE_LONG_DURATION: 6000
 };
 
 (function initAvatarWidget() {
@@ -508,9 +487,20 @@ var LAppDefine = {
     }
 
     function loadModel() {
-        var randomIndex = Math.floor(Math.random() * LAppDefine.MODELS.length);
-        var randomIndex1 = Math.floor(Math.random() * LAppDefine.MODELS[randomIndex].length);
-        var randomModel = LAppDefine.MODELS[randomIndex][randomIndex1];
-        loadlive2d(LAppDefine.CANVAS_ID, randomModel);
+        fetch(LAppDefine.MODELS_API, { credentials: 'same-origin' })
+            .then(function(r) { return r.json(); })
+            .then(function(resp) {
+                var pool = resp && resp.data && Array.isArray(resp.data.pool) ? resp.data.pool : [];
+                if (!pool.length) {
+                    console.warn('虚拟人模型池为空');
+                    return;
+                }
+                var index = Math.floor(Math.random() * pool.length);
+                var model = pool[index];
+                loadlive2d(LAppDefine.CANVAS_ID, model);
+            })
+            .catch(function(e) {
+                console.error('加载虚拟人模型池失败', e);
+            });
     }
 })();
