@@ -246,21 +246,6 @@
             </div>
         </div>
     </aside>
-<!--    <div class="avatar-widget" id="avatarWidget">-->
-<!--        <div class="avatar-container">-->
-<!--            <div class="avatar-canvas" id="avatarCanvas"></div>-->
-<!--            <div class="avatar-info">-->
-<!--                <div class="avatar-level" id="avatarLevelText">Lv.0</div>-->
-<!--                <div class="avatar-title" id="avatarTitleText">新手</div>-->
-<!--                <div class="avatar-xp-bar">-->
-<!--                    <div class="avatar-xp-fill" id="avatarXpFill" style="width:0%"></div>-->
-<!--                </div>-->
-<!--                <div class="avatar-action-label" id="avatarActionLabel"></div>-->
-<!--            </div>-->
-<!--            <div class="avatar-level-up-effect" id="avatarLevelUpOverlay"></div>-->
-<!--        </div>-->
-<!--        <button class="avatar-toggle" id="avatarToggleBtn" title="展开/收起">◰</button>-->
-<!--    </div>-->
 </div>
 
 
@@ -278,9 +263,6 @@
     <script th:src="@{/js/model-select.js}"></script>
     <script th:src="@{/js/marked.min.js}"></script>
     <script th:src="@{/js/chart.umd.min.js}"></script>
-    <script src="https://unpkg.com/three@0.160.0/build/three.min.js"></script>
-    <script th:src="@{/js/avatar/avatar-3d.js}"></script>
-    <script th:src="@{/js/avatar/avatar-widget.js}"></script>
     <script th:inline="javascript">
         setCurrentAgentId(/*[[${selectedAgentId}]]*/ null);
         var initialChatSessions = /*[[${chatSessions}]]*/ [];
