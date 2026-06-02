@@ -7,13 +7,105 @@
     -webkit-user-select: none;
     cursor: grab;
     touch-action: none;
-    transition: opacity 0.4s ease;
+    transition: opacity 0.4s ease, right 0.3s ease, top 0.3s ease, left 0.3s ease;
 }
 .avatar-widget:active {
     cursor: grabbing;
 }
+.avatar-widget.dragging {
+    transition: none !important;
+}
 .avatar-canvas {
     pointer-events: auto;
+    display: block;
+}
+
+.avatar-minimize-btn {
+    position: absolute;
+    top: 6px;
+    right: 6px;
+    width: 24px;
+    height: 24px;
+    padding: 0;
+    border: none;
+    border-radius: 50%;
+    background: rgba(0, 0, 0, 0.55);
+    color: #fff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    opacity: 0;
+    transform: scale(0.85);
+    transition: opacity 0.2s ease, transform 0.2s ease, background 0.2s ease;
+    z-index: 5;
+    touch-action: manipulation;
+}
+.avatar-widget:hover .avatar-minimize-btn,
+.avatar-minimize-btn:focus {
+    opacity: 1;
+    transform: scale(1);
+}
+.avatar-minimize-btn:hover {
+    background: rgba(0, 0, 0, 0.8);
+}
+.avatar-minimize-btn:active {
+    transform: scale(0.92);
+}
+
+.avatar-restore-btn {
+    position: absolute;
+    inset: 0;
+    width: 50px;
+    height: 50px;
+    padding: 0;
+    border: none;
+    border-radius: 50%;
+    background: #ffffff;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.18);
+    overflow: hidden;
+    cursor: pointer;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    touch-action: manipulation;
+    z-index: 4;
+}
+.avatar-restore-btn img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    pointer-events: none;
+}
+.avatar-restore-btn:hover {
+    background: #f5f5f5;
+}
+
+.avatar-widget.minimized {
+    right: -30px;
+    top: auto;
+    bottom: 135px;
+    left: auto;
+    width: 50px;
+    height: 50px;
+    cursor: pointer;
+    touch-action: manipulation;
+    transition: right 0.3s ease, transform 0.25s ease, bottom 0.3s ease, top 0.3s ease, left 0.3s ease;
+}
+.avatar-widget.minimized:hover {
+    right: 0;
+    transform: translateX(0);
+}
+.avatar-widget.minimized .avatar-canvas,
+.avatar-widget.minimized .avatar-bubble,
+.avatar-widget.minimized .avatar-minimize-btn {
+    display: none;
+}
+.avatar-widget.minimized .avatar-restore-btn {
+    display: flex;
+}
+.avatar-widget.minimized:active {
+    cursor: pointer;
 }
 
 .avatar-bubble {
@@ -65,4 +157,11 @@
 body.dark-theme .avatar-bubble {
     --bubble-bg: #2a2d31;
     --bubble-color: #e6e8eb;
+}
+body.dark-theme .avatar-restore-btn {
+    background: #2a2d31;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+}
+body.dark-theme .avatar-restore-btn:hover {
+    background: #35393f;
 }

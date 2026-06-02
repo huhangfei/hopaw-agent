@@ -3,35 +3,38 @@ var LAppDefine = {
     WIDGET_ID: "avatarWidget",
     BUBBLE_ID: "avatarBubble",
     BUBBLE_CONTENT_ID: "avatarBubbleContent",
+    MINIMIZE_BTN_ID: "avatarMinimizeBtn",
+    RESTORE_BTN_ID: "avatarRestoreBtn",
     IS_DRAGABLE: true,
     BUTTON_ID: "Change",
     TEXURE_BUTTON_ID: "texure",
     DRAG_THRESHOLD: 5,
     STORAGE_KEY: "hopaw_avatar_position",
+    MINIMIZED_STORAGE_KEY: "hopaw_avatar_minimized",
     WS_URL: "/ws/avatar",
     BUBBLE_DEFAULT_DURATION: 3500,
     BUBBLE_LONG_DURATION: 6000,
     MODELS: [
-        [   "model/22/model.default.json",
-            "model/22/model.2016.xmas.1.json",
-            "model/22/model.2016.xmas.2.json",
-            "model/22/model.2017.cba-normal.json",
-            "model/22/model.2017.cba-super.json",
-            "model/22/model.2017.newyear.json",
-            "model/22/model.2017.school.json",
-            "model/22/model.2017.summer.normal.1.json",
-            "model/22/model.2017.summer.normal.2.json",
-            "model/22/model.2017.summer.super.1.json",
-            "model/22/model.2017.summer.super.2.json",
-            "model/22/model.2017.tomo-bukatsu.high.json",
-            "model/22/model.2017.tomo-bukatsu.low.json",
-            "model/22/model.2017.valley.json",
-            "model/22/model.2017.vdays.json",
-            "model/22/model.2018.bls-summer.json",
-            "model/22/model.2018.bls-winter.json",
-            "model/22/model.2018.lover.json",
-            "model/22/model.2018.spring.json"],
-            ["model/haru/haru_01.model.json", "model/haru/haru_02.model.json"],
+        [   "js/avatar/model/22/model.default.json",
+            "js/avatar/model/22/model.2016.xmas.1.json",
+            "js/avatar/model/22/model.2016.xmas.2.json",
+            "js/avatar/model/22/model.2017.cba-normal.json",
+            "js/avatar/model/22/model.2017.cba-super.json",
+            "js/avatar/model/22/model.2017.newyear.json",
+            "js/avatar/model/22/model.2017.school.json",
+            "js/avatar/model/22/model.2017.summer.normal.1.json",
+            "js/avatar/model/22/model.2017.summer.normal.2.json",
+            "js/avatar/model/22/model.2017.summer.super.1.json",
+            "js/avatar/model/22/model.2017.summer.super.2.json",
+            "js/avatar/model/22/model.2017.tomo-bukatsu.high.json",
+            "js/avatar/model/22/model.2017.tomo-bukatsu.low.json",
+            "js/avatar/model/22/model.2017.valley.json",
+            "js/avatar/model/22/model.2017.vdays.json",
+            "js/avatar/model/22/model.2018.bls-summer.json",
+            "js/avatar/model/22/model.2018.bls-winter.json",
+            "js/avatar/model/22/model.2018.lover.json",
+            "js/avatar/model/22/model.2018.spring.json"],
+            ["js/avatar/model/haru/haru_01.model.json", "js/avatar/model/haru/haru_02.model.json"],
     ]
 };
 
@@ -44,14 +47,103 @@ var LAppDefine = {
 
     initBubble(widget);
     initDrag(widget);
+    initMinimize(widget);
     connectAvatarWebSocket();
     var raf = window.requestAnimationFrame || function (cb) { return setTimeout(cb, 16); };
     raf(function () {
-        if (LAppDefine.IS_DRAGABLE) {
-            loadPosition();
-        }
+        applySavedState();
         loadModel();
     });
+
+    function applySavedState() {
+        var minimized = isMinimizedStored();
+        if (minimized) {
+            enterMinimized(true);
+        } else if (LAppDefine.IS_DRAGABLE) {
+            loadPosition();
+        }
+    }
+
+    function isMinimizedStored() {
+        try {
+            return localStorage.getItem(LAppDefine.MINIMIZED_STORAGE_KEY) === "true";
+        } catch (e) {
+            return false;
+        }
+    }
+
+    function setMinimizedStored(value) {
+        try {
+            if (value) {
+                localStorage.setItem(LAppDefine.MINIMIZED_STORAGE_KEY, "true");
+            } else {
+                localStorage.removeItem(LAppDefine.MINIMIZED_STORAGE_KEY);
+            }
+        } catch (e) {}
+    }
+
+    function enterMinimized(skipTransition) {
+        if (widget._avatarBubble) widget._avatarBubble.hide();
+        if (skipTransition) {
+            var prev = widget.style.transition;
+            widget.style.transition = "none";
+            widget.classList.add("minimized");
+            widget.style.left = "";
+            widget.style.top = "";
+            widget.style.right = "";
+            widget.style.bottom = "";
+            void widget.offsetWidth;
+            widget.style.transition = prev;
+        } else {
+            widget.classList.add("minimized");
+            widget.style.left = "";
+            widget.style.top = "";
+            widget.style.right = "";
+            widget.style.bottom = "";
+        }
+        setMinimizedStored(true);
+    }
+
+    function exitMinimized() {
+        widget.classList.remove("minimized");
+        widget.style.left = "";
+        widget.style.top = "";
+        widget.style.right = "";
+        widget.style.bottom = "";
+        setMinimizedStored(false);
+        if (LAppDefine.IS_DRAGABLE && widget._applyPosition) {
+            loadPosition();
+        }
+    }
+
+    function isMinimized() {
+        return widget.classList.contains("minimized");
+    }
+
+    function initMinimize() {
+        var minBtn = document.getElementById(LAppDefine.MINIMIZE_BTN_ID);
+        var resBtn = document.getElementById(LAppDefine.RESTORE_BTN_ID);
+        if (minBtn) {
+            minBtn.addEventListener("click", function (e) {
+                e.stopPropagation();
+                e.preventDefault();
+                enterMinimized(false);
+            });
+            minBtn.addEventListener("pointerdown", function (e) {
+                e.stopPropagation();
+            });
+        }
+        if (resBtn) {
+            resBtn.addEventListener("click", function (e) {
+                e.stopPropagation();
+                e.preventDefault();
+                exitMinimized();
+            });
+            resBtn.addEventListener("pointerdown", function (e) {
+                e.stopPropagation();
+            });
+        }
+    }
 
     function initBubble() {
         var bubble = document.getElementById(LAppDefine.BUBBLE_ID);
@@ -63,6 +155,7 @@ var LAppDefine = {
             timer: null,
             show: function (text, duration) {
                 if (!text) return;
+                if (isMinimized()) return;
                 content.textContent = text;
                 bubble.classList.add("visible");
                 if (this.timer) {
@@ -135,6 +228,7 @@ var LAppDefine = {
 
     function handleAvatarEvent(data) {
         if (!data) return;
+        if (isMinimized()) return;
         var bubble = widget._avatarBubble;
         if (!bubble) return;
         if (data.userId && currentUserId && data.userId !== currentUserId) {
@@ -193,7 +287,11 @@ var LAppDefine = {
         }
 
         function onPointerDown(e) {
+            if (isMinimized()) return;
             if (e.button !== undefined && e.button !== 0) return;
+            if (e.target.closest && e.target.closest(".avatar-minimize-btn")) {
+                return;
+            }
             var pt = getPointerXY(e);
             pointerId = e.pointerId !== undefined ? e.pointerId : null;
             startX = pt.x;
@@ -207,6 +305,7 @@ var LAppDefine = {
                 try { widget.setPointerCapture(pointerId); } catch (_) {}
             }
             widget.style.cursor = "grabbing";
+            widget.classList.add("dragging");
         }
 
         function onPointerMove(e) {
@@ -228,6 +327,7 @@ var LAppDefine = {
             if (!isDragging) return;
             isDragging = false;
             widget.style.cursor = "grab";
+            widget.classList.remove("dragging");
             if (pointerId !== null && widget.releasePointerCapture) {
                 try { widget.releasePointerCapture(pointerId); } catch (_) {}
             }
@@ -266,6 +366,7 @@ var LAppDefine = {
         }
 
         window.addEventListener("resize", function () {
+            if (isMinimized()) return;
             var rect = widget.getBoundingClientRect();
             applyPosition(rect.left, rect.top);
             try {
@@ -292,6 +393,6 @@ var LAppDefine = {
         var randomIndex = Math.floor(Math.random() * LAppDefine.MODELS.length);
         var randomIndex1 = Math.floor(Math.random() * LAppDefine.MODELS[randomIndex].length);
         var randomModel = LAppDefine.MODELS[randomIndex][randomIndex1];
-        loadlive2d(LAppDefine.CANVAS_ID,'/js/avatar/'+ randomModel);
+        loadlive2d(LAppDefine.CANVAS_ID, randomModel);
     }
 })();

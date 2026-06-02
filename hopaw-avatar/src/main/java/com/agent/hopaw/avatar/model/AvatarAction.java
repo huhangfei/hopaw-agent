@@ -119,6 +119,7 @@ public enum AvatarAction {
             return IDLE;
         }
         return switch (type) {
+            case "received" -> THINKING;
             case "thinking" -> THINKING;
             case "tool_call" -> TOOL_EXECUTING;
             case "chunk" -> TYPING;

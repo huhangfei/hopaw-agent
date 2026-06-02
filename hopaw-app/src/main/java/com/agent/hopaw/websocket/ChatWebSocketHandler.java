@@ -90,26 +90,11 @@ public class ChatWebSocketHandler extends TextWebSocketHandler {
             userRequest.setAiModelId(aiModelId);
             userRequest.setEnableThinking(enableThinking);
             userRequest.setToolCallPermission(toolCallPermission);
-            //回复一个已收到消息，开始处理
-            sendFirstState(session);
             IAgentExecutor executor = agentExecutorService.createAgentExecutor(userRequest);
             executor.execute();
         } catch (Exception e) {
             logger.error("handleTextMessage error", e);
             sendError(session, "处理消息失败: " + e.getMessage());
-        }
-    }
-
-
-
-    private void sendFirstState(WebSocketSession session) {
-        try {
-            Map<String, Object> data = new HashMap<>(2);
-            data.put("type", "received");
-            data.put("message", "已收到消息，开始处理");
-            session.sendMessage(new TextMessage(JSON.toJSONString(data)));
-        } catch (IOException e) {
-            logger.error("error", e);
         }
     }
     private void sendError(WebSocketSession session, String errorMessage) {

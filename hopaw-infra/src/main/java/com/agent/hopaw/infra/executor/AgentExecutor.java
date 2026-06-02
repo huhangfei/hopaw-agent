@@ -37,6 +37,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.util.StringUtils;
 
+import java.io.IOException;
 import java.time.LocalDateTime;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
@@ -254,7 +255,18 @@ public class AgentExecutor implements IAgentExecutor {
             toolApprovalLocks.get(approvalId).complete(allowed);
         }
     }
-
+    private void sendFirstState() {
+        try {
+            AiMessageBaseInfo message=new AiMessageBaseInfo("received");
+            message.sessionId(sessionId);
+            message.setRequestId(requestId);
+            message.setContent("已收到消息，开始处理");
+            AgentMessageEvent event=new AgentMessageEvent(userId,message);
+            eventPublisher.publishEvent(event);
+        } catch (Exception e) {
+            logger.error("sendFirstState error", e);
+        }
+    }
     @Override
     public boolean running() {
         return taskLatch.getCount() > 0;
@@ -263,7 +275,7 @@ public class AgentExecutor implements IAgentExecutor {
     @Override
     public void execute() {
         try {
-
+            sendFirstState();
             saveChatSession();
             saveChatHistory();
 
