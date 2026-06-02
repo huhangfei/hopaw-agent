@@ -1,5 +1,6 @@
 package com.agent.hopaw.tool.command;
 
+import com.agent.hopaw.infra.tool.ToolSecurityLevel;
 import com.agent.hopaw.infra.service.IAgentExecutorService;
 import com.agent.hopaw.infra.util.InvocationParametersWrapper;
 import dev.langchain4j.agent.tool.P;
@@ -28,11 +29,13 @@ public class CommandExecutorTool implements AgentTool {
     private static final int TIMEOUT_SECONDS = 30;
     private static final int MAX_OUTPUT_LINES = 500;
 
+    @ToolSecurityLevel(ToolSecurityLevel.Level.SAFE)
     @Tool("获取本地操作系统的名称，例如 Windows 10 或 Ubuntu 20.04")
     public String getOsName() {
         return System.getProperty("os.name");
     }
 
+    @ToolSecurityLevel(ToolSecurityLevel.Level.ALL_REQUIRE_APPROVAL)
     @Tool("执行本地系统命令并返回输出结果。支持 Windows 和 Unix/Linux/macOS 系统。使用前最好先获取操作系统类型，" +
             "以确保命令在目标系统上执行。" +
             "请谨慎使用，避免执行危险命令如格式化磁盘、删除系统文件等。")

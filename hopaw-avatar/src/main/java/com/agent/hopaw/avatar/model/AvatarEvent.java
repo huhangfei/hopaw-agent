@@ -11,11 +11,16 @@ public class AvatarEvent {
     }
 
     public static AvatarEvent action(String userId, AvatarAction action) {
+        return action(userId, action, null);
+    }
+
+    public static AvatarEvent action(String userId, AvatarAction action, UserLevelInfo levelInfo) {
         AvatarEvent event = new AvatarEvent();
         event.type = "avatar_action";
         event.userId = userId;
         event.action = action.getCode();
         event.actionDescription = action.getDescription();
+        event.levelInfo = levelInfo;
         return event;
     }
 

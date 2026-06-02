@@ -1,5 +1,6 @@
 package com.agent.hopaw.biz.tool.mail;
 
+import com.agent.hopaw.infra.tool.ToolSecurityLevel;
 import com.agent.hopaw.biz.util.MailUtil;
 import dev.langchain4j.agent.tool.P;
 import dev.langchain4j.agent.tool.Tool;
@@ -40,6 +41,7 @@ public class MailTool implements AgentTool {
         return "邮件";
     }
 
+    @ToolSecurityLevel(ToolSecurityLevel.Level.ALL_REQUIRE_APPROVAL)
     @Tool("发送纯文本邮件。")
     public String sendTextMail(
             @P(description = "收件人邮箱地址") String to,
@@ -55,6 +57,7 @@ public class MailTool implements AgentTool {
         }
     }
 
+    @ToolSecurityLevel(ToolSecurityLevel.Level.ALL_REQUIRE_APPROVAL)
     @Tool("发送HTML格式邮件。")
     public String sendHtmlMail(
             @P(description = "收件人邮箱地址") String to,

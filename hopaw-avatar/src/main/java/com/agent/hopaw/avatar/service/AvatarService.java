@@ -90,7 +90,8 @@ public class AvatarService {
         }
 
         AvatarAction action = AvatarAction.fromMessageType(message.getType());
-        AvatarEvent avatarEvent = AvatarEvent.action(userId, action);
+        UserLevelInfo levelInfo = userLevelCache.get(userId);
+        AvatarEvent avatarEvent = AvatarEvent.action(userId, action, levelInfo);
         broadcast(avatarEvent);
     }
 

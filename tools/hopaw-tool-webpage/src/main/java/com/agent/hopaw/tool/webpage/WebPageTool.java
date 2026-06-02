@@ -1,5 +1,6 @@
 package com.agent.hopaw.tool.webpage;
 
+import com.agent.hopaw.infra.tool.ToolSecurityLevel;
 import dev.langchain4j.agent.tool.P;
 import com.agent.hopaw.infra.tool.AgentTool;
 import dev.langchain4j.agent.tool.Tool;
@@ -134,6 +135,7 @@ public class WebPageTool implements AgentTool {
         }
     }
 
+    @ToolSecurityLevel(ToolSecurityLevel.Level.SAFE)
     @Tool("获取网页内容，输入URL地址，返回网页的纯文本内容")
     public String fetchWebPage(@P(description = "URL地址") String url) {
         // 确保 Playwright 已初始化

@@ -3,6 +3,7 @@ package com.agent.hopaw.biz.tool.sysconfig;
 import com.agent.hopaw.infra.model.dto.ToolConfigItem;
 import com.agent.hopaw.infra.model.entity.SysConfig;
 import com.agent.hopaw.infra.service.ISysConfigService;
+import com.agent.hopaw.infra.tool.ToolSecurityLevel;
 import dev.langchain4j.agent.tool.P;
 import dev.langchain4j.agent.tool.SearchBehavior;
 import dev.langchain4j.agent.tool.Tool;
@@ -50,6 +51,7 @@ public class SysConfigTool implements AgentTool {
         );
     }
 
+    @ToolSecurityLevel(ToolSecurityLevel.Level.SAFE)
     @Tool(value = "根据 Key 查询系统配置项的值",searchBehavior = SearchBehavior.ALWAYS_VISIBLE)
     public String querySystemConfigValue(@P(description = "配置项的 Key") String key) {
         SysConfig config = sysConfigService.getByKey(key);
@@ -59,6 +61,7 @@ public class SysConfigTool implements AgentTool {
         return config.getConfigValue();
     }
 
+    @ToolSecurityLevel(ToolSecurityLevel.Level.SAFE)
     @Tool(value={"查询所有系统配置项的 Key和描述","Value值通过调用querySystemConfigValue接口获取"},searchBehavior = SearchBehavior.ALWAYS_VISIBLE)
     public String queryAllSystemConfigs() {
         List<SysConfig> configs = sysConfigService.getAll();
@@ -74,6 +77,7 @@ public class SysConfigTool implements AgentTool {
         return sb.toString();
     }
 
+    @ToolSecurityLevel(ToolSecurityLevel.Level.PARAM_REQUIRE_APPROVAL)
     @Tool(value="保存系统配置项（可能影响系统运行，请谨慎操作）",searchBehavior = SearchBehavior.ALWAYS_VISIBLE)
     public String saveSystemConfig(@P(description = "配置项的 Key") String key,
                              @P(description = "配置项的值") String value,

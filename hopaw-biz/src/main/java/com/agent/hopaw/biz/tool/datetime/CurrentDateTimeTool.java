@@ -1,5 +1,6 @@
 package com.agent.hopaw.biz.tool.datetime;
 
+import com.agent.hopaw.infra.tool.ToolSecurityLevel;
 import dev.langchain4j.agent.tool.Tool;
 import com.agent.hopaw.infra.tool.AgentTool;
 import org.springframework.stereotype.Component;
@@ -8,6 +9,7 @@ import org.springframework.stereotype.Service;
 @Component("currentDateTime")
 public class CurrentDateTimeTool implements AgentTool {
 
+    @ToolSecurityLevel(ToolSecurityLevel.Level.SAFE)
     @Tool("获取当前日期和时间")
     public String getCurrentTime() {
         return java.time.LocalDateTime.now().toString();

@@ -4,6 +4,7 @@ package com.agent.hopaw.biz.tool.agenttask;
 import com.agent.hopaw.infra.model.entity.ScheduledTask;
 import com.agent.hopaw.infra.service.IScheduledTaskService;
 import com.agent.hopaw.infra.util.InvocationParametersWrapper;
+import com.agent.hopaw.infra.tool.ToolSecurityLevel;
 import dev.langchain4j.agent.tool.P;
 import dev.langchain4j.agent.tool.Tool;
 import dev.langchain4j.invocation.InvocationParameters;
@@ -38,6 +39,7 @@ public class AgentTaskTool implements AgentTool {
         return "定时任务";
     }
 
+    @ToolSecurityLevel(ToolSecurityLevel.Level.PARAM_REQUIRE_APPROVAL)
     @Tool("创建定时执行的任务")
     public String createAgentTask(@P("任务的简要名称") String taskName, @P("任务的cron表达式(6位)") String cron, @P("任务具体要做的事情描述") String taskDescription, InvocationParameters invocationParameters) {
         InvocationParametersWrapper invocationParametersWrapper = InvocationParametersWrapper.create(invocationParameters);
@@ -49,6 +51,7 @@ public class AgentTaskTool implements AgentTool {
         return "定时任务创建成功";
     }
 
+    @ToolSecurityLevel(ToolSecurityLevel.Level.SAFE)
     @Tool("查询定时执行的任务")
     public String findAgentTask(InvocationParameters invocationParameters) {
         InvocationParametersWrapper invocationParametersWrapper = InvocationParametersWrapper.create(invocationParameters);
@@ -70,6 +73,7 @@ public class AgentTaskTool implements AgentTool {
         return "成功：当前没有定时任务";
     }
 
+    @ToolSecurityLevel(ToolSecurityLevel.Level.PARAM_REQUIRE_APPROVAL)
     @Tool("停止启动中的定时执行的任务")
     public String stopAgentTask(@P("任务ID") Long taskId,InvocationParameters invocationParameters) {
         InvocationParametersWrapper invocationParametersWrapper = InvocationParametersWrapper.create(invocationParameters);
@@ -82,6 +86,7 @@ public class AgentTaskTool implements AgentTool {
         return "定时任务停止成功";
     }
 
+    @ToolSecurityLevel(ToolSecurityLevel.Level.PARAM_REQUIRE_APPROVAL)
     @Tool("启动停止中的定时执行的任务")
     public String startAgentTask(@P("任务ID") Long taskId,InvocationParameters invocationParameters) {
         InvocationParametersWrapper invocationParametersWrapper = InvocationParametersWrapper.create(invocationParameters);
@@ -93,6 +98,7 @@ public class AgentTaskTool implements AgentTool {
         scheduledTaskService.setEnabled(taskId, 1);
         return "定时任务启动成功";
     }
+    @ToolSecurityLevel(ToolSecurityLevel.Level.ALL_REQUIRE_APPROVAL)
     @Tool("删除定时执行的任务")
     public String deleteAgentTask(@P("任务ID") Long taskId,InvocationParameters invocationParameters) {
         InvocationParametersWrapper invocationParametersWrapper = InvocationParametersWrapper.create(invocationParameters);

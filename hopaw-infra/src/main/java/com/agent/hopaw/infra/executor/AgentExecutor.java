@@ -35,6 +35,7 @@ import dev.langchain4j.service.tool.search.vector.VectorToolSearchStrategy;
 import dev.langchain4j.store.memory.chat.InMemoryChatMemoryStore;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.util.StringUtils;
 
 import java.time.LocalDateTime;
 import java.util.*;
@@ -80,7 +81,7 @@ public class AgentExecutor implements IAgentExecutor {
     private final java.util.concurrent.ConcurrentMap<String, CountDownLatch> toolCancelLatch = new ConcurrentHashMap<>();
     private final java.util.concurrent.ConcurrentMap<String, Consumer<String>> toolStopHooks = new ConcurrentHashMap<>();
     private final java.util.concurrent.ConcurrentMap<String, PendingResponse<Boolean>> toolApprovalLocks = new ConcurrentHashMap<>();
-    private final Map<String, ToolSecurityLevel.Level> toolSecurityLevels = new HashMap<>();
+    private final Map<String, ToolInfo> toolInfoMap = new HashMap<>();
     private final ChatMemoryId memoryId;
     private final EmbeddingModel embeddingModel;
     private final ThreadPoolExecutor toolExecutor;
@@ -129,7 +130,7 @@ public class AgentExecutor implements IAgentExecutor {
         });
         for (ToolSetInfo toolSet : agentExecutorParams.getToolSets()) {
             for (ToolInfo tool : toolSet.getTools()) {
-                toolSecurityLevels.put(toolSet.getName()+"_"+tool.getName(),tool.getSecurityLevel());
+                toolInfoMap.put(tool.getName(),tool);
             }
         }
     }
@@ -327,15 +328,29 @@ public class AgentExecutor implements IAgentExecutor {
                     })
                     .beforeToolExecution(toolExecution -> {
                         String toolCallId = toolExecution.request().id();
+                        String toolName = toolExecution.request().name();
+                        String arguments = toolExecution.request().arguments();
+
+
+                        ToolInfo toolInfo = toolInfoMap.getOrDefault(toolName, null);
+                        ToolSecurityLevel.Level toolLevel = toolInfo==null? ToolSecurityLevel.Level.ALL_REQUIRE_APPROVAL:toolInfo.getSecurityLevel();
+
                         toolExecution.invocationContext().invocationParameters().put("toolCallId", toolCallId);
                         //拦截执行
                         boolean allowed=false;
-                        if("auto".equals(agentExecutorParams.getToolCallPermission())){
+                        if(toolName.equals("tool_search_tool") || ToolSecurityLevel.Level.SAFE.equals(toolLevel)) {
+                            allowed=true;
+                        }else if("auto".equals(agentExecutorParams.getToolCallPermission())){
+                            //完全自动
                             allowed=true;
                         }else if("smart_call".equals(agentExecutorParams.getToolCallPermission())){
-
+                            if(ToolSecurityLevel.Level.PARAM_REQUIRE_APPROVAL.equals(toolLevel)){
+                                String result = analyzeToolCall(toolInfo, arguments);
+                                if(result!=null && result.contains("否")){
+                                    allowed=true;
+                                }
+                            }
                         }else{
-
                         }
                         ToolExecutionRequest toolCallInfo = toolExecution.request();
                         if(!allowed){
@@ -415,7 +430,41 @@ public class AgentExecutor implements IAgentExecutor {
             ChatRequestParameters chatRequestParameters = ChatRequestParameters.builder()
                     .temperature(0.1)
                     .build();
-            String result = assistant.analyzeUserIntent(contents, chatRequestParameters, invocationParametersWrapper.getParameters());
+            String result = assistant.analyze(contents, chatRequestParameters, invocationParametersWrapper.getParameters());
+            return result;
+        } catch (Exception ex) {
+            logger.error("Error analyzing user intent", ex);
+            return null;
+        }
+    }
+
+    private String analyzeToolCall(ToolInfo toolInfo,String arguments) {
+        try {
+
+            String systemMessage="你只是一个工具调用安全检查员，你需要判断用户提交到调用是否需要人工介入？只需要返回给用户：是或否";
+
+            List<Content> contents=new ArrayList<>();
+            contents.add(new TextContent("现在我要调用函数"+toolInfo.getName()+",这个函数的作用是"+toolInfo.getDescription()));
+
+            if(StringUtils.hasLength(arguments)){
+                contents.add(new TextContent("参数是:"+arguments));
+            }
+            InvocationParametersWrapper invocationParametersWrapper = InvocationParametersWrapper.create()
+                    .setUserId(userId)
+                    .setAgentId(agentId)
+                    .setRequestId(requestId)
+                    .setSessionId(sessionId);
+            ChatModel chatModel = aiModelService.createChatModel(agentExecutorParams.getAiModelId(), false, this.langChain4jMonitor);
+
+            String finalSystemMessage = systemMessage;
+            ChatAgentAssistant assistant = AiServices.builder(ChatAgentAssistant.class)
+                    .chatModel(chatModel)
+                    .systemMessageProvider(chatMemoryId -> finalSystemMessage)
+                    .build();
+            ChatRequestParameters chatRequestParameters = ChatRequestParameters.builder()
+                    .temperature(0.1)
+                    .build();
+            String result = assistant.analyze(contents, chatRequestParameters, invocationParametersWrapper.getParameters());
             return result;
         } catch (Exception ex) {
             logger.error("Error analyzing user intent", ex);
@@ -716,8 +765,8 @@ public class AgentExecutor implements IAgentExecutor {
     }
 
     public interface ChatAgentAssistant {
-        String analyzeUserIntent(@dev.langchain4j.service.UserMessage List<Content> contents,
-                                 ChatRequestParameters chatRequestParameters, InvocationParameters invocationParameters);
+        String analyze(@dev.langchain4j.service.UserMessage List<Content> contents,
+                       ChatRequestParameters chatRequestParameters, InvocationParameters invocationParameters);
 
         TokenStream streamingChat(@dev.langchain4j.service.UserMessage List<Content> contents,
                                   // ChatRequestParameters requestParameters, // 模型参数

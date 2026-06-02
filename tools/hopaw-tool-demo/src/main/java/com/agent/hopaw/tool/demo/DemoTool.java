@@ -1,5 +1,6 @@
 package com.agent.hopaw.tool.demo;
 
+import com.agent.hopaw.infra.tool.ToolSecurityLevel;
 import com.agent.hopaw.infra.tool.AgentTool;
 import dev.langchain4j.agent.tool.P;
 import dev.langchain4j.agent.tool.Tool;
@@ -29,6 +30,7 @@ public class DemoTool implements AgentTool {
         return "系统,信息,状态";
     }
 
+    @ToolSecurityLevel(ToolSecurityLevel.Level.SAFE)
     @Tool("查询当前系统状态信息，包括JVM内存、磁盘空间、系统时间等")
     public String querySystemStatus() {
         StringBuilder sb = new StringBuilder();
@@ -57,6 +59,7 @@ public class DemoTool implements AgentTool {
         return sb.toString();
     }
 
+    @ToolSecurityLevel(ToolSecurityLevel.Level.SAFE)
     @Tool("查询指定JVM系统属性值，如java.version、os.name等")
     public String querySystemProperty(
             @P("系统属性名，如java.version、os.name、user.dir") String key) {
