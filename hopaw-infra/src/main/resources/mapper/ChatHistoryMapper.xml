@@ -32,10 +32,10 @@
         ORDER BY create_time DESC
         LIMIT #{limit}
     </select>
-    <select id="findByAgentIdAndToolCallId" resultMap="ChatHistoryResultMap">
+    <select id="findBySessionIdAndToolCallId" resultMap="ChatHistoryResultMap">
         SELECT id, agent_id, session_id, role, message_type, content, tool_call_id, tool_name, tool_arguments, tool_call_status, tool_execution_time, create_time, user_id
         FROM chat_history
-        WHERE agent_id = #{agentId} and tool_call_id = #{toolCallId}
+        WHERE session_id = #{sessionId} and tool_call_id = #{toolCallId}
         limit 1;
     </select>
 
@@ -85,7 +85,7 @@
 
     <update id="updateToolCallStatusAndContent">
         UPDATE chat_history
-        SET tool_call_status = #{toolCallStatus}, content = #{content}
+        SET tool_call_status = #{toolCallStatus},tool_arguments=#{arguments}, content = #{content}
         <if test="toolExecutionTime != null">, tool_execution_time = #{toolExecutionTime}</if>
         WHERE id = #{id}
     </update>

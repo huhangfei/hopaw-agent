@@ -23,13 +23,13 @@ public class SqliteChatHistoryDbStore implements ChatHistoryStore {
     @Override
     public void saveChatHistory(ChatHistory chatHistory) {
         if(chatHistory.getMessageType().equals("tool_call")){
-            ChatHistory old = chatHistoryMapper.findByAgentIdAndToolCallId(chatHistory.getAgentId(), chatHistory.getToolCallId());
+            ChatHistory old = chatHistoryMapper.findBySessionIdAndToolCallId(chatHistory.getSessionId(), chatHistory.getToolCallId());
             if(old != null){
                 LocalDateTime startTime = old.getCreateTime();
                 long toolExecutionTime = ChronoUnit.MILLIS.between(startTime, LocalDateTime.now());
                 chatHistory.setToolExecutionTime(toolExecutionTime);
                 chatHistory.setId(old.getId());
-                chatHistoryMapper.updateToolCallStatusAndContent(chatHistory.getId(), chatHistory.getToolCallStatus(), chatHistory.getContent(), chatHistory.getToolExecutionTime());
+                chatHistoryMapper.updateToolCallStatusAndContent(chatHistory.getId(), chatHistory.getToolCallStatus(),chatHistory.getToolArguments(), chatHistory.getContent(), chatHistory.getToolExecutionTime());
             }else{
                 chatHistory.setToolExecutionTime(0L);
                 chatHistoryMapper.insert(chatHistory);
