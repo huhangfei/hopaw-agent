@@ -2,8 +2,8 @@ package com.agent.hopaw.avatar.service;
 
 import com.agent.hopaw.avatar.model.AvatarModelGroup;
 import com.agent.hopaw.avatar.model.AvatarSettings;
-import com.agent.hopaw.infra.model.entity.UserConfig;
-import com.agent.hopaw.infra.service.IUserConfigService;
+import com.agent.hopaw.infra.mapper.AvatarConfigMapper;
+import com.agent.hopaw.infra.model.entity.AvatarConfig;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
@@ -22,11 +22,12 @@ public class AvatarSettingsService {
     public static final String KEY_MODEL_SETTING = "avatar_model_setting";
     public static final String KEY_MODEL_GROUP = "avatar_model_group";
     public static final String KEY_PERSONA_SETTING = "avatar_persona_setting";
+    public static final String KEY_AVATAR_AI_MODEL_ID = "avatar_ai_model_id";
+    public static final String KEY_AVATAR_AI_PROMPT = "avatar_ai_prompt";
 
-    private static final String DESC_DISABLED = "是否关闭虚拟人";
-    private static final String DESC_MODEL_SETTING = "虚拟人模型设置";
-    private static final String DESC_MODEL_GROUP = "虚拟人模型组选择";
-    private static final String DESC_PERSONA_SETTING = "虚拟人人设设置";
+    public static final String DEFAULT_AVATAR_AI_PROMPT = "你是一个贴心的虚拟人助手。请结合用户的最近 30 分钟内输入内容（前时间{currentTime}），分析用户当前可能在做什么、处于什么状态，以及是否需要主动提醒。\n" +
+            "人设设定：\n{persona}"+
+            "当需要提醒时，请调用sendMessageToUser工具进行发送\n";
 
     private static final List<AvatarModelGroup> DEFAULT_MODEL_GROUPS;
 
@@ -60,18 +61,21 @@ public class AvatarSettingsService {
         DEFAULT_MODEL_GROUPS = Collections.unmodifiableList(groups);
     }
 
-    private final IUserConfigService userConfigService;
+    private final AvatarConfigMapper avatarConfigMapper;
 
-    public AvatarSettingsService(IUserConfigService userConfigService) {
-        this.userConfigService = userConfigService;
+    public AvatarSettingsService(AvatarConfigMapper avatarConfigMapper) {
+        this.avatarConfigMapper = avatarConfigMapper;
     }
 
     public AvatarSettings getSettings(String userId) {
+        AvatarConfig config = loadConfig(userId);
         AvatarSettings settings = new AvatarSettings();
-        settings.setDisabled(parseBoolean(userConfigService.getValueByKey(userId, KEY_DISABLED, "false")));
-        settings.setModelSetting(userConfigService.getValueByKey(userId, KEY_MODEL_SETTING, ""));
-        settings.setModelGroup(userConfigService.getValueByKey(userId, KEY_MODEL_GROUP, ""));
-        settings.setPersonaSetting(userConfigService.getValueByKey(userId, KEY_PERSONA_SETTING, ""));
+        settings.setDisabled(Boolean.TRUE.equals(config.getDisabled()));
+        settings.setModelSetting(config.getModelSetting());
+        settings.setModelGroup(config.getModelGroup());
+        settings.setPersonaSetting(config.getPersonaSetting());
+        settings.setAvatarAiModelId(config.getAvatarAiModelId());
+        settings.setAvatarAiPrompt(config.getAvatarAiPrompt());
         return settings;
     }
 
@@ -79,14 +83,32 @@ public class AvatarSettingsService {
         if (settings == null) {
             return;
         }
-        saveConfig(userId, KEY_DISABLED, Boolean.toString(settings.isDisabled()), DESC_DISABLED);
-        saveConfig(userId, KEY_MODEL_SETTING, settings.getModelSetting() == null ? "" : settings.getModelSetting(), DESC_MODEL_SETTING);
-        saveConfig(userId, KEY_MODEL_GROUP, settings.getModelGroup() == null ? "" : settings.getModelGroup(), DESC_MODEL_GROUP);
-        saveConfig(userId, KEY_PERSONA_SETTING, settings.getPersonaSetting() == null ? "" : settings.getPersonaSetting(), DESC_PERSONA_SETTING);
+        if (userId == null || userId.isEmpty()) {
+            logger.warn("跳过保存虚拟人配置，userId 为空");
+            return;
+        }
+        try {
+            AvatarConfig existing = avatarConfigMapper.findByUserId(userId);
+            AvatarConfig cfg = existing != null ? existing : new AvatarConfig();
+            cfg.setUserId(userId);
+            cfg.setDisabled(settings.isDisabled());
+            cfg.setModelSetting(settings.getModelSetting());
+            cfg.setModelGroup(settings.getModelGroup());
+            cfg.setPersonaSetting(settings.getPersonaSetting());
+            cfg.setAvatarAiModelId(settings.getAvatarAiModelId());
+            cfg.setAvatarAiPrompt(settings.getAvatarAiPrompt());
+            if (existing == null) {
+                avatarConfigMapper.insert(cfg);
+            } else {
+                avatarConfigMapper.update(cfg);
+            }
+        } catch (Exception e) {
+            logger.error("保存虚拟人配置失败 userId=[{}]", userId, e);
+        }
     }
 
     public boolean isAvatarDisabled(String userId) {
-        return parseBoolean(userConfigService.getValueByKey(userId, KEY_DISABLED, "false"));
+        return Boolean.TRUE.equals(loadConfig(userId).getDisabled());
     }
 
     public List<AvatarModelGroup> listModelGroups() {
@@ -94,7 +116,7 @@ public class AvatarSettingsService {
     }
 
     public String getSelectedModelGroup(String userId) {
-        String group = userConfigService.getValueByKey(userId, KEY_MODEL_GROUP, "");
+        String group = loadConfig(userId).getModelGroup();
         return group == null ? "" : group.trim();
     }
 
@@ -124,30 +146,30 @@ public class AvatarSettingsService {
         return all;
     }
 
-    private void saveConfig(String userId, String key, String value, String description) {
-        if (userId == null || userId.isEmpty()) {
-            logger.warn("跳过保存虚拟人配置，userId 为空 [{}]", key);
-            return;
-        }
-        try {
-            UserConfig existing = userConfigService.getByUserIdAndKey(userId, key);
-            UserConfig cfg = new UserConfig(userId, key, value, description);
-            if (existing == null) {
-                userConfigService.insert(cfg);
-            } else {
-                cfg.setId(existing.getId());
-                userConfigService.update(cfg);
-            }
-        } catch (Exception e) {
-            logger.error("保存虚拟人配置失败 userId=[{}] key=[{}]", userId, key, e);
-        }
+    public Long getAvatarAiModelId(String userId) {
+        return loadConfig(userId).getAvatarAiModelId();
     }
 
-    private boolean parseBoolean(String value) {
-        if (value == null) {
-            return false;
+    public String getAvatarAiPrompt(String userId) {
+        String value = loadConfig(userId).getAvatarAiPrompt();
+        return value == null ? "" : value;
+    }
+
+    public String getPersonaSetting(String userId) {
+        String value = loadConfig(userId).getPersonaSetting();
+        return value == null ? "" : value;
+    }
+
+    private AvatarConfig loadConfig(String userId) {
+        if (userId == null || userId.isEmpty()) {
+            return new AvatarConfig();
         }
-        String v = value.trim().toLowerCase();
-        return "1".equals(v) || "true".equals(v) || "yes".equals(v) || "on".equals(v);
+        try {
+            AvatarConfig config = avatarConfigMapper.findByUserId(userId);
+            return config != null ? config : new AvatarConfig();
+        } catch (Exception e) {
+            logger.error("加载虚拟人配置失败 userId=[{}]", userId, e);
+            return new AvatarConfig();
+        }
     }
 }

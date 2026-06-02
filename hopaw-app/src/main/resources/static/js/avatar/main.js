@@ -135,6 +135,7 @@ var LAppDefine = {
         var bubble = document.getElementById(LAppDefine.BUBBLE_ID);
         var content = document.getElementById(LAppDefine.BUBBLE_CONTENT_ID);
         if (!bubble || !content) return;
+        var closeBtn = bubble.querySelector(".avatar-bubble-close");
         var api = {
             el: bubble,
             content: content,
@@ -142,7 +143,7 @@ var LAppDefine = {
             show: function (text, duration) {
                 if (!text) return;
                 if (isMinimized()) return;
-                content.textContent = text;
+                this._render(text, false);
                 bubble.classList.add("visible");
                 if (this.timer) {
                     clearTimeout(this.timer);
@@ -154,6 +155,42 @@ var LAppDefine = {
                     bubble.classList.remove("visible");
                     this.timer = null;
                 }.bind(this), ms);
+            },
+            showPersistent: function (text, dismissible) {
+                if (!text) return;
+                if (isMinimized()) return;
+                this._render(text, dismissible === true);
+                bubble.classList.add("visible");
+                if (this.timer) {
+                    clearTimeout(this.timer);
+                    this.timer = null;
+                }
+            },
+            _render: function (text, dismissible) {
+                content.textContent = text;
+                if (dismissible) {
+                    if (!closeBtn) {
+                        closeBtn = document.createElement("button");
+                        closeBtn.type = "button";
+                        closeBtn.className = "avatar-bubble-close";
+                        closeBtn.setAttribute("aria-label", "关闭");
+                        closeBtn.innerHTML = "&times;";
+                        bubble.appendChild(closeBtn);
+                    }
+                    closeBtn.style.display = "";
+                    if (!closeBtn._avatarBound) {
+                        closeBtn.addEventListener("click", function (e) {
+                            e.stopPropagation();
+                            e.preventDefault();
+                            api.hide();
+                        });
+                        closeBtn._avatarBound = true;
+                    }
+                    bubble.classList.add("dismissible");
+                } else {
+                    if (closeBtn) closeBtn.style.display = "none";
+                    bubble.classList.remove("dismissible");
+                }
             },
             hide: function () {
                 bubble.classList.remove("visible");
@@ -234,6 +271,13 @@ var LAppDefine = {
             if (data.intimacyInfo) {
                 widget._intimacy && widget._intimacy.apply(data.intimacyInfo);
             }
+            return;
+        }
+        if (data.type === "avatar_proactive_message" || data.action === "proactive_message") {
+            var proactiveText = data.message;
+            if (!proactiveText) return;
+            var persistent = data.dismissible === true;
+            bubble.showPersistent(proactiveText, persistent);
             return;
         }
         var text = data.message || data.actionDescription;

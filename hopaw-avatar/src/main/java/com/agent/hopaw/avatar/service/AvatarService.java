@@ -6,8 +6,10 @@ import com.agent.hopaw.avatar.model.AvatarIntimacyConfig;
 import com.agent.hopaw.avatar.model.UserIntimacyInfo;
 import com.agent.hopaw.infra.event.AgentMessageEvent;
 import com.agent.hopaw.infra.event.TokenUsageEvent;
+import com.agent.hopaw.infra.mapper.AvatarConfigMapper;
 import com.agent.hopaw.infra.mapper.TokenUsageMapper;
 import com.agent.hopaw.infra.model.dto.AiMessageBaseInfo;
+import com.agent.hopaw.infra.model.entity.AvatarConfig;
 import com.agent.hopaw.infra.model.entity.TokenUsage;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -15,6 +17,7 @@ import org.springframework.context.event.EventListener;
 import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
@@ -26,14 +29,14 @@ public class AvatarService {
     private static final Logger logger = LoggerFactory.getLogger(AvatarService.class);
 
     private final AvatarIntimacyConfig intimacyConfig;
-    private final TokenUsageMapper tokenUsageMapper;
-    private final Map<String, UserIntimacyInfo> userIntimacyCache = new ConcurrentHashMap<>();
+    private final AvatarConfigMapper avatarConfigMapper;
     private final Map<String, AvatarAction> userLastActionCache = new ConcurrentHashMap<>();
     private final List<Consumer<AvatarEvent>> listeners = new ArrayList<>();
 
-    public AvatarService(AvatarIntimacyConfig intimacyConfig, TokenUsageMapper tokenUsageMapper) {
+    public AvatarService(AvatarIntimacyConfig intimacyConfig,
+                         AvatarConfigMapper avatarConfigMapper) {
         this.intimacyConfig = intimacyConfig;
-        this.tokenUsageMapper = tokenUsageMapper;
+        this.avatarConfigMapper = avatarConfigMapper;
     }
 
     public void registerListener(Consumer<AvatarEvent> listener) {
@@ -60,17 +63,40 @@ public class AvatarService {
         if (userId == null) {
             return;
         }
+        Integer addedTokens = event.getTotalTokens();
+        if (addedTokens == null || addedTokens <= 0) {
+            return;
+        }
 
-        UserIntimacyInfo oldInfo = userIntimacyCache.get(userId);
-        int oldLevel = oldInfo != null ? oldInfo.getIntimacyLevel() : 0;
+        UserIntimacyInfo oldInfo = getUserIntimacyInfo(userId);
+        int oldLevel = oldInfo.getIntimacyLevel();
 
-        TokenUsage summary = tokenUsageMapper.summaryByUserId(userId);
-        long totalTokens = summary != null && summary.getTotalTokens() != null ? summary.getTotalTokens().longValue() : 0;
+        AvatarConfig before;
+        AvatarConfig after;
+        try {
+            before = avatarConfigMapper.findByUserId(userId);
+            if (before == null) {
+                AvatarConfig cfg = new AvatarConfig();
+                cfg.setUserId(userId);
+                cfg.setDisabled(false);
+                cfg.setTotalTokens(addedTokens.longValue());
+                avatarConfigMapper.insert(cfg);
+            } else {
+                avatarConfigMapper.addTotalTokens(userId, addedTokens);
+            }
+            after = avatarConfigMapper.findByUserId(userId);
+        } catch (Exception e) {
+            logger.error("Failed to accumulate tokens for user {}: {}", userId, e.getMessage());
+            return;
+        }
+        if (after == null) {
+            return;
+        }
+        long totalTokens = after.getTotalTokens() != null ? after.getTotalTokens().longValue() : 0L;
 
         UserIntimacyInfo newInfo = UserIntimacyInfo.from(userId, totalTokens, intimacyConfig);
-        userIntimacyCache.put(userId, newInfo);
 
-        if (oldInfo == null || newInfo.getIntimacyLevel() > oldLevel) {
+        if (newInfo.getIntimacyLevel() > oldLevel) {
             logger.info("User {} intimacy up: {} -> {} (title: {}, tokens: {})",
                     userId, oldLevel, newInfo.getIntimacyLevel(),
                     newInfo.getTitle(), totalTokens);
@@ -80,7 +106,7 @@ public class AvatarService {
             return;
         }
 
-        if (oldInfo == null
+        if (before == null
                 || oldInfo.getTotalTokens() != newInfo.getTotalTokens()
                 || oldInfo.getIntimacyLevel() != newInfo.getIntimacyLevel()
                 || oldInfo.getProgressPercent() != newInfo.getProgressPercent()) {
@@ -116,19 +142,39 @@ public class AvatarService {
     }
 
     public UserIntimacyInfo getUserIntimacyInfo(String userId) {
-        UserIntimacyInfo cached = userIntimacyCache.get(userId);
-        if (cached != null) {
-            return cached;
-        }
-
-        TokenUsage summary = tokenUsageMapper.summaryByUserId(userId);
-        long totalTokens = summary != null && summary.getTotalTokens() != null ? summary.getTotalTokens().longValue() : 0;
-        UserIntimacyInfo info = UserIntimacyInfo.from(userId, totalTokens, intimacyConfig);
-        userIntimacyCache.put(userId, info);
-        return info;
+        long totalTokens = loadTotalTokens(userId);
+        return UserIntimacyInfo.from(userId, totalTokens, intimacyConfig);
     }
 
     public Map<String, UserIntimacyInfo> getAllUserIntimacies() {
-        return Map.copyOf(userIntimacyCache);
+        Map<String, UserIntimacyInfo> result = new LinkedHashMap<>();
+        try {
+            List<AvatarConfig> configs = avatarConfigMapper.findAll();
+            for (AvatarConfig config : configs) {
+                if (config.getUserId() == null) {
+                    continue;
+                }
+                long totalTokens = config.getTotalTokens() != null ? config.getTotalTokens().longValue() : 0L;
+                result.put(config.getUserId(), UserIntimacyInfo.from(config.getUserId(), totalTokens, intimacyConfig));
+            }
+        } catch (Exception e) {
+            logger.error("Failed to load all avatar configs: {}", e.getMessage());
+        }
+        return result;
+    }
+
+    private long loadTotalTokens(String userId) {
+        if (userId == null || userId.isEmpty()) {
+            return 0L;
+        }
+        try {
+            AvatarConfig config = avatarConfigMapper.findByUserId(userId);
+            if (config != null && config.getTotalTokens() != null) {
+                return config.getTotalTokens().longValue();
+            }
+        } catch (Exception e) {
+            logger.warn("Failed to load avatar config for user {}: {}", userId, e.getMessage());
+        }
+        return 0L;
     }
 }

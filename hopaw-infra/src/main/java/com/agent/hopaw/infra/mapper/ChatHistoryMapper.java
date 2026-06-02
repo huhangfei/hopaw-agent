@@ -4,6 +4,7 @@ import com.agent.hopaw.infra.model.entity.ChatHistory;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
 
+import java.time.LocalDateTime;
 import java.util.List;
 
 @Mapper
@@ -17,6 +18,11 @@ public interface ChatHistoryMapper {
     List<ChatHistory> findAllAfterId(@Param("afterId") Long afterId);
 
     List<Long> findDistinctAgentIds();
+
+    List<ChatHistory> findRecentByUserIdAndRole(@Param("userId") String userId,
+                                               @Param("role") String role,
+                                               @Param("since") LocalDateTime since,
+                                               @Param("limit") int limit);
 
     int insert(ChatHistory chat);
 

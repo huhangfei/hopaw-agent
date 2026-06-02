@@ -1,21 +1,42 @@
-package com.agent.hopaw.avatar.model;
+package com.agent.hopaw.infra.model.entity;
 
-public class AvatarSettings {
-    private boolean disabled;
+public class AvatarConfig {
+    private Long id;
+    private String userId;
+    private Boolean disabled;
     private String modelSetting;
     private String modelGroup;
     private String personaSetting;
     private Long avatarAiModelId;
     private String avatarAiPrompt;
+    private Long totalTokens;
+    private String createTime;
+    private String updateTime;
 
-    public AvatarSettings() {
+    public AvatarConfig() {
     }
 
-    public boolean isDisabled() {
+    public Long getId() {
+        return id;
+    }
+
+    public void setId(Long id) {
+        this.id = id;
+    }
+
+    public String getUserId() {
+        return userId;
+    }
+
+    public void setUserId(String userId) {
+        this.userId = userId;
+    }
+
+    public Boolean getDisabled() {
         return disabled;
     }
 
-    public void setDisabled(boolean disabled) {
+    public void setDisabled(Boolean disabled) {
         this.disabled = disabled;
     }
 
@@ -57,5 +78,29 @@ public class AvatarSettings {
 
     public void setAvatarAiPrompt(String avatarAiPrompt) {
         this.avatarAiPrompt = avatarAiPrompt;
+    }
+
+    public Long getTotalTokens() {
+        return totalTokens;
+    }
+
+    public void setTotalTokens(Long totalTokens) {
+        this.totalTokens = totalTokens;
+    }
+
+    public String getCreateTime() {
+        return createTime;
+    }
+
+    public void setCreateTime(String createTime) {
+        this.createTime = createTime;
+    }
+
+    public String getUpdateTime() {
+        return updateTime;
+    }
+
+    public void setUpdateTime(String updateTime) {
+        this.updateTime = updateTime;
     }
 }

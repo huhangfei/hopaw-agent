@@ -92,6 +92,43 @@
     flex: 1;
 }
 
+/* ========== Model Select (cascading provider/model selectors) ========== */
+.model-select {
+    flex: 1;
+    min-width: 0;
+    width: 100%;
+    padding: 10px 14px;
+    border: 1px solid #d1d5db;
+    border-radius: 8px;
+    font-size: 14px;
+    color: #1f2937;
+    background-color: #fff;
+    outline: none;
+    transition: border-color 0.2s, box-shadow 0.2s;
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%236b7280' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 12px center;
+    background-size: 16px;
+    padding-right: 40px;
+    box-sizing: border-box;
+}
+.model-select:focus {
+    border-color: #6366f1;
+    box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.15);
+}
+.model-select:hover {
+    border-color: #9ca3af;
+}
+.model-select:disabled {
+    background-color: #f3f4f6;
+    color: #9ca3af;
+    cursor: not-allowed;
+    opacity: 0.7;
+}
+
 /* ========== Toggle 开关 ========== */
 .toggle-wrapper {
     display: flex;
@@ -251,4 +288,27 @@ body.dark-theme .form-group textarea:disabled {
 
 body.dark-theme .form-group.form-inline > label {
     color: #b0b0b0;
+}
+
+/* Dark theme for .model-select */
+body.dark-theme .model-select {
+    background-color: #2d2d44;
+    border-color: #3d3d6b;
+    color: #e0e0e0;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%23888' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 12px center;
+    background-size: 16px;
+    padding-right: 40px;
+}
+body.dark-theme .model-select:focus {
+    border-color: #8ba3ff;
+    box-shadow: 0 0 0 3px rgba(139, 163, 255, 0.15);
+}
+body.dark-theme .model-select:hover {
+    border-color: #8ba3ff;
+}
+body.dark-theme .model-select:disabled {
+    background-color: #1e3a5f;
+    color: #888;
 }

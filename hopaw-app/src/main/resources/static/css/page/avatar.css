@@ -136,6 +136,49 @@
     transform: translateX(-50%) translateY(0) scale(1);
 }
 
+.avatar-bubble.dismissible {
+    white-space: normal;
+    max-width: 260px;
+    padding: 8px 28px 8px 12px;
+    pointer-events: auto;
+    text-align: left;
+    line-height: 18px;
+    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.16), 0 0 0 1px rgba(0, 0, 0, 0.06);
+}
+
+.avatar-bubble-close {
+    position: absolute;
+    top: 2px;
+    right: 4px;
+    width: 18px;
+    height: 18px;
+    padding: 0;
+    border: none;
+    background: transparent;
+    color: var(--bubble-color, #1f2328);
+    font-size: 16px;
+    line-height: 1;
+    cursor: pointer;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    opacity: 0.6;
+    transition: opacity 0.2s ease, background 0.2s ease, transform 0.15s ease;
+    touch-action: manipulation;
+}
+.avatar-bubble-close:hover {
+    opacity: 1;
+    background: rgba(0, 0, 0, 0.08);
+}
+.avatar-bubble-close:active {
+    transform: scale(0.92);
+}
+
+.avatar-bubble.proactive {
+    border-left: 3px solid #ff6b8b;
+}
+
 .avatar-bubble-content {
     position: relative;
     z-index: 2;
