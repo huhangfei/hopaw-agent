@@ -5,6 +5,7 @@ public class AvatarEvent {
     private String userId;
     private String action;
     private String actionDescription;
+    private String message;
     private UserLevelInfo levelInfo;
 
     public AvatarEvent() {
@@ -14,13 +15,13 @@ public class AvatarEvent {
         return action(userId, action, null);
     }
 
-    public static AvatarEvent action(String userId, AvatarAction action, UserLevelInfo levelInfo) {
+    public static AvatarEvent action(String userId, AvatarAction action, String message) {
         AvatarEvent event = new AvatarEvent();
         event.type = "avatar_action";
         event.userId = userId;
         event.action = action.getCode();
         event.actionDescription = action.getDescription();
-        event.levelInfo = levelInfo;
+        event.message = message;
         return event;
     }
 
@@ -64,6 +65,14 @@ public class AvatarEvent {
 
     public void setActionDescription(String actionDescription) {
         this.actionDescription = actionDescription;
+    }
+
+    public String getMessage() {
+        return message;
+    }
+
+    public void setMessage(String message) {
+        this.message = message;
     }
 
     public UserLevelInfo getLevelInfo() {

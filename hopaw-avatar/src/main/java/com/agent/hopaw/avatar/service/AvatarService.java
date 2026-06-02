@@ -28,6 +28,7 @@ public class AvatarService {
     private final AvatarLevelConfig levelConfig;
     private final TokenUsageMapper tokenUsageMapper;
     private final Map<String, UserLevelInfo> userLevelCache = new ConcurrentHashMap<>();
+    private final Map<String, AvatarAction> userLastActionCache = new ConcurrentHashMap<>();
     private final List<Consumer<AvatarEvent>> listeners = new ArrayList<>();
 
     public AvatarService(AvatarLevelConfig levelConfig, TokenUsageMapper tokenUsageMapper) {
@@ -73,7 +74,9 @@ public class AvatarService {
             logger.info("User {} leveled up: {} -> {} (title: {}, tokens: {})",
                     userId, oldLevel, newLevelInfo.getLevel(),
                     newLevelInfo.getTitle(), totalTokens);
-            broadcast(AvatarEvent.levelUp(userId, newLevelInfo));
+            AvatarEvent levelEvent = AvatarEvent.levelUp(userId, newLevelInfo);
+            levelEvent.setMessage(AvatarAction.LEVEL_UP.getRandomPhrase());
+            broadcast(levelEvent);
         }
     }
 
@@ -90,8 +93,17 @@ public class AvatarService {
         }
 
         AvatarAction action = AvatarAction.fromMessageType(message.getType());
-        UserLevelInfo levelInfo = userLevelCache.get(userId);
-        AvatarEvent avatarEvent = AvatarEvent.action(userId, action, levelInfo);
+        AvatarAction lastAction = userLastActionCache.get(userId);
+        if (action == lastAction) {
+            return;
+        }
+        userLastActionCache.put(userId, action);
+
+        String phrase = action.getRandomPhrase();
+        if (phrase == null || phrase.isEmpty()) {
+            phrase = action.getDescription();
+        }
+        AvatarEvent avatarEvent = AvatarEvent.action(userId, action, phrase);
         broadcast(avatarEvent);
     }
 

@@ -1,4 +1,4 @@
-// tool-config.js
+// tool-main.js
 // 工具配置页面脚本
 (function() {
     document.addEventListener('DOMContentLoaded', function() {

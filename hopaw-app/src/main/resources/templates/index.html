@@ -247,26 +247,13 @@
         </div>
     </aside>
     <div class="avatar-widget" id="avatarWidget">
-        <div class="avatar-container">
-            <div class="avatar-canvas" id="avatarCanvas">
-                <div class="avatar-minimized-icon">🐱</div>
-            </div>
-            <div class="avatar-info">
-                <div class="avatar-intimacy">
-                    <span class="avatar-heart" id="avatarHeartIcon">❤️</span>
-                    <span class="avatar-intimacy-level" id="avatarIntimacyText">亲密度 Lv.0</span>
-                </div>
-                <div class="avatar-title" id="avatarTitleText">初识</div>
-                <div class="avatar-xp-bar">
-                    <div class="avatar-xp-fill" id="avatarXpFill" style="width:0%"></div>
-                </div>
-                <div class="avatar-action-label" id="avatarActionLabel"></div>
-            </div>
-            <div class="avatar-intimacy-up-effect" id="avatarIntimacyUpOverlay"></div>
+        <div class="avatar-bubble" id="avatarBubble" aria-live="polite">
+            <div class="avatar-bubble-content" id="avatarBubbleContent"></div>
+            <div class="avatar-bubble-tail"></div>
         </div>
-        <button class="avatar-toggle" id="avatarToggleBtn" title="展开/收起">◰</button>
+        <canvas class="avatar-canvas" id="avatarCanvas" width="250" height="250"></canvas>
     </div>
-
+</div>
 
 
 <th:block layout:fragment="extraCss">
@@ -290,7 +277,8 @@
         var initialToolCallPermission = /*[[${toolCallPermission}]]*/ 'smart_call';
         var currentUserId = /*[[${T(com.agent.hopaw.constant.DefaultUser).USER}]]*/ 'user1';
     </script>
-    <script th:src="@{/js/avatar/avatar-live2d.js}"></script>
-    <script th:src="@{/js/avatar/avatar-widget.js}"></script>
+    <script th:src="@{/js/avatar/live2d.js}"></script>
+    <script th:src="@{/js/avatar/main.js}"></script>
+</th:block>
 </body>
 </html>
