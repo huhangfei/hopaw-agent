@@ -6,7 +6,7 @@ public class AvatarEvent {
     private String action;
     private String actionDescription;
     private String message;
-    private UserLevelInfo levelInfo;
+    private UserIntimacyInfo intimacyInfo;
 
     public AvatarEvent() {
     }
@@ -25,13 +25,13 @@ public class AvatarEvent {
         return event;
     }
 
-    public static AvatarEvent levelUp(String userId, UserLevelInfo levelInfo) {
+    public static AvatarEvent intimacyUp(String userId, UserIntimacyInfo intimacyInfo) {
         AvatarEvent event = new AvatarEvent();
-        event.type = "avatar_level";
+        event.type = "avatar_intimacy";
         event.userId = userId;
-        event.action = AvatarAction.LEVEL_UP.getCode();
-        event.actionDescription = AvatarAction.LEVEL_UP.getDescription();
-        event.levelInfo = levelInfo;
+        event.action = AvatarAction.INTIMACY_UP.getCode();
+        event.actionDescription = AvatarAction.INTIMACY_UP.getDescription();
+        event.intimacyInfo = intimacyInfo;
         return event;
     }
 
@@ -75,11 +75,11 @@ public class AvatarEvent {
         this.message = message;
     }
 
-    public UserLevelInfo getLevelInfo() {
-        return levelInfo;
+    public UserIntimacyInfo getIntimacyInfo() {
+        return intimacyInfo;
     }
 
-    public void setLevelInfo(UserLevelInfo levelInfo) {
-        this.levelInfo = levelInfo;
+    public void setIntimacyInfo(UserIntimacyInfo intimacyInfo) {
+        this.intimacyInfo = intimacyInfo;
     }
 }

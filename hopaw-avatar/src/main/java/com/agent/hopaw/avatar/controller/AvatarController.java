@@ -1,6 +1,6 @@
 package com.agent.hopaw.avatar.controller;
 
-import com.agent.hopaw.avatar.model.UserLevelInfo;
+import com.agent.hopaw.avatar.model.UserIntimacyInfo;
 import com.agent.hopaw.avatar.service.AvatarService;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -19,13 +19,13 @@ public class AvatarController {
         this.avatarService = avatarService;
     }
 
-    @GetMapping("/level")
-    public UserLevelInfo getUserLevel(@RequestParam String userId) {
-        return avatarService.getUserLevelInfo(userId);
+    @GetMapping("/intimacy")
+    public UserIntimacyInfo getUserIntimacy(@RequestParam String userId) {
+        return avatarService.getUserIntimacyInfo(userId);
     }
 
-    @GetMapping("/levels")
-    public Map<String, UserLevelInfo> getAllUserLevels() {
-        return avatarService.getAllUserLevels();
+    @GetMapping("/intimacies")
+    public Map<String, UserIntimacyInfo> getAllUserIntimacies() {
+        return avatarService.getAllUserIntimacies();
     }
 }

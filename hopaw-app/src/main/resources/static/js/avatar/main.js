@@ -3,6 +3,11 @@ var LAppDefine = {
     WIDGET_ID: "avatarWidget",
     BUBBLE_ID: "avatarBubble",
     BUBBLE_CONTENT_ID: "avatarBubbleContent",
+    INTIMACY_CARD_ID: "avatarIntimacyCard",
+    INTIMACY_LEVEL_ID: "avatarIntimacyLevel",
+    INTIMACY_TITLE_ID: "avatarIntimacyTitle",
+    INTIMACY_NICKNAME_ID: "avatarIntimacyNickname",
+    INTIMACY_PROGRESS_ID: "avatarIntimacyProgress",
     MINIMIZE_BTN_ID: "avatarMinimizeBtn",
     RESTORE_BTN_ID: "avatarRestoreBtn",
     IS_DRAGABLE: true,
@@ -12,6 +17,7 @@ var LAppDefine = {
     STORAGE_KEY: "hopaw_avatar_position",
     MINIMIZED_STORAGE_KEY: "hopaw_avatar_minimized",
     WS_URL: "/ws/avatar",
+    INTIMACY_API: "/api/avatar/intimacy",
     BUBBLE_DEFAULT_DURATION: 3500,
     BUBBLE_LONG_DURATION: 6000,
     MODELS: [
@@ -48,6 +54,7 @@ var LAppDefine = {
     initBubble(widget);
     initDrag(widget);
     initMinimize(widget);
+    initIntimacy(widget);
     connectAvatarWebSocket();
     var raf = window.requestAnimationFrame || function (cb) { return setTimeout(cb, 16); };
     raf(function () {
@@ -84,6 +91,7 @@ var LAppDefine = {
 
     function enterMinimized(skipTransition) {
         if (widget._avatarBubble) widget._avatarBubble.hide();
+        if (widget._intimacy) widget._intimacy.hide();
         if (skipTransition) {
             var prev = widget.style.transition;
             widget.style.transition = "none";
@@ -234,6 +242,16 @@ var LAppDefine = {
         if (data.userId && currentUserId && data.userId !== currentUserId) {
             return;
         }
+        if (data.type === "avatar_intimacy" || data.action === "intimacy_up") {
+            if (data.intimacyInfo) {
+                widget._intimacy && widget._intimacy.apply(data.intimacyInfo);
+            }
+            var text = data.message;
+            if (text) {
+                bubble.show(text, LAppDefine.BUBBLE_LONG_DURATION);
+            }
+            return;
+        }
         var text = data.message || data.actionDescription;
         if (!text) return;
         var duration = LAppDefine.BUBBLE_DEFAULT_DURATION;
@@ -241,6 +259,94 @@ var LAppDefine = {
             duration = LAppDefine.BUBBLE_LONG_DURATION;
         }
         bubble.show(text, duration);
+    }
+
+    function initIntimacy() {
+        var card = document.getElementById(LAppDefine.INTIMACY_CARD_ID);
+        if (!card) return;
+        var levelEl = document.getElementById(LAppDefine.INTIMACY_LEVEL_ID);
+        var titleEl = document.getElementById(LAppDefine.INTIMACY_TITLE_ID);
+        var nickEl = document.getElementById(LAppDefine.INTIMACY_NICKNAME_ID);
+        var progressEl = document.getElementById(LAppDefine.INTIMACY_PROGRESS_ID);
+        var hideTimer = null;
+
+        function apply(info) {
+            if (!info) return;
+            if (levelEl) levelEl.textContent = info.intimacyLevel != null ? info.intimacyLevel : 0;
+            if (titleEl) titleEl.textContent = info.title || "";
+            if (nickEl) nickEl.textContent = info.nickname || "";
+            if (progressEl) {
+                var percent = info.progressPercent;
+                if (typeof percent !== "number" || isNaN(percent)) percent = 0;
+                if (percent < 0) percent = 0;
+                if (percent > 100) percent = 100;
+                progressEl.style.width = percent + "%";
+            }
+        }
+
+        function show() {
+            if (isMinimized()) return;
+            if (hideTimer) {
+                clearTimeout(hideTimer);
+                hideTimer = null;
+            }
+            card.classList.add("visible");
+        }
+
+        function hide() {
+            if (hideTimer) {
+                clearTimeout(hideTimer);
+                hideTimer = null;
+            }
+            card.classList.remove("visible");
+        }
+
+        function load() {
+            var userId = getCurrentUserId();
+            if (!userId) return;
+            var url = LAppDefine.INTIMACY_API + "?userId=" + encodeURIComponent(userId) + "&_t=" + Date.now();
+            fetch(url, { credentials: "same-origin" })
+                .then(function (resp) {
+                    if (!resp.ok) throw new Error("intimacy api status " + resp.status);
+                    return resp.json();
+                })
+                .then(function (data) {
+                    if (data) apply(data);
+                })
+                .catch(function (e) {
+                    console.warn("Fetch intimacy info failed:", e);
+                });
+        }
+
+        widget._intimacy = { apply: apply, show: show, hide: hide, refresh: load, el: card };
+
+        widget.addEventListener("mouseenter", show);
+        widget.addEventListener("mouseleave", function () {
+            if (hideTimer) clearTimeout(hideTimer);
+            hideTimer = setTimeout(hide, 120);
+        });
+        card.addEventListener("mouseenter", function () {
+            if (hideTimer) {
+                clearTimeout(hideTimer);
+                hideTimer = null;
+            }
+        });
+        card.addEventListener("mouseleave", function () {
+            hide();
+        });
+
+        load();
+    }
+
+    function getCurrentUserId() {
+        try {
+            if (typeof currentUserId !== "undefined" && currentUserId) {
+                return String(currentUserId);
+            }
+        } catch (e) {}
+        var meta = document.querySelector('meta[name="current-user-id"]');
+        if (meta && meta.content) return meta.content;
+        return null;
     }
 
     function initDrag() {

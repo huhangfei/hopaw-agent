@@ -2,8 +2,8 @@ package com.agent.hopaw.avatar.service;
 
 import com.agent.hopaw.avatar.model.AvatarAction;
 import com.agent.hopaw.avatar.model.AvatarEvent;
-import com.agent.hopaw.avatar.model.AvatarLevelConfig;
-import com.agent.hopaw.avatar.model.UserLevelInfo;
+import com.agent.hopaw.avatar.model.AvatarIntimacyConfig;
+import com.agent.hopaw.avatar.model.UserIntimacyInfo;
 import com.agent.hopaw.infra.event.AgentMessageEvent;
 import com.agent.hopaw.infra.event.TokenUsageEvent;
 import com.agent.hopaw.infra.mapper.TokenUsageMapper;
@@ -25,14 +25,14 @@ public class AvatarService {
 
     private static final Logger logger = LoggerFactory.getLogger(AvatarService.class);
 
-    private final AvatarLevelConfig levelConfig;
+    private final AvatarIntimacyConfig intimacyConfig;
     private final TokenUsageMapper tokenUsageMapper;
-    private final Map<String, UserLevelInfo> userLevelCache = new ConcurrentHashMap<>();
+    private final Map<String, UserIntimacyInfo> userIntimacyCache = new ConcurrentHashMap<>();
     private final Map<String, AvatarAction> userLastActionCache = new ConcurrentHashMap<>();
     private final List<Consumer<AvatarEvent>> listeners = new ArrayList<>();
 
-    public AvatarService(AvatarLevelConfig levelConfig, TokenUsageMapper tokenUsageMapper) {
-        this.levelConfig = levelConfig;
+    public AvatarService(AvatarIntimacyConfig intimacyConfig, TokenUsageMapper tokenUsageMapper) {
+        this.intimacyConfig = intimacyConfig;
         this.tokenUsageMapper = tokenUsageMapper;
     }
 
@@ -61,22 +61,22 @@ public class AvatarService {
             return;
         }
 
-        UserLevelInfo oldLevelInfo = userLevelCache.get(userId);
-        int oldLevel = oldLevelInfo != null ? oldLevelInfo.getLevel() : 0;
+        UserIntimacyInfo oldInfo = userIntimacyCache.get(userId);
+        int oldLevel = oldInfo != null ? oldInfo.getIntimacyLevel() : 0;
 
         TokenUsage summary = tokenUsageMapper.summaryByUserId(userId);
         long totalTokens = summary != null && summary.getTotalTokens() != null ? summary.getTotalTokens().longValue() : 0;
 
-        UserLevelInfo newLevelInfo = UserLevelInfo.from(userId, totalTokens, levelConfig);
-        userLevelCache.put(userId, newLevelInfo);
+        UserIntimacyInfo newInfo = UserIntimacyInfo.from(userId, totalTokens, intimacyConfig);
+        userIntimacyCache.put(userId, newInfo);
 
-        if (oldLevelInfo == null || newLevelInfo.getLevel() > oldLevel) {
-            logger.info("User {} leveled up: {} -> {} (title: {}, tokens: {})",
-                    userId, oldLevel, newLevelInfo.getLevel(),
-                    newLevelInfo.getTitle(), totalTokens);
-            AvatarEvent levelEvent = AvatarEvent.levelUp(userId, newLevelInfo);
-            levelEvent.setMessage(AvatarAction.LEVEL_UP.getRandomPhrase());
-            broadcast(levelEvent);
+        if (oldInfo == null || newInfo.getIntimacyLevel() > oldLevel) {
+            logger.info("User {} intimacy up: {} -> {} (title: {}, nickname: {}, tokens: {})",
+                    userId, oldLevel, newInfo.getIntimacyLevel(),
+                    newInfo.getTitle(), newInfo.getNickname(), totalTokens);
+            AvatarEvent intimacyEvent = AvatarEvent.intimacyUp(userId, newInfo);
+            intimacyEvent.setMessage(AvatarAction.INTIMACY_UP.getRandomPhrase());
+            broadcast(intimacyEvent);
         }
     }
 
@@ -107,20 +107,20 @@ public class AvatarService {
         broadcast(avatarEvent);
     }
 
-    public UserLevelInfo getUserLevelInfo(String userId) {
-        UserLevelInfo cached = userLevelCache.get(userId);
+    public UserIntimacyInfo getUserIntimacyInfo(String userId) {
+        UserIntimacyInfo cached = userIntimacyCache.get(userId);
         if (cached != null) {
             return cached;
         }
 
         TokenUsage summary = tokenUsageMapper.summaryByUserId(userId);
         long totalTokens = summary != null && summary.getTotalTokens() != null ? summary.getTotalTokens().longValue() : 0;
-        UserLevelInfo info = UserLevelInfo.from(userId, totalTokens, levelConfig);
-        userLevelCache.put(userId, info);
+        UserIntimacyInfo info = UserIntimacyInfo.from(userId, totalTokens, intimacyConfig);
+        userIntimacyCache.put(userId, info);
         return info;
     }
 
-    public Map<String, UserLevelInfo> getAllUserLevels() {
-        return Map.copyOf(userLevelCache);
+    public Map<String, UserIntimacyInfo> getAllUserIntimacies() {
+        return Map.copyOf(userIntimacyCache);
     }
 }

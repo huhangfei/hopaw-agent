@@ -256,6 +256,27 @@
             <div class="avatar-bubble-content" id="avatarBubbleContent"></div>
             <div class="avatar-bubble-tail"></div>
         </div>
+        <div class="avatar-intimacy-card" id="avatarIntimacyCard" aria-hidden="true">
+            <div class="avatar-intimacy-icon" aria-hidden="true">
+                <svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor">
+                    <path d="M12 21s-7.5-4.6-9.5-9.2C1.1 8.3 3 5 6.3 5c1.9 0 3.3 1 3.7 2.2.4-1.2 1.8-2.2 3.7-2.2 3.3 0 5.2 3.3 3.8 6.8C19.5 16.4 12 21 12 21z"/>
+                </svg>
+            </div>
+            <div class="avatar-intimacy-body">
+                <div class="avatar-intimacy-row avatar-intimacy-level-row">
+                    <span class="avatar-intimacy-label">亲密度</span>
+                    <span class="avatar-intimacy-value">Lv.<span id="avatarIntimacyLevel">0</span> · <span id="avatarIntimacyTitle">陌生人</span></span>
+                </div>
+                <div class="avatar-intimacy-row avatar-intimacy-nick-row">
+                    <span class="avatar-intimacy-label">爱称</span>
+                    <span class="avatar-intimacy-value" id="avatarIntimacyNickname">路过的旅人</span>
+                </div>
+                <div class="avatar-intimacy-progress">
+                    <div class="avatar-intimacy-progress-bar" id="avatarIntimacyProgress" style="width:0%"></div>
+                </div>
+            </div>
+            <div class="avatar-intimacy-tail"></div>
+        </div>
         <canvas class="avatar-canvas" id="avatarCanvas" width="250" height="250"></canvas>
         <button type="button" class="avatar-restore-btn" id="avatarRestoreBtn" title="展开" aria-label="展开">
             <img th:src="@{/images/avatar.png}" alt="avatar"/>
