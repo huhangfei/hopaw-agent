@@ -6,7 +6,6 @@ var LAppDefine = {
     INTIMACY_CARD_ID: "avatarIntimacyCard",
     INTIMACY_LEVEL_ID: "avatarIntimacyLevel",
     INTIMACY_TITLE_ID: "avatarIntimacyTitle",
-    INTIMACY_NICKNAME_ID: "avatarIntimacyNickname",
     INTIMACY_PROGRESS_ID: "avatarIntimacyProgress",
     MINIMIZE_BTN_ID: "avatarMinimizeBtn",
     RESTORE_BTN_ID: "avatarRestoreBtn",
@@ -252,6 +251,12 @@ var LAppDefine = {
             }
             return;
         }
+        if (data.type === "avatar_intimacy_update" || data.action === "intimacy_update") {
+            if (data.intimacyInfo) {
+                widget._intimacy && widget._intimacy.apply(data.intimacyInfo);
+            }
+            return;
+        }
         var text = data.message || data.actionDescription;
         if (!text) return;
         var duration = LAppDefine.BUBBLE_DEFAULT_DURATION;
@@ -266,15 +271,15 @@ var LAppDefine = {
         if (!card) return;
         var levelEl = document.getElementById(LAppDefine.INTIMACY_LEVEL_ID);
         var titleEl = document.getElementById(LAppDefine.INTIMACY_TITLE_ID);
-        var nickEl = document.getElementById(LAppDefine.INTIMACY_NICKNAME_ID);
         var progressEl = document.getElementById(LAppDefine.INTIMACY_PROGRESS_ID);
         var hideTimer = null;
+        var cached = null;
 
         function apply(info) {
             if (!info) return;
+            cached = info;
             if (levelEl) levelEl.textContent = info.intimacyLevel != null ? info.intimacyLevel : 0;
             if (titleEl) titleEl.textContent = info.title || "";
-            if (nickEl) nickEl.textContent = info.nickname || "";
             if (progressEl) {
                 var percent = info.progressPercent;
                 if (typeof percent !== "number" || isNaN(percent)) percent = 0;
@@ -318,7 +323,14 @@ var LAppDefine = {
                 });
         }
 
-        widget._intimacy = { apply: apply, show: show, hide: hide, refresh: load, el: card };
+        widget._intimacy = {
+            apply: apply,
+            show: show,
+            hide: hide,
+            refresh: load,
+            el: card,
+            getCached: function () { return cached; }
+        };
 
         widget.addEventListener("mouseenter", show);
         widget.addEventListener("mouseleave", function () {

@@ -35,6 +35,16 @@ public class AvatarEvent {
         return event;
     }
 
+    public static AvatarEvent intimacyUpdate(String userId, UserIntimacyInfo intimacyInfo) {
+        AvatarEvent event = new AvatarEvent();
+        event.type = "avatar_intimacy_update";
+        event.userId = userId;
+        event.action = "intimacy_update";
+        event.actionDescription = "亲密度进度更新";
+        event.intimacyInfo = intimacyInfo;
+        return event;
+    }
+
     public String getType() {
         return type;
     }

@@ -221,10 +221,6 @@
     text-overflow: ellipsis;
     white-space: nowrap;
 }
-.avatar-intimacy-nick-row .avatar-intimacy-value {
-    color: #d63a64;
-    font-style: italic;
-}
 .avatar-intimacy-progress {
     margin-top: 8px;
     width: 100%;
@@ -274,9 +270,6 @@ body.dark-theme .avatar-intimacy-label {
 }
 body.dark-theme .avatar-intimacy-value {
     color: #fbe1ea;
-}
-body.dark-theme .avatar-intimacy-nick-row .avatar-intimacy-value {
-    color: #ff8fa8;
 }
 body.dark-theme .avatar-intimacy-progress {
     background: rgba(255, 143, 168, 0.18);

@@ -71,12 +71,20 @@ public class AvatarService {
         userIntimacyCache.put(userId, newInfo);
 
         if (oldInfo == null || newInfo.getIntimacyLevel() > oldLevel) {
-            logger.info("User {} intimacy up: {} -> {} (title: {}, nickname: {}, tokens: {})",
+            logger.info("User {} intimacy up: {} -> {} (title: {}, tokens: {})",
                     userId, oldLevel, newInfo.getIntimacyLevel(),
-                    newInfo.getTitle(), newInfo.getNickname(), totalTokens);
+                    newInfo.getTitle(), totalTokens);
             AvatarEvent intimacyEvent = AvatarEvent.intimacyUp(userId, newInfo);
             intimacyEvent.setMessage(AvatarAction.INTIMACY_UP.getRandomPhrase());
             broadcast(intimacyEvent);
+            return;
+        }
+
+        if (oldInfo == null
+                || oldInfo.getTotalTokens() != newInfo.getTotalTokens()
+                || oldInfo.getIntimacyLevel() != newInfo.getIntimacyLevel()
+                || oldInfo.getProgressPercent() != newInfo.getProgressPercent()) {
+            broadcast(AvatarEvent.intimacyUpdate(userId, newInfo));
         }
     }
 
