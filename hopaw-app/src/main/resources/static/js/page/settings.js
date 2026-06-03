@@ -6,7 +6,6 @@ document.addEventListener('DOMContentLoaded', function() {
     setupCascading();
     loadMemoryTaskStatus();
     initTabFromUrl();
-    loadAvatarTaskStatus();
     loadAvatarSettings();
     loadAvatarAiProviders();
     setupAvatarSwitch();
@@ -362,74 +361,6 @@ function savePluginStoreSettings() {
         });
 }
 
-function loadAvatarTaskStatus() {
-    fetch('/api/avatar/task/status')
-        .then(function(r) { return r.json(); })
-        .then(function(resp) {
-            if (resp.msg !== 'success' || !resp.data) {
-                setAvatarTaskStatusUI('error', '获取失败');
-                return;
-            }
-            var running = resp.data.running;
-            var task = resp.data.task;
-            setAvatarTaskStatusUI(running, running ? '运行中' : '已关闭', task.id, task.enabled);
-        })
-        .catch(function() {
-            setAvatarTaskStatusUI('error', '获取失败');
-        });
-}
-
-function setAvatarTaskStatusUI(running, label, taskId, enabled) {
-    var badge = document.getElementById('avatarTaskStatus');
-    var btn = document.getElementById('avatarTaskToggleBtn');
-    if (!badge || !btn) return;
-    badge.className = 'task-status-badge ' + (running === 'error' ? 'loading' : (running ? 'running' : 'stopped'));
-    badge.textContent = label;
-    if (taskId) {
-        btn.style.display = '';
-        var isRunning = running === true || running === 'true';
-        btn.textContent = isRunning ? '禁用' : '启用';
-        btn.className = 'btn-toggle-task' + (isRunning ? ' running' : '');
-        btn._taskId = taskId;
-        btn._newEnabled = isRunning ? 0 : 1;
-    } else {
-        btn.style.display = 'none';
-    }
-    if (typeof enabled === 'number' || typeof enabled === 'string') {
-        // 持久化展示当前 enabled 标志，供调试/扩展
-        btn._enabled = enabled;
-    }
-}
-
-function toggleAvatarTask() {
-    var btn = document.getElementById('avatarTaskToggleBtn');
-    if (!btn || !btn._taskId) return;
-    var taskId = btn._taskId;
-    var newEnabled = btn._newEnabled;
-    var action = newEnabled === 1 ? '启用' : '禁用';
-
-    showConfirm('确定要' + action + '虚拟人定时任务吗？').then(function(confirmed) {
-        if (!confirmed) return;
-        fetch('/api/tasks/' + taskId + '/enabled', {
-            method: 'PUT',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ enabled: newEnabled })
-        })
-        .then(function(r) { return r.json(); })
-        .then(function(resp) {
-            if (resp.msg === 'success') {
-                showToast(action + '成功', 'success');
-                loadAvatarTaskStatus();
-            } else {
-                showToast(action + '失败', 'error');
-            }
-        })
-        .catch(function() {
-            showToast(action + '失败', 'error');
-        });
-    });
-}
-
 function loadAvatarSettings() {
     Promise.all([
         fetch('/api/avatar/settings').then(function(r) { return r.json(); }),
@@ -447,6 +378,9 @@ function loadAvatarSettings() {
             var checkbox = document.getElementById('avatarDisabled');
             if (checkbox) checkbox.checked = !!s.disabled;
             updateAvatarDisabledLabel();
+            var soundCheckbox = document.getElementById('avatarSoundEnabled');
+            if (soundCheckbox) soundCheckbox.checked = s.soundEnabled !== false;
+            updateAvatarSoundEnabledLabel();
             document.getElementById('avatarPersonaSetting').value = s.personaSetting || '';
             var select = document.getElementById('avatarModelSetting');
             if (select && (s.modelGroup !== undefined && s.modelGroup !== null)) {
@@ -548,8 +482,13 @@ function renderAvatarModelOptions(groups, selected) {
 
 function setupAvatarSwitch() {
     var checkbox = document.getElementById('avatarDisabled');
-    if (!checkbox) return;
-    checkbox.addEventListener('change', updateAvatarDisabledLabel);
+    if (checkbox) {
+        checkbox.addEventListener('change', updateAvatarDisabledLabel);
+    }
+    var soundCheckbox = document.getElementById('avatarSoundEnabled');
+    if (soundCheckbox) {
+        soundCheckbox.addEventListener('change', updateAvatarSoundEnabledLabel);
+    }
 }
 
 function updateAvatarDisabledLabel() {
@@ -559,13 +498,22 @@ function updateAvatarDisabledLabel() {
     label.textContent = checkbox.checked ? '已关闭' : '启用';
 }
 
+function updateAvatarSoundEnabledLabel() {
+    var checkbox = document.getElementById('avatarSoundEnabled');
+    var label = document.getElementById('avatarSoundEnabledLabel');
+    if (!checkbox || !label) return;
+    label.textContent = checkbox.checked ? '已开启' : '已关闭';
+}
+
 function saveAvatarSettings() {
     var checkbox = document.getElementById('avatarDisabled');
     var select = document.getElementById('avatarModelSetting');
     var aiModelSelect = document.getElementById('avatarAiModelSelect');
     var promptArea = document.getElementById('avatarAiPrompt');
+    var soundCheckbox = document.getElementById('avatarSoundEnabled');
     var payload = {
         disabled: !!(checkbox && checkbox.checked),
+        soundEnabled: !soundCheckbox || soundCheckbox.checked,
         modelSetting: '',
         modelGroup: select ? (select.value || '') : '',
         personaSetting: document.getElementById('avatarPersonaSetting').value,

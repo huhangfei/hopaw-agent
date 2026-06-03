@@ -1,12 +1,12 @@
 package com.agent.hopaw.controller;
 
-import com.agent.hopaw.constant.DefaultUser;
 import com.agent.hopaw.infra.constant.UserMemoryTypeEnum;
 import com.agent.hopaw.infra.mapper.AgentMapper;
 import com.agent.hopaw.infra.memory.IVectorMemoryService;
 import com.agent.hopaw.infra.model.dto.VectorSearchResult;
 import com.agent.hopaw.infra.model.dto.ResponseBean;
 import com.agent.hopaw.infra.model.entity.Agent;
+import com.agent.hopaw.infra.service.AccountService;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.*;
@@ -18,14 +18,18 @@ public class VectorHistoryController {
 
     private final IVectorMemoryService vectorMemoryService;
     private final AgentMapper agentMapper;
+    private final AccountService accountService;
 
-    public VectorHistoryController(IVectorMemoryService vectorMemoryService, AgentMapper agentMapper) {
+    public VectorHistoryController(IVectorMemoryService vectorMemoryService, AgentMapper agentMapper,
+                                   AccountService accountService) {
         this.vectorMemoryService = vectorMemoryService;
         this.agentMapper = agentMapper;
+        this.accountService = accountService;
     }
 
     @GetMapping("/vector-history")
     public String page(Model model) {
+        model.addAttribute("accounts", accountService.listAccounts());
         return "vector-history";
     }
 

@@ -1,0 +1,362 @@
+/* ============= 登录页样式 ============= */
+:root {
+    --login-card-radius: 18px;
+    --login-primary: #6366f1;
+    --login-primary-dark: #4f46e5;
+    --login-bg-1: #eef2ff;
+    --login-bg-2: #f5f3ff;
+    --login-bg-3: #fdf4ff;
+    --login-text: #1f2937;
+    --login-text-soft: #6b7280;
+    --login-text-faint: #9ca3af;
+    --login-border: rgba(99, 102, 241, 0.18);
+    --login-card-bg: rgba(255, 255, 255, 0.78);
+    --login-card-shadow: 0 30px 60px -20px rgba(99, 102, 241, 0.35),
+                         0 18px 36px -18px rgba(168, 85, 247, 0.25);
+}
+
+body.dark-theme {
+    --login-bg-1: #0f172a;
+    --login-bg-2: #1e1b4b;
+    --login-bg-3: #312e81;
+    --login-text: #e5e7eb;
+    --login-text-soft: #cbd5e1;
+    --login-text-faint: #94a3b8;
+    --login-border: rgba(148, 163, 184, 0.22);
+    --login-card-bg: rgba(30, 41, 59, 0.72);
+    --login-card-shadow: 0 30px 60px -20px rgba(15, 23, 42, 0.6),
+                         0 18px 36px -18px rgba(0, 0, 0, 0.45);
+}
+
+body.login-body {
+    margin: 0;
+    min-height: 100vh;
+    background: linear-gradient(135deg, var(--login-bg-1), var(--login-bg-2) 50%, var(--login-bg-3));
+    color: var(--login-text);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC",
+                 "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
+}
+
+.login-page {
+    position: relative;
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 32px 20px;
+    box-sizing: border-box;
+    overflow: hidden;
+}
+
+.login-root {
+    width: 100%;
+}
+
+/* 背景动效 */
+.login-bg {
+    position: absolute;
+    inset: 0;
+    overflow: hidden;
+    pointer-events: none;
+    z-index: 0;
+}
+.login-blob {
+    position: absolute;
+    border-radius: 50%;
+    filter: blur(80px);
+    opacity: 0.55;
+    animation: loginFloat 14s ease-in-out infinite;
+}
+.login-blob-1 { width: 480px; height: 480px; background: #a5b4fc; top: -120px; left: -120px; }
+.login-blob-2 { width: 420px; height: 420px; background: #f0abfc; bottom: -100px; right: -100px; animation-delay: -4s; }
+.login-blob-3 { width: 320px; height: 320px; background: #67e8f9; top: 30%; right: 25%; animation-delay: -8s; opacity: 0.35; }
+
+@keyframes loginFloat {
+    0%, 100% { transform: translate(0, 0) scale(1); }
+    50% { transform: translate(40px, -30px) scale(1.05); }
+}
+
+/* 卡片 */
+.login-card {
+    position: relative;
+    z-index: 1;
+    width: 100%;
+    max-width: 520px;
+    background: var(--login-card-bg);
+    backdrop-filter: blur(22px);
+    -webkit-backdrop-filter: blur(22px);
+    border-radius: var(--login-card-radius);
+    border: 1px solid var(--login-border);
+    box-shadow: var(--login-card-shadow);
+    padding: 32px 32px 24px;
+    box-sizing: border-box;
+    animation: loginFadeIn 0.5s ease;
+}
+
+@keyframes loginFadeIn {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+.login-brand {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    margin-bottom: 22px;
+}
+.login-brand-mark {
+    width: 52px; height: 52px;
+    border-radius: 14px;
+    background: linear-gradient(135deg, #6366f1, #8b5cf6);
+    color: #fff;
+    font-size: 28px;
+    display: flex; align-items: center; justify-content: center;
+    box-shadow: 0 12px 24px -10px rgba(99, 102, 241, 0.6);
+}
+.login-brand-text h1 {
+    margin: 0;
+    font-size: 22px;
+    letter-spacing: 0.5px;
+    color: var(--login-text);
+}
+.login-brand-text p {
+    margin: 4px 0 0;
+    font-size: 13px;
+    color: var(--login-text-soft);
+}
+
+/* 搜索 */
+.login-search {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 14px;
+    background: rgba(255, 255, 255, 0.6);
+    border: 1px solid var(--login-border);
+    border-radius: 12px;
+    color: var(--login-text-soft);
+    margin-bottom: 16px;
+    transition: border-color 0.2s, box-shadow 0.2s;
+}
+body.dark-theme .login-search {
+    background: rgba(15, 23, 42, 0.5);
+}
+.login-search:focus-within {
+    border-color: var(--login-primary);
+    box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.15);
+}
+.login-search input {
+    flex: 1;
+    border: none;
+    background: transparent;
+    outline: none;
+    font-size: 14px;
+    color: var(--login-text);
+}
+.login-search input::placeholder {
+    color: var(--login-text-faint);
+}
+
+/* 列表 */
+.login-account-list {
+    max-height: 380px;
+    overflow-y: auto;
+    padding-right: 4px;
+    margin-right: -4px;
+}
+.login-account-list::-webkit-scrollbar { width: 6px; }
+.login-account-list::-webkit-scrollbar-thumb { background: var(--login-border); border-radius: 4px; }
+
+.login-account {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    padding: 12px 14px;
+    border: 1px solid transparent;
+    background: rgba(255, 255, 255, 0.55);
+    border-radius: 14px;
+    cursor: pointer;
+    text-align: left;
+    color: var(--login-text);
+    transition: transform 0.18s ease, border-color 0.18s ease, background 0.18s ease, box-shadow 0.18s ease;
+    margin-bottom: 8px;
+    font: inherit;
+}
+body.dark-theme .login-account {
+    background: rgba(15, 23, 42, 0.45);
+}
+.login-account:hover:not(.disabled):not(.logging) {
+    transform: translateY(-1px);
+    border-color: var(--login-primary);
+    background: rgba(99, 102, 241, 0.08);
+    box-shadow: 0 8px 20px -10px rgba(99, 102, 241, 0.45);
+}
+.login-account:active:not(.disabled) {
+    transform: translateY(0) scale(0.99);
+}
+.login-account.disabled {
+    opacity: 0.55;
+    cursor: not-allowed;
+}
+.login-account.logging {
+    opacity: 0.7;
+    pointer-events: none;
+}
+
+.login-avatar {
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 18px;
+    font-weight: 600;
+    color: #fff;
+    background: linear-gradient(135deg, #6366f1, #8b5cf6);
+    flex-shrink: 0;
+    letter-spacing: 0.5px;
+}
+.login-account:nth-child(3n+2) .login-avatar { background: linear-gradient(135deg, #06b6d4, #3b82f6); }
+.login-account:nth-child(3n+3) .login-avatar { background: linear-gradient(135deg, #f43f5e, #f59e0b); }
+.login-account:nth-child(3n+4) .login-avatar { background: linear-gradient(135deg, #10b981, #14b8a6); }
+.login-account:nth-child(3n+5) .login-avatar { background: linear-gradient(135deg, #ec4899, #8b5cf6); }
+.login-account:nth-child(3n+6) .login-avatar { background: linear-gradient(135deg, #f59e0b, #ef4444); }
+
+.login-account-info {
+    flex: 1;
+    min-width: 0;
+}
+.login-account-name {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 15px;
+    font-weight: 600;
+    color: var(--login-text);
+}
+.login-nickname {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+.login-status.disabled-tag {
+    font-size: 11px;
+    padding: 1px 8px;
+    border-radius: 999px;
+    background: rgba(239, 68, 68, 0.15);
+    color: #ef4444;
+    font-weight: 500;
+}
+.login-account-meta {
+    margin-top: 2px;
+    font-size: 12px;
+    color: var(--login-text-soft);
+    display: flex;
+    gap: 4px;
+    align-items: center;
+}
+.login-divider { color: var(--login-text-faint); }
+.login-user-id {
+    font-family: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
+}
+.login-account-remark {
+    margin-top: 4px;
+    font-size: 12px;
+    color: var(--login-text-faint);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.login-account-arrow {
+    color: var(--login-text-faint);
+    transition: transform 0.18s ease, color 0.18s ease;
+}
+.login-account:hover:not(.disabled) .login-account-arrow {
+    color: var(--login-primary);
+    transform: translateX(2px);
+}
+
+.login-empty {
+    text-align: center;
+    padding: 40px 0;
+    color: var(--login-text-soft);
+}
+.login-empty p { margin: 0 0 4px; font-size: 14px; }
+.login-empty span { font-size: 12px; color: var(--login-text-faint); }
+
+.login-footer {
+    margin-top: 18px;
+    text-align: center;
+    font-size: 12px;
+    color: var(--login-text-faint);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+}
+.login-dot { opacity: 0.5; }
+.login-footer-link {
+    color: var(--login-primary);
+    text-decoration: none;
+    font-weight: 500;
+}
+.login-footer-link:hover { text-decoration: underline; }
+
+/* 加载遮罩 */
+.login-loading-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(15, 23, 42, 0.45);
+    backdrop-filter: blur(4px);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    z-index: 9999;
+    color: #fff;
+    gap: 14px;
+    animation: loginFadeIn 0.2s ease;
+}
+.login-loading-spinner {
+    width: 36px; height: 36px;
+    border-radius: 50%;
+    border: 3px solid rgba(255, 255, 255, 0.3);
+    border-top-color: #fff;
+    animation: loginSpin 0.8s linear infinite;
+}
+.login-loading-text {
+    font-size: 14px;
+    letter-spacing: 1px;
+}
+@keyframes loginSpin {
+    to { transform: rotate(360deg); }
+}
+
+/* 简易 toast */
+.login-toast {
+    position: fixed;
+    top: 28px;
+    left: 50%;
+    transform: translate(-50%, -8px);
+    padding: 10px 18px;
+    border-radius: 999px;
+    font-size: 13px;
+    color: #fff;
+    background: rgba(15, 23, 42, 0.86);
+    box-shadow: 0 14px 30px -10px rgba(15, 23, 42, 0.45);
+    opacity: 0;
+    transition: opacity 0.2s, transform 0.2s;
+    z-index: 10000;
+    pointer-events: none;
+}
+.login-toast.show { opacity: 1; transform: translate(-50%, 0); }
+.login-toast-error { background: linear-gradient(135deg, #ef4444, #b91c1c); }
+.login-toast-warning { background: linear-gradient(135deg, #f59e0b, #b45309); }
+
+@media (max-width: 540px) {
+    .login-card { padding: 24px 20px 18px; }
+    .login-brand-text h1 { font-size: 19px; }
+}

@@ -1,4 +1,4 @@
-package com.agent.hopaw.infra.model.entity;
+package com.agent.hopaw.avatar.entity;
 
 public class AvatarConfig {
     private Long id;
@@ -10,6 +10,8 @@ public class AvatarConfig {
     private Long avatarAiModelId;
     private String avatarAiPrompt;
     private Long totalTokens;
+    private Long lastProcessedChatId;
+    private Boolean soundEnabled;
     private String createTime;
     private String updateTime;
 
@@ -86,6 +88,22 @@ public class AvatarConfig {
 
     public void setTotalTokens(Long totalTokens) {
         this.totalTokens = totalTokens;
+    }
+
+    public Long getLastProcessedChatId() {
+        return lastProcessedChatId;
+    }
+
+    public void setLastProcessedChatId(Long lastProcessedChatId) {
+        this.lastProcessedChatId = lastProcessedChatId;
+    }
+
+    public Boolean getSoundEnabled() {
+        return soundEnabled;
+    }
+
+    public void setSoundEnabled(Boolean soundEnabled) {
+        this.soundEnabled = soundEnabled;
     }
 
     public String getCreateTime() {

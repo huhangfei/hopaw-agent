@@ -1,14 +1,16 @@
 package com.agent.hopaw.avatar.task;
 
+import com.agent.hopaw.avatar.entity.AvatarConfig;
+import com.agent.hopaw.avatar.mapper.AvatarConfigMapper;
 import com.agent.hopaw.avatar.util.AvatarProactivePlanner;
-import com.agent.hopaw.infra.mapper.AvatarConfigMapper;
-import com.agent.hopaw.infra.model.entity.AvatarConfig;
+import com.agent.hopaw.infra.model.entity.ChatHistory;
 import com.agent.hopaw.infra.model.entity.ScheduledTask;
 import com.agent.hopaw.infra.task.TaskHandler;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
 
+import java.util.Comparator;
 import java.util.List;
 
 @Component
@@ -53,6 +55,7 @@ public class AvatarTaskHandler implements TaskHandler {
 
             int processed = 0;
             int skipped = 0;
+            int noIncrement = 0;
             for (AvatarConfig config : configs) {
                 String userId = config.getUserId();
                 if (userId == null || userId.isBlank()) {
@@ -65,14 +68,32 @@ public class AvatarTaskHandler implements TaskHandler {
                     continue;
                 }
                 try {
-                    proactivePlanner.analyzeAndDecide(userId, task);
+                    Long afterId = config.getLastProcessedChatId();
+                    List<ChatHistory> processedRecords = proactivePlanner.analyzeAndDecide(userId, task, afterId);
+                    if (processedRecords == null || processedRecords.isEmpty()) {
+                        noIncrement++;
+                        logger.info("虚拟人定时任务跳过：未查询到增量用户输入 userId={} afterId={}", userId, afterId);
+                        continue;
+                    }
+                    Long maxId = processedRecords.stream()
+                            .map(ChatHistory::getId)
+                            .filter(id -> id != null)
+                            .max(Comparator.naturalOrder())
+                            .orElse(afterId);
+                    if (maxId != null && (afterId == null || maxId > afterId)) {
+                        try {
+                            avatarConfigMapper.updateLastProcessedChatId(userId, maxId);
+                        } catch (Exception persistError) {
+                            logger.error("更新 lastProcessedChatId 失败 userId={} maxId={}", userId, maxId, persistError);
+                        }
+                    }
                     processed++;
                 } catch (Exception e) {
                     logger.error("虚拟人定时任务处理失败 userId={} [{}]", userId, task.getId(), e);
                 }
             }
 
-            logger.info("虚拟人定时任务执行完成 [{}] 处理={} 跳过={}", task.getId(), processed, skipped);
+            logger.info("虚拟人定时任务执行完成 [{}] 处理={} 跳过={} 无增量={}", task.getId(), processed, skipped, noIncrement);
         } catch (Exception e) {
             logger.error("虚拟人定时任务执行失败 [{}]", task.getId(), e);
         } finally {

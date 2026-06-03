@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+      xmlns:th="http://www.thymeleaf.org"
+      layout:decorate="~{layouts/default}">
+<head>
+    <title>账户管理 - HoPaw</title>
+</head>
+<body>
+<div layout:fragment="pageTitle">🤖 HoPaw - 账户管理</div>
+
+<main layout:fragment="content" class="accounts-container">
+    <div class="accounts-header">
+        <h2>账户管理</h2>
+        <button class="btn-add-account" onclick="showAddModal()">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <line x1="12" y1="5" x2="12" y2="19"/>
+                <line x1="5" y1="12" x2="19" y2="12"/>
+            </svg>
+            新增账户
+        </button>
+    </div>
+
+    <div class="accounts-card">
+        <table class="accounts-table">
+            <thead>
+                <tr>
+                    <th>用户编号</th>
+                    <th>用户名称</th>
+                    <th>用户昵称</th>
+                    <th>状态</th>
+                    <th>备注</th>
+                    <th>创建时间</th>
+                    <th>更新时间</th>
+                    <th>操作</th>
+                </tr>
+            </thead>
+            <tbody id="accountsTableBody">
+            </tbody>
+        </table>
+    </div>
+    <div class="empty-state" id="emptyState" style="display:none;">
+        <p>暂无账户，点击"新增账户"按钮开始创建</p>
+    </div>
+
+    <div class="modal-overlay" id="accountModal">
+        <div class="modal">
+            <div class="modal-header">
+                <h3 id="modalTitle">新增账户</h3>
+                <button class="modal-close" onclick="closeModal()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <form id="accountForm">
+                    <input type="hidden" id="accountId">
+                    <div class="form-group">
+                        <label for="accountUserId">用户编号 <span class="required">*</span></label>
+                        <input type="text" id="accountUserId" required placeholder="例如：user1" maxlength="64">
+                        <div class="form-hint">用户编号必须唯一，不可重复</div>
+                    </div>
+                    <div class="form-group">
+                        <label for="accountUsername">用户名称 <span class="required">*</span></label>
+                        <input type="text" id="accountUsername" required placeholder="例如：张三" maxlength="128">
+                    </div>
+                    <div class="form-group">
+                        <label for="accountNickname">用户昵称</label>
+                        <input type="text" id="accountNickname" placeholder="例如：小张" maxlength="128">
+                    </div>
+                    <div class="form-group">
+                        <label>状态</label>
+                        <div class="toggle-wrapper">
+                            <label class="toggle">
+                                <input type="checkbox" id="accountStatus" checked>
+                                <span class="slider"></span>
+                            </label>
+                            <span class="toggle-label" id="accountStatusLabel">启用</span>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label for="accountRemark">备注</label>
+                        <textarea id="accountRemark" rows="3" placeholder="可选，账户相关说明" maxlength="500"></textarea>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button class="btn-cancel" onclick="closeModal()">取消</button>
+                <button class="btn-submit" id="btnSaveAccount" onclick="submitAccount()">保存</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal-overlay" id="accountViewModal">
+        <div class="modal">
+            <div class="modal-header">
+                <h3>账户详情</h3>
+                <button class="modal-close" onclick="Modal.close('accountViewModal')">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="account-detail">
+                    <div class="detail-row">
+                        <span class="detail-label">用户编号</span>
+                        <span class="detail-value" id="viewUserId"></span>
+                    </div>
+                    <div class="detail-row">
+                        <span class="detail-label">用户名称</span>
+                        <span class="detail-value" id="viewUsername"></span>
+                    </div>
+                    <div class="detail-row">
+                        <span class="detail-label">用户昵称</span>
+                        <span class="detail-value" id="viewNickname"></span>
+                    </div>
+                    <div class="detail-row">
+                        <span class="detail-label">状态</span>
+                        <span class="detail-value" id="viewStatus"></span>
+                    </div>
+                    <div class="detail-row">
+                        <span class="detail-label">备注</span>
+                        <span class="detail-value" id="viewRemark"></span>
+                    </div>
+                    <div class="detail-row">
+                        <span class="detail-label">创建时间</span>
+                        <span class="detail-value" id="viewCreateTime"></span>
+                    </div>
+                    <div class="detail-row">
+                        <span class="detail-label">更新时间</span>
+                        <span class="detail-value" id="viewUpdateTime"></span>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn-cancel" onclick="Modal.close('accountViewModal')">关闭</button>
+            </div>
+        </div>
+    </div>
+</main>
+
+<th:block layout:fragment="extraCss">
+    <link rel="stylesheet" th:href="@{/css/page/accounts.css}">
+</th:block>
+
+<th:block layout:fragment="extraScripts">
+    <script th:src="@{/js/page/accounts.js}"></script>
+</th:block>
+</body>
+</html>

@@ -139,15 +139,6 @@
     <div class="settings-panel" id="tab-avatar">
         <div class="settings-form">
             <div class="form-group">
-                <label>定时任务状态</label>
-                <div class="task-status-row">
-                    <span class="task-status-badge" id="avatarTaskStatus">检测中...</span>
-                    <button class="btn-toggle-task" id="avatarTaskToggleBtn" onclick="toggleAvatarTask()">启用</button>
-                </div>
-                <p class="form-hint">虚拟人定时任务默认每 30 秒执行一次，具体任务逻辑可在后续版本中扩展。</p>
-            </div>
-
-            <div class="form-group">
                 <label>是否关闭虚拟人</label>
                 <div class="switch-row">
                     <label class="switch">
@@ -157,6 +148,18 @@
                     <span class="switch-label" id="avatarDisabledLabel">启用</span>
                 </div>
                 <p class="form-hint">关闭后，虚拟人模块相关功能将整体停用。</p>
+            </div>
+
+            <div class="form-group">
+                <label>是否播放提示音</label>
+                <div class="switch-row">
+                    <label class="switch">
+                        <input type="checkbox" id="avatarSoundEnabled">
+                        <span class="slider"></span>
+                    </label>
+                    <span class="switch-label" id="avatarSoundEnabledLabel">已开启</span>
+                </div>
+                <p class="form-hint">开启后，虚拟人在执行各类动作时会播放对应的提示音；关闭则静音。默认开启。</p>
             </div>
 
             <div class="form-group">

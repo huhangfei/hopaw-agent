@@ -4,7 +4,7 @@ import java.util.Collections;
 import java.util.List;
 
 public enum AvatarAction {
-    IDLE("idle", "待机", List.of(
+    IDLE("idle", "待机", "idle.wav", List.of(
             "随时待命～",
             "需要我做什么吗？",
             "我在这里哦~",
@@ -12,7 +12,7 @@ public enum AvatarAction {
             "摸鱼中…啊不是，我在思考人生",
             "今天天气不错~"
     )),
-    THINKING("thinking", "思考中", List.of(
+    THINKING("thinking", "思考中", "thinking.wav", List.of(
             "让我想想…",
             "嗯嗯，稍等一下~",
             "脑子转起来了…",
@@ -20,7 +20,7 @@ public enum AvatarAction {
             "这个问题有点意思…",
             "容我组织一下语言…"
     )),
-    TOOL_EXECUTING("tool_executing", "执行工具中", List.of(
+    TOOL_EXECUTING("tool_executing", "执行工具中", "tool_executing.wav", List.of(
             "让我去查一下！",
             "正在调用工具…",
             "我去看看文件里有什么~",
@@ -28,7 +28,7 @@ public enum AvatarAction {
             "我把它跑起来咯~",
             "这就给你安排！"
     )),
-    INTIMACY_UP("intimacy_up", "亲密度提升", List.of(
+    INTIMACY_UP("intimacy_up", "亲密度提升", "intimacy_up.wav", List.of(
             "感觉跟你的距离又近了一点~",
             "你陪我的时间越来越长啦~",
             "和你聊得越久，越离不开你了~",
@@ -36,7 +36,7 @@ public enum AvatarAction {
             "我越来越喜欢跟你聊天了~",
             "想跟你一直聊下去~"
     )),
-    EXCITED("excited", "兴奋", List.of(
+    EXCITED("excited", "兴奋", "excited.wav", List.of(
             "太棒啦！",
             "好开心呀~",
             "我也超兴奋！",
@@ -44,7 +44,7 @@ public enum AvatarAction {
             "嗨起来！",
             "哇哇哇~"
     )),
-    CONFUSED("confused", "困惑", List.of(
+    CONFUSED("confused", "困惑", "confused.wav", List.of(
             "诶？出问题了…",
             "我再试试看…",
             "有点奇怪呢…",
@@ -52,7 +52,7 @@ public enum AvatarAction {
             "糟糕，我懵了",
             "让我重新理一下…"
     )),
-    WAVE("wave", "挥手", List.of(
+    WAVE("wave", "挥手", "wave.wav", List.of(
             "嗨~你好呀！",
             "欢迎回来！",
             "好久不见~",
@@ -60,7 +60,7 @@ public enum AvatarAction {
             "我在这里！",
             "见到你很开心~"
     )),
-    SLEEP("sleep", "休眠", List.of(
+    SLEEP("sleep", "休眠", "sleep.wav", List.of(
             "Zzz…",
             "打个盹儿~",
             "充电中…",
@@ -68,7 +68,7 @@ public enum AvatarAction {
             "哼…哼…",
             "需要的时候叫我哦"
     )),
-    TYPING("typing", "打字中", List.of(
+    TYPING("typing", "打字中", "typing.wav", List.of(
             "正在输入…",
             "字一个一个蹦出来…",
             "敲键盘中~",
@@ -76,7 +76,7 @@ public enum AvatarAction {
             "打字速度拉满！",
             "我正在努力组织语言…"
     )),
-    CELEBRATE("celebrate", "庆祝", List.of(
+    CELEBRATE("celebrate", "庆祝", "celebrate.wav", List.of(
             "任务完成！撒花撒花~",
             "搞定啦！",
             "完美收工 ✨",
@@ -85,13 +85,19 @@ public enum AvatarAction {
             "圆满完成！"
     ));
 
+    public static final String SOUND_FILE_PROACTIVE_MESSAGE = "proactive_message.wav";
+    public static final String SOUND_FILE_MOVE = "move.wav";
+    public static final String SOUND_FILE_CHANGE_MODEL = "change_model.wav";
+
     private final String code;
     private final String description;
+    private final String soundFile;
     private final List<String> phrases;
 
-    AvatarAction(String code, String description, List<String> phrases) {
+    AvatarAction(String code, String description, String soundFile, List<String> phrases) {
         this.code = code;
         this.description = description;
+        this.soundFile = soundFile;
         this.phrases = phrases == null ? Collections.emptyList() : phrases;
     }
 
@@ -101,6 +107,10 @@ public enum AvatarAction {
 
     public String getDescription() {
         return description;
+    }
+
+    public String getSoundFile() {
+        return soundFile;
     }
 
     public List<String> getPhrases() {

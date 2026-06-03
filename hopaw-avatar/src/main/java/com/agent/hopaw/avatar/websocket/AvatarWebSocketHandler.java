@@ -1,12 +1,10 @@
 package com.agent.hopaw.avatar.websocket;
 
 import com.agent.hopaw.avatar.model.AvatarEvent;
-import com.agent.hopaw.avatar.service.AvatarProactiveMessageService;
-import com.agent.hopaw.avatar.service.AvatarService;
+import com.agent.hopaw.avatar.service.AvatarSettingsService;
 import com.alibaba.fastjson2.JSON;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.boot.context.event.ApplicationReadyEvent;
 import org.springframework.context.event.EventListener;
 import org.springframework.stereotype.Component;
 import org.springframework.web.socket.CloseStatus;
@@ -14,54 +12,38 @@ import org.springframework.web.socket.TextMessage;
 import org.springframework.web.socket.WebSocketSession;
 import org.springframework.web.socket.handler.TextWebSocketHandler;
 
-import javax.annotation.PreDestroy;
 import java.io.IOException;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.ConcurrentMap;
-import java.util.function.Consumer;
 
 @Component
 public class AvatarWebSocketHandler extends TextWebSocketHandler {
 
     private static final Logger logger = LoggerFactory.getLogger(AvatarWebSocketHandler.class);
     private static final ConcurrentHashMap<String, Object> SESSION_LOCK_MAP = new ConcurrentHashMap<>();
-    private static final String PROACTIVE_LISTENER_ID = "avatar-websocket";
-
-    private final AvatarService avatarService;
-    private final AvatarProactiveMessageService proactiveMessageService;
-    private final Consumer<AvatarEvent> eventListener;
-    private final Consumer<AvatarEvent> proactiveListener;
 
     private static final ConcurrentMap<String, ConcurrentLinkedQueue<String>> userSessionMap = new ConcurrentHashMap<>();
     private static final ConcurrentMap<String, WebSocketSession> sessionMap = new ConcurrentHashMap<>();
 
-    public AvatarWebSocketHandler(AvatarService avatarService,
-                                  AvatarProactiveMessageService proactiveMessageService) {
-        this.avatarService = avatarService;
-        this.proactiveMessageService = proactiveMessageService;
-        this.eventListener = this::onAvatarEvent;
-        this.proactiveListener = this::onAvatarEvent;
+    private final AvatarSettingsService avatarSettingsService;
+
+    public AvatarWebSocketHandler(AvatarSettingsService avatarSettingsService) {
+        this.avatarSettingsService = avatarSettingsService;
     }
 
-    @EventListener(ApplicationReadyEvent.class)
-    public void init() {
-        avatarService.registerListener(eventListener);
-        proactiveMessageService.registerListener(PROACTIVE_LISTENER_ID, proactiveListener);
-        logger.info("AvatarWebSocketHandler registered as avatar event listener");
-    }
-
-    @PreDestroy
-    public void destroy() {
-        avatarService.removeListener(eventListener);
-        proactiveMessageService.removeListener(PROACTIVE_LISTENER_ID);
-    }
-
-    private void onAvatarEvent(AvatarEvent event) {
+    @EventListener
+    public void onAvatarEvent(AvatarEvent event) {
+        if (event == null) {
+            return;
+        }
         String userId = event.getUserId();
         if (userId == null) {
             return;
+        }
+        if (!avatarSettingsService.isSoundEnabled(userId) && event.getSoundFile() != null) {
+            event.setSoundFile(null);
         }
         ConcurrentLinkedQueue<String> sessionIds = userSessionMap.get(userId);
         if (sessionIds == null || sessionIds.isEmpty()) {

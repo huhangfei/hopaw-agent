@@ -9,6 +9,8 @@ var LAppDefine = {
     INTIMACY_PROGRESS_ID: "avatarIntimacyProgress",
     MINIMIZE_BTN_ID: "avatarMinimizeBtn",
     RESTORE_BTN_ID: "avatarRestoreBtn",
+    SETTINGS_BTN_ID: "avatarSettingsBtn",
+    CHANGE_MODEL_BTN_ID: "avatarChangeModelBtn",
     IS_DRAGABLE: true,
     BUTTON_ID: "Change",
     TEXURE_BUTTON_ID: "texure",
@@ -18,8 +20,14 @@ var LAppDefine = {
     WS_URL: "/ws/avatar",
     INTIMACY_API: "/api/avatar/intimacy",
     MODELS_API: "/api/avatar/models/pool",
+    SETTINGS_API: "/api/avatar/settings",
+    SOUND_BASE_PATH: "/sounds/avatar",
+    SOUND_STORAGE_KEY: "hopaw_avatar_sound_enabled",
+    CHANGE_MODEL_SOUND_FILE: "change_model.wav",
     BUBBLE_DEFAULT_DURATION: 3500,
-    BUBBLE_LONG_DURATION: 6000
+    BUBBLE_LONG_DURATION: 6000,
+    EVENT_QUEUE_INTERVAL_MS: 180,
+    EVENT_QUEUE_MAX_SIZE: 50
 };
 
 (function initAvatarWidget() {
@@ -34,6 +42,8 @@ var LAppDefine = {
     initMinimize(widget);
     initIntimacy(widget);
     connectAvatarWebSocket();
+    startAvatarEventQueue();
+    syncSoundEnabledFromServer();
     var raf = window.requestAnimationFrame || function (cb) { return setTimeout(cb, 16); };
     raf(function () {
         applySavedState();
@@ -68,6 +78,7 @@ var LAppDefine = {
     }
 
     function enterMinimized(skipTransition) {
+        if (widget._cancelMove) widget._cancelMove();
         if (widget._avatarBubble) widget._avatarBubble.hide();
         if (widget._intimacy) widget._intimacy.hide();
         if (skipTransition) {
@@ -109,6 +120,8 @@ var LAppDefine = {
     function initMinimize() {
         var minBtn = document.getElementById(LAppDefine.MINIMIZE_BTN_ID);
         var resBtn = document.getElementById(LAppDefine.RESTORE_BTN_ID);
+        var settingsBtn = document.getElementById(LAppDefine.SETTINGS_BTN_ID);
+        var changeModelBtn = document.getElementById(LAppDefine.CHANGE_MODEL_BTN_ID);
         if (minBtn) {
             minBtn.addEventListener("click", function (e) {
                 e.stopPropagation();
@@ -126,6 +139,30 @@ var LAppDefine = {
                 exitMinimized();
             });
             resBtn.addEventListener("pointerdown", function (e) {
+                e.stopPropagation();
+            });
+        }
+        if (settingsBtn) {
+            settingsBtn.addEventListener("click", function (e) {
+                e.stopPropagation();
+                e.preventDefault();
+                if (widget.classList.contains("dragging")) return;
+                window.location.href = "/settings#tab-avatar";
+            });
+            settingsBtn.addEventListener("pointerdown", function (e) {
+                e.stopPropagation();
+            });
+        }
+        if (changeModelBtn) {
+            changeModelBtn.addEventListener("click", function (e) {
+                e.stopPropagation();
+                e.preventDefault();
+                if (widget.classList.contains("dragging")) return;
+                if (isMinimized()) return;
+                loadModelFromPool({ excludeCurrent: true });
+                playAvatarSound(LAppDefine.CHANGE_MODEL_SOUND_FILE);
+            });
+            changeModelBtn.addEventListener("pointerdown", function (e) {
                 e.stopPropagation();
             });
         }
@@ -225,7 +262,7 @@ var LAppDefine = {
             ws.onmessage = function (event) {
                 try {
                     var data = JSON.parse(event.data);
-                    handleAvatarEvent(data);
+                    enqueueAvatarEvent(data);
                 } catch (e) {
                     console.error("Avatar WS message parse error:", e);
                 }
@@ -249,7 +286,7 @@ var LAppDefine = {
         open();
     }
 
-    function handleAvatarEvent(data) {
+    function processAvatarEvent(data) {
         if (!data) return;
         if (isMinimized()) return;
         var bubble = widget._avatarBubble;
@@ -265,6 +302,7 @@ var LAppDefine = {
             if (text) {
                 bubble.show(text, LAppDefine.BUBBLE_LONG_DURATION);
             }
+            playAvatarSound(data.soundFile);
             return;
         }
         if (data.type === "avatar_intimacy_update" || data.action === "intimacy_update") {
@@ -278,6 +316,22 @@ var LAppDefine = {
             if (!proactiveText) return;
             var persistent = data.dismissible === true;
             bubble.showPersistent(proactiveText, persistent);
+            playAvatarSound(data.soundFile);
+            return;
+        }
+        if (data.type === "avatar_move" || data.action === "move") {
+            if (isMinimized()) return;
+            var deltaX = typeof data.targetX === "number" ? data.targetX : 0;
+            var deltaY = typeof data.targetY === "number" ? data.targetY : 0;
+            var duration = typeof data.durationMs === "number" && data.durationMs > 0 ? data.durationMs : 1000;
+            animateAvatarMove(deltaX, deltaY, duration);
+            playAvatarSound(data.soundFile);
+            return;
+        }
+        if (data.type === "avatar_change_model" || data.action === "change_model") {
+            if (isMinimized()) return;
+            loadModelFromPool({ excludeCurrent: true });
+            playAvatarSound(data.soundFile);
             return;
         }
         var text = data.message || data.actionDescription;
@@ -287,6 +341,210 @@ var LAppDefine = {
             duration = LAppDefine.BUBBLE_LONG_DURATION;
         }
         bubble.show(text, duration);
+        playAvatarSound(data.soundFile);
+    }
+
+    var avatarEventQueue = [];
+    var avatarEventQueueTimer = null;
+    var avatarEventQueueProcessing = false;
+
+    function enqueueAvatarEvent(data) {
+        if (!data) return;
+        if (!widget) {
+            return;
+        }
+        if (isMinimized()) {
+            return;
+        }
+        if (data.userId && currentUserId && data.userId !== currentUserId) {
+            return;
+        }
+        var maxSize = LAppDefine.EVENT_QUEUE_MAX_SIZE || 50;
+        if (avatarEventQueue.length >= maxSize) {
+            avatarEventQueue.shift();
+        }
+        avatarEventQueue.push(data);
+    }
+
+    function startAvatarEventQueue() {
+        if (avatarEventQueueTimer) return;
+        avatarEventQueueTimer = setInterval(function () {
+            if (avatarEventQueueProcessing) return;
+            if (!avatarEventQueue.length) return;
+            if (isMinimized()) {
+                avatarEventQueue.length = 0;
+                return;
+            }
+            var data = avatarEventQueue.shift();
+            avatarEventQueueProcessing = true;
+            try {
+                processAvatarEvent(data);
+            } catch (e) {
+                console.error("Avatar event process error:", e);
+            } finally {
+                avatarEventQueueProcessing = false;
+            }
+        }, LAppDefine.EVENT_QUEUE_INTERVAL_MS || 180);
+    }
+
+    function stopAvatarEventQueue() {
+        if (avatarEventQueueTimer) {
+            clearInterval(avatarEventQueueTimer);
+            avatarEventQueueTimer = null;
+        }
+        avatarEventQueue.length = 0;
+    }
+
+    var moveAnimationId = null;
+    var moveSavedTransition = null;
+    var moveAnimationRaf = window.requestAnimationFrame || function (cb) { return setTimeout(cb, 16); };
+
+    var avatarAudioCache = {};
+    var avatarSoundEnabled = readSoundEnabledFromStorage();
+
+    function readSoundEnabledFromStorage() {
+        try {
+            var v = localStorage.getItem(LAppDefine.SOUND_STORAGE_KEY);
+            if (v === "false") return false;
+        } catch (e) {}
+        return true;
+    }
+
+    function writeSoundEnabledToStorage(enabled) {
+        try {
+            localStorage.setItem(LAppDefine.SOUND_STORAGE_KEY, enabled ? "true" : "false");
+        } catch (e) {}
+    }
+
+    function isAvatarSoundEnabled() {
+        return avatarSoundEnabled !== false;
+    }
+
+    function setAvatarSoundEnabled(enabled) {
+        avatarSoundEnabled = enabled !== false;
+        writeSoundEnabledToStorage(avatarSoundEnabled);
+    }
+
+    function syncSoundEnabledFromServer() {
+        try {
+            var userId = getCurrentUserId();
+            var url = LAppDefine.SETTINGS_API;
+            if (userId) {
+                url += "?_t=" + Date.now();
+            }
+            fetch(url, { credentials: "same-origin" })
+                .then(function (r) { return r.json(); })
+                .then(function (resp) {
+                    if (!resp || resp.msg !== "success" || !resp.data) return;
+                    if (typeof resp.data.soundEnabled === "boolean") {
+                        setAvatarSoundEnabled(resp.data.soundEnabled);
+                    }
+                })
+                .catch(function () {});
+        } catch (e) {}
+    }
+
+    function playAvatarSound(soundFile) {
+        if (!isAvatarSoundEnabled()) return;
+        if (!soundFile) return;
+        var name = String(soundFile).split(/[\\/]/).pop();
+        if (!name) return;
+        var url = LAppDefine.SOUND_BASE_PATH + "/" + name;
+        try {
+            var audio = avatarAudioCache[url];
+            if (!audio) {
+                audio = new Audio(url);
+                audio.preload = "auto";
+                avatarAudioCache[url] = audio;
+            }
+            try { audio.currentTime = 0; } catch (e) {}
+            var playPromise = audio.play();
+            if (playPromise && typeof playPromise.catch === "function") {
+                playPromise.catch(function (err) {
+                    console.warn("Avatar sound play failed:", err);
+                });
+            }
+        } catch (e) {
+            console.warn("Avatar sound error:", e);
+        }
+    }
+
+    function clampAvatarPosition(x, y) {
+        var rect = widget.getBoundingClientRect();
+        var canvas = document.getElementById(LAppDefine.CANVAS_ID);
+        var w = rect.width || (canvas ? canvas.offsetWidth : 250);
+        var h = rect.height || (canvas ? canvas.offsetHeight : 250);
+        var maxX = Math.max(0, window.innerWidth - w);
+        var maxY = Math.max(0, window.innerHeight - h);
+        return {
+            x: Math.min(Math.max(0, x), maxX),
+            y: Math.min(Math.max(0, y), maxY)
+        };
+    }
+
+    function setAvatarPosition(x, y) {
+        var clamped = clampAvatarPosition(x, y);
+        if (widget._applyPosition) {
+            widget._applyPosition(clamped.x, clamped.y);
+        } else {
+            widget.style.left = clamped.x + "px";
+            widget.style.top = clamped.y + "px";
+            widget.style.right = "auto";
+            widget.style.bottom = "auto";
+        }
+    }
+
+    function cancelMoveAnimation() {
+        if (moveAnimationId !== null) {
+            cancelAnimationFrame(moveAnimationId);
+            moveAnimationId = null;
+        }
+        if (moveSavedTransition !== null) {
+            widget.style.transition = moveSavedTransition;
+            moveSavedTransition = null;
+        }
+    }
+
+    widget._cancelMove = cancelMoveAnimation;
+
+    function animateAvatarMove(deltaX, deltaY, duration) {
+        if (!widget) return;
+        if (isMinimized()) return;
+        cancelMoveAnimation();
+
+        // 预先把终点夹紧到视口，避免动画跑出屏幕
+        var rect = widget.getBoundingClientRect();
+        var startX = rect.left;
+        var startY = rect.top;
+        var endClamped = clampAvatarPosition(startX + deltaX, startY + deltaY);
+        var endX = endClamped.x;
+        var endY = endClamped.y;
+        var effectiveDeltaX = endX - startX;
+        var effectiveDeltaY = endY - startY;
+
+        // 临时禁用 CSS 过渡（widget 默认有 left/top 0.3s 过渡），避免与 rAF 冲突造成抖动
+        moveSavedTransition = widget.style.transition;
+        widget.style.transition = "none";
+
+        var startTime = null;
+        function step(ts) {
+            if (startTime === null) startTime = ts;
+            var elapsed = ts - startTime;
+            var ratio = duration > 0 ? Math.min(1, elapsed / duration) : 1;
+            var eased = 1 - (1 - ratio) * (1 - ratio);
+            setAvatarPosition(startX + effectiveDeltaX * eased, startY + effectiveDeltaY * eased);
+            if (ratio < 1) {
+                moveAnimationId = moveAnimationRaf(step);
+            } else {
+                moveAnimationId = null;
+                if (moveSavedTransition !== null) {
+                    widget.style.transition = moveSavedTransition;
+                    moveSavedTransition = null;
+                }
+                if (widget._savePosition) widget._savePosition();
+            }
+        }
+        moveAnimationId = moveAnimationRaf(step);
     }
 
     function initIntimacy() {
@@ -433,6 +691,12 @@ var LAppDefine = {
             if (e.target.closest && e.target.closest(".avatar-minimize-btn")) {
                 return;
             }
+            if (e.target.closest && e.target.closest("#" + LAppDefine.SETTINGS_BTN_ID)) {
+                return;
+            }
+            if (e.target.closest && e.target.closest("#" + LAppDefine.CHANGE_MODEL_BTN_ID)) {
+                return;
+            }
             var pt = getPointerXY(e);
             pointerId = e.pointerId !== undefined ? e.pointerId : null;
             startX = pt.x;
@@ -531,6 +795,12 @@ var LAppDefine = {
     }
 
     function loadModel() {
+        loadModelFromPool({ excludeCurrent: false });
+    }
+
+    function loadModelFromPool(options) {
+        var opts = options || {};
+        var excludeCurrent = opts.excludeCurrent === true;
         fetch(LAppDefine.MODELS_API, { credentials: 'same-origin' })
             .then(function(r) { return r.json(); })
             .then(function(resp) {
@@ -539,12 +809,22 @@ var LAppDefine = {
                     console.warn('虚拟人模型池为空');
                     return;
                 }
-                var index = Math.floor(Math.random() * pool.length);
-                var model = pool[index];
+                var candidates = pool;
+                if (excludeCurrent && currentLoadedModel && pool.length > 1) {
+                    candidates = pool.filter(function(m) { return m !== currentLoadedModel; });
+                    if (!candidates.length) {
+                        candidates = pool;
+                    }
+                }
+                var index = Math.floor(Math.random() * candidates.length);
+                var model = candidates[index];
+                currentLoadedModel = model;
                 loadlive2d(LAppDefine.CANVAS_ID, model);
             })
             .catch(function(e) {
                 console.error('加载虚拟人模型池失败', e);
             });
     }
+
+    var currentLoadedModel = null;
 })();

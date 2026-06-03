@@ -27,7 +27,8 @@
                 <label for="filterUser">用户</label>
                 <select id="filterUser">
                     <option value="">全部</option>
-                    <option value="user1">user1</option>
+                    <option th:each="acc : ${accounts}" th:value="${acc.userId}"
+                            th:text="${(acc.nickname != null and not #strings.isEmpty(acc.nickname)) ? acc.nickname + ' (' + acc.userId + ')' : acc.userId}"></option>
                 </select>
             </div>
             <div class="filter-group">

@@ -197,10 +197,20 @@ public class DatabaseInitializer implements CommandLineRunner {
                     "avatar_ai_model_id INTEGER, " +
                     "avatar_ai_prompt TEXT, " +
                     "total_tokens INTEGER DEFAULT 0, " +
+                    "last_processed_chat_id INTEGER DEFAULT 0, " +
+                    "sound_enabled INTEGER DEFAULT 1, " +
                     "create_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP, " +
                     "update_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP" +
                     ")");
             stmt.execute("CREATE UNIQUE INDEX IF NOT EXISTS idx_avatar_config_user ON avatar_config(user_id)");
+
+            try {
+                stmt.execute("ALTER TABLE avatar_config ADD COLUMN last_processed_chat_id INTEGER DEFAULT 0");
+            } catch (Exception ignored) {}
+
+            try {
+                stmt.execute("ALTER TABLE avatar_config ADD COLUMN sound_enabled INTEGER DEFAULT 1");
+            } catch (Exception ignored) {}
 
             try {
                 stmt.execute("INSERT OR IGNORE INTO avatar_config " +
@@ -277,6 +287,18 @@ public class DatabaseInitializer implements CommandLineRunner {
             try {
                 stmt.execute("ALTER TABLE chat_sessions ADD COLUMN tool_call_permission TEXT");
             } catch (Exception ignored) {}
+
+            stmt.execute("CREATE TABLE IF NOT EXISTS accounts (" +
+                    "id INTEGER PRIMARY KEY AUTOINCREMENT, " +
+                    "user_id TEXT NOT NULL UNIQUE, " +
+                    "username TEXT NOT NULL, " +
+                    "nickname TEXT, " +
+                    "status INTEGER DEFAULT 1, " +
+                    "remark TEXT, " +
+                    "create_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP, " +
+                    "update_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP" +
+                    ")");
+            stmt.execute("CREATE UNIQUE INDEX IF NOT EXISTS idx_accounts_user_id ON accounts(user_id)");
 
             log.info("Database tables created");
         }
@@ -432,6 +454,19 @@ public class DatabaseInitializer implements CommandLineRunner {
                 stmt.execute("INSERT INTO scheduled_tasks (task_name, task_type, cron_expression, enabled, description, builtin) " +
                         "SELECT 'Avatar Task', 'avatar', '0/30 * * * * *', 0, 'Execute avatar module task every 30 seconds', 1 " +
                         "WHERE NOT EXISTS (SELECT 1 FROM scheduled_tasks WHERE task_type = 'avatar')");
+            }
+
+            long accountCount = countTableRows(stmt, "accounts");
+            if (accountCount == 0) {
+                log.info("Initializing default account...");
+                stmt.execute(String.format(
+                        "INSERT INTO accounts (user_id, username, nickname, status, remark) VALUES ('%s', '%s', '%s', %d, '%s')",
+                        escapeSQL(DefaultUser.USER),
+                        escapeSQL(DefaultUser.USER),
+                        escapeSQL("默认用户"),
+                        1,
+                        escapeSQL("系统初始化默认账户")
+                ));
             }
 
             log.info("Default data initialization completed");

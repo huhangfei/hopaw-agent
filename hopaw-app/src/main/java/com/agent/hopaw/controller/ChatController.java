@@ -1,7 +1,6 @@
 package com.agent.hopaw.controller;
 
 import com.agent.hopaw.avatar.service.AvatarSettingsService;
-import com.agent.hopaw.constant.DefaultUser;
 import com.agent.hopaw.infra.model.dto.ChatHistoryVO;
 import com.agent.hopaw.infra.model.dto.ToolSetInfo;
 import com.agent.hopaw.infra.model.entity.Agent;
@@ -12,11 +11,13 @@ import com.agent.hopaw.infra.service.IChatHistoryService;
 import com.agent.hopaw.infra.service.IChatSessionService;
 import com.agent.hopaw.infra.tool.IAgentToolService;
 import com.agent.hopaw.infra.util.UuidUtil;
+import com.agent.hopaw.util.CurrentUser;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 
+import javax.servlet.http.HttpServletRequest;
 import java.util.Collections;
 import java.util.List;
 import java.util.UUID;
@@ -44,12 +45,14 @@ public class ChatController {
     }
 
     @GetMapping("/")
-    public String index(@RequestParam(required = false) String sessionId,Model model) {
+    public String index(@RequestParam(required = false) String sessionId, Model model, HttpServletRequest request) {
+        String currentUserId = CurrentUser.require(request);
+        model.addAttribute("currentUserId", currentUserId);
         model.addAttribute("agentExecutorState", false);
         model.addAttribute("chatHistory", Collections.emptyList());
-        model.addAttribute("avatarDisabled", avatarSettingsService.isAvatarDisabled(DefaultUser.USER));
+        model.addAttribute("avatarDisabled", avatarSettingsService.isAvatarDisabled(currentUserId));
 
-        List<ChatSession> chatSessions = chatSessionService.getSessionsByUserId(DefaultUser.USER);
+        List<ChatSession> chatSessions = chatSessionService.getSessionsByUserId(currentUserId);
         model.addAttribute("chatSessions", chatSessions);
 
         List<Agent> agents = agentService.getAllAgents();

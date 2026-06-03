@@ -5,6 +5,8 @@ public class AvatarEvent {
     public static final String TYPE_INTIMACY = "avatar_intimacy";
     public static final String TYPE_INTIMACY_UPDATE = "avatar_intimacy_update";
     public static final String TYPE_PROACTIVE_MESSAGE = "avatar_proactive_message";
+    public static final String TYPE_MOVE = "avatar_move";
+    public static final String TYPE_CHANGE_MODEL = "avatar_change_model";
 
     private String type;
     private String userId;
@@ -14,6 +16,10 @@ public class AvatarEvent {
     private UserIntimacyInfo intimacyInfo;
     private Boolean autoShow;
     private Boolean dismissible;
+    private Integer targetX;
+    private Integer targetY;
+    private Long durationMs;
+    private String soundFile;
 
     public AvatarEvent() {
     }
@@ -31,6 +37,7 @@ public class AvatarEvent {
         event.message = message;
         event.autoShow = Boolean.TRUE;
         event.dismissible = Boolean.FALSE;
+        event.soundFile = action.getSoundFile();
         return event;
     }
 
@@ -43,6 +50,7 @@ public class AvatarEvent {
         event.intimacyInfo = intimacyInfo;
         event.autoShow = Boolean.TRUE;
         event.dismissible = Boolean.FALSE;
+        event.soundFile = AvatarAction.INTIMACY_UP.getSoundFile();
         return event;
     }
 
@@ -67,6 +75,34 @@ public class AvatarEvent {
         event.message = message;
         event.autoShow = Boolean.FALSE;
         event.dismissible = Boolean.TRUE;
+        event.soundFile = AvatarAction.SOUND_FILE_PROACTIVE_MESSAGE;
+        return event;
+    }
+
+    public static AvatarEvent move(String userId, int targetX, int targetY, long durationMs) {
+        AvatarEvent event = new AvatarEvent();
+        event.type = TYPE_MOVE;
+        event.userId = userId;
+        event.action = "move";
+        event.actionDescription = "移动";
+        event.targetX = targetX;
+        event.targetY = targetY;
+        event.durationMs = durationMs;
+        event.autoShow = Boolean.FALSE;
+        event.dismissible = Boolean.FALSE;
+        event.soundFile = AvatarAction.SOUND_FILE_MOVE;
+        return event;
+    }
+
+    public static AvatarEvent changeModel(String userId) {
+        AvatarEvent event = new AvatarEvent();
+        event.type = TYPE_CHANGE_MODEL;
+        event.userId = userId;
+        event.action = "change_model";
+        event.actionDescription = "换装";
+        event.autoShow = Boolean.FALSE;
+        event.dismissible = Boolean.FALSE;
+        event.soundFile = AvatarAction.SOUND_FILE_CHANGE_MODEL;
         return event;
     }
 
@@ -132,5 +168,37 @@ public class AvatarEvent {
 
     public void setDismissible(Boolean dismissible) {
         this.dismissible = dismissible;
+    }
+
+    public Integer getTargetX() {
+        return targetX;
+    }
+
+    public void setTargetX(Integer targetX) {
+        this.targetX = targetX;
+    }
+
+    public Integer getTargetY() {
+        return targetY;
+    }
+
+    public void setTargetY(Integer targetY) {
+        this.targetY = targetY;
+    }
+
+    public Long getDurationMs() {
+        return durationMs;
+    }
+
+    public void setDurationMs(Long durationMs) {
+        this.durationMs = durationMs;
+    }
+
+    public String getSoundFile() {
+        return soundFile;
+    }
+
+    public void setSoundFile(String soundFile) {
+        this.soundFile = soundFile;
     }
 }

@@ -2,8 +2,8 @@ package com.agent.hopaw.avatar.service;
 
 import com.agent.hopaw.avatar.model.AvatarModelGroup;
 import com.agent.hopaw.avatar.model.AvatarSettings;
-import com.agent.hopaw.infra.mapper.AvatarConfigMapper;
-import com.agent.hopaw.infra.model.entity.AvatarConfig;
+import com.agent.hopaw.avatar.entity.AvatarConfig;
+import com.agent.hopaw.avatar.mapper.AvatarConfigMapper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
@@ -71,6 +71,7 @@ public class AvatarSettingsService {
         AvatarConfig config = loadConfig(userId);
         AvatarSettings settings = new AvatarSettings();
         settings.setDisabled(Boolean.TRUE.equals(config.getDisabled()));
+        settings.setSoundEnabled(!Boolean.FALSE.equals(config.getSoundEnabled()));
         settings.setModelSetting(config.getModelSetting());
         settings.setModelGroup(config.getModelGroup());
         settings.setPersonaSetting(config.getPersonaSetting());
@@ -92,6 +93,7 @@ public class AvatarSettingsService {
             AvatarConfig cfg = existing != null ? existing : new AvatarConfig();
             cfg.setUserId(userId);
             cfg.setDisabled(settings.isDisabled());
+            cfg.setSoundEnabled(settings.isSoundEnabled());
             cfg.setModelSetting(settings.getModelSetting());
             cfg.setModelGroup(settings.getModelGroup());
             cfg.setPersonaSetting(settings.getPersonaSetting());
@@ -109,6 +111,11 @@ public class AvatarSettingsService {
 
     public boolean isAvatarDisabled(String userId) {
         return Boolean.TRUE.equals(loadConfig(userId).getDisabled());
+    }
+
+    public boolean isSoundEnabled(String userId) {
+        AvatarConfig config = loadConfig(userId);
+        return !Boolean.FALSE.equals(config.getSoundEnabled());
     }
 
     public List<AvatarModelGroup> listModelGroups() {

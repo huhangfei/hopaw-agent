@@ -81,6 +81,87 @@
     background: #f5f5f5;
 }
 
+.avatar-settings-btn {
+    position: absolute;
+    top: calc(100% + 8px);
+    left: calc(50% - 28px);
+    transform: translateY(-6px) scale(0.9);
+    width: 24px;
+    height: 24px;
+    padding: 0;
+    border: none;
+    border-radius: 50%;
+    background: rgba(0, 0, 0, 0.55);
+    color: #ffffff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.2s ease, transform 0.2s ease, background 0.2s ease;
+    z-index: 4;
+    touch-action: manipulation;
+}
+
+.avatar-change-model-btn {
+    position: absolute;
+    top: calc(100% + 8px);
+    left: calc(50% + 4px);
+    transform: translateY(-6px) scale(0.9);
+    width: 24px;
+    height: 24px;
+    padding: 0;
+    border: none;
+    border-radius: 50%;
+    background: rgba(0, 0, 0, 0.55);
+    color: #ffffff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.2s ease, transform 0.2s ease, background 0.2s ease;
+    z-index: 4;
+    touch-action: manipulation;
+}
+
+.avatar-widget::after {
+    content: "";
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    height: 32px;
+    pointer-events: auto;
+    z-index: -1;
+}
+
+.avatar-widget:hover .avatar-settings-btn,
+.avatar-settings-btn:focus,
+.avatar-widget:hover .avatar-change-model-btn,
+.avatar-change-model-btn:focus {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+    pointer-events: auto;
+}
+
+.avatar-settings-btn:hover,
+.avatar-change-model-btn:hover {
+    background: rgba(0, 0, 0, 0.8);
+}
+
+.avatar-settings-btn:active,
+.avatar-change-model-btn:active {
+    transform: translateY(0) scale(0.92);
+}
+
+.avatar-widget.minimized .avatar-settings-btn,
+.avatar-widget.minimized .avatar-change-model-btn {
+    display: none;
+}
+
 .avatar-widget.minimized {
     right: -30px;
     top: auto;

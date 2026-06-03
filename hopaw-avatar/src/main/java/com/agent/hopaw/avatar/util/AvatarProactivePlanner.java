@@ -1,6 +1,8 @@
 package com.agent.hopaw.avatar.util;
 
 import com.agent.hopaw.avatar.service.AvatarSettingsService;
+import com.agent.hopaw.avatar.tool.AvatarChangeModelTool;
+import com.agent.hopaw.avatar.tool.AvatarMoveTool;
 import com.agent.hopaw.avatar.tool.AvatarProactiveTool;
 import com.agent.hopaw.infra.constant.AiModelCallSourceEnum;
 import com.agent.hopaw.infra.mapper.ChatHistoryMapper;
@@ -41,23 +43,37 @@ public class AvatarProactivePlanner {
     private final ChatHistoryMapper chatHistoryMapper;
 
     private final AvatarProactiveTool avatarProactiveTool;
+    private final AvatarMoveTool avatarMoveTool;
+    private final AvatarChangeModelTool avatarChangeModelTool;
 
     public AvatarProactivePlanner(IAiModelService aiModelService,
                                   IChatModelListenerProvider chatModelListenerProvider,
                                   AvatarSettingsService avatarSettingsService,
-                                  ChatHistoryMapper chatHistoryMapper, AvatarProactiveTool avatarProactiveTool) {
+                                  ChatHistoryMapper chatHistoryMapper, AvatarProactiveTool avatarProactiveTool,
+                                  AvatarMoveTool avatarMoveTool,
+                                  AvatarChangeModelTool avatarChangeModelTool) {
         this.aiModelService = aiModelService;
         this.chatModelListenerProvider = chatModelListenerProvider;
         this.avatarSettingsService = avatarSettingsService;
         this.chatHistoryMapper = chatHistoryMapper;
         this.avatarProactiveTool = avatarProactiveTool;
+        this.avatarMoveTool = avatarMoveTool;
+        this.avatarChangeModelTool = avatarChangeModelTool;
     }
 
-    public void analyzeAndDecide(String userId, ScheduledTask task) {
+    /**
+     * 处理用户输入并决策是否发送主动消息。
+     *
+     * @param userId    用户ID
+     * @param task      定时任务
+     * @param afterId   仅查询 id 大于该值的增量记录；若为 null 则按时间窗口全量
+     * @return 实际参与本次处理的记录列表（按 id 升序）；若没有增量则返回空列表
+     */
+    public List<ChatHistory> analyzeAndDecide(String userId, ScheduledTask task, Long afterId) {
         Long modelId = avatarSettingsService.getAvatarAiModelId(userId);
         if (modelId == null) {
             logger.warn("虚拟人定时任务跳过：未配置大脑模型 userId={}", userId);
-            return ;
+            return Collections.emptyList();
         }
         String persona = avatarSettingsService.getPersonaSetting(userId);
         if (persona == null || persona.isBlank()) {
@@ -68,7 +84,11 @@ public class AvatarProactivePlanner {
             promptTemplate = AvatarSettingsService.DEFAULT_AVATAR_AI_PROMPT;
         }
 
-        List<ChatHistory> recentInputs = getRecentUserInputs(userId, RECENT_USER_INPUT_LIMIT);
+        List<ChatHistory> recentInputs = getIncrementalUserInputs(userId, afterId, RECENT_USER_INPUT_LIMIT);
+        if (recentInputs.isEmpty()) {
+            logger.info("虚拟人定时任务跳过：未查询到增量输入 userId={} afterId={}", userId, afterId);
+            return Collections.emptyList();
+        }
         String formattedInputs = formatRecentInputs(recentInputs);
         String currentTime = LocalDateTime.now().format(TIME_FORMAT);
 
@@ -83,7 +103,7 @@ public class AvatarProactivePlanner {
             chatModel = aiModelService.createChatModel(modelId, false, listener);
         } catch (Exception e) {
             logger.error("创建虚拟人大脑模型失败 userId={} modelId={}", userId, modelId, e);
-            return;
+            return recentInputs;
         }
 
         try {
@@ -94,7 +114,7 @@ public class AvatarProactivePlanner {
             Assistant assistant = AiServices.builder(Assistant.class)
                     .chatModel(chatModel)
                     .systemMessageProvider(chatMemoryId -> finalPrompt)
-                    .tools(Arrays.asList(avatarProactiveTool))
+                    .tools(Arrays.asList(avatarProactiveTool, avatarMoveTool, avatarChangeModelTool))
                     .maxSequentialToolsInvocations(1)
                     .build();
             ChatRequestParameters chatRequestParameters=ChatRequestParameters.builder()
@@ -105,12 +125,33 @@ public class AvatarProactivePlanner {
         } catch (Exception e) {
             logger.error("虚拟人大脑模型调用失败 userId={} modelId={}", userId, modelId, e);
         }
+        return recentInputs;
     }
     public interface Assistant {
         @dev.langchain4j.service.UserMessage("{{content}}")
         String chat(String content,
                     ChatRequestParameters chatRequestParameters, InvocationParameters invocationParameters);
     }
+
+    public List<ChatHistory> getIncrementalUserInputs(String userId, Long afterId, int limit) {
+        if (userId == null || userId.isBlank()) {
+            return Collections.emptyList();
+        }
+        LocalDateTime since = LocalDateTime.now().minusMinutes(RECENT_WINDOW_MINUTES);
+        try {
+            List<ChatHistory> list;
+            long startId = afterId == null ? 0L : afterId;
+            list = chatHistoryMapper.findRecentByUserIdAndRoleAfterId(userId, "user", startId, since, limit);
+            if (list == null) {
+                return Collections.emptyList();
+            }
+            return list;
+        } catch (Exception e) {
+            logger.warn("查询用户增量输入失败 userId={} afterId={} err={}", userId, afterId, e.getMessage());
+            return Collections.emptyList();
+        }
+    }
+
     public List<ChatHistory> getRecentUserInputs(String userId, int limit) {
         if (userId == null || userId.isBlank()) {
             return Collections.emptyList();

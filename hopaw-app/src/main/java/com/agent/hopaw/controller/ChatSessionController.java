@@ -1,6 +1,5 @@
 package com.agent.hopaw.controller;
 
-import com.agent.hopaw.constant.DefaultUser;
 import com.agent.hopaw.infra.constant.ChatMemoryStatusEnum;
 import com.agent.hopaw.infra.memory.IChatMemoryService;
 import com.agent.hopaw.infra.model.dto.ResponseBean;
@@ -10,9 +9,11 @@ import com.agent.hopaw.infra.service.IAgentExecutorService;
 import com.agent.hopaw.infra.service.IChatHistoryService;
 import com.agent.hopaw.infra.service.IChatSessionService;
 import com.agent.hopaw.infra.util.UuidUtil;
+import com.agent.hopaw.util.CurrentUser;
 import org.springframework.util.StringUtils;
 import org.springframework.web.bind.annotation.*;
 
+import javax.servlet.http.HttpServletRequest;
 import java.util.List;
 
 @RestController
@@ -31,12 +32,13 @@ public class ChatSessionController {
     }
 
     @GetMapping("/list")
-    public ResponseBean list(@RequestParam(required = false) Long agentId) {
+    public ResponseBean list(HttpServletRequest request, @RequestParam(required = false) Long agentId) {
+        String currentUserId = CurrentUser.require(request);
         List<ChatSession> sessions;
         if (agentId != null) {
-            sessions = chatSessionService.getSessionsByUserIdAndAgentId(DefaultUser.USER, agentId);
+            sessions = chatSessionService.getSessionsByUserIdAndAgentId(currentUserId, agentId);
         } else {
-            sessions = chatSessionService.getSessionsByUserId(DefaultUser.USER);
+            sessions = chatSessionService.getSessionsByUserId(currentUserId);
         }
         return ResponseBean.success(sessions);
     }
@@ -72,11 +74,11 @@ public class ChatSessionController {
 
     @PostMapping("/create")
     @ResponseBody
-    public ResponseBean create(@RequestBody ChatSession session) {
+    public ResponseBean create(HttpServletRequest request, @RequestBody ChatSession session) {
         if(!StringUtils.hasLength(session.getTitle())){
             session.setTitle("新任务");
         }
-        session.setUserId(DefaultUser.USER);
+        session.setUserId(CurrentUser.require(request));
         session.setSessionId(UuidUtil.generateSimpleUUID());
         session.setCreateTime(java.time.LocalDateTime.now());
         session.setLastUpdateTime(java.time.LocalDateTime.now());

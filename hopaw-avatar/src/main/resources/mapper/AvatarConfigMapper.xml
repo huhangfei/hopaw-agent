@@ -1,8 +1,8 @@
 <?xml version="1.0" encoding="UTF-8" ?>
 <!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
-<mapper namespace="com.agent.hopaw.infra.mapper.AvatarConfigMapper">
+<mapper namespace="com.agent.hopaw.avatar.mapper.AvatarConfigMapper">
 
-    <resultMap id="AvatarConfigResultMap" type="com.agent.hopaw.infra.model.entity.AvatarConfig">
+    <resultMap id="AvatarConfigResultMap" type="com.agent.hopaw.avatar.entity.AvatarConfig">
         <id property="id" column="id"/>
         <result property="userId" column="user_id"/>
         <result property="disabled" column="disabled"/>
@@ -12,31 +12,37 @@
         <result property="avatarAiModelId" column="avatar_ai_model_id"/>
         <result property="avatarAiPrompt" column="avatar_ai_prompt"/>
         <result property="totalTokens" column="total_tokens"/>
+        <result property="lastProcessedChatId" column="last_processed_chat_id"/>
+        <result property="soundEnabled" column="sound_enabled"/>
         <result property="createTime" column="create_time"/>
         <result property="updateTime" column="update_time"/>
     </resultMap>
 
     <select id="findByUserId" resultMap="AvatarConfigResultMap">
         SELECT id, user_id, disabled, model_setting, model_group, persona_setting,
-               avatar_ai_model_id, avatar_ai_prompt, total_tokens, create_time, update_time
+               avatar_ai_model_id, avatar_ai_prompt, total_tokens, last_processed_chat_id,
+               sound_enabled, create_time, update_time
         FROM avatar_config
         WHERE user_id = #{userId}
     </select>
 
     <select id="findAll" resultMap="AvatarConfigResultMap">
         SELECT id, user_id, disabled, model_setting, model_group, persona_setting,
-               avatar_ai_model_id, avatar_ai_prompt, total_tokens, create_time, update_time
+               avatar_ai_model_id, avatar_ai_prompt, total_tokens, last_processed_chat_id,
+               sound_enabled, create_time, update_time
         FROM avatar_config
     </select>
 
-    <insert id="insert" parameterType="com.agent.hopaw.infra.model.entity.AvatarConfig">
+    <insert id="insert" parameterType="com.agent.hopaw.avatar.entity.AvatarConfig">
         INSERT INTO avatar_config (user_id, disabled, model_setting, model_group, persona_setting,
-                                   avatar_ai_model_id, avatar_ai_prompt, total_tokens)
+                                   avatar_ai_model_id, avatar_ai_prompt, total_tokens, last_processed_chat_id,
+                                   sound_enabled)
         VALUES (#{userId}, #{disabled}, #{modelSetting}, #{modelGroup}, #{personaSetting},
-                #{avatarAiModelId}, #{avatarAiPrompt}, #{totalTokens})
+                #{avatarAiModelId}, #{avatarAiPrompt}, #{totalTokens}, #{lastProcessedChatId},
+                #{soundEnabled})
     </insert>
 
-    <update id="update" parameterType="com.agent.hopaw.infra.model.entity.AvatarConfig">
+    <update id="update" parameterType="com.agent.hopaw.avatar.entity.AvatarConfig">
         UPDATE avatar_config
         SET disabled = #{disabled},
             model_setting = #{modelSetting},
@@ -45,11 +51,13 @@
             avatar_ai_model_id = #{avatarAiModelId},
             avatar_ai_prompt = #{avatarAiPrompt},
             total_tokens = #{totalTokens},
+            last_processed_chat_id = #{lastProcessedChatId},
+            sound_enabled = #{soundEnabled},
             update_time = datetime('now', 'localtime')
         WHERE user_id = #{userId}
     </update>
 
-    <update id="upsert" parameterType="com.agent.hopaw.infra.model.entity.AvatarConfig">
+    <update id="upsert" parameterType="com.agent.hopaw.avatar.entity.AvatarConfig">
         UPDATE avatar_config
         SET disabled = COALESCE(#{disabled}, disabled),
             model_setting = COALESCE(#{modelSetting}, model_setting),
@@ -57,6 +65,7 @@
             persona_setting = COALESCE(#{personaSetting}, persona_setting),
             avatar_ai_model_id = COALESCE(#{avatarAiModelId}, avatar_ai_model_id),
             avatar_ai_prompt = COALESCE(#{avatarAiPrompt}, avatar_ai_prompt),
+            sound_enabled = COALESCE(#{soundEnabled}, sound_enabled),
             update_time = datetime('now', 'localtime')
         WHERE user_id = #{userId}
     </update>
@@ -64,6 +73,20 @@
     <update id="addTotalTokens">
         UPDATE avatar_config
         SET total_tokens = COALESCE(total_tokens, 0) + #{tokens},
+            update_time = datetime('now', 'localtime')
+        WHERE user_id = #{userId}
+    </update>
+
+    <update id="updateLastProcessedChatId">
+        UPDATE avatar_config
+        SET last_processed_chat_id = #{lastProcessedChatId},
+            update_time = datetime('now', 'localtime')
+        WHERE user_id = #{userId}
+    </update>
+
+    <update id="updateSoundEnabled">
+        UPDATE avatar_config
+        SET sound_enabled = #{soundEnabled},
             update_time = datetime('now', 'localtime')
         WHERE user_id = #{userId}
     </update>

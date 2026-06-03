@@ -277,6 +277,17 @@
         <button type="button" class="avatar-restore-btn" id="avatarRestoreBtn" title="展开" aria-label="展开">
             <img th:src="@{/images/avatar.png}" alt="avatar"/>
         </button>
+        <button type="button" class="avatar-settings-btn" id="avatarSettingsBtn" title="虚拟人设置" aria-label="虚拟人设置">
+            <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <circle cx="12" cy="12" r="3"/>
+                <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09a1.65 1.65 0 0 0-1-1.51 1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09a1.65 1.65 0 0 0 1.51-1 1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>
+            </svg>
+        </button>
+        <button type="button" class="avatar-change-model-btn" id="avatarChangeModelBtn" title="换装" aria-label="换装">
+            <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M20.38 3.46 16 2a4 4 0 0 1-8 0L3.62 3.46a2 2 0 0 0-1.34 2.23l.58 3.47a1 1 0 0 0 .99.84H6v10c0 1.1.9 2 2 2h8a2 2 0 0 0 2-2V10h2.15a1 1 0 0 0 .99-.84l.58-3.47a2 2 0 0 0-1.34-2.23z"/>
+            </svg>
+        </button>
     </div>
 </div>
 
@@ -300,7 +311,7 @@
         var initialCurrentSessionId = /*[[${currentSessionId}]]*/ null;
         var initialSelectedSkills = /*[[${selectedSkills}]]*/ '';
         var initialToolCallPermission = /*[[${toolCallPermission}]]*/ 'smart_call';
-        var currentUserId = /*[[${T(com.agent.hopaw.constant.DefaultUser).USER}]]*/ 'user1';
+        var currentUserId = /*[[${currentUserId != null ? currentUserId : T(com.agent.hopaw.constant.DefaultUser).USER}]]*/ 'user1';
     </script>
     <script th:src="@{/js/avatar/live2d.js}" th:if="${!avatarDisabled}"></script>
     <script th:src="@{/js/avatar/main.js}" th:if="${!avatarDisabled}"></script>

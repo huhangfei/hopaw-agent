@@ -1,13 +1,18 @@
 package com.agent.hopaw.config;
 
-import javax.servlet.http.Cookie;
-import javax.servlet.http.HttpServletRequest;
-import javax.servlet.http.HttpServletResponse;
+import com.agent.hopaw.infra.model.entity.Account;
+import com.agent.hopaw.infra.service.AccountService;
+import com.agent.hopaw.util.AccountAvatar;
+import com.agent.hopaw.util.CurrentUser;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
 import org.springframework.web.servlet.HandlerInterceptor;
 import org.springframework.web.servlet.ModelAndView;
+
+import javax.servlet.http.Cookie;
+import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
 
 @Component
 public class ThemeInterceptor implements HandlerInterceptor {
@@ -22,6 +27,12 @@ public class ThemeInterceptor implements HandlerInterceptor {
 
     public static final String MENU_COLLAPSED_COOKIE = "menuCollapsed";
     public static final String MENU_COLLAPSED_MODEL_KEY = "menuCollapsed";
+
+    private final AccountService accountService;
+
+    public ThemeInterceptor(AccountService accountService) {
+        this.accountService = accountService;
+    }
 
     @Override
     public boolean preHandle(HttpServletRequest request, HttpServletResponse response, Object handler) throws Exception {
@@ -41,6 +52,21 @@ public class ThemeInterceptor implements HandlerInterceptor {
             modelAndView.addObject(THEME_MODEL_ATTRIBUTE, theme);
             modelAndView.addObject("activePage", resolveActivePage(request));
             modelAndView.addObject(MENU_COLLAPSED_MODEL_KEY, isMenuCollapsed(request));
+
+            // 注入当前登录用户信息供布局使用
+            String userId = CurrentUser.fromSession(request);
+            if (userId != null) {
+                modelAndView.addObject("currentUserId", userId);
+                Account account = accountService.getByUserId(userId);
+                String nickname = account != null ? account.getNickname() : null;
+                String displayName = (nickname != null && !nickname.isEmpty())
+                        ? nickname
+                        : (account != null && account.getUsername() != null && !account.getUsername().isEmpty()
+                            ? account.getUsername()
+                            : userId);
+                modelAndView.addObject("currentNickname", displayName);
+                modelAndView.addObject("currentInitial", AccountAvatar.initial(displayName));
+            }
             logger.debug("ThemeInterceptor postHandle: modelAndView={}, theme={}", modelAndView.getViewName(), theme);
         }
     }
@@ -58,6 +84,9 @@ public class ThemeInterceptor implements HandlerInterceptor {
             case "/token-usage":    return "token-usage";
             case "/settings":       return "settings";
             case "/skills":         return "skills";
+            case "/accounts":       return "accounts";
+            case "/agents":         return "agents";
+            case "/login":          return "login";
             default:                return "";
         }
     }

@@ -2,6 +2,7 @@ package com.agent.hopaw.avatar.model;
 
 public class AvatarSettings {
     private boolean disabled;
+    private boolean soundEnabled;
     private String modelSetting;
     private String modelGroup;
     private String personaSetting;
@@ -17,6 +18,14 @@ public class AvatarSettings {
 
     public void setDisabled(boolean disabled) {
         this.disabled = disabled;
+    }
+
+    public boolean isSoundEnabled() {
+        return soundEnabled;
+    }
+
+    public void setSoundEnabled(boolean soundEnabled) {
+        this.soundEnabled = soundEnabled;
     }
 
     public String getModelSetting() {

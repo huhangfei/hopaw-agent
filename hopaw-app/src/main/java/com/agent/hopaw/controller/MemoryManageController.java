@@ -1,16 +1,17 @@
 package com.agent.hopaw.controller;
 
-import com.agent.hopaw.constant.DefaultUser;
 import com.agent.hopaw.infra.constant.UserMemoryTypeEnum;
 import com.agent.hopaw.infra.memory.ILongTermMemoryService;
 import com.agent.hopaw.infra.memory.LongTermMemoryService;
 import com.agent.hopaw.infra.model.dto.ResponseBean;
 import com.agent.hopaw.infra.model.entity.LongTermMemory;
 import com.agent.hopaw.infra.service.ChatSessionService;
+import com.agent.hopaw.util.CurrentUser;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.*;
 
+import javax.servlet.http.HttpServletRequest;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -32,8 +33,8 @@ public class MemoryManageController {
 
     @GetMapping("/api/memory-manage/tree")
     @ResponseBody
-    public ResponseBean tree() {
-        List<LongTermMemory> list = longTermMemoryService.queryUserAllMemories(null, DefaultUser.USER);
+    public ResponseBean tree(HttpServletRequest request) {
+        List<LongTermMemory> list = longTermMemoryService.queryUserAllMemories(null, CurrentUser.require(request));
         List<Map<String, Object>> types = new ArrayList<>();
         for (UserMemoryTypeEnum typeEnum : UserMemoryTypeEnum.values()) {
             Map<String, Object> item = new LinkedHashMap<>();
@@ -60,7 +61,7 @@ public class MemoryManageController {
 
     @PostMapping("/api/memory-manage")
     @ResponseBody
-    public ResponseBean create(@RequestBody Map<String, Object> body) {
+    public ResponseBean create(HttpServletRequest request, @RequestBody Map<String, Object> body) {
         String sessionId = (String) body.get("sessionId");
         String memory = (String) body.get("memory");
         Object parentIdObj = body.get("parentId");
@@ -72,7 +73,7 @@ public class MemoryManageController {
         if (UserMemoryTypeEnum.TASK_RECORDS.getCode().equals(memoryType)) {
             return ResponseBean.fail("不能添加该类型的记忆");
         }
-        LongTermMemory entity = longTermMemoryService.createMemory(sessionId, memory, parentId, DefaultUser.USER, UserMemoryTypeEnum.fromCode(memoryType), summary);
+        LongTermMemory entity = longTermMemoryService.createMemory(sessionId, memory, parentId, CurrentUser.require(request), UserMemoryTypeEnum.fromCode(memoryType), summary);
         return ResponseBean.success(entity);
     }
 

@@ -1,6 +1,5 @@
 package com.agent.hopaw.controller;
 
-import com.agent.hopaw.constant.DefaultUser;
 import com.agent.hopaw.infra.model.dto.ResponseBean;
 import com.agent.hopaw.infra.model.dto.ToolSetInfo;
 import com.agent.hopaw.infra.model.entity.Agent;
@@ -8,10 +7,12 @@ import com.agent.hopaw.infra.model.entity.AiModel;
 import com.agent.hopaw.infra.service.AgentService;
 import com.agent.hopaw.infra.service.AiModelService;
 import com.agent.hopaw.infra.tool.IAgentToolService;
+import com.agent.hopaw.util.CurrentUser;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.*;
 
+import javax.servlet.http.HttpServletRequest;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -37,7 +38,8 @@ public class AgentController {
     }
 
     @PostMapping("/agent/create")
-    public String createAgent(@RequestParam String name,
+    public String createAgent(HttpServletRequest request,
+                             @RequestParam String name,
                              @RequestParam String description,
                              @RequestParam(required = false) String tools,
                              @RequestParam(required = false, defaultValue = "20") Integer maxMemoryRecords,
@@ -47,13 +49,14 @@ public class AgentController {
                              @RequestParam(required = false, defaultValue = "true") Boolean vectorToolSearch,
                              @RequestParam(required = false, defaultValue = "5") Integer vectorToolSearchMaxResults) {
         String toolsStr = tools != null ? tools : "";
-        agentService.createAgent(name, description, toolsStr, maxMemoryRecords, maxToolInvocations, aiModelId, enableThinking, vectorToolSearch, vectorToolSearchMaxResults, DefaultUser.USER);
+        agentService.createAgent(name, description, toolsStr, maxMemoryRecords, maxToolInvocations, aiModelId, enableThinking, vectorToolSearch, vectorToolSearchMaxResults, CurrentUser.require(request));
         return "redirect:/";
     }
 
 
     @PostMapping("/agent/update")
-    public String updateAgent(@RequestParam Long id,
+    public String updateAgent(HttpServletRequest request,
+                             @RequestParam Long id,
                              @RequestParam String name,
                              @RequestParam String description,
                              @RequestParam(required = false) String tools,
@@ -64,7 +67,7 @@ public class AgentController {
                              @RequestParam(required = false, defaultValue = "true") Boolean vectorToolSearch,
                              @RequestParam(required = false, defaultValue = "5") Integer vectorToolSearchMaxResults) {
         String toolsStr = tools != null ? tools : "";
-        agentService.updateAgent(DefaultUser.USER,id, name, description, toolsStr, maxMemoryRecords, maxToolInvocations, aiModelId, enableThinking, vectorToolSearch, vectorToolSearchMaxResults);
+        agentService.updateAgent(CurrentUser.require(request), id, name, description, toolsStr, maxMemoryRecords, maxToolInvocations, aiModelId, enableThinking, vectorToolSearch, vectorToolSearchMaxResults);
         return "redirect:/?agentId=" + id;
     }
 
@@ -93,11 +96,13 @@ public class AgentController {
 
     @GetMapping("/api/agents/page")
     @ResponseBody
-    public ResponseBean getAgentsPage(@RequestParam(required = false, defaultValue = "") String keyword,
+    public ResponseBean getAgentsPage(HttpServletRequest request,
+                                      @RequestParam(required = false, defaultValue = "") String keyword,
                                       @RequestParam(required = false, defaultValue = "1") int page,
                                       @RequestParam(required = false, defaultValue = "10") int size) {
-        List<Agent> list = agentService.getAgentsPage(DefaultUser.USER, keyword, page, size);
-        int total = agentService.countAgents(DefaultUser.USER, keyword);
+        String currentUserId = CurrentUser.require(request);
+        List<Agent> list = agentService.getAgentsPage(currentUserId, keyword, page, size);
+        int total = agentService.countAgents(currentUserId, keyword);
         Map<String, Object> result = new HashMap<>();
         result.put("list", list);
         result.put("total", total);
@@ -108,19 +113,20 @@ public class AgentController {
 
     @GetMapping("/api/agents/count")
     @ResponseBody
-    public ResponseBean getAgentsCount() {
-        int total = agentService.countAgents(DefaultUser.USER, null);
+    public ResponseBean getAgentsCount(HttpServletRequest request) {
+        int total = agentService.countAgents(CurrentUser.require(request), null);
         return ResponseBean.success(total);
     }
 
     @DeleteMapping("/api/agents/{id}")
     @ResponseBody
-    public ResponseBean deleteAgent(@PathVariable Long id) {
-        int total = agentService.countAgents(DefaultUser.USER, null);
+    public ResponseBean deleteAgent(HttpServletRequest request, @PathVariable Long id) {
+        String currentUserId = CurrentUser.require(request);
+        int total = agentService.countAgents(currentUserId, null);
         if (total <= 1) {
             return ResponseBean.fail("必须保留至少一个智能体");
         }
-        agentService.deleteAgent(id, DefaultUser.USER);
+        agentService.deleteAgent(id, currentUserId);
         return ResponseBean.success();
     }
 }

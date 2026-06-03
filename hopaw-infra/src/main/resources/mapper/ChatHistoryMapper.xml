@@ -69,6 +69,17 @@
         LIMIT #{limit}
     </select>
 
+    <select id="findRecentByUserIdAndRoleAfterId" resultMap="ChatHistoryResultMap">
+        SELECT id, agent_id, session_id, role, message_type, content, tool_call_id, tool_name, tool_arguments, tool_call_status, tool_execution_time, create_time, user_id
+        FROM chat_history
+        WHERE user_id = #{userId}
+          AND role = #{role}
+          AND id &gt; #{afterId}
+          AND create_time &gt;= #{since}
+        ORDER BY id ASC
+        LIMIT #{limit}
+    </select>
+
     <insert id="insert" parameterType="com.agent.hopaw.infra.model.entity.ChatHistory">
         INSERT INTO chat_history (agent_id, session_id, role, message_type, content, tool_call_id, tool_name, tool_arguments, tool_call_status, tool_execution_time, create_time, user_id)
         VALUES (#{agentId}, #{sessionId}, #{role}, #{messageType}, #{content}, #{toolCallId}, #{toolName}, #{toolArguments}, #{toolCallStatus}, #{toolExecutionTime}, #{createTime}, #{userId})
