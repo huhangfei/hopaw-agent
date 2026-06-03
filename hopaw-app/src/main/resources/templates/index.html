@@ -295,7 +295,7 @@
 <th:block layout:fragment="extraCss">
     <link rel="stylesheet" th:href="@{/css/page/agent-form.css}">
     <link rel="stylesheet" th:href="@{/css/page/index.css}">
-    <link rel="stylesheet" th:href="@{/css/page/avatar.css}" th:if="${!avatarDisabled}">
+    <link rel="stylesheet" th:href="@{/css/page/avatar.css(v=20260603a)}" th:if="${!avatarDisabled}">
 </th:block>
 
 <th:block layout:fragment="extraScripts">
@@ -314,7 +314,7 @@
         var currentUserId = /*[[${currentUserId != null ? currentUserId : T(com.agent.hopaw.constant.DefaultUser).USER}]]*/ 'user1';
     </script>
     <script th:src="@{/js/avatar/live2d.js}" th:if="${!avatarDisabled}"></script>
-    <script th:src="@{/js/avatar/main.js}" th:if="${!avatarDisabled}"></script>
+    <script th:src="@{/js/avatar/main.js(v=20260603a)}" th:if="${!avatarDisabled}"></script>
 </th:block>
 </body>
 </html>

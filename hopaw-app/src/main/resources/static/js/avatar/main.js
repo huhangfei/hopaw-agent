@@ -232,11 +232,21 @@ var LAppDefine = {
                     }
                     closeBtn.style.display = "";
                     if (!closeBtn._avatarBound) {
-                        closeBtn.addEventListener("click", function (e) {
-                            e.stopPropagation();
-                            e.preventDefault();
+                        var onClose = function (e) {
+                            try { e.stopPropagation(); e.preventDefault(); } catch (_) {}
+                            // 用户主动关闭：清空队列里尚未派发的主动消息，
+                            // 并进入短暂冷却，避免后续事件再次弹出
+                            dismissUserClosed();
                             api.hide();
-                        });
+                        };
+                        // 同时监听 pointerdown / click，覆盖桌面和移动端，
+                        // 避免 widget 上 touch-action:none 把 click 吞掉
+                        closeBtn.addEventListener("pointerdown", onClose);
+                        closeBtn.addEventListener("click", onClose);
+                        // 拦截拖拽：关闭按钮按下时不进入拖动状态
+                        closeBtn.addEventListener("pointerdown", function (e) {
+                            try { e.stopPropagation(); } catch (_) {}
+                        }, true);
                         closeBtn._avatarBound = true;
                     }
                     bubble.classList.add("dismissible");
@@ -247,10 +257,14 @@ var LAppDefine = {
             },
             hide: function () {
                 bubble.classList.remove("visible");
+                bubble.classList.remove("dismissible");
+                // 关闭后清空文字，避免下次复用时短暂闪现旧内容
+                content.textContent = "";
                 if (this.timer) {
                     clearTimeout(this.timer);
                     this.timer = null;
                 }
+                if (closeBtn) closeBtn.style.display = "none";
             }
         };
         widget._avatarBubble = api;
@@ -411,6 +425,10 @@ var LAppDefine = {
         if (data.type === "avatar_proactive_message" || data.action === "proactive_message") {
             var proactiveText = data.message;
             if (!proactiveText) return;
+            // 用户主动关闭弹窗后冷却期内不再弹
+            if (isInDismissCooldown()) {
+                return;
+            }
             var persistent = data.dismissible === true;
             bubble.showPersistent(proactiveText, persistent);
             playAvatarSound(data.soundFile);
@@ -444,6 +462,28 @@ var LAppDefine = {
     var avatarEventQueue = [];
     var avatarEventQueueTimer = null;
     var avatarEventQueueProcessing = false;
+
+    // 用户主动关闭弹窗后，短时间内忽略新主动消息，避免又被刷出来
+    var dismissCooldownMs = 0;
+    var dismissCooldownTimer = null;
+
+    function isInDismissCooldown() {
+        return dismissCooldownMs > 0;
+    }
+
+    // 用户主动关闭弹窗时调用：清空尚未派发的事件，
+    // 并开启一个冷却期，期间不再显示新的主动消息
+    function dismissUserClosed() {
+        avatarEventQueue.length = 0;
+        dismissCooldownMs = 3000;
+        if (dismissCooldownTimer) {
+            clearTimeout(dismissCooldownTimer);
+        }
+        dismissCooldownTimer = setTimeout(function () {
+            dismissCooldownMs = 0;
+            dismissCooldownTimer = null;
+        }, 3000);
+    }
 
     function enqueueAvatarEvent(data) {
         if (!data) return;

@@ -26,7 +26,7 @@ public class AvatarEvent {
     }
 
     public static AvatarEvent action(String userId, Long agentId, AvatarAction action) {
-        return action(userId, agentId, action, null);
+        return action(userId, agentId, action, action.getRandomPhrase());
     }
 
     public static AvatarEvent action(String userId, Long agentId, AvatarAction action, String message) {
