@@ -401,6 +401,8 @@ function saveAvatarSettings() {
         showToast('缺少智能体信息', 'warning');
         return;
     }
+    // 当前页面是否已经加载了虚拟形象（index.html 等）
+    var hasAvatarCanvas = !!document.getElementById('avatarCanvas');
     // 直接从表单元素重新读取，避免直接信任缓存对象
     var groupSelect = document.getElementById('avatarModelGroupSelect');
     var groupValue = groupSelect ? groupSelect.value : '';
@@ -449,6 +451,14 @@ function saveAvatarSettings() {
             console.log('[avatar-settings] save response body', res);
             if (res && res.code === 200) {
                 showToast('保存成功', 'info');
+                // 当前页已加载虚拟人形象，配置变更需要重载以重建 Live2D 实例
+                if (hasAvatarCanvas) {
+                    showToast('配置已更新，正在刷新页面...', 'info');
+                    setTimeout(function() {
+                        window.location.reload();
+                    }, 600);
+                    return;
+                }
                 // 保存后重新拉取一次，确认数据已落地
                 return fetch('/api/avatar/settings?agentId=' + encodeURIComponent(avatarSettingsState.agentId) + '&_t=' + Date.now(), { credentials: 'same-origin' })
                     .then(function(r) { return r.json(); })

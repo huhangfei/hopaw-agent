@@ -1,5 +1,6 @@
 package com.agent.hopaw.avatar.tool;
 
+import com.agent.hopaw.avatar.mapper.AvatarConfigMapper;
 import com.agent.hopaw.avatar.model.AvatarEvent;
 import com.agent.hopaw.infra.tool.AgentTool;
 import com.agent.hopaw.infra.tool.ToolSecurityLevel;
@@ -12,15 +13,22 @@ import org.slf4j.LoggerFactory;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Component;
 
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
+
 @Component
 public class AvatarProactiveTool {
 
     private static final Logger logger = LoggerFactory.getLogger(AvatarProactiveTool.class);
+    private static final DateTimeFormatter TIME_FORMAT = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
 
     private final ApplicationEventPublisher eventPublisher;
+    private final AvatarConfigMapper avatarConfigMapper;
 
-    public AvatarProactiveTool(ApplicationEventPublisher eventPublisher) {
+    public AvatarProactiveTool(ApplicationEventPublisher eventPublisher,
+                               AvatarConfigMapper avatarConfigMapper) {
         this.eventPublisher = eventPublisher;
+        this.avatarConfigMapper = avatarConfigMapper;
     }
 
     @ToolSecurityLevel(ToolSecurityLevel.Level.SAFE)
@@ -42,6 +50,14 @@ public class AvatarProactiveTool {
         }
         try {
             eventPublisher.publishEvent(AvatarEvent.proactiveMessage(targetUserId, targetAgentId, message.trim()));
+            // 记录最后一次主动问候时间，供定时任务判断是否需要补发 wave
+            try {
+                String now = LocalDateTime.now().format(TIME_FORMAT);
+                avatarConfigMapper.updateLastProactiveGreetingTime(targetUserId, targetAgentId, now);
+            } catch (Exception persistError) {
+                logger.warn("更新 lastProactiveGreetingTime 失败 userId={} agentId={} err={}",
+                        targetUserId, targetAgentId, persistError.getMessage());
+            }
         } catch (Exception e) {
             logger.error("发布虚拟人主动消息事件失败 userId={} agentId={} err={}", targetUserId, targetAgentId, e.getMessage(), e);
             return "发送失败";

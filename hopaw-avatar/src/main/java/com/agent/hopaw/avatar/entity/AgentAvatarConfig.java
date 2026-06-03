@@ -25,6 +25,11 @@ public class AgentAvatarConfig {
      * 主动消息回忆最大记录数：超过该数量时按时间倒序截断。
      */
     private Integer memoryMaxRecords;
+    /**
+     * 最后一次主动问候时间（yyyy-MM-dd HH:mm:ss）。
+     * 由 AvatarProactiveTool 在调用时更新；定时任务据此判断是否需要发送 wave 提示。
+     */
+    private String lastProactiveGreetingTime;
     private String createTime;
     private String updateTime;
 
@@ -133,6 +138,14 @@ public class AgentAvatarConfig {
 
     public void setMemoryMaxRecords(Integer memoryMaxRecords) {
         this.memoryMaxRecords = memoryMaxRecords;
+    }
+
+    public String getLastProactiveGreetingTime() {
+        return lastProactiveGreetingTime;
+    }
+
+    public void setLastProactiveGreetingTime(String lastProactiveGreetingTime) {
+        this.lastProactiveGreetingTime = lastProactiveGreetingTime;
     }
 
     public String getCreateTime() {

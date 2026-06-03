@@ -1615,7 +1615,6 @@ body.dark-theme .chat-input-wrapper.disabled {
 }
 
 body.dark-theme .chat-input-wrapper.disabled textarea {
-    background: #16213e;
     color: #888;
 }
 
