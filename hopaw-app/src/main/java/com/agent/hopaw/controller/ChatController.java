@@ -50,7 +50,6 @@ public class ChatController {
         model.addAttribute("currentUserId", currentUserId);
         model.addAttribute("agentExecutorState", false);
         model.addAttribute("chatHistory", Collections.emptyList());
-        model.addAttribute("avatarDisabled", avatarSettingsService.isAvatarDisabled(currentUserId));
 
         List<ChatSession> chatSessions = chatSessionService.getSessionsByUserId(currentUserId);
         model.addAttribute("chatSessions", chatSessions);
@@ -93,6 +92,7 @@ public class ChatController {
         model.addAttribute("enableThinking", enableThinking);
         model.addAttribute("toolCallPermission", toolCallPermission);
         model.addAttribute("currentSessionId", sessionId==null? UuidUtil.generateSimpleUUID() :sessionId);
+        model.addAttribute("avatarDisabled", avatarSettingsService.isAvatarDisabled(currentUserId, selectedAgent.getId()));
         List<ToolSetInfo> toolSets = agentToolService.getToolSets();
         model.addAttribute("toolSets", toolSets);
         return "index";

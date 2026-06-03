@@ -1,13 +1,18 @@
 package com.agent.hopaw.avatar.entity;
 
-public class AvatarConfig {
+/**
+ * 虚拟人配置（按 用户+智能体 隔离）。
+ * <p>原 avatar_config 表（按 user 隔离）已升级为 agent_avatar_config（按 user_id + agent_id 复合隔离）。</p>
+ * <p>字段与原 AvatarConfig 一致，并新增 agentId。</p>
+ */
+public class AgentAvatarConfig {
     private Long id;
     private String userId;
+    private Long agentId;
     private Boolean disabled;
     private String modelSetting;
     private String modelGroup;
     private String personaSetting;
-    private Long avatarAiModelId;
     private String avatarAiPrompt;
     private Long totalTokens;
     private Long lastProcessedChatId;
@@ -15,7 +20,7 @@ public class AvatarConfig {
     private String createTime;
     private String updateTime;
 
-    public AvatarConfig() {
+    public AgentAvatarConfig() {
     }
 
     public Long getId() {
@@ -32,6 +37,14 @@ public class AvatarConfig {
 
     public void setUserId(String userId) {
         this.userId = userId;
+    }
+
+    public Long getAgentId() {
+        return agentId;
+    }
+
+    public void setAgentId(Long agentId) {
+        this.agentId = agentId;
     }
 
     public Boolean getDisabled() {
@@ -64,14 +77,6 @@ public class AvatarConfig {
 
     public void setPersonaSetting(String personaSetting) {
         this.personaSetting = personaSetting;
-    }
-
-    public Long getAvatarAiModelId() {
-        return avatarAiModelId;
-    }
-
-    public void setAvatarAiModelId(Long avatarAiModelId) {
-        this.avatarAiModelId = avatarAiModelId;
     }
 
     public String getAvatarAiPrompt() {

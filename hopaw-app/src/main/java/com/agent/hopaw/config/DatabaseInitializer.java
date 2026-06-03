@@ -13,6 +13,8 @@ import javax.sql.DataSource;
 import java.sql.Connection;
 import java.sql.ResultSet;
 import java.sql.Statement;
+import java.util.HashMap;
+import java.util.Map;
 
 @Component
 @Order(1)
@@ -53,7 +55,7 @@ public class DatabaseInitializer implements CommandLineRunner {
                     "model_name TEXT, " +
                     "enable_thinking INTEGER DEFAULT 1," +
                     "ext_params TEXT," +
-                    "user_id TEXT DEFAULT 'user1'" +
+                    "user_id TEXT DEFAULT 'admin'" +
                     ")");
             stmt.execute("CREATE INDEX IF NOT EXISTS idx_agents_user ON agents(user_id)");
 
@@ -79,7 +81,7 @@ public class DatabaseInitializer implements CommandLineRunner {
             stmt.execute("CREATE TABLE IF NOT EXISTS chat_memory (" +
                     "id INTEGER PRIMARY KEY AUTOINCREMENT, " +
                     "agent_id INTEGER NOT NULL, " +
-                    "user_id TEXT DEFAULT 'user1', " +
+                    "user_id TEXT DEFAULT 'admin', " +
                     "message_id TEXT NOT NULL, " +
                     "message_json TEXT NOT NULL, " +
                     "status INTEGER DEFAULT 0, " +
@@ -94,7 +96,7 @@ public class DatabaseInitializer implements CommandLineRunner {
             stmt.execute("CREATE TABLE IF NOT EXISTS chat_memory_obsolete (" +
                     "id INTEGER PRIMARY KEY AUTOINCREMENT, " +
                     "agent_id INTEGER NOT NULL, " +
-                    "user_id TEXT DEFAULT 'user1', " +
+                    "user_id TEXT DEFAULT 'admin', " +
                     "message_id TEXT NOT NULL, " +
                     "message_json TEXT NOT NULL, " +
                     "status INTEGER DEFAULT 0, " +
@@ -181,20 +183,15 @@ public class DatabaseInitializer implements CommandLineRunner {
             stmt.execute("CREATE UNIQUE INDEX IF NOT EXISTS idx_user_config_user_key ON user_config(user_id, config_key)");
             stmt.execute("CREATE INDEX IF NOT EXISTS idx_user_config_user ON user_config(user_id)");
 
-            stmt.execute("INSERT OR IGNORE INTO user_config (user_id, config_key, config_value, description) " +
-                    "SELECT 'user1', config_key, config_value, description " +
-                    "FROM sys_config " +
-                    "WHERE config_key LIKE 'avatar_%'");
-            stmt.execute("DELETE FROM sys_config WHERE config_key LIKE 'avatar_%'");
 
-            stmt.execute("CREATE TABLE IF NOT EXISTS avatar_config (" +
+            stmt.execute("CREATE TABLE IF NOT EXISTS agent_avatar_config (" +
                     "id INTEGER PRIMARY KEY AUTOINCREMENT, " +
-                    "user_id TEXT NOT NULL UNIQUE, " +
+                    "user_id TEXT NOT NULL, " +
+                    "agent_id INTEGER NOT NULL, " +
                     "disabled INTEGER DEFAULT 0, " +
                     "model_setting TEXT, " +
                     "model_group TEXT, " +
                     "persona_setting TEXT, " +
-                    "avatar_ai_model_id INTEGER, " +
                     "avatar_ai_prompt TEXT, " +
                     "total_tokens INTEGER DEFAULT 0, " +
                     "last_processed_chat_id INTEGER DEFAULT 0, " +
@@ -202,44 +199,8 @@ public class DatabaseInitializer implements CommandLineRunner {
                     "create_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP, " +
                     "update_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP" +
                     ")");
-            stmt.execute("CREATE UNIQUE INDEX IF NOT EXISTS idx_avatar_config_user ON avatar_config(user_id)");
-
-            try {
-                stmt.execute("ALTER TABLE avatar_config ADD COLUMN last_processed_chat_id INTEGER DEFAULT 0");
-            } catch (Exception ignored) {}
-
-            try {
-                stmt.execute("ALTER TABLE avatar_config ADD COLUMN sound_enabled INTEGER DEFAULT 1");
-            } catch (Exception ignored) {}
-
-            try {
-                stmt.execute("INSERT OR IGNORE INTO avatar_config " +
-                        "(user_id, disabled, model_setting, model_group, persona_setting, avatar_ai_model_id, avatar_ai_prompt) " +
-                        "SELECT uc.user_id, " +
-                        "COALESCE(CASE " +
-                        "  WHEN LOWER((SELECT config_value FROM user_config WHERE user_id = uc.user_id AND config_key = 'avatar_disabled')) IN ('1','true','yes','on') THEN 1 " +
-                        "  ELSE 0 " +
-                        "END, 0), " +
-                        "COALESCE((SELECT config_value FROM user_config WHERE user_id = uc.user_id AND config_key = 'avatar_model_setting'), ''), " +
-                        "COALESCE((SELECT config_value FROM user_config WHERE user_id = uc.user_id AND config_key = 'avatar_model_group'), ''), " +
-                        "COALESCE((SELECT config_value FROM user_config WHERE user_id = uc.user_id AND config_key = 'avatar_persona_setting'), ''), " +
-                        "CASE WHEN (SELECT config_value FROM user_config WHERE user_id = uc.user_id AND config_key = 'avatar_ai_model_id') IS NULL " +
-                        "     OR (SELECT config_value FROM user_config WHERE user_id = uc.user_id AND config_key = 'avatar_ai_model_id') = '' " +
-                        "  THEN NULL " +
-                        "  ELSE CAST((SELECT config_value FROM user_config WHERE user_id = uc.user_id AND config_key = 'avatar_ai_model_id') AS INTEGER) " +
-                        "END, " +
-                        "COALESCE((SELECT config_value FROM user_config WHERE user_id = uc.user_id AND config_key = 'avatar_ai_prompt'), '') " +
-                        "FROM (SELECT DISTINCT user_id FROM user_config WHERE config_key LIKE 'avatar_%') uc");
-            } catch (Exception ignored) {}
-
-            stmt.execute("DELETE FROM user_config WHERE config_key LIKE 'avatar_%'");
-
-            try {
-                stmt.execute("UPDATE avatar_config " +
-                        "SET total_tokens = COALESCE((SELECT SUM(total_tokens) FROM token_usage WHERE user_id = avatar_config.user_id), 0) " +
-                        "WHERE COALESCE(total_tokens, 0) = 0 " +
-                        "AND EXISTS (SELECT 1 FROM token_usage WHERE user_id = avatar_config.user_id)");
-            } catch (Exception ignored) {}
+            stmt.execute("CREATE UNIQUE INDEX IF NOT EXISTS idx_agent_avatar_config_user_agent ON agent_avatar_config(user_id, agent_id)");
+            stmt.execute("CREATE INDEX IF NOT EXISTS idx_agent_avatar_config_user ON agent_avatar_config(user_id)");
 
             stmt.execute("CREATE TABLE IF NOT EXISTS scheduled_tasks (" +
                     "id INTEGER PRIMARY KEY AUTOINCREMENT, " +

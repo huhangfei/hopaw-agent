@@ -28,13 +28,17 @@ public class AvatarChangeModelTool {
     public String changeAvatarModel(InvocationParameters invocationParameters) {
         InvocationParametersWrapper wrapper = InvocationParametersWrapper.create(invocationParameters);
         String targetUserId = wrapper.getUserId();
+        Long targetAgentId = wrapper.getAgentId();
         if (targetUserId == null || targetUserId.isBlank()) {
             return "换装失败：未指定用户Id";
         }
+        if (targetAgentId == null) {
+            return "换装失败：未指定智能体Id";
+        }
         try {
-            eventPublisher.publishEvent(AvatarEvent.changeModel(targetUserId));
+            eventPublisher.publishEvent(AvatarEvent.changeModel(targetUserId, targetAgentId));
         } catch (Exception e) {
-            logger.error("发布虚拟人换装事件失败 userId={} err={}", targetUserId, e.getMessage(), e);
+            logger.error("发布虚拟人换装事件失败 userId={} agentId={} err={}", targetUserId, targetAgentId, e.getMessage(), e);
             return "换装失败";
         }
         return "已向用户发送虚拟人换装事件";

@@ -13,16 +13,16 @@ public class AvatarIntimacyConfig {
     private List<IntimacyThreshold> thresholds = new ArrayList<>();
 
     public AvatarIntimacyConfig() {
-        thresholds.add(new IntimacyThreshold(0, 0, "陌生人", "路过的旅人"));
-        thresholds.add(new IntimacyThreshold(1, 1000, "初相识", "小可爱"));
-        thresholds.add(new IntimacyThreshold(2, 5000, "老熟人", "甜心"));
-        thresholds.add(new IntimacyThreshold(3, 20000, "好朋友", "宝贝"));
-        thresholds.add(new IntimacyThreshold(4, 100000, "亲密伙伴", "亲爱的"));
-        thresholds.add(new IntimacyThreshold(5, 500000, "挚友", "哈尼"));
-        thresholds.add(new IntimacyThreshold(6, 2000000, "知心人", "小心肝"));
-        thresholds.add(new IntimacyThreshold(7, 10000000, "灵魂伴侣", "小甜甜"));
-        thresholds.add(new IntimacyThreshold(8, 50000000, "唯一知己", "此生挚爱"));
-        thresholds.add(new IntimacyThreshold(9, 200000000, "永恒之约", "唯一"));
+        thresholds.add(new IntimacyThreshold(0, 0, "陌生人"));
+        thresholds.add(new IntimacyThreshold(1, 1000, "初相识"));
+        thresholds.add(new IntimacyThreshold(2, 5000, "老熟人"));
+        thresholds.add(new IntimacyThreshold(3, 20000, "好朋友"));
+        thresholds.add(new IntimacyThreshold(4, 100000, "亲密伙伴"));
+        thresholds.add(new IntimacyThreshold(5, 500000, "挚友"));
+        thresholds.add(new IntimacyThreshold(6, 2000000, "知心人"));
+        thresholds.add(new IntimacyThreshold(7, 10000000, "灵魂伴侣"));
+        thresholds.add(new IntimacyThreshold(8, 50000000, "唯一知己"));
+        thresholds.add(new IntimacyThreshold(9, 200000000, "永恒之约"));
     }
 
     public List<IntimacyThreshold> getThresholds() {
@@ -57,16 +57,14 @@ public class AvatarIntimacyConfig {
         private int level;
         private long tokensRequired;
         private String title;
-        private String nickname;
 
         public IntimacyThreshold() {
         }
 
-        public IntimacyThreshold(int level, long tokensRequired, String title, String nickname) {
+        public IntimacyThreshold(int level, long tokensRequired, String title) {
             this.level = level;
             this.tokensRequired = tokensRequired;
             this.title = title;
-            this.nickname = nickname;
         }
 
         public int getLevel() {
@@ -91,14 +89,6 @@ public class AvatarIntimacyConfig {
 
         public void setTitle(String title) {
             this.title = title;
-        }
-
-        public String getNickname() {
-            return nickname;
-        }
-
-        public void setNickname(String nickname) {
-            this.nickname = nickname;
         }
     }
 }

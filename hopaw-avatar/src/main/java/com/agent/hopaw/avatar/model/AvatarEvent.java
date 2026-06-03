@@ -10,6 +10,7 @@ public class AvatarEvent {
 
     private String type;
     private String userId;
+    private Long agentId;
     private String action;
     private String actionDescription;
     private String message;
@@ -24,14 +25,15 @@ public class AvatarEvent {
     public AvatarEvent() {
     }
 
-    public static AvatarEvent action(String userId, AvatarAction action) {
-        return action(userId, action, null);
+    public static AvatarEvent action(String userId, Long agentId, AvatarAction action) {
+        return action(userId, agentId, action, null);
     }
 
-    public static AvatarEvent action(String userId, AvatarAction action, String message) {
+    public static AvatarEvent action(String userId, Long agentId, AvatarAction action, String message) {
         AvatarEvent event = new AvatarEvent();
         event.type = TYPE_ACTION;
         event.userId = userId;
+        event.agentId = agentId;
         event.action = action.getCode();
         event.actionDescription = action.getDescription();
         event.message = message;
@@ -41,10 +43,11 @@ public class AvatarEvent {
         return event;
     }
 
-    public static AvatarEvent intimacyUp(String userId, UserIntimacyInfo intimacyInfo) {
+    public static AvatarEvent intimacyUp(String userId, Long agentId, UserIntimacyInfo intimacyInfo) {
         AvatarEvent event = new AvatarEvent();
         event.type = TYPE_INTIMACY;
         event.userId = userId;
+        event.agentId = agentId;
         event.action = AvatarAction.INTIMACY_UP.getCode();
         event.actionDescription = AvatarAction.INTIMACY_UP.getDescription();
         event.intimacyInfo = intimacyInfo;
@@ -54,10 +57,11 @@ public class AvatarEvent {
         return event;
     }
 
-    public static AvatarEvent intimacyUpdate(String userId, UserIntimacyInfo intimacyInfo) {
+    public static AvatarEvent intimacyUpdate(String userId, Long agentId, UserIntimacyInfo intimacyInfo) {
         AvatarEvent event = new AvatarEvent();
         event.type = TYPE_INTIMACY_UPDATE;
         event.userId = userId;
+        event.agentId = agentId;
         event.action = "intimacy_update";
         event.actionDescription = "亲密度进度更新";
         event.intimacyInfo = intimacyInfo;
@@ -66,10 +70,11 @@ public class AvatarEvent {
         return event;
     }
 
-    public static AvatarEvent proactiveMessage(String userId, String message) {
+    public static AvatarEvent proactiveMessage(String userId, Long agentId, String message) {
         AvatarEvent event = new AvatarEvent();
         event.type = TYPE_PROACTIVE_MESSAGE;
         event.userId = userId;
+        event.agentId = agentId;
         event.action = "proactive_message";
         event.actionDescription = "主动关怀";
         event.message = message;
@@ -79,10 +84,11 @@ public class AvatarEvent {
         return event;
     }
 
-    public static AvatarEvent move(String userId, int targetX, int targetY, long durationMs) {
+    public static AvatarEvent move(String userId, Long agentId, int targetX, int targetY, long durationMs) {
         AvatarEvent event = new AvatarEvent();
         event.type = TYPE_MOVE;
         event.userId = userId;
+        event.agentId = agentId;
         event.action = "move";
         event.actionDescription = "移动";
         event.targetX = targetX;
@@ -94,10 +100,11 @@ public class AvatarEvent {
         return event;
     }
 
-    public static AvatarEvent changeModel(String userId) {
+    public static AvatarEvent changeModel(String userId, Long agentId) {
         AvatarEvent event = new AvatarEvent();
         event.type = TYPE_CHANGE_MODEL;
         event.userId = userId;
+        event.agentId = agentId;
         event.action = "change_model";
         event.actionDescription = "换装";
         event.autoShow = Boolean.FALSE;
@@ -120,6 +127,14 @@ public class AvatarEvent {
 
     public void setUserId(String userId) {
         this.userId = userId;
+    }
+
+    public Long getAgentId() {
+        return agentId;
+    }
+
+    public void setAgentId(Long agentId) {
+        this.agentId = agentId;
     }
 
     public String getAction() {

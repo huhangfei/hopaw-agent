@@ -20,15 +20,23 @@ public class WSHandshakeInterceptor implements HandshakeInterceptor {
             HttpServletRequest httpRequest = servletRequest.getServletRequest();
             String userId = CurrentUser.fromSession(httpRequest);
             if (userId == null || userId.isEmpty()) {
-                // WebSocket 握手通常会复用浏览器 cookie/session，这里若仍未读到
-                // 则尝试从请求参数 ?userId= 兜底（前端可附带）
                 userId = httpRequest.getParameter("userId");
             }
+            // userId 是必填，未登录则拒绝握手
             if (userId == null || userId.isEmpty()) {
-                // 兜底：未登录不允许建立 ws
                 return false;
             }
             attributes.put("userId", userId);
+
+            // agentId 是可选：Chat WS 不需要，Avatar WS 需要（handler 内部自行判定）
+            String agentIdStr = httpRequest.getParameter("agentId");
+            if (agentIdStr != null && !agentIdStr.isEmpty()) {
+                try {
+                    attributes.put("agentId", Long.parseLong(agentIdStr));
+                } catch (NumberFormatException e) {
+                    // 非法 agentId 不阻塞连接，handler 收到时再处理
+                }
+            }
         }
         return true;
     }

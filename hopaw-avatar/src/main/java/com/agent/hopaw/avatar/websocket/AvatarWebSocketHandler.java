@@ -24,7 +24,8 @@ public class AvatarWebSocketHandler extends TextWebSocketHandler {
     private static final Logger logger = LoggerFactory.getLogger(AvatarWebSocketHandler.class);
     private static final ConcurrentHashMap<String, Object> SESSION_LOCK_MAP = new ConcurrentHashMap<>();
 
-    private static final ConcurrentMap<String, ConcurrentLinkedQueue<String>> userSessionMap = new ConcurrentHashMap<>();
+    /** key = userId + "::" + agentId */
+    private static final ConcurrentMap<String, ConcurrentLinkedQueue<String>> sessionKeyMap = new ConcurrentHashMap<>();
     private static final ConcurrentMap<String, WebSocketSession> sessionMap = new ConcurrentHashMap<>();
 
     private final AvatarSettingsService avatarSettingsService;
@@ -39,13 +40,16 @@ public class AvatarWebSocketHandler extends TextWebSocketHandler {
             return;
         }
         String userId = event.getUserId();
-        if (userId == null) {
+        Long agentId = event.getAgentId();
+        if (userId == null || agentId == null) {
+            logger.warn("忽略虚拟人事件，userId/agentId 为空 userId={} agentId={}", userId, agentId);
             return;
         }
-        if (!avatarSettingsService.isSoundEnabled(userId) && event.getSoundFile() != null) {
+        if (!avatarSettingsService.isSoundEnabled(userId, agentId) && event.getSoundFile() != null) {
             event.setSoundFile(null);
         }
-        ConcurrentLinkedQueue<String> sessionIds = userSessionMap.get(userId);
+        String key = buildKey(userId, agentId);
+        ConcurrentLinkedQueue<String> sessionIds = sessionKeyMap.get(key);
         if (sessionIds == null || sessionIds.isEmpty()) {
             return;
         }
@@ -70,22 +74,28 @@ public class AvatarWebSocketHandler extends TextWebSocketHandler {
         logger.info("Avatar WS session opened: {}", session.getId());
         sessionMap.put(session.getId(), session);
         String userId = getUserIdFromSession(session);
-        if (userId != null) {
-            ConcurrentLinkedQueue<String> sessionIds = userSessionMap.getOrDefault(userId, new ConcurrentLinkedQueue<>());
+        Long agentId = getAgentIdFromSession(session);
+        if (userId != null && agentId != null) {
+            String key = buildKey(userId, agentId);
+            ConcurrentLinkedQueue<String> sessionIds = sessionKeyMap.getOrDefault(key, new ConcurrentLinkedQueue<>());
             sessionIds.add(session.getId());
-            userSessionMap.putIfAbsent(userId, sessionIds);
+            sessionKeyMap.putIfAbsent(key, sessionIds);
+        } else {
+            logger.warn("Avatar WS session {} 缺少 userId/agentId", session.getId());
         }
     }
 
     @Override
     public void afterConnectionClosed(WebSocketSession session, CloseStatus status) {
         String userId = getUserIdFromSession(session);
-        if (userId != null) {
-            ConcurrentLinkedQueue<String> sessionIds = userSessionMap.get(userId);
+        Long agentId = getAgentIdFromSession(session);
+        if (userId != null && agentId != null) {
+            String key = buildKey(userId, agentId);
+            ConcurrentLinkedQueue<String> sessionIds = sessionKeyMap.get(key);
             if (sessionIds != null) {
                 sessionIds.remove(session.getId());
                 if (sessionIds.isEmpty()) {
-                    userSessionMap.remove(userId);
+                    sessionKeyMap.remove(key);
                 }
             }
         }
@@ -101,5 +111,37 @@ public class AvatarWebSocketHandler extends TextWebSocketHandler {
             return userIdObj.toString();
         }
         return null;
+    }
+
+    private Long getAgentIdFromSession(WebSocketSession session) {
+        Map<String, Object> attributes = session.getAttributes();
+        Object agentIdObj = attributes.get("agentId");
+        if (agentIdObj == null) {
+            return null;
+        }
+        try {
+            if (agentIdObj instanceof Number) {
+                return ((Number) agentIdObj).longValue();
+            }
+            return Long.parseLong(agentIdObj.toString());
+        } catch (NumberFormatException e) {
+            return null;
+        }
+    }
+
+    private static String buildKey(String userId, Long agentId) {
+        return userId + "::" + agentId;
+    }
+
+    /**
+     * 判断指定 (userId, agentId) 当前是否存在活跃的虚拟人 WebSocket 会话。
+     * 用于定时任务避免无客户端时仍调用大模型做主动关怀。
+     */
+    public boolean hasActiveSession(String userId, Long agentId) {
+        if (userId == null || userId.isEmpty() || agentId == null) {
+            return false;
+        }
+        ConcurrentLinkedQueue<String> sessionIds = sessionKeyMap.get(buildKey(userId, agentId));
+        return sessionIds != null && !sessionIds.isEmpty();
     }
 }

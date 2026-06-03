@@ -6,7 +6,6 @@ public class UserIntimacyInfo {
     private String userId;
     private int intimacyLevel;
     private String title;
-    private String nickname;
     private long totalTokens;
     private long currentIntimacyTokens;
     private long nextIntimacyTokens;
@@ -23,7 +22,6 @@ public class UserIntimacyInfo {
         IntimacyThreshold current = config.getByTokens(totalTokens);
         info.intimacyLevel = current.getLevel();
         info.title = current.getTitle();
-        info.nickname = current.getNickname();
         info.currentIntimacyTokens = current.getTokensRequired();
 
         IntimacyThreshold next = config.getNext(current.getLevel());
@@ -62,14 +60,6 @@ public class UserIntimacyInfo {
 
     public void setTitle(String title) {
         this.title = title;
-    }
-
-    public String getNickname() {
-        return nickname;
-    }
-
-    public void setNickname(String nickname) {
-        this.nickname = nickname;
     }
 
     public long getTotalTokens() {

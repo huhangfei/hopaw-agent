@@ -196,12 +196,163 @@
     background: #e3f2fd;
 }
 
+.btn-avatar-agent {
+    color: #7c4dff;
+}
+
+.btn-avatar-agent:hover {
+    background: #ede7f6;
+}
+
 .btn-delete-agent {
     color: #d32f2f;
 }
 
 .btn-delete-agent:hover {
     background: #ffebee;
+}
+
+/* ==================== Avatar Settings Modal ==================== */
+.avatar-settings-dialog {
+    width: 560px;
+    max-width: 95vw;
+}
+
+.avatar-settings-section {
+    margin-bottom: 20px;
+}
+
+.avatar-settings-section:last-child {
+    margin-bottom: 0;
+}
+
+.avatar-settings-section-title {
+    font-size: 14px;
+    font-weight: 600;
+    color: #555;
+    margin: 0 0 12px 0;
+    padding-bottom: 8px;
+    border-bottom: 1px solid #eee;
+}
+
+.avatar-settings-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 8px 0;
+    gap: 16px;
+}
+
+.avatar-settings-row-text {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    flex: 1;
+    min-width: 0;
+}
+
+.avatar-settings-row-text .form-label {
+    margin: 0;
+    color: #333;
+    font-size: 14px;
+    font-weight: 500;
+}
+
+.avatar-settings-row-text .form-hint {
+    color: #888;
+    font-size: 12px;
+    margin: 0;
+}
+
+.avatar-settings-dialog .form-group {
+    margin-bottom: 14px;
+}
+
+.avatar-settings-dialog .form-group:last-child {
+    margin-bottom: 0;
+}
+
+.avatar-settings-dialog .form-label {
+    color: #333;
+    font-size: 13px;
+    font-weight: 500;
+    margin-bottom: 6px;
+    display: inline-block;
+}
+
+.avatar-settings-dialog textarea,
+.avatar-settings-dialog select {
+    width: 100%;
+    box-sizing: border-box;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    padding: 8px 10px;
+    font-size: 13px;
+    background: #fff;
+    color: #333;
+    outline: none;
+    transition: border-color 0.2s, box-shadow 0.2s;
+    resize: vertical;
+    font-family: inherit;
+}
+
+.avatar-settings-dialog textarea:focus,
+.avatar-settings-dialog select:focus {
+    border-color: #667eea;
+    box-shadow: 0 0 0 2px rgba(102, 126, 234, 0.15);
+}
+
+.avatar-settings-dialog textarea {
+    min-height: 64px;
+}
+
+/* iOS-style switch toggle */
+.avatar-settings-dialog .switch {
+    position: relative;
+    display: inline-block;
+    width: 44px;
+    height: 24px;
+    flex-shrink: 0;
+}
+
+.avatar-settings-dialog .switch input {
+    opacity: 0;
+    width: 0;
+    height: 0;
+    position: absolute;
+}
+
+.avatar-settings-dialog .switch .slider {
+    position: absolute;
+    cursor: pointer;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: #cfd4dc;
+    border-radius: 24px;
+    transition: background-color 0.25s ease;
+}
+
+.avatar-settings-dialog .switch .slider::before {
+    position: absolute;
+    content: "";
+    height: 18px;
+    width: 18px;
+    left: 3px;
+    top: 3px;
+    background-color: #fff;
+    border-radius: 50%;
+    transition: transform 0.25s ease;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+}
+
+.avatar-settings-dialog .switch input:checked + .slider {
+    background-color: #4CAF50;
+}
+
+.avatar-settings-dialog .switch input:checked + .slider::before {
+    transform: translateX(20px);
 }
 
 .agents-empty {
@@ -343,8 +494,54 @@ body.dark-theme .btn-edit-agent:hover {
     background: #1e3a5f;
 }
 
+body.dark-theme .btn-avatar-agent {
+    color: #b39dff;
+}
+
+body.dark-theme .btn-avatar-agent:hover {
+    background: #2d2d44;
+}
+
 body.dark-theme .btn-delete-agent:hover {
     background: #3d2020;
+}
+
+body.dark-theme .avatar-settings-section-title {
+    color: #c0c0c0;
+    border-bottom-color: #2d2d44;
+}
+
+body.dark-theme .avatar-settings-row-text .form-label {
+    color: #e0e0e0;
+}
+
+body.dark-theme .avatar-settings-row-text .form-hint {
+    color: #888;
+}
+
+body.dark-theme .avatar-settings-dialog .form-label {
+    color: #c0c0c0;
+}
+
+body.dark-theme .avatar-settings-dialog textarea,
+body.dark-theme .avatar-settings-dialog select {
+    background: #1e3a5f;
+    border-color: #3d3d6b;
+    color: #e0e0e0;
+}
+
+body.dark-theme .avatar-settings-dialog textarea:focus,
+body.dark-theme .avatar-settings-dialog select:focus {
+    border-color: #8ba3ff;
+    box-shadow: 0 0 0 2px rgba(139, 163, 255, 0.2);
+}
+
+body.dark-theme .avatar-settings-dialog .switch .slider {
+    background-color: #3d3d6b;
+}
+
+body.dark-theme .avatar-settings-dialog .switch input:checked + .slider {
+    background-color: #66bb6a;
 }
 
 body.dark-theme .agents-empty {

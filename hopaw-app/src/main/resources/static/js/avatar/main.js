@@ -159,7 +159,7 @@ var LAppDefine = {
                 e.preventDefault();
                 if (widget.classList.contains("dragging")) return;
                 if (isMinimized()) return;
-                loadModelFromPool({ excludeCurrent: true });
+                loadModelFromPool({ excludeCurrent: true, random: true });
                 playAvatarSound(LAppDefine.CHANGE_MODEL_SOUND_FILE);
             });
             changeModelBtn.addEventListener("pointerdown", function (e) {
@@ -241,25 +241,40 @@ var LAppDefine = {
         return api;
     }
 
-    function connectAvatarWebSocket() {
-        var protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
-        var wsUrl = protocol + "//" + window.location.host + LAppDefine.WS_URL;
-        var attempts = 0;
-        var ws = null;
+    var currentAvatarWs = null;
+    var currentAvatarWsReconnectTimer = null;
 
+    function buildAvatarWsUrl() {
+        var protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
+        var url = protocol + "//" + window.location.host + LAppDefine.WS_URL;
+        var userId = getCurrentUserId();
+        var agentId = getCurrentAgentId();
+        var query = [];
+        if (userId) query.push("userId=" + encodeURIComponent(userId));
+        if (agentId !== null && agentId !== undefined && agentId !== "") {
+            query.push("agentId=" + encodeURIComponent(agentId));
+        }
+        if (query.length) {
+            url += "?" + query.join("&");
+        }
+        return url;
+    }
+
+    function connectAvatarWebSocket() {
+        var attempts = 0;
         function open() {
             try {
-                ws = new WebSocket(wsUrl);
+                currentAvatarWs = new WebSocket(buildAvatarWsUrl());
             } catch (e) {
                 console.error("Avatar WS init error:", e);
                 scheduleReconnect();
                 return;
             }
-            ws.onopen = function () {
+            currentAvatarWs.onopen = function () {
                 attempts = 0;
                 console.log("Avatar WS connected");
             };
-            ws.onmessage = function (event) {
+            currentAvatarWs.onmessage = function (event) {
                 try {
                     var data = JSON.parse(event.data);
                     enqueueAvatarEvent(data);
@@ -267,24 +282,90 @@ var LAppDefine = {
                     console.error("Avatar WS message parse error:", e);
                 }
             };
-            ws.onclose = function () {
+            currentAvatarWs.onclose = function () {
                 console.log("Avatar WS closed");
                 scheduleReconnect();
             };
-            ws.onerror = function (err) {
+            currentAvatarWs.onerror = function (err) {
                 console.error("Avatar WS error:", err);
-                try { ws.close(); } catch (_) {}
+                try { currentAvatarWs.close(); } catch (_) {}
             };
         }
 
         function scheduleReconnect() {
             attempts++;
             var delay = Math.min(15000, 1000 * Math.pow(1.5, attempts));
-            setTimeout(open, delay);
+            if (currentAvatarWsReconnectTimer) {
+                clearTimeout(currentAvatarWsReconnectTimer);
+            }
+            currentAvatarWsReconnectTimer = setTimeout(open, delay);
         }
 
         open();
     }
+
+    function reconnectAvatarWebSocket() {
+        try {
+            if (currentAvatarWs) {
+                try { currentAvatarWs.onclose = null; } catch (_) {}
+                try { currentAvatarWs.close(); } catch (_) {}
+            }
+            if (currentAvatarWsReconnectTimer) {
+                clearTimeout(currentAvatarWsReconnectTimer);
+                currentAvatarWsReconnectTimer = null;
+            }
+            attempts = 0;
+            connectAvatarWebSocket();
+        } catch (e) {
+            console.warn("reconnectAvatarWebSocket error", e);
+        }
+    }
+
+    function getCurrentUserId() {
+        try {
+            if (typeof currentUserId !== "undefined" && currentUserId) {
+                return String(currentUserId);
+            }
+        } catch (e) {}
+        var meta = document.querySelector('meta[name="current-user-id"]');
+        if (meta && meta.content) return meta.content;
+        return null;
+    }
+
+    function getCurrentAgentId() {
+        try {
+            if (typeof currentAgentId !== "undefined" && currentAgentId) {
+                return String(currentAgentId);
+            }
+        } catch (e) {}
+        var meta = document.querySelector('meta[name="current-agent-id"]');
+        if (meta && meta.content) return meta.content;
+        return null;
+    }
+
+    // 暴露给 index.js 在智能体切换时调用
+    window.AvatarBridge = window.AvatarBridge || {};
+    window.AvatarBridge.onAgentChanged = function (agentId) {
+        try {
+            currentAgentId = agentId;
+        } catch (e) {}
+        reconnectAvatarWebSocket();
+        // 智能体切换后重新拉取该智能体配置的模型分组，并加载对应 Live2D 模型
+        try {
+            currentLoadedModel = null;
+            loadModelFromPool({ excludeCurrent: false, random: false });
+        } catch (e) {
+            console.warn('切换虚拟人模型失败', e);
+        }
+        // 智能体切换后重新拉取该智能体的亲密度等信息
+        try {
+            if (widget && widget._intimacy && typeof widget._intimacy.refresh === 'function') {
+                widget._intimacy.refresh();
+            }
+        } catch (e) {
+            console.warn('刷新虚拟人亲密度失败', e);
+        }
+    };
 
     function processAvatarEvent(data) {
         if (!data) return;
@@ -330,7 +411,7 @@ var LAppDefine = {
         }
         if (data.type === "avatar_change_model" || data.action === "change_model") {
             if (isMinimized()) return;
-            loadModelFromPool({ excludeCurrent: true });
+            loadModelFromPool({ excludeCurrent: true, random: true });
             playAvatarSound(data.soundFile);
             return;
         }
@@ -428,9 +509,17 @@ var LAppDefine = {
     function syncSoundEnabledFromServer() {
         try {
             var userId = getCurrentUserId();
+            var agentId = getCurrentAgentId();
             var url = LAppDefine.SETTINGS_API;
+            var qs = [];
+            if (agentId !== null && agentId !== undefined && agentId !== "") {
+                qs.push("agentId=" + encodeURIComponent(agentId));
+            }
             if (userId) {
-                url += "?_t=" + Date.now();
+                qs.push("_t=" + Date.now());
+            }
+            if (qs.length) {
+                url += "?" + qs.join("&");
             }
             fetch(url, { credentials: "same-origin" })
                 .then(function (r) { return r.json(); })
@@ -591,6 +680,10 @@ var LAppDefine = {
             var userId = getCurrentUserId();
             if (!userId) return;
             var url = LAppDefine.INTIMACY_API + "?userId=" + encodeURIComponent(userId) + "&_t=" + Date.now();
+            var agentId = getCurrentAgentId();
+            if (agentId) {
+                url += "&agentId=" + encodeURIComponent(agentId);
+            }
             fetch(url, { credentials: "same-origin" })
                 .then(function (resp) {
                     if (!resp.ok) throw new Error("intimacy api status " + resp.status);
@@ -794,21 +887,35 @@ var LAppDefine = {
         } catch (e) {}
     }
 
+    function buildModelsApiUrl() {
+        var url = LAppDefine.MODELS_API;
+        var qs = [];
+        var agentId = getCurrentAgentId();
+        if (agentId !== null && agentId !== undefined && agentId !== "") {
+            qs.push("agentId=" + encodeURIComponent(agentId));
+        }
+        qs.push("_t=" + Date.now());
+        return url + "?" + qs.join("&");
+    }
+
     function loadModel() {
-        loadModelFromPool({ excludeCurrent: false });
+        loadModelFromPool({ excludeCurrent: false, random: false });
     }
 
     function loadModelFromPool(options) {
         var opts = options || {};
         var excludeCurrent = opts.excludeCurrent === true;
-        fetch(LAppDefine.MODELS_API, { credentials: 'same-origin' })
+        var random = opts.random === true;
+        fetch(buildModelsApiUrl(), { credentials: 'same-origin' })
             .then(function(r) { return r.json(); })
             .then(function(resp) {
                 var pool = resp && resp.data && Array.isArray(resp.data.pool) ? resp.data.pool : [];
+                var selectedGroup = resp && resp.data ? resp.data.selected : '';
                 if (!pool.length) {
                     console.warn('虚拟人模型池为空');
                     return;
                 }
+                avatarSelectedGroup = selectedGroup || '';
                 var candidates = pool;
                 if (excludeCurrent && currentLoadedModel && pool.length > 1) {
                     candidates = pool.filter(function(m) { return m !== currentLoadedModel; });
@@ -816,8 +923,13 @@ var LAppDefine = {
                         candidates = pool;
                     }
                 }
-                var index = Math.floor(Math.random() * candidates.length);
-                var model = candidates[index];
+                var model;
+                if (random) {
+                    var index = Math.floor(Math.random() * candidates.length);
+                    model = candidates[index];
+                } else {
+                    model = candidates[0];
+                }
                 currentLoadedModel = model;
                 loadlive2d(LAppDefine.CANVAS_ID, model);
             })
@@ -827,4 +939,5 @@ var LAppDefine = {
     }
 
     var currentLoadedModel = null;
+    var avatarSelectedGroup = '';
 })();

@@ -1,9 +1,9 @@
 package com.agent.hopaw.avatar.service;
 
+import com.agent.hopaw.avatar.entity.AgentAvatarConfig;
+import com.agent.hopaw.avatar.mapper.AvatarConfigMapper;
 import com.agent.hopaw.avatar.model.AvatarModelGroup;
 import com.agent.hopaw.avatar.model.AvatarSettings;
-import com.agent.hopaw.avatar.entity.AvatarConfig;
-import com.agent.hopaw.avatar.mapper.AvatarConfigMapper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
@@ -17,13 +17,6 @@ import java.util.List;
 public class AvatarSettingsService {
 
     private static final Logger logger = LoggerFactory.getLogger(AvatarSettingsService.class);
-
-    public static final String KEY_DISABLED = "avatar_disabled";
-    public static final String KEY_MODEL_SETTING = "avatar_model_setting";
-    public static final String KEY_MODEL_GROUP = "avatar_model_group";
-    public static final String KEY_PERSONA_SETTING = "avatar_persona_setting";
-    public static final String KEY_AVATAR_AI_MODEL_ID = "avatar_ai_model_id";
-    public static final String KEY_AVATAR_AI_PROMPT = "avatar_ai_prompt";
 
     public static final String DEFAULT_AVATAR_AI_PROMPT = "你是一个贴心的虚拟人助手。请结合用户的最近 30 分钟内输入内容（前时间{currentTime}），分析用户当前可能在做什么、处于什么状态，以及是否需要主动提醒。\n" +
             "人设设定：\n{persona}"+
@@ -67,20 +60,22 @@ public class AvatarSettingsService {
         this.avatarConfigMapper = avatarConfigMapper;
     }
 
-    public AvatarSettings getSettings(String userId) {
-        AvatarConfig config = loadConfig(userId);
+    /** agentId 为空时使用兜底值（0L），不实际写入，仅用于在缺失配置时返回默认值 */
+    public static final long FALLBACK_AGENT_ID = 0L;
+
+    public AvatarSettings getSettings(String userId, Long agentId) {
+        AgentAvatarConfig config = loadConfig(userId, agentId);
         AvatarSettings settings = new AvatarSettings();
         settings.setDisabled(Boolean.TRUE.equals(config.getDisabled()));
         settings.setSoundEnabled(!Boolean.FALSE.equals(config.getSoundEnabled()));
         settings.setModelSetting(config.getModelSetting());
         settings.setModelGroup(config.getModelGroup());
         settings.setPersonaSetting(config.getPersonaSetting());
-        settings.setAvatarAiModelId(config.getAvatarAiModelId());
         settings.setAvatarAiPrompt(config.getAvatarAiPrompt());
         return settings;
     }
 
-    public void saveSettings(String userId, AvatarSettings settings) {
+    public void saveSettings(String userId, Long agentId, AvatarSettings settings) {
         if (settings == null) {
             return;
         }
@@ -88,33 +83,62 @@ public class AvatarSettingsService {
             logger.warn("跳过保存虚拟人配置，userId 为空");
             return;
         }
+        if (agentId == null) {
+            logger.warn("跳过保存虚拟人配置，agentId 为空 userId=[{}]", userId);
+            return;
+        }
         try {
-            AvatarConfig existing = avatarConfigMapper.findByUserId(userId);
-            AvatarConfig cfg = existing != null ? existing : new AvatarConfig();
-            cfg.setUserId(userId);
-            cfg.setDisabled(settings.isDisabled());
-            cfg.setSoundEnabled(settings.isSoundEnabled());
-            cfg.setModelSetting(settings.getModelSetting());
-            cfg.setModelGroup(settings.getModelGroup());
-            cfg.setPersonaSetting(settings.getPersonaSetting());
-            cfg.setAvatarAiModelId(settings.getAvatarAiModelId());
-            cfg.setAvatarAiPrompt(settings.getAvatarAiPrompt());
-            if (existing == null) {
-                avatarConfigMapper.insert(cfg);
+            // 先判断该 (userId, agentId) 是否已存在
+            AgentAvatarConfig existing = avatarConfigMapper.findByUserAndAgent(userId, agentId);
+            boolean isInsert = (existing == null);
+            logger.info("[avatar-settings] 保存判断 userId=[{}] agentId=[{}] 已存在={} modelGroup=[{}]",
+                    userId, agentId, !isInsert, settings.getModelGroup());
+
+            if (isInsert) {
+                // 不存在 → INSERT 新行
+                AgentAvatarConfig cfg = new AgentAvatarConfig();
+                cfg.setUserId(userId);
+                cfg.setAgentId(agentId);
+                cfg.setDisabled(settings.isDisabled());
+                cfg.setSoundEnabled(settings.isSoundEnabled());
+                cfg.setModelSetting(settings.getModelSetting());
+                cfg.setModelGroup(settings.getModelGroup());
+                cfg.setPersonaSetting(settings.getPersonaSetting());
+                cfg.setAvatarAiPrompt(settings.getAvatarAiPrompt());
+                cfg.setTotalTokens(0L);
+                cfg.setLastProcessedChatId(0L);
+                int rows = avatarConfigMapper.insert(cfg);
+                logger.info("[avatar-settings] INSERT 影响行数={} 新行 id={} userId=[{}] agentId=[{}] modelGroup=[{}]",
+                        rows, cfg.getId(), userId, agentId, cfg.getModelGroup());
             } else {
-                avatarConfigMapper.update(cfg);
+                // 已存在 → UPDATE
+                existing.setDisabled(settings.isDisabled());
+                existing.setSoundEnabled(settings.isSoundEnabled());
+                existing.setModelSetting(settings.getModelSetting());
+                existing.setModelGroup(settings.getModelGroup());
+                existing.setPersonaSetting(settings.getPersonaSetting());
+                existing.setAvatarAiPrompt(settings.getAvatarAiPrompt());
+                int rows = avatarConfigMapper.update(existing);
+                logger.info("[avatar-settings] UPDATE 影响行数={} userId=[{}] agentId=[{}] modelGroup=[{}]",
+                        rows, userId, agentId, existing.getModelGroup());
             }
         } catch (Exception e) {
-            logger.error("保存虚拟人配置失败 userId=[{}]", userId, e);
+            logger.error("保存虚拟人配置失败 userId=[{}] agentId=[{}]", userId, agentId, e);
         }
     }
 
-    public boolean isAvatarDisabled(String userId) {
-        return Boolean.TRUE.equals(loadConfig(userId).getDisabled());
+    public boolean isAvatarDisabled(String userId, Long agentId) {
+        if (agentId == null) {
+            return false;
+        }
+        return Boolean.TRUE.equals(loadConfig(userId, agentId).getDisabled());
     }
 
-    public boolean isSoundEnabled(String userId) {
-        AvatarConfig config = loadConfig(userId);
+    public boolean isSoundEnabled(String userId, Long agentId) {
+        if (agentId == null) {
+            return true;
+        }
+        AgentAvatarConfig config = loadConfig(userId, agentId);
         return !Boolean.FALSE.equals(config.getSoundEnabled());
     }
 
@@ -122,13 +146,16 @@ public class AvatarSettingsService {
         return DEFAULT_MODEL_GROUPS;
     }
 
-    public String getSelectedModelGroup(String userId) {
-        String group = loadConfig(userId).getModelGroup();
+    public String getSelectedModelGroup(String userId, Long agentId) {
+        if (agentId == null) {
+            return "";
+        }
+        String group = loadConfig(userId, agentId).getModelGroup();
         return group == null ? "" : group.trim();
     }
 
-    public List<String> resolveModelPool(String userId) {
-        String selected = getSelectedModelGroup(userId);
+    public List<String> resolveModelPool(String userId, Long agentId) {
+        String selected = getSelectedModelGroup(userId, agentId);
         if (selected.isEmpty()) {
             List<String> all = new ArrayList<>();
             for (AvatarModelGroup g : DEFAULT_MODEL_GROUPS) {
@@ -153,30 +180,32 @@ public class AvatarSettingsService {
         return all;
     }
 
-    public Long getAvatarAiModelId(String userId) {
-        return loadConfig(userId).getAvatarAiModelId();
-    }
-
-    public String getAvatarAiPrompt(String userId) {
-        String value = loadConfig(userId).getAvatarAiPrompt();
+    public String getAvatarAiPrompt(String userId, Long agentId) {
+        if (agentId == null) {
+            return "";
+        }
+        String value = loadConfig(userId, agentId).getAvatarAiPrompt();
         return value == null ? "" : value;
     }
 
-    public String getPersonaSetting(String userId) {
-        String value = loadConfig(userId).getPersonaSetting();
+    public String getPersonaSetting(String userId, Long agentId) {
+        if (agentId == null) {
+            return "";
+        }
+        String value = loadConfig(userId, agentId).getPersonaSetting();
         return value == null ? "" : value;
     }
 
-    private AvatarConfig loadConfig(String userId) {
-        if (userId == null || userId.isEmpty()) {
-            return new AvatarConfig();
+    private AgentAvatarConfig loadConfig(String userId, Long agentId) {
+        if (userId == null || userId.isEmpty() || agentId == null) {
+            return new AgentAvatarConfig();
         }
         try {
-            AvatarConfig config = avatarConfigMapper.findByUserId(userId);
-            return config != null ? config : new AvatarConfig();
+            AgentAvatarConfig config = avatarConfigMapper.findByUserAndAgent(userId, agentId);
+            return config != null ? config : new AgentAvatarConfig();
         } catch (Exception e) {
-            logger.error("加载虚拟人配置失败 userId=[{}]", userId, e);
-            return new AvatarConfig();
+            logger.error("加载虚拟人配置失败 userId=[{}] agentId=[{}]", userId, agentId, e);
+            return new AgentAvatarConfig();
         }
     }
 }

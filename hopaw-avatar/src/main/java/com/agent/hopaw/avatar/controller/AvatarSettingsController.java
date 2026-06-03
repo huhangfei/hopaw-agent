@@ -7,11 +7,14 @@ import com.agent.hopaw.avatar.task.AvatarTaskHandler;
 import com.agent.hopaw.infra.model.dto.ResponseBean;
 import com.agent.hopaw.infra.model.entity.ScheduledTask;
 import com.agent.hopaw.infra.service.ScheduledTaskService;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import javax.servlet.http.HttpServletRequest;
@@ -23,6 +26,8 @@ import java.util.Map;
 @RequestMapping("/api/avatar")
 public class AvatarSettingsController {
 
+    private static final Logger logger = LoggerFactory.getLogger(AvatarSettingsController.class);
+
     /** 兼容未登录兜底（应用拦截器会先拦截大多数调用） */
     private static final String FALLBACK_USER_ID = "user1";
 
@@ -30,22 +35,30 @@ public class AvatarSettingsController {
     private final ScheduledTaskService scheduledTaskService;
 
     public AvatarSettingsController(AvatarSettingsService avatarSettingsService,
-                                   ScheduledTaskService scheduledTaskService) {
+                                    ScheduledTaskService scheduledTaskService) {
         this.avatarSettingsService = avatarSettingsService;
         this.scheduledTaskService = scheduledTaskService;
     }
 
     @GetMapping("/settings")
     public ResponseBean getSettings(HttpServletRequest request,
-                                    @RequestHeader(value = "X-User-Id", required = false) String headerUserId) {
-        return ResponseBean.success(avatarSettingsService.getSettings(resolveUserId(request, headerUserId)));
+                                    @RequestHeader(value = "X-User-Id", required = false) String headerUserId,
+                                    @RequestParam(value = "agentId", required = false) Long agentId) {
+        String userId = resolveUserId(request, headerUserId);
+        AvatarSettings settings = avatarSettingsService.getSettings(userId, agentId);
+        logger.info("[avatar-settings] GET /settings userId={} agentId={} modelGroup={}", userId, agentId, settings.getModelGroup());
+        return ResponseBean.success(settings);
     }
 
     @PutMapping("/settings")
     public ResponseBean saveSettings(HttpServletRequest request,
                                      @RequestHeader(value = "X-User-Id", required = false) String headerUserId,
+                                     @RequestParam(value = "agentId", required = false) Long agentId,
                                      @RequestBody AvatarSettings settings) {
-        avatarSettingsService.saveSettings(resolveUserId(request, headerUserId), settings);
+        String userId = resolveUserId(request, headerUserId);
+        logger.info("[avatar-settings] PUT /settings userId={} agentId={} payload={}", userId, agentId, settings);
+        avatarSettingsService.saveSettings(userId, agentId, settings);
+        logger.info("[avatar-settings] PUT /settings 保存完成 userId={} agentId={}", userId, agentId);
         return ResponseBean.success();
     }
 
@@ -63,21 +76,24 @@ public class AvatarSettingsController {
 
     @GetMapping("/models")
     public ResponseBean listModelGroups(HttpServletRequest request,
-                                        @RequestHeader(value = "X-User-Id", required = false) String headerUserId) {
+                                        @RequestHeader(value = "X-User-Id", required = false) String headerUserId,
+                                        @RequestParam(value = "agentId", required = false) Long agentId) {
         Map<String, Object> data = new HashMap<>();
+        String userId = resolveUserId(request, headerUserId);
         List<AvatarModelGroup> groups = avatarSettingsService.listModelGroups();
         data.put("groups", groups);
-        data.put("selected", avatarSettingsService.getSelectedModelGroup(resolveUserId(request, headerUserId)));
+        data.put("selected", avatarSettingsService.getSelectedModelGroup(userId, agentId));
         return ResponseBean.success(data);
     }
 
     @GetMapping("/models/pool")
     public ResponseBean resolveModelPool(HttpServletRequest request,
-                                         @RequestHeader(value = "X-User-Id", required = false) String headerUserId) {
+                                         @RequestHeader(value = "X-User-Id", required = false) String headerUserId,
+                                         @RequestParam(value = "agentId", required = false) Long agentId) {
         Map<String, Object> data = new HashMap<>();
         String userId = resolveUserId(request, headerUserId);
-        data.put("pool", avatarSettingsService.resolveModelPool(userId));
-        data.put("selected", avatarSettingsService.getSelectedModelGroup(userId));
+        data.put("pool", avatarSettingsService.resolveModelPool(userId, agentId));
+        data.put("selected", avatarSettingsService.getSelectedModelGroup(userId, agentId));
         return ResponseBean.success(data);
     }
 

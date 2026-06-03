@@ -7,7 +7,6 @@ document.addEventListener('DOMContentLoaded', function() {
     loadMemoryTaskStatus();
     initTabFromUrl();
     loadAvatarSettings();
-    loadAvatarAiProviders();
     setupAvatarSwitch();
 });
 
@@ -390,71 +389,10 @@ function loadAvatarSettings() {
             if (promptArea) {
                 promptArea.value = s.avatarAiPrompt || '';
             }
-            if (s.avatarAiModelId) {
-                selectAvatarAiModelById(s.avatarAiModelId);
-            }
         }
     }).catch(function(e) {
         console.error('加载虚拟人设置失败:', e);
     });
-}
-
-function loadAvatarAiProviders() {
-    var select = document.getElementById('avatarAiProviderSelect');
-    if (!select) return;
-    fetch('/api/providers')
-        .then(function(r) { return r.json(); })
-        .then(function(providers) {
-            select.innerHTML = '<option value="">选择提供商</option>';
-            providers.forEach(function(p) {
-                if (!p.apiKey) return;
-                var opt = document.createElement('option');
-                opt.value = p.id;
-                opt.textContent = p.name;
-                select.appendChild(opt);
-            });
-            select.addEventListener('change', function() {
-                var providerId = this.value;
-                var modelSelect = document.getElementById('avatarAiModelSelect');
-                modelSelect.innerHTML = '<option value="">选择模型</option>';
-                modelSelect.disabled = !providerId;
-                if (!providerId) return;
-                fetch('/api/providers/' + providerId + '/models')
-                    .then(function(r) { return r.json(); })
-                    .then(function(models) {
-                        models.forEach(function(m) {
-                            var opt = document.createElement('option');
-                            opt.value = m.id;
-                            opt.textContent = m.modelName;
-                            modelSelect.appendChild(opt);
-                        });
-                    });
-            });
-        })
-        .catch(function(e) {
-            console.error('加载模型提供商失败:', e);
-        });
-}
-
-function selectAvatarAiModelById(modelId) {
-    if (!modelId) return;
-    fetch('/api/models/' + modelId)
-        .then(function(r) { return r.json(); })
-        .then(function(model) {
-            if (!model || !model.providerId) return;
-            var providerSelect = document.getElementById('avatarAiProviderSelect');
-            var modelSelect = document.getElementById('avatarAiModelSelect');
-            if (!providerSelect || !modelSelect) return;
-            providerSelect.value = model.providerId;
-            var changeEvent = new Event('change');
-            providerSelect.dispatchEvent(changeEvent);
-            setTimeout(function() {
-                modelSelect.value = modelId;
-            }, 100);
-        })
-        .catch(function(e) {
-            console.error('加载虚拟人 AI 模型信息失败:', e);
-        });
 }
 
 function renderAvatarModelOptions(groups, selected) {
@@ -508,7 +446,6 @@ function updateAvatarSoundEnabledLabel() {
 function saveAvatarSettings() {
     var checkbox = document.getElementById('avatarDisabled');
     var select = document.getElementById('avatarModelSetting');
-    var aiModelSelect = document.getElementById('avatarAiModelSelect');
     var promptArea = document.getElementById('avatarAiPrompt');
     var soundCheckbox = document.getElementById('avatarSoundEnabled');
     var payload = {
@@ -517,7 +454,6 @@ function saveAvatarSettings() {
         modelSetting: '',
         modelGroup: select ? (select.value || '') : '',
         personaSetting: document.getElementById('avatarPersonaSetting').value,
-        avatarAiModelId: aiModelSelect && aiModelSelect.value ? Number(aiModelSelect.value) : null,
         avatarAiPrompt: promptArea ? promptArea.value : ''
     };
     fetch('/api/avatar/settings', {

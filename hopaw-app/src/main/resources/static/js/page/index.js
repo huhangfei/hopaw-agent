@@ -53,7 +53,18 @@ function renderAllMessages() {
 }
 
 function setCurrentAgentId(agentId) {
+    var previousAgentId = currentAgentId;
     currentAgentId = agentId;
+    // 智能体切换：同步刷新虚拟人配置并重新连接虚拟人 WebSocket
+    if (previousAgentId !== agentId && window.AvatarBridge) {
+        try {
+            if (typeof window.AvatarBridge.onAgentChanged === 'function') {
+                window.AvatarBridge.onAgentChanged(agentId);
+            }
+        } catch (e) {
+            console.warn('通知虚拟人智能体切换失败', e);
+        }
+    }
 }
 function connectWebSocket() {
     var protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';

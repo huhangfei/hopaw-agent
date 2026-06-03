@@ -32,16 +32,20 @@ public class AvatarMoveTool {
                              InvocationParameters invocationParameters) {
         InvocationParametersWrapper wrapper = InvocationParametersWrapper.create(invocationParameters);
         String targetUserId = wrapper.getUserId();
+        Long targetAgentId = wrapper.getAgentId();
         if (targetUserId == null || targetUserId.isBlank()) {
             return "移动失败：未指定用户Id";
+        }
+        if (targetAgentId == null) {
+            return "移动失败：未指定智能体Id";
         }
         if (durationMs <= 0) {
             return "移动失败：时长必须大于 0 毫秒";
         }
         try {
-            eventPublisher.publishEvent(AvatarEvent.move(targetUserId, targetX, targetY, durationMs));
+            eventPublisher.publishEvent(AvatarEvent.move(targetUserId, targetAgentId, targetX, targetY, durationMs));
         } catch (Exception e) {
-            logger.error("发布虚拟人移动事件失败 userId={} err={}", targetUserId, e.getMessage(), e);
+            logger.error("发布虚拟人移动事件失败 userId={} agentId={} err={}", targetUserId, targetAgentId, e.getMessage(), e);
             return "移动失败";
         }
         return "已向用户发送虚拟人移动事件";

@@ -176,19 +176,6 @@
             </div>
 
             <div class="form-group">
-                <label>虚拟人大脑模型</label>
-                <div class="flex-container">
-                    <select id="avatarAiProviderSelect" class="model-select">
-                        <option value="">选择提供商</option>
-                    </select>
-                    <select id="avatarAiModelSelect" class="model-select">
-                        <option value="">选择模型</option>
-                    </select>
-                </div>
-                <p class="form-hint">虚拟人定时任务会调用该模型分析用户最近 30 分钟的输入以决定是否主动关怀。留空则跳过主动关怀。</p>
-            </div>
-
-            <div class="form-group">
                 <label for="avatarAiPrompt">虚拟人主动关怀提示词</label>
                 <textarea id="avatarAiPrompt" class="memory-prompt-input" rows="10" placeholder="自定义虚拟人主动关怀的提示词，留空则使用默认提示词。支持的占位符：{persona}、{currentTime}、{recentInputs}"></textarea>
             </div>

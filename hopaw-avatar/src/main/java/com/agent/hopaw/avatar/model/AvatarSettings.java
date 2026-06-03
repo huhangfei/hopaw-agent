@@ -6,7 +6,6 @@ public class AvatarSettings {
     private String modelSetting;
     private String modelGroup;
     private String personaSetting;
-    private Long avatarAiModelId;
     private String avatarAiPrompt;
 
     public AvatarSettings() {
@@ -50,14 +49,6 @@ public class AvatarSettings {
 
     public void setPersonaSetting(String personaSetting) {
         this.personaSetting = personaSetting;
-    }
-
-    public Long getAvatarAiModelId() {
-        return avatarAiModelId;
-    }
-
-    public void setAvatarAiModelId(Long avatarAiModelId) {
-        this.avatarAiModelId = avatarAiModelId;
     }
 
     public String getAvatarAiPrompt() {

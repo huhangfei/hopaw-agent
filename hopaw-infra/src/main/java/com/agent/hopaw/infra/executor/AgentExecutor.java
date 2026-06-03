@@ -261,7 +261,7 @@ public class AgentExecutor implements IAgentExecutor {
             message.sessionId(sessionId);
             message.setRequestId(requestId);
             message.setContent("已收到消息，开始处理");
-            AgentMessageEvent event=new AgentMessageEvent(userId,message);
+            AgentMessageEvent event=new AgentMessageEvent(userId, agentId, message);
             eventPublisher.publishEvent(event);
         } catch (Exception e) {
             logger.error("sendFirstState error", e);
@@ -651,7 +651,7 @@ public class AgentExecutor implements IAgentExecutor {
         }
 
         public void sendMessageToChannel(AiMessageBaseInfo message) {
-            eventPublisher.publishEvent(new AgentMessageEvent(userId, message));
+            eventPublisher.publishEvent(new AgentMessageEvent(userId, agentId, message));
         }
 
         public void done() {

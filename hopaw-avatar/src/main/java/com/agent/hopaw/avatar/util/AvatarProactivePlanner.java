@@ -6,8 +6,10 @@ import com.agent.hopaw.avatar.tool.AvatarMoveTool;
 import com.agent.hopaw.avatar.tool.AvatarProactiveTool;
 import com.agent.hopaw.infra.constant.AiModelCallSourceEnum;
 import com.agent.hopaw.infra.mapper.ChatHistoryMapper;
+import com.agent.hopaw.infra.model.entity.Agent;
 import com.agent.hopaw.infra.model.entity.ChatHistory;
 import com.agent.hopaw.infra.model.entity.ScheduledTask;
+import com.agent.hopaw.infra.service.IAgentService;
 import com.agent.hopaw.infra.service.IAiModelService;
 import com.agent.hopaw.infra.service.IChatModelListenerProvider;
 import com.agent.hopaw.infra.util.InvocationParametersWrapper;
@@ -41,6 +43,7 @@ public class AvatarProactivePlanner {
     private final IChatModelListenerProvider chatModelListenerProvider;
     private final AvatarSettingsService avatarSettingsService;
     private final ChatHistoryMapper chatHistoryMapper;
+    private final IAgentService agentService;
 
     private final AvatarProactiveTool avatarProactiveTool;
     private final AvatarMoveTool avatarMoveTool;
@@ -49,13 +52,16 @@ public class AvatarProactivePlanner {
     public AvatarProactivePlanner(IAiModelService aiModelService,
                                   IChatModelListenerProvider chatModelListenerProvider,
                                   AvatarSettingsService avatarSettingsService,
-                                  ChatHistoryMapper chatHistoryMapper, AvatarProactiveTool avatarProactiveTool,
+                                  ChatHistoryMapper chatHistoryMapper,
+                                  IAgentService agentService,
+                                  AvatarProactiveTool avatarProactiveTool,
                                   AvatarMoveTool avatarMoveTool,
                                   AvatarChangeModelTool avatarChangeModelTool) {
         this.aiModelService = aiModelService;
         this.chatModelListenerProvider = chatModelListenerProvider;
         this.avatarSettingsService = avatarSettingsService;
         this.chatHistoryMapper = chatHistoryMapper;
+        this.agentService = agentService;
         this.avatarProactiveTool = avatarProactiveTool;
         this.avatarMoveTool = avatarMoveTool;
         this.avatarChangeModelTool = avatarChangeModelTool;
@@ -64,29 +70,39 @@ public class AvatarProactivePlanner {
     /**
      * 处理用户输入并决策是否发送主动消息。
      *
-     * @param userId    用户ID
-     * @param task      定时任务
-     * @param afterId   仅查询 id 大于该值的增量记录；若为 null 则按时间窗口全量
+     * @param userId  用户ID
+     * @param agentId 智能体ID（虚拟人主动任务模型取自该 Agent.aiModelId）
+     * @param task    定时任务
+     * @param afterId 仅查询 id 大于该值的增量记录；若为 null 则按时间窗口全量
      * @return 实际参与本次处理的记录列表（按 id 升序）；若没有增量则返回空列表
      */
-    public List<ChatHistory> analyzeAndDecide(String userId, ScheduledTask task, Long afterId) {
-        Long modelId = avatarSettingsService.getAvatarAiModelId(userId);
-        if (modelId == null) {
-            logger.warn("虚拟人定时任务跳过：未配置大脑模型 userId={}", userId);
+    public List<ChatHistory> analyzeAndDecide(String userId, Long agentId, ScheduledTask task, Long afterId) {
+        if (agentId == null) {
+            logger.warn("虚拟人定时任务跳过：未指定 agentId userId={}", userId);
             return Collections.emptyList();
         }
-        String persona = avatarSettingsService.getPersonaSetting(userId);
+        Agent agent = agentService.getAgentById(agentId);
+        if (agent == null) {
+            logger.warn("虚拟人定时任务跳过：未找到智能体 userId={} agentId={}", userId, agentId);
+            return Collections.emptyList();
+        }
+        Long modelId = agent.getAiModelId();
+        if (modelId == null) {
+            logger.warn("虚拟人定时任务跳过：智能体未配置模型 userId={} agentId={}", userId, agentId);
+            return Collections.emptyList();
+        }
+        String persona = avatarSettingsService.getPersonaSetting(userId, agentId);
         if (persona == null || persona.isBlank()) {
             persona = "（未设置人设）";
         }
-        String promptTemplate = avatarSettingsService.getAvatarAiPrompt(userId);
+        String promptTemplate = avatarSettingsService.getAvatarAiPrompt(userId, agentId);
         if (promptTemplate == null || promptTemplate.isBlank()) {
             promptTemplate = AvatarSettingsService.DEFAULT_AVATAR_AI_PROMPT;
         }
 
         List<ChatHistory> recentInputs = getIncrementalUserInputs(userId, afterId, RECENT_USER_INPUT_LIMIT);
         if (recentInputs.isEmpty()) {
-            logger.info("虚拟人定时任务跳过：未查询到增量输入 userId={} afterId={}", userId, afterId);
+            logger.info("虚拟人定时任务跳过：未查询到增量输入 userId={} agentId={} afterId={}", userId, agentId, afterId);
             return Collections.emptyList();
         }
         String formattedInputs = formatRecentInputs(recentInputs);
@@ -97,18 +113,19 @@ public class AvatarProactivePlanner {
                 .replace("{currentTime}", currentTime);
 
         ChatModelListener listener = chatModelListenerProvider.getChatModelListener(
-                AiModelCallSourceEnum.MEMORYORGANIZE, UUID.randomUUID().toString(), userId, null);
+                AiModelCallSourceEnum.MEMORYORGANIZE, UUID.randomUUID().toString(), userId, agentId);
         ChatModel chatModel;
         try {
             chatModel = aiModelService.createChatModel(modelId, false, listener);
         } catch (Exception e) {
-            logger.error("创建虚拟人大脑模型失败 userId={} modelId={}", userId, modelId, e);
+            logger.error("创建虚拟人大脑模型失败 userId={} agentId={} modelId={}", userId, agentId, modelId, e);
             return recentInputs;
         }
 
         try {
             InvocationParametersWrapper invocationParametersWrapper = InvocationParametersWrapper.create()
                     .setUserId(task.getUserId())
+                    .setAgentId(agentId)
                     .setRequestId(UuidUtil.generateSimpleUUID())
                     .setSessionId(UuidUtil.generateSimpleUUID());
             Assistant assistant = AiServices.builder(Assistant.class)
@@ -121,9 +138,9 @@ public class AvatarProactivePlanner {
                     .temperature(0.1)
                     .build();
             String result = assistant.chat("近期输入：" + formattedInputs, chatRequestParameters, invocationParametersWrapper.getParameters());
-            logger.info("虚拟人大脑模型调用结果 userId={} modelId={} result={}", userId, modelId, result);
+            logger.info("虚拟人大脑模型调用结果 userId={} agentId={} modelId={} result={}", userId, agentId, modelId, result);
         } catch (Exception e) {
-            logger.error("虚拟人大脑模型调用失败 userId={} modelId={}", userId, modelId, e);
+            logger.error("虚拟人大脑模型调用失败 userId={} agentId={} modelId={}", userId, agentId, modelId, e);
         }
         return recentInputs;
     }

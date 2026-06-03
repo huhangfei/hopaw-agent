@@ -2,14 +2,14 @@
 <!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
 <mapper namespace="com.agent.hopaw.avatar.mapper.AvatarConfigMapper">
 
-    <resultMap id="AvatarConfigResultMap" type="com.agent.hopaw.avatar.entity.AvatarConfig">
+    <resultMap id="AgentAvatarConfigResultMap" type="com.agent.hopaw.avatar.entity.AgentAvatarConfig">
         <id property="id" column="id"/>
         <result property="userId" column="user_id"/>
+        <result property="agentId" column="agent_id"/>
         <result property="disabled" column="disabled"/>
         <result property="modelSetting" column="model_setting"/>
         <result property="modelGroup" column="model_group"/>
         <result property="personaSetting" column="persona_setting"/>
-        <result property="avatarAiModelId" column="avatar_ai_model_id"/>
         <result property="avatarAiPrompt" column="avatar_ai_prompt"/>
         <result property="totalTokens" column="total_tokens"/>
         <result property="lastProcessedChatId" column="last_processed_chat_id"/>
@@ -18,77 +18,85 @@
         <result property="updateTime" column="update_time"/>
     </resultMap>
 
-    <select id="findByUserId" resultMap="AvatarConfigResultMap">
-        SELECT id, user_id, disabled, model_setting, model_group, persona_setting,
-               avatar_ai_model_id, avatar_ai_prompt, total_tokens, last_processed_chat_id,
+    <select id="findByUserAndAgent" resultMap="AgentAvatarConfigResultMap">
+        SELECT id, user_id, agent_id, disabled, model_setting, model_group, persona_setting,
+               avatar_ai_prompt, total_tokens, last_processed_chat_id,
                sound_enabled, create_time, update_time
-        FROM avatar_config
+        FROM agent_avatar_config
+        WHERE user_id = #{userId} AND agent_id = #{agentId}
+    </select>
+
+    <select id="findByUserId" resultMap="AgentAvatarConfigResultMap">
+        SELECT id, user_id, agent_id, disabled, model_setting, model_group, persona_setting,
+               avatar_ai_prompt, total_tokens, last_processed_chat_id,
+               sound_enabled, create_time, update_time
+        FROM agent_avatar_config
         WHERE user_id = #{userId}
     </select>
 
-    <select id="findAll" resultMap="AvatarConfigResultMap">
-        SELECT id, user_id, disabled, model_setting, model_group, persona_setting,
-               avatar_ai_model_id, avatar_ai_prompt, total_tokens, last_processed_chat_id,
+    <select id="findAll" resultMap="AgentAvatarConfigResultMap">
+        SELECT id, user_id, agent_id, disabled, model_setting, model_group, persona_setting,
+               avatar_ai_prompt, total_tokens, last_processed_chat_id,
                sound_enabled, create_time, update_time
-        FROM avatar_config
+        FROM agent_avatar_config
     </select>
 
-    <insert id="insert" parameterType="com.agent.hopaw.avatar.entity.AvatarConfig">
-        INSERT INTO avatar_config (user_id, disabled, model_setting, model_group, persona_setting,
-                                   avatar_ai_model_id, avatar_ai_prompt, total_tokens, last_processed_chat_id,
-                                   sound_enabled)
-        VALUES (#{userId}, #{disabled}, #{modelSetting}, #{modelGroup}, #{personaSetting},
-                #{avatarAiModelId}, #{avatarAiPrompt}, #{totalTokens}, #{lastProcessedChatId},
+    <insert id="insert" parameterType="com.agent.hopaw.avatar.entity.AgentAvatarConfig" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO agent_avatar_config (user_id, agent_id, disabled, model_setting, model_group, persona_setting,
+                                         avatar_ai_prompt, total_tokens, last_processed_chat_id,
+                                         sound_enabled)
+        VALUES (#{userId}, #{agentId}, #{disabled}, #{modelSetting}, #{modelGroup}, #{personaSetting},
+                #{avatarAiPrompt}, COALESCE(#{totalTokens}, 0), COALESCE(#{lastProcessedChatId}, 0),
                 #{soundEnabled})
     </insert>
 
-    <update id="update" parameterType="com.agent.hopaw.avatar.entity.AvatarConfig">
-        UPDATE avatar_config
+    <update id="update" parameterType="com.agent.hopaw.avatar.entity.AgentAvatarConfig">
+        UPDATE agent_avatar_config
         SET disabled = #{disabled},
             model_setting = #{modelSetting},
             model_group = #{modelGroup},
             persona_setting = #{personaSetting},
-            avatar_ai_model_id = #{avatarAiModelId},
             avatar_ai_prompt = #{avatarAiPrompt},
-            total_tokens = #{totalTokens},
-            last_processed_chat_id = #{lastProcessedChatId},
             sound_enabled = #{soundEnabled},
             update_time = datetime('now', 'localtime')
-        WHERE user_id = #{userId}
+        WHERE user_id = #{userId} AND agent_id = #{agentId}
     </update>
 
-    <update id="upsert" parameterType="com.agent.hopaw.avatar.entity.AvatarConfig">
-        UPDATE avatar_config
+    <update id="upsert" parameterType="com.agent.hopaw.avatar.entity.AgentAvatarConfig">
+        UPDATE agent_avatar_config
         SET disabled = COALESCE(#{disabled}, disabled),
             model_setting = COALESCE(#{modelSetting}, model_setting),
             model_group = COALESCE(#{modelGroup}, model_group),
             persona_setting = COALESCE(#{personaSetting}, persona_setting),
-            avatar_ai_model_id = COALESCE(#{avatarAiModelId}, avatar_ai_model_id),
             avatar_ai_prompt = COALESCE(#{avatarAiPrompt}, avatar_ai_prompt),
             sound_enabled = COALESCE(#{soundEnabled}, sound_enabled),
             update_time = datetime('now', 'localtime')
-        WHERE user_id = #{userId}
+        WHERE user_id = #{userId} AND agent_id = #{agentId}
     </update>
 
     <update id="addTotalTokens">
-        UPDATE avatar_config
+        UPDATE agent_avatar_config
         SET total_tokens = COALESCE(total_tokens, 0) + #{tokens},
             update_time = datetime('now', 'localtime')
-        WHERE user_id = #{userId}
+        WHERE user_id = #{userId} AND agent_id = #{agentId}
     </update>
 
     <update id="updateLastProcessedChatId">
-        UPDATE avatar_config
+        UPDATE agent_avatar_config
         SET last_processed_chat_id = #{lastProcessedChatId},
             update_time = datetime('now', 'localtime')
-        WHERE user_id = #{userId}
+        WHERE user_id = #{userId} AND agent_id = #{agentId}
     </update>
 
     <update id="updateSoundEnabled">
-        UPDATE avatar_config
+        UPDATE agent_avatar_config
         SET sound_enabled = #{soundEnabled},
             update_time = datetime('now', 'localtime')
-        WHERE user_id = #{userId}
+        WHERE user_id = #{userId} AND agent_id = #{agentId}
     </update>
+
+    <delete id="deleteByUserAndAgent">
+        DELETE FROM agent_avatar_config WHERE user_id = #{userId} AND agent_id = #{agentId}
+    </delete>
 
 </mapper>

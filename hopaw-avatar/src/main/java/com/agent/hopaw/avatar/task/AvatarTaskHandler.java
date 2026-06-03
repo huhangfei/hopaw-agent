@@ -1,8 +1,9 @@
 package com.agent.hopaw.avatar.task;
 
-import com.agent.hopaw.avatar.entity.AvatarConfig;
+import com.agent.hopaw.avatar.entity.AgentAvatarConfig;
 import com.agent.hopaw.avatar.mapper.AvatarConfigMapper;
 import com.agent.hopaw.avatar.util.AvatarProactivePlanner;
+import com.agent.hopaw.avatar.websocket.AvatarWebSocketHandler;
 import com.agent.hopaw.infra.model.entity.ChatHistory;
 import com.agent.hopaw.infra.model.entity.ScheduledTask;
 import com.agent.hopaw.infra.task.TaskHandler;
@@ -23,11 +24,14 @@ public class AvatarTaskHandler implements TaskHandler {
 
     private final AvatarConfigMapper avatarConfigMapper;
     private final AvatarProactivePlanner proactivePlanner;
+    private final AvatarWebSocketHandler avatarWebSocketHandler;
 
     public AvatarTaskHandler(AvatarConfigMapper avatarConfigMapper,
-                             AvatarProactivePlanner proactivePlanner) {
+                             AvatarProactivePlanner proactivePlanner,
+                             AvatarWebSocketHandler avatarWebSocketHandler) {
         this.avatarConfigMapper = avatarConfigMapper;
         this.proactivePlanner = proactivePlanner;
+        this.avatarWebSocketHandler = avatarWebSocketHandler;
     }
 
     @Override
@@ -47,32 +51,42 @@ public class AvatarTaskHandler implements TaskHandler {
         running = true;
         try {
             logger.info("虚拟人定时任务执行 [{}] cron={}", task.getId(), task.getCronExpression());
-            List<AvatarConfig> configs = loadAllConfigs();
+            List<AgentAvatarConfig> configs = loadAllConfigs();
             if (configs.isEmpty()) {
-                logger.info("虚拟人定时任务跳过：未找到任何 AvatarConfig 记录 [{}]", task.getId());
+                logger.info("虚拟人定时任务跳过：未找到任何 AgentAvatarConfig 记录 [{}]", task.getId());
                 return;
             }
 
             int processed = 0;
             int skipped = 0;
             int noIncrement = 0;
-            for (AvatarConfig config : configs) {
+            for (AgentAvatarConfig config : configs) {
                 String userId = config.getUserId();
+                Long agentId = config.getAgentId();
                 if (userId == null || userId.isBlank()) {
                     skipped++;
                     continue;
                 }
+                if (agentId == null) {
+                    skipped++;
+                    continue;
+                }
                 if (Boolean.TRUE.equals(config.getDisabled())) {
-                    logger.info("虚拟人定时任务跳过：虚拟人已关闭 userId={}", userId);
+                    logger.info("虚拟人定时任务跳过：虚拟人已关闭 userId={} agentId={}", userId, agentId);
+                    skipped++;
+                    continue;
+                }
+                if (!avatarWebSocketHandler.hasActiveSession(userId, agentId)) {
+                    logger.info("虚拟人定时任务跳过：无活跃 WS 会话 userId={} agentId={}", userId, agentId);
                     skipped++;
                     continue;
                 }
                 try {
                     Long afterId = config.getLastProcessedChatId();
-                    List<ChatHistory> processedRecords = proactivePlanner.analyzeAndDecide(userId, task, afterId);
+                    List<ChatHistory> processedRecords = proactivePlanner.analyzeAndDecide(userId, agentId, task, afterId);
                     if (processedRecords == null || processedRecords.isEmpty()) {
                         noIncrement++;
-                        logger.info("虚拟人定时任务跳过：未查询到增量用户输入 userId={} afterId={}", userId, afterId);
+                        logger.info("虚拟人定时任务跳过：未查询到增量用户输入 userId={} agentId={} afterId={}", userId, agentId, afterId);
                         continue;
                     }
                     Long maxId = processedRecords.stream()
@@ -82,14 +96,14 @@ public class AvatarTaskHandler implements TaskHandler {
                             .orElse(afterId);
                     if (maxId != null && (afterId == null || maxId > afterId)) {
                         try {
-                            avatarConfigMapper.updateLastProcessedChatId(userId, maxId);
+                            avatarConfigMapper.updateLastProcessedChatId(userId, agentId, maxId);
                         } catch (Exception persistError) {
-                            logger.error("更新 lastProcessedChatId 失败 userId={} maxId={}", userId, maxId, persistError);
+                            logger.error("更新 lastProcessedChatId 失败 userId={} agentId={} maxId={}", userId, agentId, maxId, persistError);
                         }
                     }
                     processed++;
                 } catch (Exception e) {
-                    logger.error("虚拟人定时任务处理失败 userId={} [{}]", userId, task.getId(), e);
+                    logger.error("虚拟人定时任务处理失败 userId={} agentId={} [{}]", userId, agentId, task.getId(), e);
                 }
             }
 
@@ -102,11 +116,11 @@ public class AvatarTaskHandler implements TaskHandler {
         }
     }
 
-    private List<AvatarConfig> loadAllConfigs() {
+    private List<AgentAvatarConfig> loadAllConfigs() {
         try {
             return avatarConfigMapper.findAll();
         } catch (Exception e) {
-            logger.error("扫描 AvatarConfig 失败", e);
+            logger.error("扫描 AgentAvatarConfig 失败", e);
             return List.of();
         }
     }

@@ -20,7 +20,11 @@ public class AvatarController {
     }
 
     @GetMapping("/intimacy")
-    public UserIntimacyInfo getUserIntimacy(@RequestParam String userId) {
+    public UserIntimacyInfo getUserIntimacy(@RequestParam String userId,
+                                            @RequestParam(value = "agentId", required = false) Long agentId) {
+        if (agentId != null) {
+            return avatarService.getUserAgentIntimacyInfo(userId, agentId);
+        }
         return avatarService.getUserIntimacyInfo(userId);
     }
 
