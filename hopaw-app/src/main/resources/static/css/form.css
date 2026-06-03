@@ -134,11 +134,11 @@
     display: flex;
     align-items: center;
     gap: 12px;
+    min-height: 40px;
 }
 
-.form-group:has(.toggle-wrapper) {
-    display: flex;
-    align-items: center;
+.form-group:has(.toggle-wrapper) > label {
+    margin-bottom: 6px;
 }
 
 .toggle-wrapper .toggle {

@@ -20,24 +20,25 @@
 .btn-add-account {
     display: inline-flex;
     align-items: center;
-    gap: 6px;
-    padding: 8px 16px;
-    background: #1976d2;
+    gap: 8px;
+    padding: 10px 20px;
+    background: #667eea;
     color: #fff;
     border: none;
-    border-radius: 6px;
+    border-radius: 8px;
     cursor: pointer;
     font-size: 14px;
     transition: background 0.2s;
+    white-space: nowrap;
 }
 
 .btn-add-account:hover {
-    background: #1565c0;
+    background: #5a6fd6;
 }
 
 .btn-add-account svg {
-    width: 16px;
-    height: 16px;
+    width: 20px;
+    height: 20px;
 }
 
 .accounts-card {
@@ -199,121 +200,86 @@
 
 /* ============= 暗色主题 ============= */
 body.dark-theme .accounts-container {
-    background: #16213e;
+    background: #1a1a2e;
 }
 
 body.dark-theme .accounts-header h2 {
-    color: #e5e7eb;
+    color: #e0e0e0;
 }
 
 body.dark-theme .btn-add-account {
-    background: linear-gradient(135deg, #6366f1, #4f46e5);
-    box-shadow: 0 4px 14px -4px rgba(99, 102, 241, 0.55);
+    background: #5a6fd6;
 }
 body.dark-theme .btn-add-account:hover {
-    background: linear-gradient(135deg, #4f46e5, #4338ca);
+    background: #667eea;
 }
 
 body.dark-theme .accounts-card {
-    background: #1f2937;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.35);
-    border: 1px solid #2d2d44;
+    background: #16213e;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
 }
 
 body.dark-theme .accounts-table thead {
-    background: #111827;
+    background: #1e3a5f;
 }
 body.dark-theme .accounts-table th {
-    color: #94a3b8;
+    color: #b0b0b0;
     border-bottom-color: #2d2d44;
-    background: #111827;
 }
 body.dark-theme .accounts-table td {
-    color: #e5e7eb;
+    color: #c0c0c0;
     border-bottom-color: #2d2d44;
 }
 body.dark-theme .accounts-table tbody tr:hover {
-    background: rgba(99, 102, 241, 0.08);
+    background: #2d2d44;
 }
 
 body.dark-theme .account-status.enabled {
-    background: rgba(34, 197, 94, 0.15);
-    color: #4ade80;
+    background: #1b3d1b;
+    color: #66bb6a;
 }
 body.dark-theme .account-status.disabled {
-    background: rgba(148, 163, 184, 0.15);
-    color: #94a3b8;
+    background: #2d2d44;
+    color: #888;
 }
 
 body.dark-theme .btn-icon {
     background: #2d2d44;
-    color: #cbd5e1;
+    color: #c0c0c0;
 }
 body.dark-theme .btn-icon:hover {
-    background: #374151;
-    color: #e5e7eb;
+    background: #3d3d6b;
+    color: #e0e0e0;
 }
 body.dark-theme .btn-view:hover {
-    background: rgba(59, 130, 246, 0.18);
-    color: #60a5fa;
+    background: #1e3a5f;
+    color: #8ba3ff;
 }
 body.dark-theme .btn-edit:hover {
-    background: rgba(249, 115, 22, 0.18);
-    color: #fb923c;
+    background: #3d3020;
+    color: #ffb74d;
 }
 body.dark-theme .btn-delete:hover {
-    background: rgba(239, 68, 68, 0.18);
-    color: #f87171;
+    background: #3d2020;
+    color: #ff7961;
 }
 
 body.dark-theme .detail-row {
     border-bottom-color: #2d2d44;
 }
 body.dark-theme .detail-label {
-    color: #94a3b8;
+    color: #888;
 }
 body.dark-theme .detail-value {
-    color: #e5e7eb;
+    color: #c0c0c0;
 }
 
 body.dark-theme .form-hint {
-    color: #94a3b8;
+    color: #888;
 }
 
 body.dark-theme .empty-state {
-    background: #1f2937;
-    color: #94a3b8;
-    border: 1px dashed #374151;
+    background: #16213e;
+    color: #888;
 }
 
-/* 模态框内表单字段的暗色适配（modal 自身已被 modal.css 接管） */
-body.dark-theme #accountForm .form-group label {
-    color: #cbd5e1;
-}
-body.dark-theme #accountForm input[type="text"],
-body.dark-theme #accountForm textarea {
-    background: #111827;
-    border-color: #374151;
-    color: #e5e7eb;
-}
-body.dark-theme #accountForm input[type="text"]:focus,
-body.dark-theme #accountForm textarea:focus {
-    border-color: #6366f1;
-    box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.25);
-}
-body.dark-theme #accountForm input[type="text"]::placeholder,
-body.dark-theme #accountForm textarea::placeholder {
-    color: #64748b;
-}
-body.dark-theme .toggle .slider {
-    background: #374151;
-}
-body.dark-theme .toggle input:checked + .slider {
-    background: #6366f1;
-}
-body.dark-theme .toggle-label {
-    color: #cbd5e1;
-}
-body.dark-theme .required {
-    color: #f87171;
-}

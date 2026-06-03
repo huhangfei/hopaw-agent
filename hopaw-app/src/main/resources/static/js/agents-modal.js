@@ -96,7 +96,7 @@ function submitAddAgentForm(formEl) {
             showToast('创建成功', 'info');
             setTimeout(function() {
                 location.reload();
-            }, 1500);
+            }, 800);
         } else {
             showToast('创建失败', 'error');
         }
@@ -133,7 +133,7 @@ function submitEditAgentForm(formEl) {
             showToast('保存成功', 'info');
             setTimeout(function() {
                 location.reload();
-            }, 1500);
+            }, 800);
         } else {
             showToast('保存失败', 'error');
         }
@@ -167,22 +167,24 @@ function ensureAvatarSettingsModal() {
         '    </div>' +
         '    <div class="modal-body">' +
         '      <div class="form-group">' +
+        '        <label>启用虚拟人</label>' +
         '        <div class="toggle-wrapper">' +
         '          <label class="toggle">' +
         '            <input type="checkbox" id="avatarEnabledInput">' +
         '            <span class="slider"></span>' +
         '          </label>' +
-        '        <label>启用虚拟人</label>' +
+        '          <span class="toggle-label" id="avatarEnabledLabel">已启用</span>' +
         '          <span class="form-hint">关闭后该智能体不再显示虚拟人形象</span>' +
         '        </div>' +
         '      </div>' +
         '      <div class="form-group">' +
+        '        <label>启用语音</label>' +
         '        <div class="toggle-wrapper">' +
         '          <label class="toggle">' +
         '            <input type="checkbox" id="avatarSoundInput">' +
         '            <span class="slider"></span>' +
         '          </label>' +
-        '        <label>启用语音</label>' +
+        '          <span class="toggle-label" id="avatarSoundLabel">已启用</span>' +
         '          <span class="form-hint">关闭后虚拟人不播放提示音</span>' +
         '        </div>' +
         '      </div>' +
@@ -206,10 +208,10 @@ function ensureAvatarSettingsModal() {
         '      <div class="form-group">' +
         '        <label for="memoryMaxRecordsInput">回忆最大记录数</label>' +
         '        <input type="number" id="memoryMaxRecordsInput" min="1" step="1" placeholder="例如：20">' +
-        '        <span class="form-hint">按时间倒序截取的最大记录条数，传给模型前会反转成正序</span>' +
+        '        <span class="form-hint">按时间倒序截取的最大记录条数</span>' +
         '      </div>' +
         '      <div class="form-group">' +
-        '        <label for="avatarModelGroupSelect">模型分组</label>' +
+        '        <label for="avatarModelGroupSelect">人物形象模型</label>' +
         '        <select id="avatarModelGroupSelect"></select>' +
         '      </div>' +
         '    </div>' +
@@ -288,6 +290,7 @@ function showAvatarSettingsModal(agentId, agentName) {
     avatarSettingsModal.style.display = 'flex';
     avatarSettingsModal.classList.add('active');
     document.body.style.overflow = 'hidden';
+    bindAvatarToggleChange();
     loadAvatarSettings(agentId);
     // 绑定遮罩点击关闭
     if (!avatarSettingsModal._avatarOverlayBound) {
@@ -297,6 +300,32 @@ function showAvatarSettingsModal(agentId, agentName) {
             }
         });
         avatarSettingsModal._avatarOverlayBound = true;
+    }
+}
+
+function bindAvatarToggleChange() {
+    if (!avatarSettingsModal || avatarSettingsModal._avatarToggleBound) return;
+    var enabledInput = document.getElementById('avatarEnabledInput');
+    var soundInput = document.getElementById('avatarSoundInput');
+    if (enabledInput) {
+        enabledInput.addEventListener('change', updateAvatarToggleLabels);
+    }
+    if (soundInput) {
+        soundInput.addEventListener('change', updateAvatarToggleLabels);
+    }
+    avatarSettingsModal._avatarToggleBound = true;
+}
+
+function updateAvatarToggleLabels() {
+    var enabledInput = document.getElementById('avatarEnabledInput');
+    var soundInput = document.getElementById('avatarSoundInput');
+    var enabledLabel = document.getElementById('avatarEnabledLabel');
+    var soundLabel = document.getElementById('avatarSoundLabel');
+    if (enabledInput && enabledLabel) {
+        enabledLabel.textContent = enabledInput.checked ? '已启用' : '已关闭';
+    }
+    if (soundInput && soundLabel) {
+        soundLabel.textContent = soundInput.checked ? '已启用' : '已关闭';
     }
 }
 
@@ -335,6 +364,7 @@ function fillAvatarSettings(settings, groups, selectedGroup) {
 
     document.getElementById('avatarEnabledInput').checked = !settings.disabled;
     document.getElementById('avatarSoundInput').checked = settings.soundEnabled !== false;
+    updateAvatarToggleLabels();
     document.getElementById('avatarPromptInput').value = settings.avatarAiPrompt || '';
     var memoryWindowInput = document.getElementById('memoryWindowInput');
     if (memoryWindowInput) {
