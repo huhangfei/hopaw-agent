@@ -119,7 +119,7 @@ public class AvatarProactivePlanner {
 
         String userProfile = longTermMemoryService.queryUserProfileMemoryContent(userId);
         if(StringUtils.hasLength(userProfile)){
-            finalPrompt = promptTemplate
+            finalPrompt = finalPrompt
                     .replace("{userProfile}", userProfile);
         }
         ChatModelListener listener = chatModelListenerProvider.getChatModelListener(
