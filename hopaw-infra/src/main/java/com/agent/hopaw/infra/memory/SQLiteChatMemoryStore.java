@@ -68,7 +68,7 @@ public class SQLiteChatMemoryStore implements IChatMemoryService {
     @Override
     public void updateMessages(Object memoryIdObj, List<ChatMessage> messages) {
         ChatMemoryId memoryId = (ChatMemoryId) memoryIdObj;
-        List<ChatMemory> existingRecords = chatMemoryMapper.findBySessionIdAndStatus(memoryId.getSessionId(), Arrays.asList(0));
+        List<ChatMemory> existingRecords = chatMemoryMapper.findBySessionId(memoryId.getSessionId());
         Map<String, ChatMemory> memoryMap = existingRecords.stream()
                 .collect(Collectors.toMap(ChatMemory::getMessageId, record -> record));
 
