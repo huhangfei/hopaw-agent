@@ -207,9 +207,14 @@ public class DatabaseInitializer implements CommandLineRunner {
                     "total_tokens INTEGER DEFAULT 0, " +
                     "last_processed_chat_id INTEGER DEFAULT 0, " +
                     "sound_enabled INTEGER DEFAULT 1, " +
+                    "memory_window_minutes INTEGER DEFAULT 10, " +
+                    "memory_max_records INTEGER DEFAULT 20, " +
                     "create_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP, " +
                     "update_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP" +
                     ")");
+            // 兼容旧库：增量补充新列
+            ensureColumn(stmt, "agent_avatar_config", "memory_window_minutes", "INTEGER DEFAULT 10");
+            ensureColumn(stmt, "agent_avatar_config", "memory_max_records", "INTEGER DEFAULT 20");
             stmt.execute("CREATE UNIQUE INDEX IF NOT EXISTS idx_agent_avatar_config_user_agent ON agent_avatar_config(user_id, agent_id)");
             stmt.execute("CREATE INDEX IF NOT EXISTS idx_agent_avatar_config_user ON agent_avatar_config(user_id)");
 
@@ -471,6 +476,29 @@ public class DatabaseInitializer implements CommandLineRunner {
                 escapeSQL(capabilities),
                 0
         ));
+    }
+
+    /**
+     * 增量 ALTER：当目标表缺少指定列时，执行 ADD COLUMN。
+     * 用于不破坏旧库结构、平滑补齐新增字段。
+     */
+    private void ensureColumn(Statement stmt, String tableName, String columnName, String columnDef) throws Exception {
+        if (tableColumnExists(stmt, tableName, columnName)) {
+            return;
+        }
+        stmt.execute("ALTER TABLE " + tableName + " ADD COLUMN " + columnName + " " + columnDef);
+        log.info("[DatabaseInitializer] 已为表 {} 补齐列 {}", tableName, columnName);
+    }
+
+    private boolean tableColumnExists(Statement stmt, String tableName, String columnName) throws Exception {
+        try (ResultSet rs = stmt.executeQuery("PRAGMA table_info(" + tableName + ")")) {
+            while (rs.next()) {
+                if (columnName.equalsIgnoreCase(rs.getString("name"))) {
+                    return true;
+                }
+            }
+        }
+        return false;
     }
 
     private String escapeSQL(String value) {

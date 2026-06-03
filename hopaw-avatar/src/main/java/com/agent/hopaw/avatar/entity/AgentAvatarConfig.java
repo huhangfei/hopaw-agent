@@ -17,6 +17,14 @@ public class AgentAvatarConfig {
     private Long totalTokens;
     private Long lastProcessedChatId;
     private Boolean soundEnabled;
+    /**
+     * 主动消息回忆窗口（分钟）：仅拉取最近该时间范围内的聊天记录。
+     */
+    private Integer memoryWindowMinutes;
+    /**
+     * 主动消息回忆最大记录数：超过该数量时按时间倒序截断。
+     */
+    private Integer memoryMaxRecords;
     private String createTime;
     private String updateTime;
 
@@ -109,6 +117,22 @@ public class AgentAvatarConfig {
 
     public void setSoundEnabled(Boolean soundEnabled) {
         this.soundEnabled = soundEnabled;
+    }
+
+    public Integer getMemoryWindowMinutes() {
+        return memoryWindowMinutes;
+    }
+
+    public void setMemoryWindowMinutes(Integer memoryWindowMinutes) {
+        this.memoryWindowMinutes = memoryWindowMinutes;
+    }
+
+    public Integer getMemoryMaxRecords() {
+        return memoryMaxRecords;
+    }
+
+    public void setMemoryMaxRecords(Integer memoryMaxRecords) {
+        this.memoryMaxRecords = memoryMaxRecords;
     }
 
     public String getCreateTime() {

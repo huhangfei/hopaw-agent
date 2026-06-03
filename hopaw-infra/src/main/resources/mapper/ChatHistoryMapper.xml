@@ -96,7 +96,7 @@
             </foreach>
         </if>
           AND create_time &gt;= #{since}
-        ORDER BY id ASC
+        ORDER BY create_time DESC
         LIMIT #{limit}
     </select>
 

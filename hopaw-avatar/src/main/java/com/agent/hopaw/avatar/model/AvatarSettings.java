@@ -7,6 +7,14 @@ public class AvatarSettings {
     private String modelGroup;
     private String personaSetting;
     private String avatarAiPrompt;
+    /**
+     * 主动消息回忆窗口（分钟）。
+     */
+    private Integer memoryWindowMinutes;
+    /**
+     * 主动消息回忆最大记录数。
+     */
+    private Integer memoryMaxRecords;
 
     public AvatarSettings() {
     }
@@ -57,5 +65,21 @@ public class AvatarSettings {
 
     public void setAvatarAiPrompt(String avatarAiPrompt) {
         this.avatarAiPrompt = avatarAiPrompt;
+    }
+
+    public Integer getMemoryWindowMinutes() {
+        return memoryWindowMinutes;
+    }
+
+    public void setMemoryWindowMinutes(Integer memoryWindowMinutes) {
+        this.memoryWindowMinutes = memoryWindowMinutes;
+    }
+
+    public Integer getMemoryMaxRecords() {
+        return memoryMaxRecords;
+    }
+
+    public void setMemoryMaxRecords(Integer memoryMaxRecords) {
+        this.memoryMaxRecords = memoryMaxRecords;
     }
 }

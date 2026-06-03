@@ -14,6 +14,8 @@
         <result property="totalTokens" column="total_tokens"/>
         <result property="lastProcessedChatId" column="last_processed_chat_id"/>
         <result property="soundEnabled" column="sound_enabled"/>
+        <result property="memoryWindowMinutes" column="memory_window_minutes"/>
+        <result property="memoryMaxRecords" column="memory_max_records"/>
         <result property="createTime" column="create_time"/>
         <result property="updateTime" column="update_time"/>
     </resultMap>
@@ -21,7 +23,8 @@
     <select id="findByUserAndAgent" resultMap="AgentAvatarConfigResultMap">
         SELECT id, user_id, agent_id, disabled, model_setting, model_group, persona_setting,
                avatar_ai_prompt, total_tokens, last_processed_chat_id,
-               sound_enabled, create_time, update_time
+               sound_enabled, memory_window_minutes, memory_max_records,
+               create_time, update_time
         FROM agent_avatar_config
         WHERE user_id = #{userId} AND agent_id = #{agentId}
     </select>
@@ -29,7 +32,8 @@
     <select id="findByUserId" resultMap="AgentAvatarConfigResultMap">
         SELECT id, user_id, agent_id, disabled, model_setting, model_group, persona_setting,
                avatar_ai_prompt, total_tokens, last_processed_chat_id,
-               sound_enabled, create_time, update_time
+               sound_enabled, memory_window_minutes, memory_max_records,
+               create_time, update_time
         FROM agent_avatar_config
         WHERE user_id = #{userId}
     </select>
@@ -37,17 +41,18 @@
     <select id="findAll" resultMap="AgentAvatarConfigResultMap">
         SELECT id, user_id, agent_id, disabled, model_setting, model_group, persona_setting,
                avatar_ai_prompt, total_tokens, last_processed_chat_id,
-               sound_enabled, create_time, update_time
+               sound_enabled, memory_window_minutes, memory_max_records,
+               create_time, update_time
         FROM agent_avatar_config
     </select>
 
     <insert id="insert" parameterType="com.agent.hopaw.avatar.entity.AgentAvatarConfig" useGeneratedKeys="true" keyProperty="id">
         INSERT INTO agent_avatar_config (user_id, agent_id, disabled, model_setting, model_group, persona_setting,
                                          avatar_ai_prompt, total_tokens, last_processed_chat_id,
-                                         sound_enabled)
+                                         sound_enabled, memory_window_minutes, memory_max_records)
         VALUES (#{userId}, #{agentId}, #{disabled}, #{modelSetting}, #{modelGroup}, #{personaSetting},
                 #{avatarAiPrompt}, COALESCE(#{totalTokens}, 0), COALESCE(#{lastProcessedChatId}, 0),
-                #{soundEnabled})
+                #{soundEnabled}, COALESCE(#{memoryWindowMinutes}, 10), COALESCE(#{memoryMaxRecords}, 20))
     </insert>
 
     <update id="update" parameterType="com.agent.hopaw.avatar.entity.AgentAvatarConfig">
@@ -58,6 +63,8 @@
             persona_setting = #{personaSetting},
             avatar_ai_prompt = #{avatarAiPrompt},
             sound_enabled = #{soundEnabled},
+            memory_window_minutes = COALESCE(#{memoryWindowMinutes}, memory_window_minutes),
+            memory_max_records = COALESCE(#{memoryMaxRecords}, memory_max_records),
             update_time = datetime('now', 'localtime')
         WHERE user_id = #{userId} AND agent_id = #{agentId}
     </update>
@@ -70,6 +77,8 @@
             persona_setting = COALESCE(#{personaSetting}, persona_setting),
             avatar_ai_prompt = COALESCE(#{avatarAiPrompt}, avatar_ai_prompt),
             sound_enabled = COALESCE(#{soundEnabled}, sound_enabled),
+            memory_window_minutes = COALESCE(#{memoryWindowMinutes}, memory_window_minutes),
+            memory_max_records = COALESCE(#{memoryMaxRecords}, memory_max_records),
             update_time = datetime('now', 'localtime')
         WHERE user_id = #{userId} AND agent_id = #{agentId}
     </update>

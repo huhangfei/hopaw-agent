@@ -39,8 +39,8 @@ public class AvatarProactivePlanner {
 
     private static final Logger logger = LoggerFactory.getLogger(AvatarProactivePlanner.class);
 
-    public static final int RECENT_USER_INPUT_LIMIT = 20;
-    public static final long RECENT_WINDOW_MINUTES = 10L;
+    public static final int DEFAULT_RECENT_USER_INPUT_LIMIT = 20;
+    public static final long DEFAULT_RECENT_WINDOW_MINUTES = 10L;
     private static final DateTimeFormatter TIME_FORMAT = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
 
     private final IAiModelService aiModelService;
@@ -97,16 +97,15 @@ public class AvatarProactivePlanner {
             logger.warn("虚拟人定时任务跳过：智能体未配置模型 userId={} agentId={}", userId, agentId);
             return afterId;
         }
-        String persona = avatarSettingsService.getPersonaSetting(userId, agentId);
-        if (persona == null || persona.isBlank()) {
-            persona = "（未设置人设）";
-        }
         String promptTemplate = avatarSettingsService.getAvatarAiPrompt(userId, agentId);
         if (promptTemplate == null || promptTemplate.isBlank()) {
             promptTemplate = AvatarSettingsService.DEFAULT_AVATAR_AI_PROMPT;
         }
+        // 主动消息回忆参数从用户配置读取，未配置时回退到默认值
+        int memoryWindowMinutes = avatarSettingsService.getMemoryWindowMinutes(userId, agentId);
+        int memoryMaxRecords = avatarSettingsService.getMemoryMaxRecords(userId, agentId);
         long startId = afterId == null ? 0L : afterId;
-        List<ChatHistory> recentInputs = getIncrementalUserInputs(userId, RECENT_USER_INPUT_LIMIT);
+        List<ChatHistory> recentInputs = getIncrementalUserInputs(userId, memoryMaxRecords, memoryWindowMinutes);
         if (recentInputs.isEmpty()) {
             logger.info("虚拟人定时任务跳过：未查询到增量输入 userId={} agentId={} afterId={}", userId, agentId, afterId);
             return afterId;
@@ -122,8 +121,13 @@ public class AvatarProactivePlanner {
         String formattedInputs = formatRecentInputs(recentInputs);
         String currentTime = LocalDateTime.now().format(TIME_FORMAT);
 
+        // 人设不再单独配置，直接在 prompt 模板中通过 {agentName} / {agentDesc} 表达智能体身份
+        String agentName = agent.getName() == null ? "" : agent.getName();
+        String agentDesc = agent.getDescription() == null ? "" : agent.getDescription();
+
         String finalPrompt = promptTemplate
-                .replace("{persona}", persona)
+                .replace("{agentName}", agentName)
+                .replace("{agentDesc}", agentDesc)
                 .replace("{toolCallTips}", AvatarSettingsService.TOOL_CALL_TIPS)
                 .replace("{currentTime}", currentTime);
 
@@ -171,19 +175,23 @@ public class AvatarProactivePlanner {
                     InvocationParameters invocationParameters);
     }
 
-    public List<ChatHistory> getIncrementalUserInputs(String userId, int limit) {
+    public List<ChatHistory> getIncrementalUserInputs(String userId, int limit, int windowMinutes) {
         if (userId == null || userId.isBlank()) {
             return Collections.emptyList();
         }
-        LocalDateTime since = LocalDateTime.now().minusMinutes(RECENT_WINDOW_MINUTES);
+        int safeLimit = limit <= 0 ? DEFAULT_RECENT_USER_INPUT_LIMIT : limit;
+        int safeWindow = windowMinutes <= 0 ? (int) DEFAULT_RECENT_WINDOW_MINUTES : windowMinutes;
+        LocalDateTime since = LocalDateTime.now().minusMinutes(safeWindow);
         try {
-            List<ChatHistory> list;
-
-            list = chatHistoryMapper.findRecentByUserIdAndRolesAndRoleTypes(userId, List.of("user", "agent"), List.of("text"), since, limit);
-            if (list == null) {
+            // SQL 已按 create_time DESC 取最近 N 条；这里再反转成时间正序后返回，便于模型按上下文顺序理解
+            List<ChatHistory> list = chatHistoryMapper.findRecentByUserIdAndRolesAndRoleTypes(
+                    userId, List.of("user", "agent"), List.of("text"), since, safeLimit);
+            if (list == null || list.isEmpty()) {
                 return Collections.emptyList();
             }
-            return list;
+            List<ChatHistory> reversed = new ArrayList<>(list);
+            Collections.reverse(reversed);
+            return reversed;
         } catch (Exception e) {
             logger.warn("查询用户聊天历史失败 userId={}  err={}", userId, e.getMessage());
             return Collections.emptyList();
@@ -194,7 +202,7 @@ public class AvatarProactivePlanner {
         if (userId == null || userId.isBlank()) {
             return Collections.emptyList();
         }
-        LocalDateTime since = LocalDateTime.now().minusMinutes(RECENT_WINDOW_MINUTES);
+        LocalDateTime since = LocalDateTime.now().minusMinutes(DEFAULT_RECENT_WINDOW_MINUTES);
         try {
             List<ChatHistory> list = chatHistoryMapper.findRecentByUserIdAndRole(userId, "user", since, limit);
             if (list == null) {

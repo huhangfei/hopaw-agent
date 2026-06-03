@@ -187,19 +187,26 @@ function ensureAvatarSettingsModal() {
         '        </div>' +
         '      </div>' +
         '      <div class="form-group">' +
-        '        <label for="avatarPersonaInput">人设</label>' +
-        '        <textarea id="avatarPersonaInput" rows="3" placeholder="请输入人设描述"></textarea>' +
-        '      </div>' +
-        '      <div class="form-group">' +
         '        <label for="avatarPromptInput">主动消息提示词模板</label>' +
         '        <div class="prompt-variables" aria-label="内置变量">' +
         '          <span class="form-hint" style="margin-right:4px;">点击插入变量：</span>' +
-        '          <button type="button" class="prompt-variable-chip" data-variable="{persona}" data-target="avatarPromptInput" title="人设">人设</button>' +
+        '          <button type="button" class="prompt-variable-chip" data-variable="{agentName}" data-target="avatarPromptInput" title="智能体名称">智能体名称</button>' +
+        '          <button type="button" class="prompt-variable-chip" data-variable="{agentDesc}" data-target="avatarPromptInput" title="智能体描述">智能体描述</button>' +
         '          <button type="button" class="prompt-variable-chip" data-variable="{currentTime}" data-target="avatarPromptInput" title="当前时间">当前时间</button>' +
         '          <button type="button" class="prompt-variable-chip" data-variable="{userProfile}" data-target="avatarPromptInput" title="用户画像">用户画像</button>' +
         '          <button type="button" class="prompt-variable-chip" data-variable="{toolCallTips}" data-target="avatarPromptInput" title="工具调用提示">工具调用提示</button>' +
         '        </div>' +
-        '        <textarea id="avatarPromptInput" rows="4" placeholder="例如：根据{currentTime}、{persona}和{userProfile}，主动发一条消息"></textarea>' +
+        '        <textarea id="avatarPromptInput" rows="4" placeholder="例如：你是{agentName}，{agentDesc}，根据{currentTime}和{userProfile}主动发一条消息"></textarea>' +
+        '      </div>' +
+        '      <div class="form-group">' +
+        '        <label for="memoryWindowInput">回忆时长（分钟）</label>' +
+        '        <input type="number" id="memoryWindowInput" min="1" step="1" placeholder="例如：10">' +
+        '        <span class="form-hint">仅拉取最近该时长范围内的聊天记录作为回忆</span>' +
+        '      </div>' +
+        '      <div class="form-group">' +
+        '        <label for="memoryMaxRecordsInput">回忆最大记录数</label>' +
+        '        <input type="number" id="memoryMaxRecordsInput" min="1" step="1" placeholder="例如：20">' +
+        '        <span class="form-hint">按时间倒序截取的最大记录条数，传给模型前会反转成正序</span>' +
         '      </div>' +
         '      <div class="form-group">' +
         '        <label for="avatarModelGroupSelect">模型分组</label>' +
@@ -328,8 +335,17 @@ function fillAvatarSettings(settings, groups, selectedGroup) {
 
     document.getElementById('avatarEnabledInput').checked = !settings.disabled;
     document.getElementById('avatarSoundInput').checked = settings.soundEnabled !== false;
-    document.getElementById('avatarPersonaInput').value = settings.personaSetting || '';
     document.getElementById('avatarPromptInput').value = settings.avatarAiPrompt || '';
+    var memoryWindowInput = document.getElementById('memoryWindowInput');
+    if (memoryWindowInput) {
+        memoryWindowInput.value = (settings.memoryWindowMinutes == null || settings.memoryWindowMinutes === '')
+            ? '' : settings.memoryWindowMinutes;
+    }
+    var memoryMaxRecordsInput = document.getElementById('memoryMaxRecordsInput');
+    if (memoryMaxRecordsInput) {
+        memoryMaxRecordsInput.value = (settings.memoryMaxRecords == null || settings.memoryMaxRecords === '')
+            ? '' : settings.memoryMaxRecords;
+    }
 
     var groupSelect = document.getElementById('avatarModelGroupSelect');
     groupSelect.innerHTML = '';
@@ -358,13 +374,29 @@ function saveAvatarSettings() {
     // 直接从表单元素重新读取，避免直接信任缓存对象
     var groupSelect = document.getElementById('avatarModelGroupSelect');
     var groupValue = groupSelect ? groupSelect.value : '';
+    var memoryWindowInput = document.getElementById('memoryWindowInput');
+    var memoryMaxRecordsInput = document.getElementById('memoryMaxRecordsInput');
+    var memoryWindowRaw = memoryWindowInput ? (memoryWindowInput.value || '').trim() : '';
+    var memoryMaxRecordsRaw = memoryMaxRecordsInput ? (memoryMaxRecordsInput.value || '').trim() : '';
+    var memoryWindowMinutes = memoryWindowRaw === '' ? null : parseInt(memoryWindowRaw, 10);
+    var memoryMaxRecords = memoryMaxRecordsRaw === '' ? null : parseInt(memoryMaxRecordsRaw, 10);
+    if (memoryWindowMinutes != null && (isNaN(memoryWindowMinutes) || memoryWindowMinutes <= 0)) {
+        showToast('回忆时长必须为正整数', 'warning');
+        return;
+    }
+    if (memoryMaxRecords != null && (isNaN(memoryMaxRecords) || memoryMaxRecords <= 0)) {
+        showToast('回忆最大记录数必须为正整数', 'warning');
+        return;
+    }
     var payload = {
         disabled: !document.getElementById('avatarEnabledInput').checked,
         soundEnabled: document.getElementById('avatarSoundInput').checked,
         modelSetting: '',
         modelGroup: groupValue,
-        personaSetting: document.getElementById('avatarPersonaInput').value || '',
-        avatarAiPrompt: document.getElementById('avatarPromptInput').value || ''
+        personaSetting: '',
+        avatarAiPrompt: document.getElementById('avatarPromptInput').value || '',
+        memoryWindowMinutes: memoryWindowMinutes,
+        memoryMaxRecords: memoryMaxRecords
     };
     console.log('[avatar-settings] PUT /api/avatar/settings agentId=' + avatarSettingsState.agentId, payload);
     var saveBtn = document.getElementById('avatarSettingsSaveBtn');
