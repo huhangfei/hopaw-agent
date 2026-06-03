@@ -240,12 +240,7 @@ function escapeHtml(str) {
     return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 }
 
-var SOURCE_MAP = {
-    'chat': '会话',
-    'model-test': '模型测试',
-    'memory-organize': '记忆整理',
-    'agentTask': '智能体定时任务'
-};
+var SOURCE_MAP = window.SOURCE_MAP || {};
 
 function getSourceName(source) {
     return SOURCE_MAP[source] || source || '-';

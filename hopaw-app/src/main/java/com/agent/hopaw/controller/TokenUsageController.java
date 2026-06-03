@@ -1,5 +1,6 @@
 package com.agent.hopaw.controller;
 
+import com.agent.hopaw.infra.constant.AiModelCallSourceEnum;
 import com.agent.hopaw.infra.mapper.AgentMapper;
 import com.agent.hopaw.infra.model.entity.Agent;
 import com.agent.hopaw.infra.model.dto.ResponseBean;
@@ -16,6 +17,8 @@ import org.springframework.web.bind.annotation.ResponseBody;
 
 import javax.servlet.http.HttpServletRequest;
 import java.time.LocalDateTime;
+import java.util.Arrays;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -38,6 +41,17 @@ public class TokenUsageController {
         List<Agent> agents = agentMapper.findAll();
         model.addAttribute("agents", agents);
         model.addAttribute("accounts", accountService.listAccounts());
+
+        List<AiModelCallSourceEnum> callSources = Arrays.asList(AiModelCallSourceEnum.values());
+        model.addAttribute("callSources", callSources);
+
+        // 同步生成 value -> description 字典，供前端表格渲染使用
+        Map<String, String> sourceMap = new LinkedHashMap<>();
+        for (AiModelCallSourceEnum src : callSources) {
+            sourceMap.put(src.getValue(), src.getDescription());
+        }
+        model.addAttribute("sourceMap", sourceMap);
+
         return "token-usage";
     }
 

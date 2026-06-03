@@ -46,10 +46,9 @@
                 <label for="filterSource">来源</label>
                 <select id="filterSource">
                     <option value="">全部</option>
-                    <option value="chat">会话</option>
-                    <option value="model-test">模型测试</option>
-                    <option value="memory-organize">记忆整理</option>
-                    <option value="agentTask">智能体定时任务</option>
+                    <option th:each="src : ${callSources}"
+                            th:value="${src.value}"
+                            th:text="${src.description}"></option>
                 </select>
             </div>
             <div class="filter-group">
@@ -126,6 +125,7 @@
 <th:block layout:fragment="extraScripts">
     <script th:inline="javascript">
         var AGENTS = /*[[${agents}]]*/ [];
+        var SOURCE_MAP = /*[[${sourceMap}]]*/ {};
     </script>
     <script th:src="@{/js/page/token-usage.js}"></script>
     <script th:src="@{/js/chart.umd.min.js}"></script>
