@@ -424,7 +424,7 @@ public class DatabaseInitializer implements CommandLineRunner {
                         "SELECT 'Long Term Memory', 'longTermMemory', '0/50 * * * * *', 1, 'Execute memory cleanup every 50 seconds', 1 " +
                         "WHERE NOT EXISTS (SELECT 1 FROM scheduled_tasks WHERE task_type = 'longTermMemory')");
                 stmt.execute("INSERT INTO scheduled_tasks (task_name, task_type, cron_expression, enabled, description, builtin) " +
-                        "SELECT 'Avatar Task', 'avatar', '0/30 * * * * *', 1, 'Execute avatar module task every 30 seconds', 1 " +
+                        "SELECT 'Avatar Task', 'avatar', '0 0/2 * * * *', 1, 'Execute avatar module task every 30 seconds', 1 " +
                         "WHERE NOT EXISTS (SELECT 1 FROM scheduled_tasks WHERE task_type = 'avatar')");
             }
 

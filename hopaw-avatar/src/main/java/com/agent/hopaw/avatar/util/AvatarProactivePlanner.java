@@ -143,7 +143,7 @@ public class AvatarProactivePlanner {
                     .chatModel(chatModel)
                     .systemMessageProvider(chatMemoryId -> finalPrompt1)
                     .tools(Arrays.asList(avatarProactiveTool, avatarMoveTool, avatarChangeModelTool))
-                    .maxSequentialToolsInvocations(1)
+                    .maxSequentialToolsInvocations(20)
                     .build();
             ChatRequestParameters chatRequestParameters=ChatRequestParameters.builder()
                     .temperature(0.1)
