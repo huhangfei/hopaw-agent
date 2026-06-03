@@ -17,6 +17,8 @@ import com.agent.hopaw.infra.util.InvocationParametersWrapper;
 import com.agent.hopaw.infra.util.UuidUtil;
 import com.alibaba.fastjson2.JSON;
 import com.alibaba.fastjson2.JSONObject;
+import dev.langchain4j.data.message.Content;
+import dev.langchain4j.data.message.TextContent;
 import dev.langchain4j.invocation.InvocationParameters;
 import dev.langchain4j.model.chat.ChatModel;
 import dev.langchain4j.model.chat.listener.ChatModelListener;
@@ -148,7 +150,7 @@ public class AvatarProactivePlanner {
             ChatRequestParameters chatRequestParameters=ChatRequestParameters.builder()
                     .temperature(0.1)
                     .build();
-            String result = assistant.chat("用户的近期输入：" + formattedInputs, chatRequestParameters, invocationParametersWrapper.getParameters());
+            String result = assistant.chat(List.of(new TextContent("用户的近期输入：" + formattedInputs)), chatRequestParameters, invocationParametersWrapper.getParameters());
             logger.info("虚拟人大脑模型调用结果 userId={} agentId={} modelId={} result={}", userId, agentId, modelId, result);
         } catch (Exception e) {
             logger.error("虚拟人大脑模型调用失败 userId={} agentId={} modelId={}", userId, agentId, modelId, e);
@@ -156,9 +158,9 @@ public class AvatarProactivePlanner {
         return recentInputs;
     }
     public interface Assistant {
-        @dev.langchain4j.service.UserMessage("{{content}}")
-        String chat(String content,
-                    ChatRequestParameters chatRequestParameters, InvocationParameters invocationParameters);
+        String chat(@dev.langchain4j.service.UserMessage List<Content> contents,
+                    ChatRequestParameters chatRequestParameters,
+                    InvocationParameters invocationParameters);
     }
 
     public List<ChatHistory> getIncrementalUserInputs(String userId, Long afterId, int limit) {
