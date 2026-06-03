@@ -83,17 +83,7 @@ public class AvatarTaskHandler implements TaskHandler {
                 }
                 try {
                     Long afterId = config.getLastProcessedChatId();
-                    List<ChatHistory> processedRecords = proactivePlanner.analyzeAndDecide(userId, agentId, task, afterId);
-                    if (processedRecords == null || processedRecords.isEmpty()) {
-                        noIncrement++;
-                        logger.info("虚拟人定时任务跳过：未查询到增量用户输入 userId={} agentId={} afterId={}", userId, agentId, afterId);
-                        continue;
-                    }
-                    Long maxId = processedRecords.stream()
-                            .map(ChatHistory::getId)
-                            .filter(id -> id != null)
-                            .max(Comparator.naturalOrder())
-                            .orElse(afterId);
+                    Long maxId = proactivePlanner.analyzeAndDecide(userId, agentId, task, afterId);
                     if (maxId != null && (afterId == null || maxId > afterId)) {
                         try {
                             avatarConfigMapper.updateLastProcessedChatId(userId, agentId, maxId);

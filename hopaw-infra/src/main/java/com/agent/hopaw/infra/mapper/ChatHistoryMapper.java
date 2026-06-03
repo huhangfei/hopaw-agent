@@ -30,6 +30,12 @@ public interface ChatHistoryMapper {
                                                        @Param("since") LocalDateTime since,
                                                        @Param("limit") int limit);
 
+    List<ChatHistory> findRecentByUserIdAndRolesAndRoleTypes(@Param("userId") String userId,
+                                                       @Param("roles") List<String> roles,
+                                                       @Param("types") List<String> types,
+                                                       @Param("since") LocalDateTime since,
+                                                       @Param("limit") int limit);
+
     int insert(ChatHistory chat);
 
     int insertBatch(List<ChatHistory> list);

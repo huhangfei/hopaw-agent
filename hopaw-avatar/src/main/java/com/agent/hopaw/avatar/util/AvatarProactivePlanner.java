@@ -39,8 +39,8 @@ public class AvatarProactivePlanner {
 
     private static final Logger logger = LoggerFactory.getLogger(AvatarProactivePlanner.class);
 
-    public static final int RECENT_USER_INPUT_LIMIT = 10;
-    public static final long RECENT_WINDOW_MINUTES = 30L;
+    public static final int RECENT_USER_INPUT_LIMIT = 20;
+    public static final long RECENT_WINDOW_MINUTES = 10L;
     private static final DateTimeFormatter TIME_FORMAT = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
 
     private final IAiModelService aiModelService;
@@ -80,22 +80,22 @@ public class AvatarProactivePlanner {
      * @param agentId 智能体ID（虚拟人主动任务模型取自该 Agent.aiModelId）
      * @param task    定时任务
      * @param afterId 仅查询 id 大于该值的增量记录；若为 null 则按时间窗口全量
-     * @return 实际参与本次处理的记录列表（按 id 升序）；若没有增量则返回空列表
+     * @return 返回最大ID
      */
-    public List<ChatHistory> analyzeAndDecide(String userId, Long agentId, ScheduledTask task, Long afterId) {
+    public Long analyzeAndDecide(String userId, Long agentId, ScheduledTask task, Long afterId) {
         if (agentId == null) {
             logger.warn("虚拟人定时任务跳过：未指定 agentId userId={}", userId);
-            return Collections.emptyList();
+            return afterId;
         }
         Agent agent = agentService.getAgentById(agentId);
         if (agent == null) {
             logger.warn("虚拟人定时任务跳过：未找到智能体 userId={} agentId={}", userId, agentId);
-            return Collections.emptyList();
+            return afterId;
         }
         Long modelId = agent.getAiModelId();
         if (modelId == null) {
             logger.warn("虚拟人定时任务跳过：智能体未配置模型 userId={} agentId={}", userId, agentId);
-            return Collections.emptyList();
+            return afterId;
         }
         String persona = avatarSettingsService.getPersonaSetting(userId, agentId);
         if (persona == null || persona.isBlank()) {
@@ -105,11 +105,19 @@ public class AvatarProactivePlanner {
         if (promptTemplate == null || promptTemplate.isBlank()) {
             promptTemplate = AvatarSettingsService.DEFAULT_AVATAR_AI_PROMPT;
         }
-
-        List<ChatHistory> recentInputs = getIncrementalUserInputs(userId, afterId, RECENT_USER_INPUT_LIMIT);
+        long startId = afterId == null ? 0L : afterId;
+        List<ChatHistory> recentInputs = getIncrementalUserInputs(userId, RECENT_USER_INPUT_LIMIT);
         if (recentInputs.isEmpty()) {
             logger.info("虚拟人定时任务跳过：未查询到增量输入 userId={} agentId={} afterId={}", userId, agentId, afterId);
-            return Collections.emptyList();
+            return afterId;
+        }
+        Long maxId = recentInputs.stream()
+                .map(ChatHistory::getId)
+                .filter(id -> id != null)
+                .max(Comparator.naturalOrder())
+                .orElse(afterId);
+        if(maxId <= startId) {
+            return startId;
         }
         String formattedInputs = formatRecentInputs(recentInputs);
         String currentTime = LocalDateTime.now().format(TIME_FORMAT);
@@ -131,7 +139,7 @@ public class AvatarProactivePlanner {
             chatModel = aiModelService.createChatModel(modelId, false, listener);
         } catch (Exception e) {
             logger.error("创建虚拟人大脑模型失败 userId={} agentId={} modelId={}", userId, agentId, modelId, e);
-            return recentInputs;
+            return maxId;
         }
 
         try {
@@ -155,7 +163,7 @@ public class AvatarProactivePlanner {
         } catch (Exception e) {
             logger.error("虚拟人大脑模型调用失败 userId={} agentId={} modelId={}", userId, agentId, modelId, e);
         }
-        return recentInputs;
+        return maxId;
     }
     public interface Assistant {
         String chat(@dev.langchain4j.service.UserMessage List<Content> contents,
@@ -163,21 +171,21 @@ public class AvatarProactivePlanner {
                     InvocationParameters invocationParameters);
     }
 
-    public List<ChatHistory> getIncrementalUserInputs(String userId, Long afterId, int limit) {
+    public List<ChatHistory> getIncrementalUserInputs(String userId, int limit) {
         if (userId == null || userId.isBlank()) {
             return Collections.emptyList();
         }
         LocalDateTime since = LocalDateTime.now().minusMinutes(RECENT_WINDOW_MINUTES);
         try {
             List<ChatHistory> list;
-            long startId = afterId == null ? 0L : afterId;
-            list = chatHistoryMapper.findRecentByUserIdAndRoleAfterId(userId, "user", startId, since, limit);
+
+            list = chatHistoryMapper.findRecentByUserIdAndRolesAndRoleTypes(userId, List.of("user", "agent"), List.of("text"), since, limit);
             if (list == null) {
                 return Collections.emptyList();
             }
             return list;
         } catch (Exception e) {
-            logger.warn("查询用户增量输入失败 userId={} afterId={} err={}", userId, afterId, e.getMessage());
+            logger.warn("查询用户聊天历史失败 userId={}  err={}", userId, e.getMessage());
             return Collections.emptyList();
         }
     }
