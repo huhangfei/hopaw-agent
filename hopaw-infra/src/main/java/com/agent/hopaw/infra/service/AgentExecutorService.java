@@ -137,7 +137,6 @@ public class AgentExecutorService implements IAgentExecutorService {
         if (userRequest.getAiModelId() == null) {
             throw new RuntimeException("智能体没有设置AI模型");
         }
-        ChatModelListener chatModelListener = chatModelListenerProvider.getChatModelListener(AiModelCallSourceEnum.Chat, userRequest.getSessionId(), userRequest.getUserId(), userRequest.getAgentId());
         List<String> selectedToolNames = parseToolNames(agent.getTools());
         List<ToolSetInfo> selectedTools = agentToolService.getToolSets().stream()
                 .filter(t -> selectedToolNames.contains(t.getName()))
@@ -159,7 +158,7 @@ public class AgentExecutorService implements IAgentExecutorService {
         Function<Long, String> systemMessageProvider = aId -> {
             return getSystemMessage(userRequest.getSessionId(), agent, userRequest.getUserId(), selectedTools, userRequest.getSkillNames());
         };
-        AgentExecutor agentExecutor = new AgentExecutor(agentExecutorParams, chatMemoryService, embeddingModel, systemMessageProvider, chatHistoryStore, aiModelService, chatModelListener, eventPublisher, chatSessionService);
+        AgentExecutor agentExecutor = new AgentExecutor(agentExecutorParams, chatMemoryService, embeddingModel, systemMessageProvider, chatHistoryStore, aiModelService, chatModelListenerProvider, eventPublisher, chatSessionService);
         agentExecutors.put(userRequest.getSessionId(), agentExecutor);
         return agentExecutor;
     }

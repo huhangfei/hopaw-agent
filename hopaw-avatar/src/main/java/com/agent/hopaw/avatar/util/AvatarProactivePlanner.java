@@ -6,6 +6,7 @@ import com.agent.hopaw.avatar.tool.AvatarMoveTool;
 import com.agent.hopaw.avatar.tool.AvatarProactiveTool;
 import com.agent.hopaw.infra.constant.AiModelCallSourceEnum;
 import com.agent.hopaw.infra.mapper.ChatHistoryMapper;
+import com.agent.hopaw.infra.memory.ILongTermMemoryService;
 import com.agent.hopaw.infra.model.entity.Agent;
 import com.agent.hopaw.infra.model.entity.ChatHistory;
 import com.agent.hopaw.infra.model.entity.ScheduledTask;
@@ -24,6 +25,7 @@ import dev.langchain4j.service.AiServices;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
+import org.springframework.util.StringUtils;
 
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
@@ -48,6 +50,7 @@ public class AvatarProactivePlanner {
     private final AvatarProactiveTool avatarProactiveTool;
     private final AvatarMoveTool avatarMoveTool;
     private final AvatarChangeModelTool avatarChangeModelTool;
+    private final ILongTermMemoryService longTermMemoryService;
 
     public AvatarProactivePlanner(IAiModelService aiModelService,
                                   IChatModelListenerProvider chatModelListenerProvider,
@@ -56,7 +59,7 @@ public class AvatarProactivePlanner {
                                   IAgentService agentService,
                                   AvatarProactiveTool avatarProactiveTool,
                                   AvatarMoveTool avatarMoveTool,
-                                  AvatarChangeModelTool avatarChangeModelTool) {
+                                  AvatarChangeModelTool avatarChangeModelTool, ILongTermMemoryService longTermMemoryService) {
         this.aiModelService = aiModelService;
         this.chatModelListenerProvider = chatModelListenerProvider;
         this.avatarSettingsService = avatarSettingsService;
@@ -65,6 +68,7 @@ public class AvatarProactivePlanner {
         this.avatarProactiveTool = avatarProactiveTool;
         this.avatarMoveTool = avatarMoveTool;
         this.avatarChangeModelTool = avatarChangeModelTool;
+        this.longTermMemoryService = longTermMemoryService;
     }
 
     /**
@@ -110,10 +114,16 @@ public class AvatarProactivePlanner {
 
         String finalPrompt = promptTemplate
                 .replace("{persona}", persona)
+                .replace("{toolCallTips}", AvatarSettingsService.TOOL_CALL_TIPS)
                 .replace("{currentTime}", currentTime);
 
+        String userProfile = longTermMemoryService.queryUserProfileMemoryContent(userId);
+        if(StringUtils.hasLength(userProfile)){
+            finalPrompt = promptTemplate
+                    .replace("{userProfile}", userProfile);
+        }
         ChatModelListener listener = chatModelListenerProvider.getChatModelListener(
-                AiModelCallSourceEnum.MEMORYORGANIZE, UUID.randomUUID().toString(), userId, agentId);
+                AiModelCallSourceEnum.AvatarTask, UUID.randomUUID().toString(), userId, agentId);
         ChatModel chatModel;
         try {
             chatModel = aiModelService.createChatModel(modelId, false, listener);
@@ -124,20 +134,21 @@ public class AvatarProactivePlanner {
 
         try {
             InvocationParametersWrapper invocationParametersWrapper = InvocationParametersWrapper.create()
-                    .setUserId(task.getUserId())
+                    .setUserId(userId)
                     .setAgentId(agentId)
                     .setRequestId(UuidUtil.generateSimpleUUID())
                     .setSessionId(UuidUtil.generateSimpleUUID());
+            String finalPrompt1 = finalPrompt;
             Assistant assistant = AiServices.builder(Assistant.class)
                     .chatModel(chatModel)
-                    .systemMessageProvider(chatMemoryId -> finalPrompt)
+                    .systemMessageProvider(chatMemoryId -> finalPrompt1)
                     .tools(Arrays.asList(avatarProactiveTool, avatarMoveTool, avatarChangeModelTool))
                     .maxSequentialToolsInvocations(1)
                     .build();
             ChatRequestParameters chatRequestParameters=ChatRequestParameters.builder()
                     .temperature(0.1)
                     .build();
-            String result = assistant.chat("近期输入：" + formattedInputs, chatRequestParameters, invocationParametersWrapper.getParameters());
+            String result = assistant.chat("用户的近期输入：" + formattedInputs, chatRequestParameters, invocationParametersWrapper.getParameters());
             logger.info("虚拟人大脑模型调用结果 userId={} agentId={} modelId={} result={}", userId, agentId, modelId, result);
         } catch (Exception e) {
             logger.error("虚拟人大脑模型调用失败 userId={} agentId={} modelId={}", userId, agentId, modelId, e);

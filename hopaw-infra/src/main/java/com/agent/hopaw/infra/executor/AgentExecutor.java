@@ -1,6 +1,7 @@
 package com.agent.hopaw.infra.executor;
 
 
+import com.agent.hopaw.infra.constant.AiModelCallSourceEnum;
 import com.agent.hopaw.infra.constant.ChatMemoryStatusEnum;
 import com.agent.hopaw.infra.event.AgentMessageEvent;
 import com.agent.hopaw.infra.exception.ToolCallRejectedException;
@@ -8,6 +9,7 @@ import com.agent.hopaw.infra.memory.IChatMemoryService;
 import com.agent.hopaw.infra.model.entity.*;
 import com.agent.hopaw.infra.model.dto.*;
 import com.agent.hopaw.infra.service.AiModelService;
+import com.agent.hopaw.infra.service.IChatModelListenerProvider;
 import com.agent.hopaw.infra.service.IChatSessionService;
 import com.agent.hopaw.infra.storage.ChatHistoryStore;
 import com.agent.hopaw.infra.tool.AgentTool;
@@ -77,7 +79,6 @@ public class AgentExecutor implements IAgentExecutor {
     private final AtomicBoolean cancelTask = new AtomicBoolean(false);
     private final ChatHistoryStore chatHistoryStore;
     private final IChatMemoryService memoryStore;
-    private final ChatModelListener langChain4jMonitor;
     private final java.util.concurrent.ConcurrentMap<String, AtomicBoolean> toolCancelInvocations = new ConcurrentHashMap<>();
     private final java.util.concurrent.ConcurrentMap<String, CountDownLatch> toolCancelLatch = new ConcurrentHashMap<>();
     private final java.util.concurrent.ConcurrentMap<String, Consumer<String>> toolStopHooks = new ConcurrentHashMap<>();
@@ -94,14 +95,14 @@ public class AgentExecutor implements IAgentExecutor {
     private final IChatSessionService chatSessionService;
     private final AgentExecutorParams agentExecutorParams;
     private final Function<Long, String> systemMessageProvider;
-
+    private final IChatModelListenerProvider chatModelListenerProvider;
     public AgentExecutor(AgentExecutorParams agentExecutorParams,
                          IChatMemoryService memoryStore,
                          EmbeddingModel embeddingModel,
                          Function<Long, String> systemMessageProvider,
                          ChatHistoryStore chatHistoryStore,
                          AiModelService aiModelService,
-                         ChatModelListener langChain4jMonitor,
+                         IChatModelListenerProvider chatModelListenerProvider,
                          ApplicationEventPublisher eventPublisher,
                          IChatSessionService chatSessionService) {
         this.agentExecutorParams = agentExecutorParams;
@@ -114,7 +115,7 @@ public class AgentExecutor implements IAgentExecutor {
 
         this.chatSessionService = chatSessionService;
         this.chatHistoryStore = chatHistoryStore;
-        this.langChain4jMonitor = langChain4jMonitor;
+        this.chatModelListenerProvider = chatModelListenerProvider;
         this.eventPublisher = eventPublisher;
         this.aiModelService = aiModelService;
         this.memoryStore = memoryStore;
@@ -428,12 +429,14 @@ public class AgentExecutor implements IAgentExecutor {
 
     private String analyzeUserIntent() {
         try {
+            ChatModelListener chatModelListener = chatModelListenerProvider.getChatModelListener(AiModelCallSourceEnum.ChatAnalyzeUserIntent, sessionId, userId, agentId);
+
             InvocationParametersWrapper invocationParametersWrapper = InvocationParametersWrapper.create()
                     .setUserId(userId)
                     .setAgentId(agentId)
                     .setRequestId(requestId)
                     .setSessionId(sessionId);
-            ChatModel chatModel = aiModelService.createChatModel(agentExecutorParams.getAiModelId(), false, this.langChain4jMonitor);
+            ChatModel chatModel = aiModelService.createChatModel(agentExecutorParams.getAiModelId(), false, chatModelListener);
 
             ChatAgentAssistant assistant = AiServices.builder(ChatAgentAssistant.class)
                     .chatModel(chatModel)
@@ -452,7 +455,7 @@ public class AgentExecutor implements IAgentExecutor {
 
     private String analyzeToolCall(ToolInfo toolInfo,String arguments) {
         try {
-
+            ChatModelListener chatModelListener = chatModelListenerProvider.getChatModelListener(AiModelCallSourceEnum.ChatToolCallCheck, sessionId, userId, agentId);
             String systemMessage="你只是一个工具调用安全检查员，你需要判断用户提交到调用是否需要人工介入？只需要返回给用户：是或否";
 
             List<Content> contents=new ArrayList<>();
@@ -466,7 +469,7 @@ public class AgentExecutor implements IAgentExecutor {
                     .setAgentId(agentId)
                     .setRequestId(requestId)
                     .setSessionId(sessionId);
-            ChatModel chatModel = aiModelService.createChatModel(agentExecutorParams.getAiModelId(), false, this.langChain4jMonitor);
+            ChatModel chatModel = aiModelService.createChatModel(agentExecutorParams.getAiModelId(), false, chatModelListener);
 
             String finalSystemMessage = systemMessage;
             ChatAgentAssistant assistant = AiServices.builder(ChatAgentAssistant.class)
@@ -511,7 +514,8 @@ public class AgentExecutor implements IAgentExecutor {
             }
             aiBuilder.tools(selectedTools.toArray());
         }
-        StreamingChatModel streamingModel = aiModelService.createStreamingChatModel(agentExecutorParams.getAiModelId(), agentExecutorParams.getEnableThinking(), this.langChain4jMonitor);
+        ChatModelListener chatModelListener = chatModelListenerProvider.getChatModelListener(AiModelCallSourceEnum.Chat, sessionId, userId, agentId);
+        StreamingChatModel streamingModel = aiModelService.createStreamingChatModel(agentExecutorParams.getAiModelId(), agentExecutorParams.getEnableThinking(), chatModelListener);
         return aiBuilder.streamingChatModel(streamingModel).build();
     }
 

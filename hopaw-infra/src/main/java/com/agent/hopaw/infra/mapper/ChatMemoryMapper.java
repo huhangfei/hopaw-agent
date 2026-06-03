@@ -46,12 +46,35 @@ public interface ChatMemoryMapper {
 
 
     /**
+     * 查询 chat_memory 中指定状态的所有 (session_id, user_id) 组合。
+     * 用于发现那些从未被转移到 chat_memory_obsolete 但已具备整理条件的会话。
+     */
+    List<ChatMemory> findTaskDoneDistinctSessionUserPairs(@Param("status") Integer status);
+
+
+    /**
      * 查询会话根据会话和用户编号
      * @param sessionId
      * @param userId
      * @return
      */
     List<ChatMemory> findObsoleteChatMemoryBySessionIdAndUserId(String sessionId,String userId);
+
+
+    /**
+     * 增量查询：拉取指定会话/用户下 status = TASK_DONE 且 id 大于 lastId 的数据。
+     * 用于将长期滞留在 chat_memory 中尚未转移的已结束任务纳入整理。
+     *
+     * @param sessionId 会话编号
+     * @param userId    用户编号
+     * @param status    期望的状态列表
+     * @param lastId    上次已处理到的最大 id（不包含）
+     * @return 增量数据，按 id 升序
+     */
+    List<ChatMemory> findTaskDoneChatMemoryBySessionIdAndUserIdAfterId(@Param("sessionId") String sessionId,
+                                                                       @Param("userId") String userId,
+                                                                       @Param("status") List<Integer> status,
+                                                                       @Param("lastId") Long lastId);
 
 
     /**

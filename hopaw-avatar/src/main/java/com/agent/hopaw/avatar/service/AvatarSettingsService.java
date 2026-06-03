@@ -18,9 +18,8 @@ public class AvatarSettingsService {
 
     private static final Logger logger = LoggerFactory.getLogger(AvatarSettingsService.class);
 
-    public static final String DEFAULT_AVATAR_AI_PROMPT = "你是一个贴心的虚拟人助手。请结合用户的最近 30 分钟内输入内容（前时间{currentTime}），分析用户当前可能在做什么、处于什么状态，以及是否需要主动提醒。\n" +
-            "人设设定：\n{persona}"+
-            "当需要提醒时，请调用sendMessageToUser工具进行发送\n";
+    public static final String DEFAULT_AVATAR_AI_PROMPT = "{persona}，这是用户的记忆画像{userProfile}，请根据用户最近输入的内容，分析用户当前可能在做什么、处于什么状态，以及是否需要主动提醒。{toolCallTips}\n现在时间是{currentTime}。";
+    public static final String TOOL_CALL_TIPS = "当需要提醒时，请调用sendMessageToUser工具进行发送消息；\n当需要表现存在感时，请调用moveAvatar工具进行控制移动或者调用changeAvatarModel工具进行换装；\n";
 
     private static final List<AvatarModelGroup> DEFAULT_MODEL_GROUPS;
 

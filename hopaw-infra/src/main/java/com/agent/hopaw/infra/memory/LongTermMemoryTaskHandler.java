@@ -1,9 +1,13 @@
 package com.agent.hopaw.infra.memory;
 
 import com.agent.hopaw.infra.constant.AiModelCallSourceEnum;
+import com.agent.hopaw.infra.constant.ChatMemoryStatusEnum;
 import com.agent.hopaw.infra.constant.UserMemoryTypeEnum;
+import com.agent.hopaw.infra.mapper.ChatMemoryMapper;
 import com.agent.hopaw.infra.mapper.ChatMemoryObsoleteMapper;
+import com.agent.hopaw.infra.mapper.ChatMemoryProcessedCursorMapper;
 import com.agent.hopaw.infra.model.entity.ChatMemory;
+import com.agent.hopaw.infra.model.entity.ChatMemoryProcessedCursor;
 import com.agent.hopaw.infra.model.entity.LongTermMemory;
 import com.agent.hopaw.infra.model.entity.ScheduledTask;
 import com.agent.hopaw.infra.monitor.LangChain4jChatModelListener;
@@ -30,9 +34,13 @@ import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Objects;
+import java.util.Set;
 import java.util.UUID;
 
 @Component
@@ -43,7 +51,9 @@ public class LongTermMemoryTaskHandler implements TaskHandler {
     private final ILongTermMemoryService longTermMemoryService;
     private final ISysConfigService sysConfigService;
     private final ApplicationEventPublisher eventPublisher;
-    private final ChatMemoryObsoleteMapper chatMemoryMapper;
+    private final ChatMemoryObsoleteMapper chatMemoryObsoleteMapper;
+    private final ChatMemoryMapper chatMemoryMapper;
+    private final ChatMemoryProcessedCursorMapper processedCursorMapper;
 
     // 运行中标记，防止并发执行
     private volatile boolean running = false;
@@ -52,27 +62,99 @@ public class LongTermMemoryTaskHandler implements TaskHandler {
                                      ILongTermMemoryService longTermMemoryService,
                                      ISysConfigService sysConfigService,
                                      ApplicationEventPublisher eventPublisher,
-                                     ChatMemoryObsoleteMapper chatMemoryMapper) {
+                                     ChatMemoryObsoleteMapper chatMemoryObsoleteMapper,
+                                     ChatMemoryMapper chatMemoryMapper,
+                                     ChatMemoryProcessedCursorMapper processedCursorMapper) {
         this.aiModelService = aiModelService;
         this.longTermMemoryService = longTermMemoryService;
         this.sysConfigService = sysConfigService;
         this.eventPublisher = eventPublisher;
+        this.chatMemoryObsoleteMapper = chatMemoryObsoleteMapper;
         this.chatMemoryMapper = chatMemoryMapper;
+        this.processedCursorMapper = processedCursorMapper;
     }
     public void processAgentMemories() {
         try {
-            //会话和用户分组信息
-            List<ChatMemory> pairs = chatMemoryMapper.findObsoleteDistinctSessionUserPairs();
-            for (ChatMemory pair : pairs) {
+            // 同时从 chat_memory_obsolete 与 chat_memory(status=TASK_DONE) 中发现需要整理的会话
+            // 去重后再逐个处理
+            List<SessionUserPair> pairs = collectSessionUserPairs();
+            for (SessionUserPair pair : pairs) {
                 try {
                     processMemoryForIdentity(pair.getSessionId(), pair.getUserId());
                 } catch (Exception e) {
-                    logger.error("Error processing memory for agentId {} userId {}", pair.getAgentId(), pair.getUserId(), e);
+                    logger.error("Error processing memory for sessionId {} userId {}",
+                            pair.getSessionId(), pair.getUserId(), e);
                 }
             }
 
         } catch (Exception e) {
             logger.error("Error fetching agent ids for memory processing", e);
+        }
+    }
+
+    /**
+     * 汇总需要整理记忆的 (sessionId, userId) 组合：
+     * 1) chat_memory_obsolete 中尚有未处理数据
+     * 2) chat_memory 中 status = TASK_DONE 的数据（未及时迁移的）
+     * 去重后返回。
+     */
+    private List<SessionUserPair> collectSessionUserPairs() {
+        Set<String> pairKeys = new HashSet<>();
+        List<SessionUserPair> result = new ArrayList<>();
+
+        // 来自 chat_memory_obsolete
+        try {
+            for (ChatMemory pair : chatMemoryObsoleteMapper.findObsoleteDistinctSessionUserPairs()) {
+                if (pair == null || pair.getSessionId() == null || pair.getUserId() == null) {
+                    continue;
+                }
+                String key = pair.getSessionId() + "::" + pair.getUserId();
+                if (pairKeys.add(key)) {
+                    result.add(new SessionUserPair(pair.getSessionId(), pair.getUserId()));
+                }
+            }
+        } catch (Exception e) {
+            logger.error("查询 chat_memory_obsolete 会话组合失败", e);
+        }
+
+        // 来自 chat_memory(status=TASK_DONE)
+        try {
+            List<ChatMemory> taskDonePairs = chatMemoryMapper.findTaskDoneDistinctSessionUserPairs(
+                    ChatMemoryStatusEnum.TASK_DONE.getCode());
+            for (ChatMemory pair : taskDonePairs) {
+                if (pair == null || pair.getSessionId() == null || pair.getUserId() == null) {
+                    continue;
+                }
+                String key = pair.getSessionId() + "::" + pair.getUserId();
+                if (pairKeys.add(key)) {
+                    result.add(new SessionUserPair(pair.getSessionId(), pair.getUserId()));
+                }
+            }
+        } catch (Exception e) {
+            logger.error("查询 chat_memory(TASK_DONE) 会话组合失败", e);
+        }
+
+        return result;
+    }
+
+    /**
+     * 会话 / 用户 组合的轻量 DTO，避免每次返回完整的 ChatMemory 实体。
+     */
+    private static class SessionUserPair {
+        private final String sessionId;
+        private final String userId;
+
+        SessionUserPair(String sessionId, String userId) {
+            this.sessionId = sessionId;
+            this.userId = userId;
+        }
+
+        public String getSessionId() {
+            return sessionId;
+        }
+
+        public String getUserId() {
+            return userId;
         }
     }
 
@@ -183,8 +265,44 @@ public class LongTermMemoryTaskHandler implements TaskHandler {
     }
 
     private void processMemoryForIdentity(String sessionId, String userId) {
-        //已标记清理的消息
-        List<ChatMemory> cleanedMessages = chatMemoryMapper.findObsoleteChatMemoryBySessionIdAndUserId(sessionId, userId);
+        // 1) 读取当前 (session, user) 的整理进度游标
+        ChatMemoryProcessedCursor cursor = processedCursorMapper.findBySessionIdAndUserId(sessionId, userId);
+        long lastChatMemoryId = cursor == null || cursor.getLastChatMemoryId() == null ? 0L : cursor.getLastChatMemoryId();
+        long lastObsoleteMemoryId = cursor == null || cursor.getLastObsoleteMemoryId() == null ? 0L : cursor.getLastObsoleteMemoryId();
+
+        // 2) 增量查询 chat_memory_obsolete 中未处理的数据
+        List<ChatMemory> obsoleteIncremental = chatMemoryObsoleteMapper.findObsoleteChatMemoryBySessionIdAndUserIdAfterId(
+                sessionId, userId, lastObsoleteMemoryId);
+        if (obsoleteIncremental == null) {
+            obsoleteIncremental = Collections.emptyList();
+        }
+
+        // 3) 增量查询 chat_memory 中 status = TASK_DONE 的数据
+        List<Integer> taskDoneStatus = Collections.singletonList(ChatMemoryStatusEnum.TASK_DONE.getCode());
+        List<ChatMemory> taskDoneIncremental = chatMemoryMapper.findTaskDoneChatMemoryBySessionIdAndUserIdAfterId(
+                sessionId, userId, taskDoneStatus, lastChatMemoryId);
+        if (taskDoneIncremental == null) {
+            taskDoneIncremental = Collections.emptyList();
+        }
+
+        // 拼接后排序：先按 create_time 升序，再按 id 升序，保证上下文连续
+        List<ChatMemory> cleanedMessages = new ArrayList<>(obsoleteIncremental.size() + taskDoneIncremental.size());
+        cleanedMessages.addAll(obsoleteIncremental);
+        cleanedMessages.addAll(taskDoneIncremental);
+        cleanedMessages.sort((a, b) -> {
+            LocalDateTime ta = a.getCreateTime();
+            LocalDateTime tb = b.getCreateTime();
+            if (ta != null && tb != null && !ta.equals(tb)) {
+                return ta.compareTo(tb);
+            }
+            Long ia = a.getId();
+            Long ib = b.getId();
+            if (ia == null && ib == null) return 0;
+            if (ia == null) return -1;
+            if (ib == null) return 1;
+            return ia.compareTo(ib);
+        });
+
         if (cleanedMessages.isEmpty()) {
             return;
         }
@@ -221,11 +339,52 @@ public class LongTermMemoryTaskHandler implements TaskHandler {
 
         boolean handle = handle(sessionId, userId, longTermMemoryContent,content);
         if (handle) {
-            chatMemoryMapper.deleteObsoleteChatMemoryByIds(cleanedMessages.stream().map(ChatMemory::getId).toList());
+            // 2.1) 推进 chat_memory 游标
+            long newLastChatMemoryId = lastChatMemoryId;
+            for (ChatMemory m : taskDoneIncremental) {
+                if (m != null && m.getId() != null && m.getId() > newLastChatMemoryId) {
+                    newLastChatMemoryId = m.getId();
+                }
+            }
+
+            // 2.2) 仅清理本次读取过的 chat_memory_obsolete 行（id <= 本次处理最大 id）
+            if (!obsoleteIncremental.isEmpty()) {
+                long maxObsoleteId = lastObsoleteMemoryId;
+                for (ChatMemory m : obsoleteIncremental) {
+                    if (m != null && m.getId() != null && m.getId() > maxObsoleteId) {
+                        maxObsoleteId = m.getId();
+                    }
+                }
+                if (maxObsoleteId > lastObsoleteMemoryId) {
+                    chatMemoryObsoleteMapper.deleteObsoleteChatMemoryBySessionIdUserIdUpToId(
+                            sessionId, userId, maxObsoleteId);
+                }
+            }
+
+            // 2.3) 持久化最新游标
+            ChatMemoryProcessedCursor newCursor = new ChatMemoryProcessedCursor(
+                    sessionId, userId, newLastChatMemoryId,
+                    cursor == null ? Math.max(lastObsoleteMemoryId, computeMaxId(obsoleteIncremental))
+                                   : Math.max(cursor.getLastObsoleteMemoryId() == null ? 0L : cursor.getLastObsoleteMemoryId(),
+                                              computeMaxId(obsoleteIncremental)));
+            processedCursorMapper.upsert(newCursor);
         }
         longTermMemoryService.deleteExpiredTaskRecordsMemories(sessionId, userId);
 
         logger.info("Processing memory for sessionId: {}, cleaned messages count: {}", sessionId, cleanedMessages.size());
+    }
+
+    private static long computeMaxId(List<ChatMemory> items) {
+        long max = 0L;
+        if (items == null) {
+            return max;
+        }
+        for (ChatMemory m : items) {
+            if (m != null && m.getId() != null && m.getId() > max) {
+                max = m.getId();
+            }
+        }
+        return max;
     }
 
     private boolean handle(String sessionId, String userId,String longTermMemoriesContent, String content) {
@@ -238,7 +397,7 @@ public class LongTermMemoryTaskHandler implements TaskHandler {
                 } catch (NumberFormatException ignored) {
                 }
             }
-            LangChain4jChatModelListener langChain4JChatModelListener = new LangChain4jChatModelListener(AiModelCallSourceEnum.MEMORYORGANIZE)
+            LangChain4jChatModelListener langChain4JChatModelListener = new LangChain4jChatModelListener(AiModelCallSourceEnum.MemoryOrganize)
                     .setSessionId(sessionId)
                     .setUserId(userId)
                     .setEventPublisher(eventPublisher);

@@ -21,12 +21,22 @@
         WHERE session_id = #{sessionId} AND user_id = #{userId}
         ORDER BY create_time ASC
     </select>
+    <select id="findObsoleteChatMemoryBySessionIdAndUserIdAfterId" resultMap="ChatMemoryResultMap">
+        SELECT id, agent_id, user_id, message_id, message_json, status, session_id, create_time
+        FROM chat_memory_obsolete
+        WHERE session_id = #{sessionId} AND user_id = #{userId} AND id > #{lastId}
+        ORDER BY id ASC, create_time ASC
+    </select>
     <delete id="deleteObsoleteChatMemoryByIds">
         DELETE FROM chat_memory_obsolete
         WHERE  id IN
         <foreach collection="ids" item="id" open="(" separator="," close=")">
             #{id}
         </foreach>
+    </delete>
+    <delete id="deleteObsoleteChatMemoryBySessionIdUserIdUpToId">
+        DELETE FROM chat_memory_obsolete
+        WHERE session_id = #{sessionId} AND user_id = #{userId} AND id &lt;= #{maxId}
     </delete>
     <insert id="insertBatch">
         INSERT INTO chat_memory_obsolete (id, agent_id, user_id, message_id, message_json, status, session_id, create_time)

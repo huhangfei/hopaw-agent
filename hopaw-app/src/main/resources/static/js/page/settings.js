@@ -6,14 +6,12 @@ document.addEventListener('DOMContentLoaded', function() {
     setupCascading();
     loadMemoryTaskStatus();
     initTabFromUrl();
-    loadAvatarSettings();
-    setupAvatarSwitch();
 });
 
 function initTabFromUrl() {
     var params = new URLSearchParams(window.location.search);
     var tab = params.get('tab');
-    if (tab && ['memory', 'mail', 'pluginStore', 'avatar'].includes(tab)) {
+    if (tab && ['memory', 'mail', 'pluginStore'].includes(tab)) {
         switchTab(tab);
     }
 }
@@ -358,118 +356,4 @@ function savePluginStoreSettings() {
                 showToast('保存失败', 'error');
             }
         });
-}
-
-function loadAvatarSettings() {
-    Promise.all([
-        fetch('/api/avatar/settings').then(function(r) { return r.json(); }),
-        fetch('/api/avatar/models').then(function(r) { return r.json(); })
-    ]).then(function(results) {
-        var settingsResp = results[0];
-        var modelsResp = results[1];
-
-        if (modelsResp && modelsResp.msg === 'success' && modelsResp.data) {
-            renderAvatarModelOptions(modelsResp.data.groups || [], modelsResp.data.selected || '');
-        }
-
-        if (settingsResp && settingsResp.msg === 'success' && settingsResp.data) {
-            var s = settingsResp.data;
-            var checkbox = document.getElementById('avatarDisabled');
-            if (checkbox) checkbox.checked = !!s.disabled;
-            updateAvatarDisabledLabel();
-            var soundCheckbox = document.getElementById('avatarSoundEnabled');
-            if (soundCheckbox) soundCheckbox.checked = s.soundEnabled !== false;
-            updateAvatarSoundEnabledLabel();
-            document.getElementById('avatarPersonaSetting').value = s.personaSetting || '';
-            var select = document.getElementById('avatarModelSetting');
-            if (select && (s.modelGroup !== undefined && s.modelGroup !== null)) {
-                select.value = s.modelGroup || '';
-            }
-            var promptArea = document.getElementById('avatarAiPrompt');
-            if (promptArea) {
-                promptArea.value = s.avatarAiPrompt || '';
-            }
-        }
-    }).catch(function(e) {
-        console.error('加载虚拟人设置失败:', e);
-    });
-}
-
-function renderAvatarModelOptions(groups, selected) {
-    var select = document.getElementById('avatarModelSetting');
-    if (!select) return;
-    while (select.options.length > 1) {
-        select.remove(1);
-    }
-    groups.forEach(function(g) {
-        if (!g || !g.name) return;
-        var opt = document.createElement('option');
-        opt.value = g.name;
-        opt.textContent = g.name + (g.models && g.models.length ? '（' + g.models.length + ' 个）' : '');
-        select.appendChild(opt);
-    });
-    var value = selected || '';
-    if (value && !groups.some(function(g) { return g && g.name === value; })) {
-        var opt = document.createElement('option');
-        opt.value = value;
-        opt.textContent = value + '（未匹配）';
-        select.appendChild(opt);
-    }
-    select.value = value;
-}
-
-function setupAvatarSwitch() {
-    var checkbox = document.getElementById('avatarDisabled');
-    if (checkbox) {
-        checkbox.addEventListener('change', updateAvatarDisabledLabel);
-    }
-    var soundCheckbox = document.getElementById('avatarSoundEnabled');
-    if (soundCheckbox) {
-        soundCheckbox.addEventListener('change', updateAvatarSoundEnabledLabel);
-    }
-}
-
-function updateAvatarDisabledLabel() {
-    var checkbox = document.getElementById('avatarDisabled');
-    var label = document.getElementById('avatarDisabledLabel');
-    if (!checkbox || !label) return;
-    label.textContent = checkbox.checked ? '已关闭' : '启用';
-}
-
-function updateAvatarSoundEnabledLabel() {
-    var checkbox = document.getElementById('avatarSoundEnabled');
-    var label = document.getElementById('avatarSoundEnabledLabel');
-    if (!checkbox || !label) return;
-    label.textContent = checkbox.checked ? '已开启' : '已关闭';
-}
-
-function saveAvatarSettings() {
-    var checkbox = document.getElementById('avatarDisabled');
-    var select = document.getElementById('avatarModelSetting');
-    var promptArea = document.getElementById('avatarAiPrompt');
-    var soundCheckbox = document.getElementById('avatarSoundEnabled');
-    var payload = {
-        disabled: !!(checkbox && checkbox.checked),
-        soundEnabled: !soundCheckbox || soundCheckbox.checked,
-        modelSetting: '',
-        modelGroup: select ? (select.value || '') : '',
-        personaSetting: document.getElementById('avatarPersonaSetting').value,
-        avatarAiPrompt: promptArea ? promptArea.value : ''
-    };
-    fetch('/api/avatar/settings', {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload)
-    })
-    .then(function(r) { return r.json(); })
-    .then(function(resp) {
-        if (resp.msg === 'success') {
-            showToast('虚拟人设置保存成功', 'success');
-        } else {
-            showToast('保存失败: ' + (resp.msg || ''), 'error');
-        }
-    })
-    .catch(function() {
-        showToast('保存失败', 'error');
-    });
 }

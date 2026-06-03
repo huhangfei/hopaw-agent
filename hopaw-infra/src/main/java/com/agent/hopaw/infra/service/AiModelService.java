@@ -2,7 +2,6 @@ package com.agent.hopaw.infra.service;
 
 import com.agent.hopaw.infra.constant.AiModelCallSourceEnum;
 import com.agent.hopaw.infra.mapper.AiModelMapper;
-import com.agent.hopaw.infra.monitor.LangChain4jChatModelListener;
 import com.agent.hopaw.infra.model.entity.*;
 import com.agent.hopaw.infra.model.dto.*;
 import com.agent.hopaw.infra.chat.ChatModelFactory;
@@ -12,7 +11,6 @@ import dev.langchain4j.model.chat.StreamingChatModel;
 import dev.langchain4j.model.chat.listener.ChatModelListener;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 
 import java.util.HashMap;
@@ -89,7 +87,7 @@ public class AiModelService implements IAiModelService {
             org.springframework.beans.BeanUtils.copyProperties(aiModel, aiModelVO);
             aiModelVO.setAiModelProvider(provider);
             ChatModelFactory factory = factories.get(aiModelVO.getAiModelProvider().getSdkName().toLowerCase());
-            ChatModelListener chatModelListener = chatModelListenerProvider.getChatModelListener(AiModelCallSourceEnum.ModelTEST, null, null, null);
+            ChatModelListener chatModelListener = chatModelListenerProvider.getChatModelListener(AiModelCallSourceEnum.ModelTest, null, null, null);
             ChatModel chatModel = factory.createChatModel(aiModelVO, false, chatModelListener);
             ModelCapabilityTestResult result = factory.testModelCapability(chatModel);
 

@@ -306,55 +306,6 @@
     min-height: 64px;
 }
 
-/* iOS-style switch toggle */
-.avatar-settings-dialog .switch {
-    position: relative;
-    display: inline-block;
-    width: 44px;
-    height: 24px;
-    flex-shrink: 0;
-}
-
-.avatar-settings-dialog .switch input {
-    opacity: 0;
-    width: 0;
-    height: 0;
-    position: absolute;
-}
-
-.avatar-settings-dialog .switch .slider {
-    position: absolute;
-    cursor: pointer;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    background-color: #cfd4dc;
-    border-radius: 24px;
-    transition: background-color 0.25s ease;
-}
-
-.avatar-settings-dialog .switch .slider::before {
-    position: absolute;
-    content: "";
-    height: 18px;
-    width: 18px;
-    left: 3px;
-    top: 3px;
-    background-color: #fff;
-    border-radius: 50%;
-    transition: transform 0.25s ease;
-    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
-}
-
-.avatar-settings-dialog .switch input:checked + .slider {
-    background-color: #4CAF50;
-}
-
-.avatar-settings-dialog .switch input:checked + .slider::before {
-    transform: translateX(20px);
-}
-
 .agents-empty {
     text-align: center;
     padding: 40px;
@@ -476,6 +427,60 @@ body.dark-theme .agent-desc-cell {
     color: #999;
 }
 
+/* ========== 提示词模板变量快捷插入 ========== */
+.prompt-variables {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 6px;
+    margin-bottom: 8px;
+}
+
+.prompt-variables .form-hint {
+    margin-bottom: 0;
+}
+
+.prompt-variable-chip {
+    display: inline-block;
+    padding: 3px 10px;
+    border-radius: 12px;
+    border: 1px solid #c7d2fe;
+    background: #eef2ff;
+    color: #4338ca;
+    font-size: 12px;
+    line-height: 1.4;
+    cursor: pointer;
+    transition: background 0.15s, border-color 0.15s, color 0.15s, transform 0.1s;
+    user-select: none;
+}
+
+.prompt-variable-chip:hover {
+    background: #c7d2fe;
+    border-color: #818cf8;
+    color: #312e81;
+}
+
+.prompt-variable-chip:active {
+    transform: scale(0.96);
+}
+
+.prompt-variable-chip:focus-visible {
+    outline: 2px solid #6366f1;
+    outline-offset: 1px;
+}
+
+body.dark-theme .prompt-variable-chip {
+    background: #2a2a4a;
+    border-color: #4f46e5;
+    color: #c7d2fe;
+}
+
+body.dark-theme .prompt-variable-chip:hover {
+    background: #3d3d6b;
+    border-color: #818cf8;
+    color: #e0e7ff;
+}
+
 body.dark-theme .agent-model-cell {
     color: #aaa;
 }
@@ -534,14 +539,6 @@ body.dark-theme .avatar-settings-dialog textarea:focus,
 body.dark-theme .avatar-settings-dialog select:focus {
     border-color: #8ba3ff;
     box-shadow: 0 0 0 2px rgba(139, 163, 255, 0.2);
-}
-
-body.dark-theme .avatar-settings-dialog .switch .slider {
-    background-color: #3d3d6b;
-}
-
-body.dark-theme .avatar-settings-dialog .switch input:checked + .slider {
-    background-color: #66bb6a;
 }
 
 body.dark-theme .agents-empty {

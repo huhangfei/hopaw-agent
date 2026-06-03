@@ -147,7 +147,23 @@ var LAppDefine = {
                 e.stopPropagation();
                 e.preventDefault();
                 if (widget.classList.contains("dragging")) return;
-                window.location.href = "/settings#tab-avatar";
+                var agentId = (typeof currentAgentId !== "undefined") ? currentAgentId : null;
+                if (!agentId) {
+                    if (window.AvatarBridge && typeof window.AvatarBridge.getCurrentAgentId === "function") {
+                        agentId = window.AvatarBridge.getCurrentAgentId();
+                    }
+                }
+                if (!agentId) {
+                    console.warn("未找到当前智能体 ID，无法打开虚拟人设置");
+                    return;
+                }
+                if (window.AvatarSettings && typeof window.AvatarSettings.open === "function") {
+                    window.AvatarSettings.open(agentId, "");
+                } else if (typeof showAvatarSettingsModal === "function") {
+                    showAvatarSettingsModal(agentId, "");
+                } else {
+                    console.warn("虚拟人设置弹窗脚本未加载");
+                }
             });
             settingsBtn.addEventListener("pointerdown", function (e) {
                 e.stopPropagation();

@@ -141,3 +141,288 @@ function submitEditAgentForm(formEl) {
         showToast('请求失败: ' + err.message, 'error');
     });
 };
+
+
+
+// 智能体相关的弹窗（虚拟人设置等），同时被 agents.html 与 index.html 引用。
+// 文件名沿用项目内既有的 agents-modal.js 命名风格。
+
+var avatarSettingsModal = null;
+var avatarSettingsState = {
+    agentId: null,
+    agentName: '',
+    modelPool: [],
+    settings: null
+};
+
+function ensureAvatarSettingsModal() {
+    if (avatarSettingsModal) return avatarSettingsModal;
+    var wrapper = document.createElement('div');
+    var html = '' +
+        '<div class="modal-overlay" id="avatarSettingsModal" style="display:none;">' +
+        '  <div class="modal">' +
+        '    <div class="modal-header">' +
+        '      <h3 id="avatarSettingsTitle">虚拟形象设置</h3>' +
+        '      <button type="button" class="modal-close" onclick="closeAvatarSettingsModal()" aria-label="关闭">&times;</button>' +
+        '    </div>' +
+        '    <div class="modal-body">' +
+        '      <div class="form-group">' +
+        '        <div class="toggle-wrapper">' +
+        '          <label class="toggle">' +
+        '            <input type="checkbox" id="avatarEnabledInput">' +
+        '            <span class="slider"></span>' +
+        '          </label>' +
+        '        <label>启用虚拟人</label>' +
+        '          <span class="form-hint">关闭后该智能体不再显示虚拟人形象</span>' +
+        '        </div>' +
+        '      </div>' +
+        '      <div class="form-group">' +
+        '        <div class="toggle-wrapper">' +
+        '          <label class="toggle">' +
+        '            <input type="checkbox" id="avatarSoundInput">' +
+        '            <span class="slider"></span>' +
+        '          </label>' +
+        '        <label>启用语音</label>' +
+        '          <span class="form-hint">关闭后虚拟人不播放提示音</span>' +
+        '        </div>' +
+        '      </div>' +
+        '      <div class="form-group">' +
+        '        <label for="avatarPersonaInput">人设</label>' +
+        '        <textarea id="avatarPersonaInput" rows="3" placeholder="请输入人设描述"></textarea>' +
+        '      </div>' +
+        '      <div class="form-group">' +
+        '        <label for="avatarPromptInput">主动消息提示词模板</label>' +
+        '        <div class="prompt-variables" aria-label="内置变量">' +
+        '          <span class="form-hint" style="margin-right:4px;">点击插入变量：</span>' +
+        '          <button type="button" class="prompt-variable-chip" data-variable="{persona}" data-target="avatarPromptInput" title="人设">人设</button>' +
+        '          <button type="button" class="prompt-variable-chip" data-variable="{currentTime}" data-target="avatarPromptInput" title="当前时间">当前时间</button>' +
+        '          <button type="button" class="prompt-variable-chip" data-variable="{userProfile}" data-target="avatarPromptInput" title="用户画像">用户画像</button>' +
+        '          <button type="button" class="prompt-variable-chip" data-variable="{toolCallTips}" data-target="avatarPromptInput" title="工具调用提示">工具调用提示</button>' +
+        '        </div>' +
+        '        <textarea id="avatarPromptInput" rows="4" placeholder="例如：根据{currentTime}、{persona}和{userProfile}，主动发一条消息"></textarea>' +
+        '      </div>' +
+        '      <div class="form-group">' +
+        '        <label for="avatarModelGroupSelect">模型分组</label>' +
+        '        <select id="avatarModelGroupSelect"></select>' +
+        '      </div>' +
+        '    </div>' +
+        '    <div class="modal-footer">' +
+        '      <button type="button" class="btn-cancel" onclick="closeAvatarSettingsModal()">取消</button>' +
+        '      <button type="button" class="btn-submit" id="avatarSettingsSaveBtn" onclick="saveAvatarSettings()">保存</button>' +
+        '    </div>' +
+        '  </div>' +
+        '</div>';
+    wrapper.innerHTML = html;
+    document.body.appendChild(wrapper.firstChild);
+    avatarSettingsModal = document.getElementById('avatarSettingsModal');
+    bindPromptVariableChips(avatarSettingsModal);
+    return avatarSettingsModal;
+}
+
+/**
+ * 给弹框内带 [data-variable] 的快捷插入按钮绑定事件。
+ * 点击后在对应 textarea 的光标处插入占位符。
+ */
+function bindPromptVariableChips(rootEl) {
+    if (!rootEl) return;
+    var chips = rootEl.querySelectorAll('.prompt-variable-chip');
+    chips.forEach(function(chip) {
+        if (chip._chipBound) return;
+        chip._chipBound = true;
+        chip.addEventListener('click', function() {
+            var variable = chip.getAttribute('data-variable') || '';
+            var targetId = chip.getAttribute('data-target');
+            if (!targetId || !variable) return;
+            var textarea = document.getElementById(targetId);
+            if (!textarea) return;
+            insertTextAtCursor(textarea, variable);
+        });
+    });
+}
+
+/**
+ * 在 textarea/input 的当前光标处插入文本，保持原光标位置合理。
+ * 没有光标时（如刚打开未聚焦）追加到末尾。
+ */
+function insertTextAtCursor(input, text) {
+    if (!input || !text) return;
+    var start = input.selectionStart;
+    var end = input.selectionEnd;
+    var value = input.value || '';
+    if (start == null || end == null || isNaN(start) || isNaN(end)) {
+        input.value = value + text;
+        input.focus();
+        return;
+    }
+    input.value = value.substring(0, start) + text + value.substring(end);
+    var caret = start + text.length;
+    try {
+        input.setSelectionRange(caret, caret);
+    } catch (e) {
+        // 某些 input 类型不支持 setSelectionRange，忽略即可
+    }
+    input.focus();
+    // 触发 input 事件，方便其他监听者感知到内容变化
+    try {
+        input.dispatchEvent(new Event('input', { bubbles: true }));
+    } catch (e) {
+        // 旧浏览器忽略
+    }
+}
+
+function showAvatarSettingsModal(agentId, agentName) {
+    ensureAvatarSettingsModal();
+    avatarSettingsState.agentId = agentId;
+    avatarSettingsState.agentName = agentName || '';
+    var titleEl = document.getElementById('avatarSettingsTitle');
+    if (titleEl) {
+        titleEl.textContent = '虚拟形象设置 - ' + (agentName || ('智能体 #' + agentId));
+    }
+    avatarSettingsModal.style.display = 'flex';
+    avatarSettingsModal.classList.add('active');
+    document.body.style.overflow = 'hidden';
+    loadAvatarSettings(agentId);
+    // 绑定遮罩点击关闭
+    if (!avatarSettingsModal._avatarOverlayBound) {
+        avatarSettingsModal.addEventListener('click', function(e) {
+            if (e.target === avatarSettingsModal) {
+                closeAvatarSettingsModal();
+            }
+        });
+        avatarSettingsModal._avatarOverlayBound = true;
+    }
+}
+
+function closeAvatarSettingsModal() {
+    if (avatarSettingsModal) {
+        avatarSettingsModal.style.display = 'none';
+        avatarSettingsModal.classList.remove('active');
+    }
+    document.body.style.overflow = '';
+}
+
+function loadAvatarSettings(agentId) {
+    Promise.all([
+        fetch('/api/avatar/settings?agentId=' + encodeURIComponent(agentId) + '&_t=' + Date.now(), { credentials: 'same-origin' }).then(function(r) { return r.json(); }),
+        fetch('/api/avatar/models?agentId=' + encodeURIComponent(agentId) + '&_t=' + Date.now(), { credentials: 'same-origin' }).then(function(r) { return r.json(); })
+    ]).then(function(results) {
+        var settingsResp = results[0];
+        var modelsResp = results[1];
+        var settings = (settingsResp && settingsResp.code === 200) ? settingsResp.data : null;
+        var groups = (modelsResp && modelsResp.code === 200 && modelsResp.data && modelsResp.data.groups) ? modelsResp.data.groups : [];
+        var selected = (modelsResp && modelsResp.code === 200 && modelsResp.data && modelsResp.data.selected) ? modelsResp.data.selected : '';
+        fillAvatarSettings(settings, groups, selected);
+    }).catch(function(err) {
+        console.error('加载虚拟人配置失败', err);
+        showToast('加载虚拟人配置失败', 'error');
+    });
+}
+
+function fillAvatarSettings(settings, groups, selectedGroup) {
+    if (!settings) settings = {};
+    avatarSettingsState.settings = settings;
+    avatarSettingsState.modelPool = Array.isArray(groups) ? groups : [];
+    if (!selectedGroup) {
+        selectedGroup = settings.modelGroup || '';
+    }
+
+    document.getElementById('avatarEnabledInput').checked = !settings.disabled;
+    document.getElementById('avatarSoundInput').checked = settings.soundEnabled !== false;
+    document.getElementById('avatarPersonaInput').value = settings.personaSetting || '';
+    document.getElementById('avatarPromptInput').value = settings.avatarAiPrompt || '';
+
+    var groupSelect = document.getElementById('avatarModelGroupSelect');
+    groupSelect.innerHTML = '';
+    avatarSettingsState.modelPool.forEach(function(g) {
+        var opt = document.createElement('option');
+        opt.value = g.name;
+        opt.textContent = g.name;
+        if (selectedGroup && g.name === selectedGroup) {
+            opt.selected = true;
+        }
+        groupSelect.appendChild(opt);
+    });
+    if (avatarSettingsState.modelPool.length === 0) {
+        var opt = document.createElement('option');
+        opt.value = '';
+        opt.textContent = '暂无可用模型';
+        groupSelect.appendChild(opt);
+    }
+}
+
+function saveAvatarSettings() {
+    if (!avatarSettingsState.agentId) {
+        showToast('缺少智能体信息', 'warning');
+        return;
+    }
+    // 直接从表单元素重新读取，避免直接信任缓存对象
+    var groupSelect = document.getElementById('avatarModelGroupSelect');
+    var groupValue = groupSelect ? groupSelect.value : '';
+    var payload = {
+        disabled: !document.getElementById('avatarEnabledInput').checked,
+        soundEnabled: document.getElementById('avatarSoundInput').checked,
+        modelSetting: '',
+        modelGroup: groupValue,
+        personaSetting: document.getElementById('avatarPersonaInput').value || '',
+        avatarAiPrompt: document.getElementById('avatarPromptInput').value || ''
+    };
+    console.log('[avatar-settings] PUT /api/avatar/settings agentId=' + avatarSettingsState.agentId, payload);
+    var saveBtn = document.getElementById('avatarSettingsSaveBtn');
+    if (saveBtn) {
+        saveBtn.disabled = true;
+        saveBtn.textContent = '保存中...';
+    }
+    var requestUrl = '/api/avatar/settings?agentId=' + encodeURIComponent(avatarSettingsState.agentId);
+    fetch(requestUrl, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'same-origin',
+        body: JSON.stringify(payload)
+    })
+        .then(function(r) {
+            console.log('[avatar-settings] save response status=' + r.status);
+            return r.json();
+        })
+        .then(function(res) {
+            console.log('[avatar-settings] save response body', res);
+            if (res && res.code === 200) {
+                showToast('保存成功', 'info');
+                // 保存后重新拉取一次，确认数据已落地
+                return fetch('/api/avatar/settings?agentId=' + encodeURIComponent(avatarSettingsState.agentId) + '&_t=' + Date.now(), { credentials: 'same-origin' })
+                    .then(function(r) { return r.json(); })
+                    .then(function(verify) {
+                        console.log('[avatar-settings] 重新拉取校验', verify);
+                        if (verify && verify.data && verify.data.modelGroup !== payload.modelGroup) {
+                            console.warn('[avatar-settings] 保存与回读不一致，发送=' + payload.modelGroup + ' 实际=' + verify.data.modelGroup);
+                            showToast('保存成功，但回读校验不一致，请检查后端', 'warning');
+                        }
+                    })
+                    .catch(function() {})
+                    .then(function() { closeAvatarSettingsModal(); });
+            } else {
+                showToast((res && res.msg) || '保存失败', 'warning');
+            }
+        })
+        .catch(function(err) {
+            console.error('保存虚拟人配置失败', err);
+            showToast('保存失败', 'error');
+        })
+        .finally(function() {
+            if (saveBtn) {
+                saveBtn.disabled = false;
+                saveBtn.textContent = '保存';
+            }
+        });
+}
+
+// 暴露给其他页面（如 index.html 上的虚拟人设置按钮）调用。
+window.AvatarSettings = {
+    open: function(agentId, agentName) {
+        if (!agentId) {
+            showToast('缺少智能体信息', 'warning');
+            return;
+        }
+        showAvatarSettingsModal(agentId, agentName);
+    },
+    close: closeAvatarSettingsModal
+};

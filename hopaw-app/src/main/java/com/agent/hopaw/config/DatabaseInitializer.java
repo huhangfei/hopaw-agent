@@ -94,7 +94,7 @@ public class DatabaseInitializer implements CommandLineRunner {
             stmt.execute("CREATE INDEX IF NOT EXISTS idx_chat_memory_user ON chat_memory(user_id)");
 
             stmt.execute("CREATE TABLE IF NOT EXISTS chat_memory_obsolete (" +
-                    "id INTEGER PRIMARY KEY AUTOINCREMENT, " +
+                    "id INTEGER PRIMARY KEY, " +
                     "agent_id INTEGER NOT NULL, " +
                     "user_id TEXT DEFAULT 'admin', " +
                     "message_id TEXT NOT NULL, " +
@@ -107,6 +107,17 @@ public class DatabaseInitializer implements CommandLineRunner {
             stmt.execute("CREATE INDEX IF NOT EXISTS idx_chat_memory_session ON chat_memory_obsolete(session_id)");
             stmt.execute("CREATE INDEX IF NOT EXISTS idx_chat_memory_request ON chat_memory_obsolete(request_id)");
             stmt.execute("CREATE INDEX IF NOT EXISTS idx_chat_memory_user ON chat_memory_obsolete(user_id)");
+
+            // 记忆整理进度游标：记录每个 (session_id, user_id) 已处理到的 chat_memory / chat_memory_obsolete 最大 id
+            stmt.execute("CREATE TABLE IF NOT EXISTS chat_memory_processed_cursor (" +
+                    "session_id TEXT NOT NULL, " +
+                    "user_id TEXT NOT NULL, " +
+                    "last_chat_memory_id INTEGER DEFAULT 0, " +
+                    "last_obsolete_memory_id INTEGER DEFAULT 0, " +
+                    "update_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP, " +
+                    "PRIMARY KEY (session_id, user_id)" +
+                    ")");
+            stmt.execute("CREATE INDEX IF NOT EXISTS idx_chat_memory_cursor_user ON chat_memory_processed_cursor(user_id)");
 
             stmt.execute("CREATE TABLE IF NOT EXISTS long_term_memory (" +
                     "id INTEGER PRIMARY KEY AUTOINCREMENT, " +
@@ -410,10 +421,10 @@ public class DatabaseInitializer implements CommandLineRunner {
                         "SELECT 'Log Test', 'testLog', '0 */5 * * * *', 0, 'Print log every 5 minutes for testing', 1 " +
                         "WHERE NOT EXISTS (SELECT 1 FROM scheduled_tasks WHERE task_type = 'testLog')");
                 stmt.execute("INSERT INTO scheduled_tasks (task_name, task_type, cron_expression, enabled, description, builtin) " +
-                        "SELECT 'Long Term Memory', 'longTermMemory', '0/50 * * * * *', 0, 'Execute memory cleanup every 50 seconds', 1 " +
+                        "SELECT 'Long Term Memory', 'longTermMemory', '0/50 * * * * *', 1, 'Execute memory cleanup every 50 seconds', 1 " +
                         "WHERE NOT EXISTS (SELECT 1 FROM scheduled_tasks WHERE task_type = 'longTermMemory')");
                 stmt.execute("INSERT INTO scheduled_tasks (task_name, task_type, cron_expression, enabled, description, builtin) " +
-                        "SELECT 'Avatar Task', 'avatar', '0/30 * * * * *', 0, 'Execute avatar module task every 30 seconds', 1 " +
+                        "SELECT 'Avatar Task', 'avatar', '0/30 * * * * *', 1, 'Execute avatar module task every 30 seconds', 1 " +
                         "WHERE NOT EXISTS (SELECT 1 FROM scheduled_tasks WHERE task_type = 'avatar')");
             }
 

@@ -135,6 +135,23 @@
         WHERE session_id = #{sessionId} AND user_id = #{userId}
         ORDER BY create_time ASC
     </select>
+    <select id="findTaskDoneDistinctSessionUserPairs" resultMap="ChatMemoryResultMap">
+        SELECT DISTINCT session_id, user_id
+        FROM chat_memory
+        WHERE status = #{status}
+    </select>
+    <select id="findTaskDoneChatMemoryBySessionIdAndUserIdAfterId" resultMap="ChatMemoryResultMap">
+        SELECT id, agent_id, user_id, message_id, message_json, status, session_id, create_time
+        FROM chat_memory
+        WHERE session_id = #{sessionId} AND user_id = #{userId} AND id > #{lastId}
+        <if test="status!=null and status.size()>0">
+            AND status in
+            <foreach collection="status" separator="," item="item" close=")" open="(">
+                #{item}
+            </foreach>
+        </if>
+        ORDER BY id ASC
+    </select>
     <delete id="deleteObsoleteChatMemoryByIds">
         DELETE FROM chat_memory_obsolete
         WHERE  id IN
