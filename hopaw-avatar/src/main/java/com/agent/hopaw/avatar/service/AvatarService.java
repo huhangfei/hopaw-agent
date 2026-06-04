@@ -80,6 +80,7 @@ public class AvatarService {
                 cfg.setDisabled(false);
                 cfg.setSoundEnabled(true);
                 cfg.setTotalTokens(addedTokens.longValue());
+                cfg.setAvatarAiPrompt(AvatarSettingsService.DEFAULT_AVATAR_AI_PROMPT);
                 avatarConfigMapper.insert(cfg);
             } else {
                 avatarConfigMapper.addTotalTokens(userId, agentId, addedTokens);
