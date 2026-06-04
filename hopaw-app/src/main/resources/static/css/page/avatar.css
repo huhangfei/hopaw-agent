@@ -178,7 +178,7 @@
     transform: translateX(0);
 }
 .avatar-widget.minimized .avatar-canvas,
-.avatar-widget.minimized .avatar-bubble,
+.avatar-widget.minimized .avatar-bubble-stack,
 .avatar-widget.minimized .avatar-intimacy-card,
 .avatar-widget.minimized .avatar-minimize-btn {
     display: none;
@@ -190,11 +190,23 @@
     cursor: pointer;
 }
 
-.avatar-bubble {
+.avatar-bubble-stack {
     position: absolute;
     left: 50%;
     bottom: calc(100% + 12px);
-    transform: translateX(-50%) translateY(6px) scale(0.9);
+    transform: translateX(-50%);
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-end;
+    align-items: center;
+    gap: 6px;
+    pointer-events: none;
+    z-index: 1;
+}
+
+.avatar-bubble {
+    position: relative;
+    margin: 0;
     width: max-content;
     max-width: 220px;
     padding: 4px 10px;
@@ -205,17 +217,23 @@
     font-size: 12px;
     line-height: 20px;
     white-space: nowrap;
-    overflow: hidden;
+    overflow: visible;
     text-overflow: ellipsis;
     opacity: 0;
-    pointer-events: none;
+    transform: translateY(6px) scale(0.9);
+    pointer-events: auto;
     transition: opacity 0.25s ease, transform 0.25s ease;
-    z-index: 1;
 }
 
 .avatar-bubble.visible {
     opacity: 1;
-    transform: translateX(-50%) translateY(0) scale(1);
+    transform: translateY(0) scale(1);
+}
+
+.avatar-bubble.removing {
+    opacity: 0;
+    transform: translateY(-6px) scale(0.9);
+    pointer-events: none;
 }
 
 .avatar-bubble.dismissible {
@@ -266,6 +284,8 @@
 .avatar-bubble-content {
     position: relative;
     z-index: 2;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
 
 .avatar-bubble-tail {

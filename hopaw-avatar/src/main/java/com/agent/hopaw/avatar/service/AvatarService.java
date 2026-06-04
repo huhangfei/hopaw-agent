@@ -139,10 +139,34 @@ public class AvatarService {
         String phrase="";
         if(action.equals(AvatarAction.TOOL_EXECUTING) && message instanceof AiToolCallMessageInfo){
             AiToolCallMessageInfo toolCallMessageInfo=(AiToolCallMessageInfo)message;
-            currentActionCode+=toolCallMessageInfo.getToolName();
+            if(toolCallMessageInfo.getStatus().equals(AiToolCallMessageInfo.STATUS_STARTING))
+                currentActionCode+=toolCallMessageInfo.getToolName()+toolCallMessageInfo.getStatus();
+            if (currentActionCode.equals(lastActionCode)) {
+                return;
+            }
             List<String> toolDescriptions = toolCallMessageInfo.getToolDescriptions();
             if(toolDescriptions != null && !toolDescriptions.isEmpty()){
-                phrase="让我执行"+toolCallMessageInfo.getToolDescriptions().get(0);
+                String desc = toolCallMessageInfo.getToolDescriptions().get(0);
+                if(AiToolCallMessageInfo.STATUS_APPROVAL.equals(toolCallMessageInfo.getStatus())){
+                    phrase="我可以使用"+desc+"吗？";
+                }else if(AiToolCallMessageInfo.STATUS_REJECTED.equals(toolCallMessageInfo.getStatus())){
+                    phrase="那我就不用"+desc+"了！";
+                }else if(AiToolCallMessageInfo.STATUS_STARTING.equals(toolCallMessageInfo.getStatus())){
+                    phrase="让我执行"+desc+"看看";
+                }
+//                else if(AiToolCallMessageInfo.STATUS_PREPARING.equals(toolCallMessageInfo.getStatus())){
+//                    phrase="让我准备一下工具 "+desc;
+//                }
+//                else if(AiToolCallMessageInfo.STATUS_RUNNING.equals(toolCallMessageInfo.getStatus())){
+//                    phrase=desc+"运行很顺畅啊😊";
+//                }
+                else if(AiToolCallMessageInfo.STATUS_FAILED.equals(toolCallMessageInfo.getStatus())){
+                    phrase="看来"+desc+"无法运行了😭";
+                }else if(AiToolCallMessageInfo.STATUS_EXECUTED.equals(toolCallMessageInfo.getStatus())){
+                    phrase="看来"+desc+"已经运行完毕😊";
+                }else{
+                    return;
+                }
             }else{
                 phrase = action.getRandomPhrase();
             }

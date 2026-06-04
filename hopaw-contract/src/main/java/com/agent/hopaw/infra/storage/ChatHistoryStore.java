@@ -5,7 +5,5 @@ import com.agent.hopaw.infra.model.entity.ChatHistory;
 import java.util.List;
 
 public interface ChatHistoryStore {
-    void saveChatHistory(ChatHistory chatHistory);
-
     void saveChatHistoryBatch(List<ChatHistory> chatHistories);
 }

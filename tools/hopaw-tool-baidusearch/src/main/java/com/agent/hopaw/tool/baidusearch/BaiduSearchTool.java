@@ -74,7 +74,7 @@ public class BaiduSearchTool implements AgentTool {
 
     @Override
     public String getDescription() {
-        return "百度搜索网页信息，返回相关的网页标题和摘要内容";
+        return "百度搜索网页信息，返回相关的网页标题和摘要内容。请到：https://console.bce.baidu.com/ai-search/resource/manage 申请key";
     }
 
     @Override

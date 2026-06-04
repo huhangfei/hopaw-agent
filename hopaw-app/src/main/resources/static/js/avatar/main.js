@@ -1,8 +1,7 @@
 var LAppDefine = {
     CANVAS_ID: "avatarCanvas",
     WIDGET_ID: "avatarWidget",
-    BUBBLE_ID: "avatarBubble",
-    BUBBLE_CONTENT_ID: "avatarBubbleContent",
+    BUBBLE_STACK_ID: "avatarBubbleStack",
     INTIMACY_CARD_ID: "avatarIntimacyCard",
     INTIMACY_LEVEL_ID: "avatarIntimacyLevel",
     INTIMACY_TITLE_ID: "avatarIntimacyTitle",
@@ -37,7 +36,7 @@ var LAppDefine = {
         return;
     }
 
-    initBubble(widget);
+    initBubbleStack();
     initDrag(widget);
     initMinimize(widget);
     initIntimacy(widget);
@@ -79,7 +78,7 @@ var LAppDefine = {
 
     function enterMinimized(skipTransition) {
         if (widget._cancelMove) widget._cancelMove();
-        if (widget._avatarBubble) widget._avatarBubble.hide();
+        if (widget._avatarBubble) widget._avatarBubble.hideAll();
         if (widget._intimacy) widget._intimacy.hide();
         if (skipTransition) {
             var prev = widget.style.transition;
@@ -184,87 +183,112 @@ var LAppDefine = {
         }
     }
 
-    function initBubble() {
-        var bubble = document.getElementById(LAppDefine.BUBBLE_ID);
-        var content = document.getElementById(LAppDefine.BUBBLE_CONTENT_ID);
-        if (!bubble || !content) return;
-        var closeBtn = bubble.querySelector(".avatar-bubble-close");
+    function initBubbleStack() {
+        var stack = document.getElementById(LAppDefine.BUBBLE_STACK_ID);
+        if (!stack) return;
+        var bubbles = [];
+
+        function createBubbleEl(text, dismissible) {
+            var el = document.createElement("div");
+            el.className = "avatar-bubble";
+            if (dismissible) el.classList.add("dismissible");
+
+            var content = document.createElement("div");
+            content.className = "avatar-bubble-content";
+            content.textContent = text;
+            el.appendChild(content);
+
+            var tail = document.createElement("div");
+            tail.className = "avatar-bubble-tail";
+            el.appendChild(tail);
+
+            if (dismissible) {
+                var closeBtn = document.createElement("button");
+                closeBtn.type = "button";
+                closeBtn.className = "avatar-bubble-close";
+                closeBtn.setAttribute("aria-label", "关闭");
+                closeBtn.innerHTML = "&times;";
+                var onClose = function (e) {
+                    try { e.stopPropagation(); e.preventDefault(); } catch (_) {}
+                    dismissUserClosed();
+                    removeBubble(el);
+                };
+                closeBtn.addEventListener("pointerdown", onClose);
+                closeBtn.addEventListener("click", onClose);
+                closeBtn.addEventListener("pointerdown", function (e) {
+                    try { e.stopPropagation(); } catch (_) {}
+                }, true);
+                el.appendChild(closeBtn);
+            }
+
+            return el;
+        }
+
+        function removeBubble(el) {
+            if (!el || el._removing) return;
+            el._removing = true;
+            if (el._timer) {
+                clearTimeout(el._timer);
+                el._timer = null;
+            }
+            el.classList.remove("visible");
+            el.classList.add("removing");
+            // 动画结束后移除 DOM
+            var onDone = function () {
+                el.removeEventListener("transitionend", onDone);
+                if (el.parentNode) el.parentNode.removeChild(el);
+                // 清理 bubbles 数组
+                for (var i = 0; i < bubbles.length; i++) {
+                    if (bubbles[i] === el) { bubbles.splice(i, 1); break; }
+                }
+            };
+            el.addEventListener("transitionend", onDone);
+            // 兜底：500ms 后强制移除
+            setTimeout(function () {
+                if (el.parentNode) {
+                    el.removeEventListener("transitionend", onDone);
+                    el.parentNode.removeChild(el);
+                    for (var i = 0; i < bubbles.length; i++) {
+                        if (bubbles[i] === el) { bubbles.splice(i, 1); break; }
+                    }
+                }
+            }, 500);
+        }
+
         var api = {
-            el: bubble,
-            content: content,
-            timer: null,
             show: function (text, duration) {
                 if (!text) return;
                 if (isMinimized()) return;
-                this._render(text, false);
-                bubble.classList.add("visible");
-                if (this.timer) {
-                    clearTimeout(this.timer);
-                }
+                var el = createBubbleEl(text, false);
+                stack.appendChild(el);
+                bubbles.push(el);
+                // 下一帧触发进场动画
+                requestAnimationFrame(function () {
+                    el.classList.add("visible");
+                });
                 var ms = typeof duration === "number" && duration > 0
                     ? duration
                     : LAppDefine.BUBBLE_DEFAULT_DURATION;
-                this.timer = setTimeout(function () {
-                    bubble.classList.remove("visible");
-                    this.timer = null;
-                }.bind(this), ms);
+                el._timer = setTimeout(function () {
+                    removeBubble(el);
+                }, ms);
             },
             showPersistent: function (text, dismissible) {
                 if (!text) return;
                 if (isMinimized()) return;
-                this._render(text, dismissible === true);
-                bubble.classList.add("visible");
-                if (this.timer) {
-                    clearTimeout(this.timer);
-                    this.timer = null;
-                }
+                var el = createBubbleEl(text, dismissible === true);
+                stack.appendChild(el);
+                bubbles.push(el);
+                requestAnimationFrame(function () {
+                    el.classList.add("visible");
+                });
             },
-            _render: function (text, dismissible) {
-                content.textContent = text;
-                if (dismissible) {
-                    if (!closeBtn) {
-                        closeBtn = document.createElement("button");
-                        closeBtn.type = "button";
-                        closeBtn.className = "avatar-bubble-close";
-                        closeBtn.setAttribute("aria-label", "关闭");
-                        closeBtn.innerHTML = "&times;";
-                        bubble.appendChild(closeBtn);
-                    }
-                    closeBtn.style.display = "";
-                    if (!closeBtn._avatarBound) {
-                        var onClose = function (e) {
-                            try { e.stopPropagation(); e.preventDefault(); } catch (_) {}
-                            // 用户主动关闭：清空队列里尚未派发的主动消息，
-                            // 并进入短暂冷却，避免后续事件再次弹出
-                            dismissUserClosed();
-                            api.hide();
-                        };
-                        // 同时监听 pointerdown / click，覆盖桌面和移动端，
-                        // 避免 widget 上 touch-action:none 把 click 吞掉
-                        closeBtn.addEventListener("pointerdown", onClose);
-                        closeBtn.addEventListener("click", onClose);
-                        // 拦截拖拽：关闭按钮按下时不进入拖动状态
-                        closeBtn.addEventListener("pointerdown", function (e) {
-                            try { e.stopPropagation(); } catch (_) {}
-                        }, true);
-                        closeBtn._avatarBound = true;
-                    }
-                    bubble.classList.add("dismissible");
-                } else {
-                    if (closeBtn) closeBtn.style.display = "none";
-                    bubble.classList.remove("dismissible");
+            hideAll: function () {
+                // 复制数组，因为 removeBubble 会修改 bubbles
+                var all = bubbles.slice();
+                for (var i = 0; i < all.length; i++) {
+                    removeBubble(all[i]);
                 }
-            },
-            hide: function () {
-                bubble.classList.remove("visible");
-                bubble.classList.remove("dismissible");
-                // 关闭后清空文字，避免下次复用时短暂闪现旧内容
-                content.textContent = "";
-                if (this.timer) {
-                    clearTimeout(this.timer);
-                    this.timer = null;
-                }
-                if (closeBtn) closeBtn.style.display = "none";
             }
         };
         widget._avatarBubble = api;

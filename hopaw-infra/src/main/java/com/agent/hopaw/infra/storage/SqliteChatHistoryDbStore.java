@@ -1,7 +1,9 @@
 package com.agent.hopaw.infra.storage;
 
+import com.agent.hopaw.infra.event.ChatHistoryEvent;
 import com.agent.hopaw.infra.mapper.ChatHistoryMapper;
 import com.agent.hopaw.infra.model.entity.ChatHistory;
+import org.springframework.context.event.EventListener;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
@@ -20,8 +22,9 @@ public class SqliteChatHistoryDbStore implements ChatHistoryStore {
         this.chatHistoryMapper = chatHistoryMapper;
     }
 
-    @Override
-    public void saveChatHistory(ChatHistory chatHistory) {
+    @EventListener
+    public void listenChatHistoryEvent(ChatHistoryEvent chatHistoryEvent) {
+        ChatHistory chatHistory = chatHistoryEvent.getChatHistory();
         if(chatHistory.getMessageType().equals("tool_call")){
             ChatHistory old = chatHistoryMapper.findBySessionIdAndToolCallId(chatHistory.getSessionId(), chatHistory.getToolCallId());
             if(old != null){
@@ -45,12 +48,5 @@ public class SqliteChatHistoryDbStore implements ChatHistoryStore {
             return;
         }
         chatHistoryMapper.insertBatch(chatHistories);
-    }
-
-    private String formatMemoryContent(ChatHistory chatHistory) {
-        if (chatHistory.getMessageType().equals("tool_call")) {
-            return chatHistory.getRole() + ": " + chatHistory.getMessageType() + ": " + chatHistory.getToolName() + ": " + chatHistory.getToolArguments()+ ": " + chatHistory.getContent();
-        }
-        return chatHistory.getRole() + ": " + chatHistory.getMessageType() + ": " + chatHistory.getContent();
     }
 }

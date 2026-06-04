@@ -24,8 +24,6 @@ import java.util.stream.Collectors;
 public class AgentExecutorService implements IAgentExecutorService {
     private final IAgentService agentService;
     private final AiModelService aiModelService;
-    private final ChatHistoryStore chatHistoryStore;
-    private final TokenUsageService tokenUsageService;
     private final IChatMemoryService chatMemoryService;
     private final IAgentToolService agentToolService;
     private final EmbeddingModel embeddingModel;
@@ -38,11 +36,9 @@ public class AgentExecutorService implements IAgentExecutorService {
 
     private final Map<String, IAgentExecutor> agentExecutors = new HashMap<>();
 
-    public AgentExecutorService(IAgentService agentService, AiModelService aiModelService, ChatHistoryStore chatHistoryStore, TokenUsageService tokenUsageService, IChatMemoryService chatMemoryService, IAgentToolService agentToolService, EmbeddingModel embeddingModel, ISkillService ISkillService, IChatSessionService chatSessionService, IChatModelListenerProvider chatModelListenerProvider, ApplicationEventPublisher eventPublisher) {
+    public AgentExecutorService(IAgentService agentService, AiModelService aiModelService, IChatMemoryService chatMemoryService, IAgentToolService agentToolService, EmbeddingModel embeddingModel, ISkillService ISkillService, IChatSessionService chatSessionService, IChatModelListenerProvider chatModelListenerProvider, ApplicationEventPublisher eventPublisher) {
         this.agentService = agentService;
         this.aiModelService = aiModelService;
-        this.chatHistoryStore = chatHistoryStore;
-        this.tokenUsageService = tokenUsageService;
         this.chatMemoryService = chatMemoryService;
         this.agentToolService = agentToolService;
         this.embeddingModel = embeddingModel;
@@ -158,7 +154,7 @@ public class AgentExecutorService implements IAgentExecutorService {
         Function<Long, String> systemMessageProvider = aId -> {
             return getSystemMessage(userRequest.getSessionId(), agent, userRequest.getUserId(), selectedTools, userRequest.getSkillNames());
         };
-        AgentExecutor agentExecutor = new AgentExecutor(agentExecutorParams, chatMemoryService, embeddingModel, systemMessageProvider, chatHistoryStore, aiModelService, chatModelListenerProvider, eventPublisher, chatSessionService);
+        AgentExecutor agentExecutor = new AgentExecutor(agentExecutorParams, chatMemoryService, embeddingModel, systemMessageProvider, aiModelService, chatModelListenerProvider, eventPublisher, chatSessionService);
         agentExecutors.put(userRequest.getSessionId(), agentExecutor);
         return agentExecutor;
     }

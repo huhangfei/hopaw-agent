@@ -4,6 +4,7 @@ package com.agent.hopaw.infra.executor;
 import com.agent.hopaw.infra.constant.AiModelCallSourceEnum;
 import com.agent.hopaw.infra.constant.ChatMemoryStatusEnum;
 import com.agent.hopaw.infra.event.AgentMessageEvent;
+import com.agent.hopaw.infra.event.ChatHistoryEvent;
 import com.agent.hopaw.infra.exception.ToolCallRejectedException;
 import com.agent.hopaw.infra.memory.IChatMemoryService;
 import com.agent.hopaw.infra.model.entity.*;
@@ -76,7 +77,6 @@ public class AgentExecutor implements IAgentExecutor {
     private final Long aiModelId;
     private final AgentMessageHandler agentMessageHandler;
     private final AtomicBoolean cancelTask = new AtomicBoolean(false);
-    private final ChatHistoryStore chatHistoryStore;
     private final IChatMemoryService memoryStore;
     private final java.util.concurrent.ConcurrentMap<String, AtomicBoolean> toolCancelInvocations = new ConcurrentHashMap<>();
     private final java.util.concurrent.ConcurrentMap<String, CountDownLatch> toolCancelLatch = new ConcurrentHashMap<>();
@@ -100,7 +100,6 @@ public class AgentExecutor implements IAgentExecutor {
                          IChatMemoryService memoryStore,
                          EmbeddingModel embeddingModel,
                          Function<Long, String> systemMessageProvider,
-                         ChatHistoryStore chatHistoryStore,
                          AiModelService aiModelService,
                          IChatModelListenerProvider chatModelListenerProvider,
                          ApplicationEventPublisher eventPublisher,
@@ -114,7 +113,6 @@ public class AgentExecutor implements IAgentExecutor {
         this.requestId = UuidUtil.generateSimpleUUID();
 
         this.chatSessionService = chatSessionService;
-        this.chatHistoryStore = chatHistoryStore;
         this.chatModelListenerProvider = chatModelListenerProvider;
         this.eventPublisher = eventPublisher;
         this.aiModelService = aiModelService;
@@ -125,11 +123,7 @@ public class AgentExecutor implements IAgentExecutor {
         this.memoryId = new ChatMemoryId(sessionId,this.requestId, agentId, userId);
         // 创建工具执行线程池
         this.toolExecutor = createToolExecutor();
-        this.agentMessageHandler = new AgentMessageHandler(this.sessionId, this.requestId, eventPublisher, chatHistory -> {
-            chatHistory.setUserId(userId);
-            chatHistoryStore.saveChatHistory(chatHistory);
-
-        }, toolInfoMap);
+        this.agentMessageHandler = new AgentMessageHandler(this.sessionId, this.requestId, eventPublisher, toolInfoMap);
         for (ToolSetInfo toolSet : agentExecutorParams.getToolSets()) {
             for (ToolInfo tool : toolSet.getTools()) {
                 toolInfoMap.put(tool.getName(),tool);
@@ -596,8 +590,8 @@ public class AgentExecutor implements IAgentExecutor {
         List<ChatHistory> chatHistoryList = convertToChatHistory(contents);
         for (ChatHistory chatHistory : chatHistoryList) {
             chatHistory.setUserId(userId);
+            eventPublisher.publishEvent(new ChatHistoryEvent(chatHistory));
         }
-        chatHistoryStore.saveChatHistoryBatch(chatHistoryList);
     }
 
     private List<ChatHistory> convertToChatHistory(List<Content> contents) {
@@ -673,12 +667,13 @@ public class AgentExecutor implements IAgentExecutor {
         public AgentMessageHandler(String sessionId,
                                    String requestId,
                                    ApplicationEventPublisher eventPublisher,
-                                   Consumer<ChatHistory> chatHistoryConsumer,
                                    Map<String, ToolInfo> toolInfoMap) {
             this.sessionId = sessionId;
             this.requestId = requestId;
             this.eventPublisher = eventPublisher;
-            this.chatHistoryConsumer = chatHistoryConsumer;
+            this.chatHistoryConsumer = chatHistory -> {
+                eventPublisher.publishEvent(new ChatHistoryEvent(chatHistory));
+            };
             this.toolInfoMap = toolInfoMap;
         }
 
