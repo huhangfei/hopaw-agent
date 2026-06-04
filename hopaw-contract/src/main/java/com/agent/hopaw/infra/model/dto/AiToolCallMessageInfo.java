@@ -1,5 +1,7 @@
 package com.agent.hopaw.infra.model.dto;
 
+import java.util.List;
+
 public class AiToolCallMessageInfo extends AiMessageBaseInfo{
     public static final String TYPE_TOOL_CALL = "tool_call";
     /**
@@ -42,6 +44,7 @@ public class AiToolCallMessageInfo extends AiMessageBaseInfo{
     private String status;
     private String toolCallId;
     private String toolName;
+    private List<String> toolDescriptions;
     private Object arguments;
     private Object argumentsPartial;
     private Object result;
@@ -53,7 +56,7 @@ public class AiToolCallMessageInfo extends AiMessageBaseInfo{
         super(TYPE_TOOL_CALL);
     }
 
-    public static AiToolCallMessageInfo preparing(String sessionId, String requestId, String toolCallId, String toolName, Object argumentsPartial,Integer index) {
+    public static AiToolCallMessageInfo preparing(String sessionId, String requestId, String toolCallId, String toolName, Object argumentsPartial,Integer index, List<String> toolDescriptions) {
         AiToolCallMessageInfo info = new AiToolCallMessageInfo();
         info.setSessionId(sessionId);
         info.setRequestId(requestId);
@@ -62,9 +65,10 @@ public class AiToolCallMessageInfo extends AiMessageBaseInfo{
         info.setToolName(toolName);
         info.setArgumentsPartial(argumentsPartial);
         info.setIndex(index);
+        info.setToolDescriptions(toolDescriptions);
         return info;
     }
-    public static AiToolCallMessageInfo starting(String sessionId, String requestId, String toolCallId, String toolName, Object arguments) {
+    public static AiToolCallMessageInfo starting(String sessionId, String requestId, String toolCallId, String toolName, Object arguments, List<String> toolDescriptions) {
         AiToolCallMessageInfo info = new AiToolCallMessageInfo();
         info.setSessionId(sessionId);
         info.setRequestId(requestId);
@@ -72,9 +76,10 @@ public class AiToolCallMessageInfo extends AiMessageBaseInfo{
         info.setToolCallId(toolCallId);
         info.setToolName(toolName);
         info.setArguments(arguments);
+        info.setToolDescriptions(toolDescriptions);
         return info;
     }
-    public static AiToolCallMessageInfo approval(String sessionId, String requestId, String toolCallId, String toolName, Object arguments) {
+    public static AiToolCallMessageInfo approval(String sessionId, String requestId, String toolCallId, String toolName, Object arguments, List<String> toolDescriptions) {
         AiToolCallMessageInfo info = new AiToolCallMessageInfo();
         info.setSessionId(sessionId);
         info.setRequestId(requestId);
@@ -82,39 +87,38 @@ public class AiToolCallMessageInfo extends AiMessageBaseInfo{
         info.setToolCallId(toolCallId);
         info.setToolName(toolName);
         info.setArguments(arguments);
+        info.setToolDescriptions(toolDescriptions);
         return info;
     }
-
-    public static AiToolCallMessageInfo stoppable(String sessionId, String requestId, String toolCallId) {
+    public static AiToolCallMessageInfo stoppable(String sessionId, String requestId, String toolCallId, List<String> toolDescriptions) {
         AiToolCallMessageInfo info = new AiToolCallMessageInfo();
         info.setSessionId(sessionId);
         info.setRequestId(requestId);
         info.setStatus(STATUS_STOPPABLE);
         info.setToolCallId(toolCallId);
+        info.setToolDescriptions(toolDescriptions);
         return info;
     }
-
-
-    public static AiToolCallMessageInfo stopping(String sessionId, String requestId, String toolCallId) {
+    public static AiToolCallMessageInfo stopping(String sessionId, String requestId, String toolCallId, List<String> toolDescriptions) {
         AiToolCallMessageInfo info = new AiToolCallMessageInfo();
         info.setSessionId(sessionId);
         info.setRequestId(requestId);
         info.setStatus(STATUS_STOPPING);
         info.setToolCallId(toolCallId);
+        info.setToolDescriptions(toolDescriptions);
         return info;
     }
-
-    public static AiToolCallMessageInfo running(String sessionId, String requestId, String toolCallId, Object resultPartial) {
+    public static AiToolCallMessageInfo running(String sessionId, String requestId, String toolCallId, Object resultPartial, List<String> toolDescriptions) {
         AiToolCallMessageInfo info = new AiToolCallMessageInfo();
         info.setSessionId(sessionId);
         info.setRequestId(requestId);
         info.setStatus(STATUS_RUNNING);
         info.setToolCallId(toolCallId);
         info.setResultPartial(resultPartial);
+        info.setToolDescriptions(toolDescriptions);
         return info;
     }
-
-    public static AiToolCallMessageInfo executed(String sessionId, String requestId, String toolCallId, String toolName, Object arguments, Object result) {
+    public static AiToolCallMessageInfo executed(String sessionId, String requestId, String toolCallId, String toolName, Object arguments, Object result, List<String> toolDescriptions) {
         AiToolCallMessageInfo info = new AiToolCallMessageInfo();
         info.setSessionId(sessionId);
         info.setRequestId(requestId);
@@ -123,6 +127,7 @@ public class AiToolCallMessageInfo extends AiMessageBaseInfo{
         info.setToolName(toolName);
         info.setArguments(arguments);
         info.setResult(result);
+        info.setToolDescriptions(toolDescriptions);
         return info;
     }
     public static AiToolCallMessageInfo build(
@@ -132,7 +137,8 @@ public class AiToolCallMessageInfo extends AiMessageBaseInfo{
                                               String toolCallId,
                                               String toolName,
                                               Object arguments,
-                                              Object result) {
+                                              Object result,
+                                              List<String> toolDescriptions) {
         AiToolCallMessageInfo info = new AiToolCallMessageInfo();
         info.setSessionId(sessionId);
         info.setRequestId(requestId);
@@ -141,6 +147,7 @@ public class AiToolCallMessageInfo extends AiMessageBaseInfo{
         info.setToolName(toolName);
         info.setArguments(arguments);
         info.setResult(result);
+        info.setToolDescriptions(toolDescriptions);
         return info;
     }
 
@@ -207,5 +214,12 @@ public class AiToolCallMessageInfo extends AiMessageBaseInfo{
 
     public void setIndex(Integer index) {
         this.index = index;
+    }
+
+    public List<String> getToolDescriptions() {
+        return toolDescriptions;
+    }
+    public void setToolDescriptions(List<String> toolDescriptions) {
+        this.toolDescriptions = toolDescriptions;
     }
 }

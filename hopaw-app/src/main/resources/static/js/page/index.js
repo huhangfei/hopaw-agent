@@ -161,7 +161,11 @@ function handleToolCall(data, requestId) {
 
         var toolName = document.createElement('span');
         toolName.className = 'tool-call-name';
-        toolName.textContent = data.toolName || 'Unknown Tool';
+        var toolNameValue=data.toolName || 'Unknown Tool';
+        if(data.toolDescriptions && data.toolDescriptions.length > 0){
+            toolNameValue =data.toolDescriptions[0] || toolNameValue;
+        }
+        toolName.textContent =toolNameValue;
         toolCallHeader.appendChild(toolName);
 
         var toolCallStatus = document.createElement('span');

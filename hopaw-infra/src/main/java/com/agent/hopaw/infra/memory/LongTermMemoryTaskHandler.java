@@ -484,18 +484,18 @@ public class LongTermMemoryTaskHandler implements TaskHandler {
         }
 
         @ToolSecurityLevel(ToolSecurityLevel.Level.SAFE)
-        @Tool(value = "查询用户记忆详细内容,根据指定Id查询",searchBehavior = SearchBehavior.ALWAYS_VISIBLE)
+        @Tool(value = {"按Id查询用户记忆", "查询用户记忆详细内容,根据指定Id查询"},searchBehavior = SearchBehavior.ALWAYS_VISIBLE)
         public String queryUserMemoryById(@P(description="记忆Id")Long id){
             return longTermMemoryService.getMemoryContentById(id);
         }
         @ToolSecurityLevel(ToolSecurityLevel.Level.ALL_REQUIRE_APPROVAL)
-        @Tool(value = "删除用户记忆内容，根据指定id删除",searchBehavior = SearchBehavior.ALWAYS_VISIBLE)
+        @Tool(value = {"按Id删除用户记忆", "删除用户记忆内容，根据指定id删除"},searchBehavior = SearchBehavior.ALWAYS_VISIBLE)
         public String deleteUserMemoryById(@P(description="记忆Id") Long id){
             longTermMemoryService.deleteMemory(id);
             return "成功";
         }
         @ToolSecurityLevel(ToolSecurityLevel.Level.PARAM_REQUIRE_APPROVAL)
-        @Tool(value = "保存用户记忆,如果有记忆Id则为更新，如果记忆Id不存在则为新增。",searchBehavior = SearchBehavior.ALWAYS_VISIBLE)
+        @Tool(value = {"保存用户记忆", "保存用户记忆,如果有记忆Id则为更新，如果记忆Id不存在则为新增。"},searchBehavior = SearchBehavior.ALWAYS_VISIBLE)
         public String saveUserMemory(@P(description = "记忆类型:userProfile、taskRecords、empiricalKnowledge",required = false) String memoryType,
                                      @P(description = "记忆概要") String summary,
                                      @P(description = "记忆内容") String memory,

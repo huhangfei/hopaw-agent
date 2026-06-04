@@ -24,7 +24,7 @@ public class AvatarMoveTool {
     }
 
     @ToolSecurityLevel(ToolSecurityLevel.Level.SAFE)
-    @Tool(value = "控制虚拟人在用户屏幕上的相对移动（以当前所在位置为原点(0,0)，传入目标坐标和移动时长）",
+    @Tool(value = {"移动虚拟人", "控制虚拟人在用户屏幕上的相对移动（以当前所在位置为原点(0,0)，传入目标坐标和移动时长）"},
             searchBehavior = SearchBehavior.ALWAYS_VISIBLE)
     public String moveAvatar(@P("相对当前 X 方向的位移像素（可正可负，范围建议 -1000 ~ 1000）") int targetX,
                              @P("相对当前 Y 方向的位移像素（可正可负，范围建议 -1000 ~ 1000）") int targetY,

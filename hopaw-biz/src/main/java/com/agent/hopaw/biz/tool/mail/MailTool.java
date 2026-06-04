@@ -42,7 +42,7 @@ public class MailTool implements AgentTool {
     }
 
     @ToolSecurityLevel(ToolSecurityLevel.Level.ALL_REQUIRE_APPROVAL)
-    @Tool("发送纯文本邮件。")
+    @Tool(value = {"发送文本邮件", "发送纯文本邮件。"})
     public String sendTextMail(
             @P(description = "收件人邮箱地址") String to,
             @P(description = "邮件主题") String subject,
@@ -58,7 +58,7 @@ public class MailTool implements AgentTool {
     }
 
     @ToolSecurityLevel(ToolSecurityLevel.Level.ALL_REQUIRE_APPROVAL)
-    @Tool("发送HTML格式邮件。")
+    @Tool(value = {"发送HTML邮件", "发送HTML格式邮件。"})
     public String sendHtmlMail(
             @P(description = "收件人邮箱地址") String to,
             @P(description = "邮件主题") String subject,

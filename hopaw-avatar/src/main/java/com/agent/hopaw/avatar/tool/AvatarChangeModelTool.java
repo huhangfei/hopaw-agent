@@ -23,7 +23,7 @@ public class AvatarChangeModelTool {
     }
 
     @ToolSecurityLevel(ToolSecurityLevel.Level.SAFE)
-    @Tool(value = "让虚拟人换装：从用户可用的模型池中随机抽取一个不同的模型进行切换",
+    @Tool(value = {"切换虚拟人模型", "让虚拟人换装：从用户可用的模型池中随机抽取一个不同的模型进行切换"},
             searchBehavior = SearchBehavior.ALWAYS_VISIBLE)
     public String changeAvatarModel(InvocationParameters invocationParameters) {
         InvocationParametersWrapper wrapper = InvocationParametersWrapper.create(invocationParameters);

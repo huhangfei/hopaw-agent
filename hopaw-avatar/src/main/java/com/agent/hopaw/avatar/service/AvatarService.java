@@ -9,6 +9,7 @@ import com.agent.hopaw.avatar.model.UserIntimacyInfo;
 import com.agent.hopaw.infra.event.AgentMessageEvent;
 import com.agent.hopaw.infra.event.TokenUsageEvent;
 import com.agent.hopaw.infra.model.dto.AiMessageBaseInfo;
+import com.agent.hopaw.infra.model.dto.AiToolCallMessageInfo;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.context.ApplicationEventPublisher;
@@ -29,7 +30,7 @@ public class AvatarService {
     private final AvatarConfigMapper avatarConfigMapper;
     private final ApplicationEventPublisher eventPublisher;
     /** userId -> agentId -> AvatarAction */
-    private final Map<String, Map<Long, AvatarAction>> userAgentLastActionCache = new ConcurrentHashMap<>();
+    private final Map<String, Map<Long, String>> userAgentLastActionCache = new ConcurrentHashMap<>();
 
     public AvatarService(AvatarIntimacyConfig intimacyConfig,
                          AvatarConfigMapper avatarConfigMapper,
@@ -130,18 +131,31 @@ public class AvatarService {
         }
 
         AvatarAction action = AvatarAction.fromMessageType(message.getType());
-        Map<Long, AvatarAction> lastActions = userAgentLastActionCache
-                .computeIfAbsent(userId, k -> new ConcurrentHashMap<>());
-        AvatarAction lastAction = lastActions.get(agentId);
-        if (action == lastAction) {
-            return;
-        }
-        lastActions.put(agentId, action);
+        Map<Long, String> lastActions = userAgentLastActionCache
+                .computeIfAbsent(userId, k -> new ConcurrentHashMap<>(5));
+        String lastActionCode = lastActions.get(agentId);
 
-        String phrase = action.getRandomPhrase();
+        String currentActionCode = action.getCode();
+        String phrase="";
+        if(action.equals(AvatarAction.TOOL_EXECUTING) && message instanceof AiToolCallMessageInfo){
+            AiToolCallMessageInfo toolCallMessageInfo=(AiToolCallMessageInfo)message;
+            currentActionCode+=toolCallMessageInfo.getToolName();
+            List<String> toolDescriptions = toolCallMessageInfo.getToolDescriptions();
+            if(toolDescriptions != null && !toolDescriptions.isEmpty()){
+                phrase="让我执行"+toolCallMessageInfo.getToolDescriptions().get(0);
+            }else{
+                phrase = action.getRandomPhrase();
+            }
+        }else{
+            phrase = action.getRandomPhrase();
+        }
         if (phrase == null || phrase.isEmpty()) {
             phrase = action.getDescription();
         }
+        if (currentActionCode.equals(lastActionCode)) {
+            return;
+        }
+        lastActions.put(agentId, currentActionCode);
         AvatarEvent avatarEvent = AvatarEvent.action(userId, agentId, action, phrase);
         publish(avatarEvent);
     }

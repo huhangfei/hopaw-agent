@@ -33,11 +33,7 @@ import java.net.URL;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.security.MessageDigest;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Comparator;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.stream.Collectors;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipInputStream;
@@ -45,7 +41,6 @@ import java.util.zip.ZipOutputStream;
 
 @Service
 public class AgentToolService implements IAgentToolService {
-
     private static final Logger log = LoggerFactory.getLogger(AgentToolService.class);
     private static final int BUFFER_SIZE = 8192;
 
@@ -99,6 +94,17 @@ public class AgentToolService implements IAgentToolService {
         result.addAll(getAllPluginToolSets());
         return result;
     }
+
+    @Override
+    public Map<String, String> getToolNameAndDescriptionMap() {
+        Map<String,String> toolNameMap = new HashMap<>();
+        getToolSets().forEach(toolSet -> toolSet.getTools().forEach(
+                tool -> toolNameMap.put(tool.getName(), tool.getDescriptions().size()>0 ? tool.getDescriptions().get(0) : tool.getName())
+        ));
+        toolNameMap.put(AgentTool.TOOL_SEARCH_TOOL_NAME, AgentTool.TOOL_SEARCH_TOOL_DESCRIPTION);
+        return toolNameMap;
+    }
+
     private List<ToolSetInfo> getAllPluginToolSets() {
         List<ToolSetInfo> result = new ArrayList<>();
         List<DynamicToolRegistry.PluginEntry> allPluginEntries = dynamicToolRegistry.getAllPluginEntries();
@@ -148,6 +154,7 @@ public class AgentToolService implements IAgentToolService {
             params.sort(Comparator.comparing(p -> p.isRequired() ? 0 : 1));
 
             ToolInfo toolInfo = new ToolInfo(toolName, description, params);
+            toolInfo.setDescriptions(Arrays.asList(toolAnn.value()));
             ToolSecurityLevel methodSecurityAnn = method.getAnnotation(ToolSecurityLevel.class);
             if (methodSecurityAnn != null) {
                 toolInfo.setSecurityLevel(methodSecurityAnn.value());

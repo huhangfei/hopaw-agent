@@ -18,9 +18,7 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 
 import javax.servlet.http.HttpServletRequest;
-import java.util.Collections;
-import java.util.List;
-import java.util.UUID;
+import java.util.*;
 
 @Controller
 public class ChatController {
@@ -70,6 +68,16 @@ public class ChatController {
             if(session != null){
                 List<ChatHistoryVO> chatHistory = chatHistoryService.findBySessionId(sessionId, 100);
                 Collections.reverse(chatHistory);
+                if(!chatHistory.isEmpty()){
+                    Map<String, String> toolNameAndDescriptionMap = agentToolService.getToolNameAndDescriptionMap();
+                    chatHistory.forEach(chatHistoryVO -> {
+                        if(chatHistoryVO.getToolName() != null){
+                            chatHistoryVO.setToolName(toolNameAndDescriptionMap.get(chatHistoryVO.getToolName()));
+                        }
+                    });
+                }
+
+
                 model.addAttribute("chatHistory", chatHistory);
                 model.addAttribute("agentExecutorState", agentExecutorService.isAgentExecutorRunning(session.getSessionId()));
                 selectedAgent=agents.stream().filter(agent -> agent.getId().equals(session.getAgentId())).findFirst().orElse(null);

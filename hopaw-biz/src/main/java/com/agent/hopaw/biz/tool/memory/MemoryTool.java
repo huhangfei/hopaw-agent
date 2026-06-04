@@ -51,7 +51,7 @@ public class MemoryTool implements AgentTool {
     }
 
     @ToolSecurityLevel(ToolSecurityLevel.Level.PARAM_REQUIRE_APPROVAL)
-    @Tool(value = "保存用户记忆,如果有记忆Id则为更新，如果记忆Id不存在则为新增。",searchBehavior = SearchBehavior.ALWAYS_VISIBLE)
+    @Tool(value = {"保存用户记忆", "保存用户记忆,如果有记忆Id则为更新，如果记忆Id不存在则为新增。"},searchBehavior = SearchBehavior.ALWAYS_VISIBLE)
     public String saveUserMemory(@P(description = "记忆类型:userProfile、taskRecords、empiricalKnowledge",required = false) String memoryType,
                                  @P(description = "记忆概要") String summary,
                                  @P(description = "记忆内容") String memory,
@@ -63,7 +63,7 @@ public class MemoryTool implements AgentTool {
     }
 
     @ToolSecurityLevel(ToolSecurityLevel.Level.SAFE)
-    @Tool(value = "语义搜索历史记忆，根据查询关键词查找最相关的记忆内容",searchBehavior = SearchBehavior.ALWAYS_VISIBLE)
+    @Tool(value = {"搜索用户记忆", "语义搜索历史记忆，根据查询关键词查找最相关的记忆内容"},searchBehavior = SearchBehavior.ALWAYS_VISIBLE)
     public String searchUserMemory(@P(description = "搜索查询关键词") String query,
                                    @P(description = "最大返回结果数量，默认5", required = false) Integer maxResults,
                                    InvocationParameters invocationParameters) {

@@ -39,7 +39,7 @@ public class SkillTool implements AgentTool {
     }
 
     @ToolSecurityLevel(ToolSecurityLevel.Level.SAFE)
-    @Tool(value = "查询所有技能列表，仅返回每个技能的 名称、Slug 和 描述",searchBehavior = SearchBehavior.ALWAYS_VISIBLE)
+    @Tool(value = {"列出技能", "查询所有技能列表，仅返回每个技能的 名称、Slug 和 描述"},searchBehavior = SearchBehavior.ALWAYS_VISIBLE)
     public String listSkills() {
         List<SkillInfo> skills = skillService.listSkills();
         if (skills == null || skills.isEmpty()) {
@@ -58,7 +58,7 @@ public class SkillTool implements AgentTool {
     }
 
     @ToolSecurityLevel(ToolSecurityLevel.Level.SAFE)
-    @Tool(value = "根据 Slug 查询技能的具体内容，返回技能的名称、版本、描述、主页和完整内容",searchBehavior = SearchBehavior.ALWAYS_VISIBLE)
+    @Tool(value = {"通过Slug获取技能", "根据 Slug 查询技能的具体内容，返回技能的名称、版本、描述、主页和完整内容"},searchBehavior = SearchBehavior.ALWAYS_VISIBLE)
     public String getSkillBySlug(@P(description = "技能的 Slug 标识") String slug) {
         SkillInfo found = skillService.getSkill(slug);
 

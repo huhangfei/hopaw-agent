@@ -136,7 +136,7 @@ public class WebPageTool implements AgentTool {
     }
 
     @ToolSecurityLevel(ToolSecurityLevel.Level.SAFE)
-    @Tool("获取网页内容，输入URL地址，返回网页的纯文本内容")
+    @Tool(value = {"获取网页", "获取网页内容，输入URL地址，返回网页的纯文本内容"})
     public String fetchWebPage(@P(description = "URL地址") String url) {
         // 确保 Playwright 已初始化
         ensureInitialized();

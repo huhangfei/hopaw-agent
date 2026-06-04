@@ -32,7 +32,7 @@ public class AvatarProactiveTool {
     }
 
     @ToolSecurityLevel(ToolSecurityLevel.Level.SAFE)
-    @Tool(value = "向用户发送虚拟人主动消息",
+    @Tool(value = {"向用户发送消息", "向用户发送虚拟人主动消息"},
             searchBehavior = dev.langchain4j.agent.tool.SearchBehavior.ALWAYS_VISIBLE)
     public String sendMessageToUser(@P("需要推送给用户的消息内容") String message,
                                    InvocationParameters invocationParameters) {

@@ -63,7 +63,7 @@ public class SshTool implements AgentTool {
     }
 
     @ToolSecurityLevel(ToolSecurityLevel.Level.ALL_REQUIRE_APPROVAL)
-    @Tool("SSH远程连接服务器，建立SSH会话。密码属于敏感信息，如果账号密码错误不要自行猜测，请搜索记忆或询问用户。连接成功后会返回sessionKey，后续操作需要使用此sessionKey。")
+    @Tool(value = {"SSH连接", "SSH远程连接服务器，建立SSH会话。密码属于敏感信息，如果账号密码错误不要自行猜测，请搜索记忆或询问用户。连接成功后会返回sessionKey，后续操作需要使用此sessionKey。"})
     public String sshConnect(
             @P(description = "服务器IP地址或域名") String host,
             @P(description = "SSH端口号，默认22", required = false) Integer port,
@@ -98,7 +98,7 @@ public class SshTool implements AgentTool {
     }
 
     @ToolSecurityLevel(ToolSecurityLevel.Level.ALL_REQUIRE_APPROVAL)
-    @Tool("在已连接的SSH会话上执行远程命令，需要先通过sshConnect建立连接获取sessionKey")
+    @Tool(value = {"SSH执行命令", "在已连接的SSH会话上执行远程命令，需要先通过sshConnect建立连接获取sessionKey"})
     public String sshExec(
             @P(description = "会话标识，由sshConnect返回的sessionKey") String sessionKey,
             @P(description = "要执行的远程命令") String command,
@@ -181,7 +181,7 @@ public class SshTool implements AgentTool {
     }
 
     @ToolSecurityLevel(ToolSecurityLevel.Level.ALL_REQUIRE_APPROVAL)
-    @Tool("通过SFTP上传本地文件到远程服务器，需要先建立SSH连接")
+    @Tool(value = {"SSH上传文件", "通过SFTP上传本地文件到远程服务器，需要先建立SSH连接"})
     public String sshUpload(
             @P(description = "会话标识，由sshConnect返回的sessionKey") String sessionKey,
             @P(description = "本地文件路径") String localPath,
@@ -232,7 +232,7 @@ public class SshTool implements AgentTool {
     }
 
     @ToolSecurityLevel(ToolSecurityLevel.Level.ALL_REQUIRE_APPROVAL)
-    @Tool("通过SFTP从远程服务器下载文件到本地，需要先建立SSH连接")
+    @Tool(value = {"SSH下载文件", "通过SFTP从远程服务器下载文件到本地，需要先建立SSH连接"})
     public String sshDownload(
             @P(description = "会话标识，由sshConnect返回的sessionKey") String sessionKey,
             @P(description = "远程服务器文件路径") String remotePath,
@@ -281,7 +281,7 @@ public class SshTool implements AgentTool {
     }
 
     @ToolSecurityLevel(ToolSecurityLevel.Level.SAFE)
-    @Tool("断开SSH远程连接，释放会话资源")
+    @Tool(value = {"SSH断开连接", "断开SSH远程连接，释放会话资源"})
     public String sshDisconnect(
             @P(description = "会话标识，由sshConnect返回的sessionKey") String sessionKey) {
         if (sessionKey == null || sessionKey.trim().isEmpty()) {
@@ -298,7 +298,7 @@ public class SshTool implements AgentTool {
     }
 
     @ToolSecurityLevel(ToolSecurityLevel.Level.SAFE)
-    @Tool("断开所有SSH远程连接，清理所有会话资源")
+    @Tool(value = {"断开所有SSH连接", "断开所有SSH远程连接，清理所有会话资源"})
     public String sshDisconnectAll() {
         int count = 0;
         for (Map.Entry<String, Session> entry : SESSION_CACHE.entrySet()) {

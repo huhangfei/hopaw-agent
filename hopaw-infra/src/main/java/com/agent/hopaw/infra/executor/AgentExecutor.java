@@ -39,7 +39,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.util.StringUtils;
 
-import java.io.IOException;
 import java.time.LocalDateTime;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
@@ -83,6 +82,7 @@ public class AgentExecutor implements IAgentExecutor {
     private final java.util.concurrent.ConcurrentMap<String, CountDownLatch> toolCancelLatch = new ConcurrentHashMap<>();
     private final java.util.concurrent.ConcurrentMap<String, Consumer<String>> toolStopHooks = new ConcurrentHashMap<>();
     private final java.util.concurrent.ConcurrentMap<String, PendingResponse<Boolean>> toolApprovalLocks = new ConcurrentHashMap<>();
+    private final java.util.concurrent.ConcurrentMap<String, String> toolNameByCallIdMap = new ConcurrentHashMap<>();
     private final Map<String, ToolInfo> toolInfoMap = new HashMap<>();
     private final ChatMemoryId memoryId;
     private final EmbeddingModel embeddingModel;
@@ -129,12 +129,15 @@ public class AgentExecutor implements IAgentExecutor {
             chatHistory.setUserId(userId);
             chatHistoryStore.saveChatHistory(chatHistory);
 
-        });
+        }, toolInfoMap);
         for (ToolSetInfo toolSet : agentExecutorParams.getToolSets()) {
             for (ToolInfo tool : toolSet.getTools()) {
                 toolInfoMap.put(tool.getName(),tool);
             }
         }
+        ToolInfo toolInfo = new ToolInfo(AgentTool.TOOL_SEARCH_TOOL_NAME, AgentTool.TOOL_SEARCH_TOOL_DESCRIPTION,new ArrayList<>(0));
+        toolInfo.setDescriptions(Arrays.asList(AgentTool.TOOL_SEARCH_TOOL_DESCRIPTION));
+        toolInfoMap.put(AgentTool.TOOL_SEARCH_TOOL_NAME, toolInfo);
     }
 
     @Override
@@ -157,6 +160,14 @@ public class AgentExecutor implements IAgentExecutor {
         return aiModelId;
     }
 
+    private List<String> getToolDescriptions(String toolName) {
+        ToolInfo toolInfo = toolInfoMap.get(toolName);
+        if (toolInfo == null || toolInfo.getDescriptions() == null || toolInfo.getDescriptions().isEmpty()) {
+            return new ArrayList<>();
+        }
+        return toolInfo.getDescriptions();
+    }
+
     @Override
     public void stop() {
 
@@ -167,9 +178,12 @@ public class AgentExecutor implements IAgentExecutor {
         //停止所有工具
         toolCancelInvocations.values().forEach(atomicBoolean -> atomicBoolean.set(true));
         toolStopHooks.entrySet().forEach(entry -> {
-            AiToolCallMessageInfo stopping = AiToolCallMessageInfo.stopping(sessionId, requestId, entry.getKey());
+            String callId = entry.getKey();
+            String toolName = toolNameByCallIdMap.get(callId);
+            List<String> toolDescriptions = toolName == null ? new ArrayList<>() : getToolDescriptions(toolName);
+            AiToolCallMessageInfo stopping = AiToolCallMessageInfo.stopping(sessionId, requestId, callId, toolDescriptions);
             agentMessageHandler.sendMessageToChannel(stopping);
-            entry.getValue().accept(entry.getKey());
+            entry.getValue().accept(callId);
         });
         toolCancelLatch.values().forEach(countDownLatch -> {
             try {
@@ -211,7 +225,9 @@ public class AgentExecutor implements IAgentExecutor {
     @Override
     public void addToolStopHook(String callId, Consumer<String> hook) {
         toolStopHooks.put(callId, hook);
-        AiToolCallMessageInfo stoppable = AiToolCallMessageInfo.stoppable(sessionId, requestId, callId);
+        String toolName = toolNameByCallIdMap.get(callId);
+        List<String> toolDescriptions = toolName == null ? new ArrayList<>() : getToolDescriptions(toolName);
+        AiToolCallMessageInfo stoppable = AiToolCallMessageInfo.stoppable(sessionId, requestId, callId, toolDescriptions);
         agentMessageHandler.sendMessageToChannel(stoppable);
     }
 
@@ -223,7 +239,9 @@ public class AgentExecutor implements IAgentExecutor {
         }
         if (toolStopHooks.containsKey(callId)) {
             Consumer<String> hook = toolStopHooks.get(callId);
-            AiToolCallMessageInfo stopping = AiToolCallMessageInfo.stopping(sessionId, requestId, callId);
+            String toolName = toolNameByCallIdMap.get(callId);
+            List<String> toolDescriptions = toolName == null ? new ArrayList<>() : getToolDescriptions(toolName);
+            AiToolCallMessageInfo stopping = AiToolCallMessageInfo.stopping(sessionId, requestId, callId, toolDescriptions);
             agentMessageHandler.sendMessageToChannel(stopping);
             hook.accept(callId);
         }
@@ -241,12 +259,15 @@ public class AgentExecutor implements IAgentExecutor {
 
     @Override
     public void sendToolRunningContent(String callId, Object resultPartial) {
-        AiToolCallMessageInfo aiToolCallMessageInfo = AiToolCallMessageInfo.running(sessionId, requestId, callId, resultPartial);
+        String toolName = toolNameByCallIdMap.get(callId);
+        List<String> toolDescriptions = toolName == null ? new ArrayList<>() : getToolDescriptions(toolName);
+        AiToolCallMessageInfo aiToolCallMessageInfo = AiToolCallMessageInfo.running(sessionId, requestId, callId, resultPartial, toolDescriptions);
         agentMessageHandler.sendMessageToChannel(aiToolCallMessageInfo);
     }
 
     private void sendToolApprovalMessage(String sessionId,String callId, String toolName, Object arguments){
-        AiToolCallMessageInfo aiToolCallMessageInfo = AiToolCallMessageInfo.approval(sessionId, requestId, callId, toolName,arguments);
+        List<String> toolDescriptions = getToolDescriptions(toolName);
+        AiToolCallMessageInfo aiToolCallMessageInfo = AiToolCallMessageInfo.approval(sessionId, requestId, callId, toolName, arguments, toolDescriptions);
         agentMessageHandler.sendMessageToChannel(aiToolCallMessageInfo);
     }
     @Override
@@ -326,6 +347,7 @@ public class AgentExecutor implements IAgentExecutor {
                             toolCancelInvocations.put(toolCall.id(), new AtomicBoolean(false));
                             toolCancelLatch.put(toolCall.id(), new CountDownLatch(1));
                         }
+                        toolNameByCallIdMap.put(toolCall.id(), toolCall.name());
                         //logger.info("Tool call: {}", toolCall.toString());
                         agentMessageHandler.partialToolExecutionHandler(toolCall);
                         //工具或任务停止
@@ -351,7 +373,7 @@ public class AgentExecutor implements IAgentExecutor {
                         toolExecution.invocationContext().invocationParameters().put("toolCallId", toolCallId);
                         //拦截执行
                         boolean allowed=false;
-                        if(toolName.equals("tool_search_tool") || ToolSecurityLevel.Level.SAFE.equals(toolLevel)) {
+                        if(toolName.equals(AgentTool.TOOL_SEARCH_TOOL_NAME) || ToolSecurityLevel.Level.SAFE.equals(toolLevel)) {
                             allowed=true;
                         }else if("auto".equals(agentExecutorParams.getToolCallPermission())){
                             //完全自动
@@ -398,6 +420,7 @@ public class AgentExecutor implements IAgentExecutor {
                         if (toolCancelInvocations.containsKey(toolExecutionRequest.id())) {
                             toolCancelInvocations.remove(toolExecutionRequest.id());
                         }
+                        toolNameByCallIdMap.remove(toolExecutionRequest.id());
                         //工具执行完成
                         agentMessageHandler.toolCallHandler(AiToolCallMessageInfo.STATUS_EXECUTED, toolExecutionRequest.id(),toolExecutionRequest.name(),toolExecutionRequest.arguments(),toolExecution.result());
                     });
@@ -413,6 +436,7 @@ public class AgentExecutor implements IAgentExecutor {
             toolCancelInvocations.clear();
             toolStopHooks.clear();
             toolApprovalLocks.clear();
+            toolNameByCallIdMap.clear();
             taskLatch.countDown();
             agentMessageHandler.taskDone();
             updateMemoryStateToDone();
@@ -644,14 +668,18 @@ public class AgentExecutor implements IAgentExecutor {
         private AiToolCallMessageInfo aiToolCallMessageInfo;
         private final ApplicationEventPublisher eventPublisher;
         private final Consumer<ChatHistory> chatHistoryConsumer;
+        private final Map<String, ToolInfo> toolInfoMap;
+
         public AgentMessageHandler(String sessionId,
                                    String requestId,
                                    ApplicationEventPublisher eventPublisher,
-                                   Consumer<ChatHistory> chatHistoryConsumer) {
+                                   Consumer<ChatHistory> chatHistoryConsumer,
+                                   Map<String, ToolInfo> toolInfoMap) {
             this.sessionId = sessionId;
             this.requestId = requestId;
             this.eventPublisher = eventPublisher;
             this.chatHistoryConsumer = chatHistoryConsumer;
+            this.toolInfoMap = toolInfoMap;
         }
 
         public void sendMessageToChannel(AiMessageBaseInfo message) {
@@ -690,22 +718,27 @@ public class AgentExecutor implements IAgentExecutor {
             taskDone();
         }
 
+
         private void partialToolExecutionHandler(PartialToolCall toolCall) {
+            List<String> toolDescriptions = getToolDescriptions(toolCall.name());
             this.aiToolCallMessageInfo = AiToolCallMessageInfo.preparing(sessionId, requestId,
                     toolCall.id(),
                     toolCall.name(),
                     toolCall.partialArguments(),
-                    toolCall.index()
+                    toolCall.index(),
+                    toolDescriptions
             );
             messageTypeChangedChatHistoryHandler(AiToolCallMessageInfo.TYPE_TOOL_CALL+"_"+aiToolCallMessageInfo.getStatus());
         }
 
         private void toolCallHandler(String status,String id, String toolName, String arguments, Object result) {
+            List<String> toolDescriptions = getToolDescriptions(toolName);
             this.aiToolCallMessageInfo = AiToolCallMessageInfo.build(status,sessionId, requestId,
                     id,
                     toolName,
                     JSON.parseObject(arguments),
-                    result
+                    result,
+                    toolDescriptions
             );
             messageTypeChangedChatHistoryHandler(AiToolCallMessageInfo.TYPE_TOOL_CALL+"_"+status);
         }
