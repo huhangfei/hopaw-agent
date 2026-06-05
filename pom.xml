@@ -23,7 +23,7 @@
         <module>hopaw-avatar</module>
         <module>hopaw-app</module>
         <module>hopaw-plugin-repo</module>
-<!--        <module>tools/hopaw-tool-webpage</module>-->
+        <module>tools/hopaw-tool-webpage</module>
         <module>tools/hopaw-tool-ssh</module>
         <module>tools/hopaw-tool-demo</module>
         <module>tools/hopaw-tool-dingtalk</module>

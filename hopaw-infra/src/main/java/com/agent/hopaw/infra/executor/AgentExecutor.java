@@ -659,7 +659,6 @@ public class AgentExecutor implements IAgentExecutor {
         private String currentMessageType = "";
         private StringBuilder messageBuilder = new StringBuilder();
         private StringBuilder thinkingBuilder = new StringBuilder();
-        private AiToolCallMessageInfo aiToolCallMessageInfo;
         private final ApplicationEventPublisher eventPublisher;
         private final Consumer<ChatHistory> chatHistoryConsumer;
         private final Map<String, ToolInfo> toolInfoMap;
@@ -716,25 +715,27 @@ public class AgentExecutor implements IAgentExecutor {
 
         private void partialToolExecutionHandler(PartialToolCall toolCall) {
             List<String> toolDescriptions = getToolDescriptions(toolCall.name());
-            this.aiToolCallMessageInfo = AiToolCallMessageInfo.preparing(sessionId, requestId,
+            AiToolCallMessageInfo toolCallMessageInfo=  AiToolCallMessageInfo.preparing(sessionId, requestId,
                     toolCall.id(),
                     toolCall.name(),
                     toolCall.partialArguments(),
                     toolCall.index(),
                     toolDescriptions
             );
-            messageTypeChangedChatHistoryHandler(AiToolCallMessageInfo.TYPE_TOOL_CALL+"_"+aiToolCallMessageInfo.getStatus());
+            messageTypeChangedChatHistoryHandler(AiToolCallMessageInfo.TYPE_TOOL_CALL+"_"+toolCallMessageInfo.getStatus());
+            sendToolCallHistoryEventAndToChannel(toolCallMessageInfo);
         }
 
         private void toolCallHandler(String status,String id, String toolName, String arguments, Object result) {
             List<String> toolDescriptions = getToolDescriptions(toolName);
-            this.aiToolCallMessageInfo = AiToolCallMessageInfo.build(status,sessionId, requestId,
+            AiToolCallMessageInfo toolCallMessageInfo= AiToolCallMessageInfo.build(status,sessionId, requestId,
                     id,
                     toolName,
                     JSON.parseObject(arguments),
                     result,
                     toolDescriptions
             );
+            sendToolCallHistoryEventAndToChannel(toolCallMessageInfo);
             messageTypeChangedChatHistoryHandler(AiToolCallMessageInfo.TYPE_TOOL_CALL+"_"+status);
         }
 
@@ -767,10 +768,6 @@ public class AgentExecutor implements IAgentExecutor {
          */
         private void messageTypeChangedChatHistoryHandler(String currentMessageType) {
             this.currentMessageType = currentMessageType;
-            //tool 调用
-            if (currentMessageType.startsWith(AiToolCallMessageInfo.TYPE_TOOL_CALL)) {
-                sendMessageToChannel(aiToolCallMessageInfo);
-            }
             if (messageTypeChanged()) {
                 //需要处理上个类型的消息
                 if (lastMessageType.equals("message")) {
@@ -788,23 +785,24 @@ public class AgentExecutor implements IAgentExecutor {
                     chatHistoryConsumer.accept(textChat);
                     thinkingBuilder = new StringBuilder(100);
                 }
-                //tool 调用
-                if (currentMessageType.startsWith(AiToolCallMessageInfo.TYPE_TOOL_CALL)) {
-                    //入库
-                    ChatHistory toolChat = new ChatHistory(
-                            agentId, "agent", AiToolCallMessageInfo.TYPE_TOOL_CALL,
-                            aiToolCallMessageInfo.getToolCallId(),
-                            aiToolCallMessageInfo.getToolName(),
-                            (aiToolCallMessageInfo.getArguments() != null ? aiToolCallMessageInfo.getArguments().toString() : null),
-                            aiToolCallMessageInfo.getResult() != null ? (String) aiToolCallMessageInfo.getResult() : null
-                    );
-                    toolChat.setToolCallStatus(aiToolCallMessageInfo.getStatus());
-                    toolChat.setSessionId(sessionId);
-                    chatHistoryConsumer.accept(toolChat);
-                }
                 lastMessageType = currentMessageType;
             }
 
+        }
+
+        private void sendToolCallHistoryEventAndToChannel(AiToolCallMessageInfo callMessageInfo){
+            sendMessageToChannel(callMessageInfo);
+            //入库
+            ChatHistory toolChat = new ChatHistory(
+                    agentId, "agent", AiToolCallMessageInfo.TYPE_TOOL_CALL,
+                    callMessageInfo.getToolCallId(),
+                    callMessageInfo.getToolName(),
+                    (callMessageInfo.getArguments() != null ? callMessageInfo.getArguments().toString() : null),
+                    callMessageInfo.getResult() != null ? (String) callMessageInfo.getResult() : null
+            );
+            toolChat.setToolCallStatus(callMessageInfo.getStatus());
+            toolChat.setSessionId(callMessageInfo.getSessionId());
+            chatHistoryConsumer.accept(toolChat);
         }
     }
 
