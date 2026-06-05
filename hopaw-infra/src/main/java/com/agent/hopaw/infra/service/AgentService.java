@@ -35,14 +35,19 @@ public class AgentService implements IAgentService {
     }
 
     @Override
-    public Agent createAgent(String name, String description, String tools, Integer maxMemoryRecords, Integer maxToolInvocations, Long aiModelId, Boolean enableThinking, Boolean vectorToolSearch, Integer vectorToolSearchMaxResults, Boolean enableAllTools, String userId) {
-        Agent agent = new Agent(name, description, tools, maxMemoryRecords, maxToolInvocations, enableThinking);
-        agent.setAiModelId(aiModelId);
-        agent.setEnableThinking(enableThinking);
-        agent.setVectorToolSearch(vectorToolSearch != null ? vectorToolSearch : true);
-        agent.setVectorToolSearchMaxResults(vectorToolSearchMaxResults != null ? vectorToolSearchMaxResults : 5);
-        agent.setEnableAllTools(enableAllTools);
-        agent.setUserId(userId);
+    public Agent createAgent(Agent agent) {
+        if (agent.getMaxMemoryRecords() == null) {
+            agent.setMaxMemoryRecords(20);
+        }
+        if (agent.getMaxToolInvocations() == null) {
+            agent.setMaxToolInvocations(10);
+        }
+        if (agent.getVectorToolSearch() == null) {
+            agent.setVectorToolSearch(true);
+        }
+        if (agent.getVectorToolSearchMaxResults() == null) {
+            agent.setVectorToolSearchMaxResults(5);
+        }
         agentMapper.insert(agent);
         return agent;
     }
@@ -54,22 +59,22 @@ public class AgentService implements IAgentService {
     }
 
     @Override
-    public void updateAgent(String userId, Long id, String name, String description, String tools, Integer maxMemoryRecords, Integer maxToolInvocations, Long aiModelId, Boolean enableThinking, Boolean vectorToolSearch, Integer vectorToolSearchMaxResults, Boolean enableAllTools) {
-        Agent agent = agentMapper.findById(id);
-        if (agent != null) {
-            agent.setName(name);
-            agent.setDescription(description);
-            agent.setTools(tools);
-            agent.setMaxMemoryRecords(maxMemoryRecords);
-            agent.setMaxToolInvocations(maxToolInvocations);
-            agent.setAiModelId(aiModelId);
-            if (enableThinking != null) {
-                agent.setEnableThinking(enableThinking);
+    public void updateAgent(Agent agent) {
+        Agent existing = agentMapper.findById(agent.getId());
+        if (existing != null) {
+            existing.setName(agent.getName());
+            existing.setDescription(agent.getDescription());
+            existing.setTools(agent.getTools());
+            existing.setMaxMemoryRecords(agent.getMaxMemoryRecords());
+            existing.setMaxToolInvocations(agent.getMaxToolInvocations());
+            existing.setAiModelId(agent.getAiModelId());
+            if (agent.getEnableThinking() != null) {
+                existing.setEnableThinking(agent.getEnableThinking());
             }
-            agent.setVectorToolSearch(vectorToolSearch != null ? vectorToolSearch : true);
-            agent.setVectorToolSearchMaxResults(vectorToolSearchMaxResults != null ? vectorToolSearchMaxResults : 5);
-            agent.setEnableAllTools(enableAllTools);
-            agentMapper.update(agent);
+            existing.setVectorToolSearch(agent.getVectorToolSearch() != null ? agent.getVectorToolSearch() : true);
+            existing.setVectorToolSearchMaxResults(agent.getVectorToolSearchMaxResults() != null ? agent.getVectorToolSearchMaxResults() : 5);
+            existing.setEnableAllTools(agent.getEnableAllTools());
+            agentMapper.update(existing);
         }
     }
 

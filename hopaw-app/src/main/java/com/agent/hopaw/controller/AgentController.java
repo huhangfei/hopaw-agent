@@ -10,9 +10,11 @@ import com.agent.hopaw.infra.tool.IAgentToolService;
 import com.agent.hopaw.util.CurrentUser;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
+import org.springframework.web.bind.WebDataBinder;
 import org.springframework.web.bind.annotation.*;
 
 import javax.servlet.http.HttpServletRequest;
+import java.beans.PropertyEditorSupport;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -37,40 +39,33 @@ public class AgentController {
         return "agents";
     }
 
+    @InitBinder
+    public void initBinder(WebDataBinder binder) {
+        // 处理 tools 多选值：将 String[] 转为逗号分隔的字符串
+        binder.registerCustomEditor(String.class, "tools", new PropertyEditorSupport() {
+            @Override
+            public void setValue(Object value) {
+                if (value instanceof String[]) {
+                    super.setValue(String.join(",", (String[]) value));
+                } else {
+                    super.setValue(value);
+                }
+            }
+        });
+    }
+
     @PostMapping("/agent/create")
-    public String createAgent(HttpServletRequest request,
-                             @RequestParam String name,
-                             @RequestParam String description,
-                             @RequestParam(required = false) String tools,
-                             @RequestParam(required = false, defaultValue = "20") Integer maxMemoryRecords,
-                             @RequestParam(required = false, defaultValue = "10") Integer maxToolInvocations,
-                             @RequestParam Long aiModelId,
-                             @RequestParam(required = false, defaultValue = "true") Boolean enableThinking,
-                             @RequestParam(required = false, defaultValue = "true") Boolean vectorToolSearch,
-                             @RequestParam(required = false, defaultValue = "5") Integer vectorToolSearchMaxResults,
-                             @RequestParam(required = false, defaultValue = "false") Boolean enableAllTools) {
-        String toolsStr = tools != null ? tools : "";
-        agentService.createAgent(name, description, toolsStr, maxMemoryRecords, maxToolInvocations, aiModelId, enableThinking, vectorToolSearch, vectorToolSearchMaxResults, enableAllTools, CurrentUser.require(request));
+    public String createAgent(HttpServletRequest request, @ModelAttribute Agent agent) {
+        agent.setUserId(CurrentUser.require(request));
+        agentService.createAgent(agent);
         return "redirect:/";
     }
 
 
     @PostMapping("/agent/update")
-    public String updateAgent(HttpServletRequest request,
-                             @RequestParam Long id,
-                             @RequestParam String name,
-                             @RequestParam String description,
-                             @RequestParam(required = false) String tools,
-                             @RequestParam(required = false, defaultValue = "20") Integer maxMemoryRecords,
-                             @RequestParam(required = false, defaultValue = "10") Integer maxToolInvocations,
-                             @RequestParam Long aiModelId,
-                             @RequestParam(required = false) Boolean enableThinking,
-                             @RequestParam(required = false, defaultValue = "true") Boolean vectorToolSearch,
-                             @RequestParam(required = false, defaultValue = "5") Integer vectorToolSearchMaxResults,
-                             @RequestParam(required = false, defaultValue = "false") Boolean enableAllTools) {
-        String toolsStr = tools != null ? tools : "";
-        agentService.updateAgent(CurrentUser.require(request), id, name, description, toolsStr, maxMemoryRecords, maxToolInvocations, aiModelId, enableThinking, vectorToolSearch, vectorToolSearchMaxResults, enableAllTools);
-        return "redirect:/?agentId=" + id;
+    public String updateAgent(HttpServletRequest request, @ModelAttribute Agent agent) {
+        agentService.updateAgent(agent);
+        return "redirect:/?agentId=" + agent.getId();
     }
 
     @GetMapping("/agent/modal/add")
