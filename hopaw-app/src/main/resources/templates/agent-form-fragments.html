@@ -249,7 +249,7 @@
                                 <div class="tool-item-row">
                                     <input type="checkbox" name="tools" th:value="${ts.name}"
                                            class="edit-tool-checkbox-fragment"
-                                           th:checked="${#strings.contains(agent.tools, ts.name)}">
+                                           th:checked="${agent.tools != null and #strings.contains(agent.tools, ts.name)}">
                                     <div class="tool-item-icon">
                                         <th:block th:if="${ts.iconIsSvgCode()}">
                                             <span th:utext="${ts.icon}"></span>
