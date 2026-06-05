@@ -13,18 +13,9 @@ public class AgentAvatarConfig {
     private String modelSetting;
     private String modelGroup;
     private String personaSetting;
-    private String avatarAiPrompt;
     private Long totalTokens;
     private Long lastProcessedChatId;
     private Boolean soundEnabled;
-    /**
-     * 主动消息回忆窗口（分钟）：仅拉取最近该时间范围内的聊天记录。
-     */
-    private Integer memoryWindowMinutes;
-    /**
-     * 主动消息回忆最大记录数：超过该数量时按时间倒序截断。
-     */
-    private Integer memoryMaxRecords;
     /**
      * 最后一次主动问候时间（yyyy-MM-dd HH:mm:ss）。
      * 由 AvatarProactiveTool 在调用时更新；定时任务据此判断是否需要发送 wave 提示。
@@ -92,14 +83,6 @@ public class AgentAvatarConfig {
         this.personaSetting = personaSetting;
     }
 
-    public String getAvatarAiPrompt() {
-        return avatarAiPrompt;
-    }
-
-    public void setAvatarAiPrompt(String avatarAiPrompt) {
-        this.avatarAiPrompt = avatarAiPrompt;
-    }
-
     public Long getTotalTokens() {
         return totalTokens;
     }
@@ -122,22 +105,6 @@ public class AgentAvatarConfig {
 
     public void setSoundEnabled(Boolean soundEnabled) {
         this.soundEnabled = soundEnabled;
-    }
-
-    public Integer getMemoryWindowMinutes() {
-        return memoryWindowMinutes;
-    }
-
-    public void setMemoryWindowMinutes(Integer memoryWindowMinutes) {
-        this.memoryWindowMinutes = memoryWindowMinutes;
-    }
-
-    public Integer getMemoryMaxRecords() {
-        return memoryMaxRecords;
-    }
-
-    public void setMemoryMaxRecords(Integer memoryMaxRecords) {
-        this.memoryMaxRecords = memoryMaxRecords;
     }
 
     public String getLastProactiveGreetingTime() {

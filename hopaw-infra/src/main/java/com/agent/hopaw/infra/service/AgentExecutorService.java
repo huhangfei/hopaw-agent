@@ -1,16 +1,13 @@
 package com.agent.hopaw.infra.service;
 
-import com.agent.hopaw.infra.constant.AiModelCallSourceEnum;
-import com.agent.hopaw.infra.event.AgentMessageEvent;
 import com.agent.hopaw.infra.executor.AgentExecutor;
 import com.agent.hopaw.infra.executor.IAgentExecutor;
 import com.agent.hopaw.infra.memory.IChatMemoryService;
 import com.agent.hopaw.infra.model.dto.*;
-import com.agent.hopaw.infra.storage.ChatHistoryStore;
 import com.agent.hopaw.infra.model.entity.Agent;
+import com.agent.hopaw.infra.tool.AgentTool;
 import com.agent.hopaw.infra.tool.IAgentToolService;
 import dev.langchain4j.data.message.TextContent;
-import dev.langchain4j.model.chat.listener.ChatModelListener;
 import dev.langchain4j.model.embedding.EmbeddingModel;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
@@ -29,14 +26,12 @@ public class AgentExecutorService implements IAgentExecutorService {
     private final EmbeddingModel embeddingModel;
     private final ISkillService ISkillService;
     private final IChatSessionService chatSessionService;
-
     private final IChatModelListenerProvider chatModelListenerProvider;
-
-    private final  ApplicationEventPublisher eventPublisher;
-
+    private final ApplicationEventPublisher eventPublisher;
+    private final IAvatarSettingsService avatarSettingsService;
     private final Map<String, IAgentExecutor> agentExecutors = new HashMap<>();
 
-    public AgentExecutorService(IAgentService agentService, AiModelService aiModelService, IChatMemoryService chatMemoryService, IAgentToolService agentToolService, EmbeddingModel embeddingModel, ISkillService ISkillService, IChatSessionService chatSessionService, IChatModelListenerProvider chatModelListenerProvider, ApplicationEventPublisher eventPublisher) {
+    public AgentExecutorService(IAgentService agentService, AiModelService aiModelService, IChatMemoryService chatMemoryService, IAgentToolService agentToolService, EmbeddingModel embeddingModel, ISkillService ISkillService, IChatSessionService chatSessionService, IChatModelListenerProvider chatModelListenerProvider, ApplicationEventPublisher eventPublisher, IAvatarSettingsService avatarSettingsService) {
         this.agentService = agentService;
         this.aiModelService = aiModelService;
         this.chatMemoryService = chatMemoryService;
@@ -46,6 +41,7 @@ public class AgentExecutorService implements IAgentExecutorService {
         this.chatSessionService = chatSessionService;
         this.chatModelListenerProvider = chatModelListenerProvider;
         this.eventPublisher = eventPublisher;
+        this.avatarSettingsService = avatarSettingsService;
     }
 
     @Override
@@ -133,14 +129,21 @@ public class AgentExecutorService implements IAgentExecutorService {
         if (userRequest.getAiModelId() == null) {
             throw new RuntimeException("智能体没有设置AI模型");
         }
+        AvatarSettings avatarSettings = avatarSettingsService.getSettings(userRequest.getSessionId(), agent.getId());
         List<String> selectedToolNames = parseToolNames(agent.getTools());
         List<ToolSetInfo> selectedTools;
         if (Boolean.TRUE.equals(agent.getEnableAllTools())) {
             selectedTools = agentToolService.getToolSets();
         } else {
+            if(!avatarSettings.isDisabled() && avatarSettings.getPersonaSetting() != null && !avatarSettings.getPersonaSetting().isEmpty()){
+               if(!selectedToolNames.contains(IAvatarSettingsService.TOOL_NAME)){
+                   selectedToolNames.add(IAvatarSettingsService.TOOL_NAME);
+               }
+            }
             selectedTools = agentToolService.getToolSets().stream()
                     .filter(t -> selectedToolNames.contains(t.getName()))
                     .collect(Collectors.toList());
+
         }
         AgentExecutorParams agentExecutorParams = new AgentExecutorParams();
         agentExecutorParams.setSessionId(userRequest.getSessionId());
@@ -156,24 +159,31 @@ public class AgentExecutorService implements IAgentExecutorService {
         agentExecutorParams.setToolCallPermission(userRequest.getToolCallPermission());
         agentExecutorParams.setToolSets(selectedTools);
         agentExecutorParams.setContents(Arrays.asList(new TextContent(userRequest.getMessage())));
+
+
         Function<Long, String> systemMessageProvider = aId -> {
-            return getSystemMessage(userRequest.getSessionId(), agent, userRequest.getUserId(), selectedTools, userRequest.getSkillNames());
+            return getSystemMessage(userRequest.getSessionId(), agent, userRequest.getUserId(), selectedTools, userRequest.getSkillNames(), avatarSettings);
         };
         AgentExecutor agentExecutor = new AgentExecutor(agentExecutorParams, chatMemoryService, embeddingModel, systemMessageProvider, aiModelService, chatModelListenerProvider, eventPublisher, chatSessionService);
         agentExecutors.put(userRequest.getSessionId(), agentExecutor);
         return agentExecutor;
     }
 
-    private String getSystemMessage(String sessionId, Agent agent, String userId, List<ToolSetInfo> selectedTools, List<String> skillNames) {
+    private String getSystemMessage(String sessionId, Agent agent, String userId, List<ToolSetInfo> selectedTools, List<String> skillNames,AvatarSettings avatarSettings) {
         String systemMessage = "你是一个智能助手，名字叫" + agent.getName() + "," +
                 "主要工作是" + agent.getDescription() + "," +
                 "你的agentId是" + agent.getId() + "。\n" +
-                "在遇到需要用户提供信息或最新信息不正确的时候，不要猜，先查询记忆，记忆中没有就问用户。\n" +
+                "在解决问题时的时候，先去查询记忆看看有没相关可用信息。\n" +
+                "在遇到需要用户提供信息的时候，不要猜，先查询记忆，记忆中没有就问用户。\n" +
                 "在判断有需要调用工具就去调用，遇到危险操作，立刻停止操作，询问用户。\n" +
                 "你只能使用用户提供的工具，绝对不能调用不存在的工具。\n" +
                 "不要编造工具！\n";
+        if(!avatarSettings.isDisabled() && avatarSettings.getPersonaSetting() != null && !avatarSettings.getPersonaSetting().isEmpty()){
+            systemMessage += "你有一个实体的虚拟形象，你当前使用的人物设定是：" + avatarSettings.getPersonaSetting() + "\n";
+            systemMessage +="你要善于通过虚拟人工具去和用户互动，这样显得你更生动："+ IAvatarSettingsService.TOOL_CALL_TIPS;
+        }
         if (agent.getVectorToolSearch() != null && agent.getVectorToolSearch() && selectedTools != null && !selectedTools.isEmpty()) {
-            systemMessage += "当需要[" + getToolKeywords(selectedTools) + "]这些能力时，先使用tool_search_tool搜一下对应关键词，拿到工具详情再做决定使用。\n";
+            systemMessage += "当需要[" + getToolKeywords(selectedTools) + "]这些能力时，先使用"+ AgentTool.TOOL_SEARCH_TOOL_NAME +"搜一下对应关键词，拿到工具详情再做决定使用。\n";
         }
         if (skillNames != null && !skillNames.isEmpty()) {
             String skillContext = buildSkillContext(skillNames);
@@ -209,6 +219,6 @@ public class AgentExecutorService implements IAgentExecutorService {
         if (toolsStr == null || toolsStr.isEmpty()) {
             return new ArrayList<>();
         }
-        return Arrays.asList(toolsStr.split(","));
+        return Arrays.stream(toolsStr.split(",")).collect(Collectors.toList());
     }
 }

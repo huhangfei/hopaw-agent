@@ -19,22 +19,10 @@ public interface ChatHistoryMapper {
 
     List<Long> findDistinctAgentIds();
 
-    List<ChatHistory> findRecentByUserIdAndRole(@Param("userId") String userId,
-                                               @Param("role") String role,
-                                               @Param("since") LocalDateTime since,
-                                               @Param("limit") int limit);
-
-    List<ChatHistory> findRecentByUserIdAndRoleAfterId(@Param("userId") String userId,
-                                                       @Param("role") String role,
+    List<ChatHistory> findRecentByUserIdAndAagentIdAndAfterId(@Param("userId") String userId,
+                                                       @Param("agentId") Long agentId,
                                                        @Param("afterId") Long afterId,
-                                                       @Param("since") LocalDateTime since,
-                                                       @Param("limit") int limit);
-
-    List<ChatHistory> findRecentByUserIdAndRolesAndRoleTypes(@Param("userId") String userId,
-                                                       @Param("roles") List<String> roles,
-                                                       @Param("types") List<String> types,
-                                                       @Param("since") LocalDateTime since,
-                                                       @Param("limit") int limit);
+                                                              @Param("limit") int limit);
 
     int insert(ChatHistory chat);
 

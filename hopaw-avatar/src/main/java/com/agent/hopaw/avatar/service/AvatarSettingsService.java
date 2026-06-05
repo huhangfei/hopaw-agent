@@ -3,7 +3,8 @@ package com.agent.hopaw.avatar.service;
 import com.agent.hopaw.avatar.entity.AgentAvatarConfig;
 import com.agent.hopaw.avatar.mapper.AvatarConfigMapper;
 import com.agent.hopaw.avatar.model.AvatarModelGroup;
-import com.agent.hopaw.avatar.model.AvatarSettings;
+import com.agent.hopaw.infra.model.dto.AvatarSettings;
+import com.agent.hopaw.infra.service.IAvatarSettingsService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
@@ -14,23 +15,15 @@ import java.util.Collections;
 import java.util.List;
 
 @Service
-public class AvatarSettingsService {
+public class AvatarSettingsService implements IAvatarSettingsService {
 
     private static final Logger logger = LoggerFactory.getLogger(AvatarSettingsService.class);
-
-    public static final String DEFAULT_AVATAR_AI_PROMPT = "你是{agentName}，你是一个虚拟数字人，你的人格是爱卖萌的萝莉，非常的粘人。这是用户的记忆画像{userProfile}，请根据用户最近输入的内容，分析用户当前可能在做什么、处于什么状态，不要针对用户的输入内容去找答案回复，而是根据你的人设去调用工具与用户交互。{toolCallTips}\n现在时间是{currentTime}。";
-    public static final String TOOL_CALL_TIPS = "当需要提醒时，请调用sendMessageToUser工具进行发送消息；\n当需要表现存在感时，请调用moveAvatar工具进行控制移动或者调用changeAvatarModel工具进行换装；\n";
-
-    /** 主动消息回忆窗口默认分钟数（用户未配置时的回退值） */
-    public static final int DEFAULT_MEMORY_WINDOW_MINUTES = 10;
-    /** 主动消息回忆默认最大记录数（用户未配置时的回退值） */
-    public static final int DEFAULT_MEMORY_MAX_RECORDS = 20;
 
     private static final List<AvatarModelGroup> DEFAULT_MODEL_GROUPS;
 
     static {
         List<AvatarModelGroup> groups = new ArrayList<>();
-        groups.add(new AvatarModelGroup("22", new ArrayList<>(Arrays.asList(
+        groups.add(new AvatarModelGroup("小萝莉", new ArrayList<>(Arrays.asList(
                 "js/avatar/model/22/model.default.json",
                 "js/avatar/model/22/model.2016.xmas.1.json",
                 "js/avatar/model/22/model.2016.xmas.2.json",
@@ -51,9 +44,27 @@ public class AvatarSettingsService {
                 "js/avatar/model/22/model.2018.lover.json",
                 "js/avatar/model/22/model.2018.spring.json"
         ))));
-        groups.add(new AvatarModelGroup("haru", new ArrayList<>(Arrays.asList(
+        groups.add(new AvatarModelGroup("邻家妹妹", new ArrayList<>(Arrays.asList(
                 "js/avatar/model/haru/haru_01.model.json",
                 "js/avatar/model/haru/haru_02.model.json"
+        ))));
+        groups.add(new AvatarModelGroup("成熟姐姐", new ArrayList<>(Arrays.asList(
+                "js/avatar/model/HyperdimensionNeptunia/vert_swimwear/index.json",
+                "js/avatar/model/HyperdimensionNeptunia/vert_classic/index.json",
+                "js/avatar/model/HyperdimensionNeptunia/vert_normal/index.json"
+        ))));
+
+        groups.add(new AvatarModelGroup("爆炸头少年", new ArrayList<>(Arrays.asList(
+                "js/avatar/model/touma/touma.model.json"
+        ))));
+        groups.add(new AvatarModelGroup("阳光男孩", new ArrayList<>(Arrays.asList(
+                "js/avatar/model/chiaki_kitty/chiaki_kitty.model.json"
+        ))));
+        groups.add(new AvatarModelGroup("男绅士", new ArrayList<>(Arrays.asList(
+                "js/avatar/model/stl/stl.model.json"
+        ))));
+        groups.add(new AvatarModelGroup("丸子", new ArrayList<>(Arrays.asList(
+                "js/avatar/model/penchan/penchan.model.json"
         ))));
         DEFAULT_MODEL_GROUPS = Collections.unmodifiableList(groups);
     }
@@ -67,6 +78,7 @@ public class AvatarSettingsService {
     /** agentId 为空时使用兜底值（0L），不实际写入，仅用于在缺失配置时返回默认值 */
     public static final long FALLBACK_AGENT_ID = 0L;
 
+    @Override
     public AvatarSettings getSettings(String userId, Long agentId) {
         AgentAvatarConfig config = loadConfig(userId, agentId);
         AvatarSettings settings = new AvatarSettings();
@@ -75,11 +87,6 @@ public class AvatarSettingsService {
         settings.setModelSetting(config.getModelSetting());
         settings.setModelGroup(config.getModelGroup());
         settings.setPersonaSetting(config.getPersonaSetting());
-        settings.setAvatarAiPrompt(config.getAvatarAiPrompt());
-        settings.setMemoryWindowMinutes(config.getMemoryWindowMinutes() == null
-                ? DEFAULT_MEMORY_WINDOW_MINUTES : config.getMemoryWindowMinutes());
-        settings.setMemoryMaxRecords(config.getMemoryMaxRecords() == null
-                ? DEFAULT_MEMORY_MAX_RECORDS : config.getMemoryMaxRecords());
         return settings;
     }
 
@@ -112,11 +119,6 @@ public class AvatarSettingsService {
                 cfg.setModelSetting(settings.getModelSetting());
                 cfg.setModelGroup(settings.getModelGroup());
                 cfg.setPersonaSetting(settings.getPersonaSetting());
-                cfg.setAvatarAiPrompt(settings.getAvatarAiPrompt());
-                cfg.setMemoryWindowMinutes(settings.getMemoryWindowMinutes() == null
-                        ? DEFAULT_MEMORY_WINDOW_MINUTES : settings.getMemoryWindowMinutes());
-                cfg.setMemoryMaxRecords(settings.getMemoryMaxRecords() == null
-                        ? DEFAULT_MEMORY_MAX_RECORDS : settings.getMemoryMaxRecords());
                 cfg.setTotalTokens(0L);
                 cfg.setLastProcessedChatId(0L);
                 int rows = avatarConfigMapper.insert(cfg);
@@ -129,13 +131,6 @@ public class AvatarSettingsService {
                 existing.setModelSetting(settings.getModelSetting());
                 existing.setModelGroup(settings.getModelGroup());
                 existing.setPersonaSetting(settings.getPersonaSetting());
-                existing.setAvatarAiPrompt(settings.getAvatarAiPrompt());
-                existing.setMemoryWindowMinutes(settings.getMemoryWindowMinutes() == null
-                        ? existing.getMemoryWindowMinutes()
-                        : settings.getMemoryWindowMinutes());
-                existing.setMemoryMaxRecords(settings.getMemoryMaxRecords() == null
-                        ? existing.getMemoryMaxRecords()
-                        : settings.getMemoryMaxRecords());
                 int rows = avatarConfigMapper.update(existing);
                 logger.info("[avatar-settings] UPDATE 影响行数={} userId=[{}] agentId=[{}] modelGroup=[{}]",
                         rows, userId, agentId, existing.getModelGroup());
@@ -198,14 +193,6 @@ public class AvatarSettingsService {
         return all;
     }
 
-    public String getAvatarAiPrompt(String userId, Long agentId) {
-        if (agentId == null) {
-            return "";
-        }
-        String value = loadConfig(userId, agentId).getAvatarAiPrompt();
-        return value == null ? "" : value;
-    }
-
     public String getPersonaSetting(String userId, Long agentId) {
         if (agentId == null) {
             return "";
@@ -214,35 +201,20 @@ public class AvatarSettingsService {
         return value == null ? "" : value;
     }
 
-    /**
-     * 主动消息回忆窗口分钟数。用户未配置时回退到默认 10 分钟。
-     */
-    public int getMemoryWindowMinutes(String userId, Long agentId) {
-        if (agentId == null) {
-            return DEFAULT_MEMORY_WINDOW_MINUTES;
-        }
-        Integer value = loadConfig(userId, agentId).getMemoryWindowMinutes();
-        return value == null || value <= 0 ? DEFAULT_MEMORY_WINDOW_MINUTES : value;
-    }
-
-    /**
-     * 主动消息回忆最大记录数。用户未配置时回退到默认 20 条。
-     */
-    public int getMemoryMaxRecords(String userId, Long agentId) {
-        if (agentId == null) {
-            return DEFAULT_MEMORY_MAX_RECORDS;
-        }
-        Integer value = loadConfig(userId, agentId).getMemoryMaxRecords();
-        return value == null || value <= 0 ? DEFAULT_MEMORY_MAX_RECORDS : value;
-    }
-
     private AgentAvatarConfig loadConfig(String userId, Long agentId) {
         if (userId == null || userId.isEmpty() || agentId == null) {
-            return new AgentAvatarConfig();
+            AgentAvatarConfig agentAvatarConfig = new AgentAvatarConfig();
+            agentAvatarConfig.setPersonaSetting(DEFAULT_PERSONA_PROMPT);
+            return agentAvatarConfig;
         }
         try {
             AgentAvatarConfig config = avatarConfigMapper.findByUserAndAgent(userId, agentId);
-            return config != null ? config : new AgentAvatarConfig();
+            if (config == null) {
+                config = new AgentAvatarConfig();
+                config.setPersonaSetting(DEFAULT_PERSONA_PROMPT);
+                return config;
+            }
+            return config;
         } catch (Exception e) {
             logger.error("加载虚拟人配置失败 userId=[{}] agentId=[{}]", userId, agentId, e);
             return new AgentAvatarConfig();

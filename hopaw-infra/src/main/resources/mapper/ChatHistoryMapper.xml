@@ -59,47 +59,16 @@
         SELECT DISTINCT agent_id FROM chat_history
     </select>
 
-    <select id="findRecentByUserIdAndRole" resultMap="ChatHistoryResultMap">
-        SELECT id, agent_id, session_id, role, message_type, content, tool_call_id, tool_name, tool_arguments, tool_call_status, tool_execution_time, create_time, user_id
-        FROM chat_history
-        WHERE user_id = #{userId}
-          AND role = #{role}
-          AND create_time &gt;= #{since}
-        ORDER BY create_time DESC
-        LIMIT #{limit}
-    </select>
 
-    <select id="findRecentByUserIdAndRoleAfterId" resultMap="ChatHistoryResultMap">
+    <select id="findRecentByUserIdAndAagentIdAndAfterId" resultMap="ChatHistoryResultMap">
         SELECT id, agent_id, session_id, role, message_type, content, tool_call_id, tool_name, tool_arguments, tool_call_status, tool_execution_time, create_time, user_id
         FROM chat_history
         WHERE user_id = #{userId}
-          AND role = #{role}
+          AND agent_id = #{agentId}
           AND id &gt; #{afterId}
-          AND create_time &gt;= #{since}
-        ORDER BY id ASC
+        ORDER BY id desc
         LIMIT #{limit}
     </select>
-    <select id="findRecentByUserIdAndRolesAndRoleTypes" resultMap="ChatHistoryResultMap">
-        SELECT id, agent_id, session_id, role, message_type, content, tool_call_id, tool_name, tool_arguments, tool_call_status, tool_execution_time, create_time, user_id
-        FROM chat_history
-        WHERE user_id = #{userId}
-          <if test="roles!=null and roles.size()>0">
-              AND role IN
-              <foreach item="role" collection="roles" separator="," open="(" close=")">
-                  #{role}
-              </foreach>
-          </if>
-        <if test="types!=null and types.size()>0">
-            And message_type IN
-            <foreach item="type" collection="types" separator="," open="(" close=")">
-                #{type}
-            </foreach>
-        </if>
-          AND create_time &gt;= #{since}
-        ORDER BY create_time DESC
-        LIMIT #{limit}
-    </select>
-
     <insert id="insert" parameterType="com.agent.hopaw.infra.model.entity.ChatHistory">
         INSERT INTO chat_history (agent_id, session_id, role, message_type, content, tool_call_id, tool_name, tool_arguments, tool_call_status, tool_execution_time, create_time, user_id)
         VALUES (#{agentId}, #{sessionId}, #{role}, #{messageType}, #{content}, #{toolCallId}, #{toolName}, #{toolArguments}, #{toolCallStatus}, #{toolExecutionTime}, #{createTime}, #{userId})

@@ -1,7 +1,7 @@
 package com.agent.hopaw.avatar.controller;
 
 import com.agent.hopaw.avatar.model.AvatarModelGroup;
-import com.agent.hopaw.avatar.model.AvatarSettings;
+import com.agent.hopaw.infra.model.dto.AvatarSettings;
 import com.agent.hopaw.avatar.service.AvatarSettingsService;
 import com.agent.hopaw.avatar.task.AvatarTaskHandler;
 import com.agent.hopaw.infra.model.dto.ResponseBean;

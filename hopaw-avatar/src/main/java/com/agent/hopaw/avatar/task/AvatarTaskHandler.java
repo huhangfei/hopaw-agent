@@ -4,7 +4,6 @@ import com.agent.hopaw.avatar.entity.AgentAvatarConfig;
 import com.agent.hopaw.avatar.mapper.AvatarConfigMapper;
 import com.agent.hopaw.avatar.model.AvatarAction;
 import com.agent.hopaw.avatar.model.AvatarEvent;
-import com.agent.hopaw.avatar.util.AvatarProactivePlanner;
 import com.agent.hopaw.avatar.websocket.AvatarWebSocketHandler;
 import com.agent.hopaw.infra.model.entity.ScheduledTask;
 import com.agent.hopaw.infra.task.TaskHandler;
@@ -30,16 +29,12 @@ public class AvatarTaskHandler implements TaskHandler {
     private volatile boolean running = false;
 
     private final AvatarConfigMapper avatarConfigMapper;
-    private final AvatarProactivePlanner proactivePlanner;
     private final AvatarWebSocketHandler avatarWebSocketHandler;
     private final ApplicationEventPublisher eventPublisher;
-
     public AvatarTaskHandler(AvatarConfigMapper avatarConfigMapper,
-                             AvatarProactivePlanner proactivePlanner,
                              AvatarWebSocketHandler avatarWebSocketHandler,
                              ApplicationEventPublisher eventPublisher) {
         this.avatarConfigMapper = avatarConfigMapper;
-        this.proactivePlanner = proactivePlanner;
         this.avatarWebSocketHandler = avatarWebSocketHandler;
         this.eventPublisher = eventPublisher;
     }
@@ -93,27 +88,15 @@ public class AvatarTaskHandler implements TaskHandler {
                     continue;
                 }
                 try {
-                    Long afterId = config.getLastProcessedChatId();
-                    Long maxId = proactivePlanner.analyzeAndDecide(userId, agentId, task, afterId);
-                    if (maxId != null && (afterId == null || maxId > afterId)) {
+                    // 距离上次主动问候超过阈值，则补发一个 wave 动作
+                    if (shouldSendWave(config.getLastProactiveGreetingTime())) {
                         try {
-                            avatarConfigMapper.updateLastProcessedChatId(userId, agentId, maxId);
-                        } catch (Exception persistError) {
-                            logger.error("更新 lastProcessedChatId 失败 userId={} agentId={} maxId={}", userId, agentId, maxId, persistError);
-                        }
-                    } else {
-                        // 本轮未拉到新数据
-                        noIncrement++;
-                        // 距离上次主动问候超过阈值，则补发一个 wave 动作
-                        if (shouldSendWave(config.getLastProactiveGreetingTime())) {
-                            try {
-                                eventPublisher.publishEvent(AvatarEvent.action(userId, agentId, AvatarAction.WAVE));
-                                waved++;
-                                logger.info("虚拟人定时任务补发 wave：距上次问候已超过 {} 分钟 userId={} agentId={} lastGreetingTime={}",
-                                        WAVE_INTERVAL_MINUTES, userId, agentId, config.getLastProactiveGreetingTime());
-                            } catch (Exception publishError) {
-                                logger.error("发布虚拟人 wave 事件失败 userId={} agentId={}", userId, agentId, publishError);
-                            }
+                            eventPublisher.publishEvent(AvatarEvent.action(userId, agentId, AvatarAction.WAVE));
+                            waved++;
+                            logger.info("虚拟人定时任务补发 wave：距上次问候已超过 {} 分钟 userId={} agentId={} lastGreetingTime={}",
+                                    WAVE_INTERVAL_MINUTES, userId, agentId, config.getLastProactiveGreetingTime());
+                        } catch (Exception publishError) {
+                            logger.error("发布虚拟人 wave 事件失败 userId={} agentId={}", userId, agentId, publishError);
                         }
                     }
                     processed++;

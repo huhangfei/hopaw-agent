@@ -1,4 +1,4 @@
-package com.agent.hopaw.avatar.model;
+package com.agent.hopaw.infra.model.dto;
 
 public class AvatarSettings {
     private boolean disabled;
@@ -6,15 +6,6 @@ public class AvatarSettings {
     private String modelSetting;
     private String modelGroup;
     private String personaSetting;
-    private String avatarAiPrompt;
-    /**
-     * 主动消息回忆窗口（分钟）。
-     */
-    private Integer memoryWindowMinutes;
-    /**
-     * 主动消息回忆最大记录数。
-     */
-    private Integer memoryMaxRecords;
 
     public AvatarSettings() {
     }
@@ -57,29 +48,5 @@ public class AvatarSettings {
 
     public void setPersonaSetting(String personaSetting) {
         this.personaSetting = personaSetting;
-    }
-
-    public String getAvatarAiPrompt() {
-        return avatarAiPrompt;
-    }
-
-    public void setAvatarAiPrompt(String avatarAiPrompt) {
-        this.avatarAiPrompt = avatarAiPrompt;
-    }
-
-    public Integer getMemoryWindowMinutes() {
-        return memoryWindowMinutes;
-    }
-
-    public void setMemoryWindowMinutes(Integer memoryWindowMinutes) {
-        this.memoryWindowMinutes = memoryWindowMinutes;
-    }
-
-    public Integer getMemoryMaxRecords() {
-        return memoryMaxRecords;
-    }
-
-    public void setMemoryMaxRecords(Integer memoryMaxRecords) {
-        this.memoryMaxRecords = memoryMaxRecords;
     }
 }

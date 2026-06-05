@@ -204,19 +204,14 @@ public class DatabaseInitializer implements CommandLineRunner {
                     "model_setting TEXT, " +
                     "model_group TEXT, " +
                     "persona_setting TEXT, " +
-                    "avatar_ai_prompt TEXT, " +
                     "total_tokens INTEGER DEFAULT 0, " +
                     "last_processed_chat_id INTEGER DEFAULT 0, " +
                     "sound_enabled INTEGER DEFAULT 1, " +
-                    "memory_window_minutes INTEGER DEFAULT 10, " +
-                    "memory_max_records INTEGER DEFAULT 20, " +
                     "last_proactive_greeting_time TEXT, " +
                     "create_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP, " +
                     "update_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP" +
                     ")");
             // 兼容旧库：增量补充新列
-            ensureColumn(stmt, "agent_avatar_config", "memory_window_minutes", "INTEGER DEFAULT 10");
-            ensureColumn(stmt, "agent_avatar_config", "memory_max_records", "INTEGER DEFAULT 20");
             ensureColumn(stmt, "agent_avatar_config", "last_proactive_greeting_time", "TEXT");
             stmt.execute("CREATE UNIQUE INDEX IF NOT EXISTS idx_agent_avatar_config_user_agent ON agent_avatar_config(user_id, agent_id)");
             stmt.execute("CREATE INDEX IF NOT EXISTS idx_agent_avatar_config_user ON agent_avatar_config(user_id)");
