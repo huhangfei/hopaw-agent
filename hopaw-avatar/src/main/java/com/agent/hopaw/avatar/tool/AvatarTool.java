@@ -2,6 +2,8 @@ package com.agent.hopaw.avatar.tool;
 
 import com.agent.hopaw.avatar.mapper.AvatarConfigMapper;
 import com.agent.hopaw.avatar.model.AvatarEvent;
+import com.agent.hopaw.infra.service.TtsService;
+import com.agent.hopaw.avatar.websocket.AvatarWebSocketHandler;
 import com.agent.hopaw.infra.service.IAvatarSettingsService;
 import com.agent.hopaw.infra.tool.AgentTool;
 import com.agent.hopaw.infra.tool.ToolSecurityLevel;
@@ -17,6 +19,7 @@ import org.springframework.stereotype.Component;
 
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
+import java.util.concurrent.CompletableFuture;
 
 /**
  * @author hhf
@@ -29,11 +32,17 @@ public class AvatarTool implements AgentTool {
 
     private final ApplicationEventPublisher eventPublisher;
     private final AvatarConfigMapper avatarConfigMapper;
+    private final TtsService ttsService;
+    private final AvatarWebSocketHandler avatarWebSocketHandler;
 
     public AvatarTool(ApplicationEventPublisher eventPublisher,
-                      AvatarConfigMapper avatarConfigMapper) {
+                      AvatarConfigMapper avatarConfigMapper,
+                      TtsService ttsService,
+                      AvatarWebSocketHandler avatarWebSocketHandler) {
         this.eventPublisher = eventPublisher;
         this.avatarConfigMapper = avatarConfigMapper;
+        this.ttsService = ttsService;
+        this.avatarWebSocketHandler = avatarWebSocketHandler;
     }
 
     @ToolSecurityLevel(ToolSecurityLevel.Level.SAFE)
@@ -104,7 +113,8 @@ public class AvatarTool implements AgentTool {
             return "发送失败：消息内容不能为空";
         }
         try {
-            eventPublisher.publishEvent(AvatarEvent.proactiveMessage(targetUserId, targetAgentId, message.trim()));
+            String trimmed = message.trim();
+            eventPublisher.publishEvent(AvatarEvent.proactiveMessage(targetUserId, targetAgentId, trimmed));
             // 记录最后一次主动问候时间，供定时任务判断是否需要补发 wave
             try {
                 String now = LocalDateTime.now().format(TIME_FORMAT);
@@ -113,6 +123,18 @@ public class AvatarTool implements AgentTool {
                 logger.warn("更新 lastProactiveGreetingTime 失败 userId={} agentId={} err={}",
                         targetUserId, targetAgentId, persistError.getMessage());
             }
+            // 异步合成 TTS 语音并推送
+            CompletableFuture.runAsync(() -> {
+                try {
+                    String audioBase64 = ttsService.synthesizeToBase64(trimmed);
+                    if (audioBase64 != null && !audioBase64.isEmpty()) {
+                        avatarWebSocketHandler.sendTtsAudio(targetUserId, targetAgentId, audioBase64, trimmed);
+                    }
+                } catch (Exception ttsErr) {
+                    logger.warn("TTS 合成/推送失败 userId={} agentId={} err={}",
+                            targetUserId, targetAgentId, ttsErr.getMessage());
+                }
+            });
         } catch (Exception e) {
             logger.error("发布虚拟人主动消息事件失败 userId={} agentId={} err={}", targetUserId, targetAgentId, e.getMessage(), e);
             return "发送失败";

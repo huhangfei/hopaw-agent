@@ -440,6 +440,10 @@ var LAppDefine = {
             playAvatarSound(data.soundFile);
             return;
         }
+        if (data.type === "avatar_tts_audio") {
+            handleTtsAudio(data);
+            return;
+        }
         if (data.type === "avatar_intimacy_update" || data.action === "intimacy_update") {
             if (data.intimacyInfo) {
                 widget._intimacy && widget._intimacy.apply(data.intimacyInfo);
@@ -636,6 +640,41 @@ var LAppDefine = {
         } catch (e) {
             console.warn("Avatar sound error:", e);
         }
+    }
+
+    function handleTtsAudio(data) {
+        if (!data.audio) return;
+        try {
+            var audioBytes = base64ToArrayBuffer(data.audio);
+            var blob = new Blob([audioBytes], { type: "audio/mp3" });
+            var url = URL.createObjectURL(blob);
+            var audio = new Audio(url);
+            audio.onended = function() {
+                URL.revokeObjectURL(url);
+            };
+            audio.onerror = function() {
+                URL.revokeObjectURL(url);
+            };
+            var playPromise = audio.play();
+            if (playPromise && typeof playPromise.catch === "function") {
+                playPromise.catch(function(err) {
+                    console.warn("TTS audio play failed:", err);
+                    URL.revokeObjectURL(url);
+                });
+            }
+        } catch (e) {
+            console.warn("TTS audio decode error:", e);
+        }
+    }
+
+    function base64ToArrayBuffer(base64) {
+        var binaryStr = atob(base64);
+        var len = binaryStr.length;
+        var bytes = new Uint8Array(len);
+        for (var i = 0; i < len; i++) {
+            bytes[i] = binaryStr.charCodeAt(i);
+        }
+        return bytes.buffer;
     }
 
     function clampAvatarPosition(x, y) {

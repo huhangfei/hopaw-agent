@@ -3,6 +3,7 @@ package com.agent.hopaw.avatar.websocket;
 import com.agent.hopaw.avatar.model.AvatarEvent;
 import com.agent.hopaw.avatar.service.AvatarSettingsService;
 import com.alibaba.fastjson2.JSON;
+import com.alibaba.fastjson2.JSONObject;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.context.event.EventListener;
@@ -143,5 +144,41 @@ public class AvatarWebSocketHandler extends TextWebSocketHandler {
         }
         ConcurrentLinkedQueue<String> sessionIds = sessionKeyMap.get(buildKey(userId, agentId));
         return sessionIds != null && !sessionIds.isEmpty();
+    }
+
+    /**
+     * 向指定用户推送 TTS 音频数据。
+     * @param userId 用户 ID
+     * @param agentId 智能体 ID
+     * @param audioBase64 base64 编码的 MP3 音频数据
+     * @param messageText 对应的文本内容（用于前端展示）
+     */
+    public void sendTtsAudio(String userId, Long agentId, String audioBase64, String messageText) {
+        if (userId == null || agentId == null || audioBase64 == null) {
+            return;
+        }
+        String key = buildKey(userId, agentId);
+        ConcurrentLinkedQueue<String> sessionIds = sessionKeyMap.get(key);
+        if (sessionIds == null || sessionIds.isEmpty()) {
+            return;
+        }
+        JSONObject msg = new JSONObject();
+        msg.put("type", "avatar_tts_audio");
+        msg.put("audio", audioBase64);
+        msg.put("text", messageText != null ? messageText : "");
+        String messageJson = msg.toJSONString();
+        for (String id : sessionIds) {
+            WebSocketSession wsSession = sessionMap.get(id);
+            if (wsSession != null && wsSession.isOpen()) {
+                try {
+                    Object lock = SESSION_LOCK_MAP.computeIfAbsent(id, k -> new Object());
+                    synchronized (lock) {
+                        wsSession.sendMessage(new TextMessage(messageJson));
+                    }
+                } catch (IOException e) {
+                    logger.error("Failed to send TTS audio to session {}: {}", id, e.getMessage());
+                }
+            }
+        }
     }
 }

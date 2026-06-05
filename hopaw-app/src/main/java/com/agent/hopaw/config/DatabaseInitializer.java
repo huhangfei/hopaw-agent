@@ -216,6 +216,18 @@ public class DatabaseInitializer implements CommandLineRunner {
             stmt.execute("CREATE UNIQUE INDEX IF NOT EXISTS idx_agent_avatar_config_user_agent ON agent_avatar_config(user_id, agent_id)");
             stmt.execute("CREATE INDEX IF NOT EXISTS idx_agent_avatar_config_user ON agent_avatar_config(user_id)");
 
+            stmt.execute("CREATE TABLE IF NOT EXISTS tts_config (" +
+                    "id INTEGER PRIMARY KEY AUTOINCREMENT, " +
+                    "vendor_code TEXT NOT NULL, " +
+                    "vendor_name TEXT, " +
+                    "config_json TEXT, " +
+                    "default_voice_id TEXT, " +
+                    "enabled INTEGER DEFAULT 0, " +
+                    "create_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP, " +
+                    "update_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP" +
+                    ")");
+            stmt.execute("CREATE UNIQUE INDEX IF NOT EXISTS idx_tts_config_vendor ON tts_config(vendor_code)");
+
             stmt.execute("CREATE TABLE IF NOT EXISTS scheduled_tasks (" +
                     "id INTEGER PRIMARY KEY AUTOINCREMENT, " +
                     "task_name TEXT NOT NULL, " +

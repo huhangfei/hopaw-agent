@@ -1,0 +1,61 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.agent.hopaw.infra.mapper.TtsConfigMapper">
+
+    <resultMap id="TtsConfigResultMap" type="com.agent.hopaw.infra.model.entity.TtsConfig">
+        <id property="id" column="id"/>
+        <result property="vendorCode" column="vendor_code"/>
+        <result property="vendorName" column="vendor_name"/>
+        <result property="configJson" column="config_json"/>
+        <result property="defaultVoiceId" column="default_voice_id"/>
+        <result property="enabled" column="enabled"/>
+        <result property="createTime" column="create_time"/>
+        <result property="updateTime" column="update_time"/>
+    </resultMap>
+
+    <select id="findAll" resultMap="TtsConfigResultMap">
+        SELECT id, vendor_code, vendor_name, config_json, default_voice_id, enabled, create_time, update_time
+        FROM tts_config
+        ORDER BY id
+    </select>
+
+    <select id="findByVendorCode" resultMap="TtsConfigResultMap">
+        SELECT id, vendor_code, vendor_name, config_json, default_voice_id, enabled, create_time, update_time
+        FROM tts_config
+        WHERE vendor_code = #{vendorCode}
+    </select>
+
+    <select id="findById" resultMap="TtsConfigResultMap">
+        SELECT id, vendor_code, vendor_name, config_json, default_voice_id, enabled, create_time, update_time
+        FROM tts_config
+        WHERE id = #{id}
+    </select>
+
+    <select id="findEnabledByUserId" resultMap="TtsConfigResultMap">
+        SELECT id, vendor_code, vendor_name, config_json, default_voice_id, enabled, create_time, update_time
+        FROM tts_config
+        WHERE enabled = 1
+        LIMIT 1
+    </select>
+
+    <insert id="insert" parameterType="com.agent.hopaw.infra.model.entity.TtsConfig" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO tts_config (vendor_code, vendor_name, config_json, default_voice_id, enabled)
+        VALUES (#{vendorCode}, #{vendorName}, #{configJson}, #{defaultVoiceId}, COALESCE(#{enabled}, 0))
+    </insert>
+
+    <update id="update" parameterType="com.agent.hopaw.infra.model.entity.TtsConfig">
+        UPDATE tts_config
+        SET vendor_code = #{vendorCode},
+            vendor_name = #{vendorName},
+            config_json = #{configJson},
+            default_voice_id = #{defaultVoiceId},
+            enabled = #{enabled},
+            update_time = CURRENT_TIMESTAMP
+        WHERE id = #{id}
+    </update>
+
+    <delete id="deleteById">
+        DELETE FROM tts_config WHERE id = #{id}
+    </delete>
+
+</mapper>

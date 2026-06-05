@@ -5,13 +5,14 @@ document.addEventListener('DOMContentLoaded', function() {
     loadProviders();
     setupCascading();
     loadMemoryTaskStatus();
+    loadTtsVendors();
     initTabFromUrl();
 });
 
 function initTabFromUrl() {
     var params = new URLSearchParams(window.location.search);
     var tab = params.get('tab');
-    if (tab && ['memory', 'mail', 'pluginStore'].includes(tab)) {
+    if (tab && ['memory', 'mail', 'tts', 'pluginStore'].includes(tab)) {
         switchTab(tab);
     }
 }
@@ -356,4 +357,118 @@ function savePluginStoreSettings() {
                 showToast('保存失败', 'error');
             }
         });
+}
+
+// ========== TTS 设置 ==========
+var ttsConfigId = null;
+var ttsConfigCache = {};
+
+function loadTtsSettings() {
+    fetch('/api/tts/configs')
+        .then(function(r) { return r.json(); })
+        .then(function(resp) {
+            if (resp.msg !== 'success' || !resp.data || resp.data.length === 0) return;
+            var config = resp.data[0];
+            ttsConfigId = config.id;
+            ttsConfigCache = config;
+            document.getElementById('ttsVendorSelect').value = config.vendorCode || '';
+            document.getElementById('ttsConfigJson').value = config.configJson || '';
+            document.getElementById('ttsEnabledCheck').checked = config.enabled === 1;
+            if (config.vendorCode) {
+                loadTtsVoices(config.vendorCode, config.defaultVoiceId);
+            }
+        })
+        .catch(function(e) {
+            console.error('加载 TTS 配置失败:', e);
+        });
+}
+
+function loadTtsVendors() {
+    fetch('/api/tts/vendors')
+        .then(function(r) { return r.json(); })
+        .then(function(resp) {
+            if (resp.msg !== 'success') return;
+            var select = document.getElementById('ttsVendorSelect');
+            var vendors = resp.data;
+            for (var code in vendors) {
+                if (!vendors.hasOwnProperty(code)) continue;
+                var opt = document.createElement('option');
+                opt.value = code;
+                opt.textContent = vendors[code];
+                select.appendChild(opt);
+            }
+            loadTtsSettings();
+        })
+        .catch(function(e) {
+            console.error('加载 TTS 厂商列表失败:', e);
+        });
+}
+
+function onTtsVendorChange() {
+    var vendorCode = document.getElementById('ttsVendorSelect').value;
+    var voiceSelect = document.getElementById('ttsVoiceSelect');
+    voiceSelect.innerHTML = '<option value="">请选择音色</option>';
+    if (!vendorCode) return;
+    loadTtsVoices(vendorCode, null);
+}
+
+function loadTtsVoices(vendorCode, defaultVoiceId) {
+    var voiceSelect = document.getElementById('ttsVoiceSelect');
+    voiceSelect.innerHTML = '<option value="">加载中...</option>';
+    fetch('/api/tts/voices?vendorCode=' + encodeURIComponent(vendorCode))
+        .then(function(r) { return r.json(); })
+        .then(function(resp) {
+            voiceSelect.innerHTML = '<option value="">选择音色</option>';
+            if (resp.msg !== 'success' || !resp.data) return;
+            resp.data.forEach(function(v) {
+                var opt = document.createElement('option');
+                opt.value = v.voiceId;
+                opt.textContent = v.voiceName;
+                voiceSelect.appendChild(opt);
+            });
+            if (defaultVoiceId) {
+                voiceSelect.value = defaultVoiceId;
+            }
+        })
+        .catch(function(e) {
+            console.error('加载音色列表失败:', e);
+            voiceSelect.innerHTML = '<option value="">加载失败</option>';
+        });
+}
+
+function saveTtsSettings() {
+    var vendorCode = document.getElementById('ttsVendorSelect').value;
+    var configJson = document.getElementById('ttsConfigJson').value.trim();
+    var defaultVoiceId = document.getElementById('ttsVoiceSelect').value;
+    var enabled = document.getElementById('ttsEnabledCheck').checked ? 1 : 0;
+
+    if (!vendorCode) {
+        showToast('请选择 TTS 厂商', 'error');
+        return;
+    }
+
+    var payload = {
+        vendorCode: vendorCode,
+        vendorName: vendorCode === 'volcano' ? '火山引擎' : (vendorCode === 'aliyun' ? '阿里云' : vendorCode),
+        configJson: configJson,
+        defaultVoiceId: defaultVoiceId,
+        enabled: enabled
+    };
+
+    fetch('/api/tts/config', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+    })
+    .then(function(r) { return r.json(); })
+    .then(function(resp) {
+        if (resp.msg === 'success') {
+            showToast('TTS 设置保存成功', 'success');
+        } else {
+            showToast('保存失败: ' + (resp.data || ''), 'error');
+        }
+    })
+    .catch(function() {
+        showToast('保存失败', 'error');
+    });
 }
