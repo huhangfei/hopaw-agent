@@ -11,6 +11,7 @@ public class Agent {
     private Boolean enableThinking;
     private Boolean vectorToolSearch;
     private Integer vectorToolSearchMaxResults;
+    private Boolean enableAllTools;
     private String extParams;
     private String userId;
 
@@ -133,6 +134,14 @@ public class Agent {
 
     public void setVectorToolSearchMaxResults(Integer vectorToolSearchMaxResults) {
         this.vectorToolSearchMaxResults = vectorToolSearchMaxResults;
+    }
+
+    public Boolean getEnableAllTools() {
+        return enableAllTools;
+    }
+
+    public void setEnableAllTools(Boolean enableAllTools) {
+        this.enableAllTools = enableAllTools;
     }
 
     public String getExtParams() {

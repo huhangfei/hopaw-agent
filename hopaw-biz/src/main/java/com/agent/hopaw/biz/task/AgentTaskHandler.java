@@ -69,11 +69,18 @@ public class AgentTaskHandler implements TaskHandler {
             ChatModel chatModel = aiModelService.createChatModel(agent.getAiModelId(), agent.getEnableThinking(),chatModelListener);
             List<String> selectTools = parseToolNames(agent.getTools());
 
-            List<AgentTool> selectedTools = allTools.stream()
-                    .filter(t -> {
-                        return selectTools.contains(t.getName()) && !"agentTaskTool".equals(t.getName());
-                    })
-                    .collect(Collectors.toList());
+            List<AgentTool> selectedTools;
+            if (Boolean.TRUE.equals(agent.getEnableAllTools())) {
+                selectedTools = allTools.stream()
+                        .filter(t -> !"agentTaskTool".equals(t.getName()))
+                        .collect(Collectors.toList());
+            } else {
+                selectedTools = allTools.stream()
+                        .filter(t -> {
+                            return selectTools.contains(t.getName()) && !"agentTaskTool".equals(t.getName());
+                        })
+                        .collect(Collectors.toList());
+            }
             InvocationParametersWrapper invocationParametersWrapper = InvocationParametersWrapper.create()
             .setUserId(task.getUserId())
             .setAgentId(Long.parseLong(agentIdStr))

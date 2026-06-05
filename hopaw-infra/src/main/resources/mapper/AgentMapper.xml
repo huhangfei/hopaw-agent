@@ -13,24 +13,25 @@
         <result property="vectorToolSearchMaxResults" column="vector_tool_search_max_results"/>
         <result property="aiModelId" column="ai_model_id"/>
         <result property="enableThinking" column="enable_thinking"/>
+        <result property="enableAllTools" column="enable_all_tools"/>
         <result property="extParams" column="ext_params"/>
         <result property="userId" column="user_id"/>
     </resultMap>
 
     <select id="findAll" resultMap="AgentResultMap">
-        SELECT id, name, description, tools, max_memory_records, max_tool_invocations, vector_tool_search, vector_tool_search_max_results, ai_model_id, enable_thinking, ext_params, user_id
+        SELECT id, name, description, tools, max_memory_records, max_tool_invocations, vector_tool_search, vector_tool_search_max_results, ai_model_id, enable_thinking, enable_all_tools, ext_params, user_id
         FROM agents
         ORDER BY id DESC
     </select>
 
     <select id="findById" resultMap="AgentResultMap">
-        SELECT id, name, description, tools, max_memory_records, max_tool_invocations, vector_tool_search, vector_tool_search_max_results, ai_model_id, enable_thinking, ext_params, user_id
+        SELECT id, name, description, tools, max_memory_records, max_tool_invocations, vector_tool_search, vector_tool_search_max_results, ai_model_id, enable_thinking, enable_all_tools, ext_params, user_id
         FROM agents
         WHERE id = #{id}
     </select>
 
     <select id="findByIds" resultMap="AgentResultMap">
-        SELECT id, name, description, tools, max_memory_records, max_tool_invocations, vector_tool_search, vector_tool_search_max_results, ai_model_id, enable_thinking, ext_params, user_id
+        SELECT id, name, description, tools, max_memory_records, max_tool_invocations, vector_tool_search, vector_tool_search_max_results, ai_model_id, enable_thinking, enable_all_tools, ext_params, user_id
         FROM agents
         WHERE id IN
         <foreach item="id" collection="ids" separator="," open="(" close=")">
@@ -40,8 +41,8 @@
     </select>
 
     <insert id="insert" parameterType="com.agent.hopaw.infra.model.entity.Agent">
-        INSERT INTO agents (name, description, tools, max_memory_records, max_tool_invocations, vector_tool_search, vector_tool_search_max_results, ai_model_id, enable_thinking, ext_params, user_id)
-        VALUES (#{name}, #{description}, #{tools}, #{maxMemoryRecords}, #{maxToolInvocations}, #{vectorToolSearch}, #{vectorToolSearchMaxResults}, #{aiModelId}, #{enableThinking}, #{extParams}, #{userId})
+        INSERT INTO agents (name, description, tools, max_memory_records, max_tool_invocations, vector_tool_search, vector_tool_search_max_results, ai_model_id, enable_thinking, enable_all_tools, ext_params, user_id)
+        VALUES (#{name}, #{description}, #{tools}, #{maxMemoryRecords}, #{maxToolInvocations}, #{vectorToolSearch}, #{vectorToolSearchMaxResults}, #{aiModelId}, #{enableThinking}, #{enableAllTools}, #{extParams}, #{userId})
         <selectKey resultType="long" keyProperty="id" order="AFTER">
             SELECT last_insert_rowid()
         </selectKey>
@@ -58,6 +59,7 @@
             vector_tool_search_max_results = #{vectorToolSearchMaxResults},
             ai_model_id = #{aiModelId},
             enable_thinking = #{enableThinking},
+            enable_all_tools = #{enableAllTools},
             ext_params = #{extParams},
             user_id = #{userId}
         WHERE id = #{id}
@@ -68,14 +70,14 @@
     </delete>
 
     <select id="findByUserId" resultMap="AgentResultMap">
-        SELECT id, name, description, tools, max_memory_records, max_tool_invocations, vector_tool_search, vector_tool_search_max_results, ai_model_id, enable_thinking, ext_params, user_id
+        SELECT id, name, description, tools, max_memory_records, max_tool_invocations, vector_tool_search, vector_tool_search_max_results, ai_model_id, enable_thinking, enable_all_tools, ext_params, user_id
         FROM agents
         WHERE user_id = #{userId}
         ORDER BY id DESC
     </select>
 
     <select id="findByUserIdWithKeyword" resultMap="AgentResultMap">
-        SELECT id, name, description, tools, max_memory_records, max_tool_invocations, vector_tool_search, vector_tool_search_max_results, ai_model_id, enable_thinking, ext_params, user_id
+        SELECT id, name, description, tools, max_memory_records, max_tool_invocations, vector_tool_search, vector_tool_search_max_results, ai_model_id, enable_thinking, enable_all_tools, ext_params, user_id
         FROM agents
         WHERE user_id = #{userId}
         <if test="keyword != null and keyword != ''">

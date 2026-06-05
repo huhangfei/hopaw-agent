@@ -55,6 +55,7 @@ public class DatabaseInitializer implements CommandLineRunner {
                     "model_name TEXT, " +
                     "enable_thinking INTEGER DEFAULT 1," +
                     "ext_params TEXT," +
+                    "enable_all_tools INTEGER DEFAULT 0," +
                     "user_id TEXT DEFAULT 'admin'" +
                     ")");
             stmt.execute("CREATE INDEX IF NOT EXISTS idx_agents_user ON agents(user_id)");
@@ -265,6 +266,9 @@ public class DatabaseInitializer implements CommandLineRunner {
             } catch (Exception ignored) {}
             try {
                 stmt.execute("ALTER TABLE chat_sessions ADD COLUMN tool_call_permission TEXT");
+            } catch (Exception ignored) {}
+            try {
+                stmt.execute("ALTER TABLE agents ADD COLUMN enable_all_tools INTEGER DEFAULT 0");
             } catch (Exception ignored) {}
 
             stmt.execute("CREATE TABLE IF NOT EXISTS accounts (" +

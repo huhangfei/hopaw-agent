@@ -134,9 +134,14 @@ public class AgentExecutorService implements IAgentExecutorService {
             throw new RuntimeException("智能体没有设置AI模型");
         }
         List<String> selectedToolNames = parseToolNames(agent.getTools());
-        List<ToolSetInfo> selectedTools = agentToolService.getToolSets().stream()
-                .filter(t -> selectedToolNames.contains(t.getName()))
-                .collect(Collectors.toList());
+        List<ToolSetInfo> selectedTools;
+        if (Boolean.TRUE.equals(agent.getEnableAllTools())) {
+            selectedTools = agentToolService.getToolSets();
+        } else {
+            selectedTools = agentToolService.getToolSets().stream()
+                    .filter(t -> selectedToolNames.contains(t.getName()))
+                    .collect(Collectors.toList());
+        }
         AgentExecutorParams agentExecutorParams = new AgentExecutorParams();
         agentExecutorParams.setSessionId(userRequest.getSessionId());
         agentExecutorParams.setAgentId(agent.getId());

@@ -99,7 +99,9 @@ function renderAgentList(list) {
         var modelName = modelNameMap[agent.aiModelId] || (agent.aiModelId ? 'ID:' + agent.aiModelId : '-');
 
         var toolsHtml = '';
-        if (agent.tools) {
+        if (agent.enableAllTools) {
+            toolsHtml = '<span class="agent-tool-tag" style="background:#fff3e0;color:#e65100;">全部工具</span>';
+        } else if (agent.tools) {
             var toolNames = agent.tools.split(',').filter(function(t) { return t.trim() !== ''; });
             var displayTools = toolNames.slice(0, 3);
             displayTools.forEach(function(t) {

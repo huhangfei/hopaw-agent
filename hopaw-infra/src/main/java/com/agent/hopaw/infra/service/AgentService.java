@@ -35,12 +35,13 @@ public class AgentService implements IAgentService {
     }
 
     @Override
-    public Agent createAgent(String name, String description, String tools, Integer maxMemoryRecords, Integer maxToolInvocations, Long aiModelId, Boolean enableThinking, Boolean vectorToolSearch, Integer vectorToolSearchMaxResults, String userId) {
+    public Agent createAgent(String name, String description, String tools, Integer maxMemoryRecords, Integer maxToolInvocations, Long aiModelId, Boolean enableThinking, Boolean vectorToolSearch, Integer vectorToolSearchMaxResults, Boolean enableAllTools, String userId) {
         Agent agent = new Agent(name, description, tools, maxMemoryRecords, maxToolInvocations, enableThinking);
         agent.setAiModelId(aiModelId);
         agent.setEnableThinking(enableThinking);
         agent.setVectorToolSearch(vectorToolSearch != null ? vectorToolSearch : true);
         agent.setVectorToolSearchMaxResults(vectorToolSearchMaxResults != null ? vectorToolSearchMaxResults : 5);
+        agent.setEnableAllTools(enableAllTools);
         agent.setUserId(userId);
         agentMapper.insert(agent);
         return agent;
@@ -53,7 +54,7 @@ public class AgentService implements IAgentService {
     }
 
     @Override
-    public void updateAgent(String userId, Long id, String name, String description, String tools, Integer maxMemoryRecords, Integer maxToolInvocations, Long aiModelId, Boolean enableThinking, Boolean vectorToolSearch, Integer vectorToolSearchMaxResults) {
+    public void updateAgent(String userId, Long id, String name, String description, String tools, Integer maxMemoryRecords, Integer maxToolInvocations, Long aiModelId, Boolean enableThinking, Boolean vectorToolSearch, Integer vectorToolSearchMaxResults, Boolean enableAllTools) {
         Agent agent = agentMapper.findById(id);
         if (agent != null) {
             agent.setName(name);
@@ -67,6 +68,7 @@ public class AgentService implements IAgentService {
             }
             agent.setVectorToolSearch(vectorToolSearch != null ? vectorToolSearch : true);
             agent.setVectorToolSearchMaxResults(vectorToolSearchMaxResults != null ? vectorToolSearchMaxResults : 5);
+            agent.setEnableAllTools(enableAllTools);
             agentMapper.update(agent);
         }
     }

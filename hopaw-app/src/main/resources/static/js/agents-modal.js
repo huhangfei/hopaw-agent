@@ -68,6 +68,25 @@ function deselectAllTools(containerSelector) {
     });
 }
 
+function toggleAllTools(mode) {
+    var checkbox, hiddenInput, container;
+    if (mode === 'add') {
+        checkbox = document.getElementById('addEnableAllToolsCheckboxFragment');
+        hiddenInput = document.getElementById('addEnableAllToolsFragment');
+        container = document.getElementById('addToolListContainerFragment');
+    } else {
+        checkbox = document.getElementById('editEnableAllToolsCheckboxFragment');
+        hiddenInput = document.getElementById('editEnableAllToolsFragment');
+        container = document.getElementById('editToolListContainerFragment');
+    }
+    if (checkbox && hiddenInput) {
+        hiddenInput.value = checkbox.checked ? 'true' : 'false';
+    }
+    if (container) {
+        container.style.display = checkbox && checkbox.checked ? 'none' : '';
+    }
+}
+
 function submitAddAgentForm(formEl) {
     var name = formEl.querySelector('input[name="name"]').value.trim();
     var description = formEl.querySelector('textarea[name="description"]').value.trim();

@@ -72,8 +72,21 @@
                                    placeholder="10">
                         </div>
                     </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <div class="toggle-wrapper">
+                                <input type="hidden" name="enableAllTools" id="addEnableAllToolsFragment" value="false">
+                                <label class="toggle">
+                                    <input type="checkbox" id="addEnableAllToolsCheckboxFragment"
+                                           onchange="toggleAllTools('add')">
+                                    <span class="slider"></span>
+                                </label>
+                                <span class="toggle-label">允许使用所有工具</span>
+                            </div>
+                        </div>
+                    </div>
                 </div>
-                <div class="form-right">
+                <div class="form-right" id="addToolListContainerFragment">
                     <div class="form-group">
                         <div class="tool-header">
                             <label>工具</label>
@@ -201,8 +214,24 @@
                                    min="1" max="500" placeholder="10">
                         </div>
                     </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <div class="toggle-wrapper">
+                                <input type="hidden" name="enableAllTools" id="editEnableAllToolsFragment"
+                                       th:value="${agent.enableAllTools != null ? agent.enableAllTools : false}">
+                                <label class="toggle">
+                                    <input type="checkbox" id="editEnableAllToolsCheckboxFragment"
+                                           th:checked="${agent.enableAllTools}"
+                                           onchange="toggleAllTools('edit')">
+                                    <span class="slider"></span>
+                                </label>
+                                <span class="toggle-label">允许使用所有工具</span>
+                            </div>
+                        </div>
+                    </div>
                 </div>
-                <div class="form-right">
+                <div class="form-right" id="editToolListContainerFragment"
+                     th:style="${agent.enableAllTools ? 'display:none' : ''}">
                     <div class="form-group">
                         <div class="tool-header">
                             <label>工具</label>
