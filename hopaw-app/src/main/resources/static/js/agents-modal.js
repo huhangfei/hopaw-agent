@@ -216,6 +216,29 @@ function ensureAvatarSettingsModal() {
         '        <label for="avatarModelGroupSelect">人物形象模型</label>' +
         '        <select id="avatarModelGroupSelect"></select>' +
         '      </div>' +
+        '      <div class="form-group">' +
+        '        <label>启用 TTS 语音播报</label>' +
+        '        <div class="toggle-wrapper">' +
+        '          <label class="toggle">' +
+        '            <input type="checkbox" id="avatarTtsEnabledInput">' +
+        '            <span class="slider"></span>' +
+        '          </label>' +
+        '          <span class="toggle-label" id="avatarTtsEnabledLabel">已启用</span>' +
+        '          <span class="form-hint">开启后主动消息将合成语音播报</span>' +
+        '        </div>' +
+        '      </div>' +
+        '      <div class="form-group">' +
+        '        <label for="avatarTtsVendorSelect">TTS 厂商</label>' +
+        '        <select id="avatarTtsVendorSelect" class="form-select" onchange="onAvatarTtsVendorChange()">' +
+        '          <option value="">选择厂商</option>' +
+        '        </select>' +
+        '      </div>' +
+        '      <div class="form-group">' +
+        '        <label for="avatarTtsVoiceSelect">TTS 音色</label>' +
+        '        <select id="avatarTtsVoiceSelect" class="form-select">' +
+        '          <option value="">请先选择厂商</option>' +
+        '        </select>' +
+        '      </div>' +
         '    </div>' +
         '    <div class="modal-footer">' +
         '      <button type="button" class="btn-cancel" onclick="closeAvatarSettingsModal()">取消</button>' +
@@ -293,6 +316,8 @@ function showAvatarSettingsModal(agentId, agentName) {
     avatarSettingsModal.classList.add('active');
     document.body.style.overflow = 'hidden';
     bindAvatarToggleChange();
+    bindAvatarTtsToggleChange();
+    loadAvatarTtsVendors();
     loadAvatarSettings(agentId);
     // 绑定遮罩点击关闭
     if (!avatarSettingsModal._avatarOverlayBound) {
@@ -316,6 +341,14 @@ function bindAvatarToggleChange() {
         soundInput.addEventListener('change', updateAvatarToggleLabels);
     }
     avatarSettingsModal._avatarToggleBound = true;
+}
+
+function bindAvatarTtsToggleChange() {
+    var ttsInput = document.getElementById('avatarTtsEnabledInput');
+    if (ttsInput && !ttsInput._ttsToggleBound) {
+        ttsInput.addEventListener('change', updateAvatarTtsToggleLabel);
+        ttsInput._ttsToggleBound = true;
+    }
 }
 
 function updateAvatarToggleLabels() {
@@ -386,6 +419,14 @@ function fillAvatarSettings(settings, groups, selectedGroup) {
         opt.textContent = '暂无可用模型';
         groupSelect.appendChild(opt);
     }
+
+    // TTS 字段
+    document.getElementById('avatarTtsEnabledInput').checked = settings.ttsEnabled === true;
+    document.getElementById('avatarTtsVendorSelect').value = settings.ttsVendorCode || '';
+    updateAvatarTtsToggleLabel();
+    if (settings.ttsVendorCode) {
+        loadAvatarTtsVoices(settings.ttsVendorCode, settings.ttsVoiceId);
+    }
 }
 
 function saveAvatarSettings() {
@@ -403,7 +444,10 @@ function saveAvatarSettings() {
         soundEnabled: document.getElementById('avatarSoundInput').checked,
         modelSetting: '',
         modelGroup: groupValue,
-        personaSetting: document.getElementById('avatarPromptInput').value || ''
+        personaSetting: document.getElementById('avatarPromptInput').value || '',
+        ttsEnabled: document.getElementById('avatarTtsEnabledInput').checked,
+        ttsVendorCode: document.getElementById('avatarTtsVendorSelect').value || '',
+        ttsVoiceId: document.getElementById('avatarTtsVoiceSelect').value || ''
     };
     console.log('[avatar-settings] PUT /api/avatar/settings agentId=' + avatarSettingsState.agentId, payload);
     var saveBtn = document.getElementById('avatarSettingsSaveBtn');
@@ -460,6 +504,69 @@ function saveAvatarSettings() {
                 saveBtn.textContent = '保存';
             }
         });
+}
+
+// ========== TTS 音色选择 ==========
+function loadAvatarTtsVendors() {
+    fetch('/api/tts/vendors')
+        .then(function(r) { return r.json(); })
+        .then(function(resp) {
+            if (resp.msg !== 'success') return;
+            var select = document.getElementById('avatarTtsVendorSelect');
+            if (!select) return;
+            // 保留第一个 option（选择厂商）
+            while (select.options.length > 1) select.remove(1);
+            var vendors = resp.data;
+            for (var code in vendors) {
+                if (!vendors.hasOwnProperty(code)) continue;
+                var opt = document.createElement('option');
+                opt.value = code;
+                opt.textContent = vendors[code];
+                select.appendChild(opt);
+            }
+        })
+        .catch(function(e) { console.error('加载 TTS 厂商失败:', e); });
+}
+
+function onAvatarTtsVendorChange() {
+    var vendorCode = document.getElementById('avatarTtsVendorSelect').value;
+    var voiceSelect = document.getElementById('avatarTtsVoiceSelect');
+    voiceSelect.innerHTML = '<option value="">请选择音色</option>';
+    if (!vendorCode) return;
+    loadAvatarTtsVoices(vendorCode, null);
+}
+
+function loadAvatarTtsVoices(vendorCode, defaultVoiceId) {
+    var voiceSelect = document.getElementById('avatarTtsVoiceSelect');
+    if (!voiceSelect) return;
+    voiceSelect.innerHTML = '<option value="">加载中...</option>';
+    fetch('/api/tts/voices?vendorCode=' + encodeURIComponent(vendorCode))
+        .then(function(r) { return r.json(); })
+        .then(function(resp) {
+            voiceSelect.innerHTML = '<option value="">选择音色</option>';
+            if (resp.msg !== 'success' || !resp.data) return;
+            resp.data.forEach(function(v) {
+                var opt = document.createElement('option');
+                opt.value = v.voiceId;
+                opt.textContent = v.voiceName;
+                voiceSelect.appendChild(opt);
+            });
+            if (defaultVoiceId) {
+                voiceSelect.value = defaultVoiceId;
+            }
+        })
+        .catch(function(e) {
+            console.error('加载音色列表失败:', e);
+            voiceSelect.innerHTML = '<option value="">加载失败</option>';
+        });
+}
+
+function updateAvatarTtsToggleLabel() {
+    var input = document.getElementById('avatarTtsEnabledInput');
+    var label = document.getElementById('avatarTtsEnabledLabel');
+    if (input && label) {
+        label.textContent = input.checked ? '已启用' : '已禁用';
+    }
 }
 
 // 暴露给其他页面（如 index.html 上的虚拟人设置按钮）调用。

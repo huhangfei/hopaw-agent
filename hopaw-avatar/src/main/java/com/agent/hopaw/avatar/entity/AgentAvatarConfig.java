@@ -21,6 +21,12 @@ public class AgentAvatarConfig {
      * 由 AvatarProactiveTool 在调用时更新；定时任务据此判断是否需要发送 wave 提示。
      */
     private String lastProactiveGreetingTime;
+    /** TTS 厂商编号 */
+    private String ttsVendorCode;
+    /** TTS 音色编号 */
+    private String ttsVoiceId;
+    /** TTS 是否启用 */
+    private Boolean ttsEnabled;
     private String createTime;
     private String updateTime;
 
@@ -113,6 +119,30 @@ public class AgentAvatarConfig {
 
     public void setLastProactiveGreetingTime(String lastProactiveGreetingTime) {
         this.lastProactiveGreetingTime = lastProactiveGreetingTime;
+    }
+
+    public String getTtsVendorCode() {
+        return ttsVendorCode;
+    }
+
+    public void setTtsVendorCode(String ttsVendorCode) {
+        this.ttsVendorCode = ttsVendorCode;
+    }
+
+    public String getTtsVoiceId() {
+        return ttsVoiceId;
+    }
+
+    public void setTtsVoiceId(String ttsVoiceId) {
+        this.ttsVoiceId = ttsVoiceId;
+    }
+
+    public Boolean getTtsEnabled() {
+        return ttsEnabled;
+    }
+
+    public void setTtsEnabled(Boolean ttsEnabled) {
+        this.ttsEnabled = ttsEnabled;
     }
 
     public String getCreateTime() {

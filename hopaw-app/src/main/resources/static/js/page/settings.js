@@ -359,9 +359,8 @@ function savePluginStoreSettings() {
         });
 }
 
-// ========== TTS 设置 ==========
+// ========== TTS 设置（全局厂商配置） ==========
 var ttsConfigId = null;
-var ttsConfigCache = {};
 
 function loadTtsSettings() {
     fetch('/api/tts/configs')
@@ -370,13 +369,8 @@ function loadTtsSettings() {
             if (resp.msg !== 'success' || !resp.data || resp.data.length === 0) return;
             var config = resp.data[0];
             ttsConfigId = config.id;
-            ttsConfigCache = config;
             document.getElementById('ttsVendorSelect').value = config.vendorCode || '';
             document.getElementById('ttsConfigJson').value = config.configJson || '';
-            document.getElementById('ttsEnabledCheck').checked = config.enabled === 1;
-            if (config.vendorCode) {
-                loadTtsVoices(config.vendorCode, config.defaultVoiceId);
-            }
         })
         .catch(function(e) {
             console.error('加载 TTS 配置失败:', e);
@@ -405,42 +399,12 @@ function loadTtsVendors() {
 }
 
 function onTtsVendorChange() {
-    var vendorCode = document.getElementById('ttsVendorSelect').value;
-    var voiceSelect = document.getElementById('ttsVoiceSelect');
-    voiceSelect.innerHTML = '<option value="">请选择音色</option>';
-    if (!vendorCode) return;
-    loadTtsVoices(vendorCode, null);
-}
-
-function loadTtsVoices(vendorCode, defaultVoiceId) {
-    var voiceSelect = document.getElementById('ttsVoiceSelect');
-    voiceSelect.innerHTML = '<option value="">加载中...</option>';
-    fetch('/api/tts/voices?vendorCode=' + encodeURIComponent(vendorCode))
-        .then(function(r) { return r.json(); })
-        .then(function(resp) {
-            voiceSelect.innerHTML = '<option value="">选择音色</option>';
-            if (resp.msg !== 'success' || !resp.data) return;
-            resp.data.forEach(function(v) {
-                var opt = document.createElement('option');
-                opt.value = v.voiceId;
-                opt.textContent = v.voiceName;
-                voiceSelect.appendChild(opt);
-            });
-            if (defaultVoiceId) {
-                voiceSelect.value = defaultVoiceId;
-            }
-        })
-        .catch(function(e) {
-            console.error('加载音色列表失败:', e);
-            voiceSelect.innerHTML = '<option value="">加载失败</option>';
-        });
+    // 全局设置页不再管理音色，仅切换厂商
 }
 
 function saveTtsSettings() {
     var vendorCode = document.getElementById('ttsVendorSelect').value;
     var configJson = document.getElementById('ttsConfigJson').value.trim();
-    var defaultVoiceId = document.getElementById('ttsVoiceSelect').value;
-    var enabled = document.getElementById('ttsEnabledCheck').checked ? 1 : 0;
 
     if (!vendorCode) {
         showToast('请选择 TTS 厂商', 'error');
@@ -451,8 +415,7 @@ function saveTtsSettings() {
         vendorCode: vendorCode,
         vendorName: vendorCode === 'volcano' ? '火山引擎' : (vendorCode === 'aliyun' ? '阿里云' : vendorCode),
         configJson: configJson,
-        defaultVoiceId: defaultVoiceId,
-        enabled: enabled
+        enabled: 1
     };
 
     fetch('/api/tts/config', {

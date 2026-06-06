@@ -6,6 +6,12 @@ public class AvatarSettings {
     private String modelSetting;
     private String modelGroup;
     private String personaSetting;
+    /** TTS 厂商编号 */
+    private String ttsVendorCode;
+    /** TTS 音色编号 */
+    private String ttsVoiceId;
+    /** TTS 是否启用 */
+    private boolean ttsEnabled;
 
     public AvatarSettings() {
     }
@@ -48,5 +54,29 @@ public class AvatarSettings {
 
     public void setPersonaSetting(String personaSetting) {
         this.personaSetting = personaSetting;
+    }
+
+    public String getTtsVendorCode() {
+        return ttsVendorCode;
+    }
+
+    public void setTtsVendorCode(String ttsVendorCode) {
+        this.ttsVendorCode = ttsVendorCode;
+    }
+
+    public String getTtsVoiceId() {
+        return ttsVoiceId;
+    }
+
+    public void setTtsVoiceId(String ttsVoiceId) {
+        this.ttsVoiceId = ttsVoiceId;
+    }
+
+    public boolean isTtsEnabled() {
+        return ttsEnabled;
+    }
+
+    public void setTtsEnabled(boolean ttsEnabled) {
+        this.ttsEnabled = ttsEnabled;
     }
 }

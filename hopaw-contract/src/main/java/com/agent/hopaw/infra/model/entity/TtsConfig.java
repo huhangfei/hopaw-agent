@@ -8,7 +8,6 @@ public class TtsConfig {
     private String vendorCode;
     private String vendorName;
     private String configJson;
-    private String defaultVoiceId;
     private Integer enabled;
     private String createTime;
     private String updateTime;
@@ -43,14 +42,6 @@ public class TtsConfig {
 
     public void setConfigJson(String configJson) {
         this.configJson = configJson;
-    }
-
-    public String getDefaultVoiceId() {
-        return defaultVoiceId;
-    }
-
-    public void setDefaultVoiceId(String defaultVoiceId) {
-        this.defaultVoiceId = defaultVoiceId;
     }
 
     public Integer getEnabled() {

@@ -208,11 +208,17 @@ public class DatabaseInitializer implements CommandLineRunner {
                     "last_processed_chat_id INTEGER DEFAULT 0, " +
                     "sound_enabled INTEGER DEFAULT 1, " +
                     "last_proactive_greeting_time TEXT, " +
+                    "tts_vendor_code TEXT, " +
+                    "tts_voice_id TEXT, " +
+                    "tts_enabled INTEGER DEFAULT 0, " +
                     "create_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP, " +
                     "update_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP" +
                     ")");
             // 兼容旧库：增量补充新列
             ensureColumn(stmt, "agent_avatar_config", "last_proactive_greeting_time", "TEXT");
+            ensureColumn(stmt, "agent_avatar_config", "tts_vendor_code", "TEXT");
+            ensureColumn(stmt, "agent_avatar_config", "tts_voice_id", "TEXT");
+            ensureColumn(stmt, "agent_avatar_config", "tts_enabled", "INTEGER DEFAULT 0");
             stmt.execute("CREATE UNIQUE INDEX IF NOT EXISTS idx_agent_avatar_config_user_agent ON agent_avatar_config(user_id, agent_id)");
             stmt.execute("CREATE INDEX IF NOT EXISTS idx_agent_avatar_config_user ON agent_avatar_config(user_id)");
 
@@ -221,7 +227,6 @@ public class DatabaseInitializer implements CommandLineRunner {
                     "vendor_code TEXT NOT NULL, " +
                     "vendor_name TEXT, " +
                     "config_json TEXT, " +
-                    "default_voice_id TEXT, " +
                     "enabled INTEGER DEFAULT 0, " +
                     "create_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP, " +
                     "update_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP" +

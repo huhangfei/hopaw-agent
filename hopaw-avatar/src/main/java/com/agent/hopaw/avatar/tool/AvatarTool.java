@@ -2,7 +2,7 @@ package com.agent.hopaw.avatar.tool;
 
 import com.agent.hopaw.avatar.mapper.AvatarConfigMapper;
 import com.agent.hopaw.avatar.model.AvatarEvent;
-import com.agent.hopaw.infra.service.TtsService;
+import com.agent.hopaw.avatar.service.TtsService;
 import com.agent.hopaw.avatar.websocket.AvatarWebSocketHandler;
 import com.agent.hopaw.infra.service.IAvatarSettingsService;
 import com.agent.hopaw.infra.tool.AgentTool;
@@ -126,7 +126,7 @@ public class AvatarTool implements AgentTool {
             // 异步合成 TTS 语音并推送
             CompletableFuture.runAsync(() -> {
                 try {
-                    String audioBase64 = ttsService.synthesizeToBase64(trimmed);
+                    String audioBase64 = ttsService.synthesizeToBase64(targetUserId, targetAgentId, trimmed);
                     if (audioBase64 != null && !audioBase64.isEmpty()) {
                         avatarWebSocketHandler.sendTtsAudio(targetUserId, targetAgentId, audioBase64, trimmed);
                     }

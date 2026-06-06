@@ -87,6 +87,9 @@ public class AvatarSettingsService implements IAvatarSettingsService {
         settings.setModelSetting(config.getModelSetting());
         settings.setModelGroup(config.getModelGroup());
         settings.setPersonaSetting(config.getPersonaSetting());
+        settings.setTtsVendorCode(config.getTtsVendorCode());
+        settings.setTtsVoiceId(config.getTtsVoiceId());
+        settings.setTtsEnabled(Boolean.TRUE.equals(config.getTtsEnabled()));
         return settings;
     }
 
@@ -119,6 +122,9 @@ public class AvatarSettingsService implements IAvatarSettingsService {
                 cfg.setModelSetting(settings.getModelSetting());
                 cfg.setModelGroup(settings.getModelGroup());
                 cfg.setPersonaSetting(settings.getPersonaSetting());
+                cfg.setTtsVendorCode(settings.getTtsVendorCode());
+                cfg.setTtsVoiceId(settings.getTtsVoiceId());
+                cfg.setTtsEnabled(settings.isTtsEnabled());
                 cfg.setTotalTokens(0L);
                 cfg.setLastProcessedChatId(0L);
                 int rows = avatarConfigMapper.insert(cfg);
@@ -131,6 +137,9 @@ public class AvatarSettingsService implements IAvatarSettingsService {
                 existing.setModelSetting(settings.getModelSetting());
                 existing.setModelGroup(settings.getModelGroup());
                 existing.setPersonaSetting(settings.getPersonaSetting());
+                existing.setTtsVendorCode(settings.getTtsVendorCode());
+                existing.setTtsVoiceId(settings.getTtsVoiceId());
+                existing.setTtsEnabled(settings.isTtsEnabled());
                 int rows = avatarConfigMapper.update(existing);
                 logger.info("[avatar-settings] UPDATE 影响行数={} userId=[{}] agentId=[{}] modelGroup=[{}]",
                         rows, userId, agentId, existing.getModelGroup());
