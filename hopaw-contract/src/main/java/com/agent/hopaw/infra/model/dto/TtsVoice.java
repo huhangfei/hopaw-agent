@@ -1,11 +1,14 @@
 package com.agent.hopaw.infra.model.dto;
 
+import java.util.List;
+
 public class TtsVoice {
     private String voiceId;
     private String voiceName;
     private String language;
     private String gender;
     private String description;
+    private List<String> emotions;
 
     public TtsVoice() {
     }
@@ -53,5 +56,13 @@ public class TtsVoice {
 
     public void setDescription(String description) {
         this.description = description;
+    }
+
+    public List<String> getEmotions() {
+        return emotions;
+    }
+
+    public void setEmotions(List<String> emotions) {
+        this.emotions = emotions;
     }
 }

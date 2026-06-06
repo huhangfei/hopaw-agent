@@ -449,6 +449,19 @@ function saveAvatarSettings() {
         ttsVendorCode: document.getElementById('avatarTtsVendorSelect').value || '',
         ttsVoiceId: document.getElementById('avatarTtsVoiceSelect').value || ''
     };
+    // 根据选中的音色自动填入支持的情感列表
+    var selectedVoiceId = payload.ttsVoiceId;
+    if (selectedVoiceId && ttsVoicesCache.length > 0) {
+        for (var i = 0; i < ttsVoicesCache.length; i++) {
+            if (ttsVoicesCache[i].voiceId === selectedVoiceId) {
+                var emotions = ttsVoicesCache[i].emotions;
+                if (emotions && emotions.length > 0) {
+                    payload.ttsEmotions = emotions.join(',');
+                }
+                break;
+            }
+        }
+    }
     console.log('[avatar-settings] PUT /api/avatar/settings agentId=' + avatarSettingsState.agentId, payload);
     var saveBtn = document.getElementById('avatarSettingsSaveBtn');
     if (saveBtn) {
@@ -507,6 +520,8 @@ function saveAvatarSettings() {
 }
 
 // ========== TTS 音色选择 ==========
+var ttsVoicesCache = [];
+
 function loadAvatarTtsVendors() {
     fetch('/api/tts/vendors')
         .then(function(r) { return r.json(); })
@@ -544,7 +559,9 @@ function loadAvatarTtsVoices(vendorCode, defaultVoiceId) {
         .then(function(r) { return r.json(); })
         .then(function(resp) {
             voiceSelect.innerHTML = '<option value="">选择音色</option>';
+            ttsVoicesCache = [];
             if (resp.msg !== 'success' || !resp.data) return;
+            ttsVoicesCache = resp.data;
             resp.data.forEach(function(v) {
                 var opt = document.createElement('option');
                 opt.value = v.voiceId;

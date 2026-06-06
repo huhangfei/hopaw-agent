@@ -39,7 +39,7 @@ public class TtsService {
      * @param text 文本内容
      * @return base64 字符串，如果 TTS 未启用或合成失败返回 null
      */
-    public String synthesizeToBase64(String userId, Long agentId, String text) {
+    public String synthesizeToBase64(String userId, Long agentId, String text, String emotion) {
         try {
             // 1. 查询 agent 的 TTS 配置
             AgentAvatarConfig agentConfig = avatarConfigMapper.findByUserAndAgent(userId, agentId);
@@ -70,7 +70,7 @@ public class TtsService {
                 logger.warn("TTS 厂商未注册: {}", vendorCode);
                 return null;
             }
-            byte[] audio = service.synthesize(vendorConfig.getConfigJson(), voiceId, text);
+            byte[] audio = service.synthesize(vendorConfig.getConfigJson(), voiceId, text, emotion);
             if (audio == null || audio.length == 0) {
                 return null;
             }

@@ -99,6 +99,7 @@ public class AvatarTool implements AgentTool {
     @Tool(value = {"和用户聊天", "向用户发送虚拟人主动消息，该消息支持文字气泡显示和语音播报"},
             searchBehavior = dev.langchain4j.agent.tool.SearchBehavior.ALWAYS_VISIBLE)
     public String sendAvatarMessageToUser(@P("需要推送给用户的消息内容") String message,
+                                          @P(value = "说话时的感情，根据提示词中感情值传入",required = false)String emotion,
                                    InvocationParameters invocationParameters) {
         InvocationParametersWrapper wrapper = InvocationParametersWrapper.create(invocationParameters);
         String targetUserId = wrapper.getUserId();
@@ -126,7 +127,7 @@ public class AvatarTool implements AgentTool {
             // 异步合成 TTS 语音并推送
             CompletableFuture.runAsync(() -> {
                 try {
-                    String audioBase64 = ttsService.synthesizeToBase64(targetUserId, targetAgentId, trimmed);
+                    String audioBase64 = ttsService.synthesizeToBase64(targetUserId, targetAgentId, trimmed,emotion);
                     if (audioBase64 != null && !audioBase64.isEmpty()) {
                         avatarWebSocketHandler.sendTtsAudio(targetUserId, targetAgentId, audioBase64, trimmed);
                     }

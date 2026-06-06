@@ -210,6 +210,7 @@ public class DatabaseInitializer implements CommandLineRunner {
                     "last_proactive_greeting_time TEXT, " +
                     "tts_vendor_code TEXT, " +
                     "tts_voice_id TEXT, " +
+                    "tts_emotions TEXT, " +
                     "tts_enabled INTEGER DEFAULT 0, " +
                     "create_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP, " +
                     "update_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP" +

@@ -25,6 +25,8 @@ public class AgentAvatarConfig {
     private String ttsVendorCode;
     /** TTS 音色编号 */
     private String ttsVoiceId;
+    /** TTS 音色支持的情感列表（逗号分隔，选择音色后自动填入） */
+    private String ttsEmotions;
     /** TTS 是否启用 */
     private Boolean ttsEnabled;
     private String createTime;
@@ -135,6 +137,14 @@ public class AgentAvatarConfig {
 
     public void setTtsVoiceId(String ttsVoiceId) {
         this.ttsVoiceId = ttsVoiceId;
+    }
+
+    public String getTtsEmotions() {
+        return ttsEmotions;
+    }
+
+    public void setTtsEmotions(String ttsEmotions) {
+        this.ttsEmotions = ttsEmotions;
     }
 
     public Boolean getTtsEnabled() {

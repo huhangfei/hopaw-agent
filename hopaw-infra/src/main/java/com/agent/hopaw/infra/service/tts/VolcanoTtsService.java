@@ -82,7 +82,7 @@ public class VolcanoTtsService implements ITtsService {
     }
 
     @Override
-    public byte[] synthesize(String configJson, String voiceId, String text) {
+    public byte[] synthesize(String configJson, String voiceId, String text, String emotion) {
         if (text == null || text.isEmpty()) {
             logger.warn("火山引擎 TTS: 文本为空，跳过合成");
             return new byte[0];
