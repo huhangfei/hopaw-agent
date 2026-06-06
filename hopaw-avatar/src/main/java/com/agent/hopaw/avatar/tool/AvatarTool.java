@@ -96,7 +96,7 @@ public class AvatarTool implements AgentTool {
     }
 
     @ToolSecurityLevel(ToolSecurityLevel.Level.SAFE)
-    @Tool(value = {"和用户聊天", "向用户发送虚拟人主动消息"},
+    @Tool(value = {"和用户聊天", "向用户发送虚拟人主动消息，该消息支持文字气泡显示和语音播报"},
             searchBehavior = dev.langchain4j.agent.tool.SearchBehavior.ALWAYS_VISIBLE)
     public String sendAvatarMessageToUser(@P("需要推送给用户的消息内容") String message,
                                    InvocationParameters invocationParameters) {

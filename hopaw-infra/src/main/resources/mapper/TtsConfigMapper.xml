@@ -37,7 +37,7 @@
         LIMIT 1
     </select>
 
-    <insert id="insert" parameterType="com.agent.hopaw.infra.model.entity.TtsConfig" useGeneratedKeys="true" keyProperty="id">
+    <insert id="insert" parameterType="com.agent.hopaw.infra.model.entity.TtsConfig">
         INSERT INTO tts_config (vendor_code, vendor_name, config_json, enabled)
         VALUES (#{vendorCode}, #{vendorName}, #{configJson}, COALESCE(#{enabled}, 0))
     </insert>

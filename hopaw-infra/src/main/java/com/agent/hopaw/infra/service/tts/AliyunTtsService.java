@@ -155,29 +155,87 @@ public class AliyunTtsService implements ITtsService {
     }
 
     private String generateNlsToken(String accessKeyId, String accessKeySecret) throws Exception {
-        // 阿里云 NLS Token 生成算法
-        String headerJson = "{\"alg\":\"HS256\",\"typ\":\"JWT\"}";
-        long now = System.currentTimeMillis() / 1000;
-        long exp = now + 3600;
-        String payloadJson = "{\"iss\":\"" + accessKeyId + "\",\"iat\":" + now + ",\"exp\":" + exp + "}";
+        // 通过阿里云 CreateToken API 获取 NLS Token
+        // 参考: https://help.aliyun.com/document_detail/374324.html
+        String domain = "nls-meta.cn-shanghai.aliyuncs.com";
+        Map<String, String> params = new TreeMap<>();
+        params.put("Action", "CreateToken");
+        params.put("Version", "2019-02-28");
+        params.put("Format", "JSON");
+        params.put("AccessKeyId", accessKeyId);
+        params.put("SignatureMethod", "HMAC-SHA1");
+        params.put("SignatureVersion", "1.0");
+        params.put("SignatureNonce", UUID.randomUUID().toString());
+        params.put("Timestamp", getUtcTimestamp());
+        params.put("RegionId", "cn-shanghai");
 
-        String headerB64 = base64UrlEncode(headerJson.getBytes(StandardCharsets.UTF_8));
-        String payloadB64 = base64UrlEncode(payloadJson.getBytes(StandardCharsets.UTF_8));
+        // 构造签名字符串
+        StringBuilder canonicalized = new StringBuilder();
+        boolean first = true;
+        for (Map.Entry<String, String> entry : params.entrySet()) {
+            if (!first) canonicalized.append('&');
+            canonicalized.append(percentEncode(entry.getKey()))
+                    .append('=')
+                    .append(percentEncode(entry.getValue()));
+            first = false;
+        }
 
-        String signingInput = headerB64 + "." + payloadB64;
+        String stringToSign = "GET&" + percentEncode("/") + "&" + percentEncode(canonicalized.toString());
 
-        Mac mac = Mac.getInstance("HmacSHA256");
-        SecretKeySpec spec = new SecretKeySpec(accessKeySecret.getBytes(StandardCharsets.UTF_8), "HmacSHA256");
+        Mac mac = Mac.getInstance("HmacSHA1");
+        SecretKeySpec spec = new SecretKeySpec(
+                (accessKeySecret + "&").getBytes(StandardCharsets.UTF_8), "HmacSHA1");
         mac.init(spec);
-        byte[] signature = mac.doFinal(signingInput.getBytes(StandardCharsets.UTF_8));
-        String signatureB64 = base64UrlEncode(signature);
+        byte[] signData = mac.doFinal(stringToSign.getBytes(StandardCharsets.UTF_8));
+        String signature = Base64.getEncoder().encodeToString(signData);
 
-        return signingInput + "." + signatureB64;
+        String urlStr = "https://" + domain + "/?" + canonicalized
+                + "&Signature=" + URLEncoder.encode(signature, "UTF-8");
+
+        String responseBody = httpGetString(urlStr);
+        JSONObject resp = JSON.parseObject(responseBody);
+        JSONObject tokenObj = resp.getJSONObject("Token");
+        if (tokenObj == null) {
+            throw new RuntimeException("CreateToken 响应中无 Token 字段: " + responseBody);
+        }
+        return tokenObj.getString("Id");
     }
 
-    private String base64UrlEncode(byte[] data) {
-        String b64 = Base64.getEncoder().encodeToString(data);
-        return b64.replace('+', '-').replace('/', '_').replaceAll("=", "");
+    private static String getUtcTimestamp() {
+        SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss'Z'");
+        sdf.setTimeZone(TimeZone.getTimeZone("UTC"));
+        return sdf.format(new Date());
+    }
+
+    private static String percentEncode(String value) throws Exception {
+        return URLEncoder.encode(value, "UTF-8")
+                .replace("+", "%20")
+                .replace("*", "%2A")
+                .replace("%7E", "~");
+    }
+
+    private String httpGetString(String urlStr) throws Exception {
+        URL url = new URL(urlStr);
+        HttpsURLConnection conn = (HttpsURLConnection) url.openConnection();
+        try {
+            SSLContext sc = SSLContext.getInstance("TLS");
+            sc.init(null, new TrustManager[]{new X509TrustManager() {
+                public void checkClientTrusted(X509Certificate[] c, String a) {}
+                public void checkServerTrusted(X509Certificate[] c, String a) {}
+                public X509Certificate[] getAcceptedIssuers() { return new X509Certificate[0]; }
+            }}, new java.security.SecureRandom());
+            conn.setSSLSocketFactory(sc.getSocketFactory());
+        } catch (Exception ignored) {}
+        conn.setRequestMethod("GET");
+        conn.setConnectTimeout(10000);
+        conn.setReadTimeout(10000);
+        int code = conn.getResponseCode();
+        String body = readString(code == 200 ? conn.getInputStream() : conn.getErrorStream());
+        conn.disconnect();
+        if (code != 200) {
+            throw new RuntimeException("CreateToken API 返回 " + code + ": " + body);
+        }
+        return body;
     }
 
     private byte[] httpGet(String urlStr) throws Exception {

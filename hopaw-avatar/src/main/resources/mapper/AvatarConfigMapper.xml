@@ -53,7 +53,10 @@
         FROM agent_avatar_config
     </select>
 
-    <insert id="insert" parameterType="com.agent.hopaw.avatar.entity.AgentAvatarConfig" useGeneratedKeys="true" keyProperty="id">
+    <insert id="insert" parameterType="com.agent.hopaw.avatar.entity.AgentAvatarConfig">
+        <selectKey keyProperty="id" resultType="long" order="AFTER">
+            SELECT last_insert_rowid()
+        </selectKey>
         INSERT INTO agent_avatar_config (user_id, agent_id, disabled, model_setting, model_group, persona_setting,
                                          total_tokens, last_processed_chat_id,
                                          sound_enabled,
