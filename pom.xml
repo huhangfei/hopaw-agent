@@ -30,6 +30,7 @@
         <module>tools/hopaw-tool-baidusearch</module>
         <module>tools/hopaw-tool-file</module>
         <module>tools/hopaw-tool-command</module>
+        <module>tools/hopaw-tool-database</module>
     </modules>
 
     <properties>

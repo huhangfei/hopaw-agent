@@ -2,6 +2,7 @@ package com.agent.hopaw.config;
 
 import org.springframework.context.annotation.Configuration;
 import org.springframework.web.servlet.config.annotation.InterceptorRegistry;
+import org.springframework.web.servlet.config.annotation.ResourceHandlerRegistry;
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 
 @Configuration
@@ -16,13 +17,21 @@ public class WebMvcConfig implements WebMvcConfigurer {
     }
 
     @Override
+    public void addResourceHandlers(ResourceHandlerRegistry registry) {
+        // 导出文件下载：将 /exports/** 映射到项目根目录下的 exports/ 文件夹
+        String exportPath = "file:" + System.getProperty("user.dir") + "/exports/";
+        registry.addResourceHandler("/exports/**")
+                .addResourceLocations(exportPath);
+    }
+
+    @Override
     public void addInterceptors(InterceptorRegistry registry) {
         registry.addInterceptor(authInterceptor)
                 .addPathPatterns("/**")
-                .excludePathPatterns("/static/**", "/css/**", "/js/**", "/icons/**", "/images/**", "/test/**", "/ws/**", "/error");
+                .excludePathPatterns("/static/**", "/css/**", "/js/**", "/icons/**", "/images/**", "/test/**", "/ws/**", "/error", "/exports/**");
 
         registry.addInterceptor(themeInterceptor)
                 .addPathPatterns("/**")
-                .excludePathPatterns("/static/**", "/css/**", "/js/**", "/icons/**", "/images/**", "/test/**");
+                .excludePathPatterns("/static/**", "/css/**", "/js/**", "/icons/**", "/images/**", "/test/**", "/exports/**");
     }
 }

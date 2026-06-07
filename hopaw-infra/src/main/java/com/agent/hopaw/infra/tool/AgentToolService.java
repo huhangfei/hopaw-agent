@@ -530,6 +530,68 @@ public class AgentToolService implements IAgentToolService {
         return PluginInstallResult.success(toolName, version, jarFileName, toolCount, isUpgrade, previousVersion, conflictInfo);
     }
 
+    @Override
+    public PluginInstallResult installPluginFromJarFile(Path jarPath) throws Exception {
+        if (jarPath == null) {
+            throw new IllegalArgumentException("jarPath 不能为空");
+        }
+        File src = jarPath.toFile();
+        if (!src.exists() || !src.isFile()) {
+            throw new IllegalArgumentException("JAR 文件不存在或不是文件: " + jarPath);
+        }
+        if (!src.canRead()) {
+            throw new IllegalArgumentException("JAR 文件不可读: " + jarPath);
+        }
+        if (src.length() <= 0L) {
+            throw new IllegalArgumentException("JAR 文件为空: " + jarPath);
+        }
+
+        String jarFileName = src.getName();
+        if (!jarFileName.toLowerCase().endsWith(".jar")) {
+            throw new IllegalArgumentException("文件扩展名必须为 .jar: " + jarFileName);
+        }
+
+        // 先扫描 JAR 拿到插件名/工具名（用于冲突检测与升级判断）
+        JarPluginLoader.PluginScanResult scanResult = jarPluginLoader.scanPluginInfo(src);
+        if (scanResult.hasError() || scanResult.pluginName == null) {
+            String err = scanResult.errorMessage != null ? scanResult.errorMessage : "JAR 内未发现可用的 AgentTool 实现";
+            return PluginInstallResult.fail(jarFileName, null, jarFileName, "JAR 无效: " + err);
+        }
+
+        boolean isUpgrade = false;
+        String previousVersion = null;
+        Path targetPath = jarPluginLoader.getPluginDir().resolve(jarFileName);
+        File existingFile = targetPath.toFile();
+        if (existingFile.exists() || dynamicToolRegistry.hasPlugin(jarFileName)) {
+            isUpgrade = true;
+            DynamicToolRegistry.PluginEntry existing = dynamicToolRegistry.getPlugins().get(jarFileName);
+            if (existing != null && !existing.tools.isEmpty()) {
+                previousVersion = existing.tools.get(0).getVersion();
+            }
+            jarPluginLoader.unloadAndDeletePlugin(jarFileName);
+        }
+
+        Files.copy(src.toPath(), targetPath, java.nio.file.StandardCopyOption.REPLACE_EXISTING);
+        log.info("Plugin JAR copied from {} to {}", src, targetPath);
+
+        PluginConflictInfo conflictInfo = detectConflicts(targetPath.toFile(), scanResult.pluginName);
+
+        int toolCount = jarPluginLoader.loadPlugin(targetPath.toFile());
+
+        String version = null;
+        try {
+            // 加载后从注册表中读取版本号
+            DynamicToolRegistry.PluginEntry entry = dynamicToolRegistry.getPlugins().get(jarFileName);
+            if (entry != null && !entry.tools.isEmpty()) {
+                version = entry.tools.get(0).getVersion();
+            }
+        } catch (Exception ignored) {
+            // 版本读取失败不阻塞安装结果
+        }
+
+        return PluginInstallResult.success(scanResult.pluginName, version, jarFileName, toolCount, isUpgrade, previousVersion, conflictInfo);
+    }
+
     private String formatFileSize(long bytes) {
         if (bytes < 1024) return bytes + " B";
         if (bytes < 1024 * 1024) return String.format("%.2f KB", bytes / 1024.0);

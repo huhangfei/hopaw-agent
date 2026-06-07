@@ -79,7 +79,7 @@ public class BaiduSearchTool implements AgentTool {
 
     @Override
     public String getIcon() {
-        return "web-search-tool.svg";
+        return "baidu-search-tool.svg";
     }
 
     @Override

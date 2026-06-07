@@ -43,3 +43,4 @@ vector_store.metadata
 /plugin-packages/
 /plugin-repo.db
 /skills/
+/exports/
