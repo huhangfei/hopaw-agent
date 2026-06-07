@@ -6,214 +6,33 @@
     <title>设置 - HoPaw</title>
 </head>
 <body>
-<div layout:fragment="pageTitle">🤖 HoPaw - 设置</div>
+<div layout:fragment="pageTitle">设置</div>
 
 <main layout:fragment="content" class="settings-content">
     <h2>系统设置</h2>
 
     <div class="settings-tabs">
-        <button class="settings-tab active" data-tab="memory" onclick="switchTab('memory')">记忆设置</button>
-        <button class="settings-tab" data-tab="mail" onclick="switchTab('mail')">邮件配置</button>
-        <button class="settings-tab" data-tab="tts" onclick="switchTab('tts')">TTS语音</button>
-        <button class="settings-tab" data-tab="pluginStore" onclick="switchTab('pluginStore')">插件商店源</button>
+        <a th:href="@{/settings/memory}" class="settings-tab" th:classappend="${currentTab == 'memory' ? 'active' : ''}">记忆设置</a>
+        <a th:href="@{/settings/mail}" class="settings-tab" th:classappend="${currentTab == 'mail' ? 'active' : ''}">邮件配置</a>
+        <a th:href="@{/settings/tts}" class="settings-tab" th:classappend="${currentTab == 'tts' ? 'active' : ''}">TTS语音</a>
+        <a th:href="@{/settings/plugin-store}" class="settings-tab" th:classappend="${currentTab == 'plugin-store' ? 'active' : ''}">插件商店源</a>
     </div>
 
-    <div class="settings-panel active" id="tab-memory">
-        <div class="settings-row">
-            <div class="settings-form">
-                <div class="form-group">
-                    <label>定时任务状态</label>
-                    <div class="task-status-row">
-                        <span class="task-status-badge" id="memoryTaskStatus">检测中...</span>
-                        <button class="btn-toggle-task" id="memoryTaskToggleBtn" onclick="toggleMemoryTask()">启用</button>
-                    </div>
-                </div>
-
-                <div class="form-group">
-                    <label>记忆整理使用模型</label>
-                    <div class="flex-container">
-                        <select id="memoryProviderSelect" class="model-select">
-                            <option value="">选择提供商</option>
-                        </select>
-                        <select id="memoryModelSelect" class="model-select">
-                            <option value="">选择模型</option>
-                        </select>
-                    </div>
-                </div>
-
-                <div class="form-group">
-                    <label for="memoryPrompt">记忆整理提示词</label>
-                    <textarea id="memoryPrompt" class="memory-prompt-input" rows="8" placeholder="自定义记忆整理的提示词，留空则使用默认提示词"></textarea>
-                </div>
-
-                <div class="form-row">
-                    <div class="form-group">
-                        <label for="taskRecordsArrangeTimeoutHour">近期任务记忆过期时间（单位：小时，用于整理记忆时限制时限）</label>
-                        <input type="number" id="taskRecordsArrangeTimeoutHour" class="settings-input" min="1" placeholder="48">
-                    </div>
-                    <div class="form-group">
-                        <label for="taskRecordsClearTimeoutDay">任务记忆过期归档时间（单位：天，过期后从记忆库中删除，但是向量库中永存）</label>
-                        <input type="number" id="taskRecordsClearTimeoutDay" class="settings-input" min="1" placeholder="7">
-                    </div>
-                </div>
-
-                <div class="settings-actions">
-                    <button class="btn-save-settings" onclick="saveSettings()">保存设置</button>
-                </div>
-            </div>
-
-            <div class="settings-form">
-                <h3 style="font-size:15px;color:#333;margin:0 0 16px 0;">向量存储配置</h3>
-
-                <div class="restart-notice">
-                    <p>向量存储设置修改后需重启应用使配置生效。</p>
-                </div>
-
-                <div class="form-group">
-                    <label for="vectorStorePath">向量持久化路径</label>
-                    <input type="text" id="vectorStorePath" class="settings-input" placeholder="./vector_store">
-                    <p class="form-hint">向量索引文件的存储目录，默认 ./vector_store</p>
-                </div>
-
-                <div class="form-group">
-                    <label>向量存储预设</label>
-                    <select id="vectorStoreProfile" class="settings-input">
-                        <option value="stable">稳定 - 默认，均衡精度与性能</option>
-                        <option value="precision">精准 - 召回率最优，构建较慢</option>
-                        <option value="speed">极速 - 构建最快，内存更省</option>
-                    </select>
-                    <p class="form-hint">精准：maxDegree=32, 速度慢但搜索准。极速：maxDegree=8, 快但召回有所下降</p>
-                </div>
-
-                <div class="settings-actions">
-                    <button class="btn-save-settings" onclick="saveVectorStoreSettings()">保存设置</button>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <div class="settings-panel" id="tab-mail">
-        <div class="settings-form">
-            <div class="form-group">
-                <label for="mailHost">SMTP 服务器</label>
-                <input type="text" id="mailHost" class="settings-input" placeholder="smtp.example.com">
-            </div>
-            <div class="form-group">
-                <label for="mailPort">端口</label>
-                <input type="number" id="mailPort" class="settings-input" placeholder="587">
-            </div>
-            <div class="form-group">
-                <label for="mailUsername">用户名</label>
-                <input type="text" id="mailUsername" class="settings-input" placeholder="your@example.com">
-            </div>
-            <div class="form-group">
-                <label for="mailPassword">密码/授权码</label>
-                <input type="password" id="mailPassword" class="settings-input" placeholder="SMTP 密码或授权码">
-            </div>
-            <div class="form-group">
-                <label for="mailFrom">发件人地址</label>
-                <input type="text" id="mailFrom" class="settings-input" placeholder="noreply@example.com（可选）">
-            </div>
-            <div class="settings-actions">
-                <button class="btn-save-settings" onclick="saveMailSettings()">保存设置</button>
-                <button class="btn-test-mail" onclick="testMailConfig()">测试连接</button>
-            </div>
-        </div>
-    </div>
-
-    <div class="settings-panel" id="tab-tts">
-        <div class="settings-form" style="max-width:900px;">
-            <div class="tts-list-header">
-                <h3 style="font-size:15px;color:#333;margin:0;">TTS 语音配置</h3>
-                <button class="btn-add-tts" onclick="showTtsForm()">+ 添加配置</button>
-            </div>
-
-            <!-- 配置列表 -->
-            <div class="tts-table-wrap">
-                <table class="tts-table" id="ttsTable">
-                    <thead>
-                        <tr>
-                            <th>配置名称</th>
-                            <th>厂商</th>
-                            <th>编号</th>
-                            <th>配置</th>
-                            <th style="width:80px;">状态</th>
-                            <th style="width:120px;">操作</th>
-                        </tr>
-                    </thead>
-                    <tbody id="ttsTableBody">
-                        <tr id="ttsEmptyRow">
-                            <td colspan="6" class="tts-empty">暂无 TTS 配置，点击"添加配置"开始</td>
-                        </tr>
-                    </tbody>
-                </table>
-            </div>
-
-            <!-- 添加/编辑表单 -->
-            <div class="tts-form" id="ttsEditForm" style="display:none;">
-                <div class="tts-form-divider"></div>
-                <h4 class="tts-form-title" id="ttsFormTitle">添加 TTS 配置</h4>
-                <input type="hidden" id="ttsEditId">
-
-                <div class="form-group">
-                    <label for="ttsVendorSelect">TTS 厂商</label>
-                    <select id="ttsVendorSelect" class="settings-input" onchange="onTtsVendorChange()">
-                        <option value="">选择厂商</option>
-                    </select>
-                </div>
-
-                <div class="form-group">
-                    <label for="ttsConfigName">配置名称</label>
-                    <input type="text" id="ttsConfigName" class="settings-input" maxlength="50" placeholder="例如：生产环境、测试账号A">
-                    <p class="form-hint">自定义名称，方便区分同厂商的多条配置</p>
-                </div>
-
-                <div class="form-group">
-                    <label for="ttsConfigJson">厂商配置（JSON）</label>
-                    <textarea id="ttsConfigJson" class="settings-input tts-json-input" rows="6" placeholder='{"appId":"xxx","accessToken":"xxx"}'></textarea>
-                    <p class="form-hint">火山引擎: {"appId":"xxx","accessToken":"xxx","cluster":"volcano_tts"}<br>阿里云: {"accessKeyId":"xxx","accessKeySecret":"xxx","appKey":"xxx"}</p>
-                </div>
-
-                <div class="form-group">
-                    <label class="switch-row">
-                        <span class="switch-label">启用</span>
-                        <label class="switch">
-                            <input type="checkbox" id="ttsEnabled" checked>
-                            <span class="slider"></span>
-                        </label>
-                    </label>
-                </div>
-
-                <div class="tts-form-actions">
-                    <button class="btn-save-settings" onclick="saveTtsForm()">保存</button>
-                    <button class="btn-cancel" onclick="hideTtsForm()">取消</button>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <div class="settings-panel" id="tab-pluginStore">
-        <div class="settings-form">
-            <div class="form-group">
-                <label>插件商店源地址</label>
-                <div id="pluginSourceList">
-                </div>
-                <button class="btn-add-key" onclick="addPluginSource()">+ 添加源地址</button>
-                <p class="form-hint">添加多个插件商店源地址，多个源将按顺序查询</p>
-            </div>
-            <div class="settings-actions">
-                <button class="btn-save-settings" onclick="savePluginStoreSettings()">保存设置</button>
-            </div>
-        </div>
-    </div>
+    <div th:replace="~{__${'settings/' + currentTab}__ :: content}"></div>
 </main>
 
 <th:block layout:fragment="extraCss">
     <link rel="stylesheet" th:href="@{/css/page/settings.css}">
+    <th:block th:if="${tabCss != null}">
+        <link rel="stylesheet" th:href="@{${tabCss}}">
+    </th:block>
 </th:block>
 
 <th:block layout:fragment="extraScripts">
-    <script th:src="@{/js/page/settings.js}"></script>
+    <script th:src="@{/js/page/settings-common.js}"></script>
+    <th:block th:if="${tabJs != null}">
+        <script th:src="@{${tabJs}}"></script>
+    </th:block>
 </th:block>
 </body>
 </html>

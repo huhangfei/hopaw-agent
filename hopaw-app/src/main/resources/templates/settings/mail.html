@@ -1,0 +1,30 @@
+<th:block th:fragment="content" xmlns:th="http://www.thymeleaf.org">
+<div class="settings-panel active" id="tab-mail">
+    <div class="settings-form">
+        <div class="form-group">
+            <label for="mailHost">SMTP 服务器</label>
+            <input type="text" id="mailHost" class="settings-input" placeholder="smtp.example.com">
+        </div>
+        <div class="form-group">
+            <label for="mailPort">端口</label>
+            <input type="number" id="mailPort" class="settings-input" placeholder="587">
+        </div>
+        <div class="form-group">
+            <label for="mailUsername">用户名</label>
+            <input type="text" id="mailUsername" class="settings-input" placeholder="your@example.com">
+        </div>
+        <div class="form-group">
+            <label for="mailPassword">密码/授权码</label>
+            <input type="password" id="mailPassword" class="settings-input" placeholder="SMTP 密码或授权码">
+        </div>
+        <div class="form-group">
+            <label for="mailFrom">发件人地址</label>
+            <input type="text" id="mailFrom" class="settings-input" placeholder="noreply@example.com（可选）">
+        </div>
+        <div class="settings-actions">
+            <button class="btn-save-settings" onclick="saveMailSettings()">保存设置</button>
+            <button class="btn-test-mail" onclick="testMailConfig()">测试连接</button>
+        </div>
+    </div>
+</div>
+</th:block>

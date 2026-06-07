@@ -1,0 +1,75 @@
+<th:block th:fragment="content" xmlns:th="http://www.thymeleaf.org">
+<div class="settings-panel active" id="tab-memory">
+    <div class="settings-row">
+        <div class="settings-form">
+            <div class="form-group">
+                <label>定时任务状态</label>
+                <div class="task-status-row">
+                    <span class="task-status-badge" id="memoryTaskStatus">检测中...</span>
+                    <button class="btn-toggle-task" id="memoryTaskToggleBtn" onclick="toggleMemoryTask()">启用</button>
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label>记忆整理使用模型</label>
+                <div class="flex-container">
+                    <select id="memoryProviderSelect" class="model-select">
+                        <option value="">选择提供商</option>
+                    </select>
+                    <select id="memoryModelSelect" class="model-select">
+                        <option value="">选择模型</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label for="memoryPrompt">记忆整理提示词</label>
+                <textarea id="memoryPrompt" class="memory-prompt-input" rows="8" placeholder="自定义记忆整理的提示词，留空则使用默认提示词"></textarea>
+            </div>
+
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="taskRecordsArrangeTimeoutHour">近期任务记忆过期时间（单位：小时，用于整理记忆时限制时限）</label>
+                    <input type="number" id="taskRecordsArrangeTimeoutHour" class="settings-input" min="1" placeholder="48">
+                </div>
+                <div class="form-group">
+                    <label for="taskRecordsClearTimeoutDay">任务记忆过期归档时间（单位：天，过期后从记忆库中删除，但是向量库中永存）</label>
+                    <input type="number" id="taskRecordsClearTimeoutDay" class="settings-input" min="1" placeholder="7">
+                </div>
+            </div>
+
+            <div class="settings-actions">
+                <button class="btn-save-settings" onclick="saveSettings()">保存设置</button>
+            </div>
+        </div>
+
+        <div class="settings-form">
+            <h3 style="font-size:15px;color:#333;margin:0 0 16px 0;">向量存储配置</h3>
+
+            <div class="restart-notice">
+                <p>向量存储设置修改后需重启应用使配置生效。</p>
+            </div>
+
+            <div class="form-group">
+                <label for="vectorStorePath">向量持久化路径</label>
+                <input type="text" id="vectorStorePath" class="settings-input" placeholder="./vector_store">
+                <p class="form-hint">向量索引文件的存储目录，默认 ./vector_store</p>
+            </div>
+
+            <div class="form-group">
+                <label>向量存储预设</label>
+                <select id="vectorStoreProfile" class="settings-input">
+                    <option value="stable">稳定 - 默认，均衡精度与性能</option>
+                    <option value="precision">精准 - 召回率最优，构建较慢</option>
+                    <option value="speed">极速 - 构建最快，内存更省</option>
+                </select>
+                <p class="form-hint">精准：maxDegree=32, 速度慢但搜索准。极速：maxDegree=8, 快但召回有所下降</p>
+            </div>
+
+            <div class="settings-actions">
+                <button class="btn-save-settings" onclick="saveVectorStoreSettings()">保存设置</button>
+            </div>
+        </div>
+    </div>
+</div>
+</th:block>

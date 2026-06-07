@@ -162,6 +162,11 @@ function connectWebSocket() {
         } else if (data.type === 'session-title') {
             updateSessionTitle(data.sessionId, data.content);
         } else if (data.type === 'task-done') {
+            var msgState = streamingMessages[requestId];
+            if (msgState && msgState.currentStreamingMessage) {
+                msgState.currentStreamingMessage.appendChild(createMessageFooter());
+                msgState.currentStreamingMessage = null;
+            }
             enableInput();
         } else if (data.type === 'error') {
             handleStreamingError(data.content || data.message, requestId);
