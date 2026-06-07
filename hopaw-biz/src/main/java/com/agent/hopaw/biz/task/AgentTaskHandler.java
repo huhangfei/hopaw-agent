@@ -24,6 +24,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.UUID;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 
 @Component
@@ -81,6 +82,11 @@ public class AgentTaskHandler implements TaskHandler {
                         })
                         .collect(Collectors.toList());
             }
+            Function<Object, String> systemMessageProvider = x -> {
+                String systemMessage = "现在你要执行一个用户给定的任务，请你根据任务描述认真执行任务，如果任务中出现了指定时间执行或者定时执行的描述请忽略，直接执行要做的事情即可，有疑问可以尝试查询用户记忆，需要调用工具就调用工具。"
+                        +"本次任务任务编号："+task.getId()+"，本次任务的表达式："+task.getCronExpression()+"，判断如果是一次性任务处理完后请删除任务。";
+                return systemMessage;
+            };
             InvocationParametersWrapper invocationParametersWrapper = InvocationParametersWrapper.create()
             .setUserId(task.getUserId())
             .setAgentId(Long.parseLong(agentIdStr))
@@ -88,7 +94,7 @@ public class AgentTaskHandler implements TaskHandler {
             .setSessionId(UUID.randomUUID().toString());
             AgentTaskAssistant assistant = AiServices.builder(AgentTaskAssistant.class)
                     .chatModel(chatModel)
-                    .systemMessageProvider(chatMemoryId -> "这是一个定时执行的任务，你根据任务描述认真执行任务，有疑问可以尝试查询用户记忆。")
+                    .systemMessageProvider(systemMessageProvider)
                     .tools(selectedTools.toArray())
                     .maxSequentialToolsInvocations(agent.getMaxToolInvocations())
                     .build();

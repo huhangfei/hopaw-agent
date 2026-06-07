@@ -44,6 +44,71 @@ function renderMarkdown(content) {
     return content.replace(/\n/g, '<br>');
 }
 
+function createMessageFooter(messageText) {
+    var footer = document.createElement('div');
+    footer.className = 'message-footer';
+
+    var timeDiv = document.createElement('div');
+    timeDiv.className = 'message-time';
+    timeDiv.textContent = formatMessageTime(new Date());
+    footer.appendChild(timeDiv);
+
+    var copyBtn = document.createElement('button');
+    copyBtn.className = 'message-copy-btn';
+    copyBtn.setAttribute('title', '复制消息');
+    if (messageText) {
+        copyBtn.setAttribute('data-content', messageText);
+    }
+    copyBtn.innerHTML = '<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>';
+    copyBtn.onclick = function() { copyMessageContent(this); };
+    footer.appendChild(copyBtn);
+
+    return footer;
+}
+
+function copyMessageContent(btn) {
+    var content = btn.getAttribute('data-content');
+    // fallback: 从父级 message 中查找 message-content
+    if (!content) {
+        var msgEl = btn.closest('.message');
+        if (msgEl) {
+            var contentEl = msgEl.querySelector('.message-content');
+            if (contentEl) {
+                content = contentEl.getAttribute('data-raw-content') || contentEl.textContent;
+            }
+        }
+    }
+    if (!content) return;
+
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(content).then(function() {
+            btn.classList.add('copied');
+            setTimeout(function() { btn.classList.remove('copied'); }, 1500);
+        }).catch(function() {
+            fallbackCopy(btn, content);
+        });
+    } else {
+        fallbackCopy(btn, content);
+    }
+}
+
+function fallbackCopy(btn, content) {
+    var textarea = document.createElement('textarea');
+    textarea.value = content;
+    textarea.style.position = 'fixed';
+    textarea.style.opacity = '0';
+    document.body.appendChild(textarea);
+    textarea.select();
+    try {
+        document.execCommand('copy');
+        btn.classList.add('copied');
+        setTimeout(function() { btn.classList.remove('copied'); }, 1500);
+    } catch (e) {
+        console.error('复制失败:', e);
+    }
+    document.body.removeChild(textarea);
+}
+
 function renderAllMessages() {
     var messageContents = document.querySelectorAll('.message-content[data-is-agent="true"], .thinking-content');
     messageContents.forEach(function(el) {
@@ -396,10 +461,7 @@ function handleToolCall(data, requestId) {
 
         // Finalize message
         if (msgState.currentStreamingMessage) {
-            var timeDiv = document.createElement('div');
-            timeDiv.className = 'message-time';
-            timeDiv.textContent = formatMessageTime(new Date());
-            msgState.currentStreamingMessage.appendChild(timeDiv);
+            msgState.currentStreamingMessage.appendChild(createMessageFooter());
             msgState.currentStreamingMessage = null;
         }
     }
@@ -480,10 +542,7 @@ function handleThinking(data, requestId) {
         msgState.thinkingDiv.innerHTML = renderMarkdown(msgState.thinkingContent);
         messagesDiv.scrollTop = messagesDiv.scrollHeight;
         if (msgState.currentStreamingMessage && msgState.lastMessageType === 'thinking') {
-            var timeDiv = document.createElement('div');
-            timeDiv.className = 'message-time';
-            timeDiv.textContent = formatMessageTime(new Date());
-            msgState.currentStreamingMessage.appendChild(timeDiv);
+            msgState.currentStreamingMessage.appendChild(createMessageFooter());
             msgState.currentStreamingMessage = null;
             msgState.thinkingContent = '';
             msgState.thinkingDiv = null;
@@ -568,10 +627,7 @@ function handleStreamingDone(userMessage, response, requestId) {
     //     }
     // }
     
-    var timeDiv = document.createElement('div');
-    timeDiv.className = 'message-time';
-    timeDiv.textContent = formatMessageTime(new Date());
-    msgState.currentStreamingMessage.appendChild(timeDiv);
+    msgState.currentStreamingMessage.appendChild(createMessageFooter());
     
     delete streamingMessages[requestId];
     enableInput();
@@ -597,10 +653,7 @@ function handleStreamingError(errorMessage, requestId) {
     contentDiv.textContent = errorMessage;
     errorDiv.appendChild(contentDiv);
 
-    var timeDiv = document.createElement('div');
-    timeDiv.className = 'message-time';
-    timeDiv.textContent = formatMessageTime(new Date());
-    errorDiv.appendChild(timeDiv);
+    errorDiv.appendChild(createMessageFooter(errorMessage));
 
     messagesDiv.appendChild(errorDiv);
     messagesDiv.scrollTop = messagesDiv.scrollHeight;
@@ -626,10 +679,7 @@ function handleStreamingWarn(warnMessage, requestId) {
     contentDiv.textContent = warnMessage;
     warnDiv.appendChild(contentDiv);
 
-    var timeDiv = document.createElement('div');
-    timeDiv.className = 'message-time';
-    timeDiv.textContent = formatMessageTime(new Date());
-    warnDiv.appendChild(timeDiv);
+    warnDiv.appendChild(createMessageFooter(warnMessage));
 
     messagesDiv.appendChild(warnDiv);
     messagesDiv.scrollTop = messagesDiv.scrollHeight;
@@ -672,10 +722,7 @@ function sendMessage() {
             userContent.textContent = message;
             userMessageDiv.appendChild(userContent);
 
-            var userTime = document.createElement('div');
-            userTime.className = 'message-time';
-            userTime.textContent = formatMessageTime(new Date());
-            userMessageDiv.appendChild(userTime);
+            userMessageDiv.appendChild(createMessageFooter(message));
 
             var messagesDiv = document.getElementById('chatMessages');
             messagesDiv.appendChild(userMessageDiv);

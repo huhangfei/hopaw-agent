@@ -53,7 +53,7 @@ public class LongTermMemoryService implements ILongTermMemoryService {
     public LongTermMemory createMemory(String sessionId, String memory, Long parentId, String userId,
                                        UserMemoryTypeEnum memoryType, String summary) {
         LongTermMemory entity = new LongTermMemory(sessionId, userId, memoryType.getCode(), summary, memory, parentId);
-        String storeId = vectorMemoryService.store(memory, sessionId, userId, memoryType, LocalDateTime.now());
+        String storeId = vectorMemoryService.store(summary+"\n"+memory, sessionId, userId, memoryType, LocalDateTime.now());
         entity.setEmbeddingId(storeId);
         longTermMemoryMapper.insert(entity);
         return entity;
@@ -71,7 +71,7 @@ public class LongTermMemoryService implements ILongTermMemoryService {
     @Override
     public void update(LongTermMemory entity) {
         LongTermMemory dbEntity = longTermMemoryMapper.findById(entity.getId());
-        String storeId = vectorMemoryService.store(entity.getMemory(), entity.getSessionId(), entity.getUserId(), UserMemoryTypeEnum.fromCode(entity.getMemoryType()), entity.getCreateTime());
+        String storeId = vectorMemoryService.store(entity.getSummary()+"\n"+ entity.getMemory(), entity.getSessionId(), entity.getUserId(), UserMemoryTypeEnum.fromCode(entity.getMemoryType()), entity.getCreateTime());
         entity.setEmbeddingId(storeId);
         entity.setMemoryHash(String.valueOf(entity.getMemory().hashCode()));
         longTermMemoryMapper.update(entity);
@@ -337,7 +337,7 @@ public class LongTermMemoryService implements ILongTermMemoryService {
         LongTermMemory memoryEntity = null;
         String memoryHash = UUID.nameUUIDFromBytes((memory).getBytes()).toString();
         InvocationParametersWrapper invocationParametersWrapper = InvocationParametersWrapper.create(invocationParameters);
-        String storeId = vectorMemoryService.store(memory, invocationParametersWrapper.getSessionId(), invocationParametersWrapper.getUserId(), memoryType, LocalDateTime.now());
+        String storeId = vectorMemoryService.store(summary+"\n"+memory, invocationParametersWrapper.getSessionId(), invocationParametersWrapper.getUserId(), memoryType, LocalDateTime.now());
         boolean isUpdate = false;
         if (id != null) {
             // 根据id查询记忆
@@ -394,7 +394,7 @@ public class LongTermMemoryService implements ILongTermMemoryService {
 
     @Override
     public void saveUserMemory(String sessionId, String userId, UserMemoryTypeEnum memoryType, String summary, String memory) {
-        String storeId = vectorMemoryService.store(memory, sessionId, userId, memoryType, LocalDateTime.now());
+        String storeId = vectorMemoryService.store(summary+"\n"+memory, sessionId, userId, memoryType, LocalDateTime.now());
         LongTermMemory memoryEntity = new LongTermMemory();
         memoryEntity.setSessionId(sessionId);
         memoryEntity.setUserId(userId);

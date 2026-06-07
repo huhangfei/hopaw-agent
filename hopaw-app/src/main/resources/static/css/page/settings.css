@@ -477,3 +477,267 @@ body.dark-theme .restart-notice p {
 body.dark-theme .form-hint {
     color: #888;
 }
+
+/* ========== TTS 列表 ========== */
+.tts-list-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 16px;
+}
+
+.btn-add-tts {
+    background: #667eea;
+    color: white;
+    border: none;
+    padding: 8px 20px;
+    border-radius: 8px;
+    font-size: 13px;
+    cursor: pointer;
+    transition: background 0.2s;
+}
+
+.btn-add-tts:hover {
+    background: #5a6fd6;
+}
+
+.tts-table-wrap {
+    overflow-x: auto;
+}
+
+.tts-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 13px;
+}
+
+.tts-table thead th {
+    background: #f5f5f5;
+    padding: 10px 12px;
+    text-align: left;
+    font-weight: 600;
+    color: #666;
+    border-bottom: 2px solid #e0e0e0;
+    white-space: nowrap;
+}
+
+.tts-table tbody td {
+    padding: 12px;
+    border-bottom: 1px solid #f0f0f0;
+    vertical-align: middle;
+}
+
+.tts-table tbody tr:hover {
+    background: #fafbff;
+}
+
+.tts-table code {
+    background: #f0f0f0;
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-size: 12px;
+    color: #555;
+}
+
+.tts-empty {
+    text-align: center;
+    color: #999;
+    padding: 32px 12px !important;
+    font-size: 14px;
+}
+
+.tts-config-cell {
+    max-width: 280px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-family: 'Consolas', 'Courier New', monospace;
+    font-size: 12px;
+    color: #666;
+    cursor: default;
+}
+
+.tts-status-badge {
+    display: inline-block;
+    padding: 3px 10px;
+    border-radius: 10px;
+    font-size: 12px;
+    font-weight: 500;
+}
+.tts-status-badge.enabled {
+    background: #e8f5e9;
+    color: #2e7d32;
+}
+.tts-status-badge.disabled {
+    background: #f5f5f5;
+    color: #999;
+}
+
+.tts-actions {
+    white-space: nowrap;
+}
+
+.btn-tts-edit {
+    background: none;
+    color: #667eea;
+    border: 1px solid #667eea;
+    padding: 4px 12px;
+    border-radius: 6px;
+    font-size: 12px;
+    cursor: pointer;
+    margin-right: 6px;
+    transition: all 0.2s;
+}
+
+.btn-tts-edit:hover {
+    background: #667eea;
+    color: white;
+}
+
+.btn-tts-delete {
+    background: none;
+    color: #e53935;
+    border: 1px solid #e53935;
+    padding: 4px 12px;
+    border-radius: 6px;
+    font-size: 12px;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.btn-tts-delete:hover {
+    background: #e53935;
+    color: white;
+}
+
+/* TTS 表单 */
+.tts-form {
+    margin-top: 20px;
+}
+
+.tts-form-divider {
+    border-top: 1px solid #e0e0e0;
+    margin-bottom: 20px;
+}
+
+.tts-form-title {
+    font-size: 15px;
+    color: #333;
+    margin: 0 0 16px 0;
+}
+
+.tts-json-input {
+    font-family: 'Consolas', 'Courier New', monospace;
+    font-size: 13px;
+}
+
+.tts-form-actions {
+    margin-top: 20px;
+    padding-top: 16px;
+    border-top: 1px solid #e0e0e0;
+    display: flex;
+    gap: 10px;
+}
+
+.btn-cancel {
+    background: white;
+    color: #666;
+    border: 1px solid #ccc;
+    padding: 10px 24px;
+    border-radius: 8px;
+    font-size: 14px;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.btn-cancel:hover {
+    background: #f5f5f5;
+    color: #333;
+}
+
+/* ========== Dark Theme: TTS ========== */
+body.dark-theme .tts-table thead th {
+    background: #2d2d44;
+    color: #aaa;
+    border-bottom-color: #3d3d6b;
+}
+
+body.dark-theme .tts-table tbody td {
+    border-bottom-color: #2d2d44;
+}
+
+body.dark-theme .tts-table tbody tr:hover {
+    background: #253555;
+}
+
+body.dark-theme .tts-table code {
+    background: #3d3d6b;
+    color: #8ba3ff;
+}
+
+body.dark-theme .tts-config-cell {
+    color: #aaa;
+}
+
+body.dark-theme .tts-status-badge.enabled {
+    background: rgba(46, 125, 50, 0.2);
+    color: #69f0ae;
+}
+
+body.dark-theme .tts-status-badge.disabled {
+    background: rgba(255, 255, 255, 0.05);
+    color: #888;
+}
+
+body.dark-theme .btn-add-tts {
+    background: #8ba3ff;
+    color: #fff;
+}
+
+body.dark-theme .btn-add-tts:hover {
+    background: #7a92ee;
+}
+
+body.dark-theme .btn-tts-edit {
+    color: #8ba3ff;
+    border-color: #8ba3ff;
+}
+
+body.dark-theme .btn-tts-edit:hover {
+    background: #8ba3ff;
+    color: #fff;
+}
+
+body.dark-theme .btn-tts-delete {
+    color: #ff7961;
+    border-color: #ff7961;
+}
+
+body.dark-theme .btn-tts-delete:hover {
+    background: #ff7961;
+    color: #fff;
+}
+
+body.dark-theme .tts-form-divider,
+body.dark-theme .tts-form-actions {
+    border-top-color: #3d3d6b;
+}
+
+body.dark-theme .tts-form-title {
+    color: #e0e0e0;
+}
+
+body.dark-theme .tts-json-input {
+    color: #e0e0e0;
+}
+
+body.dark-theme .btn-cancel {
+    background: #1e3a5f;
+    color: #aaa;
+    border-color: #3d3d6b;
+}
+
+body.dark-theme .btn-cancel:hover {
+    background: #2d2d44;
+    color: #e0e0e0;
+}

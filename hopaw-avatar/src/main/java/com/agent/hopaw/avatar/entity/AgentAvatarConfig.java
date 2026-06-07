@@ -21,8 +21,8 @@ public class AgentAvatarConfig {
      * 由 AvatarProactiveTool 在调用时更新；定时任务据此判断是否需要发送 wave 提示。
      */
     private String lastProactiveGreetingTime;
-    /** TTS 厂商编号 */
-    private String ttsVendorCode;
+    /** TTS 配置主键（关联 tts_config 表） */
+    private Long ttsConfigId;
     /** TTS 音色编号 */
     private String ttsVoiceId;
     /** TTS 音色支持的情感列表（逗号分隔，选择音色后自动填入） */
@@ -123,12 +123,12 @@ public class AgentAvatarConfig {
         this.lastProactiveGreetingTime = lastProactiveGreetingTime;
     }
 
-    public String getTtsVendorCode() {
-        return ttsVendorCode;
+    public Long getTtsConfigId() {
+        return ttsConfigId;
     }
 
-    public void setTtsVendorCode(String ttsVendorCode) {
-        this.ttsVendorCode = ttsVendorCode;
+    public void setTtsConfigId(Long ttsConfigId) {
+        this.ttsConfigId = ttsConfigId;
     }
 
     public String getTtsVoiceId() {

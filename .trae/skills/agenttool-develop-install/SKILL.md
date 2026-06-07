@@ -10,7 +10,7 @@ audience: "LLM agents, plugin developers, ops engineers"
 related_interfaces:
   - "com.agent.hopaw.infra.tool.IAgentToolService"
   - "com.agent.hopaw.infra.tool.AgentTool"
-  - "com.agent.hopaw.biz.tool.plugin.PluginTool"
+  - "com.agent.hopaw.biz.tool.plugin.ToolManagerTool"
 depends_on:
   - "hopaw-contract"
   - "hopaw-biz"

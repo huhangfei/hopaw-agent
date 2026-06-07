@@ -102,6 +102,32 @@ function createTypeNode(typeInfo, children) {
     count.textContent = typeInfo.count + ' 条';
     content.appendChild(count);
 
+    // 支持拖放到类型节点，表示移动到顶级（父级为空）
+    content.addEventListener('dragover', function(e) {
+        e.preventDefault();
+        e.dataTransfer.dropEffect = 'move';
+        clearDragOver();
+        content.classList.add('drag-over');
+    });
+    content.addEventListener('dragleave', function(e) {
+        content.classList.remove('drag-over');
+    });
+    content.addEventListener('drop', function(e) {
+        e.preventDefault();
+        e.stopPropagation();
+        content.classList.remove('drag-over');
+        try {
+            var dragData = JSON.parse(e.dataTransfer.getData('text/plain'));
+            var draggedId = dragData.id;
+            var draggedType = dragData.memoryType;
+            if (draggedId && draggedType === typeInfo.code) {
+                moveNode(draggedId, null);
+            } else if (draggedId && draggedType !== typeInfo.code) {
+                showToast('不能移动到不同记忆类型下', 'warning');
+            }
+        } catch (ex) {}
+    });
+
     li.appendChild(content);
 
     if (children.length > 0) {
@@ -326,7 +352,11 @@ function deleteMemory(id) {
 }
 
 function moveNode(draggedId, targetId) {
-    fetch('/api/memory-manage/' + draggedId + '/move?newParentId=' + targetId, { method: 'PUT' })
+    var url = '/api/memory-manage/' + draggedId + '/move';
+    if (targetId != null) {
+        url += '?newParentId=' + targetId;
+    }
+    fetch(url, { method: 'PUT' })
         .then(function(r) { return r.json(); })
         .then(function(res) {
             if (res.code === 200) {
@@ -469,10 +499,6 @@ function renderTypeSelect(selectedType) {
     var html = '<select id="memoryTypeSelect" class="form-select">';
     for (var i = 0; i < memoryTypes.length; i++) {
         var t = memoryTypes[i];
-        // 限制不能选择任务记录类型
-        if (t.code === 'taskRecords') {
-            continue;
-        }
         var sel = t.code === selectedType ? ' selected' : '';
         html += '<option value="' + escapeHtml(t.code) + '"' + sel + '>' + escapeHtml(t.name) + ' (' + escapeHtml(t.code) + ')</option>';
     }

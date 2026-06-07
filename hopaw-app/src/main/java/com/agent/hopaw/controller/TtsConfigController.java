@@ -30,6 +30,13 @@ public class TtsConfigController {
         return ResponseBean.success(configs);
     }
 
+    /** 获取所有已启用的 TTS 配置（供虚拟形象选择） */
+    @GetMapping("/configs/enabled")
+    public ResponseBean listEnabledConfigs() {
+        List<TtsConfig> configs = ttsConfigMapper.findAllEnabled();
+        return ResponseBean.success(configs);
+    }
+
     /** 获取已启用的 TTS 配置 */
     @GetMapping("/config/enabled")
     public ResponseBean getEnabledConfig(@RequestParam(defaultValue = "admin") String userId) {
@@ -40,15 +47,13 @@ public class TtsConfigController {
         return ResponseBean.success(config);
     }
 
-    /** 保存 TTS 配置 */
+    /** 保存 TTS 配置（新增或更新）。同厂商可添加多条配置。 */
     @PostMapping("/config")
     public ResponseBean saveConfig(@RequestBody TtsConfig config) {
         if (config.getVendorCode() == null || config.getVendorCode().isEmpty()) {
             return ResponseBean.fail("厂商编号不能为空");
         }
-        TtsConfig existing = ttsConfigMapper.findByVendorCode(config.getVendorCode());
-        if (existing != null) {
-            config.setId(existing.getId());
+        if (config.getId() != null) {
             ttsConfigMapper.update(config);
         } else {
             ttsConfigMapper.insert(config);

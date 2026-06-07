@@ -208,7 +208,7 @@ public class DatabaseInitializer implements CommandLineRunner {
                     "last_processed_chat_id INTEGER DEFAULT 0, " +
                     "sound_enabled INTEGER DEFAULT 1, " +
                     "last_proactive_greeting_time TEXT, " +
-                    "tts_vendor_code TEXT, " +
+                    "tts_config_id INTEGER, " +
                     "tts_voice_id TEXT, " +
                     "tts_emotions TEXT, " +
                     "tts_enabled INTEGER DEFAULT 0, " +
@@ -217,7 +217,7 @@ public class DatabaseInitializer implements CommandLineRunner {
                     ")");
             // 兼容旧库：增量补充新列
             ensureColumn(stmt, "agent_avatar_config", "last_proactive_greeting_time", "TEXT");
-            ensureColumn(stmt, "agent_avatar_config", "tts_vendor_code", "TEXT");
+            ensureColumn(stmt, "agent_avatar_config", "tts_config_id", "INTEGER");
             ensureColumn(stmt, "agent_avatar_config", "tts_voice_id", "TEXT");
             ensureColumn(stmt, "agent_avatar_config", "tts_enabled", "INTEGER DEFAULT 0");
             stmt.execute("CREATE UNIQUE INDEX IF NOT EXISTS idx_agent_avatar_config_user_agent ON agent_avatar_config(user_id, agent_id)");
@@ -227,12 +227,13 @@ public class DatabaseInitializer implements CommandLineRunner {
                     "id INTEGER PRIMARY KEY AUTOINCREMENT, " +
                     "vendor_code TEXT NOT NULL, " +
                     "vendor_name TEXT, " +
+                    "config_name TEXT, " +
                     "config_json TEXT, " +
                     "enabled INTEGER DEFAULT 0, " +
                     "create_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP, " +
                     "update_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP" +
                     ")");
-            stmt.execute("CREATE UNIQUE INDEX IF NOT EXISTS idx_tts_config_vendor ON tts_config(vendor_code)");
+            ensureColumn(stmt, "tts_config", "config_name", "TEXT");
 
             stmt.execute("CREATE TABLE IF NOT EXISTS scheduled_tasks (" +
                     "id INTEGER PRIMARY KEY AUTOINCREMENT, " +

@@ -17,24 +17,19 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 
 /**
- * 插件安装工具
- * <p>
- * 支持从本地文件安装插件包。
- * 文件需要是 {@link IAgentToolService#exportPlugin(String, String)} 导出的 zip 压缩包（内部包含 .json 清单与 .jar 插件）。
- * 安装过程会调用 {@link IAgentToolService#installPluginFromBytes(byte[])} 完成实际部署。
- * </p>
+ * 工具管理工具
  */
-@Component("pluginTool")
-public class PluginTool implements AgentTool {
+@Component("toolManagerTool")
+public class ToolManagerTool implements AgentTool {
 
-    private static final Logger log = LoggerFactory.getLogger(PluginTool.class);
+    private static final Logger log = LoggerFactory.getLogger(ToolManagerTool.class);
 
     /** 允许的插件包最大字节数（100MB），避免一次性把超大文件读入内存 */
     private static final long MAX_PLUGIN_PACKAGE_SIZE = 100L * 1024L * 1024L;
 
     private final IAgentToolService agentToolService;
 
-    public PluginTool(IAgentToolService agentToolService) {
+    public ToolManagerTool(IAgentToolService agentToolService) {
         this.agentToolService = agentToolService;
     }
 
@@ -45,7 +40,7 @@ public class PluginTool implements AgentTool {
 
     @Override
     public String getDescription() {
-        return "插件安装工具，支持从本地 zip 压缩包或 .jar 文件安装插件";
+        return "工具管理工具，支持管理内置工具和插件工具，支持从本地 zip 压缩包或 .jar 文件安装插件工具";
     }
 
     @Override
@@ -55,15 +50,15 @@ public class PluginTool implements AgentTool {
 
     @Override
     public String getKeyword() {
-        return "插件";
+        return "工具，插件，安装插件，管理工具";
     }
 
     @ToolSecurityLevel(ToolSecurityLevel.Level.PARAM_REQUIRE_APPROVAL)
     @Tool(value = {
-            "从本地文件安装插件",
+            "从本地文件安装插件工具集",
             "从本地文件路径读取插件包并安装。文件应为 exportPlugin 导出的 zip 压缩包（包含 .json 清单和 .jar 插件）。"
-    }, searchBehavior = SearchBehavior.ALWAYS_VISIBLE)
-    public String installPluginFromLocal(@P(description = "本地插件包文件绝对路径，要求是 exportPlugin 导出的 zip 压缩包") String filePath) {
+    })
+    public String installPluginToolFromLocal(@P(description = "本地插件包文件绝对路径，要求是 exportPlugin 导出的 zip 压缩包") String filePath) {
         if (filePath == null || filePath.isBlank()) {
             return "安装失败：文件路径不能为空";
         }
@@ -141,9 +136,9 @@ public class PluginTool implements AgentTool {
 
     @ToolSecurityLevel(ToolSecurityLevel.Level.PARAM_REQUIRE_APPROVAL)
     @Tool(value = {
-            "从本地 JAR 文件安装插件",
+            "从本地JAR文件安装插件工具集",
             "直接读取本地 .jar 插件文件并安装（无需打包成 zip）。插件元数据会从 JAR 内部自动扫描。"
-    }, searchBehavior = SearchBehavior.ALWAYS_VISIBLE)
+    })
     public String installPluginFromLocalJar(@P(description = "本地 .jar 插件文件的绝对路径") String filePath) {
         if (filePath == null || filePath.isBlank()) {
             return "安装失败：文件路径不能为空";

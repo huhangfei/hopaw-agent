@@ -387,6 +387,44 @@
     margin-top: 5px;
     text-align: right;
 }
+
+.message-footer {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 6px;
+    margin-top: 5px;
+}
+
+.message-footer .message-time {
+    margin-top: 0;
+}
+
+.message-copy-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 22px;
+    height: 22px;
+    border: none;
+    background: none;
+    cursor: pointer;
+    opacity: 0.35;
+    border-radius: 4px;
+    padding: 0;
+    color: inherit;
+    transition: opacity 0.15s, background 0.15s;
+}
+
+.message-copy-btn:hover {
+    opacity: 0.8;
+    background: rgba(128, 128, 128, 0.15);
+}
+
+.message-copy-btn.copied {
+    opacity: 1;
+    color: #22c55e;
+}
 .chat-input-area {
     flex-shrink: 0;
     padding: 20px;

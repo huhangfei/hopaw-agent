@@ -11,6 +11,8 @@ public interface TtsConfigMapper {
 
     List<TtsConfig> findAll();
 
+    List<TtsConfig> findAllEnabled();
+
     TtsConfig findByVendorCode(@Param("vendorCode") String vendorCode);
 
     TtsConfig findById(@Param("id") Long id);

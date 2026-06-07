@@ -71,14 +71,24 @@
                     <div class="message-label" th:text="${chat.role == 'user' ? '你' : (chat.agent != null ? chat.agent.name : 'Agent')}"></div>
                     <div th:text="${chat.content}" class="message-content"
                          th:attr="data-is-agent=${chat.role == 'agent'}"></div>
-                    <div class="message-time"
-                         th:text="${chat.createTime.toLocalDate().equals(T(java.time.LocalDate).now()) ? #temporals.format(chat.createTime, 'HH:mm:ss') : #temporals.format(chat.createTime, 'yyyy-MM-dd HH:mm:ss')}"></div>
+                    <div class="message-footer">
+                        <div class="message-time"
+                             th:text="${chat.createTime.toLocalDate().equals(T(java.time.LocalDate).now()) ? #temporals.format(chat.createTime, 'HH:mm:ss') : #temporals.format(chat.createTime, 'yyyy-MM-dd HH:mm:ss')}"></div>
+                        <button class="message-copy-btn" th:attr="data-content=${chat.content}" onclick="copyMessageContent(this)" title="复制消息">
+                            <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+                        </button>
+                    </div>
                 </div>
                 <div th:case="'thinking'">
                     <div class="message-label" th:text="${chat.agent != null ? chat.agent.name : 'Agent'} + ' (思考)'"></div>
                     <div th:text="${chat.content}" class="message-content thinking-content"></div>
-                    <div class="message-time"
-                         th:text="${chat.createTime.toLocalDate().equals(T(java.time.LocalDate).now()) ? #temporals.format(chat.createTime, 'HH:mm:ss') : #temporals.format(chat.createTime, 'yyyy-MM-dd HH:mm:ss')}"></div>
+                    <div class="message-footer">
+                        <div class="message-time"
+                             th:text="${chat.createTime.toLocalDate().equals(T(java.time.LocalDate).now()) ? #temporals.format(chat.createTime, 'HH:mm:ss') : #temporals.format(chat.createTime, 'yyyy-MM-dd HH:mm:ss')}"></div>
+                        <button class="message-copy-btn" th:attr="data-content=${chat.content}" onclick="copyMessageContent(this)" title="复制消息">
+                            <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+                        </button>
+                    </div>
                 </div>
             </div>
             <div th:if="${chatHistory.size()==0}" class="empty-state" id="chatHistoryEmptyState">

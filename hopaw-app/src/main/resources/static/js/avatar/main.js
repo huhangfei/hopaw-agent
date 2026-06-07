@@ -195,7 +195,7 @@ var LAppDefine = {
 
             var content = document.createElement("div");
             content.className = "avatar-bubble-content";
-            content.textContent = text;
+            content.innerHTML = marked.parse(text);
             el.appendChild(content);
 
             var tail = document.createElement("div");

@@ -7,6 +7,8 @@ public class TtsConfig {
     private Long id;
     private String vendorCode;
     private String vendorName;
+    /** 自定义配置名称，用于区分同厂商的多条配置 */
+    private String configName;
     private String configJson;
     private Integer enabled;
     private String createTime;
@@ -34,6 +36,14 @@ public class TtsConfig {
 
     public void setVendorName(String vendorName) {
         this.vendorName = vendorName;
+    }
+
+    public String getConfigName() {
+        return configName;
+    }
+
+    public void setConfigName(String configName) {
+        this.configName = configName;
     }
 
     public String getConfigJson() {

@@ -582,7 +582,7 @@ public class DatabaseTool implements AgentTool {
                 return String.format(
                         "导出成功！\n" +
                         "文件路径：%s\n" +
-                        "下载链接（可以拼接为a标签的href，点击后下载）：%s\n" +
+                        "下载链接：%s\n" +
                         "文件大小：%s\n" +
                         "导出行数：%,d\n" +
                         "列数：%d\n" +

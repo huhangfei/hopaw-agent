@@ -46,10 +46,10 @@ public class TtsService {
             if (agentConfig == null || !Boolean.TRUE.equals(agentConfig.getTtsEnabled())) {
                 return null;
             }
-            String vendorCode = agentConfig.getTtsVendorCode();
+            Long ttsConfigId = agentConfig.getTtsConfigId();
             String voiceId = agentConfig.getTtsVoiceId();
-            if (vendorCode == null || vendorCode.isEmpty()) {
-                logger.warn("TTS: agent {} 未配置厂商编号", agentId);
+            if (ttsConfigId == null) {
+                logger.warn("TTS: agent {} 未配置 TTS 配置主键", agentId);
                 return null;
             }
             if (voiceId == null || voiceId.isEmpty()) {
@@ -57,12 +57,13 @@ public class TtsService {
                 return null;
             }
 
-            // 2. 查询全局厂商凭证配置
-            TtsConfig vendorConfig = ttsConfigMapper.findByVendorCode(vendorCode);
-            if (vendorConfig == null || vendorConfig.getEnabled() == null || vendorConfig.getEnabled() != 1) {
-                logger.warn("TTS: 厂商 {} 未启用或未配置", vendorCode);
+            // 2. 查询全局 TTS 厂商配置
+            TtsConfig ttsConfig = ttsConfigMapper.findById(ttsConfigId);
+            if (ttsConfig == null || ttsConfig.getEnabled() == null || ttsConfig.getEnabled() != 1) {
+                logger.warn("TTS: 配置 id={} 未启用或不存在", ttsConfigId);
                 return null;
             }
+            String vendorCode = ttsConfig.getVendorCode();
 
             // 3. 获取厂商实现并合成
             ITtsService service = ttsServiceFactory.getService(vendorCode);
@@ -70,7 +71,7 @@ public class TtsService {
                 logger.warn("TTS 厂商未注册: {}", vendorCode);
                 return null;
             }
-            byte[] audio = service.synthesize(vendorConfig.getConfigJson(), voiceId, text, emotion);
+            byte[] audio = service.synthesize(ttsConfig.getConfigJson(), voiceId, text, emotion);
             if (audio == null || audio.length == 0) {
                 return null;
             }

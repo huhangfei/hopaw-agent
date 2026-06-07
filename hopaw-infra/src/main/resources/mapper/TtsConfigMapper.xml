@@ -6,6 +6,7 @@
         <id property="id" column="id"/>
         <result property="vendorCode" column="vendor_code"/>
         <result property="vendorName" column="vendor_name"/>
+        <result property="configName" column="config_name"/>
         <result property="configJson" column="config_json"/>
         <result property="enabled" column="enabled"/>
         <result property="createTime" column="create_time"/>
@@ -13,39 +14,47 @@
     </resultMap>
 
     <select id="findAll" resultMap="TtsConfigResultMap">
-        SELECT id, vendor_code, vendor_name, config_json, enabled, create_time, update_time
+        SELECT id, vendor_code, vendor_name, config_name, config_json, enabled, create_time, update_time
         FROM tts_config
         ORDER BY id
     </select>
 
+    <select id="findAllEnabled" resultMap="TtsConfigResultMap">
+        SELECT id, vendor_code, vendor_name, config_name, config_json, enabled, create_time, update_time
+        FROM tts_config
+        WHERE enabled = 1
+        ORDER BY id
+    </select>
+
     <select id="findByVendorCode" resultMap="TtsConfigResultMap">
-        SELECT id, vendor_code, vendor_name, config_json, enabled, create_time, update_time
+        SELECT id, vendor_code, vendor_name, config_name, config_json, enabled, create_time, update_time
         FROM tts_config
         WHERE vendor_code = #{vendorCode}
     </select>
 
     <select id="findById" resultMap="TtsConfigResultMap">
-        SELECT id, vendor_code, vendor_name, config_json, enabled, create_time, update_time
+        SELECT id, vendor_code, vendor_name, config_name, config_json, enabled, create_time, update_time
         FROM tts_config
         WHERE id = #{id}
     </select>
 
     <select id="findEnabledByUserId" resultMap="TtsConfigResultMap">
-        SELECT id, vendor_code, vendor_name, config_json, enabled, create_time, update_time
+        SELECT id, vendor_code, vendor_name, config_name, config_json, enabled, create_time, update_time
         FROM tts_config
         WHERE enabled = 1
         LIMIT 1
     </select>
 
     <insert id="insert" parameterType="com.agent.hopaw.infra.model.entity.TtsConfig">
-        INSERT INTO tts_config (vendor_code, vendor_name, config_json, enabled)
-        VALUES (#{vendorCode}, #{vendorName}, #{configJson}, COALESCE(#{enabled}, 0))
+        INSERT INTO tts_config (vendor_code, vendor_name, config_name, config_json, enabled)
+        VALUES (#{vendorCode}, #{vendorName}, #{configName}, #{configJson}, COALESCE(#{enabled}, 0))
     </insert>
 
     <update id="update" parameterType="com.agent.hopaw.infra.model.entity.TtsConfig">
         UPDATE tts_config
         SET vendor_code = #{vendorCode},
             vendor_name = #{vendorName},
+            config_name = #{configName},
             config_json = #{configJson},
             enabled = #{enabled},
             update_time = CURRENT_TIMESTAMP

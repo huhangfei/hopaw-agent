@@ -87,7 +87,7 @@ public class AvatarSettingsService implements IAvatarSettingsService {
         settings.setModelSetting(config.getModelSetting());
         settings.setModelGroup(config.getModelGroup());
         settings.setPersonaSetting(config.getPersonaSetting());
-        settings.setTtsVendorCode(config.getTtsVendorCode());
+        settings.setTtsConfigId(config.getTtsConfigId());
         settings.setTtsVoiceId(config.getTtsVoiceId());
         settings.setTtsEmotions(config.getTtsEmotions());
         settings.setTtsEnabled(Boolean.TRUE.equals(config.getTtsEnabled()));
@@ -123,7 +123,7 @@ public class AvatarSettingsService implements IAvatarSettingsService {
                 cfg.setModelSetting(settings.getModelSetting());
                 cfg.setModelGroup(settings.getModelGroup());
                 cfg.setPersonaSetting(settings.getPersonaSetting());
-                cfg.setTtsVendorCode(settings.getTtsVendorCode());
+                cfg.setTtsConfigId(settings.getTtsConfigId());
                 cfg.setTtsVoiceId(settings.getTtsVoiceId());
                 cfg.setTtsEmotions(settings.getTtsEmotions());
                 cfg.setTtsEnabled(settings.isTtsEnabled());
@@ -139,7 +139,7 @@ public class AvatarSettingsService implements IAvatarSettingsService {
                 existing.setModelSetting(settings.getModelSetting());
                 existing.setModelGroup(settings.getModelGroup());
                 existing.setPersonaSetting(settings.getPersonaSetting());
-                existing.setTtsVendorCode(settings.getTtsVendorCode());
+                existing.setTtsConfigId(settings.getTtsConfigId());
                 existing.setTtsVoiceId(settings.getTtsVoiceId());
                 existing.setTtsEmotions(settings.getTtsEmotions());
                 existing.setTtsEnabled(settings.isTtsEnabled());
