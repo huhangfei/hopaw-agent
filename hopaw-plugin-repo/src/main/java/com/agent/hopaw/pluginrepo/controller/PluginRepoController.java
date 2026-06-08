@@ -33,6 +33,12 @@ public class PluginRepoController {
         return "plugin-repo";
     }
 
+    @GetMapping("/docs")
+    public String docs(Model model) {
+        model.addAttribute("currentUser", authService.getCurrentUser());
+        return "api-docs";
+    }
+
     @GetMapping("/api/plugins")
     @ResponseBody
     public List<PluginRepoResult> apiListPlugins() throws IOException {

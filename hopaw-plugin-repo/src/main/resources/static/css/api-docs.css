@@ -1,0 +1,253 @@
+/* ===== 接口说明页面 ===== */
+.docs-container {
+    max-width: 960px;
+    margin: 32px auto;
+    padding: 0 24px 48px;
+}
+
+.docs-card,
+.api-card {
+    background: var(--card-bg, #fff);
+    border: 1px solid var(--border, #e5e7eb);
+    border-radius: 10px;
+    padding: 20px 24px;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.03);
+}
+
+.api-group {
+    margin-top: 24px;
+}
+
+.api-group-title {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text-secondary, #6b7280);
+    margin-bottom: 10px;
+    padding-left: 4px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.api-card {
+    margin-bottom: 12px;
+}
+
+.api-card .api-head {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 8px;
+}
+
+.api-card .api-desc {
+    font-size: 13px;
+    color: var(--text-secondary, #4b5563);
+    margin-bottom: 12px;
+    line-height: 1.6;
+}
+
+.api-card .api-path {
+    font-family: 'JetBrains Mono', 'Fira Code', Consolas, Monaco, monospace;
+    font-size: 14px;
+    color: var(--text-primary, #111827);
+    word-break: break-all;
+}
+
+.api-card .api-example,
+.api-card .api-params {
+    margin-top: 12px;
+}
+
+.api-card .example-label,
+.api-card .param-title {
+    font-size: 12px;
+    color: var(--text-muted, #9ca3af);
+    margin-bottom: 6px;
+}
+
+.api-card .example-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background: var(--bg, #f9fafb);
+    border: 1px solid var(--border, #e5e7eb);
+    border-radius: 6px;
+    padding: 8px 12px;
+}
+
+.api-card .example-url {
+    flex: 1;
+    font-family: 'JetBrains Mono', 'Fira Code', Consolas, Monaco, monospace;
+    font-size: 12px;
+    color: var(--text-primary, #1f2937);
+    word-break: break-all;
+    line-height: 1.5;
+}
+
+.api-card ul {
+    margin: 0;
+    padding-left: 20px;
+}
+
+.api-card ul li {
+    font-size: 12px;
+    line-height: 1.8;
+    color: var(--text-secondary, #4b5563);
+}
+
+.api-card code {
+    background: var(--bg, #f3f4f6);
+    padding: 1px 6px;
+    border-radius: 4px;
+    font-family: 'JetBrains Mono', 'Fira Code', Consolas, Monaco, monospace;
+    font-size: 11px;
+    color: var(--primary, #4f46e5);
+}
+
+.api-card .optional {
+    display: inline-block;
+    font-size: 10px;
+    color: #ef4444;
+    margin-left: 4px;
+    font-weight: 500;
+}
+
+/* method tag */
+.method-tag {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 56px;
+    padding: 3px 8px;
+    border-radius: 4px;
+    font-size: 11px;
+    font-weight: 700;
+    color: #fff;
+    letter-spacing: 0.5px;
+    flex-shrink: 0;
+}
+
+.method-get { background: #10b981; }
+.method-post { background: #3b82f6; }
+.method-put { background: #f59e0b; }
+.method-delete { background: #ef4444; }
+
+/* base url card */
+.base-url-card {
+    background: linear-gradient(135deg, #eef2ff 0%, #f5f3ff 100%);
+    border-color: #c7d2fe;
+}
+
+.base-url-card .card-title {
+    font-size: 12px;
+    font-weight: 600;
+    color: #4f46e5;
+    margin-bottom: 8px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.base-url-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background: #fff;
+    border: 1px solid #c7d2fe;
+    border-radius: 6px;
+    padding: 10px 14px;
+}
+
+.base-url {
+    flex: 1;
+    font-family: 'JetBrains Mono', 'Fira Code', Consolas, Monaco, monospace;
+    font-size: 14px;
+    color: #1e1b4b;
+    word-break: break-all;
+    font-weight: 500;
+}
+
+.base-url-card .card-hint {
+    font-size: 12px;
+    color: #4b5563;
+    line-height: 1.6;
+    margin-top: 10px;
+}
+
+.base-url-card .card-hint code {
+    background: rgba(255, 255, 255, 0.6);
+    padding: 1px 6px;
+    border-radius: 4px;
+    font-family: 'JetBrains Mono', 'Fira Code', Consolas, Monaco, monospace;
+    font-size: 11px;
+    color: #4f46e5;
+}
+
+/* code block */
+.code-block {
+    background: #1f2937;
+    color: #e5e7eb;
+    padding: 14px 16px;
+    border-radius: 6px;
+    font-family: 'JetBrains Mono', 'Fira Code', Consolas, Monaco, monospace;
+    font-size: 12px;
+    line-height: 1.6;
+    margin: 0 0 8px 0;
+    overflow-x: auto;
+    white-space: pre;
+    word-break: normal;
+}
+
+/* copy button */
+.btn-copy {
+    flex-shrink: 0;
+    padding: 4px 12px;
+    font-size: 12px;
+    color: var(--primary, #4f46e5);
+    background: #fff;
+    border: 1px solid var(--primary, #4f46e5);
+    border-radius: 4px;
+    cursor: pointer;
+    transition: all 0.15s;
+    font-family: inherit;
+}
+
+.btn-copy:hover {
+    background: var(--primary, #4f46e5);
+    color: #fff;
+}
+
+.btn-copy.copied {
+    background: #10b981;
+    border-color: #10b981;
+    color: #fff;
+}
+
+.base-url-row .btn-copy,
+.api-card .example-row .btn-copy {
+    font-weight: 500;
+}
+
+/* dark theme */
+@media (prefers-color-scheme: dark) {
+    .docs-card, .api-card {
+        background: #1f2937;
+        border-color: #374151;
+    }
+    .api-card .api-path { color: #f3f4f6; }
+    .api-card .api-desc { color: #d1d5db; }
+    .api-card .example-row { background: #111827; border-color: #374151; }
+    .api-card .example-url { color: #e5e7eb; }
+    .api-card code { background: #374151; color: #a5b4fc; }
+    .api-card ul li { color: #d1d5db; }
+    .api-group-title { color: #9ca3af; }
+
+    .base-url-card {
+        background: linear-gradient(135deg, #1e1b4b 0%, #312e81 100%);
+        border-color: #4338ca;
+    }
+    .base-url-card .card-title { color: #a5b4fc; }
+    .base-url-card .base-url-row { background: #0f172a; border-color: #4338ca; }
+    .base-url { color: #c7d2fe; }
+    .base-url-card .card-hint { color: #c7d2fe; }
+    .base-url-card .card-hint code { background: rgba(67, 56, 202, 0.3); color: #c7d2fe; }
+}

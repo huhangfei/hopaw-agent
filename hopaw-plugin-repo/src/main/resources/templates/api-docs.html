@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>接口说明 - 插件仓库</title>
+    <link rel="stylesheet" th:href="@{/css/plugin-repo.css}">
+    <link rel="stylesheet" th:href="@{/css/api-docs.css}">
+</head>
+<body>
+    <header class="nav-bar">
+        <a th:href="@{/plugin-repo/}" class="nav-brand">插件仓库</a>
+        <div class="nav-links">
+            <a th:href="@{/plugin-repo/}">插件列表</a>
+            <a th:if="${currentUser != null and currentUser.role == 'ADMIN'}" th:href="@{/plugin-repo/admin/users}">用户管理</a>
+            <a th:href="@{/plugin-repo/keys}">API Keys</a>
+            <a th:href="@{/plugin-repo/docs}" class="active">接口说明</a>
+            <a th:href="@{/plugin-repo/user/change-password}">修改密码</a>
+        </div>
+        <div class="nav-user" th:if="${currentUser != null}">
+            <span th:text="${currentUser.displayName}">admin</span>
+            <a href="javascript:void(0)" onclick="document.getElementById('logoutForm').submit()">退出</a>
+            <form id="logoutForm" th:action="@{/plugin-repo/auth/logout}" method="post" style="display:none;"></form>
+        </div>
+    </header>
+
+    <div class="docs-container">
+        <div class="docs-card base-url-card">
+            <div class="card-title">服务地址</div>
+            <div class="base-url-row">
+                <code class="base-url" id="baseUrl"></code>
+                <button class="btn-copy" onclick="copyText(document.getElementById('baseUrl').textContent, this)">复制</button>
+            </div>
+            <div class="card-hint">以下接口均基于该地址，所有读写类接口需要在请求头 <code>X-API-Key</code> 或 URL 参数 <code>?api_key=</code> 传入 API Key。</div>
+        </div>
+
+        <div class="api-group">
+            <div class="api-group-title">对外接口（需 API Key）</div>
+
+            <div class="api-card">
+                <div class="api-head">
+                    <span class="method-tag method-get">GET</span>
+                    <span class="api-path">/plugin-repo/api/plugins</span>
+                </div>
+                <div class="api-desc">列出仓库内所有插件及其所有版本信息。</div>
+                <div class="api-example">
+                    <div class="example-label">请求示例：</div>
+                    <div class="example-row">
+                        <code class="example-url" id="example-plugins"></code>
+                        <button class="btn-copy" onclick="copyText(document.getElementById('example-plugins').textContent, this)">复制</button>
+                    </div>
+                </div>
+                <div class="api-params">
+                    <div class="param-title">参数：</div>
+                    <ul>
+                        <li><code>api_key</code> &lt;Header: <code>X-API-Key</code>&gt; <span class="optional">必填</span>，可在「API Keys」页面创建。</li>
+                    </ul>
+                </div>
+            </div>
+
+            <div class="api-card">
+                <div class="api-head">
+                    <span class="method-tag method-get">GET</span>
+                    <span class="api-path">/plugin-repo/api/download/{pluginName}/{version}</span>
+                </div>
+                <div class="api-desc">下载指定插件版本的压缩包（zip）。</div>
+                <div class="api-example">
+                    <div class="example-label">请求示例：</div>
+                    <div class="example-row">
+                        <code class="example-url" id="example-download"></code>
+                        <button class="btn-copy" onclick="copyText(document.getElementById('example-download').textContent, this)">复制</button>
+                    </div>
+                </div>
+                <div class="api-params">
+                    <div class="param-title">路径参数：</div>
+                    <ul>
+                        <li><code>pluginName</code> &lt;String&gt; <span class="optional">必填</span>，插件名称。</li>
+                        <li><code>version</code> &lt;String&gt; <span class="optional">必填</span>，插件版本号。</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <div class="api-group" th:if="${currentUser != null and currentUser.role == 'ADMIN'}">
+            <div class="api-group-title">管理接口（需登录管理员）</div>
+
+            <div class="api-card">
+                <div class="api-head">
+                    <span class="method-tag method-post">POST</span>
+                    <span class="api-path">/plugin-repo/web/import</span>
+                </div>
+                <div class="api-desc">导入插件包，multipart/form-data 方式上传 zip 文件。</div>
+                <div class="api-params">
+                    <div class="param-title">参数：</div>
+                    <ul>
+                        <li><code>file</code> &lt;File&gt; <span class="optional">必填</span>，插件 zip 包。</li>
+                    </ul>
+                </div>
+            </div>
+
+            <div class="api-card">
+                <div class="api-head">
+                    <span class="method-tag method-delete">DELETE</span>
+                    <span class="api-path">/plugin-repo/web/plugin/{pluginName}/{version}</span>
+                </div>
+                <div class="api-desc">删除指定插件的某个版本。</div>
+                <div class="api-params">
+                    <div class="param-title">路径参数：</div>
+                    <ul>
+                        <li><code>pluginName</code> &lt;String&gt; <span class="optional">必填</span></li>
+                        <li><code>version</code> &lt;String&gt; <span class="optional">必填</span></li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <div class="api-group">
+            <div class="api-group-title">调用示例（curl）</div>
+            <div class="api-card">
+                <div class="api-desc">使用 Header 方式传递 API Key：</div>
+                <pre class="code-block" id="curlHeader"></pre>
+                <div class="api-example">
+                    <div class="example-row">
+                        <button class="btn-copy" onclick="copyText(document.getElementById('curlHeader').textContent, this)">复制</button>
+                    </div>
+                </div>
+            </div>
+            <div class="api-card">
+                <div class="api-desc">使用 URL 参数方式传递 API Key：</div>
+                <pre class="code-block" id="curlQuery"></pre>
+                <div class="api-example">
+                    <div class="example-row">
+                        <button class="btn-copy" onclick="copyText(document.getElementById('curlQuery').textContent, this)">复制</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        (function() {
+            var origin = window.location.origin;
+            document.getElementById('baseUrl').textContent = origin;
+            document.getElementById('example-plugins').textContent = origin + '/plugin-repo/api/plugins?api_key=YOUR_KEY';
+            document.getElementById('example-download').textContent = origin + '/plugin-repo/api/download/{pluginName}/{version}?api_key=YOUR_KEY';
+
+            document.getElementById('curlHeader').textContent =
+                'curl -H "X-API-Key: YOUR_KEY" \\\n' +
+                '  "' + origin + '/plugin-repo/api/plugins"';
+            document.getElementById('curlQuery').textContent =
+                'curl "' + origin + '/plugin-repo/api/plugins?api_key=YOUR_KEY"';
+        })();
+
+        function copyText(text, btn) {
+            var done = function() {
+                var orig = btn.textContent;
+                btn.textContent = '已复制';
+                btn.classList.add('copied');
+                setTimeout(function() {
+                    btn.textContent = orig;
+                    btn.classList.remove('copied');
+                }, 1500);
+            };
+            if (navigator.clipboard && navigator.clipboard.writeText) {
+                navigator.clipboard.writeText(text).then(done, function() {
+                    fallbackCopy(text);
+                    done();
+                });
+            } else {
+                fallbackCopy(text);
+                done();
+            }
+        }
+
+        function fallbackCopy(text) {
+            var ta = document.createElement('textarea');
+            ta.value = text;
+            ta.style.position = 'fixed';
+            ta.style.opacity = '0';
+            document.body.appendChild(ta);
+            ta.select();
+            try { document.execCommand('copy'); } catch (e) {}
+            document.body.removeChild(ta);
+        }
+    </script>
+</body>
+</html>

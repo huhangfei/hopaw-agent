@@ -218,6 +218,13 @@ body {
 /* ===== Tree ===== */
 .tree-node {
     user-select: none;
+    cursor: pointer;
+    border-radius: 6px;
+    transition: background 0.15s;
+}
+
+.tree-node:hover {
+    background: var(--bg);
 }
 
 .tree-node-header {
@@ -225,13 +232,7 @@ body {
     align-items: center;
     gap: 8px;
     padding: 10px 16px;
-    cursor: pointer;
-    transition: background var(--transition);
     font-size: 13px;
-}
-
-.tree-node-header:hover {
-    background: var(--bg);
 }
 
 .tree-arrow {
@@ -274,6 +275,46 @@ body {
 
 .tree-node.expanded > .tree-node-children {
     display: block;
+}
+
+/* 插件描述与关键字 */
+.tree-node-info {
+    padding: 0 16px 8px 40px;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.tree-node-desc {
+    font-size: 12px;
+    line-height: 1.5;
+    color: var(--text-secondary);
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    word-break: break-word;
+}
+
+.tree-node-keywords {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+}
+
+.keyword-tag {
+    font-size: 11px;
+    padding: 2px 8px;
+    border-radius: 10px;
+    background: var(--bg);
+    color: var(--text-muted);
+    border: 1px solid var(--border);
+    line-height: 1.4;
+    max-width: 160px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
 }
 
 .tree-leaf {

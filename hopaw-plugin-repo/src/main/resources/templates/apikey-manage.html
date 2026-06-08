@@ -89,29 +89,6 @@
             white-space: nowrap;
             display: inline-block;
         }
-        .key-created {
-            background: #ecfdf5;
-            border: 1px solid #a7f3d0;
-            border-radius: 8px;
-            padding: 16px;
-            margin-top: 16px;
-        }
-        .key-created .key-label { font-size: 11px; color: #065f46; font-weight: 600; margin-bottom: 4px; }
-        .key-created .key-text {
-            font-family: monospace;
-            font-size: 13px;
-            word-break: break-all;
-            color: #065f46;
-            background: #fff;
-            padding: 8px 12px;
-            border-radius: 6px;
-            border: 1px solid #a7f3d0;
-        }
-        .key-created .key-warn {
-            font-size: 11px;
-            color: #92400e;
-            margin-top: 8px;
-        }
         .modal-actions { display: flex; gap: 10px; justify-content: flex-end; margin-top: 20px; }
         .btn-cancel {
             padding: 8px 16px; font-size: 13px; font-weight: 500;
@@ -180,6 +157,7 @@
             <a th:href="@{/plugin-repo/}">插件列表</a>
             <a th:if="${isAdmin}" th:href="@{/plugin-repo/admin/users}">用户管理</a>
             <a th:href="@{/plugin-repo/keys}" class="active">API Keys</a>
+            <a th:href="@{/plugin-repo/docs}">接口说明</a>
         </div>
         <div class="nav-user" th:if="${currentUser != null}">
             <span th:text="${currentUser.displayName}">admin</span>
@@ -263,11 +241,6 @@
                     <button class="btn-cancel" onclick="hideCreateModal()">取消</button>
                     <button class="btn-primary" onclick="createKey()">创建</button>
                 </div>
-                <div class="key-created" id="keyCreated" style="display:none;">
-                    <div class="key-label">新创建的 API Key（仅显示一次，请妥善保管）：</div>
-                    <div class="key-text" id="keyCreatedValue"></div>
-                    <div class="key-warn">请立即复制并安全保存，关闭后将无法再次查看。</div>
-                </div>
             </div>
         </div>
     </div>
@@ -276,7 +249,6 @@
         function showCreateModal() {
             document.getElementById('keyName').value = '';
             document.getElementById('keyExpiresAt').value = '';
-            document.getElementById('keyCreated').style.display = 'none';
             document.getElementById('createModal').style.display = '';
         }
 
@@ -297,9 +269,8 @@
                 body: JSON.stringify(body)
             }).then(function(r) { return r.json(); }).then(function(d) {
                 if (d.type === 'success') {
-                    document.getElementById('keyCreated').style.display = '';
-                    document.getElementById('keyCreatedValue').textContent = d.keyValue;
-                    setTimeout(function() { location.reload(); }, 3000);
+                    alert('创建成功');
+                    location.reload();
                 } else {
                     alert(d.message);
                 }

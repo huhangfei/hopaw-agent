@@ -211,6 +211,7 @@ public class PluginRepoService {
             PluginRepoResult result = new PluginRepoResult();
             result.setName(pluginName);
             result.setDescription(exportInfo.getDescription());
+            result.setKeyword(exportInfo.getKeyword());
             PluginRepoResult.VersionEntry ve = PluginRepoResult.VersionEntry.from(exportInfo,
                     "/plugin-repo/api/download/" + urlEncode(pluginName) + "/" + urlEncode(version));
             result.setVersions(Collections.singletonList(ve));

@@ -30,7 +30,7 @@ function refreshPlugins() {
                 var leaf = document.querySelector(
                     '.tree-leaf[data-plugin="' + selectedPlugin + '"][data-version="' + selectedVersion + '"]');
                 if (leaf) {
-                    selectVersion(leaf, true);
+                    selectVersion(null, leaf, true);
                 } else {
                     selectedPlugin = null;
                     selectedVersion = null;
@@ -64,20 +64,41 @@ function renderTree(plugins) {
 
     var html = '';
     plugins.forEach(function(plugin) {
-        html += '<div class="tree-node" data-name="' + escapeHtml(plugin.name) + '">' +
-            '<div class="tree-node-header" onclick="toggleTreeNode(this)">' +
+        var desc = plugin.description || '';
+        var keyword = plugin.keyword || '';
+        var infoHtml = '';
+        if (desc || keyword) {
+            infoHtml = '<div class="tree-node-info">';
+            if (desc) {
+                infoHtml += '<div class="tree-node-desc" title="' + escapeHtml(desc) + '">' + escapeHtml(desc) + '</div>';
+            }
+            if (keyword) {
+                infoHtml += '<div class="tree-node-keywords">';
+                keyword.split(',').forEach(function(kw) {
+                    var k = kw.trim();
+                    if (k) {
+                        infoHtml += '<span class="keyword-tag">' + escapeHtml(k) + '</span>';
+                    }
+                });
+                infoHtml += '</div>';
+            }
+            infoHtml += '</div>';
+        }
+        html += '<div class="tree-node" data-name="' + escapeHtml(plugin.name) + '" onclick="toggleTreeNode(this)">' +
+            '<div class="tree-node-header">' +
             '<span class="tree-arrow">▸</span>' +
             '<span class="tree-icon">🧩</span>' +
             '<span class="tree-name">' + escapeHtml(plugin.name) + '</span>' +
             '<span class="tree-badge">' + plugin.versions.length + '个版本</span>' +
             '</div>' +
+            infoHtml +
             '<div class="tree-node-children">';
         plugin.versions.forEach(function(v) {
             var hash = v.sha256Hash ? v.sha256Hash.substring(0, 8) : '';
             html += '<div class="tree-leaf"' +
                 ' data-plugin="' + escapeHtml(plugin.name) + '"' +
                 ' data-version="' + escapeHtml(v.version) + '"' +
-                ' onclick="selectVersion(this)">' +
+                ' onclick="selectVersion(event, this)">' +
                 '<span class="leaf-dot"></span>' +
                 '<span class="leaf-version">v' + escapeHtml(v.version) + '</span>' +
                 '<span class="leaf-hash">' + escapeHtml(hash) + '</span>' +
@@ -93,12 +114,18 @@ function renderTree(plugins) {
     if (dp) dp.style.display = '';
 }
 
-function toggleTreeNode(header) {
-    var node = header.parentNode;
+function toggleTreeNode(node) {
+    // 兼容从 header 触发的旧调用
+    if (!node.classList.contains('tree-node')) {
+        node = node.parentNode;
+    }
     node.classList.toggle('expanded');
 }
 
-function selectVersion(leaf, fromRefresh) {
+function selectVersion(event, leaf, fromRefresh) {
+    if (event) {
+        event.stopPropagation();
+    }
     var detailPanel = document.getElementById('detailPanel');
     var welcomePanel = document.getElementById('welcomePanel');
     if (!detailPanel || !welcomePanel) return;

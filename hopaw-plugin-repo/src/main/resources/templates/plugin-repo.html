@@ -50,17 +50,27 @@
                     <p>暂无插件包</p>
                     <p class="empty-hint">点击「导入插件包」上传</p>
                 </div>
-                <div th:each="plugin, pIdx : ${plugins}" class="tree-node" th:attr="data-name=${plugin.name}">
-                    <div class="tree-node-header" th:onclick="'toggleTreeNode(this)'">
+                <div th:each="plugin, pIdx : ${plugins}" class="tree-node" th:attr="data-name=${plugin.name}"
+                     th:onclick="'toggleTreeNode(this)'">
+                    <div class="tree-node-header">
                         <span class="tree-arrow">▸</span>
                         <span class="tree-icon">🧩</span>
                         <span class="tree-name" th:text="${plugin.name}">plugin-name</span>
                         <span class="tree-badge" th:text="${plugin.versions.size() + '个版本'}">3个版本</span>
                     </div>
+                    <div class="tree-node-info" th:if="${plugin.description != null or plugin.keyword != null}">
+                        <div class="tree-node-desc" th:if="${plugin.description != null and plugin.description != ''}"
+                             th:text="${plugin.description}"
+                             th:title="${plugin.description}">插件描述</div>
+                        <div class="tree-node-keywords" th:if="${plugin.keyword != null and plugin.keyword != ''}">
+                            <span class="keyword-tag" th:each="kw : ${#strings.listSplit(plugin.keyword, ',')}"
+                                  th:text="${#strings.trim(kw)}">keyword</span>
+                        </div>
+                    </div>
                     <div class="tree-node-children">
                         <div th:each="version, vIdx : ${plugin.versions}" class="tree-leaf"
                              th:attr="data-plugin=${plugin.name},data-version=${version.version}"
-                             th:onclick="'selectVersion(this)'">
+                             th:onclick="'selectVersion(event, this)'">
                             <span class="leaf-dot"></span>
                             <span class="leaf-version" th:text="'v' + ${version.version}">v1.0.0</span>
                             <span class="leaf-hash" th:text="${#strings.isEmpty(version.sha256Hash) ? '' : version.sha256Hash.substring(0, 8)}"></span>
