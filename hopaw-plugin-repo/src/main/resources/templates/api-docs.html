@@ -8,21 +8,7 @@
     <link rel="stylesheet" th:href="@{/css/api-docs.css}">
 </head>
 <body>
-    <header class="nav-bar">
-        <a th:href="@{/plugin-repo/}" class="nav-brand">插件仓库</a>
-        <div class="nav-links">
-            <a th:href="@{/plugin-repo/}">插件列表</a>
-            <a th:if="${currentUser != null and currentUser.role == 'ADMIN'}" th:href="@{/plugin-repo/admin/users}">用户管理</a>
-            <a th:href="@{/plugin-repo/keys}">API Keys</a>
-            <a th:href="@{/plugin-repo/docs}" class="active">接口说明</a>
-            <a th:href="@{/plugin-repo/user/change-password}">修改密码</a>
-        </div>
-        <div class="nav-user" th:if="${currentUser != null}">
-            <span th:text="${currentUser.displayName}">admin</span>
-            <a href="javascript:void(0)" onclick="document.getElementById('logoutForm').submit()">退出</a>
-            <form id="logoutForm" th:action="@{/plugin-repo/auth/logout}" method="post" style="display:none;"></form>
-        </div>
-    </header>
+    <th:block th:replace="~{layout/layout-nav :: nav('docs')}"></th:block>
 
     <div class="docs-container">
         <div class="docs-card base-url-card">

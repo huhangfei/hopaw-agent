@@ -21,27 +21,6 @@
             font-size: 20px;
             font-weight: 700;
         }
-        .nav-bar {
-            display: flex;
-            align-items: center;
-            gap: 24px;
-            padding: 0 32px;
-            height: 56px;
-            background: var(--card-bg);
-            border-bottom: 1px solid var(--border);
-        }
-        .nav-brand { font-weight: 700; color: var(--primary); font-size: 16px; text-decoration: none; }
-        .nav-links { display: flex; gap: 8px; flex: 1; }
-        .nav-links a {
-            padding: 6px 14px; font-size: 13px; text-decoration: none;
-            color: var(--text-secondary); border-radius: 6px; transition: all .2s;
-        }
-        .nav-links a:hover, .nav-links a.active { background: var(--primary-light); color: var(--primary); }
-        .nav-user {
-            display: flex; align-items: center; gap: 12px;
-            font-size: 13px; color: var(--text-secondary);
-        }
-        .nav-user a { color: #dc2626; text-decoration: none; font-size: 12px; }
         .btn-primary {
             display: inline-flex; align-items: center; gap: 6px;
             padding: 8px 16px; font-size: 13px; font-weight: 600;
@@ -151,20 +130,7 @@
     </style>
 </head>
 <body>
-    <nav class="nav-bar">
-        <a th:href="@{/plugin-repo/}" class="nav-brand">插件仓库</a>
-        <div class="nav-links">
-            <a th:href="@{/plugin-repo/}">插件列表</a>
-            <a th:if="${isAdmin}" th:href="@{/plugin-repo/admin/users}">用户管理</a>
-            <a th:href="@{/plugin-repo/keys}" class="active">API Keys</a>
-            <a th:href="@{/plugin-repo/docs}">接口说明</a>
-        </div>
-        <div class="nav-user" th:if="${currentUser != null}">
-            <span th:text="${currentUser.displayName}">admin</span>
-            <a href="javascript:void(0)" th:onclick="'document.getElementById(\'logoutForm\').submit()'">退出</a>
-            <form id="logoutForm" th:action="@{/plugin-repo/auth/logout}" method="post" style="display:none;"></form>
-        </div>
-    </nav>
+    <th:block th:replace="~{layout/layout-nav :: nav('keys')}"></th:block>
 
     <div class="page-container">
         <div class="page-header">

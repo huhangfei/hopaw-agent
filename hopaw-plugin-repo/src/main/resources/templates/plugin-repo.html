@@ -7,20 +7,13 @@
     <link rel="stylesheet" th:href="@{/css/plugin-repo.css}">
 </head>
 <body>
-    <header class="nav-bar">
-        <a th:href="@{/plugin-repo/}" class="nav-brand">插件仓库</a>
-        <div class="nav-links">
-            <a th:href="@{/plugin-repo/}" class="active">插件列表</a>
-            <a th:if="${currentUser != null and currentUser.role == 'ADMIN'}" th:href="@{/plugin-repo/admin/users}">用户管理</a>
-            <a th:href="@{/plugin-repo/keys}">API Keys</a>
-            <a th:href="@{/plugin-repo/user/change-password}">修改密码</a>
+    <th:block th:replace="~{layout/layout-nav :: nav('plugins')}"></th:block>
+
+    <div class="page-toolbar">
+        <div class="toolbar-search">
+            <input type="text" class="search-input" id="searchInput" placeholder="搜索插件..." oninput="filterPlugins()">
         </div>
-        <div class="nav-user" th:if="${currentUser != null}">
-            <span th:text="${currentUser.displayName}">admin</span>
-            <a href="javascript:void(0)" onclick="document.getElementById('logoutForm').submit()">退出</a>
-            <form id="logoutForm" th:action="@{/plugin-repo/auth/logout}" method="post" style="display:none;"></form>
-        </div>
-        <div class="nav-actions">
+        <div class="toolbar-actions">
             <button class="btn-refresh" id="btnRefresh" onclick="refreshPlugins()">
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                     <path d="M23 4v6h-6"/><path d="M1 20v-6h6"/>
@@ -37,13 +30,10 @@
                 导入插件包
             </button>
         </div>
-    </header>
+    </div>
 
     <div class="main-container">
         <aside class="sidebar" id="sidebar">
-            <div class="sidebar-header">
-                <input type="text" class="search-input" id="searchInput" placeholder="搜索插件..." oninput="filterPlugins()">
-            </div>
             <div class="tree-container" id="treeContainer">
                 <div th:if="${plugins == null or plugins.isEmpty()}" class="empty-state">
                     <div class="empty-icon">📦</div>

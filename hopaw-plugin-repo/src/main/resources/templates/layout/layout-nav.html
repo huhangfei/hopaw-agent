@@ -1,0 +1,27 @@
+<th:block th:fragment="nav(activePage)" xmlns:th="http://www.thymeleaf.org">
+    <header class="nav-bar">
+        <a th:href="@{/plugin-repo/}" class="nav-brand">插件仓库</a>
+        <div class="nav-links">
+            <a th:href="@{/plugin-repo/}" th:classappend="${activePage == 'plugins' ? 'active' : ''}">插件列表</a>
+            <th:block th:if="${isAdmin == true}">
+                <a th:href="@{/plugin-repo/admin/users}"
+                   th:classappend="${activePage == 'users' ? 'active' : ''}">用户管理</a>
+            </th:block>
+            <th:block th:if="${isAdmin == null and currentUser != null and currentUser.role == 'ADMIN'}">
+                <a th:href="@{/plugin-repo/admin/users}"
+                   th:classappend="${activePage == 'users' ? 'active' : ''}">用户管理</a>
+            </th:block>
+            <a th:href="@{/plugin-repo/keys}"
+               th:classappend="${activePage == 'keys' ? 'active' : ''}">API Keys</a>
+            <a th:href="@{/plugin-repo/docs}"
+               th:classappend="${activePage == 'docs' ? 'active' : ''}">接口说明</a>
+            <a th:href="@{/plugin-repo/user/change-password}"
+               th:classappend="${activePage == 'password' ? 'active' : ''}">修改密码</a>
+        </div>
+        <div class="nav-user" th:if="${currentUser != null}">
+            <span th:text="${currentUser.displayName}">admin</span>
+            <a href="javascript:void(0)" onclick="document.getElementById('logoutForm').submit()">退出</a>
+            <form id="logoutForm" th:action="@{/plugin-repo/auth/logout}" method="post" style="display:none;"></form>
+        </div>
+    </header>
+</th:block>
