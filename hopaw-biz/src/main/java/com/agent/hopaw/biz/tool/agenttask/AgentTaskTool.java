@@ -46,6 +46,7 @@ public class AgentTaskTool implements AgentTool {
         ScheduledTask agentTask = new ScheduledTask(taskName, "agentTask", cron, 1, taskDescription);
         agentTask.setAgentId(String.valueOf(invocationParametersWrapper.getAgentId()));
         agentTask.setUserId(invocationParametersWrapper.getUserId());
+        agentTask.setSessionId(invocationParametersWrapper.getSessionId());
         agentTask.setBuiltin(0);
         scheduledTaskService.insert(agentTask);
         return "定时任务创建成功";

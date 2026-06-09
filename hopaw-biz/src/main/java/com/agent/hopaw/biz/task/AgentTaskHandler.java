@@ -9,6 +9,9 @@ import com.agent.hopaw.infra.service.IChatModelListenerProvider;
 import com.agent.hopaw.infra.task.TaskHandler;
 import com.agent.hopaw.infra.tool.AgentTool;
 import com.agent.hopaw.infra.util.InvocationParametersWrapper;
+import com.agent.hopaw.infra.util.UuidUtil;
+import dev.langchain4j.data.message.Content;
+import dev.langchain4j.data.message.TextContent;
 import dev.langchain4j.invocation.InvocationParameters;
 import dev.langchain4j.model.chat.ChatModel;
 import dev.langchain4j.model.chat.listener.ChatModelListener;
@@ -47,8 +50,7 @@ public class AgentTaskHandler implements TaskHandler {
         return "agentTask";
     }
     public interface AgentTaskAssistant {
-        @UserMessage("{{content}}")
-        String chat(String content,
+        String chat(@dev.langchain4j.service.UserMessage List<Content> contents,
                     ChatRequestParameters chatRequestParameters, InvocationParameters invocationParameters);
     }
     private List<String> parseToolNames(String toolsStr) {
@@ -90,8 +92,8 @@ public class AgentTaskHandler implements TaskHandler {
             InvocationParametersWrapper invocationParametersWrapper = InvocationParametersWrapper.create()
             .setUserId(task.getUserId())
             .setAgentId(Long.parseLong(agentIdStr))
-            .setRequestId(UUID.randomUUID().toString())
-            .setSessionId(UUID.randomUUID().toString());
+            .setRequestId(UuidUtil.generateSimpleUUID())
+            .setSessionId(task.getSessionId());
             AgentTaskAssistant assistant = AiServices.builder(AgentTaskAssistant.class)
                     .chatModel(chatModel)
                     .systemMessageProvider(systemMessageProvider)
@@ -101,7 +103,7 @@ public class AgentTaskHandler implements TaskHandler {
             ChatRequestParameters chatRequestParameters=ChatRequestParameters.builder()
                     .temperature(0.1)
                     .build();
-            String result = assistant.chat(task.getDescription(), chatRequestParameters, invocationParametersWrapper.getParameters());
+            String result = assistant.chat(List.of(new TextContent(task.getDescription())), chatRequestParameters, invocationParametersWrapper.getParameters());
             logger.info("定时任务执行结果 [{}] - {}: {}", task.getId(), task.getTaskName(), result);
             }
         } catch (Exception e) {
