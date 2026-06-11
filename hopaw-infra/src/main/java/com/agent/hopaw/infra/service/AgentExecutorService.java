@@ -179,11 +179,9 @@ public class AgentExecutorService implements IAgentExecutorService {
                 "你只能使用用户提供的工具，绝对不能调用不存在的工具。\n" +
                 "不要编造工具！\n";
         if(!avatarSettings.isDisabled() && avatarSettings.getPersonaSetting() != null && !avatarSettings.getPersonaSetting().isEmpty()){
-            systemMessage += "你有一个实体的虚拟形象，使用的人物设定是：" + avatarSettings.getPersonaSetting() + "\n";
-            systemMessage += "长文本结果不要使用虚拟人发送消息！\n";
-            systemMessage +="你要善于通过虚拟人工具去和用户互动，这样显得你更生动："+ IAvatarSettingsService.TOOL_CALL_TIPS;
+            systemMessage += "你可以控制一个虚拟人和用户交互，人物的设定是：" + avatarSettings.getPersonaSetting() + "\n";
             if(avatarSettings.isTtsEnabled() && avatarSettings.getTtsEmotions() != null && !avatarSettings.getTtsEmotions().isEmpty()){
-                systemMessage += "你的虚拟人支持TTS语音合成，消息将被转为语音播放，所以消息内容尽量以第一人称说话方式提供，TTS支持感情：" + avatarSettings.getTtsEmotions() + "\n";
+                systemMessage += "虚拟人TTS感情：" + avatarSettings.getTtsEmotions() + "\n";
             }
         }
         if (agent.getVectorToolSearch() != null && agent.getVectorToolSearch() && selectedTools != null && !selectedTools.isEmpty()) {

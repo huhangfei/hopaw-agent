@@ -46,7 +46,7 @@ public class AvatarTool implements AgentTool {
     }
 
     @ToolSecurityLevel(ToolSecurityLevel.Level.SAFE)
-    @Tool(value = {"换个漂亮衣服", "让虚拟人换装：从用户可用的模型池中随机抽取一个不同的模型进行切换"},
+    @Tool(value = {"虚拟人换装", "让虚拟人换装：从用户可用的模型池中随机抽取一个不同的模型进行切换"},
             searchBehavior = SearchBehavior.ALWAYS_VISIBLE)
     public String changeAvatarModel(InvocationParameters invocationParameters) {
         InvocationParametersWrapper wrapper = InvocationParametersWrapper.create(invocationParameters);
@@ -68,7 +68,7 @@ public class AvatarTool implements AgentTool {
     }
 
     @ToolSecurityLevel(ToolSecurityLevel.Level.SAFE)
-    @Tool(value = {"走动一下", "控制虚拟人在用户屏幕上的相对移动（以当前所在位置为原点(0,0)，传入目标坐标和移动时长）"},
+    @Tool(value = {"虚拟人走动", "控制虚拟人在用户屏幕上的相对移动（以当前所在位置为原点(0,0)，传入目标坐标和移动时长）"},
             searchBehavior = SearchBehavior.ALWAYS_VISIBLE)
     public String moveAvatar(@P("相对当前 X 方向的位移像素（可正可负，范围建议 -1000 ~ 1000）") int targetX,
                              @P("相对当前 Y 方向的位移像素（可正可负，范围建议 -1000 ~ 1000）") int targetY,
@@ -96,10 +96,10 @@ public class AvatarTool implements AgentTool {
     }
 
     @ToolSecurityLevel(ToolSecurityLevel.Level.SAFE)
-    @Tool(value = {"和用户聊天", "向用户发送虚拟人主动消息，该消息支持文字气泡显示和语音播报"},
+    @Tool(value = {"虚拟人消息", "向用户发送虚拟人主动消息，该消息支持文字气泡显示和语音播报"},
             searchBehavior = dev.langchain4j.agent.tool.SearchBehavior.ALWAYS_VISIBLE)
     public String sendAvatarMessageToUser(@P("需要推送给用户的消息内容") String message,
-                                          @P(value = "说话时的感情，根据提示词中感情值传入",required = false)String emotion,
+                                          @P(value = "说话时的感情，根据提示词中TTS感情传入",required = false)String emotion,
                                    InvocationParameters invocationParameters) {
         InvocationParametersWrapper wrapper = InvocationParametersWrapper.create(invocationParameters);
         String targetUserId = wrapper.getUserId();
