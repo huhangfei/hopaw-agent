@@ -24,9 +24,9 @@ import java.util.List;
 @Component("memoryTool")
 public class MemoryTool implements AgentTool {
 
-    private final ILongTermMemoryProvider longTermMemoryProvider;
+    private final ILongTermMemoryService longTermMemoryProvider;
 
-    public MemoryTool(ILongTermMemoryProvider longTermMemoryProvider) {
+    public MemoryTool(ILongTermMemoryService longTermMemoryProvider) {
         this.longTermMemoryProvider = longTermMemoryProvider;
     }
 
@@ -88,6 +88,26 @@ public class MemoryTool implements AgentTool {
         }
 
         return sb.toString();
+    }
+
+    @ToolSecurityLevel(ToolSecurityLevel.Level.SAFE)
+    @Tool(value = {"查询任务记录记忆", "查询用户任务记录记忆，如果不是特别需要不要包含详情"},searchBehavior = SearchBehavior.ALWAYS_VISIBLE)
+    public String queryUserTaskRecordsMemory(InvocationParameters invocationParameters){
+        InvocationParametersWrapper invocationParametersWrapper = InvocationParametersWrapper.create(invocationParameters);
+        String memory = longTermMemoryProvider.queryUserTaskRecordsMemoryContent(null, invocationParametersWrapper.getUserId(), false);
+        return memory;
+    }
+    @ToolSecurityLevel(ToolSecurityLevel.Level.SAFE)
+    @Tool(value = {"查询用户记忆详情", "查询用户记忆内容，根据指定id查询"},searchBehavior = SearchBehavior.ALWAYS_VISIBLE)
+    public String queryUserMemoryById(@P(description="记忆Id")Long id){
+        return longTermMemoryProvider.getMemoryContentById(id);
+    }
+
+    @ToolSecurityLevel(ToolSecurityLevel.Level.ALL_REQUIRE_APPROVAL)
+    @Tool(value = {"删除用户记忆","删除用户记忆内容，根据指定id删除"},searchBehavior = SearchBehavior.ALWAYS_VISIBLE)
+    public String deleteUserMemoryById(@P(description="记忆Id") Long id){
+        longTermMemoryProvider.deleteMemory(id);
+        return "成功";
     }
 
 }
