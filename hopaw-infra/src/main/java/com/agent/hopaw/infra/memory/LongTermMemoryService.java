@@ -381,7 +381,7 @@ public class LongTermMemoryService implements ILongTermMemoryService {
 
     @Override
     public List<MemorySearchResult> queryUserMemory(String userId, String keyword, Integer maxResults) {
-        List<VectorSearchResult> searchResultList = vectorMemoryService.search(keyword, null,userId, null, maxResults, 0.5, UserMemoryTypeEnum.TASK_RECORDS);
+        List<VectorSearchResult> searchResultList = vectorMemoryService.search(keyword, null,userId, null, maxResults, 0.5);
         return searchResultList.stream().map(x -> {
             return new MemorySearchResult(x.getScore(), x.getText(), x.getSessionId(), x.getUserId(), x.getMemoryType(), x.getMemoryDate());
         }).collect(Collectors.toList());
