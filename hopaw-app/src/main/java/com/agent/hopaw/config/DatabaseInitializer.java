@@ -291,11 +291,21 @@ public class DatabaseInitializer implements CommandLineRunner {
                     "username TEXT NOT NULL, " +
                     "nickname TEXT, " +
                     "status INTEGER DEFAULT 1, " +
+                    "password_enabled INTEGER DEFAULT 0, " +
+                    "password TEXT, " +
                     "remark TEXT, " +
                     "create_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP, " +
                     "update_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP" +
                     ")");
             stmt.execute("CREATE UNIQUE INDEX IF NOT EXISTS idx_accounts_user_id ON accounts(user_id)");
+
+            // 为旧表补充 password_enabled 和 password 字段
+            try {
+                stmt.execute("ALTER TABLE accounts ADD COLUMN password_enabled INTEGER DEFAULT 0");
+            } catch (Exception ignored) {}
+            try {
+                stmt.execute("ALTER TABLE accounts ADD COLUMN password TEXT");
+            } catch (Exception ignored) {}
 
             stmt.execute("CREATE TABLE IF NOT EXISTS mcp_server_config (" +
                     "id INTEGER PRIMARY KEY AUTOINCREMENT, " +

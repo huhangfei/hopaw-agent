@@ -4,6 +4,7 @@ import com.agent.hopaw.infra.model.dto.ResponseBean;
 import com.agent.hopaw.infra.model.entity.Account;
 import com.agent.hopaw.infra.service.AccountService;
 import com.agent.hopaw.util.CurrentUser;
+import com.agent.hopaw.util.PasswordUtil;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -56,12 +57,28 @@ public class LoginController {
     }
 
     /**
+     * 公开接口：检查指定账户是否需要密码登录
+     */
+    @GetMapping("/api/auth/check-password")
+    @ResponseBody
+    public ResponseBean checkPasswordRequired(@RequestParam String userId) {
+        Account account = accountService.getByUserId(userId);
+        if (account == null) {
+            return ResponseBean.fail("账户不存在");
+        }
+        Map<String, Object> data = new HashMap<>();
+        data.put("passwordRequired", account.getPasswordEnabled() != null && account.getPasswordEnabled() == 1);
+        return ResponseBean.success(data);
+    }
+
+    /**
      * 公开接口：选择用户即登录
      */
     @PostMapping("/api/auth/login")
     @ResponseBody
     public ResponseBean login(@RequestBody Map<String, String> body, HttpServletRequest request) {
         String userId = body == null ? null : body.get("userId");
+        String password = body == null ? null : body.get("password");
         if (userId == null || userId.isBlank()) {
             return ResponseBean.fail("用户编号不能为空");
         }
@@ -71,6 +88,15 @@ public class LoginController {
         }
         if (account.getStatus() != null && account.getStatus() == 0) {
             return ResponseBean.fail("账户已被禁用");
+        }
+        // 密码校验
+        if (account.getPasswordEnabled() != null && account.getPasswordEnabled() == 1) {
+            if (password == null || password.isBlank()) {
+                return ResponseBean.fail("password_required");
+            }
+            if (!PasswordUtil.verify(password, account.getPassword())) {
+                return ResponseBean.fail("密码错误");
+            }
         }
         CurrentUser.set(request, userId, account);
         Map<String, Object> data = new HashMap<>();

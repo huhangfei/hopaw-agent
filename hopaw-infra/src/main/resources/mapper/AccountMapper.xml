@@ -8,34 +8,36 @@
         <result property="username" column="username"/>
         <result property="nickname" column="nickname"/>
         <result property="status" column="status"/>
+        <result property="passwordEnabled" column="password_enabled"/>
+        <result property="password" column="password"/>
         <result property="remark" column="remark"/>
         <result property="createTime" column="create_time"/>
         <result property="updateTime" column="update_time"/>
     </resultMap>
 
     <select id="findAll" resultMap="AccountResultMap">
-        SELECT id, user_id, username, nickname, status, remark, create_time, update_time
+        SELECT id, user_id, username, nickname, status, password_enabled, remark, create_time, update_time
         FROM accounts
         ORDER BY id ASC
     </select>
 
     <select id="findById" resultMap="AccountResultMap">
-        SELECT id, user_id, username, nickname, status, remark, create_time, update_time
+        SELECT id, user_id, username, nickname, status, password_enabled, password, remark, create_time, update_time
         FROM accounts
         WHERE id = #{id}
     </select>
 
     <select id="findByUserId" resultMap="AccountResultMap">
-        SELECT id, user_id, username, nickname, status, remark, create_time, update_time
+        SELECT id, user_id, username, nickname, status, password_enabled, password, remark, create_time, update_time
         FROM accounts
         WHERE user_id = #{userId}
         LIMIT 1
     </select>
 
     <insert id="insert" parameterType="com.agent.hopaw.infra.model.entity.Account">
-        INSERT INTO accounts (user_id, username, nickname, status, remark)
+        INSERT INTO accounts (user_id, username, nickname, status, password_enabled, password, remark)
         VALUES (#{userId}, #{username}, #{nickname},
-                COALESCE(#{status}, 1), #{remark})
+                COALESCE(#{status}, 1), COALESCE(#{passwordEnabled}, 0), #{password}, #{remark})
         <selectKey resultType="long" keyProperty="id" order="AFTER">
             SELECT last_insert_rowid()
         </selectKey>
@@ -47,6 +49,8 @@
             username = #{username},
             nickname = #{nickname},
             status = COALESCE(#{status}, status),
+            password_enabled = COALESCE(#{passwordEnabled}, password_enabled),
+            password = #{password},
             remark = #{remark},
             update_time = datetime('now', 'localtime')
         WHERE id = #{id}

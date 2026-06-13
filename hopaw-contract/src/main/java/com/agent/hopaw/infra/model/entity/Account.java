@@ -14,6 +14,10 @@ public class Account {
     private String nickname;
     /** 状态：1 启用，0 禁用 */
     private Integer status;
+    /** 是否启用密码：1 启用，0 未启用 */
+    private Integer passwordEnabled;
+    /** 登录密码（BCrypt 加密存储） */
+    private String password;
     /** 备注 */
     private String remark;
     private String createTime;
@@ -43,6 +47,12 @@ public class Account {
 
     public Integer getStatus() { return status; }
     public void setStatus(Integer status) { this.status = status; }
+
+    public Integer getPasswordEnabled() { return passwordEnabled; }
+    public void setPasswordEnabled(Integer passwordEnabled) { this.passwordEnabled = passwordEnabled; }
+
+    public String getPassword() { return password; }
+    public void setPassword(String password) { this.password = password; }
 
     public String getRemark() { return remark; }
     public void setRemark(String remark) { this.remark = remark; }
