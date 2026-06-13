@@ -73,6 +73,7 @@ public class ThemeInterceptor implements HandlerInterceptor {
 
     private String resolveActivePage(HttpServletRequest request) {
         String path = request.getRequestURI();
+        if(path.startsWith("/settings")){return "settings";}
         switch (path) {
             case "/":               return "index";
             case "/models":         return "models";

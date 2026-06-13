@@ -51,8 +51,7 @@ public class ChatController {
 
         List<ChatSession> chatSessions = chatSessionService.getSessionsByUserId(currentUserId);
         model.addAttribute("chatSessions", chatSessions);
-
-        List<Agent> agents = agentService.getAllAgents();
+        List<Agent> agents = agentService.getAgentsPage(currentUserId, null, 0, 100);
         model.addAttribute("agents", agents);
         if(sessionId == null && !chatSessions.isEmpty()){
             sessionId=chatSessions.get(0).getSessionId();
@@ -90,17 +89,17 @@ public class ChatController {
         if(selectedAgent==null && !agents.isEmpty()){
             selectedAgent=agents.get(0);
         }
-        if(aiModelId == null){
+        if(selectedAgent!=null && aiModelId == null){
             aiModelId=selectedAgent.getAiModelId();
         }
         model.addAttribute("selectedAgent", selectedAgent);
+        model.addAttribute("selectedAgentId", selectedAgent != null ? selectedAgent.getId() : null);
         model.addAttribute("selectedSkills", selectedSkills);
-        model.addAttribute("selectedAgentId", selectedAgent.getId());
         model.addAttribute("selectedAiModelId", aiModelId);
         model.addAttribute("enableThinking", enableThinking);
         model.addAttribute("toolCallPermission", toolCallPermission);
         model.addAttribute("currentSessionId", sessionId==null? UuidUtil.generateSimpleUUID() :sessionId);
-        model.addAttribute("avatarDisabled", avatarSettingsService.isAvatarDisabled(currentUserId, selectedAgent.getId()));
+        model.addAttribute("avatarDisabled",selectedAgent != null ? avatarSettingsService.isAvatarDisabled(currentUserId,  selectedAgent.getId()) : true);
         List<ToolSetInfo> toolSets = agentToolService.getToolSets();
         model.addAttribute("toolSets", toolSets);
         return "index";

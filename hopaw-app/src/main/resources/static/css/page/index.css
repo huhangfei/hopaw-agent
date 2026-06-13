@@ -1563,6 +1563,75 @@ body.dark-theme .chat-area {
     background: #1a1a2e;
 }
 
+/* ===== 智能体空状态 ===== */
+.chat-empty-state {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 40px 20px;
+    gap: 12px;
+}
+.chat-empty-icon {
+    width: 72px;
+    height: 72px;
+    border-radius: 50%;
+    background: rgba(99, 102, 241, 0.1);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 8px;
+}
+.chat-empty-icon svg {
+    width: 36px;
+    height: 36px;
+    color: #6366f1;
+}
+.chat-empty-title {
+    margin: 0;
+    font-size: 18px;
+    font-weight: 600;
+    color: #1f2937;
+}
+.chat-empty-desc {
+    margin: 0;
+    font-size: 14px;
+    color: #6b7280;
+}
+.chat-empty-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    margin-top: 12px;
+    padding: 10px 24px;
+    border-radius: 10px;
+    background: #6366f1;
+    color: #fff;
+    font-size: 14px;
+    font-weight: 500;
+    text-decoration: none;
+    transition: background 0.2s, transform 0.15s;
+}
+.chat-empty-btn:hover {
+    background: #4f46e5;
+    transform: translateY(-1px);
+}
+.chat-empty-btn svg {
+    width: 16px;
+    height: 16px;
+}
+
+body.dark-theme .chat-empty-icon {
+    background: rgba(99, 102, 241, 0.15);
+}
+body.dark-theme .chat-empty-title {
+    color: #e6e6f0;
+}
+body.dark-theme .chat-empty-desc {
+    color: #a0a0b8;
+}
+
 body.dark-theme .tool-panel {
     border-left-color: #3d3d6b;
     background: #16213e;
