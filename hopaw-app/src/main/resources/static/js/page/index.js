@@ -15,6 +15,28 @@ if (typeof marked !== 'undefined') {
         breaks: true,
         gfm: true
     });
+
+    // 重写 del 规则：只匹配 ~~text~~（双波浪线），防止单个 ~ 被误解析为删除线
+    marked.use({
+        extensions: [{
+            name: 'del',
+            level: 'inline',
+            start: function(src) { return src.indexOf('~~'); },
+            tokenizer: function(src) {
+                var match = src.match(/^~~([^\s~])((?:[^\\]|\\.)*?[^\s~])?~~(?=[^~]|$)/);
+                if (match) {
+                    return {
+                        type: 'del',
+                        raw: match[0],
+                        tokens: this.lexer.inlineTokens(match[1] + (match[2] || ''))
+                    };
+                }
+            },
+            renderer: function(token) {
+                return '<del>' + this.parser.parseInline(token.tokens) + '</del>';
+            }
+        }]
+    });
 }
 
 function formatMessageTime(date) {

@@ -84,6 +84,7 @@ public class ThemeInterceptor implements HandlerInterceptor {
             case "/token-usage":    return "token-usage";
             case "/settings":       return "settings";
             case "/skills":         return "skills";
+            case "/mcp":            return "mcp";
             case "/accounts":       return "accounts";
             case "/agents":         return "agents";
             case "/login":          return "login";

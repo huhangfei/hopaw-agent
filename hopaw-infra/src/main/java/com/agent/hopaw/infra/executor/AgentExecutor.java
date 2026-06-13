@@ -33,9 +33,16 @@ import dev.langchain4j.model.chat.response.PartialThinking;
 import dev.langchain4j.model.chat.response.PartialToolCall;
 import dev.langchain4j.model.embedding.EmbeddingModel;
 import dev.langchain4j.service.AiServices;
+import dev.langchain4j.service.tool.ToolProvider;
 import dev.langchain4j.service.TokenStream;
 import dev.langchain4j.service.tool.search.vector.VectorToolSearchStrategy;
 import dev.langchain4j.store.memory.chat.InMemoryChatMemoryStore;
+import dev.langchain4j.mcp.McpToolProvider;
+import dev.langchain4j.mcp.client.DefaultMcpClient;
+import dev.langchain4j.mcp.client.McpClient;
+import dev.langchain4j.mcp.client.transport.McpTransport;
+import dev.langchain4j.mcp.client.transport.stdio.StdioMcpTransport;
+import dev.langchain4j.mcp.client.transport.http.StreamableHttpMcpTransport;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.util.StringUtils;
@@ -94,6 +101,7 @@ public class AgentExecutor implements IAgentExecutor {
     private final List<Content> contents;
     private final IChatSessionService chatSessionService;
     private final AgentExecutorParams agentExecutorParams;
+    private final List<McpClient> mcpClients = new ArrayList<>();
     private final Function<Long, String> systemMessageProvider;
     private final IChatModelListenerProvider chatModelListenerProvider;
     public AgentExecutor(AgentExecutorParams agentExecutorParams,
@@ -214,6 +222,17 @@ public class AgentExecutor implements IAgentExecutor {
                 Thread.currentThread().interrupt();
             }
         }
+
+        // 关闭 MCP 客户端连接
+        for (McpClient client : mcpClients) {
+            try {
+                client.close();
+                logger.info("MCP client closed: {}", client);
+            } catch (Exception e) {
+                logger.error("Failed to close MCP client: {}", e.getMessage());
+            }
+        }
+        mcpClients.clear();
     }
 
     @Override
@@ -532,9 +551,83 @@ public class AgentExecutor implements IAgentExecutor {
             }
             aiBuilder.tools(selectedTools.toArray());
         }
+
+        // MCP 工具集成：为每个已启用的 MCP 服务器创建客户端并注册
+        List<McpServerConfig> mcpConfigs = agentExecutorParams.getMcpServerConfigs();
+        if (mcpConfigs != null && !mcpConfigs.isEmpty()) {
+            List<McpClient> clients = new ArrayList<>();
+            for (McpServerConfig config : mcpConfigs) {
+                try {
+                    McpTransport transport = buildMcpTransport(config);
+                    McpClient mcpClient = DefaultMcpClient.builder()
+                            .key(config.getName())
+                            .transport(transport)
+                            .build();
+                    clients.add(mcpClient);
+                    logger.info("MCP client created: {}", config.getName());
+                } catch (Exception e) {
+                    logger.error("Failed to create MCP client for {}: {}", config.getName(), e.getMessage());
+                }
+            }
+            if (!clients.isEmpty()) {
+                ToolProvider toolProvider = McpToolProvider.builder()
+                        .mcpClients(clients)
+                        .failIfOneServerFails(false)
+                        .build();
+                aiBuilder.toolProvider(toolProvider);
+                mcpClients.addAll(clients);
+            }
+        }
+
         ChatModelListener chatModelListener = chatModelListenerProvider.getChatModelListener(AiModelCallSourceEnum.Chat, sessionId, userId, agentId);
         StreamingChatModel streamingModel = aiModelService.createStreamingChatModel(agentExecutorParams.getAiModelId(), agentExecutorParams.getEnableThinking(), chatModelListener);
         return aiBuilder.streamingChatModel(streamingModel).build();
+    }
+
+    /**
+     * 根据 MCP 配置构建对应的传输层
+     */
+    private McpTransport buildMcpTransport(McpServerConfig config) {
+        String transportType = config.getTransportType();
+        if ("http".equalsIgnoreCase(transportType)) {
+            return StreamableHttpMcpTransport.builder()
+                    .url(config.getUrl())
+                    .build();
+        } else {
+            // 默认使用 stdio
+            List<String> commandParts = parseCommand(config.getCommand());
+            return StdioMcpTransport.builder()
+                    .command(commandParts)
+                    .build();
+        }
+    }
+
+    /**
+     * 解析命令行字符串为命令参数列表
+     */
+    private List<String> parseCommand(String command) {
+        if (command == null || command.isBlank()) {
+            return Collections.emptyList();
+        }
+        List<String> parts = new ArrayList<>();
+        StringBuilder current = new StringBuilder();
+        boolean inQuotes = false;
+        for (char c : command.toCharArray()) {
+            if (c == '"') {
+                inQuotes = !inQuotes;
+            } else if (c == ' ' && !inQuotes) {
+                if (current.length() > 0) {
+                    parts.add(current.toString());
+                    current.setLength(0);
+                }
+            } else {
+                current.append(c);
+            }
+        }
+        if (current.length() > 0) {
+            parts.add(current.toString());
+        }
+        return parts;
     }
 
     private void saveChatSession() {

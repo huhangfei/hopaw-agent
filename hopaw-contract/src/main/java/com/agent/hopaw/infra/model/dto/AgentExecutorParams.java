@@ -1,6 +1,7 @@
 package com.agent.hopaw.infra.model.dto;
 
 import com.agent.hopaw.infra.tool.AgentTool;
+import com.agent.hopaw.infra.model.entity.McpServerConfig;
 import dev.langchain4j.data.message.Content;
 
 import java.util.List;
@@ -29,6 +30,7 @@ public class AgentExecutorParams {
     private List<ToolSetInfo> toolSets;
     private List<String> skillNames;
     private List<Content> contents;
+    private List<McpServerConfig> mcpServerConfigs;
     public Long getAgentId() {
         return agentId;
     }
@@ -139,5 +141,13 @@ public class AgentExecutorParams {
 
     public void setContents(List<Content> contents) {
         this.contents = contents;
+    }
+
+    public List<McpServerConfig> getMcpServerConfigs() {
+        return mcpServerConfigs;
+    }
+
+    public void setMcpServerConfigs(List<McpServerConfig> mcpServerConfigs) {
+        this.mcpServerConfigs = mcpServerConfigs;
     }
 }

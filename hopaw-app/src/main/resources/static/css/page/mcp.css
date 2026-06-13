@@ -1,0 +1,316 @@
+.mcp-content {
+    flex: 1;
+    padding: 20px 24px;
+    overflow-y: auto;
+    background: #f5f5f5;
+}
+
+.mcp-page {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+}
+
+.mcp-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 20px;
+    flex-shrink: 0;
+}
+
+.mcp-header h3 {
+    font-size: 16px;
+    font-weight: 600;
+    color: #333;
+    margin: 0;
+}
+
+.btn-add-mcp {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 7px 16px;
+    font-size: 13px;
+    font-weight: 500;
+    color: #fff;
+    background: #4caf50;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: background 0.2s;
+}
+
+.btn-add-mcp:hover {
+    background: #43a047;
+}
+
+.btn-add-mcp svg {
+    width: 14px;
+    height: 14px;
+}
+
+/* ===== Grid ===== */
+.mcp-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+    gap: 16px;
+    flex: 1;
+    overflow-y: auto;
+    align-content: start;
+    padding-bottom: 20px;
+}
+
+.mcp-empty {
+    grid-column: 1 / -1;
+    text-align: center;
+    color: #999;
+    padding: 60px 20px;
+    font-size: 14px;
+}
+
+/* ===== Card ===== */
+.mcp-card {
+    background: #fff;
+    border: 1px solid #e0e0e0;
+    border-radius: 10px;
+    padding: 18px 20px;
+    display: flex;
+    flex-direction: column;
+    transition: border-color 0.2s, box-shadow 0.2s;
+    min-height: 120px;
+}
+
+.mcp-card:hover {
+    border-color: #2196f3;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
+}
+
+.mcp-card.enabled {
+    border-left: 3px solid #4caf50;
+}
+
+.mcp-card.disabled {
+    border-left: 3px solid #ccc;
+    opacity: 0.7;
+}
+
+.mcp-card-body {
+    flex: 1;
+}
+
+.mcp-card-name {
+    font-size: 15px;
+    font-weight: 600;
+    color: #222;
+    margin-bottom: 8px;
+    word-break: break-word;
+}
+
+.mcp-card-meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    align-items: center;
+    font-size: 12px;
+    color: #888;
+    margin-bottom: 4px;
+}
+
+.mcp-tag {
+    background: #e8eaf6;
+    color: #3f51b5;
+    padding: 2px 8px;
+    border-radius: 4px;
+    font-size: 11px;
+    font-weight: 500;
+}
+
+.mcp-url,
+.mcp-cmd {
+    font-family: 'Consolas', 'Monaco', monospace;
+    word-break: break-all;
+    font-size: 12px;
+    color: #666;
+}
+
+.mcp-desc {
+    color: #aaa;
+    font-style: italic;
+    font-size: 12px;
+    width: 100%;
+}
+
+.mcp-card-actions {
+    display: flex;
+    gap: 8px;
+    margin-top: 14px;
+    padding-top: 12px;
+    border-top: 1px solid #eee;
+    align-items: center;
+}
+
+/* Toggle */
+.mcp-toggle {
+    position: relative;
+    display: inline-block;
+    width: 44px;
+    height: 24px;
+    margin-right: auto;
+}
+
+.mcp-toggle input {
+    opacity: 0;
+    width: 0;
+    height: 0;
+}
+
+.toggle-slider {
+    position: absolute;
+    cursor: pointer;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: #ccc;
+    border-radius: 24px;
+    transition: 0.3s;
+}
+
+.toggle-slider:before {
+    position: absolute;
+    content: "";
+    height: 18px;
+    width: 18px;
+    left: 3px;
+    bottom: 3px;
+    background-color: white;
+    border-radius: 50%;
+    transition: 0.3s;
+}
+
+.mcp-toggle input:checked + .toggle-slider {
+    background-color: #4caf50;
+}
+
+.mcp-toggle input:checked + .toggle-slider:before {
+    transform: translateX(20px);
+}
+
+/* Card action buttons */
+.btn-card {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all 0.2s;
+    background: transparent;
+    font-size: 16px;
+}
+
+.btn-edit-mcp {
+    color: #f57c00;
+}
+
+.btn-edit-mcp:hover {
+    background: rgba(245, 124, 0, 0.1);
+}
+
+.btn-delete-mcp {
+    color: #d32f2f;
+}
+
+.btn-delete-mcp:hover {
+    background: rgba(211, 47, 47, 0.1);
+}
+
+/* Modal */
+.modal-mcp {
+    width: 480px;
+    max-width: 90%;
+}
+
+/* ===== MCP Page Dark Theme ===== */
+body.dark-theme .mcp-content {
+    background: #1a1a2e;
+}
+
+body.dark-theme .mcp-header h3 {
+    color: #e6e6f0;
+}
+
+body.dark-theme .btn-add-mcp {
+    background: #43a047;
+}
+
+body.dark-theme .btn-add-mcp:hover {
+    background: #388e3c;
+}
+
+body.dark-theme .mcp-empty {
+    color: #6c6c8a;
+}
+
+body.dark-theme .mcp-card {
+    background: #232342;
+    border-color: #2f2f4a;
+}
+
+body.dark-theme .mcp-card:hover {
+    border-color: #64b5f6;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
+}
+
+body.dark-theme .mcp-card.enabled {
+    border-left-color: #66bb6a;
+}
+
+body.dark-theme .mcp-card.disabled {
+    border-left-color: #555;
+}
+
+body.dark-theme .mcp-card-name {
+    color: #e6e6f0;
+}
+
+body.dark-theme .mcp-card-meta {
+    color: #a0a0b8;
+}
+
+body.dark-theme .mcp-tag {
+    background: #283593;
+    color: #8ba3ff;
+}
+
+body.dark-theme .mcp-url,
+body.dark-theme .mcp-cmd {
+    color: #a0a0b8;
+}
+
+body.dark-theme .mcp-desc {
+    color: #6c6c8a;
+}
+
+body.dark-theme .mcp-card-actions {
+    border-top-color: #2f2f4a;
+}
+
+body.dark-theme .btn-edit-mcp {
+    color: #ffb74d;
+}
+
+body.dark-theme .btn-edit-mcp:hover {
+    background: rgba(255, 183, 77, 0.15);
+}
+
+body.dark-theme .btn-delete-mcp {
+    color: #ef5350;
+}
+
+body.dark-theme .btn-delete-mcp:hover {
+    background: rgba(239, 83, 80, 0.15);
+}

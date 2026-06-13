@@ -297,6 +297,19 @@ public class DatabaseInitializer implements CommandLineRunner {
                     ")");
             stmt.execute("CREATE UNIQUE INDEX IF NOT EXISTS idx_accounts_user_id ON accounts(user_id)");
 
+            stmt.execute("CREATE TABLE IF NOT EXISTS mcp_server_config (" +
+                    "id INTEGER PRIMARY KEY AUTOINCREMENT, " +
+                    "name TEXT NOT NULL, " +
+                    "transport_type TEXT NOT NULL DEFAULT 'stdio', " +
+                    "command TEXT, " +
+                    "url TEXT, " +
+                    "description TEXT, " +
+                    "enabled INTEGER DEFAULT 0, " +
+                    "ext_params TEXT, " +
+                    "create_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP, " +
+                    "update_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP" +
+                    ")");
+
             log.info("Database tables created");
         }
     }

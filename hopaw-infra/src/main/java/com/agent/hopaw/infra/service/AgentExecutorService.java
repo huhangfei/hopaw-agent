@@ -29,9 +29,10 @@ public class AgentExecutorService implements IAgentExecutorService {
     private final IChatModelListenerProvider chatModelListenerProvider;
     private final ApplicationEventPublisher eventPublisher;
     private final IAvatarSettingsService avatarSettingsService;
+    private final IMcpServerConfigService mcpServerConfigService;
     private final Map<String, IAgentExecutor> agentExecutors = new HashMap<>();
 
-    public AgentExecutorService(IAgentService agentService, AiModelService aiModelService, IChatMemoryService chatMemoryService, IAgentToolService agentToolService, EmbeddingModel embeddingModel, ISkillService ISkillService, IChatSessionService chatSessionService, IChatModelListenerProvider chatModelListenerProvider, ApplicationEventPublisher eventPublisher, IAvatarSettingsService avatarSettingsService) {
+    public AgentExecutorService(IAgentService agentService, AiModelService aiModelService, IChatMemoryService chatMemoryService, IAgentToolService agentToolService, EmbeddingModel embeddingModel, ISkillService ISkillService, IChatSessionService chatSessionService, IChatModelListenerProvider chatModelListenerProvider, ApplicationEventPublisher eventPublisher, IAvatarSettingsService avatarSettingsService, IMcpServerConfigService mcpServerConfigService) {
         this.agentService = agentService;
         this.aiModelService = aiModelService;
         this.chatMemoryService = chatMemoryService;
@@ -42,6 +43,7 @@ public class AgentExecutorService implements IAgentExecutorService {
         this.chatModelListenerProvider = chatModelListenerProvider;
         this.eventPublisher = eventPublisher;
         this.avatarSettingsService = avatarSettingsService;
+        this.mcpServerConfigService = mcpServerConfigService;
     }
 
     @Override
@@ -159,6 +161,8 @@ public class AgentExecutorService implements IAgentExecutorService {
         agentExecutorParams.setToolCallPermission(userRequest.getToolCallPermission());
         agentExecutorParams.setToolSets(selectedTools);
         agentExecutorParams.setContents(Arrays.asList(new TextContent(userRequest.getMessage())));
+        // 加载已启用的 MCP 服务器配置
+        agentExecutorParams.setMcpServerConfigs(mcpServerConfigService.findEnabled());
 
 
         Function<Long, String> systemMessageProvider = aId -> {
