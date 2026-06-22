@@ -81,7 +81,7 @@ function renderResults(results) {
 
     results.forEach(function(item, idx) {
         var memType = item.memoryType || '';
-        var typeLabel = item.memTypeName || memType;
+        var typeLabel = item.memoryTypeName || memType;
         var typeClass = memType || 'unknown';
 
         var text = item.text || '';
@@ -116,9 +116,7 @@ function showDetail(idx) {
     if (!item) return;
 
     var memType = item.memoryType || '';
-    var typeLabel = memType === 'chatHistory' ? '聊天历史'
-                  : memType === 'taskRecords' ? '任务记录'
-                  : memType || '未知';
+    var typeLabel = item.memoryTypeName || memType || '未知';
     var typeClass = memType || 'unknown';
 
     document.getElementById('detailType').textContent = typeLabel;
