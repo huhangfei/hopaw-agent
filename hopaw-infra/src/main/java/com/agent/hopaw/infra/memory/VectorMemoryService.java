@@ -23,6 +23,7 @@ import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
 
 @Service
@@ -35,9 +36,17 @@ public class VectorMemoryService implements IVectorMemoryService {
     private static final String METADATA_MEMORY_DATE = "memoryDate";
     private static final String METADATA_MEMORY_ID = "memoryId";
 
+    /** 落盘操作计数器：每满 FLUSH_THRESHOLD 次触发一次 save */
+    private static final int FLUSH_THRESHOLD = 100;
+    /** 落盘时间间隔（毫秒）：距上次落盘超过此时长则立即落盘 */
+    private static final long FLUSH_INTERVAL_MS = 30_000L;
+
     private final ISysConfigService sysConfigService;
     private final EmbeddingModel embeddingModel;
     private EmbeddingStore<TextSegment> embeddingStore;
+
+    private final AtomicInteger pendingOps = new AtomicInteger(0);
+    private volatile long lastFlushTime = System.currentTimeMillis();
 
     public VectorMemoryService(ISysConfigService sysConfigService, EmbeddingModel embeddingModel) {
         this.sysConfigService = sysConfigService;
@@ -47,7 +56,16 @@ public class VectorMemoryService implements IVectorMemoryService {
     @EventListener(ApplicationReadyEvent.class)
     public void init() {
         try {
-            int dimension = 512;
+            // 启动时探测 embedding 模型实际维度，避免硬编码与实际不一致导致写入失败
+            int dimension;
+            try {
+                Embedding probe = embeddingModel.embed(TextSegment.from("__probe__")).content();
+                dimension = probe.vector().length();
+                logger.info("Detected embedding dimension: {}", dimension);
+            } catch (Exception probeEx) {
+                logger.warn("Failed to probe embedding dimension, fallback to 512", probeEx);
+                dimension = 512;
+            }
 
             String persistencePath = sysConfigService.getValueByKey("vector_store_path", "./vector_store");
             String profile = sysConfigService.getValueByKey("vector_store_profile", "stable");
@@ -113,7 +131,7 @@ public class VectorMemoryService implements IVectorMemoryService {
     public void destroy() {
         try {
             if (embeddingStore instanceof JVectorEmbeddingStore) {
-               saveVectorStore ((JVectorEmbeddingStore) embeddingStore);
+                saveVectorStore((JVectorEmbeddingStore) embeddingStore);
                 logger.info("JVectorEmbeddingStore saved on shutdown");
             }
         } catch (Exception e) {
@@ -123,69 +141,104 @@ public class VectorMemoryService implements IVectorMemoryService {
 
     /**
      * 将内容写入向量库，附带 agent、用户、记忆类型、记忆ID 等分类信息
+     *
+     * @throws RuntimeException 当 embedding 维度与索引不匹配或底层存储失败时抛出，
+     *                          调用方应中止后续数据库写入，避免数据不一致
      */
     @Override
-    public String store(String content, String sessionId,String userId, UserMemoryTypeEnum memoryType, LocalDateTime timestamp) {
+    public String store(String content, String sessionId, String userId, UserMemoryTypeEnum memoryType, LocalDateTime timestamp) {
         if (content == null || content.isBlank()) {
             return null;
         }
-        try {
-            TextSegment segment = TextSegment.from(content);
-            segment.metadata().put(METADATA_SESSION_ID, sessionId);
-            segment.metadata().put(METADATA_USER_ID, userId);
-            segment.metadata().put(METADATA_MEMORY_TYPE, memoryType.getCode());
-            segment.metadata().put(METADATA_MEMORY_DATE, timestamp.format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss")));
+        TextSegment segment = TextSegment.from(content);
+        segment.metadata().put(METADATA_SESSION_ID, sessionId);
+        segment.metadata().put(METADATA_USER_ID, userId);
+        segment.metadata().put(METADATA_MEMORY_TYPE, memoryType.getCode());
+        segment.metadata().put(METADATA_MEMORY_DATE, timestamp.format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss")));
 
-            Embedding embedding = embeddingModel.embed(segment).content();
-            String id= embeddingStore.add(embedding, segment);
-            saveVectorStore((JVectorEmbeddingStore) embeddingStore);
-            return id;
-        } catch (Exception e) {
-            logger.error("Failed to store vector memory, sessionId={}, userId={}, type={}",
-                    sessionId, userId, memoryType, e);
-        }
-        return null;
+        Embedding embedding = embeddingModel.embed(segment).content();
+        // 维度校验：写入维度与索引维度不匹配时立即抛出，防止数据错位
+        validateDimension(embedding.vector().length());
+        String id = embeddingStore.add(embedding, segment);
+        scheduleFlush();
+        return id;
     }
 
     /**
      * 批量写入向量库
+     *
+     * @throws RuntimeException 当 embedding 维度与索引不匹配或底层存储失败时抛出
      */
     @Override
     public void storeBatch(List<String> contents, String sessionId, String userId, UserMemoryTypeEnum memoryType, LocalDateTime timestamp) {
         if (contents == null || contents.isEmpty()) {
             return;
         }
-        try {
-            List<TextSegment> segments = new java.util.ArrayList<>();
-            DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
-            for (String content : contents) {
-                if (content == null || content.isBlank()) {
-                    continue;
-                }
-                TextSegment segment = TextSegment.from(content);
-                segment.metadata().put(METADATA_SESSION_ID, sessionId);
-                segment.metadata().put(METADATA_USER_ID, userId);
-                segment.metadata().put(METADATA_MEMORY_TYPE, memoryType.getCode());
-                segment.metadata().put(METADATA_MEMORY_DATE, timestamp.format(formatter));
-
-                segments.add(segment);
+        List<TextSegment> segments = new ArrayList<>();
+        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
+        for (String content : contents) {
+            if (content == null || content.isBlank()) {
+                continue;
             }
-
-            if (segments.isEmpty()) {
-                return;
-            }
-
-            List<Embedding> embeddings = embeddingModel.embedAll(segments).content();
-            embeddingStore.addAll(embeddings, segments);
-
-            saveVectorStore((JVectorEmbeddingStore) embeddingStore);
-
-            logger.info("Batch stored {} vectors, sessionId={}, userId={}, type={}",
-                    segments.size(), sessionId, userId, memoryType);
-        } catch (Exception e) {
-            logger.error("Failed to batch store vectors, sessionId={}, userId={}, type={}",
-                    sessionId, userId, memoryType, e);
+            TextSegment segment = TextSegment.from(content);
+            segment.metadata().put(METADATA_SESSION_ID, sessionId);
+            segment.metadata().put(METADATA_USER_ID, userId);
+            segment.metadata().put(METADATA_MEMORY_TYPE, memoryType.getCode());
+            segment.metadata().put(METADATA_MEMORY_DATE, timestamp.format(formatter));
+            segments.add(segment);
         }
+
+        if (segments.isEmpty()) {
+            return;
+        }
+
+        List<Embedding> embeddings = embeddingModel.embedAll(segments).content();
+        // 维度校验
+        for (Embedding e : embeddings) {
+            validateDimension(e.vector().length());
+        }
+        embeddingStore.addAll(embeddings, segments);
+        scheduleFlush();
+
+        logger.info("Batch stored {} vectors, sessionId={}, userId={}, type={}",
+                segments.size(), sessionId, userId, memoryType);
+    }
+
+    /**
+     * 校验向量维度是否与索引一致，不一致直接抛错防止数据错位
+     */
+    private void validateDimension(int actualDim) {
+        if (embeddingStore instanceof JVectorEmbeddingStore) {
+            int configured = ((JVectorEmbeddingStore) embeddingStore).dimension();
+            if (actualDim != configured) {
+                throw new IllegalStateException(
+                        "Embedding dimension mismatch: index configured=" + configured
+                                + ", actual=" + actualDim
+                                + ". 请检查 vector_store_path 配置或更换与当前 embedding 模型匹配的索引目录。");
+            }
+        }
+    }
+
+    /**
+     * 根据操作次数/时间决定是否落盘
+     */
+    private void scheduleFlush() {
+        int ops = pendingOps.incrementAndGet();
+        long now = System.currentTimeMillis();
+        if (ops >= FLUSH_THRESHOLD || (now - lastFlushTime) >= FLUSH_INTERVAL_MS) {
+            flush();
+        }
+    }
+
+    /**
+     * 立即落盘
+     */
+    private synchronized void flush() {
+        if (embeddingStore instanceof JVectorEmbeddingStore) {
+            saveVectorStore((JVectorEmbeddingStore) embeddingStore);
+        }
+        pendingOps.set(0);
+        lastFlushTime = System.currentTimeMillis();
     }
 
     /**
@@ -214,7 +267,7 @@ public class VectorMemoryService implements IVectorMemoryService {
         }
         try {
             embeddingStore.remove(embeddingId);
-            saveVectorStore((JVectorEmbeddingStore) embeddingStore);
+            scheduleFlush();
             logger.info("Deleted vector, embeddingId={}", embeddingId);
             return true;
         } catch (Exception e) {
@@ -235,10 +288,11 @@ public class VectorMemoryService implements IVectorMemoryService {
      * @param excludeMemoryTypes   排除的记忆类型
      */
     @Override
-    public List<VectorSearchResult> search(String query,String sessionId, String userId,
-                                          String memoryType, int maxResults, double minScore,UserMemoryTypeEnum... excludeMemoryTypes) {
+    public List<VectorSearchResult> search(String query, String sessionId, String userId,
+                                          String memoryType, int maxResults, double minScore, UserMemoryTypeEnum... excludeMemoryTypes) {
         try {
             Embedding queryEmbedding = embeddingModel.embed(TextSegment.from(query)).content();
+            validateDimension(queryEmbedding.vector().length());
 
             int searchLimit = Math.max(maxResults * 5, 20);
 
@@ -251,7 +305,7 @@ public class VectorMemoryService implements IVectorMemoryService {
             EmbeddingSearchResult<TextSegment> result = embeddingStore.search(request);
 
             List<String> excludeMemoryTypeStrList;
-            if(excludeMemoryTypes!=null && excludeMemoryTypes.length>0) {
+            if (excludeMemoryTypes != null && excludeMemoryTypes.length > 0) {
                 excludeMemoryTypeStrList = Arrays.stream(excludeMemoryTypes).map(x -> x.getCode()).collect(Collectors.toList());
             } else {
                 excludeMemoryTypeStrList = new ArrayList<>();
@@ -277,7 +331,7 @@ public class VectorMemoryService implements IVectorMemoryService {
                                 return false;
                             }
                         }
-                        if(excludeMemoryTypes.length>0){
+                        if (excludeMemoryTypes.length > 0) {
                             String storedType = metadata.getString(METADATA_MEMORY_TYPE);
                             if (excludeMemoryTypeStrList.contains(storedType)) {
                                 return false;
@@ -288,7 +342,7 @@ public class VectorMemoryService implements IVectorMemoryService {
                     .limit(maxResults)
                     .map(match -> {
                         Metadata m = match.embedded().metadata();
-                        var r= new VectorSearchResult(
+                        var r = new VectorSearchResult(
                                 match.score(),
                                 match.embedded().text(),
                                 m != null ? m.getString(METADATA_SESSION_ID) : null,
@@ -297,7 +351,7 @@ public class VectorMemoryService implements IVectorMemoryService {
                                 m != null ? m.getString(METADATA_MEMORY_DATE) : null,
                                 match.embeddingId()
                         );
-                        if(r.getMemoryType() != null){
+                        if (r.getMemoryType() != null) {
                             r.setMemoryTypeName(UserMemoryTypeEnum.fromCode(r.getMemoryType()).getName());
                         }
                         return r;

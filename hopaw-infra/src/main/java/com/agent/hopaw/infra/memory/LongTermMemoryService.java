@@ -71,13 +71,15 @@ public class LongTermMemoryService implements ILongTermMemoryService {
     @Override
     public void update(LongTermMemory entity) {
         LongTermMemory dbEntity = longTermMemoryMapper.findById(entity.getId());
-        String storeId = vectorMemoryService.store(entity.getSummary()+"\n"+ entity.getMemory(), entity.getSessionId(), entity.getUserId(), UserMemoryTypeEnum.fromCode(entity.getMemoryType()), entity.getCreateTime());
+        // 先删除旧向量（如果存在）
+        if (dbEntity != null && dbEntity.getEmbeddingId() != null) {
+            vectorMemoryService.deleteByEmbeddingId(dbEntity.getEmbeddingId());
+        }
+        // 写入新向量；若 store 抛异常（维度不匹配/底层失败）将直接向上传播，DB 不会被更新
+        String storeId = vectorMemoryService.store(entity.getSummary() + "\n" + entity.getMemory(), entity.getSessionId(), entity.getUserId(), UserMemoryTypeEnum.fromCode(entity.getMemoryType()), entity.getCreateTime());
         entity.setEmbeddingId(storeId);
         entity.setMemoryHash(String.valueOf(entity.getMemory().hashCode()));
         longTermMemoryMapper.update(entity);
-        if(dbEntity !=null && entity.getEmbeddingId() != null){
-            vectorMemoryService.deleteByEmbeddingId(dbEntity.getEmbeddingId());
-        }
     }
 
     @Override
@@ -106,7 +108,24 @@ public class LongTermMemoryService implements ILongTermMemoryService {
     public void deleteExpiredTaskRecordsMemories(String sessionId, String userId) {
         int taskRecordsClearTimeoutDay = Integer.parseInt(sysConfigService.getValueByKey("taskRecordsClearTimeoutDay", "7"));
         LocalDateTime endDateTime = LocalDate.now().atStartOfDay().minusDays(taskRecordsClearTimeoutDay);
-        longTermMemoryMapper.deleteBySessionIdAndUserIdAndMemoryTypeAndEndDateTime(sessionId, userId, UserMemoryTypeEnum.TASK_RECORDS.getCode(), endDateTime);
+
+        // 先查询待清理的记录，拿到 embeddingId 同步清理向量库
+//        List<LongTermMemory> expired = longTermMemoryMapper.findExpiredBySessionIdAndUserIdAndMemoryTypeAndEndDateTime(
+//                sessionId, userId, UserMemoryTypeEnum.TASK_RECORDS.getCode(), endDateTime);
+//        if (expired == null || expired.isEmpty()) {
+//            return;
+//        }
+
+        // 1) 同步清理向量库 （向量库中目前可以永存）
+//        for (LongTermMemory m : expired) {
+//            if (m.getEmbeddingId() != null) {
+//                vectorMemoryService.deleteByEmbeddingId(m.getEmbeddingId());
+//            }
+//        }
+
+        // 2) 删除数据库记录
+        longTermMemoryMapper.deleteBySessionIdAndUserIdAndMemoryTypeAndEndDateTime(
+                sessionId, userId, UserMemoryTypeEnum.TASK_RECORDS.getCode(), endDateTime);
     }
 
 
@@ -343,9 +362,12 @@ public class LongTermMemoryService implements ILongTermMemoryService {
             // 根据id查询记忆
             memoryEntity = longTermMemoryMapper.findById(id);
             if(memoryEntity != null){
-                if(memoryEntity.getEmbeddingId() != null){
+                // 先删除旧向量
+                if (memoryEntity.getEmbeddingId() != null) {
                     vectorMemoryService.deleteByEmbeddingId(memoryEntity.getEmbeddingId());
                 }
+                // 写入新向量
+                String updateStoreId = vectorMemoryService.store(summary + "\n" + memory, invocationParametersWrapper.getSessionId(), invocationParametersWrapper.getUserId(), memoryType, LocalDateTime.now());
                 memoryEntity.setSessionId(invocationParametersWrapper.getSessionId());
                 memoryEntity.setUserId(invocationParametersWrapper.getUserId());
                 memoryEntity.setMemoryType(memoryType.getCode());
@@ -353,7 +375,7 @@ public class LongTermMemoryService implements ILongTermMemoryService {
                 memoryEntity.setMemory(memory);
                 memoryEntity.setMemoryHash(memoryHash);
                 memoryEntity.setUpdateTime(LocalDateTime.now());
-                memoryEntity.setEmbeddingId(storeId);
+                memoryEntity.setEmbeddingId(updateStoreId);
                 longTermMemoryMapper.update(memoryEntity);
                 isUpdate = true;
             }
