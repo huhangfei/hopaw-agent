@@ -44,6 +44,8 @@ public class VectorMemoryService implements IVectorMemoryService {
     private final ISysConfigService sysConfigService;
     private final EmbeddingModel embeddingModel;
     private EmbeddingStore<TextSegment> embeddingStore;
+    /** 当前索引维度（启动时探测得到），用于写入/检索时校验防止数据错位 */
+    private volatile int currentDimension;
 
     private final AtomicInteger pendingOps = new AtomicInteger(0);
     private volatile long lastFlushTime = System.currentTimeMillis();
@@ -60,7 +62,7 @@ public class VectorMemoryService implements IVectorMemoryService {
             int dimension;
             try {
                 Embedding probe = embeddingModel.embed(TextSegment.from("__probe__")).content();
-                dimension = probe.vector().length();
+                dimension = probe.vector().length;
                 logger.info("Detected embedding dimension: {}", dimension);
             } catch (Exception probeEx) {
                 logger.warn("Failed to probe embedding dimension, fallback to 512", probeEx);
@@ -118,6 +120,7 @@ public class VectorMemoryService implements IVectorMemoryService {
                     .neighborOverflow(neighborOverflow)
                     .alpha(alpha)
                     .build();
+            this.currentDimension = dimension;
 
             logger.info("JVectorEmbeddingStore initialized, profile={}, dimension={}, maxDegree={}, beamWidth={}, path={}",
                     profile, dimension, maxDegree, beamWidth, persistencePath);
@@ -158,7 +161,7 @@ public class VectorMemoryService implements IVectorMemoryService {
 
         Embedding embedding = embeddingModel.embed(segment).content();
         // 维度校验：写入维度与索引维度不匹配时立即抛出，防止数据错位
-        validateDimension(embedding.vector().length());
+        validateDimension(embedding.vector().length);
         String id = embeddingStore.add(embedding, segment);
         scheduleFlush();
         return id;
@@ -195,7 +198,7 @@ public class VectorMemoryService implements IVectorMemoryService {
         List<Embedding> embeddings = embeddingModel.embedAll(segments).content();
         // 维度校验
         for (Embedding e : embeddings) {
-            validateDimension(e.vector().length());
+            validateDimension(e.vector().length);
         }
         embeddingStore.addAll(embeddings, segments);
         scheduleFlush();
@@ -208,14 +211,14 @@ public class VectorMemoryService implements IVectorMemoryService {
      * 校验向量维度是否与索引一致，不一致直接抛错防止数据错位
      */
     private void validateDimension(int actualDim) {
-        if (embeddingStore instanceof JVectorEmbeddingStore) {
-            int configured = ((JVectorEmbeddingStore) embeddingStore).dimension();
-            if (actualDim != configured) {
-                throw new IllegalStateException(
-                        "Embedding dimension mismatch: index configured=" + configured
-                                + ", actual=" + actualDim
-                                + ". 请检查 vector_store_path 配置或更换与当前 embedding 模型匹配的索引目录。");
-            }
+        if (currentDimension == 0) {
+            return; // 尚未初始化时跳过（启动前/降级路径）
+        }
+        if (actualDim != currentDimension) {
+            throw new IllegalStateException(
+                    "Embedding dimension mismatch: index configured=" + currentDimension
+                            + ", actual=" + actualDim
+                            + ". 请检查 vector_store_path 配置或更换与当前 embedding 模型匹配的索引目录。");
         }
     }
 
@@ -292,7 +295,7 @@ public class VectorMemoryService implements IVectorMemoryService {
                                           String memoryType, int maxResults, double minScore, UserMemoryTypeEnum... excludeMemoryTypes) {
         try {
             Embedding queryEmbedding = embeddingModel.embed(TextSegment.from(query)).content();
-            validateDimension(queryEmbedding.vector().length());
+            validateDimension(queryEmbedding.vector().length);
 
             int searchLimit = Math.max(maxResults * 5, 20);
 

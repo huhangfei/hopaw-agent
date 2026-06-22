@@ -52,7 +52,7 @@ public class MemoryTool implements AgentTool {
 
     @ToolSecurityLevel(ToolSecurityLevel.Level.PARAM_REQUIRE_APPROVAL)
     @Tool(value = {"保存用户记忆", "保存用户记忆,如果有记忆Id则为更新，如果记忆Id不存在则为新增。"},searchBehavior = SearchBehavior.ALWAYS_VISIBLE)
-    public String saveUserMemory(@P(description = "记忆类型:userProfile、taskRecords、empiricalKnowledge",required = false) String memoryType,
+    public String saveUserMemory(@P(description = "记忆类型:userProfile、taskRecords、empiricalKnowledge") String memoryType,
                                  @P(description = "记忆概要") String summary,
                                  @P(description = "记忆内容") String memory,
                                  @P(description = "记忆Id，如果传入记忆Id则为更新，如果不传记忆Id则为新增。",required = false) Long id,
@@ -91,15 +91,22 @@ public class MemoryTool implements AgentTool {
     }
 
     @ToolSecurityLevel(ToolSecurityLevel.Level.SAFE)
-    @Tool(value = {"查询任务记录记忆", "查询用户任务记录记忆，如果不是特别需要不要包含详情"},searchBehavior = SearchBehavior.ALWAYS_VISIBLE)
-    public String queryUserTaskRecordsMemory(InvocationParameters invocationParameters){
+    @Tool(value = {"获取用户画像记忆"},searchBehavior = SearchBehavior.ALWAYS_VISIBLE)
+    public String getUserProfileMemory(InvocationParameters invocationParameters){
+        InvocationParametersWrapper invocationParametersWrapper = InvocationParametersWrapper.create(invocationParameters);
+        String memory = longTermMemoryProvider.queryUserProfileMemoryContent(invocationParametersWrapper.getUserId());
+        return memory;
+    }
+    @ToolSecurityLevel(ToolSecurityLevel.Level.SAFE)
+    @Tool(value = {"获取任务记录记忆", "获取用户近期任务记录记忆"},searchBehavior = SearchBehavior.ALWAYS_VISIBLE)
+    public String getUserTaskRecordsMemory(InvocationParameters invocationParameters){
         InvocationParametersWrapper invocationParametersWrapper = InvocationParametersWrapper.create(invocationParameters);
         String memory = longTermMemoryProvider.queryUserTaskRecordsMemoryContent(null, invocationParametersWrapper.getUserId(), false);
         return memory;
     }
     @ToolSecurityLevel(ToolSecurityLevel.Level.SAFE)
-    @Tool(value = {"查询用户记忆详情", "查询用户记忆内容，根据指定id查询"},searchBehavior = SearchBehavior.ALWAYS_VISIBLE)
-    public String queryUserMemoryById(@P(description="记忆Id")Long id){
+    @Tool(value = {"获取用户记忆详情", "查询用户记忆内容，根据指定id获取"},searchBehavior = SearchBehavior.ALWAYS_VISIBLE)
+    public String getUserMemoryById(@P(description="记忆Id")Long id){
         return longTermMemoryProvider.getMemoryContentById(id);
     }
 
