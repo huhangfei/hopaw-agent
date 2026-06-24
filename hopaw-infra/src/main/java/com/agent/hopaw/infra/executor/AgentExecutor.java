@@ -369,7 +369,7 @@ public class AgentExecutor implements IAgentExecutor {
                                 toolCancelLatch.get(toolCall.id()).countDown();
                             }
                             ctx.streamingHandle().cancel(); // ✅ 真正中断：关闭流、停止LLM、省token
-                            agentMessageHandler.done();
+                            agentMessageHandler.toolCallHandler(AiToolCallMessageInfo.STATUS_EXECUTED, toolCall.id(),toolCall.name(),null,"用户取消了工具调用");
                             taskLatch.countDown();
                             return;
                         }
@@ -820,7 +820,7 @@ public class AgentExecutor implements IAgentExecutor {
             sendToolCallHistoryEventAndToChannel(toolCallMessageInfo);
         }
 
-        private void toolCallHandler(String status,String id, String toolName, String arguments, Object result) {
+        public void toolCallHandler(String status,String id, String toolName, String arguments, Object result) {
             List<String> toolDescriptions = getToolDescriptions(toolName);
             AiToolCallMessageInfo toolCallMessageInfo= AiToolCallMessageInfo.build(status,sessionId, requestId,
                     id,

@@ -359,10 +359,9 @@ function handleToolCall(data, requestId) {
             stopBtn.onclick = function(e) {
                 e.stopPropagation();
                 e.preventDefault();
-                fetch('/api/session/tool/stop', {
+                fetch('/api/session/'+encodeURIComponent(data.sessionId || currentSessionId)+'/tool/stop'+ '&callId=' + data.toolCallId, {
                     method: 'POST',
-                    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-                    body: 'agentId=' + currentAgentId + '&callId=' + data.toolCallId
+                    headers: { 'Content-Type': 'application/x-www-form-urlencoded' }
                 });
             };
             var headerEl = toolCallDiv.querySelector('.tool-call-header');
@@ -399,10 +398,9 @@ function handleToolCall(data, requestId) {
                 e.preventDefault();
                 approveBtn.disabled = true;
                 rejectBtn.disabled = true;
-                fetch('/api/session/tool/approval', {
+                fetch('/api/session/'+ encodeURIComponent(data.sessionId || currentSessionId)+'/tool/approval'+ '&callId=' + encodeURIComponent(data.toolCallId) + '&allowed=true', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-                    body: 'sessionId=' + encodeURIComponent(data.sessionId || currentSessionId) + '&callId=' + encodeURIComponent(data.toolCallId) + '&allowed=true'
                 }).then(function() {
                     footerDiv.remove();
                 }).catch(function() {
@@ -419,10 +417,9 @@ function handleToolCall(data, requestId) {
                 e.preventDefault();
                 approveBtn.disabled = true;
                 rejectBtn.disabled = true;
-                fetch('/api/session/tool/approval', {
+                fetch('/api/session/'+ encodeURIComponent(data.sessionId || currentSessionId)+'/tool/approval'+ '&callId=' + encodeURIComponent(data.toolCallId) + '&allowed=false', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-                    body: 'sessionId=' + encodeURIComponent(data.sessionId || currentSessionId) + '&callId=' + encodeURIComponent(data.toolCallId) + '&allowed=false'
                 }).then(function() {
                     footerDiv.remove();
                 }).catch(function() {
@@ -727,11 +724,11 @@ function sendMessage() {
         return;
     }
 
-    fetch('/api/session/' + currentAgentId + '/running')
+    fetch('/api/session/' + currentSessionId + '/running')
         .then(function(r) { return r.json(); })
         .then(function(res) {
             if (res.code === 200 && res.data === true) {
-                showToast('智能体正在运行中，请先停止', 'warning');
+                showToast('任务还在运行中，请先停止', 'warning');
                 disableInput();
                 return;
             }
@@ -886,10 +883,9 @@ function deleteSession(sessionId) {
 function forceStopAgent(sessionId) {
     showConfirm('确定要强停智能体吗？强停后将移除执行器并刷新页面。').then(function(confirmed) {
         if (!confirmed) return;
-        fetch('/api/session/force-stop', {
+        fetch('/api/session/'+ encodeURIComponent(sessionId)+'/force-stop', {
             method: 'POST',
-            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-            body: 'sessionId=' + sessionId
+            headers: { 'Content-Type': 'application/x-www-form-urlencoded' }
         }).then(function(r) { return r.json(); }).then(function(res) {
             if (res.code === 200) {
                 window.location.href = '/?sessionId=' + sessionId;
@@ -904,12 +900,11 @@ function stopCurrentSession() {
     showConfirm('确定要停止运行吗？').then(function(confirmed) {
         if (!confirmed) return;
         var agentId = document.querySelector('input[name="agentId"]').value;
-        fetch('/api/session/stop', {
+        fetch('/api/session/'+ encodeURIComponent(currentSessionId)+'/stop', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/x-www-form-urlencoded',
-            },
-            body: 'id=' + agentId
+            }
         }).then(function(response) {
             return response.json();
         }).then(function(res) {

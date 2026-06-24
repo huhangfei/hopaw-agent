@@ -58,16 +58,16 @@ public class ChatSessionController {
         return ResponseBean.success(history);
     }
 
-    @PostMapping("/stop")
+    @PostMapping("/{sessionId}/stop")
     @ResponseBody
-    public ResponseBean stopAgent(@RequestParam String sessionId) {
+    public ResponseBean stopAgent(@PathVariable String sessionId) {
         agentExecutorService.stopAgentExecutor(sessionId);
         return ResponseBean.success();
     }
 
-    @PostMapping("/force-stop")
+    @PostMapping("/{sessionId}/force-stop")
     @ResponseBody
-    public ResponseBean forceStopAgent(@RequestParam String sessionId) {
+    public ResponseBean forceStopAgent(@PathVariable String sessionId) {
         agentExecutorService.stopAndRemoveAgentExecutor(sessionId);
         return ResponseBean.success();
     }
@@ -111,16 +111,16 @@ public class ChatSessionController {
     }
 
 
-    @PostMapping("/tool/stop")
+    @PostMapping("/{sessionId}/tool/stop")
     @ResponseBody
-    public ResponseBean stopTool(@RequestParam String sessionId, @RequestParam String callId) {
+    public ResponseBean stopTool(@PathVariable String sessionId, @RequestParam String callId) {
         agentExecutorService.stopTool(sessionId, callId);
         return ResponseBean.success();
     }
 
-    @PostMapping("/tool/approval")
+    @PostMapping("/{sessionId}/tool/approval")
     @ResponseBody
-    public ResponseBean stopTool(@RequestParam String sessionId, @RequestParam String callId, @RequestParam Boolean allowed) {
+    public ResponseBean approvalTool(@PathVariable String sessionId, @RequestParam String callId, @RequestParam Boolean allowed) {
         agentExecutorService.toolApprovalComplete(sessionId, callId,allowed);
         return ResponseBean.success();
     }
