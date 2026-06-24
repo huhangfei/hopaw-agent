@@ -64,7 +64,13 @@
                 </div>
                 <div class="form-group">
                     <label>扩展参数 (JSON)</label>
-                    <textarea id="mcpExtParams" rows="2" placeholder='可选扩展参数，JSON格式'></textarea>
+                    <div class="ext-params-presets" id="extParamsPresets">
+                        <button type="button" class="preset-btn" onclick="fillExtParamsPreset('httpHeaders')">HTTP 自定义 Header</button>
+                        <button type="button" class="preset-btn" onclick="fillExtParamsPreset('httpTimeout')">HTTP 超时+日志</button>
+                        <button type="button" class="preset-btn" onclick="fillExtParamsPreset('stdioEnv')">STDIO 环境变量</button>
+                        <button type="button" class="preset-btn" onclick="fillExtParamsPreset('stdioLog')">STDIO 日志</button>
+                    </div>
+                    <textarea id="mcpExtParams" rows="3" placeholder='可选扩展参数，JSON格式，点击上方按钮可快速填充示例'></textarea>
                 </div>
                 <input type="hidden" id="mcpId">
             </div>

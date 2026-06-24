@@ -330,6 +330,7 @@ public class AgentExecutor implements IAgentExecutor {
 
             TokenStream tokenStream = chatAgentAssistant.streamingChat(contents, invocationParametersWrapper.getParameters())
                     .onError(e -> {
+                        logger.error("Streaming chat error: {}", e.getMessage(), e);
                         agentMessageHandler.onErrorHandler(e);
                         taskLatch.countDown();
                     }).onCompleteResponse(response -> {
@@ -557,16 +558,23 @@ public class AgentExecutor implements IAgentExecutor {
         if (mcpConfigs != null && !mcpConfigs.isEmpty()) {
             List<McpClient> clients = new ArrayList<>();
             for (McpServerConfig config : mcpConfigs) {
+                long startMs = System.currentTimeMillis();
                 try {
                     McpTransport transport = buildMcpTransport(config);
+                    logger.info("MCP client initializing: name={}, type={}, url/cmd={}",
+                            config.getName(),
+                            config.getTransportType(),
+                            "http".equalsIgnoreCase(config.getTransportType()) ? config.getUrl() : config.getCommand());
                     McpClient mcpClient = DefaultMcpClient.builder()
                             .key(config.getName())
                             .transport(transport)
+                            .toolExecutionTimeout(java.time.Duration.ofSeconds(30))
+                            .toolExecutionTimeoutErrorMessage("MCP 工具执行超时（30s）")
                             .build();
                     clients.add(mcpClient);
-                    logger.info("MCP client created: {}", config.getName());
+                    logger.info("MCP client created: name={}, elapsed={}ms", config.getName(), System.currentTimeMillis() - startMs);
                 } catch (Exception e) {
-                    logger.error("Failed to create MCP client for {}: {}", config.getName(), e.getMessage());
+                    logger.error("Failed to create MCP client for {}: {}, elapsed={}ms", config.getName(), e.getMessage(), System.currentTimeMillis() - startMs, e);
                 }
             }
             if (!clients.isEmpty()) {
@@ -576,6 +584,9 @@ public class AgentExecutor implements IAgentExecutor {
                         .build();
                 aiBuilder.toolProvider(toolProvider);
                 mcpClients.addAll(clients);
+                logger.info("MCP toolProvider registered with {} client(s)", clients.size());
+            } else {
+                logger.warn("MCP configs found but no client was created, proceeding without MCP tools");
             }
         }
 
@@ -585,20 +596,108 @@ public class AgentExecutor implements IAgentExecutor {
     }
 
     /**
-     * 根据 MCP 配置构建对应的传输层
+     * 根据 MCP 配置构建对应的传输层。
+     *
+     * <p>对于 HTTP 类型，支持从 {@code extParams}（JSON）读取以下可选字段：
+     * <ul>
+     *   <li>{@code headers}        : Map&lt;String,String&gt; 自定义请求头</li>
+     *   <li>{@code timeoutSeconds} : Number 连接超时（秒）</li>
+     *   <li>{@code logRequests}    : Boolean 打印请求</li>
+     *   <li>{@code logResponses}   : Boolean 打印响应</li>
+     *   <li>{@code followRedirects}: Boolean 跟随 3xx 重定向</li>
+     *   <li>{@code httpVersion1_1} : Boolean 强制 HTTP/1.1</li>
+     *   <li>{@code subsidiaryChannel}: Boolean 启用附属 SSE 通道</li>
+     * </ul>
+     *
+     * <p>对于 STDIO 类型，支持：
+     * <ul>
+     *   <li>{@code env}        : Map&lt;String,String&gt; 子进程环境变量</li>
+     *   <li>{@code logEvents}  : Boolean 打印流量</li>
+     * </ul>
      */
     private McpTransport buildMcpTransport(McpServerConfig config) {
         String transportType = config.getTransportType();
+        // 解析扩展参数
+        com.alibaba.fastjson2.JSONObject ext = null;
+        if (config.getExtParams() != null && !config.getExtParams().isBlank()) {
+            try {
+                ext = JSON.parseObject(config.getExtParams());
+            } catch (Exception e) {
+                logger.warn("Failed to parse extParams for MCP '{}', ignoring: {}", config.getName(), e.getMessage());
+            }
+        }
+
         if ("http".equalsIgnoreCase(transportType)) {
-            return StreamableHttpMcpTransport.builder()
+            StreamableHttpMcpTransport.Builder builder = StreamableHttpMcpTransport.builder()
                     .url(config.getUrl())
-                    .build();
+                    .timeout(java.time.Duration.ofSeconds(15)); // 默认 15 秒，防止 build() 无限阻塞
+
+            if (ext != null) {
+                // 自定义请求头
+                com.alibaba.fastjson2.JSONObject headers = ext.getJSONObject("headers");
+                if (headers != null && !headers.isEmpty()) {
+                    Map<String, String> headerMap = new LinkedHashMap<>();
+                    for (String key : headers.keySet()) {
+                        headerMap.put(key, headers.getString(key));
+                    }
+                    builder.customHeaders(headerMap);
+                }
+                // 连接超时（覆盖默认值）
+                Long timeoutSeconds = ext.getLong("timeoutSeconds");
+                if (timeoutSeconds != null && timeoutSeconds > 0) {
+                    builder.timeout(java.time.Duration.ofSeconds(timeoutSeconds));
+                }
+                // 日志开关
+                Boolean logRequests = ext.getBoolean("logRequests");
+                if (logRequests != null) {
+                    builder.logRequests(logRequests);
+                }
+                Boolean logResponses = ext.getBoolean("logResponses");
+                if (logResponses != null) {
+                    builder.logResponses(logResponses);
+                }
+                // 跟随重定向
+                Boolean followRedirects = ext.getBoolean("followRedirects");
+                if (followRedirects != null) {
+                    builder.followRedirects(followRedirects);
+                }
+                // 强制 HTTP/1.1
+                Boolean httpVersion1_1 = ext.getBoolean("httpVersion1_1");
+                if (Boolean.TRUE.equals(httpVersion1_1)) {
+                    builder.setHttpVersion1_1();
+                }
+                // 附属 SSE 通道
+                Boolean subsidiaryChannel = ext.getBoolean("subsidiaryChannel");
+                if (subsidiaryChannel != null) {
+                    builder.subsidiaryChannel(subsidiaryChannel);
+                }
+            }
+
+            return builder.build();
         } else {
             // 默认使用 stdio
             List<String> commandParts = parseCommand(config.getCommand());
-            return StdioMcpTransport.builder()
-                    .command(commandParts)
-                    .build();
+            StdioMcpTransport.Builder builder = StdioMcpTransport.builder()
+                    .command(commandParts);
+
+            if (ext != null) {
+                // 环境变量
+                com.alibaba.fastjson2.JSONObject env = ext.getJSONObject("env");
+                if (env != null && !env.isEmpty()) {
+                    Map<String, String> envMap = new LinkedHashMap<>();
+                    for (String key : env.keySet()) {
+                        envMap.put(key, env.getString(key));
+                    }
+                    builder.environment(envMap);
+                }
+                // 日志开关
+                Boolean logEvents = ext.getBoolean("logEvents");
+                if (logEvents != null) {
+                    builder.logEvents(logEvents);
+                }
+            }
+
+            return builder.build();
         }
     }
 

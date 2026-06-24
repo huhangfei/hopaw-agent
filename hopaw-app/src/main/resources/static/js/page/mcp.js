@@ -1,4 +1,5 @@
 var currentMcpId = null;
+var mcpServerMap = {};
 
 document.addEventListener('DOMContentLoaded', function () {
     loadMcpServers();
@@ -30,6 +31,10 @@ function renderMcpCards(servers) {
         return;
     }
 
+    // 缓存数据供编辑使用，避免通过 onclick 内联传递含换行/特殊字符的 JSON
+    mcpServerMap = {};
+    servers.forEach(function (s) { mcpServerMap[s.id] = s; });
+
     var html = '';
     servers.forEach(function (s) {
         var isEnabled = s.enabled === 1;
@@ -60,10 +65,7 @@ function renderMcpCards(servers) {
                     '<input type="checkbox" ' + (isEnabled ? 'checked' : '') + ' onchange="toggleMcpServer(' + s.id + ', this.checked)">' +
                     '<span class="toggle-slider"></span>' +
                 '</label>' +
-                '<button class="btn-card btn-edit-mcp" onclick="editMcpServer(' +
-                    s.id + ',\'' + escapeAttr(s.name) + '\',\'' + escapeAttr(s.transportType) + '\',\'' +
-                    escapeAttr(s.command || '') + '\',\'' + escapeAttr(s.url || '') + '\',\'' +
-                    escapeAttr(s.description || '') + '\',\'' + escapeAttr(s.extParams || '') + '\')" title="编辑">&#9998;</button>' +
+                '<button class="btn-card btn-edit-mcp" onclick="editMcpServer(' + s.id + ')" title="编辑">&#9998;</button>' +
                 '<button class="btn-card btn-delete-mcp" onclick="deleteMcpServer(' + s.id + ')" title="删除">&#10005;</button>' +
             '</div>' +
         '</div>';
@@ -85,15 +87,20 @@ function showMcpDialog() {
     Modal.open('mcpDialog');
 }
 
-function editMcpServer(id, name, transportType, command, url, description, extParams) {
+function editMcpServer(id) {
+    var s = mcpServerMap[id];
+    if (!s) {
+        showToast('数据已过期，请刷新页面', 'error');
+        return;
+    }
     currentMcpId = id;
     document.getElementById('mcpDialogTitle').textContent = '编辑 MCP 服务器';
-    document.getElementById('mcpName').value = name;
-    document.getElementById('mcpTransportType').value = transportType || 'stdio';
-    document.getElementById('mcpCommand').value = command || '';
-    document.getElementById('mcpUrl').value = url || '';
-    document.getElementById('mcpDescription').value = description || '';
-    document.getElementById('mcpExtParams').value = extParams || '';
+    document.getElementById('mcpName').value = s.name || '';
+    document.getElementById('mcpTransportType').value = s.transportType || 'stdio';
+    document.getElementById('mcpCommand').value = s.command || '';
+    document.getElementById('mcpUrl').value = s.url || '';
+    document.getElementById('mcpDescription').value = s.description || '';
+    document.getElementById('mcpExtParams').value = s.extParams || '';
     document.getElementById('mcpId').value = id;
     onTransportTypeChange();
     Modal.open('mcpDialog');
@@ -197,7 +204,52 @@ function deleteMcpServer(id) {
         });
 }
 
-function escapeAttr(str) {
-    if (!str) return '';
-    return str.replace(/'/g, "\\'").replace(/"/g, '&quot;');
+/**
+ * 扩展参数示例配置
+ * 点击按钮后将对应 JSON 样例填入扩展参数输入框
+ */
+var extParamsPresets = {
+    httpHeaders: {
+        headers: {
+            Authorization: 'Bearer your-token-here',
+            'X-Tenant-Id': '12345'
+        }
+    },
+    httpTimeout: {
+        headers: {
+            Authorization: 'Bearer your-token-here'
+        },
+        timeoutSeconds: 30,
+        logRequests: true,
+        logResponses: true
+    },
+    stdioEnv: {
+        env: {
+            API_KEY: 'sk-xxx',
+            NODE_ENV: 'production'
+        }
+    },
+    stdioLog: {
+        env: {
+            API_KEY: 'sk-xxx'
+        },
+        logEvents: true
+    }
+};
+
+function fillExtParamsPreset(presetKey) {
+    var preset = extParamsPresets[presetKey];
+    if (!preset) {
+        return;
+    }
+    document.getElementById('mcpExtParams').value = JSON.stringify(preset, null, 2);
+
+    // HTTP 类型的预设自动切换传输类型为 http
+    if (presetKey === 'httpHeaders' || presetKey === 'httpTimeout') {
+        document.getElementById('mcpTransportType').value = 'http';
+        onTransportTypeChange();
+    } else if (presetKey === 'stdioEnv' || presetKey === 'stdioLog') {
+        document.getElementById('mcpTransportType').value = 'stdio';
+        onTransportTypeChange();
+    }
 }
