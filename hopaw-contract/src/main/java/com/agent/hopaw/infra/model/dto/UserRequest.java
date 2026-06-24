@@ -20,6 +20,7 @@ public class UserRequest {
      * auto 完全自动
      */
     private String toolCallPermission;
+    private List<AttachmentFile> files;
     public String getUserId() {
         return userId;
     }
@@ -82,5 +83,13 @@ public class UserRequest {
 
     public void setToolCallPermission(String toolCallPermission) {
         this.toolCallPermission = toolCallPermission;
+    }
+
+    public List<AttachmentFile> getFiles() {
+        return files;
+    }
+
+    public void setFiles(List<AttachmentFile> files) {
+        this.files = files;
     }
 }

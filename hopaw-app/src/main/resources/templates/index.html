@@ -97,6 +97,15 @@
                         </button>
                     </div>
                 </div>
+                <div th:case="'image'">
+                    <div class="message-label" th:text="${chat.role == 'user' ? '你' : (chat.agent != null ? chat.agent.name : 'Agent')}"></div>
+                    <img th:src="${chat.content}" class="message-content message-image"
+                         th:attr="data-is-agent=${chat.role == 'agent'}" alt="图片消息"/>
+                    <div class="message-footer">
+                        <div class="message-time"
+                             th:text="${chat.createTime.toLocalDate().equals(T(java.time.LocalDate).now()) ? #temporals.format(chat.createTime, 'HH:mm:ss') : #temporals.format(chat.createTime, 'yyyy-MM-dd HH:mm:ss')}"></div>
+                    </div>
+                </div>
                 <div th:case="'thinking'">
                     <div class="message-label" th:text="${chat.agent != null ? chat.agent.name : 'Agent'} + ' (思考)'"></div>
                     <div th:text="${chat.content}" class="message-content thinking-content"></div>
@@ -120,6 +129,7 @@
             <form th:action="@{/chat}" method="post" class="chat-form" id="chatForm">
                 <input type="hidden" name="agentId" th:value="${selectedAgent.id}">
                 <div class="chat-input-wrapper" th:classappend="${agentExecutorState} ? 'disabled' : ''">
+                    <div class="file-preview-area" id="filePreviewArea"></div>
                     <textarea name="message" id="messageInput" placeholder="输入消息..." required
                               th:disabled="${agentExecutorState}" rows="2"></textarea>
                     <div class="chat-input-tools">
@@ -158,6 +168,12 @@
                                 <div class="skills-dropdown-list" id="skillsCheckboxList"></div>
                             </div>
                         </div>
+                        <button type="button" class="chat-btn-attach" id="attachBtn" title="添加附件">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14">
+                                <path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"/>
+                            </svg>
+                        </button>
+                        <input type="file" id="fileInput" accept="image/*" style="display:none" multiple>
                         <button type="button" class="chat-btn-deep" id="deepThinkBtn"
                                 th:attr="data-agent-id=${selectedAgent.id}, data-enabled=${selectedAgent.enableThinking}"
                                 th:classappend="${selectedAgent.enableThinking ? 'active' : ''}">

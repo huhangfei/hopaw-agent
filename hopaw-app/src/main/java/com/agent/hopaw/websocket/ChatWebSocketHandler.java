@@ -4,6 +4,7 @@ import com.agent.hopaw.infra.event.AgentMessageEvent;
 import com.agent.hopaw.infra.event.TokenUsageEvent;
 import com.agent.hopaw.infra.executor.IAgentExecutor;
 import com.agent.hopaw.infra.model.dto.AiMessageBaseInfo;
+import com.agent.hopaw.infra.model.dto.AttachmentFile;
 import com.agent.hopaw.infra.model.dto.UserRequest;
 import com.agent.hopaw.infra.service.IAgentExecutorService;
 import com.alibaba.fastjson2.JSON;
@@ -81,6 +82,16 @@ public class ChatWebSocketHandler extends TextWebSocketHandler {
             @SuppressWarnings("unchecked")
             List<String> skillNames = payload.getJSONArray("skills").toJavaList(String.class);
 
+            // 解析附件文件
+            List<AttachmentFile> files = new ArrayList<>();
+            if (payload.containsKey("files") && payload.get("files") != null) {
+                try {
+                    files = payload.getJSONArray("files").toJavaList(AttachmentFile.class);
+                } catch (Exception e) {
+                    logger.warn("解析附件文件失败: {}", e.getMessage());
+                }
+            }
+
             UserRequest userRequest = new UserRequest();
             userRequest.setAgentId(agentId);
             userRequest.setUserId(getUserIdFromSession(session));
@@ -90,6 +101,7 @@ public class ChatWebSocketHandler extends TextWebSocketHandler {
             userRequest.setAiModelId(aiModelId);
             userRequest.setEnableThinking(enableThinking);
             userRequest.setToolCallPermission(toolCallPermission);
+            userRequest.setFiles(files);
             IAgentExecutor executor = agentExecutorService.createAgentExecutor(userRequest);
             executor.execute();
         } catch (Exception e) {

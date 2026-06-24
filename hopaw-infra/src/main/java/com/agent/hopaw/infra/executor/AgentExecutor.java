@@ -696,7 +696,8 @@ public class AgentExecutor implements IAgentExecutor {
                 userChat.setSessionId(sessionId);
                 chatHistoryList.add(userChat);
             } else if (content instanceof ImageContent) {
-                ChatHistory userChat = new ChatHistory(agentId, "user", "image", "[一张图片]");
+                ImageContent image=(ImageContent)content;
+                ChatHistory userChat = new ChatHistory(agentId, "user", "image", "data:"+image.image().mimeType()+";base64,"+image.image().base64Data());
                 userChat.setSessionId(sessionId);
                 chatHistoryList.add(userChat);
             } else if (content instanceof VideoContent) {

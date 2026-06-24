@@ -7,11 +7,17 @@ import com.agent.hopaw.infra.model.dto.*;
 import com.agent.hopaw.infra.model.entity.Agent;
 import com.agent.hopaw.infra.tool.AgentTool;
 import com.agent.hopaw.infra.tool.IAgentToolService;
+import dev.langchain4j.data.message.ImageContent;
 import dev.langchain4j.data.message.TextContent;
+import dev.langchain4j.data.message.Content;
 import dev.langchain4j.model.embedding.EmbeddingModel;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
+import java.io.*;
+import java.nio.file.*;
 import java.util.*;
 import java.util.function.Consumer;
 import java.util.function.Function;
@@ -19,6 +25,7 @@ import java.util.stream.Collectors;
 
 @Service
 public class AgentExecutorService implements IAgentExecutorService {
+    private static final Logger logger = LoggerFactory.getLogger(AgentExecutorService.class);
     private final IAgentService agentService;
     private final AiModelService aiModelService;
     private final IChatMemoryService chatMemoryService;
@@ -160,7 +167,7 @@ public class AgentExecutorService implements IAgentExecutorService {
         agentExecutorParams.setSkillNames(userRequest.getSkillNames());
         agentExecutorParams.setToolCallPermission(userRequest.getToolCallPermission());
         agentExecutorParams.setToolSets(selectedTools);
-        agentExecutorParams.setContents(Arrays.asList(new TextContent(userRequest.getMessage())));
+        agentExecutorParams.setContents(buildContents(userRequest));
         // 加载已启用的 MCP 服务器配置
         agentExecutorParams.setMcpServerConfigs(mcpServerConfigService.findEnabled());
 
@@ -171,6 +178,51 @@ public class AgentExecutorService implements IAgentExecutorService {
         AgentExecutor agentExecutor = new AgentExecutor(agentExecutorParams, chatMemoryService, embeddingModel, systemMessageProvider, aiModelService, chatModelListenerProvider, eventPublisher, chatSessionService);
         agentExecutors.put(userRequest.getSessionId(), agentExecutor);
         return agentExecutor;
+    }
+
+    /**
+     * 构建发送给大模型的内容列表，将图片文件转为 Base64 的 ImageContent
+     */
+    private List<Content> buildContents(UserRequest userRequest) {
+        List<Content> contents = new ArrayList<>();
+        contents.add(new TextContent(userRequest.getMessage()));
+
+        List<AttachmentFile> files = userRequest.getFiles();
+        if (files != null && !files.isEmpty()) {
+            for (AttachmentFile file : files) {
+                if (!"image".equals(file.getType())) {
+                    continue;
+                }
+                try {
+                    String url = file.getUrl();
+                    if (url == null || url.isEmpty()) continue;
+                    // url 格式: /uploads/2025-01-01/xxx.png
+                    String relativePath = url.startsWith("/") ? url.substring(1) : url;
+                    Path filePath = Paths.get(System.getProperty("user.dir"), relativePath);
+                    if (!Files.exists(filePath)) {
+                        logger.warn("图片文件不存在: {}", filePath);
+                        continue;
+                    }
+                    byte[] bytes = Files.readAllBytes(filePath);
+                    String base64 = Base64.getEncoder().encodeToString(bytes);
+                    String mimeType = getMimeType(filePath.toString());
+                    contents.add(ImageContent.from(base64, mimeType));
+                } catch (Exception e) {
+                    logger.error("图片转 Base64 失败: {} -> {}", file.getUrl(), e.getMessage());
+                }
+            }
+        }
+        return contents;
+    }
+
+    private String getMimeType(String fileName) {
+        String lower = fileName.toLowerCase();
+        if (lower.endsWith(".png")) return "image/png";
+        if (lower.endsWith(".jpg") || lower.endsWith(".jpeg")) return "image/jpeg";
+        if (lower.endsWith(".gif")) return "image/gif";
+        if (lower.endsWith(".bmp")) return "image/bmp";
+        if (lower.endsWith(".webp")) return "image/webp";
+        return "image/png";
     }
 
     private String getSystemMessage(String sessionId, Agent agent, String userId, List<ToolSetInfo> selectedTools, List<String> skillNames,AvatarSettings avatarSettings) {
@@ -184,9 +236,6 @@ public class AgentExecutorService implements IAgentExecutorService {
                 "不要编造工具！\n";
         if(!avatarSettings.isDisabled() && avatarSettings.getPersonaSetting() != null && !avatarSettings.getPersonaSetting().isEmpty()){
             systemMessage += "你可以控制一个虚拟人和用户交互，人物的设定是：" + avatarSettings.getPersonaSetting() + "\n";
-            if(avatarSettings.isTtsEnabled() && avatarSettings.getTtsEmotions() != null && !avatarSettings.getTtsEmotions().isEmpty()){
-                systemMessage += "虚拟人TTS感情：" + avatarSettings.getTtsEmotions() + "\n";
-            }
         }
         if (agent.getVectorToolSearch() != null && agent.getVectorToolSearch() && selectedTools != null && !selectedTools.isEmpty()) {
             systemMessage += "当需要[" + getToolKeywords(selectedTools) + "]这些能力时，先使用"+ AgentTool.TOOL_SEARCH_TOOL_NAME +"搜一下对应关键词，拿到工具详情再做决定使用。\n";

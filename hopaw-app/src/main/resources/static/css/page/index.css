@@ -430,7 +430,7 @@
     padding: 20px;
     border-top: 1px solid #e0e0e0;
     background: #fafafa;
-    height: 130px;
+    min-height: 130px;
     overflow: visible;
     position: relative;
 }
@@ -703,6 +703,92 @@
     border-color: #667eea;
     background: #f0f3ff;
     color: #667eea;
+}
+
+/* 附件按钮 */
+.chat-btn-attach {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 30px;
+    height: 30px;
+    border: 1px solid #e0e0e0;
+    border-radius: 14px;
+    background: transparent;
+    color: #666;
+    cursor: pointer;
+    transition: all 0.2s;
+    flex-shrink: 0;
+}
+.chat-btn-attach:hover {
+    border-color: #2196F3;
+    color: #2196F3;
+    background: #f0f7ff;
+}
+
+/* 文件预览区域 */
+.file-preview-area {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    padding: 8px 8px 0;
+    min-height: 0;
+}
+.file-preview-area:empty {
+    padding: 0;
+    display: none;
+}
+.file-preview-item {
+    position: relative;
+    width: 64px;
+    height: 64px;
+    border-radius: 8px;
+    overflow: hidden;
+    border: 1px solid #e0e0e0;
+    flex-shrink: 0;
+}
+.file-preview-item img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+.file-preview-item .preview-remove {
+    position: absolute;
+    top: 2px;
+    right: 2px;
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    background: rgba(0,0,0,0.6);
+    color: #fff;
+    border: none;
+    font-size: 12px;
+    line-height: 18px;
+    text-align: center;
+    cursor: pointer;
+    display: none;
+}
+.file-preview-item:hover .preview-remove {
+    display: block;
+}
+.file-preview-item .preview-uploading {
+    position: absolute;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background: rgba(255,255,255,0.7);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+.file-preview-item .preview-spinner {
+    width: 20px;
+    height: 20px;
+    border: 2px solid #ddd;
+    border-top-color: #2196F3;
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+}
+@keyframes spin {
+    to { transform: rotate(360deg); }
 }
 
 .skills-dropdown-menu {
@@ -1227,6 +1313,20 @@
 .message.user .message-content a {
     color: white;
     text-decoration: underline;
+}
+.message-images {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-bottom: 8px;
+}
+.message-image {
+    max-width: 200px;
+    max-height: 200px;
+    border-radius: 8px;
+    object-fit: cover;
+    cursor: pointer;
+    border: 1px solid rgba(255,255,255,0.3);
 }
 .thinking-content {
     color: #999;
@@ -1967,6 +2067,26 @@ body.dark-theme .chat-btn-skill.has-selected {
     border-color: #8ba3ff;
     background: #2d2d44;
     color: #8ba3ff;
+}
+
+body.dark-theme .chat-btn-attach {
+    border: 1px solid #7d7dab;
+    color: #999;
+}
+body.dark-theme .chat-btn-attach:hover {
+    border-color: #8ba3ff;
+    color: #8ba3ff;
+    background: #2d2d44;
+}
+body.dark-theme .file-preview-item {
+    border-color: #7d7dab;
+}
+body.dark-theme .file-preview-item .preview-uploading {
+    background: rgba(30,58,95,0.7);
+}
+body.dark-theme .file-preview-item .preview-spinner {
+    border-color: #7d7dab;
+    border-top-color: #8ba3ff;
 }
 
 body.dark-theme .skills-dropdown-menu {

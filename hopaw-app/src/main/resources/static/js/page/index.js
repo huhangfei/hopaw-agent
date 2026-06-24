@@ -9,6 +9,7 @@ var loadingMessageDiv = null;
 var currentModelId = null;
 var currentSessionId = null;
 var currentToolCallPermission = 'smart_call';
+var attachedFiles = []; // { url, type, name }
 
 if (typeof marked !== 'undefined') {
     marked.setOptions({
@@ -737,25 +738,55 @@ function sendMessage() {
 
             input.value = '';
             disableInput();
-            var userMessageDiv = document.createElement('div');
-            userMessageDiv.className = 'message user';
-
-            var userLabel = document.createElement('div');
-            userLabel.className = 'message-label';
-            userLabel.textContent = '你';
-            userMessageDiv.appendChild(userLabel);
-
-            var userContent = document.createElement('div');
-            userContent.textContent = message;
-            userMessageDiv.appendChild(userContent);
-
-            userMessageDiv.appendChild(createMessageFooter(message));
-
             var messagesDiv = document.getElementById('chatMessages');
-            messagesDiv.appendChild(userMessageDiv);
+
+            // 显示图片附件 - 每张图片作为独立的消息记录
+            var imageFiles = attachedFiles.filter(function(f) { return f.type === 'image'; });
+            imageFiles.forEach(function(f) {
+                var imageMessageDiv = document.createElement('div');
+                imageMessageDiv.className = 'message user';
+
+                var imageLabel = document.createElement('div');
+                imageLabel.className = 'message-label';
+                imageLabel.textContent = '你';
+                imageMessageDiv.appendChild(imageLabel);
+
+                var img = document.createElement('img');
+                img.src = f.url;
+                img.className = 'message-content message-image';
+                imageMessageDiv.appendChild(img);
+
+                imageMessageDiv.appendChild(createMessageFooter(''));
+
+                messagesDiv.appendChild(imageMessageDiv);
+            });
+
+            // 文本消息作为独立的消息记录
+            if (message && message.trim() !== '') {
+                var textMessageDiv = document.createElement('div');
+                textMessageDiv.className = 'message user';
+
+                var textLabel = document.createElement('div');
+                textLabel.className = 'message-label';
+                textLabel.textContent = '你';
+                textMessageDiv.appendChild(textLabel);
+
+                var textContent = document.createElement('div');
+                textContent.className = 'message-content';
+                textContent.textContent = message;
+                textMessageDiv.appendChild(textContent);
+
+                textMessageDiv.appendChild(createMessageFooter(message));
+
+                messagesDiv.appendChild(textMessageDiv);
+            }
+
             messagesDiv.scrollTop = messagesDiv.scrollHeight;
 
             var deepBtn = document.getElementById('deepThinkBtn');
+            var filesPayload = attachedFiles.map(function(f) {
+                return { url: f.url, type: f.type };
+            });
             var payload = {
                 sessionId: currentSessionId,
                 agentId: currentAgentId,
@@ -763,8 +794,10 @@ function sendMessage() {
                 skills: getSelectedSkills(),
                 aiModelId: currentModelId,
                 enableThinking: deepBtn ? deepBtn.getAttribute('data-enabled') === 'true' : true,
-                toolCallPermission: currentToolCallPermission
+                toolCallPermission: currentToolCallPermission,
+                files: filesPayload
             };
+            clearAttachedFiles();
             var emptyState = document.getElementById('chatHistoryEmptyState');
             if(emptyState){
                 emptyState.classList.add("hide");
@@ -1129,6 +1162,19 @@ window.onload = function() {
         });
     }
 
+    // 附件按钮
+    var attachBtn = document.getElementById('attachBtn');
+    var fileInput = document.getElementById('fileInput');
+    if (attachBtn && fileInput) {
+        attachBtn.addEventListener('click', function() {
+            fileInput.click();
+        });
+        fileInput.addEventListener('change', function() {
+            handleFiles(fileInput.files);
+            fileInput.value = '';
+        });
+    }
+
     var modelBtn = document.getElementById('modelSelectBtn');
     if (modelBtn) {
         modelBtn.addEventListener('click', function(e) {
@@ -1203,6 +1249,19 @@ window.onload = function() {
             if (e.key === 'Enter' && !e.shiftKey) {
                 e.preventDefault();
                 sendMessage();
+            }
+        });
+        // 粘贴截图处理
+        input.addEventListener('paste', function(e) {
+            var items = e.clipboardData && e.clipboardData.items;
+            if (!items) return;
+            for (var i = 0; i < items.length; i++) {
+                if (items[i].type.indexOf('image') === 0) {
+                    e.preventDefault();
+                    var blob = items[i].getAsFile();
+                    uploadFile(blob);
+                    break;
+                }
             }
         });
     }
@@ -1611,4 +1670,122 @@ function handleApprovalClick(btn, allowed) {
         if (approveBtn) approveBtn.disabled = false;
         if (rejectBtn) rejectBtn.disabled = false;
     });
+}
+
+// ========== 文件附件功能 ==========
+
+function handleFiles(fileList) {
+    for (var i = 0; i < fileList.length; i++) {
+        uploadFile(fileList[i]);
+    }
+}
+
+function uploadFile(file) {
+    var formData = new FormData();
+    formData.append('file', file);
+
+    // 创建预览占位（上传中）
+    var tempId = 'file_' + Date.now() + '_' + Math.random().toString(36).substr(2, 6);
+    var previewItem = createPreviewItem(tempId, null, true);
+    document.getElementById('filePreviewArea').appendChild(previewItem);
+
+    fetch('/api/upload', {
+        method: 'POST',
+        body: formData
+    })
+    .then(function(r) { return r.json(); })
+    .then(function(resp) {
+        // 移除占位
+        removePreviewItem(tempId);
+        if (resp.code === 200) {
+            var fileInfo = {
+                url: resp.data.url,
+                type: resp.data.type,
+                name: file.name
+            };
+            attachedFiles.push(fileInfo);
+            renderFilePreview(fileInfo);
+        } else {
+            showToast('文件上传失败: ' + (resp.msg || '未知错误'), 'error');
+        }
+    })
+    .catch(function(err) {
+        removePreviewItem(tempId);
+        showToast('文件上传失败: ' + err.message, 'error');
+    });
+}
+
+function createPreviewItem(id, url, uploading) {
+    var item = document.createElement('div');
+    item.className = 'file-preview-item';
+    item.setAttribute('data-file-id', id);
+
+    if (uploading) {
+        var overlay = document.createElement('div');
+        overlay.className = 'preview-uploading';
+        var spinner = document.createElement('div');
+        spinner.className = 'preview-spinner';
+        overlay.appendChild(spinner);
+        item.appendChild(overlay);
+    } else {
+        var img = document.createElement('img');
+        img.src = url;
+        item.appendChild(img);
+
+        var removeBtn = document.createElement('button');
+        removeBtn.className = 'preview-remove';
+        removeBtn.textContent = 'X';
+        removeBtn.onclick = function(e) {
+            e.stopPropagation();
+            removeFileByUrl(url);
+        };
+        item.appendChild(removeBtn);
+    }
+
+    return item;
+}
+
+function renderFilePreview(fileInfo) {
+    var id = 'file_' + fileInfo.url.replace(/[^a-zA-Z0-9]/g, '_');
+    var item = createPreviewItem(id, fileInfo.url, false);
+    document.getElementById('filePreviewArea').appendChild(item);
+    // 更新预览区域可见性
+    updatePreviewAreaVisibility();
+}
+
+function removePreviewItem(id) {
+    var item = document.querySelector('.file-preview-item[data-file-id="' + id + '"]');
+    if (item) item.remove();
+    updatePreviewAreaVisibility();
+}
+
+function removeFileByUrl(url) {
+    attachedFiles = attachedFiles.filter(function(f) { return f.url !== url; });
+    // 移除预览元素
+    var items = document.querySelectorAll('.file-preview-item');
+    items.forEach(function(item) {
+        var img = item.querySelector('img');
+        if (img && img.src.indexOf(url) !== -1) {
+            item.remove();
+        }
+    });
+    updatePreviewAreaVisibility();
+}
+
+function updatePreviewAreaVisibility() {
+    var area = document.getElementById('filePreviewArea');
+    if (area && area.children.length === 0) {
+        area.style.display = 'none';
+    } else if (area) {
+        area.style.display = '';
+    }
+}
+
+function clearAttachedFiles() {
+    attachedFiles = [];
+    var area = document.getElementById('filePreviewArea');
+    if (area) {
+        area.innerHTML = '';
+        area.style.display = 'none';
+    }
 }
