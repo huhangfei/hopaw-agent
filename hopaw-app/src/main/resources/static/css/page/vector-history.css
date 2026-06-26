@@ -242,6 +242,16 @@
     color: #6a1b9a;
 }
 
+.type-tag.empiricalKnowledge {
+    background: #e8f5e9;
+    color: #2e7d32;
+}
+
+.type-tag.userProfile {
+    background: #fff3e0;
+    color: #e65100;
+}
+
 .type-tag.unknown {
     background: #f5f5f5;
     color: #999;
@@ -494,6 +504,16 @@ body.dark-theme .type-tag.chatHistory {
 body.dark-theme .type-tag.taskRecords {
     background: #3d3d6b;
     color: #c0c0ff;
+}
+
+body.dark-theme .type-tag.empiricalKnowledge {
+    background: #1e3a1e;
+    color: #8fcf8f;
+}
+
+body.dark-theme .type-tag.userProfile {
+    background: #4a2c1a;
+    color: #ffb380;
 }
 
 body.dark-theme .type-tag.unknown {
