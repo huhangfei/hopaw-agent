@@ -44,14 +44,17 @@ public interface TokenUsageMapper {
                                                      @Param("agentId") Long agentId,
                                                      @Param("modelName") String modelName,
                                                      @Param("source") String source,
-                                                     @Param("sessionId") String sessionId);
+                                                     @Param("sessionId") String sessionId,
+                                                     @Param("zoneOffsetMinutes") int zoneOffsetMinutes);
 
     List<TokenUsage> findTodayByAgentUser(@Param("agentId") Long agentId,
                                           @Param("userId") String userId,
                                           @Param("source") String source,
                                           @Param("sessionId") String sessionId,
                                           @Param("minId") Long minId,
-                                          @Param("limit") int limit);
+                                          @Param("limit") int limit,
+                                          @Param("startTime") LocalDateTime startTime,
+                                          @Param("endTime") LocalDateTime endTime);
 
     TokenUsage summaryByUserId(@Param("userId") String userId);
 

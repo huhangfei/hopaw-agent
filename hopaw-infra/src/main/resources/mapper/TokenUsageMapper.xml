@@ -68,7 +68,7 @@
 
     <select id="dailyStatsByTimeRange" resultType="java.util.HashMap">
         SELECT
-        strftime('%Y-%m-%d', create_time) AS date,
+        strftime('%Y-%m-%d', create_time, (CASE WHEN #{zoneOffsetMinutes} &gt;= 0 THEN '+' ELSE '' END) || #{zoneOffsetMinutes} || ' minutes') AS date,
         COALESCE(SUM(input_tokens), 0) AS inputTokens,
         COALESCE(SUM(output_tokens), 0) AS outputTokens,
         COALESCE(SUM(total_tokens), 0) AS totalTokens
@@ -76,7 +76,7 @@
         WHERE 1=1
         <include refid="timeRangeFilter"/>
         <include refid="searchFilter"/>
-        GROUP BY strftime('%Y-%m-%d', create_time)
+        GROUP BY strftime('%Y-%m-%d', create_time, (CASE WHEN #{zoneOffsetMinutes} &gt;= 0 THEN '+' ELSE '' END) || #{zoneOffsetMinutes} || ' minutes')
         ORDER BY date ASC
     </select>
 
@@ -89,8 +89,8 @@
         <if test="agentId!=null">
             AND agent_id = #{agentId}
         </if>
-        AND create_time >= datetime('now', 'start of day', 'localtime')
-        AND create_time &lt; datetime('now', 'start of day', '+1 day', 'localtime')
+        AND create_time >= #{startTime}
+        AND create_time &lt; #{endTime}
         <if test="minId != null">AND id > #{minId}</if>
         <if test="source != null">AND source = #{source}</if>
         <if test="sessionId != null and sessionId != ''">AND session_id = #{sessionId}</if>

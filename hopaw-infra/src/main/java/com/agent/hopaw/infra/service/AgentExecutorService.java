@@ -229,11 +229,10 @@ public class AgentExecutorService implements IAgentExecutorService {
         String systemMessage = "你是一个智能助手，名字叫" + agent.getName() + "," +
                 "主要工作是" + agent.getDescription() + "," +
                 "你的agentId是" + agent.getId() + "。\n" +
-                "在解决问题时的时候，先去查询记忆看看有没相关可用信息。\n" +
-                "在遇到需要用户提供信息的时候，不要猜，先查询记忆，记忆中没有就问用户。\n" +
+                "记忆工具是你的核心工具，需要回忆什么信息时，先去调用记忆工具看看有没相关可用信息。与用户相关获取用户画像记忆，与任务相关获取任务记录记忆，如果找不到可以搜索用户记忆试试\n" +
+                "在遇到需要用户提供信息的时候，不要猜，记忆中没有就问用户。\n" +
                 "在判断有需要调用工具就去调用，遇到危险操作，立刻停止操作，询问用户。\n" +
-                "你只能使用用户提供的工具，绝对不能调用不存在的工具。\n" +
-                "不要编造工具！\n";
+                "你只能使用用户提供的工具，绝对不能调用不存在的工具。更不能编造工具。\n";
         if(!avatarSettings.isDisabled() && avatarSettings.getPersonaSetting() != null && !avatarSettings.getPersonaSetting().isEmpty()){
             systemMessage += "你可以控制一个虚拟人和用户交互，人物的设定是：" + avatarSettings.getPersonaSetting() + "\n";
         }

@@ -9,6 +9,10 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileOutputStream;
+import java.io.InputStream;
+import java.io.OutputStream;
 import java.net.URL;
 import java.net.URLClassLoader;
 import java.sql.*;
@@ -86,6 +90,30 @@ public class DatabaseTool implements AgentTool {
         return "1.0.0";
     }
 
+    /**
+     * 启动时自动扫描默认驱动目录（jdbc-drivers/）并加载所有 JAR。
+     */
+    @Override
+    public void asyncInit() {
+        File driverDir = resolveDriverDir();
+        if (!driverDir.exists() || !driverDir.isDirectory()) {
+            log.info("JDBC driver directory not found: {}", driverDir.getAbsolutePath());
+            return;
+        }
+
+        File[] jars = driverDir.listFiles((f) -> f.isFile() && f.getName().toLowerCase().endsWith(".jar"));
+        if (jars == null || jars.length == 0) {
+            log.info("No JDBC driver JARs found in {}", driverDir.getAbsolutePath());
+            return;
+        }
+
+        log.info("Auto-loading {} JDBC driver JAR(s) from {}", jars.length, driverDir.getAbsolutePath());
+        for (File jar : jars) {
+            String result = loadJdbcDriverFromJar(jar.getAbsolutePath());
+            log.info("Auto-loaded driver {}: {}", jar.getName(), result);
+        }
+    }
+
     // ========== Tool 方法 ==========
 
     @ToolSecurityLevel(ToolSecurityLevel.Level.SAFE)
@@ -138,7 +166,10 @@ public class DatabaseTool implements AgentTool {
                 return "警告：未能从 JAR 中自动发现 JDBC Driver。\n"
                         + "已加载 JAR 到 classpath，请确认该 JAR 包含 META-INF/services/java.sql.Driver 文件。";
             }
-            return "成功加载 " + count + " 个 JDBC 驱动：" + drivers;
+            // 加载成功后复制到默认驱动目录，以便下次启动时自动加载
+            String copyMsg = copyJarToDriverDir(jar);
+            return "成功加载 " + count + " 个 JDBC 驱动：" + drivers
+                    + (copyMsg.isEmpty() ? "" : "\n" + copyMsg);
         } catch (Exception e) {
             log.error("加载驱动 JAR 失败 path={}", jarPath, e);
             return "加载失败：" + e.getMessage();
@@ -252,6 +283,46 @@ public class DatabaseTool implements AgentTool {
             parent = parent.getParentFile();
         }
         return dir; // 不存在也返回原路径，让上层做提示
+    }
+
+    /**
+     * 将外部驱动 JAR 复制到默认驱动目录，以便下次启动时自动加载。
+     * 若源文件已位于驱动目录中则跳过；若目标已存在且大小一致也跳过。
+     *
+     * @return 复制结果信息；源文件已在驱动目录中时返回空字符串。
+     */
+    private static String copyJarToDriverDir(File sourceJar) {
+        File driverDir = resolveDriverDir();
+        File destJar = new File(driverDir, sourceJar.getName());
+
+        // 源文件已在驱动目录中，无需复制
+        try {
+            if (sourceJar.getCanonicalPath().equals(destJar.getCanonicalPath())) {
+                return "";
+            }
+        } catch (Exception ignored) {
+        }
+
+        if (!driverDir.exists() && !driverDir.mkdirs()) {
+            return "无法创建驱动目录: " + driverDir.getAbsolutePath();
+        }
+
+        if (destJar.exists() && destJar.length() == sourceJar.length()) {
+            return "驱动已存在于默认目录，跳过复制";
+        }
+
+        try (InputStream in = new FileInputStream(sourceJar);
+             OutputStream out = new FileOutputStream(destJar)) {
+            byte[] buffer = new byte[8192];
+            int len;
+            while ((len = in.read(buffer)) != -1) {
+                out.write(buffer, 0, len);
+            }
+            log.info("已复制驱动 JAR 到默认目录: {}", destJar.getAbsolutePath());
+            return "驱动已复制到默认目录: " + destJar.getAbsolutePath();
+        } catch (Exception e) {
+            return "复制驱动失败: " + e.getMessage();
+        }
     }
 
     private static String formatSize(long bytes) {

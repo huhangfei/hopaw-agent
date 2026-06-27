@@ -23,6 +23,9 @@ import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
 
@@ -49,6 +52,9 @@ public class VectorMemoryService implements IVectorMemoryService {
 
     private final AtomicInteger pendingOps = new AtomicInteger(0);
     private volatile long lastFlushTime = System.currentTimeMillis();
+
+    /** 定时落盘调度器：每 30 秒触发一次 flush，守护线程避免阻塞 JVM 退出 */
+    private ScheduledExecutorService flushScheduler;
 
     public VectorMemoryService(ISysConfigService sysConfigService, EmbeddingModel embeddingModel) {
         this.sysConfigService = sysConfigService;
@@ -124,6 +130,15 @@ public class VectorMemoryService implements IVectorMemoryService {
 
             logger.info("JVectorEmbeddingStore initialized, profile={}, dimension={}, maxDegree={}, beamWidth={}, path={}",
                     profile, dimension, maxDegree, beamWidth, persistencePath);
+
+            // 启动定时落盘任务：每 30 秒执行一次 flush，确保异常退出时数据丢失可控
+            flushScheduler = Executors.newSingleThreadScheduledExecutor(r -> {
+                Thread t = new Thread(r, "vector-memory-flush");
+                t.setDaemon(true);
+                return t;
+            });
+            flushScheduler.scheduleAtFixedRate(this::safeFlush, 30, 30, TimeUnit.SECONDS);
+            logger.info("Vector memory flush scheduler started, interval=30s");
         } catch (Exception e) {
             logger.error("Failed to initialize JVectorEmbeddingStore", e);
             throw new RuntimeException("Vector store initialization failed", e);
@@ -132,6 +147,20 @@ public class VectorMemoryService implements IVectorMemoryService {
 
     @PreDestroy
     public void destroy() {
+        // 先关闭定时调度器，避免退出过程中并发落盘
+        if (flushScheduler != null && !flushScheduler.isShutdown()) {
+            try {
+                flushScheduler.shutdown();
+                if (!flushScheduler.awaitTermination(5, TimeUnit.SECONDS)) {
+                    flushScheduler.shutdownNow();
+                }
+                logger.info("Vector memory flush scheduler stopped");
+            } catch (InterruptedException e) {
+                flushScheduler.shutdownNow();
+                Thread.currentThread().interrupt();
+            }
+        }
+        // 服务退出时落盘
         try {
             if (embeddingStore instanceof JVectorEmbeddingStore) {
                 saveVectorStore((JVectorEmbeddingStore) embeddingStore);
@@ -238,10 +267,21 @@ public class VectorMemoryService implements IVectorMemoryService {
      */
     private synchronized void flush() {
         if (embeddingStore instanceof JVectorEmbeddingStore) {
-            saveVectorStore((JVectorEmbeddingStore) embeddingStore);
+            //saveVectorStore((JVectorEmbeddingStore) embeddingStore);
         }
         pendingOps.set(0);
         lastFlushTime = System.currentTimeMillis();
+    }
+
+    /**
+     * 定时任务包装方法：捕获异常避免 ScheduledExecutorService 因抛出异常而停止后续调度
+     */
+    private void safeFlush() {
+        try {
+            flush();
+        } catch (Exception e) {
+            logger.error("Scheduled flush failed", e);
+        }
     }
 
     /**

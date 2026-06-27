@@ -359,7 +359,7 @@ function handleToolCall(data, requestId) {
             stopBtn.onclick = function(e) {
                 e.stopPropagation();
                 e.preventDefault();
-                fetch('/api/session/'+encodeURIComponent(data.sessionId || currentSessionId)+'/tool/stop'+ '&callId=' + data.toolCallId, {
+                fetch('/api/session/'+encodeURIComponent(data.sessionId || currentSessionId)+'/tool/stop'+ '?callId=' + data.toolCallId, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/x-www-form-urlencoded' }
                 });
@@ -398,10 +398,7 @@ function handleToolCall(data, requestId) {
                 e.preventDefault();
                 approveBtn.disabled = true;
                 rejectBtn.disabled = true;
-                fetch('/api/session/'+ encodeURIComponent(data.sessionId || currentSessionId)+'/tool/approval'+ '&callId=' + encodeURIComponent(data.toolCallId) + '&allowed=true', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-                }).then(function() {
+                postToolApproval(data.sessionId, data.toolCallId, true).then(function() {
                     footerDiv.remove();
                 }).catch(function() {
                     approveBtn.disabled = false;
@@ -417,10 +414,7 @@ function handleToolCall(data, requestId) {
                 e.preventDefault();
                 approveBtn.disabled = true;
                 rejectBtn.disabled = true;
-                fetch('/api/session/'+ encodeURIComponent(data.sessionId || currentSessionId)+'/tool/approval'+ '&callId=' + encodeURIComponent(data.toolCallId) + '&allowed=false', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-                }).then(function() {
+                postToolApproval(data.sessionId, data.toolCallId, false).then(function() {
                     footerDiv.remove();
                 }).catch(function() {
                     approveBtn.disabled = false;
@@ -1716,16 +1710,30 @@ function handleApprovalClick(btn, allowed) {
     btn.disabled = true;
     if (approveBtn) approveBtn.disabled = true;
     if (rejectBtn) rejectBtn.disabled = true;
-    fetch('/api/session/tool/approval', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-        body: 'sessionId=' + encodeURIComponent(sessionId || currentSessionId) + '&callId=' + encodeURIComponent(callId) + '&allowed=' + allowed
-    }).then(function() {
+    postToolApproval(sessionId, callId, allowed).then(function() {
         footer.remove();
     }).catch(function() {
         btn.disabled = false;
         if (approveBtn) approveBtn.disabled = false;
         if (rejectBtn) rejectBtn.disabled = false;
+    });
+}
+
+/**
+ * 提交工具调用审批请求
+ * @param sessionId  会话ID（为空时回退到 currentSessionId）
+ * @param callId     工具调用ID
+ * @param allowed    true=通过, false=拒绝
+ * @returns {Promise<Response>}
+ */
+function postToolApproval(sessionId, callId, allowed) {
+    var url = '/api/session/' + encodeURIComponent(sessionId || currentSessionId)
+        + '/tool/approval'
+        + '?callId=' + encodeURIComponent(callId)
+        + '&allowed=' + allowed;
+    return fetch(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
     });
 }
 
