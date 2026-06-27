@@ -92,6 +92,16 @@
         DELETE FROM long_term_memory WHERE id = #{id}
     </delete>
 
+    <select id="findByUserId" resultMap="LongTermMemoryResultMap">
+        SELECT id, memory_type, summary, memory, memory_hash, parent_id, session_id, create_time, update_time, user_id, embedding_id
+        FROM long_term_memory
+        WHERE user_id = #{userId}
+    </select>
+
+    <delete id="deleteByUserId">
+        DELETE FROM long_term_memory WHERE user_id = #{userId}
+    </delete>
+
     <update id="updateParentId">
         UPDATE long_term_memory
         SET parent_id = #{parentId}, update_time = datetime('now', 'localtime')

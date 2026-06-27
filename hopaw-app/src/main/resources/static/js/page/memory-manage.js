@@ -510,6 +510,73 @@ function escapeAttr(str) {
     return str.replace(/'/g, "\\'").replace(/"/g, '&quot;');
 }
 
+function exportMemories() {
+    window.location.href = '/api/memory-manage/export';
+}
+
+function clearAllMemories() {
+    showConfirm('确定清空所有记忆？此操作不可恢复，所有记忆数据将被永久删除。').then(function(confirmed) {
+        if (!confirmed) return;
+        fetch('/api/memory-manage/clear-all', { method: 'DELETE' })
+        .then(function(r) { return r.json(); })
+        .then(function(res) {
+            if (res.code === 200) {
+                showToast('已清空所有记忆', 'success');
+                currentMemoryId = null;
+                currentNode = null;
+                document.getElementById('editorContent').innerHTML = '<div class="empty-state">请在左侧选择一条记忆</div>';
+                loadTree();
+            } else {
+                showToast(res.msg || '清空失败', 'error');
+            }
+        })
+        .catch(function(err) {
+            showToast('网络错误: ' + err.message, 'error');
+        });
+    });
+}
+
+function importMemories(input) {
+    if (!input.files || input.files.length === 0) return;
+    var file = input.files[0];
+    if (!file.name.toLowerCase().endsWith('.zip')) {
+        showToast('请选择zip格式文件', 'error');
+        input.value = '';
+        return;
+    }
+
+    showConfirm('确定导入 ' + escapeHtml(file.name) + ' ？导入的记忆将新增到记忆库中。').then(function(confirmed) {
+        if (!confirmed) {
+            input.value = '';
+            return;
+        }
+
+        var formData = new FormData();
+        formData.append('file', file);
+
+        fetch('/api/memory-manage/import', {
+            method: 'POST',
+            body: formData
+        })
+        .then(function(r) { return r.json(); })
+        .then(function(res) {
+            if (res.code === 200) {
+                var d = res.data || {};
+                showToast('导入成功：成功 ' + (d.success || 0) + ' 条，失败 ' + (d.fail || 0) + ' 条', 'success');
+                loadTree();
+            } else {
+                showToast(res.msg || '导入失败', 'error');
+            }
+        })
+        .catch(function(err) {
+            showToast('网络错误: ' + err.message, 'error');
+        })
+        .finally(function() {
+            input.value = '';
+        });
+    });
+}
+
 // 页面加载时自动加载数据
 document.addEventListener('DOMContentLoaded', function() {
     loadTree();

@@ -69,6 +69,17 @@ public class LongTermMemoryService implements ILongTermMemoryService {
     }
 
     @Override
+    public void deleteAllMemoriesByUserId(String userId) {
+        List<LongTermMemory> memories = longTermMemoryMapper.findByUserId(userId);
+        for (LongTermMemory m : memories) {
+            if (m.getEmbeddingId() != null) {
+                vectorMemoryService.deleteByEmbeddingId(m.getEmbeddingId());
+            }
+        }
+        longTermMemoryMapper.deleteByUserId(userId);
+    }
+
+    @Override
     public void update(LongTermMemory entity) {
         LongTermMemory dbEntity = longTermMemoryMapper.findById(entity.getId());
         // 先删除旧向量（如果存在）

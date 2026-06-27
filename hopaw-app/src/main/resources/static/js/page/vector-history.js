@@ -102,10 +102,21 @@ function renderResults(results) {
             '<td class="date-cell">' + memoryDate + '</td>' +
             '<td class="score-cell">' + score + '</td>' +
             '<td class="action-cell">' +
-            '  <button class="btn-detail" onclick="showDetail(' + idx + ')">详情</button>' +
-            '  <button class="btn-delete" onclick="confirmDelete(\'' + embeddingId + '\', \'' + escapeAttr(text.substring(0, 50)) + '\')">删除</button>' +
+            '  <button class="btn-detail" data-idx="' + idx + '">详情</button>' +
+            '  <button class="btn-delete" data-embedding-id="' + escapeHtml(embeddingId) + '" data-text-preview="' + escapeHtml(text.substring(0, 50)) + '">删除</button>' +
             '</td>';
         tbody.appendChild(row);
+    });
+
+    tbody.querySelectorAll('.btn-detail').forEach(function(btn) {
+        btn.addEventListener('click', function() {
+            showDetail(parseInt(btn.getAttribute('data-idx'), 10));
+        });
+    });
+    tbody.querySelectorAll('.btn-delete').forEach(function(btn) {
+        btn.addEventListener('click', function() {
+            confirmDelete(btn.getAttribute('data-embedding-id'), btn.getAttribute('data-text-preview'));
+        });
     });
 
     window._lastResults = results;
@@ -139,8 +150,11 @@ function confirmDelete(embeddingId, textPreview) {
     pendingDeleteId = embeddingId;
     document.getElementById('confirmMessage').textContent =
         '确定要删除该向量记录吗？\n\n记录: ' + textPreview + '...\n\n此操作不可恢复。';
+    var btn = document.getElementById('confirmDeleteBtn');
+    btn.disabled = false;
+    btn.textContent = '确认删除';
     document.getElementById('confirmModal').style.display = '';
-    document.getElementById('confirmDeleteBtn').onclick = executeDelete;
+    btn.onclick = executeDelete;
 }
 
 function executeDelete() {
@@ -190,13 +204,4 @@ function escapeHtml(str) {
               .replace(/</g, '&lt;')
               .replace(/>/g, '&gt;')
               .replace(/"/g, '&quot;');
-}
-
-function escapeAttr(str) {
-    if (!str) return '';
-    return str.replace(/'/g, "\\'")
-              .replace(/"/g, '&quot;')
-              .replace(/&/g, '&amp;')
-              .replace(/</g, '&lt;')
-              .replace(/>/g, '&gt;');
 }

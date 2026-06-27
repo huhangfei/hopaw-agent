@@ -11,6 +11,10 @@
 <main layout:fragment="content" class="memory-manage-container">
     <div class="toolbar">
         <button class="btn btn-primary" onclick="loadTree()">刷新</button>
+        <button class="btn btn-outline" onclick="exportMemories()">导出记忆</button>
+        <button class="btn btn-outline" onclick="document.getElementById('importFileInput').click()">导入记忆</button>
+        <input type="file" id="importFileInput" accept=".zip" style="display:none" onchange="importMemories(this)">
+        <button class="btn btn-danger" onclick="clearAllMemories()">清空记忆</button>
     </div>
     <div class="memory-panels">
         <div class="tree-panel">

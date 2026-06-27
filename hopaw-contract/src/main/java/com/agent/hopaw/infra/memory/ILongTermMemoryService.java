@@ -20,6 +20,8 @@ public interface ILongTermMemoryService extends ILongTermMemoryProvider{
 
     void deleteMemory(Long id);
 
+    void deleteAllMemoriesByUserId(String userId);
+
     void update(LongTermMemory entity);
 
     void moveMemory(Long id, Long newParentId);

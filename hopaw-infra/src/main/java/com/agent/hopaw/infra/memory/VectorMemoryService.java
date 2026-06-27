@@ -154,7 +154,7 @@ public class VectorMemoryService implements IVectorMemoryService {
             return null;
         }
         TextSegment segment = TextSegment.from(content);
-        segment.metadata().put(METADATA_SESSION_ID, sessionId);
+        segment.metadata().put(METADATA_SESSION_ID, sessionId==null?"":sessionId);
         segment.metadata().put(METADATA_USER_ID, userId);
         segment.metadata().put(METADATA_MEMORY_TYPE, memoryType.getCode());
         segment.metadata().put(METADATA_MEMORY_DATE, timestamp.format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss")));
