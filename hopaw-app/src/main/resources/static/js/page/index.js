@@ -1501,9 +1501,10 @@ function renderSessionList(sessions) {
         var activeClass = (s.sessionId === currentSessionId) ? ' active' : '';
         var title = s.title || '未命名会话';
         var timeStr = formatSessionTime(s.lastUpdateTime || s.createTime);
-        html += '<div class="session-list-item' + activeClass + '" data-session-id="' + escapeHtml(s.sessionId) + '">';
+        html += '<div class="session-list-item' + activeClass + '" data-session-id="' + escapeHtml(s.sessionId) + '" data-id="' + (s.id || '') + '">';
         html += '<span class="session-list-item-title">' + escapeHtml(title) + '</span>';
         html += '<span class="session-list-item-time">' + escapeHtml(timeStr) + '</span>';
+        html += '<button class="session-edit-btn" onclick="event.stopPropagation();showEditSessionTitle(this,' + (s.id || 0) + ')" title="编辑标题"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg></button>';
         html += '</div>';
     });
     container.innerHTML = html;
@@ -1556,6 +1557,12 @@ function updateSessionTitle(sessionId, newTitle) {
     timeSpan.textContent = '刚刚';
     item.appendChild(timeSpan);
 
+    var editBtn = document.createElement('button');
+    editBtn.className = 'session-edit-btn';
+    editBtn.setAttribute('title', '编辑标题');
+    editBtn.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>';
+    item.appendChild(editBtn);
+
     item.addEventListener('click', function() {
         if (sessionId !== currentSessionId) {
             window.location.href = '/?sessionId=' + sessionId;
@@ -1563,6 +1570,61 @@ function updateSessionTitle(sessionId, newTitle) {
     });
 
     container.insertBefore(item, container.firstChild);
+}
+
+function showEditSessionTitle(btn, id) {
+    var item = btn.closest('.session-list-item');
+    var titleSpan = item.querySelector('.session-list-item-title');
+    var oldTitle = titleSpan.textContent;
+
+    var input = document.createElement('input');
+    input.type = 'text';
+    input.className = 'session-title-input';
+    input.value = oldTitle;
+    input.setAttribute('data-id', id);
+
+    titleSpan.replaceWith(input);
+    input.focus();
+    input.select();
+
+    var saved = false;
+    function save() {
+        if (saved) return;
+        saved = true;
+        var newTitle = input.value.trim();
+        if (!newTitle || newTitle === oldTitle) {
+            // 空值或未改，恢复
+            input.replaceWith(titleSpan);
+            return;
+        }
+        fetch('/api/session/update-title?id=' + id + '&title=' + encodeURIComponent(newTitle), {
+            method: 'POST'
+        }).then(function(res) {
+            return res.json();
+        }).then(function(data) {
+            if (data.code === 200) {
+                titleSpan.textContent = newTitle;
+                input.replaceWith(titleSpan);
+            } else {
+                showToast('保存失败', 'error');
+                input.replaceWith(titleSpan);
+            }
+        }).catch(function() {
+            showToast('网络错误', 'error');
+            input.replaceWith(titleSpan);
+        });
+    }
+
+    input.addEventListener('blur', save);
+    input.addEventListener('keydown', function(e) {
+        if (e.key === 'Enter') {
+            e.preventDefault();
+            input.blur();
+        } else if (e.key === 'Escape') {
+            saved = true;
+            input.replaceWith(titleSpan);
+        }
+    });
 }
 
 function formatSessionTime(dateStr) {

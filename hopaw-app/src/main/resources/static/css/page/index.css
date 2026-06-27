@@ -268,6 +268,48 @@
     flex-shrink: 0;
 }
 
+.session-edit-btn {
+    display: none;
+    flex-shrink: 0;
+    width: 22px;
+    height: 22px;
+    padding: 0;
+    border: none;
+    background: transparent;
+    color: #999;
+    cursor: pointer;
+    border-radius: 4px;
+    align-items: center;
+    justify-content: center;
+    transition: color 0.15s, background 0.15s;
+}
+
+.session-edit-btn svg {
+    width: 14px;
+    height: 14px;
+}
+
+.session-edit-btn:hover {
+    color: #667eea;
+    background: rgba(102, 126, 234, 0.1);
+}
+
+.session-list-item:hover .session-edit-btn {
+    display: flex;
+}
+
+.session-title-input {
+    flex: 1;
+    font-size: 13px;
+    padding: 2px 6px;
+    border: 1px solid #667eea;
+    border-radius: 4px;
+    outline: none;
+    background: #fff;
+    color: #333;
+    min-width: 0;
+}
+
 .session-list-item.active .session-list-item-time {
     color: #a0a8e0;
 }
@@ -1761,6 +1803,21 @@ body.dark-theme .session-list-item-time {
 
 body.dark-theme .session-list-item.active .session-list-item-time {
     color: #7a8ac0;
+}
+
+body.dark-theme .session-edit-btn {
+    color: #777;
+}
+
+body.dark-theme .session-edit-btn:hover {
+    color: #8ba3ff;
+    background: rgba(139, 163, 255, 0.1);
+}
+
+body.dark-theme .session-title-input {
+    background: #1a1a2e;
+    border-color: #5a7aff;
+    color: #e6e6f0;
 }
 
 body.dark-theme .session-list-empty {
