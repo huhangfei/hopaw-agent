@@ -78,7 +78,7 @@ public class ThemeInterceptor implements HandlerInterceptor {
             case "/":               return "index";
             case "/models":         return "models";
             case "/memory-manage":  return "memory-manage";
-            case "/vector-history": return "vector-history";
+            case "/memory-history": return "memory-history";
             case "/tools":          return "tools";
             case "/tools/plugin-store":   return "tools";
             case "/tasks":          return "tasks";

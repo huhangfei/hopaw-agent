@@ -1,19 +1,19 @@
 package com.agent.hopaw.infra.model.dto;
 
-public class VectorSearchResult  extends MemorySearchResult{
+public class MemoryHistorySearchResult extends MemorySearchResult{
 
     private String embeddingId;
 
 
     private String memoryTypeName;
 
-    public VectorSearchResult() {}
+    public MemoryHistorySearchResult() {}
 
-    public VectorSearchResult(String embeddingId) {
+    public MemoryHistorySearchResult(String embeddingId) {
         this.embeddingId = embeddingId;
     }
 
-    public VectorSearchResult(double score, String text, String sessionId, String userId, String memoryType, String memoryDate, String embeddingId) {
+    public MemoryHistorySearchResult(double score, String text, String sessionId, String userId, String memoryType, String memoryDate, String embeddingId) {
         super(score, text, sessionId, userId, memoryType, memoryDate);
         this.embeddingId = embeddingId;
     }

@@ -3,8 +3,9 @@ package com.agent.hopaw.infra.memory;
 import com.agent.hopaw.infra.constant.UserMemoryTypeEnum;
 import com.agent.hopaw.infra.mapper.ChatMemoryObsoleteMapper;
 import com.agent.hopaw.infra.mapper.LongTermMemoryMapper;
+import com.agent.hopaw.infra.model.dto.MemoryHistorySearchResult;
 import com.agent.hopaw.infra.model.dto.MemorySearchResult;
-import com.agent.hopaw.infra.model.dto.VectorSearchResult;
+import com.agent.hopaw.infra.model.dto.MemorySearchResult;
 import com.agent.hopaw.infra.model.entity.ChatMemory;
 import com.agent.hopaw.infra.model.entity.LongTermMemory;
 import com.agent.hopaw.infra.service.ISysConfigService;
@@ -25,12 +26,12 @@ import java.util.stream.Collectors;
 public class LongTermMemoryService implements ILongTermMemoryService {
 
     private final LongTermMemoryMapper longTermMemoryMapper;
-    private final IVectorMemoryService vectorMemoryService;
+    private final IMemoryHistoryService vectorMemoryService;
     private final ISysConfigService sysConfigService; // Injected dependency
 
     private final ChatMemoryObsoleteMapper chatMemoryObsoleteMapper;
 
-    public LongTermMemoryService(LongTermMemoryMapper longTermMemoryMapper, IVectorMemoryService vectorMemoryService, ISysConfigService sysConfigService, ChatMemoryObsoleteMapper chatMemoryObsoleteMapper) {
+    public LongTermMemoryService(LongTermMemoryMapper longTermMemoryMapper, IMemoryHistoryService vectorMemoryService, ISysConfigService sysConfigService, ChatMemoryObsoleteMapper chatMemoryObsoleteMapper) {
         this.longTermMemoryMapper = longTermMemoryMapper;
         this.vectorMemoryService = vectorMemoryService;
         this.sysConfigService = sysConfigService;
@@ -414,7 +415,7 @@ public class LongTermMemoryService implements ILongTermMemoryService {
 
     @Override
     public List<MemorySearchResult> queryUserMemory(String userId, String keyword, Integer maxResults) {
-        List<VectorSearchResult> searchResultList = vectorMemoryService.search(keyword, null,userId, null, maxResults, 0.5);
+        List<MemoryHistorySearchResult> searchResultList = vectorMemoryService.search(keyword, null,userId, null, maxResults, 0.5);
         return searchResultList.stream().map(x -> {
             return new MemorySearchResult(x.getScore(), x.getText(), x.getSessionId(), x.getUserId(), x.getMemoryType(), x.getMemoryDate());
         }).collect(Collectors.toList());

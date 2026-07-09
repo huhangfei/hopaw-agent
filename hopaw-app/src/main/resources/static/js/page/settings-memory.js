@@ -3,7 +3,7 @@ function onSettingsLoaded() {
     document.getElementById('taskRecordsArrangeTimeoutHour').value = settingsCache['taskRecordsArrangeTimeoutHour'] || '48';
     document.getElementById('taskRecordsClearTimeoutDay').value = settingsCache['taskRecordsClearTimeoutDay'] || '7';
     document.getElementById('vectorStorePath').value = settingsCache['vector_store_path'] || '';
-    document.getElementById('vectorStoreProfile').value = settingsCache['vector_store_profile'] || 'stable';
+    document.getElementById('vectorStoreProfile').value = settingsCache['vector_store_profile'] || 'precision';
 
     // 先加载提供商列表，串行回填已选模型
     loadProviders().then(function() {
@@ -95,35 +95,21 @@ function saveSettings() {
     var prompt = document.getElementById('memoryPrompt').value.trim();
     var arrangeTimeoutHour = document.getElementById('taskRecordsArrangeTimeoutHour').value.trim();
     var clearTimeoutDay = document.getElementById('taskRecordsClearTimeoutDay').value.trim();
+    var includeUserProfile = document.getElementById('promptIncludeUserProfile').checked;
+    var includeTaskRecords = document.getElementById('promptIncludeTaskRecords').checked;
 
     var saves = [];
     saves.push(saveConfig('memory_ai_model_id', modelId, '记忆整理使用模型'));
     saves.push(saveConfig('memory_prompt', prompt, '记忆整理提示词'));
     saves.push(saveConfig('taskRecordsArrangeTimeoutHour', arrangeTimeoutHour, '近期任务记忆过期时间（单位：小时，用于整理记忆时限制时限）'));
-    saves.push(saveConfig('taskRecordsClearTimeoutDay', clearTimeoutDay, '任务记忆过期归档时间（单位：天，过期后从记忆库中删除，但是向量库中永存）'));
+    saves.push(saveConfig('taskRecordsClearTimeoutDay', clearTimeoutDay, '任务记忆过期归档时间（单位：天，过期后从记忆库中删除）'));
+    saves.push(saveConfig('promptIncludeUserProfile', includeUserProfile ? 'true' : 'false', '提示词带入用户画像'));
+    saves.push(saveConfig('promptIncludeTaskRecords', includeTaskRecords ? 'true' : 'false', '提示词带入近期任务记录'));
 
     Promise.all(saves).then(function(results) {
         var allOk = results.every(function(r) { return r; });
         if (allOk) {
             showToast('设置保存成功', 'success');
-        } else {
-            showToast('部分设置保存失败', 'error');
-        }
-    });
-}
-
-function saveVectorStoreSettings() {
-    var vectorStorePath = document.getElementById('vectorStorePath').value.trim();
-    var vectorStoreProfile = document.getElementById('vectorStoreProfile').value;
-
-    var saves = [];
-    saves.push(saveConfig('vector_store_path', vectorStorePath, '向量持久化路径'));
-    saves.push(saveConfig('vector_store_profile', vectorStoreProfile, '向量存储预设'));
-
-    Promise.all(saves).then(function(results) {
-        var allOk = results.every(function(r) { return r; });
-        if (allOk) {
-            showToast('向量存储设置保存成功', 'success');
         } else {
             showToast('部分设置保存失败', 'error');
         }
@@ -188,6 +174,24 @@ function toggleMemoryTask() {
         .catch(function() {
             showToast(action + '失败', 'error');
         });
+    });
+}
+
+function saveVectorStoreSettings() {
+    var vectorStorePath = document.getElementById('vectorStorePath').value.trim();
+    var vectorStoreProfile = document.getElementById('vectorStoreProfile').value;
+
+    var saves = [];
+    saves.push(saveConfig('vector_store_path', vectorStorePath, '向量持久化路径'));
+    saves.push(saveConfig('vector_store_profile', vectorStoreProfile, '向量存储预设'));
+
+    Promise.all(saves).then(function(results) {
+        var allOk = results.every(function(r) { return r; });
+        if (allOk) {
+            showToast('向量存储设置保存成功', 'success');
+        } else {
+            showToast('部分设置保存失败', 'error');
+        }
     });
 }
 

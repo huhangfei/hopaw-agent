@@ -396,6 +396,10 @@ public class DatabaseInitializer implements CommandLineRunner {
                             insertModel(stmt, providerId, "MiniMax-M1", ModelCapabilityEnum.TEXT.getCode());
                             insertModel(stmt, providerId, "MiniMax-Text-01", ModelCapabilityEnum.TEXT.getCode());
                             break;
+
+                        case "hy":
+                            insertModel(stmt, providerId, "hy3", ModelCapabilityEnum.TEXT.getCode());
+                            break;
                     }
                     providerId++;
                 }

@@ -1,7 +1,7 @@
 package com.agent.hopaw.infra.memory;
 
 import com.agent.hopaw.infra.constant.UserMemoryTypeEnum;
-import com.agent.hopaw.infra.model.dto.VectorSearchResult;
+import com.agent.hopaw.infra.model.dto.MemoryHistorySearchResult;
 import com.agent.hopaw.infra.service.ISysConfigService;
 import dev.langchain4j.community.store.embedding.jvector.JVectorEmbeddingStore;
 import dev.langchain4j.data.document.Metadata;
@@ -30,9 +30,9 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
 
 @Service
-public class VectorMemoryService implements IVectorMemoryService {
+public class MemoryHistoryService implements IMemoryHistoryService {
 
-    private static final Logger logger = LoggerFactory.getLogger(IVectorMemoryService.class);
+    private static final Logger logger = LoggerFactory.getLogger(IMemoryHistoryService.class);
     private static final String METADATA_SESSION_ID = "sessionId";
     private static final String METADATA_USER_ID = "userId";
     private static final String METADATA_MEMORY_TYPE = "memoryType";
@@ -56,7 +56,7 @@ public class VectorMemoryService implements IVectorMemoryService {
     /** 定时落盘调度器：每 30 秒触发一次 flush，守护线程避免阻塞 JVM 退出 */
     private ScheduledExecutorService flushScheduler;
 
-    public VectorMemoryService(ISysConfigService sysConfigService, EmbeddingModel embeddingModel) {
+    public MemoryHistoryService(ISysConfigService sysConfigService, EmbeddingModel embeddingModel) {
         this.sysConfigService = sysConfigService;
         this.embeddingModel = embeddingModel;
     }
@@ -76,7 +76,7 @@ public class VectorMemoryService implements IVectorMemoryService {
             }
 
             String persistencePath = sysConfigService.getValueByKey("vector_store_path", "./vector_store");
-            String profile = sysConfigService.getValueByKey("vector_store_profile", "stable");
+            String profile = sysConfigService.getValueByKey("vector_store_profile", "precision");
 
             /*
              * JVector 基于融合 DiskANN + HNSW 算法的纯 Java 向量检索引擎。
@@ -331,8 +331,8 @@ public class VectorMemoryService implements IVectorMemoryService {
      * @param excludeMemoryTypes   排除的记忆类型
      */
     @Override
-    public List<VectorSearchResult> search(String query, String sessionId, String userId,
-                                          String memoryType, int maxResults, double minScore, UserMemoryTypeEnum... excludeMemoryTypes) {
+    public List<MemoryHistorySearchResult> search(String query, String sessionId, String userId,
+                                                  String memoryType, int maxResults, double minScore, UserMemoryTypeEnum... excludeMemoryTypes) {
         try {
             Embedding queryEmbedding = embeddingModel.embed(TextSegment.from(query)).content();
             validateDimension(queryEmbedding.vector().length);
@@ -385,7 +385,7 @@ public class VectorMemoryService implements IVectorMemoryService {
                     .limit(maxResults)
                     .map(match -> {
                         Metadata m = match.embedded().metadata();
-                        var r = new VectorSearchResult(
+                        var r = new MemoryHistorySearchResult(
                                 match.score(),
                                 match.embedded().text(),
                                 m != null ? m.getString(METADATA_SESSION_ID) : null,

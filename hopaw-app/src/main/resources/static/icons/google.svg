@@ -1,7 +1,17 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
-  <rect width="100" height="100" rx="20" fill="#4285F4"/>
-  <circle cx="35" cy="40" r="12" fill="#EA4335"/>
-  <circle cx="50" cy="35" r="12" fill="#FBBC05"/>
-  <circle cx="65" cy="40" r="12" fill="#34A853"/>
-  <circle cx="50" cy="55" r="12" fill="#4285F4"/>
+  <!-- Google 风格：白底 + 4 色彩色"G" -->
+  <rect width="100" height="100" rx="20" fill="white" stroke="#E5E7EB" stroke-width="1"/>
+  <!-- 四色环组成 G 字母 -->
+  <g transform="translate(50 50)">
+    <!-- 蓝色段（底部+左侧） -->
+    <path d="M -22 0 A 22 22 0 0 0 -8 19" fill="none" stroke="#4285F4" stroke-width="8" stroke-linecap="round"/>
+    <!-- 红色段（顶部+左侧） -->
+    <path d="M -22 0 A 22 22 0 0 1 8 -19" fill="none" stroke="#EA4335" stroke-width="8" stroke-linecap="round"/>
+    <!-- 黄色段（顶部+右侧） -->
+    <path d="M 8 -19 A 22 22 0 0 1 22 0" fill="none" stroke="#FBBC05" stroke-width="8" stroke-linecap="round"/>
+    <!-- 绿色段（底部+右侧） -->
+    <path d="M 22 0 A 22 22 0 0 1 8 19" fill="none" stroke="#34A853" stroke-width="8" stroke-linecap="round"/>
+    <!-- G 字母的横钩 -->
+    <path d="M 6 0 L 18 0" stroke="#4285F4" stroke-width="8" stroke-linecap="round"/>
+  </g>
 </svg>

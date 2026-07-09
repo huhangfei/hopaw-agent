@@ -1,4 +1,8 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
+  <!-- 智谱 Zhipu 品牌色背景（橙红） -->
   <rect width="100" height="100" rx="20" fill="#FF6B35"/>
-  <path d="M50 20 L60 40 L80 40 L65 55 L70 75 L50 65 L30 75 L35 55 L20 40 L40 40 Z" fill="white"/>
+  <!-- 智谱标志性字母"Z"（粗体几何） -->
+  <g fill="white">
+    <path d="M28 28 L72 28 L72 38 L44 62 L72 62 L72 72 L28 72 L28 62 L56 38 L28 38 Z"/>
+  </g>
 </svg>

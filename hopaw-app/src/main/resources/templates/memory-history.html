@@ -3,17 +3,17 @@
       xmlns:th="http://www.thymeleaf.org"
       layout:decorate="~{layouts/default}">
 <head>
-    <title>向量历史 - HoPaw</title>
+    <title>记忆检索 - HoPaw</title>
 </head>
 <body>
-<div layout:fragment="pageTitle">🤖 HoPaw - 向量历史</div>
+<div layout:fragment="pageTitle">🤖 HoPaw - 记忆检索</div>
 
 <main layout:fragment="content" class="vector-history-container">
     <div class="search-panel">
         <div class="search-row">
             <div class="search-item search-item-keyword">
                 <label for="queryText">查询关键词</label>
-                <input type="text" id="queryText" class="search-input" placeholder="输入语义查询关键词">
+                <input type="text" id="queryText" class="search-input" placeholder="输入关键词">
             </div>
             <div class="search-item">
                 <label for="searchMemoryType">记忆类型</label>
@@ -34,8 +34,8 @@
                 <input type="number" id="searchMaxResults" class="filter-num" value="20" min="1" max="100">
             </div>
             <div class="search-item">
-                <label for="searchMinScore">最低相似度</label>
-                <input type="number" id="searchMinScore" class="filter-num" value="0.0" min="0" max="1" step="0.01">
+                <label for="searchMinScore">最低相关度</label>
+                <input type="number" id="searchMinScore" class="filter-num" value="0.0" min="0" max="1" step="0.01" title="bm25 归一化后的相关度，0 表示不过滤">
             </div>
             <div class="search-actions">
                 <button class="btn btn-primary" onclick="doSearch()">查询</button>
@@ -60,7 +60,7 @@
                         <th style="width:70px;">用户</th>
                         <th>内容</th>
                         <th style="width:90px;">时间</th>
-                        <th style="width:65px;">相似度</th>
+                        <th style="width:65px;">相关度</th>
                         <th style="width:130px;">操作</th>
                     </tr>
                 </thead>
@@ -86,7 +86,7 @@
             <div class="modal-body">
                 <div class="detail-meta">
                     <span class="detail-tag" id="detailType"></span>
-                    <span class="detail-id"><strong>embeddingId:</strong> <code id="detailEmbeddingId"></code></span>
+                    <span class="detail-id"><strong>memoryId:</strong> <code id="detailEmbeddingId"></code></span>
                 </div>
                 <div class="detail-date"><strong>时间:</strong> <span id="detailDate"></span></div>
                 <div class="detail-text" id="detailText"></div>
@@ -99,11 +99,11 @@
 </main>
 
 <th:block layout:fragment="extraCss">
-    <link rel="stylesheet" th:href="@{/css/page/vector-history.css}">
+    <link rel="stylesheet" th:href="@{/css/page/memory-history.css}">
 </th:block>
 
 <th:block layout:fragment="extraScripts">
-    <script th:src="@{/js/page/vector-history.js}"></script>
+    <script th:src="@{/js/page/memory-history.js}"></script>
 </th:block>
 </body>
 </html>

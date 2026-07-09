@@ -2,10 +2,9 @@ package com.agent.hopaw.controller;
 
 import com.agent.hopaw.infra.constant.UserMemoryTypeEnum;
 import com.agent.hopaw.infra.mapper.AgentMapper;
-import com.agent.hopaw.infra.memory.IVectorMemoryService;
-import com.agent.hopaw.infra.model.dto.VectorSearchResult;
+import com.agent.hopaw.infra.memory.IMemoryHistoryService;
+import com.agent.hopaw.infra.model.dto.MemoryHistorySearchResult;
 import com.agent.hopaw.infra.model.dto.ResponseBean;
-import com.agent.hopaw.infra.model.entity.Agent;
 import com.agent.hopaw.infra.service.AccountService;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
@@ -14,26 +13,26 @@ import org.springframework.web.bind.annotation.*;
 import java.util.*;
 
 @Controller
-public class VectorHistoryController {
+public class MemoryHistoryController {
 
-    private final IVectorMemoryService vectorMemoryService;
+    private final IMemoryHistoryService vectorMemoryService;
     private final AgentMapper agentMapper;
     private final AccountService accountService;
 
-    public VectorHistoryController(IVectorMemoryService vectorMemoryService, AgentMapper agentMapper,
+    public MemoryHistoryController(IMemoryHistoryService vectorMemoryService, AgentMapper agentMapper,
                                    AccountService accountService) {
         this.vectorMemoryService = vectorMemoryService;
         this.agentMapper = agentMapper;
         this.accountService = accountService;
     }
 
-    @GetMapping("/vector-history")
+    @GetMapping("/memory-history")
     public String page(Model model) {
         model.addAttribute("accounts", accountService.listAccounts());
-        return "vector-history";
+        return "memory-history";
     }
 
-    @GetMapping("/api/vector-history/types")
+    @GetMapping("/api/memory-history/types")
     @ResponseBody
     public ResponseBean memoryTypes() {
         List<Map<String, String>> result = new ArrayList<>();
@@ -46,7 +45,7 @@ public class VectorHistoryController {
         return ResponseBean.success(result);
     }
 
-    @GetMapping("/api/vector-history/search")
+    @GetMapping("/api/memory-history/search")
     @ResponseBody
     public ResponseBean search(
             @RequestParam(required = false) String query,
@@ -59,13 +58,13 @@ public class VectorHistoryController {
         if (query == null || query.isBlank()) {
             return ResponseBean.fail("查询关键词不能为空");
         }
-        List<VectorSearchResult> results = vectorMemoryService.search(
+        List<MemoryHistorySearchResult> results = vectorMemoryService.search(
                 query,sessionId, userId, memoryType, maxResults, minScore);
 
         return ResponseBean.success(results);
     }
 
-    @DeleteMapping("/api/vector-history/{embeddingId}")
+    @DeleteMapping("/api/memory-history/{embeddingId}")
     @ResponseBody
     public ResponseBean delete(@PathVariable String embeddingId) {
         boolean ok = vectorMemoryService.deleteByEmbeddingId(embeddingId);

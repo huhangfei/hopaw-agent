@@ -33,9 +33,35 @@
                     <input type="number" id="taskRecordsArrangeTimeoutHour" class="settings-input" min="1" placeholder="48">
                 </div>
                 <div class="form-group">
-                    <label for="taskRecordsClearTimeoutDay">任务记忆过期归档时间（单位：天，过期后从记忆库中删除，但是向量库中永存）</label>
+                    <label for="taskRecordsClearTimeoutDay">任务记忆过期归档时间（单位：天，过期后从记忆库中删除）</label>
                     <input type="number" id="taskRecordsClearTimeoutDay" class="settings-input" min="1" placeholder="7">
                 </div>
+            </div>
+
+            <h3 style="font-size:15px;color:#333;margin:24px 0 16px 0;">提示词上下文</h3>
+
+            <div class="form-group">
+                <label>提示词带入用户画像</label>
+                <div class="toggle-wrapper">
+                    <label class="toggle">
+                        <input type="checkbox" id="promptIncludeUserProfile" checked>
+                        <span class="slider"></span>
+                    </label>
+                    <span class="toggle-label" id="promptIncludeUserProfileLabel">已启用</span>
+                </div>
+                <p class="form-hint">开启后，创建执行器时会将用户画像记忆作为系统提示词上下文注入，让 LLM 了解用户偏好。</p>
+            </div>
+
+            <div class="form-group">
+                <label>提示词带入近期任务记录</label>
+                <div class="toggle-wrapper">
+                    <label class="toggle">
+                        <input type="checkbox" id="promptIncludeTaskRecords" checked>
+                        <span class="slider"></span>
+                    </label>
+                    <span class="toggle-label" id="promptIncludeTaskRecordsLabel">已启用</span>
+                </div>
+                <p class="form-hint">开启后，创建执行器时会将近期任务记录（受过期时间限制）作为系统提示词上下文注入，让 LLM 了解用户近期任务上下文。</p>
             </div>
 
             <div class="settings-actions">
@@ -59,8 +85,8 @@
             <div class="form-group">
                 <label>向量存储预设</label>
                 <select id="vectorStoreProfile" class="settings-input">
-                    <option value="stable">稳定 - 默认，均衡精度与性能</option>
-                    <option value="precision">精准 - 召回率最优，构建较慢</option>
+                    <option value="precision">精准 - 默认，召回率最优，构建较慢</option>
+                    <option value="stable">稳定 - 均衡精度与性能</option>
                     <option value="speed">极速 - 构建最快，内存更省</option>
                 </select>
                 <p class="form-hint">精准：maxDegree=32, 速度慢但搜索准。极速：maxDegree=8, 快但召回有所下降</p>

@@ -1,4 +1,11 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
-  <circle cx="50" cy="50" r="45" fill="#10A37F"/>
-  <path d="M35 35 L65 50 L35 65 Z" fill="white"/>
+  <!-- OpenAI 品牌色背景（深色） -->
+  <rect width="100" height="100" rx="20" fill="#10A37F"/>
+  <!-- OpenAI 标志性六瓣花结（简化的缠绕几何） -->
+  <g transform="translate(50 50)" fill="none" stroke="white" stroke-width="3" stroke-linecap="round">
+    <circle r="22"/>
+    <path d="M0 -22 C 8 -16, 16 -8, 22 0 C 16 8, 8 16, 0 22 C -8 16, -16 8, -22 0 C -16 -8, -8 -16, 0 -22 Z"/>
+    <path d="M-15.5 15.5 C -8 8, 8 -8, 15.5 -15.5"/>
+    <path d="M15.5 15.5 C 8 8, -8 -8, -15.5 -15.5"/>
+  </g>
 </svg>

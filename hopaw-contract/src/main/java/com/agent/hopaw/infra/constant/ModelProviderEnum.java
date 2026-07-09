@@ -8,6 +8,7 @@ public enum ModelProviderEnum {
     QWEN("qwen", "通义千问", "qwen", "https://dashscope.aliyuncs.com/compatible-mode/v1", "/icons/qwen.svg"),
     ZHIPU("zhipu", "智谱AI", "zhipu", "https://open.bigmodel.cn/api/paas/v4", "/icons/zhipu.svg"),
     MOONSHOT("moonshot", "月之暗面", "moonshot", "https://api.moonshot.cn/v1", "/icons/moonshot.svg"),
+    HY("hy", "混元", "hy", "https://tokenhub.tencentmaas.com/v1", "/icons/hy.svg"),
     MINIMAX("minimax", "MiniMax", "minimax", "https://api.minimax.chat/v1", "/icons/minimax.svg");
 
     private final String code;

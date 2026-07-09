@@ -1,11 +1,8 @@
 package com.agent.hopaw.biz.tool.memory;
 
 import com.agent.hopaw.infra.constant.UserMemoryTypeEnum;
-import com.agent.hopaw.infra.memory.ILongTermMemoryProvider;
 import com.agent.hopaw.infra.memory.ILongTermMemoryService;
-import com.agent.hopaw.infra.memory.IVectorMemoryService;
 import com.agent.hopaw.infra.model.dto.MemorySearchResult;
-import com.agent.hopaw.infra.model.dto.VectorSearchResult;
 import com.agent.hopaw.infra.util.InvocationParametersWrapper;
 import com.agent.hopaw.infra.tool.ToolSecurityLevel;
 import dev.langchain4j.agent.tool.P;
@@ -65,11 +62,11 @@ public class MemoryTool implements AgentTool {
     @ToolSecurityLevel(ToolSecurityLevel.Level.SAFE)
     @Tool(value = {"搜索用户记忆", "语义搜索历史记忆，根据查询关键词查找最相关的记忆内容"},searchBehavior = SearchBehavior.ALWAYS_VISIBLE)
     public String searchUserMemory(@P(description = "搜索查询关键词") String query,
-                                   @P(description = "最大返回结果数量，默认5", required = false) Integer maxResults,
+                                   @P(description = "最大返回结果数量，默认10", required = false) Integer maxResults,
                                    InvocationParameters invocationParameters) {
         InvocationParametersWrapper wrapper = InvocationParametersWrapper.create(invocationParameters);
         String userId = wrapper.getUserId();
-        int maxResultsVal = maxResults != null ? maxResults : 5;
+        int maxResultsVal = maxResults != null ? maxResults : 10;
         List<MemorySearchResult> results =longTermMemoryProvider.queryUserMemory(userId,query, maxResultsVal);
         if (results.isEmpty()) {
             return "未找到相关历史记忆";

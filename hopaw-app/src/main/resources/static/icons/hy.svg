@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
+  <!-- 腾讯混元品牌色背景（腾讯蓝） -->
+  <rect width="100" height="100" rx="20" fill="#2B6CB0"/>
+  <!-- 混元标志性无限符号/莫比乌斯环 -->
+  <g transform="translate(50 50)" fill="none" stroke="white" stroke-width="4" stroke-linecap="round" stroke-linejoin="round">
+    <!-- 左环 -->
+    <path d="M-18 0 C -18 -14, -2 -20, 2 -8 C 6 4, -6 12, -18 0 Z"/>
+    <!-- 右环 -->
+    <path d="M18 0 C 18 14, 2 20, -2 8 C -6 -4, 6 -12, 18 0 Z"/>
+    <!-- 中心交汇点 -->
+    <circle cx="0" cy="0" r="3" fill="white" stroke="none"/>
+  </g>
+</svg>

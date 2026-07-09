@@ -1,7 +1,7 @@
 var pendingDeleteId = null;
 
 (function init() {
-    fetch('/api/vector-history/types')
+    fetch('/api/memory-history/types')
         .then(function(r) { return r.json(); })
         .then(function(resp) {
             if (resp.msg === 'success') {
@@ -46,7 +46,7 @@ function doSearch() {
         params.append('minScore', minScore);
     }
 
-    fetch('/api/vector-history/search?' + params.toString())
+    fetch('/api/memory-history/search?' + params.toString())
         .then(function(r) { return r.json(); })
         .then(function(resp) {
             if (resp.msg === 'success') {
@@ -164,7 +164,7 @@ function executeDelete() {
     btn.disabled = true;
     btn.textContent = '删除中...';
 
-    fetch('/api/vector-history/' + pendingDeleteId, { method: 'DELETE' })
+    fetch('/api/memory-history/' + pendingDeleteId, { method: 'DELETE' })
         .then(function(r) { return r.json(); })
         .then(function(resp) {
             if (resp.msg === 'success') {

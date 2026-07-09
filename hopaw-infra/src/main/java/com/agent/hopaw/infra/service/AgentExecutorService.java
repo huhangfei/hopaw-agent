@@ -3,6 +3,7 @@ package com.agent.hopaw.infra.service;
 import com.agent.hopaw.infra.executor.AgentExecutor;
 import com.agent.hopaw.infra.executor.IAgentExecutor;
 import com.agent.hopaw.infra.memory.IChatMemoryService;
+import com.agent.hopaw.infra.memory.ILongTermMemoryService;
 import com.agent.hopaw.infra.model.dto.*;
 import com.agent.hopaw.infra.model.entity.Agent;
 import com.agent.hopaw.infra.tool.AgentTool;
@@ -37,9 +38,11 @@ public class AgentExecutorService implements IAgentExecutorService {
     private final ApplicationEventPublisher eventPublisher;
     private final IAvatarSettingsService avatarSettingsService;
     private final IMcpServerConfigService mcpServerConfigService;
+    private final ILongTermMemoryService longTermMemoryService;
+    private final ISysConfigService sysConfigService;
     private final Map<String, IAgentExecutor> agentExecutors = new HashMap<>();
 
-    public AgentExecutorService(IAgentService agentService, AiModelService aiModelService, IChatMemoryService chatMemoryService, IAgentToolService agentToolService, EmbeddingModel embeddingModel, ISkillService ISkillService, IChatSessionService chatSessionService, IChatModelListenerProvider chatModelListenerProvider, ApplicationEventPublisher eventPublisher, IAvatarSettingsService avatarSettingsService, IMcpServerConfigService mcpServerConfigService) {
+    public AgentExecutorService(IAgentService agentService, AiModelService aiModelService, IChatMemoryService chatMemoryService, IAgentToolService agentToolService, EmbeddingModel embeddingModel, ISkillService ISkillService, IChatSessionService chatSessionService, IChatModelListenerProvider chatModelListenerProvider, ApplicationEventPublisher eventPublisher, IAvatarSettingsService avatarSettingsService, IMcpServerConfigService mcpServerConfigService, ILongTermMemoryService longTermMemoryService, ISysConfigService sysConfigService) {
         this.agentService = agentService;
         this.aiModelService = aiModelService;
         this.chatMemoryService = chatMemoryService;
@@ -51,6 +54,8 @@ public class AgentExecutorService implements IAgentExecutorService {
         this.eventPublisher = eventPublisher;
         this.avatarSettingsService = avatarSettingsService;
         this.mcpServerConfigService = mcpServerConfigService;
+        this.longTermMemoryService = longTermMemoryService;
+        this.sysConfigService = sysConfigService;
     }
 
     @Override
@@ -229,10 +234,27 @@ public class AgentExecutorService implements IAgentExecutorService {
         String systemMessage = "你是一个智能助手，名字叫" + agent.getName() + "," +
                 "主要工作是" + agent.getDescription() + "," +
                 "你的agentId是" + agent.getId() + "。\n" +
-                "记忆工具是你的核心工具，需要回忆什么信息时，先去调用记忆工具看看有没相关可用信息。与用户相关获取用户画像记忆，与任务相关获取任务记录记忆，如果找不到可以搜索用户记忆试试\n" +
+                "记忆工具是你的核心工具，需要回忆什么信息时，先去调用记忆工具看看有没相关可用信息。用户画像记忆、任务记录记忆、过往的经验或总结都可以通过搜索用户记忆尝试查找。\n" +
                 "在遇到需要用户提供信息的时候，不要猜，记忆中没有就问用户。\n" +
                 "在判断有需要调用工具就去调用，遇到危险操作，立刻停止操作，询问用户。\n" +
                 "你只能使用用户提供的工具，绝对不能调用不存在的工具。更不能编造工具。\n";
+
+        // 根据设置决定是否注入用户画像 / 任务记录作为系统提示词上下文
+        if (isPromptIncludeUserProfile() && userId != null && !userId.isEmpty()) {
+            String profile = longTermMemoryService.queryUserProfileMemoryContent(userId);
+            if (profile != null && !profile.isEmpty()) {
+                systemMessage += "\n----用户画像----\n" + profile;
+                logger.debug("系统提示词已注入用户画像（userId={}）", userId);
+            }
+        }
+        if (isPromptIncludeTaskRecords() && userId != null && !userId.isEmpty()) {
+            String taskRecords = longTermMemoryService.queryUserTaskRecordsMemoryContent(sessionId, userId, false);
+            if (taskRecords != null && !taskRecords.isEmpty()) {
+                systemMessage += "\n----近期任务记录----\n" + taskRecords;
+                logger.debug("系统提示词已注入近期任务记录（userId={}）", userId);
+            }
+        }
+
         if(!avatarSettings.isDisabled() && avatarSettings.getPersonaSetting() != null && !avatarSettings.getPersonaSetting().isEmpty()){
             systemMessage += "你可以控制一个虚拟人和用户交互，人物的设定是：" + avatarSettings.getPersonaSetting() + "\n";
         }
@@ -244,6 +266,20 @@ public class AgentExecutorService implements IAgentExecutorService {
             systemMessage += skillContext;
         }
         return systemMessage;
+    }
+
+    /**
+     * 读取"提示词带入用户画像"设置（默认 true）
+     */
+    private boolean isPromptIncludeUserProfile() {
+        return Boolean.parseBoolean(sysConfigService.getValueByKey("promptIncludeUserProfile", "true"));
+    }
+
+    /**
+     * 读取"提示词带入近期任务记录"设置（默认 true）
+     */
+    private boolean isPromptIncludeTaskRecords() {
+        return Boolean.parseBoolean(sysConfigService.getValueByKey("promptIncludeTaskRecords", "true"));
     }
 
     private String buildSkillContext(List<String> skillNames) {

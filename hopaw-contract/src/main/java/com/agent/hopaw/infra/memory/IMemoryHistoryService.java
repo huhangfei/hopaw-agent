@@ -1,12 +1,12 @@
 package com.agent.hopaw.infra.memory;
 
 import com.agent.hopaw.infra.constant.UserMemoryTypeEnum;
-import com.agent.hopaw.infra.model.dto.VectorSearchResult;
+import com.agent.hopaw.infra.model.dto.MemoryHistorySearchResult;
 
 import java.time.LocalDateTime;
 import java.util.List;
 
-public interface IVectorMemoryService {
+public interface IMemoryHistoryService {
 
     String store(String content, String sessionId, String userId, UserMemoryTypeEnum memoryType, LocalDateTime timestamp);
 
@@ -22,7 +22,7 @@ public interface IVectorMemoryService {
      * @param minScore   最低相似度阈值
      * @param excludeMemoryTypes   排除的记忆类型
      */
-    List<VectorSearchResult> search(String query,String sessionId, String userId,
+    List<MemoryHistorySearchResult> search(String query,String sessionId, String userId,
                                     String memoryType, int maxResults, double minScore,UserMemoryTypeEnum... excludeMemoryTypes);
 
     boolean deleteByEmbeddingId(String embeddingId);
