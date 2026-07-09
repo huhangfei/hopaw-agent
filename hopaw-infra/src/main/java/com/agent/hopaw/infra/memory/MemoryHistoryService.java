@@ -39,10 +39,12 @@ public class MemoryHistoryService implements IMemoryHistoryService {
     private static final String METADATA_MEMORY_DATE = "memoryDate";
     private static final String METADATA_MEMORY_ID = "memoryId";
 
-    /** 落盘操作计数器：每满 FLUSH_THRESHOLD 次触发一次 save */
-    private static final int FLUSH_THRESHOLD = 100;
+    /** 落盘操作计数器：每满 flushThreshold 次触发一次 save */
+    private volatile int flushThreshold = 10;
     /** 落盘时间间隔（毫秒）：距上次落盘超过此时长则立即落盘 */
-    private static final long FLUSH_INTERVAL_MS = 30_000L;
+    private volatile long flushIntervalMs = 10_000L;
+    /** 定时落盘任务执行间隔（秒） */
+    private volatile long flushSchedulerInterval = 10;
 
     private final ISysConfigService sysConfigService;
     private final EmbeddingModel embeddingModel;
@@ -77,6 +79,26 @@ public class MemoryHistoryService implements IMemoryHistoryService {
 
             String persistencePath = sysConfigService.getValueByKey("vector_store_path", "./vector_store");
             String profile = sysConfigService.getValueByKey("vector_store_profile", "precision");
+
+            // 读取落盘相关配置
+            try {
+                this.flushSchedulerInterval = Long.parseLong(
+                        sysConfigService.getValueByKey("vector_flush_scheduler_interval", "10"));
+            } catch (NumberFormatException e) {
+                this.flushSchedulerInterval = 10;
+            }
+            try {
+                this.flushThreshold = Integer.parseInt(
+                        sysConfigService.getValueByKey("vector_flush_threshold", "10"));
+            } catch (NumberFormatException e) {
+                this.flushThreshold = 10;
+            }
+            try {
+                this.flushIntervalMs = Long.parseLong(
+                        sysConfigService.getValueByKey("vector_flush_interval_ms", "10000"));
+            } catch (NumberFormatException e) {
+                this.flushIntervalMs = 10_000L;
+            }
 
             /*
              * JVector 基于融合 DiskANN + HNSW 算法的纯 Java 向量检索引擎。
@@ -131,14 +153,16 @@ public class MemoryHistoryService implements IMemoryHistoryService {
             logger.info("JVectorEmbeddingStore initialized, profile={}, dimension={}, maxDegree={}, beamWidth={}, path={}",
                     profile, dimension, maxDegree, beamWidth, persistencePath);
 
-            // 启动定时落盘任务：每 30 秒执行一次 flush，确保异常退出时数据丢失可控
+            // 启动定时落盘任务：按配置间隔执行 flush，确保异常退出时数据丢失可控
             flushScheduler = Executors.newSingleThreadScheduledExecutor(r -> {
                 Thread t = new Thread(r, "vector-memory-flush");
                 t.setDaemon(true);
                 return t;
             });
-            flushScheduler.scheduleAtFixedRate(this::safeFlush, 30, 30, TimeUnit.SECONDS);
-            logger.info("Vector memory flush scheduler started, interval=30s");
+            flushScheduler.scheduleAtFixedRate(this::safeFlush,
+                    flushSchedulerInterval, flushSchedulerInterval, TimeUnit.SECONDS);
+            logger.info("Vector memory flush scheduler started, interval={}s, threshold={}, intervalMs={}",
+                    flushSchedulerInterval, flushThreshold, flushIntervalMs);
         } catch (Exception e) {
             logger.error("Failed to initialize JVectorEmbeddingStore", e);
             throw new RuntimeException("Vector store initialization failed", e);
@@ -257,7 +281,7 @@ public class MemoryHistoryService implements IMemoryHistoryService {
     private void scheduleFlush() {
         int ops = pendingOps.incrementAndGet();
         long now = System.currentTimeMillis();
-        if (ops >= FLUSH_THRESHOLD || (now - lastFlushTime) >= FLUSH_INTERVAL_MS) {
+        if (ops >= flushThreshold || (now - lastFlushTime) >= flushIntervalMs) {
             flush();
         }
     }
@@ -267,7 +291,7 @@ public class MemoryHistoryService implements IMemoryHistoryService {
      */
     private synchronized void flush() {
         if (embeddingStore instanceof JVectorEmbeddingStore) {
-            //saveVectorStore((JVectorEmbeddingStore) embeddingStore);
+            saveVectorStore((JVectorEmbeddingStore) embeddingStore);
         }
         pendingOps.set(0);
         lastFlushTime = System.currentTimeMillis();
@@ -291,6 +315,7 @@ public class MemoryHistoryService implements IMemoryHistoryService {
     private void saveVectorStore(JVectorEmbeddingStore store) {
         try {
             store.save();
+            logger.info("JVectorEmbeddingStore saved");
         } catch (IllegalStateException e) {
             if (e.getMessage() != null && e.getMessage().contains("empty embedding store")) {
                 logger.debug("Skipping save of empty embedding store");

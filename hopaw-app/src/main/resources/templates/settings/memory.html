@@ -37,9 +37,6 @@
                     <input type="number" id="taskRecordsClearTimeoutDay" class="settings-input" min="1" placeholder="7">
                 </div>
             </div>
-
-            <h3 style="font-size:15px;color:#333;margin:24px 0 16px 0;">提示词上下文</h3>
-
             <div class="form-group">
                 <label>提示词带入用户画像</label>
                 <div class="toggle-wrapper">
@@ -70,8 +67,6 @@
         </div>
 
         <div class="settings-form">
-            <h3 style="font-size:15px;color:#333;margin:0 0 16px 0;">向量存储配置</h3>
-
             <div class="restart-notice">
                 <p>向量存储设置修改后需重启应用使配置生效。</p>
             </div>
@@ -90,6 +85,25 @@
                     <option value="speed">极速 - 构建最快，内存更省</option>
                 </select>
                 <p class="form-hint">精准：maxDegree=32, 速度慢但搜索准。极速：maxDegree=8, 快但召回有所下降</p>
+            </div>
+
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="vectorFlushSchedulerInterval">定时落盘任务执行间隔（单位：秒）</label>
+                    <input type="number" id="vectorFlushSchedulerInterval" class="settings-input" min="5" placeholder="10">
+                    <p class="form-hint">后台定时任务检查并落盘的间隔，建议 5~60 秒</p>
+                </div>
+                <div class="form-group">
+                    <label for="vectorFlushThreshold">触发落盘的写入次数阈值</label>
+                    <input type="number" id="vectorFlushThreshold" class="settings-input" min="1" placeholder="10">
+                    <p class="form-hint">累计写入操作达到此次数后立即落盘</p>
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label for="vectorFlushIntervalMs">落盘时间间隔（单位：毫秒）</label>
+                <input type="number" id="vectorFlushIntervalMs" class="settings-input" min="1000" placeholder="10000">
+                <p class="form-hint">距上次落盘超过此时长则立即落盘，建议 5000~60000 毫秒</p>
             </div>
 
             <div class="settings-actions">

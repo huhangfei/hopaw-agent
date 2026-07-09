@@ -4,6 +4,9 @@ function onSettingsLoaded() {
     document.getElementById('taskRecordsClearTimeoutDay').value = settingsCache['taskRecordsClearTimeoutDay'] || '7';
     document.getElementById('vectorStorePath').value = settingsCache['vector_store_path'] || '';
     document.getElementById('vectorStoreProfile').value = settingsCache['vector_store_profile'] || 'precision';
+    document.getElementById('vectorFlushSchedulerInterval').value = settingsCache['vector_flush_scheduler_interval'] || '10';
+    document.getElementById('vectorFlushThreshold').value = settingsCache['vector_flush_threshold'] || '10';
+    document.getElementById('vectorFlushIntervalMs').value = settingsCache['vector_flush_interval_ms'] || '10000';
 
     // 先加载提供商列表，串行回填已选模型
     loadProviders().then(function() {
@@ -180,10 +183,16 @@ function toggleMemoryTask() {
 function saveVectorStoreSettings() {
     var vectorStorePath = document.getElementById('vectorStorePath').value.trim();
     var vectorStoreProfile = document.getElementById('vectorStoreProfile').value;
+    var flushSchedulerInterval = document.getElementById('vectorFlushSchedulerInterval').value.trim();
+    var flushThreshold = document.getElementById('vectorFlushThreshold').value.trim();
+    var flushIntervalMs = document.getElementById('vectorFlushIntervalMs').value.trim();
 
     var saves = [];
     saves.push(saveConfig('vector_store_path', vectorStorePath, '向量持久化路径'));
     saves.push(saveConfig('vector_store_profile', vectorStoreProfile, '向量存储预设'));
+    saves.push(saveConfig('vector_flush_scheduler_interval', flushSchedulerInterval, '定时落盘任务执行间隔（秒）'));
+    saves.push(saveConfig('vector_flush_threshold', flushThreshold, '触发落盘的写入次数阈值'));
+    saves.push(saveConfig('vector_flush_interval_ms', flushIntervalMs, '落盘时间间隔（毫秒）'));
 
     Promise.all(saves).then(function(results) {
         var allOk = results.every(function(r) { return r; });
