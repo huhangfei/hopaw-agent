@@ -11,7 +11,9 @@ import java.nio.file.*;
 import java.util.*;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
+import java.util.zip.ZipEntry;
 import java.util.zip.ZipInputStream;
+import java.util.zip.ZipOutputStream;
 
 @Service
 public class SkillService implements ISkillService {
@@ -639,5 +641,35 @@ public class SkillService implements ISkillService {
             slug = slug.substring(0, 50).replaceAll("-$", "");
         }
         return slug;
+    }
+
+    @Override
+    public byte[] exportSkill(String folderName) {
+        Path skillDir = getSkillDir().resolve(folderName);
+        if (!Files.isDirectory(skillDir)) {
+            throw new RuntimeException("技能不存在: " + folderName);
+        }
+        try (ByteArrayOutputStream baos = new ByteArrayOutputStream();
+             ZipOutputStream zos = new ZipOutputStream(baos, java.nio.charset.StandardCharsets.UTF_8)) {
+            try (Stream<Path> paths = Files.walk(skillDir)) {
+                paths.filter(Files::isRegularFile).forEach(file -> {
+                    try {
+                        String relativePath = skillDir.relativize(file).toString().replace('\\', '/');
+                        ZipEntry entry = new ZipEntry(folderName + "/" + relativePath);
+                        zos.putNextEntry(entry);
+                        Files.copy(file, zos);
+                        zos.closeEntry();
+                    } catch (IOException e) {
+                        throw new UncheckedIOException(e);
+                    }
+                });
+            }
+            zos.finish();
+            return baos.toByteArray();
+        } catch (UncheckedIOException e) {
+            throw new RuntimeException("导出技能失败: " + e.getCause().getMessage());
+        } catch (IOException e) {
+            throw new RuntimeException("导出技能失败: " + e.getMessage());
+        }
     }
 }

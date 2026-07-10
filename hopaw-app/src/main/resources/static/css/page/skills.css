@@ -224,6 +224,14 @@
 .btn-delete:hover {
     background: rgba(211, 47, 47, 0.1);
 }
+
+.btn-export {
+    color: #7b1fa2;
+}
+
+.btn-export:hover {
+    background: rgba(123, 31, 162, 0.1);
+}
 .modal-skill {
     width: 80%;
     max-width: 1100px;

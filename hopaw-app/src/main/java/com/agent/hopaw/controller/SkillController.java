@@ -5,6 +5,10 @@ import com.agent.hopaw.infra.model.dto.SkillInfo;
 import com.agent.hopaw.infra.service.SkillService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.http.ContentDisposition;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.*;
@@ -103,6 +107,22 @@ public class SkillController {
         } catch (Exception e) {
             log.error("Failed to import skill: {}", originalName, e);
             return ResponseBean.fail(e.getMessage());
+        }
+    }
+
+    @GetMapping("/api/export/{folderName}")
+    public ResponseEntity<byte[]> exportSkill(@PathVariable String folderName) {
+        try {
+            byte[] zipBytes = skillService.exportSkill(folderName);
+            HttpHeaders headers = new HttpHeaders();
+            headers.setContentType(MediaType.APPLICATION_OCTET_STREAM);
+            headers.setContentDisposition(ContentDisposition.attachment()
+                    .filename(folderName + ".zip").build());
+            headers.setContentLength(zipBytes.length);
+            return ResponseEntity.ok().headers(headers).body(zipBytes);
+        } catch (Exception e) {
+            log.error("Failed to export skill: {}", folderName, e);
+            return ResponseEntity.notFound().build();
         }
     }
 }

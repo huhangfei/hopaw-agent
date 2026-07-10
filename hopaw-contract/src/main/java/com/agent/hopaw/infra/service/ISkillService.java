@@ -22,4 +22,6 @@ public interface ISkillService {
     void deleteSkill(String folderName);
 
     SkillInfo readSkillFromDir(Path skillDir);
+
+    byte[] exportSkill(String folderName);
 }
