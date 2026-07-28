@@ -507,3 +507,255 @@ body.dark-theme .btn-cancel:hover {
     background: #2d2d44;
     color: #e0e0e0;
 }
+
+/* ========== 备份与恢复页面样式 ========== */
+.settings-section-title {
+    font-size: 16px;
+    font-weight: 600;
+    color: #333;
+    margin-bottom: 8px;
+}
+
+.settings-section-desc {
+    font-size: 14px;
+    color: #666;
+    margin-bottom: 20px;
+}
+
+.backup-options {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    margin-bottom: 20px;
+}
+
+.backup-option {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px 16px;
+    background: #f8f9fa;
+    border-radius: 8px;
+    border: 1px solid #e0e0e0;
+}
+
+.backup-option:hover {
+    border-color: #667eea;
+}
+
+.checkbox-wrapper {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    cursor: pointer;
+}
+
+.checkbox-wrapper input[type="checkbox"] {
+    display: none;
+}
+
+.checkbox-custom {
+    width: 18px;
+    height: 18px;
+    border: 2px solid #ccc;
+    border-radius: 4px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s;
+}
+
+.checkbox-wrapper input[type="checkbox"]:checked + .checkbox-custom {
+    background: #667eea;
+    border-color: #667eea;
+}
+
+.checkbox-wrapper input[type="checkbox"]:checked + .checkbox-custom::after {
+    content: '';
+    width: 5px;
+    height: 9px;
+    border: solid white;
+    border-width: 0 2px 2px 0;
+    transform: rotate(45deg);
+    margin-bottom: 2px;
+}
+
+.checkbox-label {
+    font-size: 14px;
+    font-weight: 500;
+    color: #333;
+}
+
+.backup-option-desc {
+    font-size: 13px;
+    color: #888;
+    margin-left: auto;
+}
+
+.backup-info {
+    background: #f0f7ff;
+    border: 1px solid #b3d4ff;
+    border-radius: 8px;
+    padding: 12px 16px;
+    margin-bottom: 20px;
+}
+
+.backup-info-item {
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+    font-size: 13px;
+    color: #1a73e8;
+}
+
+.backup-info-icon {
+    width: 18px;
+    height: 18px;
+    background: #1a73e8;
+    color: white;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 12px;
+    font-weight: bold;
+    flex-shrink: 0;
+}
+
+/* 暗色主题适配 */
+body.dark-theme .settings-section-title {
+    color: #e0e0e0;
+}
+
+body.dark-theme .settings-section-desc {
+    color: #aaa;
+}
+
+body.dark-theme .backup-option {
+    background: #2d2d44;
+    border-color: #3d3d6b;
+}
+
+body.dark-theme .backup-option:hover {
+    border-color: #667eea;
+}
+
+body.dark-theme .checkbox-label {
+    color: #e0e0e0;
+}
+
+body.dark-theme .backup-option-desc {
+    color: #888;
+}
+
+body.dark-theme .backup-info {
+    background: #1a2a3a;
+    border-color: #2a4a6a;
+}
+
+body.dark-theme .backup-info-item {
+    color: #66b3ff;
+}
+
+body.dark-theme .backup-info-icon {
+    background: #66b3ff;
+}
+
+/* ========== 备份复选框组 ========== */
+.backup-checkbox-group {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.backup-checkbox-item {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    padding: 14px 16px;
+    background: #f8f9fa;
+    border: 1px solid #e0e0e0;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: border-color 0.2s;
+}
+
+.backup-checkbox-item:hover {
+    border-color: #667eea;
+}
+
+.backup-checkbox-item input[type="checkbox"] {
+    margin-top: 2px;
+    accent-color: #667eea;
+    width: 16px;
+    height: 16px;
+    cursor: pointer;
+}
+
+.backup-checkbox-label {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.backup-checkbox-label strong {
+    font-size: 14px;
+    font-weight: 600;
+    color: #333;
+}
+
+.backup-checkbox-desc {
+    font-size: 12px;
+    color: #888;
+}
+
+.backup-info-box {
+    background: #f0f7ff;
+    border: 1px solid #b3d4ff;
+    border-radius: 8px;
+    padding: 14px 16px;
+}
+
+.backup-info-box p {
+    margin: 0 0 6px 0;
+    font-size: 13px;
+    color: #333;
+    line-height: 1.6;
+}
+
+.backup-info-box ul {
+    margin: 4px 0 8px 16px;
+    padding: 0;
+}
+
+.backup-info-box li {
+    font-size: 13px;
+    color: #555;
+    line-height: 1.8;
+}
+
+body.dark-theme .backup-checkbox-item {
+    background: #2d2d44;
+    border-color: #3d3d6b;
+}
+
+body.dark-theme .backup-checkbox-item:hover {
+    border-color: #667eea;
+}
+
+body.dark-theme .backup-checkbox-label strong {
+    color: #e0e0e0;
+}
+
+body.dark-theme .backup-info-box {
+    background: #1a2a3a;
+    border-color: #2a4a6a;
+}
+
+body.dark-theme .backup-info-box p {
+    color: #ccc;
+}
+
+body.dark-theme .backup-info-box li {
+    color: #aaa;
+}

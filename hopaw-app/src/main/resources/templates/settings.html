@@ -17,6 +17,7 @@
         <a th:href="@{/settings/tts}" class="settings-tab" th:classappend="${currentTab == 'tts' ? 'active' : ''}">TTS语音</a>
         <a th:href="@{/settings/plugin-store}" class="settings-tab" th:classappend="${currentTab == 'plugin-store' ? 'active' : ''}">插件商店源</a>
         <a th:href="@{/settings/account}" class="settings-tab" th:classappend="${currentTab == 'account' ? 'active' : ''}">账号设置</a>
+        <a th:href="@{/settings/backup}" class="settings-tab" th:classappend="${currentTab == 'backup' ? 'active' : ''}">备份与恢复</a>
     </div>
 
     <div th:replace="~{__${'settings/' + currentTab}__ :: content}"></div>
