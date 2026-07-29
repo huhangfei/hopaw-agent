@@ -72,15 +72,10 @@ function startBackup() {
 // ========== 导入备份 ==========
 
 function showRestoreDialog() {
-    var dialog = document.getElementById('restoreDialog');
-    dialog.style.display = 'flex';
     // 清空上次输入
     document.getElementById('restoreFile').value = '';
     document.getElementById('restorePassword').value = '';
-}
-
-function closeRestoreDialog() {
-    document.getElementById('restoreDialog').style.display = 'none';
+    Modal.open('restoreModal');
 }
 
 function confirmRestore() {
@@ -123,7 +118,7 @@ function confirmRestore() {
             throw new Error(res.message || '导入失败');
         }
         showToast('导入成功：' + (res.data || res.message || ''), 'success');
-        closeRestoreDialog();
+        Modal.close('restoreModal');
     })
     .catch(function(error) {
         console.error('导入失败:', error);

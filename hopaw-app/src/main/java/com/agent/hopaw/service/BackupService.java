@@ -152,7 +152,14 @@ public class BackupService {
                 }
                 zip.setPassword(password.toCharArray());
             }
-            zip.extractAll(tempDir.toString());
+            try {
+                zip.extractAll(tempDir.toString());
+            } catch (net.lingala.zip4j.exception.ZipException e) {
+                if (e.getMessage() != null && e.getMessage().toLowerCase().contains("wrong password")) {
+                    throw new IllegalArgumentException("解压密码错误", e);
+                }
+                throw e;
+            }
 
             StringBuilder summary = new StringBuilder();
             int total = 0;
