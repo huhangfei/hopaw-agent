@@ -6,10 +6,12 @@ import com.agent.hopaw.infra.mapper.AiModelMapper;
 import com.agent.hopaw.infra.mapper.AiModelProviderMapper;
 import com.agent.hopaw.infra.mapper.AgentMapper;
 import com.agent.hopaw.infra.mapper.SysConfigMapper;
+import com.agent.hopaw.infra.mapper.TtsConfigMapper;
 import com.agent.hopaw.infra.model.entity.AiModel;
 import com.agent.hopaw.infra.model.entity.AiModelProvider;
 import com.agent.hopaw.infra.model.entity.Agent;
 import com.agent.hopaw.infra.model.entity.SysConfig;
+import com.agent.hopaw.infra.model.entity.TtsConfig;
 import com.agent.hopaw.infra.util.AesEncryptionUtil;
 import com.alibaba.fastjson2.JSON;
 import net.lingala.zip4j.io.outputstream.ZipOutputStream;
@@ -28,8 +30,10 @@ import java.io.File;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
+import java.security.SecureRandom;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -45,42 +49,49 @@ public class BackupService {
     private final AiModelMapper aiModelMapper;
     private final AgentMapper agentMapper;
     private final AvatarConfigMapper avatarConfigMapper;
+    private final TtsConfigMapper ttsConfigMapper;
+    private final AesEncryptionUtil aesEncryptionUtil;
+    private final Path encryptionKeyPath;
 
     public BackupService(SysConfigMapper sysConfigMapper,
                          AiModelProviderMapper aiModelProviderMapper,
                          AiModelMapper aiModelMapper,
                          AgentMapper agentMapper,
-                         AvatarConfigMapper avatarConfigMapper) {
+                         AvatarConfigMapper avatarConfigMapper,
+                         TtsConfigMapper ttsConfigMapper,
+                         AesEncryptionUtil aesEncryptionUtil) {
         this.sysConfigMapper = sysConfigMapper;
         this.aiModelProviderMapper = aiModelProviderMapper;
         this.aiModelMapper = aiModelMapper;
         this.agentMapper = agentMapper;
         this.avatarConfigMapper = avatarConfigMapper;
+        this.ttsConfigMapper = ttsConfigMapper;
+        this.aesEncryptionUtil = aesEncryptionUtil;
+        this.encryptionKeyPath = Paths.get(System.getProperty("user.home"), ".hopaw", "encryption.key");
     }
 
     /**
-     * 执行备份，生成 zip 文件并返回文件路径。
-     * 若 password 非空，则使用 AES-256 加密 zip；否则为标准无密码 zip。
+     * 备份结果：zip 文件路径 + 后端生成的 zip 解压密码
      */
-    public Path backup(boolean exportSysConfig, boolean exportModelConfig, boolean exportAgentConfig,
-                      String password) throws Exception {
+    public record BackupResult(Path zipPath, String password) {}
+
+    /**
+     * 执行备份。后端始终生成 16 位高强度密码对 zip 加密（AES-256），并随结果返回密码。
+     * 前端下载文件后必须向用户展示该密码以便导入时输入。
+     */
+    public BackupResult backup(boolean exportSysConfig, boolean exportModelConfig, boolean exportAgentConfig,
+                      boolean exportTtsConfig) throws Exception {
         Map<String, byte[]> files = new LinkedHashMap<>();
 
         if (exportSysConfig) {
             List<SysConfig> configs = sysConfigMapper.findAll();
-            // 解密敏感字段，导出明文（不导出加密密钥）
-            for (SysConfig config : configs) {
-                config.setConfigValue(AesEncryptionUtil.decrypt(config.getConfigValue()));
-            }
+            // 保留数据库中的密文，导入时使用本机密钥（备份包中随附）解密还原
             files.put("sys_config.json", toJsonBytes(configs));
         }
 
         if (exportModelConfig) {
             List<AiModelProvider> providers = aiModelProviderMapper.findAll();
-            // 解密 apiKey，导出明文
-            for (AiModelProvider provider : providers) {
-                provider.setApiKey(AesEncryptionUtil.decrypt(provider.getApiKey()));
-            }
+            // 保留数据库中的密文 apiKey
             files.put("ai_model_providers.json", toJsonBytes(providers));
             List<AiModel> models = aiModelMapper.findAll();
             files.put("ai_models.json", toJsonBytes(models));
@@ -93,25 +104,38 @@ public class BackupService {
             files.put("agent_avatar_config.json", toJsonBytes(avatarConfigs));
         }
 
+        if (exportTtsConfig) {
+            // TTS configJson 字段以明文 JSON 形式存储于数据库（含厂商 apiKey 等凭证），
+            // 备份原样导出；导入时也原样写回。密钥包内的 encryption.key 仍用于其他加密字段。
+            List<TtsConfig> ttsConfigs = ttsConfigMapper.findAll();
+            files.put("tts_config.json", toJsonBytes(ttsConfigs));
+        }
+
+        // 打包本机加密密钥（~/.hopaw/encryption.key），导入时还原以正确解密加密字段
+        if (Files.exists(encryptionKeyPath)) {
+            files.put("encryption.key", Files.readAllBytes(encryptionKeyPath));
+            log.info("已随备份打包加密密钥: {}", encryptionKeyPath);
+        } else {
+            log.warn("未找到加密密钥文件: {}，加密字段将无法在导入端解密", encryptionKeyPath);
+        }
+
         // 生成 zip 文件到临时目录
         String timestamp = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMdd-HHmmss"));
         Path tempDir = Files.createTempDirectory("hopaw-backup-");
         Path zipPath = tempDir.resolve("hopaw-backup-" + timestamp + ".zip");
 
-        boolean usePassword = password != null && !password.isEmpty();
+        // 后端生成 16 位高强度密码（仅含易识别字符，避免 0/O/1/l/I 歧义）
+        String password = generateStrongPassword(16);
+        log.info("已生成备份解压密码");
+
         ZipParameters params = new ZipParameters();
         params.setCompressionMethod(CompressionMethod.DEFLATE);
         params.setCompressionLevel(CompressionLevel.NORMAL);
-        if (usePassword) {
-            params.setEncryptFiles(true);
-            params.setEncryptionMethod(EncryptionMethod.AES);
-            params.setAesKeyStrength(AesKeyStrength.KEY_STRENGTH_256);
-        }
+        params.setEncryptFiles(true);
+        params.setEncryptionMethod(EncryptionMethod.AES);
+        params.setAesKeyStrength(AesKeyStrength.KEY_STRENGTH_256);
 
-        // 无密码时使用无密码构造函数，避免传入 null char[]
-        try (ZipOutputStream zos = usePassword
-                ? new ZipOutputStream(Files.newOutputStream(zipPath), password.toCharArray())
-                : new ZipOutputStream(Files.newOutputStream(zipPath))) {
+        try (ZipOutputStream zos = new ZipOutputStream(Files.newOutputStream(zipPath), password.toCharArray())) {
             for (Map.Entry<String, byte[]> entry : files.entrySet()) {
                 params.setFileNameInZip(entry.getKey());
                 zos.putNextEntry(params);
@@ -126,12 +150,28 @@ public class BackupService {
             }
         }
 
-        return zipPath;
+        return new BackupResult(zipPath, password);
     }
 
     private byte[] toJsonBytes(Object obj) {
         String json = JSON.toJSONString(obj);
         return json.getBytes(StandardCharsets.UTF_8);
+    }
+
+    /**
+     * 生成指定长度的密码：从字符池中用 SecureRandom 抽取，避免使用易混淆字符（0/O/1/l/I）。
+     * 字符池包含大小写字母 + 数字，组合空间 56^16 ≈ 1.5e28，暴力破解不可行。
+     */
+    private static final String PASSWORD_CHARS =
+            "ABCDEFGHJKMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789";
+
+    private static String generateStrongPassword(int length) {
+        SecureRandom random = new SecureRandom();
+        StringBuilder sb = new StringBuilder(length);
+        for (int i = 0; i < length; i++) {
+            sb.append(PASSWORD_CHARS.charAt(random.nextInt(PASSWORD_CHARS.length())));
+        }
+        return sb.toString();
     }
 
     /**
@@ -163,6 +203,22 @@ public class BackupService {
 
             StringBuilder summary = new StringBuilder();
             int total = 0;
+
+            // 先还原加密密钥，保证后续密文能正确解密
+            Path keyFile = tempDir.resolve("encryption.key");
+            boolean hasEncryptedData = Files.exists(tempDir.resolve("sys_config.json"))
+                    || Files.exists(tempDir.resolve("ai_model_providers.json"));
+            if (Files.exists(keyFile)) {
+                Files.createDirectories(encryptionKeyPath.getParent());
+                Files.write(encryptionKeyPath, Files.readAllBytes(keyFile));
+                aesEncryptionUtil.reload();
+                summary.append("encryption_key: 已还原\n");
+                log.info("已还原加密密钥: {}", encryptionKeyPath);
+            } else if (hasEncryptedData) {
+                throw new IllegalArgumentException("备份包未包含 encryption.key，无法解密加密字段，请使用含密钥的完整备份包");
+            } else {
+                summary.append("encryption_key: 备份包无加密数据，无需密钥\n");
+            }
 
             // sys_config.json
             Path sysConfigFile = tempDir.resolve("sys_config.json");
@@ -200,6 +256,14 @@ public class BackupService {
                 summary.append("agent_avatar_config: ").append(n).append(" 条\n");
             }
 
+            // tts_config.json
+            Path ttsFile = tempDir.resolve("tts_config.json");
+            if (Files.exists(ttsFile)) {
+                int n = importTtsConfigs(ttsFile);
+                total += n;
+                summary.append("tts_config: ").append(n).append(" 条\n");
+            }
+
             summary.insert(0, "导入完成，共 " + total + " 条记录\n");
             return summary.toString();
         } finally {
@@ -213,8 +277,7 @@ public class BackupService {
         List<SysConfig> configs = JSON.parseArray(json, SysConfig.class);
         int count = 0;
         for (SysConfig config : configs) {
-            // 备份导出时已解密为明文，导入时用本机密钥重新加密
-            config.setConfigValue(AesEncryptionUtil.encrypt(config.getConfigValue()));
+            // 备份导出时未解密，导入时也保持原密文（密钥已随备份还原）
             SysConfig existing = config.getId() != null ? findSysConfigById(config.getId()) : null;
             if (existing == null && config.getConfigKey() != null) {
                 existing = sysConfigMapper.findByKey(config.getConfigKey());
@@ -245,8 +308,7 @@ public class BackupService {
         List<AiModelProvider> providers = JSON.parseArray(json, AiModelProvider.class);
         int count = 0;
         for (AiModelProvider provider : providers) {
-            // 备份导出时 apiKey 已解密为明文，导入时重新加密
-            provider.setApiKey(AesEncryptionUtil.encrypt(provider.getApiKey()));
+            // 备份导出时未解密，导入时也保持原密文 apiKey（密钥已随备份还原）
             AiModelProvider existing = provider.getId() != null ? aiModelProviderMapper.findById(provider.getId()) : null;
             if (existing != null) {
                 aiModelProviderMapper.update(provider);
@@ -284,6 +346,23 @@ public class BackupService {
                 agentMapper.update(agent);
             } else {
                 agentMapper.insert(agent);
+            }
+            count++;
+        }
+        return count;
+    }
+
+    private int importTtsConfigs(Path file) throws Exception {
+        String json = Files.readString(file, StandardCharsets.UTF_8);
+        List<TtsConfig> configs = JSON.parseArray(json, TtsConfig.class);
+        int count = 0;
+        for (TtsConfig config : configs) {
+            // configJson 数据库里以明文存储，备份导出时未做转换，导入也原样写回
+            TtsConfig existing = config.getId() != null ? ttsConfigMapper.findById(config.getId()) : null;
+            if (existing != null) {
+                ttsConfigMapper.update(config);
+            } else {
+                ttsConfigMapper.insert(config);
             }
             count++;
         }

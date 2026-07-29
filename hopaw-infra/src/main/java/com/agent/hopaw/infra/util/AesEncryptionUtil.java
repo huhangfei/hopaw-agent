@@ -58,6 +58,29 @@ public class AesEncryptionUtil {
         }
     }
 
+    /**
+     * 重新加载磁盘上的密钥（用于导入备份后使新密钥立即生效）
+     */
+    public void reload() {
+        try {
+            File keyFile = keyPath.toFile();
+            if (!keyFile.exists()) {
+                throw new IllegalStateException("密钥文件不存在: " + keyPath);
+            }
+            secretKey = loadKey(keyFile);
+            log.info("已重新加载加密密钥: {}", keyPath);
+        } catch (Exception e) {
+            throw new RuntimeException("重新加载密钥失败", e);
+        }
+    }
+
+    /**
+     * 返回当前密钥文件路径
+     */
+    public String getKeyPath() {
+        return keyPath.toString();
+    }
+
     private SecretKey generateKey() throws Exception {
         KeyGenerator keyGen = KeyGenerator.getInstance(ALGORITHM);
         keyGen.init(KEY_SIZE, new SecureRandom());

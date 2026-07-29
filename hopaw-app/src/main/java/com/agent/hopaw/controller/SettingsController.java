@@ -145,33 +145,36 @@ public class SettingsController {
 
     /**
      * 备份数据
+     * 返回 JSON：data.fileName + data.zipBase64 + data.password，
+     * 前端用 JS 触发下载并弹窗展示后端生成的密码。
      */
     @PostMapping("/api/backup")
     @ResponseBody
-    public ResponseEntity<Resource> backup(@RequestBody Map<String, Object> body) {
+    public ResponseBean backup(@RequestBody Map<String, Object> body) {
         try {
             boolean exportSysConfig = Boolean.TRUE.equals(body.get("sysConfig"));
             boolean exportModelConfig = Boolean.TRUE.equals(body.get("modelConfig"));
             boolean exportAgentConfig = Boolean.TRUE.equals(body.get("agentConfig"));
-            String password = (String) body.get("password");
+            boolean exportTtsConfig = Boolean.TRUE.equals(body.get("ttsConfig"));
 
-            if (!exportSysConfig && !exportModelConfig && !exportAgentConfig) {
-                return ResponseEntity.badRequest().build();
+            if (!exportSysConfig && !exportModelConfig && !exportAgentConfig && !exportTtsConfig) {
+                return ResponseBean.fail("请至少选择一项备份内容");
             }
 
-            Path zipPath = backupService.backup(exportSysConfig, exportModelConfig, exportAgentConfig, password);
-            File zipFile = zipPath.toFile();
+            BackupService.BackupResult result = backupService.backup(
+                    exportSysConfig, exportModelConfig, exportAgentConfig, exportTtsConfig);
+            File zipFile = result.zipPath().toFile();
+            byte[] zipBytes = Files.readAllBytes(result.zipPath());
+            String zipBase64 = java.util.Base64.getEncoder().encodeToString(zipBytes);
 
-            FileSystemResource resource = new FileSystemResource(zipFile);
-            return ResponseEntity.ok()
-                    .header(HttpHeaders.CONTENT_DISPOSITION,
-                            "attachment; filename=\"" + zipFile.getName() + "\"")
-                    .contentType(MediaType.APPLICATION_OCTET_STREAM)
-                    .contentLength(zipFile.length())
-                    .body(resource);
+            java.util.Map<String, Object> data = new java.util.HashMap<>();
+            data.put("fileName", zipFile.getName());
+            data.put("zipBase64", zipBase64);
+            data.put("password", result.password());
+            return ResponseBean.success(data);
         } catch (Exception e) {
             log.error("备份失败", e);
-            return ResponseEntity.internalServerError().build();
+            return ResponseBean.fail("备份失败: " + e.getMessage());
         }
     }
 

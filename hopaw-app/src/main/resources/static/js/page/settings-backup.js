@@ -1,31 +1,12 @@
-document.addEventListener('DOMContentLoaded', function() {
-    var usePasswordChk = document.getElementById('usePassword');
-    var passwordInput = document.getElementById('backupPassword');
-    if (usePasswordChk) {
-        usePasswordChk.addEventListener('change', function() {
-            passwordInput.style.display = this.checked ? 'block' : 'none';
-            if (!this.checked) {
-                passwordInput.value = '';
-            }
-        });
-    }
-});
-
 function startBackup() {
     var btn = document.getElementById('backupBtn');
     var exportSysConfig = document.getElementById('exportSysConfig').checked;
     var exportModelConfig = document.getElementById('exportModelConfig').checked;
     var exportAgentConfig = document.getElementById('exportAgentConfig').checked;
-    var usePassword = document.getElementById('usePassword').checked;
-    var password = usePassword ? document.getElementById('backupPassword').value : '';
+    var exportTtsConfig = document.getElementById('exportTtsConfig').checked;
 
-    if (!exportSysConfig && !exportModelConfig && !exportAgentConfig) {
+    if (!exportSysConfig && !exportModelConfig && !exportAgentConfig && !exportTtsConfig) {
         showToast('请至少选择一项备份内容', 'error');
-        return;
-    }
-
-    if (usePassword && !password) {
-        showToast('已勾选设置解压密码，但密码为空', 'error');
         return;
     }
 
@@ -39,25 +20,37 @@ function startBackup() {
             sysConfig: exportSysConfig,
             modelConfig: exportModelConfig,
             agentConfig: exportAgentConfig,
-            password: password
+            ttsConfig: exportTtsConfig
         })
     })
     .then(function(response) {
-        if (!response.ok) {
-            throw new Error('备份失败');
-        }
-        return response.blob();
+        return response.json().then(function(res) {
+            if (!response.ok || (res.code !== undefined && res.code !== 0 && res.code !== 200)) {
+                throw new Error(res.msg || '备份失败');
+            }
+            return res.data;
+        });
     })
-    .then(function(blob) {
+    .then(function(data) {
+        // Base64 解码为二进制，触发浏览器下载
+        var binary = atob(data.zipBase64);
+        var bytes = new Uint8Array(binary.length);
+        for (var i = 0; i < binary.length; i++) {
+            bytes[i] = binary.charCodeAt(i);
+        }
+        var blob = new Blob([bytes], { type: 'application/zip' });
         var url = window.URL.createObjectURL(blob);
         var a = document.createElement('a');
         a.href = url;
-        a.download = 'hopaw_backup_' + new Date().toISOString().slice(0, 10).replace(/-/g, '') + '.zip';
+        a.download = data.fileName;
         document.body.appendChild(a);
         a.click();
         document.body.removeChild(a);
         window.URL.revokeObjectURL(url);
-        showToast('备份成功', 'success');
+
+        // 弹窗显示后端生成的密码（仅显示一次）
+        document.getElementById('generatedPassword').value = data.password;
+        Modal.open('passwordModal');
     })
     .catch(function(error) {
         console.error('备份失败:', error);
@@ -67,6 +60,26 @@ function startBackup() {
         btn.disabled = false;
         btn.textContent = '备份数据';
     });
+}
+
+function copyGeneratedPassword() {
+    var input = document.getElementById('generatedPassword');
+    if (!input || !input.value) return;
+    // 现代浏览器 Clipboard API
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(input.value).then(function() {
+            showToast('密码已复制到剪贴板', 'success');
+        }).catch(function() {
+            input.select();
+            document.execCommand('copy');
+            showToast('密码已复制', 'success');
+        });
+    } else {
+        // 旧浏览器回退
+        input.select();
+        document.execCommand('copy');
+        showToast('密码已复制', 'success');
+    }
 }
 
 // ========== 导入备份 ==========
@@ -106,18 +119,18 @@ function confirmRestore() {
         body: formData
     })
     .then(function(response) {
-        if (!response.ok) {
-            return response.json().then(function(err) {
-                throw new Error(err.message || ('导入失败 (HTTP ' + response.status + ')'));
-            });
-        }
-        return response.json();
+        return response.json().then(function(res) {
+            if (!response.ok) {
+                throw new Error(res.msg || ('导入失败 (HTTP ' + response.status + ')'));
+            }
+            return res;
+        });
     })
     .then(function(res) {
         if (res.code !== undefined && res.code !== 0 && res.code !== 200) {
-            throw new Error(res.message || '导入失败');
+            throw new Error(res.msg || '导入失败');
         }
-        showToast('导入成功：' + (res.data || res.message || ''), 'success');
+        showToast('导入成功：' + (res.data || res.msg || ''), 'success');
         Modal.close('restoreModal');
     })
     .catch(function(error) {

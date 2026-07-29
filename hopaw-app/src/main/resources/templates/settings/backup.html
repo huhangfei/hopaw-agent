@@ -31,23 +31,22 @@
                 </label>
                 <span class="backup-option-desc">导出智能体表 (agents) 和头像配置表 (agent_avatar_config)</span>
             </div>
+
+            <div class="backup-option">
+                <label class="checkbox-wrapper">
+                    <input type="checkbox" id="exportTtsConfig" checked>
+                    <span class="checkbox-custom"></span>
+                    <span class="checkbox-label">TTS 配置</span>
+                </label>
+                <span class="backup-option-desc">导出语音合成配置表 (tts_config，含厂商凭证)</span>
+            </div>
         </div>
 
         <div class="backup-info">
             <div class="backup-info-item">
                 <span class="backup-info-icon">?</span>
-                <span>敏感字段（如 API 密钥）将以明文形式导出，加密密钥不会包含在备份文件中。请妥善保管备份文件。</span>
+                <span>备份文件将使用后端生成的 16 位高强度密码进行 AES-256 加密。下载后请妥善保存系统显示的密码，导入时需输入。</span>
             </div>
-        </div>
-
-        <div class="backup-option" style="margin-top: 16px; display: flex; align-items: center; gap: 10px;">
-            <label class="checkbox-wrapper">
-                <input type="checkbox" id="usePassword">
-                <span class="checkbox-custom"></span>
-                <span class="checkbox-label">设置解压密码</span>
-            </label>
-            <input type="password" id="backupPassword" placeholder="留空则不加密"
-                   style="flex: 1; padding: 6px 10px; border: 1px solid var(--border-color, #ccc); border-radius: 4px; display: none;">
         </div>
 
         <div class="settings-actions">
@@ -82,6 +81,35 @@
         <div class="modal-footer">
             <button class="btn-cancel" onclick="Modal.close('restoreModal')">取消</button>
             <button id="confirmRestoreBtn" class="btn-submit" onclick="confirmRestore()">导入</button>
+        </div>
+    </div>
+</div>
+
+<!-- 备份密码展示对话框 -->
+<div class="modal-overlay" id="passwordModal">
+    <div class="modal modal-narrow">
+        <div class="modal-header">
+            <h3>备份密码（请妥善保存）</h3>
+            <button class="modal-close" onclick="Modal.close('passwordModal')">&times;</button>
+        </div>
+        <div class="modal-body">
+            <p style="margin: 0 0 12px 0; color: #d97706; font-size: 13px;">
+                ⚠️ 密码仅显示一次，关闭后无法找回。导入备份时需输入该密码。
+            </p>
+            <div class="form-group">
+                <label>解压密码</label>
+                <div style="display: flex; gap: 8px;">
+                    <input type="text" id="generatedPassword" readonly
+                           style="flex: 1; font-family: 'Consolas', 'Monaco', monospace; font-size: 14px; font-weight: 600; letter-spacing: 1px;">
+                    <button type="button" onclick="copyGeneratedPassword()"
+                            style="padding: 6px 14px; border: 1px solid var(--border-color, #ccc); border-radius: 4px; background: #f3f4f6; cursor: pointer;">
+                        复制
+                    </button>
+                </div>
+            </div>
+        </div>
+        <div class="modal-footer">
+            <button class="btn-submit" onclick="Modal.close('passwordModal')">我已保存密码</button>
         </div>
     </div>
 </div>
