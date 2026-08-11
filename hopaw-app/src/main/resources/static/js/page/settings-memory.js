@@ -8,6 +8,9 @@ function onSettingsLoaded() {
     document.getElementById('vectorFlushThreshold').value = settingsCache['vector_flush_threshold'] || '10';
     document.getElementById('vectorFlushIntervalMs').value = settingsCache['vector_flush_interval_ms'] || '10000';
 
+    document.getElementById('promptIncludeUserProfile').checked = settingsCache['promptIncludeUserProfile'] !== 'false';
+    document.getElementById('promptIncludeTaskRecords').checked = settingsCache['promptIncludeTaskRecords'] !== 'false';
+
     // 先加载提供商列表，串行回填已选模型
     loadProviders().then(function() {
         var savedModelId = settingsCache['memory_ai_model_id'];
