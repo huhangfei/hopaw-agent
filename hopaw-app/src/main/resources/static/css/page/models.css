@@ -559,3 +559,141 @@ body.dark-theme .btn-test-model {
 body.dark-theme .btn-test-model:hover {
     background: #2d2d44;
 }
+
+/* ==================== ExtParams View Toggle ==================== */
+.ext-params-wrapper {
+    position: relative;
+}
+
+.ext-params-toggle {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin-bottom: 8px;
+}
+
+.ext-params-toggle-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 4px 10px;
+    border: 1px solid #d0d0d0;
+    background: #fff;
+    color: #666;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 12px;
+    transition: all 0.2s;
+}
+
+.ext-params-toggle-btn:hover {
+    border-color: #4CAF50;
+    color: #4CAF50;
+}
+
+.ext-params-toggle-btn.active {
+    background: #4CAF50;
+    color: #fff;
+    border-color: #4CAF50;
+}
+
+.ext-params-toggle-btn svg {
+    width: 14px;
+    height: 14px;
+}
+
+.ext-params-form-view {
+    display: none;
+    background: #f8f9fa;
+    border: 1px solid #e0e0e0;
+    border-radius: 8px;
+    padding: 12px;
+}
+
+.ext-params-form-view.active {
+    display: block;
+}
+
+.ext-params-json-view.hidden {
+    display: none;
+}
+
+.ext-params-form-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 8px;
+}
+
+.ext-params-form-row:last-child {
+    margin-bottom: 0;
+}
+
+.ext-params-form-row label {
+    flex: 0 0 140px;
+    font-size: 12px;
+    color: #555;
+    font-weight: 500;
+    text-align: right;
+}
+
+.ext-params-form-row input[type="number"],
+.ext-params-form-row input[type="text"],
+.ext-params-form-row select {
+    flex: 1;
+    padding: 5px 8px;
+    border: 1px solid #d0d0d0;
+    border-radius: 4px;
+    font-size: 12px;
+    background: #fff;
+    min-width: 0;
+}
+
+.ext-params-form-row input[type="checkbox"] {
+    width: auto;
+    margin: 0;
+}
+
+.ext-params-form-hint {
+    flex: 0 0 auto;
+    font-size: 11px;
+    color: #999;
+}
+
+/* Dark theme */
+body.dark-theme .ext-params-toggle-btn {
+    background: #2d2d44;
+    border-color: #3d3d5c;
+    color: #aaa;
+}
+
+body.dark-theme .ext-params-toggle-btn:hover {
+    border-color: #66bb6a;
+    color: #66bb6a;
+}
+
+body.dark-theme .ext-params-toggle-btn.active {
+    background: #4CAF50;
+    color: #fff;
+    border-color: #4CAF50;
+}
+
+body.dark-theme .ext-params-form-view {
+    background: #1e1e36;
+    border-color: #3d3d5c;
+}
+
+body.dark-theme .ext-params-form-row label {
+    color: #aaa;
+}
+
+body.dark-theme .ext-params-form-row input,
+body.dark-theme .ext-params-form-row select {
+    background: #2d2d44;
+    border-color: #3d3d5c;
+    color: #e0e0e0;
+}
+
+body.dark-theme .ext-params-form-hint {
+    color: #777;
+}

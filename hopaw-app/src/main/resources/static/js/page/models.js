@@ -101,6 +101,7 @@ function showAddProviderModal() {
     document.getElementById('providerSdkName').required = true;
     document.getElementById('providerSdkName').disabled = false;
     document.getElementById('providerSdkName').value = '';
+    resetExtParamsView('provider');
     Modal.open('providerModal');
 }
 
@@ -130,6 +131,7 @@ function showEditProviderModal(id) {
                 document.getElementById('providerSdkName').value = provider.sdkName || '';
             }
 
+            resetExtParamsView('provider');
             Modal.open('providerModal');
         })
         .catch(error => {
@@ -241,6 +243,7 @@ function showAddModelModal() {
     document.getElementById('modelCapabilitiesDisplay').innerHTML = '<span class="capability-hint">保存后将自动检测</span>';
     document.getElementById('modelVerifiedDisplay').innerHTML = '<span class="capability-hint">保存后将自动验证</span>';
     document.getElementById('modelExtParams').value = '';
+    resetExtParamsView('model');
     Modal.open('modelModal');
 }
 
@@ -272,6 +275,7 @@ function showEditModelModal(id) {
             document.getElementById('modelVerifiedDisplay').innerHTML = verifiedHtml;
 
             document.getElementById('modelExtParams').value = model.extParams || '';
+            resetExtParamsView('model');
             Modal.open('modelModal');
         })
         .catch(error => {
@@ -374,4 +378,139 @@ function deleteModel(id) {
         });
     });
 }
+
+// ==================== ExtParams View Toggle ====================
+
+var EXT_PARAMS_KEYS = [
+    { key: 'temperature', type: 'number' },
+    { key: 'timeoutSeconds', type: 'number' },
+    { key: 'reasoningEffort', type: 'text' },
+    { key: 'thinkingContentKey', type: 'text' },
+    { key: 'sendThinking', type: 'boolean' },
+    { key: 'returnThinking', type: 'boolean' },
+    { key: 'logRequests', type: 'boolean' },
+    { key: 'logResponses', type: 'boolean' },
+    { key: 'accumulateToolCallId', type: 'boolean' }
+];
+
+function resetExtParamsView(target) {
+    var jsonView = document.getElementById(target + 'ExtParamsJsonView');
+    var formView = document.getElementById(target + 'ExtParamsFormView');
+    var toggleBtns = jsonView.parentElement.querySelectorAll('.ext-params-toggle-btn');
+
+    jsonView.classList.remove('hidden');
+    formView.classList.remove('active');
+    toggleBtns.forEach(function(btn) { btn.classList.remove('active'); });
+    toggleBtns[0].classList.add('active');
+}
+
+function toggleExtParamsView(target, view) {
+    var jsonView = document.getElementById(target + 'ExtParamsJsonView');
+    var formView = document.getElementById(target + 'ExtParamsFormView');
+    var toggleBtns = jsonView.parentElement.querySelectorAll('.ext-params-toggle-btn');
+
+    toggleBtns.forEach(function(btn) { btn.classList.remove('active'); });
+
+    if (view === 'json') {
+        syncFormToExtParams(target);
+        jsonView.classList.remove('hidden');
+        formView.classList.remove('active');
+        toggleBtns[0].classList.add('active');
+    } else {
+        syncExtParamsToForm(target);
+        jsonView.classList.add('hidden');
+        formView.classList.add('active');
+        toggleBtns[1].classList.add('active');
+    }
+}
+
+function syncExtParamsToForm(target) {
+    var textarea = document.getElementById(target + 'ExtParams');
+    var jsonStr = textarea.value.trim();
+    var obj = {};
+
+    if (jsonStr) {
+        try {
+            obj = JSON.parse(jsonStr);
+        } catch (e) {
+            console.warn('JSON 解析失败，无法同步到表单');
+            return;
+        }
+    }
+
+    EXT_PARAMS_KEYS.forEach(function(def) {
+        var el = document.getElementById(target + 'Form_' + def.key);
+        if (!el) return;
+
+        var val = obj[def.key];
+        if (def.type === 'boolean') {
+            el.checked = val === true;
+        } else if (def.type === 'number') {
+            el.value = (val !== undefined && val !== null) ? val : '';
+        } else {
+            el.value = (val !== undefined && val !== null) ? val : '';
+        }
+    });
+}
+
+function syncFormToExtParams(target) {
+    var textarea = document.getElementById(target + 'ExtParams');
+    var jsonStr = textarea.value.trim();
+    var obj = {};
+
+    if (jsonStr) {
+        try {
+            obj = JSON.parse(jsonStr);
+        } catch (e) {
+            return;
+        }
+    }
+
+    EXT_PARAMS_KEYS.forEach(function(def) {
+        var el = document.getElementById(target + 'Form_' + def.key);
+        if (!el) return;
+
+        if (def.type === 'boolean') {
+            if (el.checked) {
+                obj[def.key] = true;
+            } else {
+                delete obj[def.key];
+            }
+        } else if (def.type === 'number') {
+            var numVal = el.value.trim();
+            if (numVal !== '') {
+                obj[def.key] = parseFloat(numVal);
+            } else {
+                delete obj[def.key];
+            }
+        } else {
+            var strVal = el.value.trim();
+            if (strVal !== '') {
+                obj[def.key] = strVal;
+            } else {
+                delete obj[def.key];
+            }
+        }
+    });
+
+    var hasKeys = Object.keys(obj).length > 0;
+    textarea.value = hasKeys ? JSON.stringify(obj, null, 2) : '';
+}
+
+function initExtParamsListeners(target) {
+    var formView = document.getElementById(target + 'ExtParamsFormView');
+    if (!formView) return;
+
+    formView.addEventListener('input', function() {
+        syncFormToExtParams(target);
+    });
+    formView.addEventListener('change', function() {
+        syncFormToExtParams(target);
+    });
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+    initExtParamsListeners('provider');
+    initExtParamsListeners('model');
+});
 

@@ -127,8 +127,75 @@
                     </div>
 
                     <div class="form-group">
-                        <label for="providerExtParams">扩展参数 (JSON)</label>
-                        <textarea id="providerExtParams" rows="4" th:placeholder='${defaultAiModelExtParamsJson}'></textarea>
+                        <label for="providerExtParams">扩展参数</label>
+                        <div class="ext-params-wrapper">
+                            <div class="ext-params-toggle">
+                                <button type="button" class="ext-params-toggle-btn active" onclick="toggleExtParamsView('provider', 'json')">
+                                    <svg viewBox="0 0 24 24" fill="currentColor"><path d="M14 2H6c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V8l-6-6zm-1 1.5L18.5 9H13V3.5zM6 20V4h5v7h7v9H6z"/></svg>
+                                    JSON
+                                </button>
+                                <button type="button" class="ext-params-toggle-btn" onclick="toggleExtParamsView('provider', 'form')">
+                                    <svg viewBox="0 0 24 24" fill="currentColor"><path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/></svg>
+                                    表单
+                                </button>
+                            </div>
+                            <div class="ext-params-json-view" id="providerExtParamsJsonView">
+                                <textarea id="providerExtParams" rows="4" th:placeholder='${defaultAiModelExtParamsJson}' oninput="syncExtParamsToJson('provider')"></textarea>
+                            </div>
+                            <div class="ext-params-form-view" id="providerExtParamsFormView">
+                                <div class="ext-params-form-row">
+                                    <label for="providerForm_temperature">temperature</label>
+                                    <input type="number" id="providerForm_temperature" step="0.1" min="0" max="2" placeholder="默认: 无">
+                                    <span class="ext-params-form-hint">0~2，控制随机性</span>
+                                </div>
+                                <div class="ext-params-form-row">
+                                    <label for="providerForm_timeoutSeconds">timeoutSeconds</label>
+                                    <input type="number" id="providerForm_timeoutSeconds" min="1" placeholder="默认: 120">
+                                    <span class="ext-params-form-hint">超时秒数</span>
+                                </div>
+                                <div class="ext-params-form-row">
+                                    <label for="providerForm_reasoningEffort">reasoningEffort</label>
+                                    <input type="text" id="providerForm_reasoningEffort" list="reasoningEffortOptions" placeholder="默认: medium">
+                                    <datalist id="reasoningEffortOptions">
+                                        <option value="low">low - 低</option>
+                                        <option value="medium">medium - 中</option>
+                                        <option value="high">high - 高</option>
+                                        <option value="max">max - 最大</option>
+                                    </datalist>
+                                    <span class="ext-params-form-hint">可输入自定义值</span>
+                                </div>
+                                <div class="ext-params-form-row">
+                                    <label for="providerForm_thinkingContentKey">thinkingContentKey</label>
+                                    <input type="text" id="providerForm_thinkingContentKey" placeholder="默认: reasoning_content">
+                                    <span class="ext-params-form-hint">思考内容字段名</span>
+                                </div>
+                                <div class="ext-params-form-row">
+                                    <label for="providerForm_sendThinking">sendThinking</label>
+                                    <input type="checkbox" id="providerForm_sendThinking">
+                                    <span class="ext-params-form-hint">默认: true</span>
+                                </div>
+                                <div class="ext-params-form-row">
+                                    <label for="providerForm_returnThinking">returnThinking</label>
+                                    <input type="checkbox" id="providerForm_returnThinking">
+                                    <span class="ext-params-form-hint">默认: true</span>
+                                </div>
+                                <div class="ext-params-form-row">
+                                    <label for="providerForm_logRequests">logRequests</label>
+                                    <input type="checkbox" id="providerForm_logRequests">
+                                    <span class="ext-params-form-hint">默认: false</span>
+                                </div>
+                                <div class="ext-params-form-row">
+                                    <label for="providerForm_logResponses">logResponses</label>
+                                    <input type="checkbox" id="providerForm_logResponses">
+                                    <span class="ext-params-form-hint">默认: false</span>
+                                </div>
+                                <div class="ext-params-form-row">
+                                    <label for="providerForm_accumulateToolCallId">accumulateToolCallId</label>
+                                    <input type="checkbox" id="providerForm_accumulateToolCallId">
+                                    <span class="ext-params-form-hint">默认: false</span>
+                                </div>
+                            </div>
+                        </div>
                     </div>
                 </form>
             </div>
@@ -166,8 +233,69 @@
                         </div>
                     </div>
                     <div class="form-group">
-                        <label for="modelExtParams">扩展参数 (JSON)</label>
-                        <textarea id="modelExtParams" rows="4" th:placeholder='${defaultAiModelExtParamsJson}'></textarea>
+                        <label for="modelExtParams">扩展参数</label>
+                        <div class="ext-params-wrapper">
+                            <div class="ext-params-toggle">
+                                <button type="button" class="ext-params-toggle-btn active" onclick="toggleExtParamsView('model', 'json')">
+                                    <svg viewBox="0 0 24 24" fill="currentColor"><path d="M14 2H6c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V8l-6-6zm-1 1.5L18.5 9H13V3.5zM6 20V4h5v7h7v9H6z"/></svg>
+                                    JSON
+                                </button>
+                                <button type="button" class="ext-params-toggle-btn" onclick="toggleExtParamsView('model', 'form')">
+                                    <svg viewBox="0 0 24 24" fill="currentColor"><path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/></svg>
+                                    表单
+                                </button>
+                            </div>
+                            <div class="ext-params-json-view" id="modelExtParamsJsonView">
+                                <textarea id="modelExtParams" rows="4" th:placeholder='${defaultAiModelExtParamsJson}' oninput="syncExtParamsToJson('model')"></textarea>
+                            </div>
+                            <div class="ext-params-form-view" id="modelExtParamsFormView">
+                                <div class="ext-params-form-row">
+                                    <label for="modelForm_temperature">temperature</label>
+                                    <input type="number" id="modelForm_temperature" step="0.1" min="0" max="2" placeholder="默认: 无">
+                                    <span class="ext-params-form-hint">0~2，控制随机性</span>
+                                </div>
+                                <div class="ext-params-form-row">
+                                    <label for="modelForm_timeoutSeconds">timeoutSeconds</label>
+                                    <input type="number" id="modelForm_timeoutSeconds" min="1" placeholder="默认: 120">
+                                    <span class="ext-params-form-hint">超时秒数</span>
+                                </div>
+                                <div class="ext-params-form-row">
+                                    <label for="modelForm_reasoningEffort">reasoningEffort</label>
+                                    <input type="text" id="modelForm_reasoningEffort" list="reasoningEffortOptions" placeholder="默认: medium">
+                                    <span class="ext-params-form-hint">可输入自定义值</span>
+                                </div>
+                                <div class="ext-params-form-row">
+                                    <label for="modelForm_thinkingContentKey">thinkingContentKey</label>
+                                    <input type="text" id="modelForm_thinkingContentKey" placeholder="默认: reasoning_content">
+                                    <span class="ext-params-form-hint">思考内容字段名</span>
+                                </div>
+                                <div class="ext-params-form-row">
+                                    <label for="modelForm_sendThinking">sendThinking</label>
+                                    <input type="checkbox" id="modelForm_sendThinking">
+                                    <span class="ext-params-form-hint">默认: true</span>
+                                </div>
+                                <div class="ext-params-form-row">
+                                    <label for="modelForm_returnThinking">returnThinking</label>
+                                    <input type="checkbox" id="modelForm_returnThinking">
+                                    <span class="ext-params-form-hint">默认: true</span>
+                                </div>
+                                <div class="ext-params-form-row">
+                                    <label for="modelForm_logRequests">logRequests</label>
+                                    <input type="checkbox" id="modelForm_logRequests">
+                                    <span class="ext-params-form-hint">默认: false</span>
+                                </div>
+                                <div class="ext-params-form-row">
+                                    <label for="modelForm_logResponses">logResponses</label>
+                                    <input type="checkbox" id="modelForm_logResponses">
+                                    <span class="ext-params-form-hint">默认: false</span>
+                                </div>
+                                <div class="ext-params-form-row">
+                                    <label for="modelForm_accumulateToolCallId">accumulateToolCallId</label>
+                                    <input type="checkbox" id="modelForm_accumulateToolCallId">
+                                    <span class="ext-params-form-hint">默认: false</span>
+                                </div>
+                            </div>
+                        </div>
                     </div>
                 </form>
             </div>
