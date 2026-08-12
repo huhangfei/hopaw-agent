@@ -5,11 +5,14 @@ import com.agent.hopaw.avatar.mapper.AvatarConfigMapper;
 import com.agent.hopaw.infra.mapper.AiModelMapper;
 import com.agent.hopaw.infra.mapper.AiModelProviderMapper;
 import com.agent.hopaw.infra.mapper.AgentMapper;
+import com.agent.hopaw.infra.mapper.LongTermMemoryMapper;
 import com.agent.hopaw.infra.mapper.SysConfigMapper;
 import com.agent.hopaw.infra.mapper.TtsConfigMapper;
+import com.agent.hopaw.infra.memory.ILongTermMemoryService;
 import com.agent.hopaw.infra.model.entity.AiModel;
 import com.agent.hopaw.infra.model.entity.AiModelProvider;
 import com.agent.hopaw.infra.model.entity.Agent;
+import com.agent.hopaw.infra.model.entity.LongTermMemory;
 import com.agent.hopaw.infra.model.entity.SysConfig;
 import com.agent.hopaw.infra.model.entity.TtsConfig;
 import com.agent.hopaw.infra.util.AesEncryptionUtil;
@@ -50,6 +53,8 @@ public class BackupService {
     private final AgentMapper agentMapper;
     private final AvatarConfigMapper avatarConfigMapper;
     private final TtsConfigMapper ttsConfigMapper;
+    private final LongTermMemoryMapper longTermMemoryMapper;
+    private final ILongTermMemoryService longTermMemoryService;
     private final AesEncryptionUtil aesEncryptionUtil;
     private final Path encryptionKeyPath;
 
@@ -59,6 +64,8 @@ public class BackupService {
                          AgentMapper agentMapper,
                          AvatarConfigMapper avatarConfigMapper,
                          TtsConfigMapper ttsConfigMapper,
+                         LongTermMemoryMapper longTermMemoryMapper,
+                         ILongTermMemoryService longTermMemoryService,
                          AesEncryptionUtil aesEncryptionUtil) {
         this.sysConfigMapper = sysConfigMapper;
         this.aiModelProviderMapper = aiModelProviderMapper;
@@ -66,6 +73,8 @@ public class BackupService {
         this.agentMapper = agentMapper;
         this.avatarConfigMapper = avatarConfigMapper;
         this.ttsConfigMapper = ttsConfigMapper;
+        this.longTermMemoryMapper = longTermMemoryMapper;
+        this.longTermMemoryService = longTermMemoryService;
         this.aesEncryptionUtil = aesEncryptionUtil;
         this.encryptionKeyPath = Paths.get(System.getProperty("user.home"), ".hopaw", "encryption.key");
     }
@@ -80,7 +89,7 @@ public class BackupService {
      * 前端下载文件后必须向用户展示该密码以便导入时输入。
      */
     public BackupResult backup(boolean exportSysConfig, boolean exportModelConfig, boolean exportAgentConfig,
-                      boolean exportTtsConfig) throws Exception {
+                      boolean exportTtsConfig, boolean exportMemory) throws Exception {
         Map<String, byte[]> files = new LinkedHashMap<>();
 
         if (exportSysConfig) {
@@ -109,6 +118,12 @@ public class BackupService {
             // 备份原样导出；导入时也原样写回。密钥包内的 encryption.key 仍用于其他加密字段。
             List<TtsConfig> ttsConfigs = ttsConfigMapper.findAll();
             files.put("tts_config.json", toJsonBytes(ttsConfigs));
+        }
+
+        if (exportMemory) {
+            // 长时记忆全量导出（所有用户），导入时重新生成向量
+            List<LongTermMemory> memories = longTermMemoryMapper.findAll();
+            files.put("long_term_memory.json", toJsonBytes(memories));
         }
 
         // 打包本机加密密钥（~/.hopaw/encryption.key），导入时还原以正确解密加密字段
@@ -264,6 +279,14 @@ public class BackupService {
                 summary.append("tts_config: ").append(n).append(" 条\n");
             }
 
+            // long_term_memory.json（长时记忆，恢复时重新生成向量）
+            Path memoryFile = tempDir.resolve("long_term_memory.json");
+            if (Files.exists(memoryFile)) {
+                int n = importLongTermMemories(memoryFile);
+                total += n;
+                summary.append("long_term_memory: ").append(n).append(" 条\n");
+            }
+
             summary.insert(0, "导入完成，共 " + total + " 条记录\n");
             return summary.toString();
         } finally {
@@ -390,6 +413,16 @@ public class BackupService {
             count++;
         }
         return count;
+    }
+
+    private int importLongTermMemories(Path file) throws Exception {
+        String json = Files.readString(file, StandardCharsets.UTF_8);
+        List<LongTermMemory> memories = JSON.parseArray(json, LongTermMemory.class);
+        if (memories == null || memories.isEmpty()) {
+            return 0;
+        }
+        // 复用长时记忆导入逻辑：重新生成向量并保留 createTime/parentId 关系
+        return longTermMemoryService.restoreUserMemories(memories);
     }
 
     private static void deleteRecursive(File f) {

@@ -29,6 +29,8 @@ public interface LongTermMemoryMapper {
 
     int deleteByUserId(@Param("userId") String userId);
 
+    List<LongTermMemory> findAll();
+
     int updateParentId(@Param("id") Long id, @Param("parentId") Long parentId);
 
     int deleteBySessionIdAndUserIdAndMemoryTypeAndEndDateTime(@Param("sessionId") String sessionId, @Param("userId") String userId, @Param("memoryType") String memoryType, @Param("endDateTime") LocalDateTime endDateTime);

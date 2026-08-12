@@ -156,13 +156,14 @@ public class SettingsController {
             boolean exportModelConfig = Boolean.TRUE.equals(body.get("modelConfig"));
             boolean exportAgentConfig = Boolean.TRUE.equals(body.get("agentConfig"));
             boolean exportTtsConfig = Boolean.TRUE.equals(body.get("ttsConfig"));
+            boolean exportMemory = Boolean.TRUE.equals(body.get("memory"));
 
-            if (!exportSysConfig && !exportModelConfig && !exportAgentConfig && !exportTtsConfig) {
+            if (!exportSysConfig && !exportModelConfig && !exportAgentConfig && !exportTtsConfig && !exportMemory) {
                 return ResponseBean.fail("请至少选择一项备份内容");
             }
 
             BackupService.BackupResult result = backupService.backup(
-                    exportSysConfig, exportModelConfig, exportAgentConfig, exportTtsConfig);
+                    exportSysConfig, exportModelConfig, exportAgentConfig, exportTtsConfig, exportMemory);
             File zipFile = result.zipPath().toFile();
             byte[] zipBytes = Files.readAllBytes(result.zipPath());
             String zipBase64 = java.util.Base64.getEncoder().encodeToString(zipBytes);

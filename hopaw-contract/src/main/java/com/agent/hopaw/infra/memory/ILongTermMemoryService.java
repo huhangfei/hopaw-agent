@@ -68,4 +68,11 @@ public interface ILongTermMemoryService extends ILongTermMemoryProvider{
                       InvocationParameters invocationParameters);
 
     String getMemoryOrganizingRules();
+
+    /**
+     * 备份恢复：批量恢复长时记忆（重新生成向量，保留原始 createTime/parentId 关系）
+     *
+     * @return 成功恢复条数
+     */
+    int restoreUserMemories(List<LongTermMemory> memories);
 }

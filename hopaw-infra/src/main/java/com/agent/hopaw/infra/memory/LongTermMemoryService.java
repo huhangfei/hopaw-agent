@@ -17,7 +17,9 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 import java.util.function.Function;
 import java.util.stream.Collectors;
@@ -440,5 +442,49 @@ public class LongTermMemoryService implements ILongTermMemoryService {
         memoryEntity.setCreateTime(LocalDateTime.now());
         memoryEntity.setEmbeddingId(storeId);
         longTermMemoryMapper.insert(memoryEntity);
+    }
+
+    @Override
+    public int restoreUserMemories(List<LongTermMemory> memories) {
+        if (memories == null || memories.isEmpty()) {
+            return 0;
+        }
+        // 按 id 升序插入，保证父记录先于子记录，便于重建 parentId 关系
+        List<LongTermMemory> sorted = memories.stream()
+                .filter(m -> m != null && m.getMemoryType() != null
+                        && UserMemoryTypeEnum.fromCode(m.getMemoryType()) != null)
+                .sorted((a, b) -> {
+                    Long idA = a.getId() != null ? a.getId() : Long.MAX_VALUE;
+                    Long idB = b.getId() != null ? b.getId() : Long.MAX_VALUE;
+                    return idA.compareTo(idB);
+                })
+                .collect(Collectors.toList());
+
+        // 旧 id -> 新 id 映射（备份恢复后自增主键可能变化）
+        Map<Long, Long> idMapping = new HashMap<>();
+        int count = 0;
+        for (LongTermMemory m : sorted) {
+            UserMemoryTypeEnum typeEnum = UserMemoryTypeEnum.fromCode(m.getMemoryType());
+            LongTermMemory entity = new LongTermMemory();
+            entity.setSessionId(m.getSessionId());
+            entity.setUserId(m.getUserId());
+            entity.setMemoryType(m.getMemoryType());
+            entity.setSummary(m.getSummary());
+            entity.setMemory(m.getMemory());
+            entity.setCreateTime(m.getCreateTime() != null ? m.getCreateTime() : LocalDateTime.now());
+            if (m.getParentId() != null) {
+                entity.setParentId(idMapping.getOrDefault(m.getParentId(), null));
+            }
+            String storeId = vectorMemoryService.store(
+                    (m.getSummary() != null ? m.getSummary() : "") + "\n" + (m.getMemory() != null ? m.getMemory() : ""),
+                    m.getSessionId(), m.getUserId(), typeEnum, entity.getCreateTime());
+            entity.setEmbeddingId(storeId);
+            longTermMemoryMapper.insert(entity);
+            if (m.getId() != null) {
+                idMapping.put(m.getId(), entity.getId());
+            }
+            count++;
+        }
+        return count;
     }
 }

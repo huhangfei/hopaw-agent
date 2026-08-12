@@ -4,8 +4,9 @@ function startBackup() {
     var exportModelConfig = document.getElementById('exportModelConfig').checked;
     var exportAgentConfig = document.getElementById('exportAgentConfig').checked;
     var exportTtsConfig = document.getElementById('exportTtsConfig').checked;
+    var exportMemory = document.getElementById('exportMemory').checked;
 
-    if (!exportSysConfig && !exportModelConfig && !exportAgentConfig && !exportTtsConfig) {
+    if (!exportSysConfig && !exportModelConfig && !exportAgentConfig && !exportTtsConfig && !exportMemory) {
         showToast('请至少选择一项备份内容', 'error');
         return;
     }
@@ -20,7 +21,8 @@ function startBackup() {
             sysConfig: exportSysConfig,
             modelConfig: exportModelConfig,
             agentConfig: exportAgentConfig,
-            ttsConfig: exportTtsConfig
+            ttsConfig: exportTtsConfig,
+            memory: exportMemory
         })
     })
     .then(function(response) {
