@@ -1,0 +1,108 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.agent.hopaw.infra.mapper.AttachmentMapper">
+
+    <resultMap id="AttachmentResultMap" type="com.agent.hopaw.infra.model.entity.Attachment">
+        <id property="id" column="id"/>
+        <result property="originalName" column="original_name"/>
+        <result property="storageName" column="storage_name"/>
+        <result property="url" column="url"/>
+        <result property="fileType" column="file_type"/>
+        <result property="fileExtension" column="file_extension"/>
+        <result property="fileSize" column="file_size"/>
+        <result property="mimeType" column="mime_type"/>
+        <result property="source" column="source"/>
+        <result property="bizId" column="biz_id"/>
+        <result property="tags" column="tags"/>
+        <result property="remark" column="remark"/>
+        <result property="userId" column="user_id"/>
+        <result property="storagePath" column="storage_path"/>
+        <result property="createTime" column="create_time"/>
+        <result property="updateTime" column="update_time"/>
+    </resultMap>
+
+    <sql id="allColumns">
+        id, original_name, storage_name, url, file_type, file_extension, file_size, mime_type,
+        source, biz_id, tags, remark, user_id, storage_path, create_time, update_time
+    </sql>
+
+    <insert id="insert" parameterType="com.agent.hopaw.infra.model.entity.Attachment">
+        INSERT INTO attachments (original_name, storage_name, url, file_type, file_extension, file_size, mime_type,
+                                 source, biz_id, tags, remark, user_id, storage_path)
+        VALUES (#{originalName}, #{storageName}, #{url}, #{fileType}, #{fileExtension}, #{fileSize}, #{mimeType},
+                #{source}, #{bizId}, #{tags}, #{remark}, #{userId}, #{storagePath})
+        <selectKey resultType="long" keyProperty="id" order="AFTER">
+            SELECT last_insert_rowid()
+        </selectKey>
+    </insert>
+
+    <update id="update" parameterType="com.agent.hopaw.infra.model.entity.Attachment">
+        UPDATE attachments
+        SET tags = #{tags},
+            remark = #{remark},
+            source = #{source},
+            biz_id = #{bizId},
+            update_time = CURRENT_TIMESTAMP
+        WHERE id = #{id}
+    </update>
+
+    <delete id="deleteById">
+        DELETE FROM attachments WHERE id = #{id}
+    </delete>
+
+    <select id="findById" resultMap="AttachmentResultMap">
+        SELECT <include refid="allColumns"/>
+        FROM attachments
+        WHERE id = #{id}
+    </select>
+
+    <select id="findByUserIdWithFilters" resultMap="AttachmentResultMap">
+        SELECT <include refid="allColumns"/>
+        FROM attachments
+        WHERE user_id = #{userId}
+        <if test="keyword != null and keyword != ''">
+            AND (original_name LIKE CONCAT('%', #{keyword}, '%') OR remark LIKE CONCAT('%', #{keyword}, '%'))
+        </if>
+        <if test="source != null and source != ''">
+            AND source = #{source}
+        </if>
+        <if test="tag != null and tag != ''">
+            AND (tags = #{tag} OR tags LIKE CONCAT(#{tag}, ',%') OR tags LIKE CONCAT('%,', #{tag}, ',%') OR tags LIKE CONCAT('%,', #{tag}))
+        </if>
+        <if test="fileType != null and fileType != ''">
+            AND file_type = #{fileType}
+        </if>
+        ORDER BY id DESC
+        LIMIT #{size} OFFSET #{offset}
+    </select>
+
+    <select id="countByUserIdWithFilters" resultType="int">
+        SELECT COUNT(*)
+        FROM attachments
+        WHERE user_id = #{userId}
+        <if test="keyword != null and keyword != ''">
+            AND (original_name LIKE CONCAT('%', #{keyword}, '%') OR remark LIKE CONCAT('%', #{keyword}, '%'))
+        </if>
+        <if test="source != null and source != ''">
+            AND source = #{source}
+        </if>
+        <if test="tag != null and tag != ''">
+            AND (tags = #{tag} OR tags LIKE CONCAT(#{tag}, ',%') OR tags LIKE CONCAT('%,', #{tag}, ',%') OR tags LIKE CONCAT('%,', #{tag}))
+        </if>
+        <if test="fileType != null and fileType != ''">
+            AND file_type = #{fileType}
+        </if>
+    </select>
+
+    <select id="findByBizTypeAndBizId" resultMap="AttachmentResultMap">
+        SELECT <include refid="allColumns"/>
+        FROM attachments
+        WHERE source = #{source} AND biz_id = #{bizId}
+        ORDER BY id DESC
+    </select>
+
+    <select id="countByStoragePath" resultType="int">
+        SELECT COUNT(*) FROM attachments WHERE storage_path = #{storagePath}
+    </select>
+
+</mapper>

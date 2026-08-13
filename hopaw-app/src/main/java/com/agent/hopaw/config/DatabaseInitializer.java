@@ -320,6 +320,28 @@ public class DatabaseInitializer implements CommandLineRunner {
                     "update_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP" +
                     ")");
 
+            // 附件管理表
+            stmt.execute("CREATE TABLE IF NOT EXISTS attachments (" +
+                    "id INTEGER PRIMARY KEY AUTOINCREMENT, " +
+                    "original_name TEXT, " +
+                    "storage_name TEXT, " +
+                    "url TEXT, " +
+                    "file_type TEXT, " +
+                    "file_extension TEXT, " +
+                    "file_size INTEGER, " +
+                    "mime_type TEXT, " +
+                    "source TEXT DEFAULT 'upload', " +
+                    "biz_id INTEGER, " +
+                    "tags TEXT, " +
+                    "remark TEXT, " +
+                    "user_id TEXT, " +
+                    "storage_path TEXT, " +
+                    "create_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP, " +
+                    "update_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP" +
+                    ")");
+            stmt.execute("CREATE INDEX IF NOT EXISTS idx_attachments_user ON attachments(user_id)");
+            stmt.execute("CREATE INDEX IF NOT EXISTS idx_attachments_source ON attachments(source, biz_id)");
+
             log.info("Database tables created");
         }
     }

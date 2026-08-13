@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+      xmlns:th="http://www.thymeleaf.org"
+      layout:decorate="~{layouts/default}">
+<head>
+    <title>附件管理 - HoPaw</title>
+</head>
+<body>
+<div layout:fragment="pageTitle">📎 HoPaw - 附件管理</div>
+
+<main layout:fragment="content" class="attachments-container">
+    <div class="attachments-toolbar">
+        <div class="toolbar-left">
+            <div class="search-box">
+                <input type="text" id="attachmentKeyword" placeholder="搜索文件名或备注..." class="search-input">
+            </div>
+            <select id="attachmentSourceFilter" class="filter-select">
+                <option value="">全部来源</option>
+                <option value="upload">附件上传</option>
+                <option value="task">任务附件</option>
+                <option value="project">项目附件</option>
+            </select>
+            <select id="attachmentTypeFilter" class="filter-select">
+                <option value="">全部类型</option>
+                <option value="image">图片</option>
+                <option value="video">视频</option>
+                <option value="audio">音频</option>
+                <option value="pdf">PDF</option>
+                <option value="markdown">Markdown</option>
+                <option value="text">文本</option>
+                <option value="file">其他</option>
+            </select>
+            <input type="text" id="attachmentTagFilter" placeholder="按标签筛选..." class="filter-input">
+            <button class="btn btn-primary btn-sm" onclick="doSearch()">搜索</button>
+        </div>
+        <div class="toolbar-right">
+            <button class="btn btn-primary" onclick="document.getElementById('attachmentFileInput').click()">
+                <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                    <polyline points="17 8 12 3 7 8"/>
+                    <line x1="12" y1="3" x2="12" y2="15"/>
+                </svg>
+                批量上传
+            </button>
+            <input type="file" id="attachmentFileInput" multiple style="display:none" onchange="handleFileUpload(this.files)">
+        </div>
+    </div>
+
+    <div id="attachmentUploadProgress" class="upload-progress" style="display:none">
+        <div class="upload-progress-bar"></div>
+        <span class="upload-progress-text">上传中...</span>
+    </div>
+
+    <div id="attachmentList" class="attachment-grid">
+    </div>
+
+    <div id="attachmentPagination" class="pagination">
+    </div>
+
+    <!-- 预览模态框 -->
+    <div class="modal-overlay" id="attachmentPreviewModal" style="display:none" onclick="closePreviewModal(event)">
+        <div class="modal modal-large" onclick="event.stopPropagation()">
+            <div class="modal-header">
+                <h3 id="previewModalTitle">预览</h3>
+                <button class="modal-close-btn" onclick="closePreviewModalDirect()">&times;</button>
+            </div>
+            <div class="modal-body" id="previewModalBody">
+            </div>
+        </div>
+    </div>
+
+    <!-- 编辑模态框 -->
+    <div class="modal-overlay" id="attachmentEditModal" style="display:none" onclick="closeEditModal(event)">
+        <div class="modal" onclick="event.stopPropagation()" style="max-width:500px">
+            <div class="modal-header">
+                <h3>编辑附件</h3>
+                <button class="modal-close-btn" onclick="closeEditModalDirect()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label>文件名</label>
+                    <input type="text" id="editOriginalName" class="form-input" readonly>
+                </div>
+                <div class="form-group">
+                    <label>来源</label>
+                    <select id="editSource" class="form-input">
+                        <option value="upload">附件上传</option>
+                        <option value="task">任务附件</option>
+                        <option value="project">项目附件</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>标签（多个用逗号分隔）</label>
+                    <input type="text" id="editTags" class="form-input" placeholder="如：重要,参考,草稿">
+                </div>
+                <div class="form-group">
+                    <label>备注</label>
+                    <textarea id="editRemark" class="form-input" rows="3" placeholder="添加备注..."></textarea>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="closeEditModalDirect()">取消</button>
+                <button class="btn btn-primary" onclick="saveAttachmentEdit()">保存</button>
+            </div>
+        </div>
+    </div>
+</main>
+
+<th:block layout:fragment="extraCss">
+    <link rel="stylesheet" th:href="@{/css/page/attachments.css}">
+</th:block>
+
+<th:block layout:fragment="extraScripts">
+    <script th:src="@{/js/marked.min.js}"></script>
+    <script th:src="@{/js/page/attachments.js}"></script>
+</th:block>
+</body>
+</html>

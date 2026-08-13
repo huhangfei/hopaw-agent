@@ -150,20 +150,8 @@
                 </svg>
                 <span class="menu-label">工具管理</span>
             </a>
-            <a href="/tasks" class="menu-btn" th:classappend="${activePage == 'tasks' ? 'active' : ''}" title="定时任务">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
-                    <circle cx="12" cy="12" r="10"/>
-                    <polyline points="12 6 12 12 16 14"/>
-                </svg>
-                <span class="menu-label">定时任务</span>
-            </a>
-            <a href="/token-usage" class="menu-btn" th:classappend="${activePage == 'token-usage' ? 'active' : ''}" title="Token 使用">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
-                    <line x1="12" y1="1" x2="12" y2="23"/>
-                    <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/>
-                </svg>
-                <span class="menu-label">Token 使用</span>
-            </a>
+
+
             <a href="/skills" class="menu-btn" th:classappend="${activePage == 'skills' ? 'active' : ''}" title="技能管理">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
                     <path d="M13 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"/>
@@ -174,7 +162,6 @@
                 </svg>
                 <span class="menu-label">技能管理</span>
             </a>
-
             <a href="/mcp" class="menu-btn" th:classappend="${activePage == 'mcp' ? 'active' : ''}" title="连接工具">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
                     <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/>
@@ -182,7 +169,26 @@
                 </svg>
                 <span class="menu-label">MCP工具</span>
             </a>
-
+            <a href="/token-usage" class="menu-btn" th:classappend="${activePage == 'token-usage' ? 'active' : ''}" title="Token 使用">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                    <line x1="12" y1="1" x2="12" y2="23"/>
+                    <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/>
+                </svg>
+                <span class="menu-label">Token 使用</span>
+            </a>
+            <a href="/tasks" class="menu-btn" th:classappend="${activePage == 'tasks' ? 'active' : ''}" title="定时任务">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                    <circle cx="12" cy="12" r="10"/>
+                    <polyline points="12 6 12 12 16 14"/>
+                </svg>
+                <span class="menu-label">定时任务</span>
+            </a>
+            <a href="/attachments" class="menu-btn" th:classappend="${activePage == 'attachments' ? 'active' : ''}" title="附件管理">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"/>
+                </svg>
+                <span class="menu-label">附件管理</span>
+            </a>
             <a href="/accounts" class="menu-btn" th:classappend="${activePage == 'accounts' ? 'active' : ''}" title="账户管理">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
                     <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
@@ -192,8 +198,6 @@
                 </svg>
                 <span class="menu-label">账户管理</span>
             </a>
-
-
             <a href="/settings" class="menu-btn" th:classappend="${activePage == 'settings' ? 'active' : ''}" title="设置">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
                     <circle cx="12" cy="12" r="3"/>
