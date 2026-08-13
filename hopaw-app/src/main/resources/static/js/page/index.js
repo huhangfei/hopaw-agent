@@ -1747,14 +1747,15 @@ function handleFiles(fileList) {
 
 function uploadFile(file) {
     var formData = new FormData();
-    formData.append('file', file);
+    formData.append('files', file);
+    formData.append('source', 'chat');
 
     // 创建预览占位（上传中）
     var tempId = 'file_' + Date.now() + '_' + Math.random().toString(36).substr(2, 6);
     var previewItem = createPreviewItem(tempId, null, true);
     document.getElementById('filePreviewArea').appendChild(previewItem);
 
-    fetch('/api/upload', {
+    fetch('/api/attachments/upload', {
         method: 'POST',
         body: formData
     })
@@ -1762,11 +1763,12 @@ function uploadFile(file) {
     .then(function(resp) {
         // 移除占位
         removePreviewItem(tempId);
-        if (resp.code === 200) {
+        if (resp.code === 200 && resp.data && resp.data.length > 0) {
+            var att = resp.data[0];
             var fileInfo = {
-                url: resp.data.url,
-                type: resp.data.type,
-                name: file.name
+                url: att.url,
+                type: att.fileType,
+                name: att.originalName
             };
             attachedFiles.push(fileInfo);
             renderFilePreview(fileInfo);

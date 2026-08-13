@@ -18,6 +18,7 @@
 
     var sourceLabels = {
         upload: '附件上传',
+        chat: '会话文件',
         task: '任务附件',
         project: '项目附件'
     };
@@ -104,6 +105,7 @@
 
         var sourceLabel = sourceLabels[item.source] || item.source || '附件上传';
         var fileSize = formatFileSize(item.fileSize);
+        var uploadTime = formatTime(item.createTime);
 
         return '<div class="attachment-card">' +
             '<div class="attachment-card-thumb" onclick="previewAttachment(' + item.id + ')">' +
@@ -117,6 +119,8 @@
             '<span>' + fileSize + '</span>' +
             '<span>·</span>' +
             '<span>' + escapeHtml(sourceLabel) + '</span>' +
+            '<span>·</span>' +
+            '<span>' + escapeHtml(uploadTime) + '</span>' +
             '</div>' +
             (tagsHtml ? '<div class="attachment-card-tags">' + tagsHtml + '</div>' : '') +
             '</div>' +
@@ -248,6 +252,8 @@
             '<span class="info-item">大小: ' + formatFileSize(item.fileSize) + '</span>' +
             '<span class="info-item">类型: ' + escapeHtml(item.fileExtension || '') + '</span>' +
             '<span class="info-item">来源: ' + escapeHtml(sourceLabels[item.source] || item.source || '') + '</span>' +
+            '<span class="info-item">创建时间: ' + escapeHtml(formatTime(item.createTime)) + '</span>' +
+            '<span class="info-item">更新时间: ' + escapeHtml(formatTime(item.updateTime)) + '</span>' +
             '<a class="preview-download" href="' + item.url + '" target="_blank" download="' + escapeHtml(item.originalName) + '">下载文件</a>' +
             '</div>';
         content += '</div>';
@@ -374,6 +380,15 @@
         if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
         if (bytes < 1024 * 1024 * 1024) return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
         return (bytes / (1024 * 1024 * 1024)).toFixed(1) + ' GB';
+    }
+
+    function formatTime(timeStr) {
+        if (!timeStr) return '';
+        var d = new Date(timeStr);
+        if (isNaN(d.getTime())) return timeStr;
+        var pad = function (n) { return n < 10 ? '0' + n : n; };
+        return d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate()) +
+            ' ' + pad(d.getHours()) + ':' + pad(d.getMinutes());
     }
 
     function escapeHtml(str) {

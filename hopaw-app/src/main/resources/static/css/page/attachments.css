@@ -220,8 +220,10 @@
     font-size: 11px;
     color: #9ca3af;
     display: flex;
-    gap: 8px;
+    gap: 3px;
     align-items: center;
+    white-space: nowrap;
+    overflow: hidden;
 }
 
 .attachment-card-tags {
