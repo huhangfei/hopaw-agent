@@ -1,0 +1,684 @@
+/* ========== 任务详情独立页面样式 ========== */
+body {
+    margin: 0;
+    background: #f5f6fa;
+    color: #333;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+}
+
+.task-detail-container {
+    padding: 20px;
+    width: 100%;
+    max-width: 1600px;
+    margin: 0 auto;
+    box-sizing: border-box;
+}
+
+.task-detail-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 12px;
+    margin-bottom: 20px;
+}
+
+.task-detail-header-left {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex-wrap: wrap;
+    min-width: 0;
+}
+
+.task-detail-header h2 {
+    font-size: 22px;
+    color: #333;
+    margin: 0;
+    word-break: break-word;
+}
+
+.task-detail-close-btn {
+    background: transparent;
+    border: none;
+    color: #999;
+    cursor: pointer;
+    padding: 6px;
+    border-radius: 6px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background 0.2s, color 0.2s;
+    flex-shrink: 0;
+}
+
+.task-detail-close-btn:hover {
+    background: #f0f0f0;
+    color: #333;
+}
+
+/* ========== 状态标签 ========== */
+.task-status-tag {
+    display: inline-block;
+    padding: 2px 10px;
+    border-radius: 12px;
+    font-size: 12px;
+    font-weight: 500;
+    color: #fff;
+    background: #6b7280;
+    white-space: nowrap;
+}
+
+.task-status-tag.status-pending { background: #6b7280; }
+.task-status-tag.status-pending_execution { background: #f59e0b; }
+.task-status-tag.status-processing { background: #3b82f6; }
+.task-status-tag.status-pending_acceptance { background: #8b5cf6; }
+.task-status-tag.status-completed { background: #10b981; }
+.task-status-tag.status-failed { background: #ef4444; }
+.task-status-tag.status-rejected { background: #ef4444; }
+.task-status-tag.status-closed { background: #9ca3af; }
+
+/* ========== 区块 ========== */
+.task-detail-section {
+    background: #fff;
+    border-radius: 8px;
+    padding: 16px;
+    margin-bottom: 20px;
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.05);
+}
+
+.task-detail-section-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 12px;
+    gap: 12px;
+}
+
+.task-detail-section-title {
+    font-size: 15px;
+    font-weight: 600;
+    color: #333;
+    margin: 0 0 12px 0;
+}
+
+.task-detail-section-header .task-detail-section-title {
+    margin-bottom: 0;
+}
+
+/* ========== 基本信息 ========== */
+.task-detail-info-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: 12px;
+}
+
+.task-detail-info-item {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.task-detail-info-item .info-label {
+    font-size: 12px;
+    color: #999;
+}
+
+.task-detail-info-item .info-value {
+    font-size: 14px;
+    color: #333;
+    word-break: break-word;
+}
+
+/* ========== 执行时段胶囊 ========== */
+.time-range-value {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    align-items: flex-start;
+}
+
+.time-range-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 3px 12px;
+    border-radius: 14px;
+    font-size: 14px;
+    font-weight: 600;
+    color: #667eea;
+    background: #eef0ff;
+    border: 1px solid #d8dcff;
+    font-variant-numeric: tabular-nums;
+    letter-spacing: 0.5px;
+    line-height: 1.4;
+}
+
+.time-range-sub {
+    font-size: 11px;
+    color: #aaa;
+    padding-left: 2px;
+}
+
+/* ========== 任务内容 ========== */
+.task-detail-content {
+    font-size: 14px;
+    color: #333;
+    line-height: 1.7;
+    white-space: pre-wrap;
+    word-break: break-word;
+}
+
+.task-detail-content.empty {
+    color: #999;
+}
+
+/* ========== 附件列表 ========== */
+.task-detail-attachments {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.task-attachment-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 10px 12px;
+    border: 1px solid #e5e7eb;
+    border-radius: 8px;
+    background: #fafafa;
+    gap: 10px;
+}
+
+.task-attachment-info {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    min-width: 0;
+    flex: 1;
+    cursor: pointer;
+}
+
+.task-attachment-info .att-icon {
+    font-size: 20px;
+    flex-shrink: 0;
+}
+
+.task-attachment-info .att-name {
+    font-size: 13px;
+    color: #333;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.task-attachment-actions {
+    display: flex;
+    gap: 6px;
+    flex-shrink: 0;
+}
+
+.task-attachment-actions .btn-mini {
+    border: none;
+    padding: 4px 10px;
+    border-radius: 6px;
+    font-size: 12px;
+    cursor: pointer;
+    transition: opacity 0.2s;
+}
+
+.task-attachment-actions .btn-preview {
+    background: #e5e7eb;
+    color: #333;
+}
+
+.task-attachment-actions .btn-unbind {
+    background: #ef4444;
+    color: #fff;
+}
+
+.task-attachment-actions .btn-mini:hover {
+    opacity: 0.85;
+}
+
+/* ========== 会话列表 ========== */
+.task-detail-sessions {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.task-session-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 10px 12px;
+    border: 1px solid #e5e7eb;
+    border-radius: 8px;
+    background: #fafafa;
+    gap: 10px;
+}
+
+.task-session-info {
+    font-size: 13px;
+    color: #666;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    flex: 1;
+}
+
+.task-session-link {
+    color: #667eea;
+    text-decoration: none;
+    font-size: 13px;
+    white-space: nowrap;
+    flex-shrink: 0;
+}
+
+.task-session-link:hover {
+    text-decoration: underline;
+}
+
+/* ========== 评论 ========== */
+.task-detail-comments {
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+    margin-bottom: 12px;
+}
+
+.comment-item {
+    padding: 10px 0 10px 10px;
+    border-bottom: 1px solid #eee;
+    border-left: 3px solid transparent;
+}
+
+.comment-item:last-child {
+    border-bottom: none;
+}
+
+/* 智能体评论：左侧高亮色条 + 标签色 */
+.comment-item-agent {
+    border-left-color: #8ba3ff;
+}
+.comment-item-agent .comment-item-user {
+    color: #5a78ff;
+}
+
+.comment-item-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 4px;
+    gap: 8px;
+}
+
+.comment-item-user {
+    font-size: 13px;
+    font-weight: 600;
+    color: #333;
+}
+
+.comment-item-time {
+    font-size: 11px;
+    color: #aaa;
+}
+
+.comment-item-content {
+    font-size: 13px;
+    color: #555;
+    line-height: 1.6;
+    white-space: pre-wrap;
+    word-break: break-word;
+}
+
+.task-comment-input-wrap {
+    display: flex;
+    gap: 8px;
+    align-items: flex-end;
+}
+
+.task-comment-input {
+    flex: 1;
+    padding: 10px 12px;
+    border: 1px solid #d1d5db;
+    border-radius: 8px;
+    font-size: 14px;
+    color: #1f2937;
+    background: #fff;
+    outline: none;
+    transition: border-color 0.2s, box-shadow 0.2s;
+    resize: vertical;
+    font-family: inherit;
+    min-height: 40px;
+}
+
+.task-comment-input:focus {
+    border-color: #667eea;
+    box-shadow: 0 0 0 2px rgba(102, 126, 234, 0.15);
+}
+
+/* ========== 操作按钮 ========== */
+.task-detail-actions {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+
+.task-detail-actions:empty {
+    display: none;
+}
+
+.task-action-btn {
+    padding: 8px 16px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 14px;
+    border: none;
+    transition: opacity 0.2s, background 0.2s;
+    white-space: nowrap;
+}
+
+.task-action-btn:hover {
+    opacity: 0.85;
+}
+
+.task-action-btn.btn-primary {
+    background: #667eea;
+    color: #fff;
+}
+
+.task-action-btn.btn-success {
+    background: #10b981;
+    color: #fff;
+}
+
+.task-action-btn.btn-warning {
+    background: #f59e0b;
+    color: #fff;
+}
+
+.task-action-btn.btn-danger {
+    background: #ef4444;
+    color: #fff;
+}
+
+.task-action-btn.btn-secondary {
+    background: #e5e7eb;
+    color: #333;
+}
+
+.task-action-btn.btn-bind-attachment {
+    background: #667eea;
+    color: #fff;
+    padding: 4px 12px;
+    font-size: 12px;
+}
+
+/* ========== 加载/空状态 ========== */
+.task-detail-loading,
+.task-detail-empty {
+    color: #999;
+    font-size: 13px;
+    padding: 12px 0;
+    text-align: center;
+}
+
+/* ========== 附件选择列表 ========== */
+.attachment-select-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 10px 12px;
+    border: 1px solid #e5e7eb;
+    border-radius: 8px;
+    margin-bottom: 8px;
+    background: #fafafa;
+    gap: 10px;
+}
+
+.attachment-select-item .att-info {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    min-width: 0;
+    flex: 1;
+}
+
+.attachment-select-item .att-info .att-name {
+    font-size: 13px;
+    color: #333;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.attachment-select-item .btn-bind {
+    background: #667eea;
+    color: #fff;
+    border: none;
+    padding: 4px 12px;
+    border-radius: 6px;
+    font-size: 12px;
+    cursor: pointer;
+    flex-shrink: 0;
+}
+
+.attachment-select-item .btn-bind:hover {
+    opacity: 0.85;
+}
+
+.attachment-select-item .btn-bound {
+    background: #e5e7eb;
+    color: #999;
+    border: none;
+    padding: 4px 12px;
+    border-radius: 6px;
+    font-size: 12px;
+    cursor: default;
+    flex-shrink: 0;
+}
+
+/* ========== 预览模态框内容 ========== */
+.preview-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 16px;
+}
+
+.preview-container img {
+    max-width: 100%;
+    max-height: 65vh;
+    border-radius: 8px;
+}
+
+.preview-container video,
+.preview-container audio {
+    width: 100%;
+    max-width: 800px;
+}
+
+.preview-container .preview-text {
+    width: 100%;
+    background: #1e1e1e;
+    color: #d4d4d4;
+    padding: 16px;
+    border-radius: 8px;
+    overflow: auto;
+    max-height: 55vh;
+    font-family: 'Consolas', 'Monaco', monospace;
+    font-size: 13px;
+    white-space: pre-wrap;
+    word-break: break-all;
+}
+
+.preview-container .preview-markdown {
+    width: 100%;
+    background: #fff;
+    color: #333;
+    padding: 20px 24px;
+    border-radius: 8px;
+    overflow: auto;
+    max-height: 55vh;
+    font-size: 14px;
+    line-height: 1.7;
+    border: 1px solid #e5e7eb;
+}
+
+.preview-container .preview-pdf {
+    width: 100%;
+    height: 65vh;
+    border: none;
+}
+
+.preview-container .preview-unsupported {
+    text-align: center;
+    padding: 40px;
+    color: #9ca3af;
+}
+
+.preview-container .preview-unsupported .file-icon {
+    font-size: 64px;
+    margin-bottom: 12px;
+}
+
+/* ==================== Dark Theme ==================== */
+body.dark-theme {
+    background: #1a1a2e;
+    color: #e0e0e0;
+}
+
+body.dark-theme .task-detail-header h2 {
+    color: #e0e0e0;
+}
+
+body.dark-theme .task-detail-close-btn {
+    color: #888;
+}
+
+body.dark-theme .task-detail-close-btn:hover {
+    background: #2d2d44;
+    color: #e0e0e0;
+}
+
+body.dark-theme .task-detail-section {
+    background: #16213e;
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.3);
+}
+
+body.dark-theme .task-detail-section-title {
+    color: #e0e0e0;
+}
+
+body.dark-theme .task-detail-info-item .info-label {
+    color: #888;
+}
+
+body.dark-theme .task-detail-info-item .info-value {
+    color: #c0c0c0;
+}
+
+body.dark-theme .time-range-badge {
+    color: #8ba3ff;
+    background: #2d3358;
+    border-color: #3d4180;
+}
+
+body.dark-theme .time-range-sub {
+    color: #666;
+}
+
+body.dark-theme .task-detail-content {
+    color: #c0c0c0;
+}
+
+body.dark-theme .task-detail-content.empty {
+    color: #888;
+}
+
+body.dark-theme .task-attachment-row {
+    background: #1a1a2e;
+    border-color: #2d2d44;
+}
+
+body.dark-theme .task-attachment-info .att-name {
+    color: #e0e0e0;
+}
+
+body.dark-theme .task-attachment-actions .btn-preview {
+    background: #2d2d44;
+    color: #c0c0c0;
+}
+
+body.dark-theme .task-session-row {
+    background: #1a1a2e;
+    border-color: #2d2d44;
+}
+
+body.dark-theme .task-session-info {
+    color: #888;
+}
+
+body.dark-theme .task-session-link {
+    color: #8ba3ff;
+}
+
+body.dark-theme .comment-item {
+    border-bottom-color: #2d2d44;
+}
+
+body.dark-theme .comment-item-user {
+    color: #e0e0e0;
+}
+
+body.dark-theme .comment-item-agent .comment-item-user {
+    color: #8ba3ff;
+}
+
+body.dark-theme .comment-item-content {
+    color: #c0c0c0;
+}
+
+body.dark-theme .task-comment-input {
+    background: #2d2d44;
+    border-color: #3d3d6b;
+    color: #e0e0e0;
+}
+
+body.dark-theme .task-comment-input:focus {
+    border-color: #8ba3ff;
+    box-shadow: 0 0 0 2px rgba(139, 163, 255, 0.15);
+}
+
+body.dark-theme .task-action-btn.btn-secondary {
+    background: #2d2d44;
+    color: #c0c0c0;
+}
+
+body.dark-theme .task-detail-loading,
+body.dark-theme .task-detail-empty {
+    color: #888;
+}
+
+body.dark-theme .attachment-select-item {
+    background: #1a1a2e;
+    border-color: #2d2d44;
+}
+
+body.dark-theme .attachment-select-item .att-info .att-name {
+    color: #e0e0e0;
+}
+
+body.dark-theme .attachment-select-item .btn-bound {
+    background: #2d2d44;
+    color: #888;
+}
+
+body.dark-theme .preview-container .preview-markdown {
+    background: #0d1117;
+    color: #c9d1d9;
+    border-color: #30363d;
+}

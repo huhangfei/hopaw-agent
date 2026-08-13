@@ -12,6 +12,7 @@
         <result property="skillNames" column="skill_names"/>
         <result property="aiModelId" column="ai_model_id"/>
         <result property="toolCallPermission" column="tool_call_permission"/>
+        <result property="bizType" column="biz_type"/>
         <result property="createTime" column="create_time"/>
         <result property="lastUpdateTime" column="last_update_time"/>
     </resultMap>
@@ -88,5 +89,9 @@
     <delete id="deleteByAgentId">
         DELETE FROM chat_sessions WHERE agent_id = #{agentId}
     </delete>
+
+    <update id="updateBizType">
+        UPDATE chat_sessions SET biz_type = #{bizType} WHERE session_id = #{sessionId}
+    </update>
 
 </mapper>

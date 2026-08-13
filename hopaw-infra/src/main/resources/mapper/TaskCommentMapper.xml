@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.agent.hopaw.infra.mapper.TaskCommentMapper">
+
+    <resultMap id="TaskCommentResultMap" type="com.agent.hopaw.infra.model.entity.TaskComment">
+        <id property="id" column="id"/>
+        <result property="taskId" column="task_id"/>
+        <result property="content" column="content"/>
+        <result property="userId" column="user_id"/>
+        <result property="commenterType" column="commenter_type"/>
+        <result property="commenterId" column="commenter_id"/>
+        <result property="createTime" column="create_time"/>
+    </resultMap>
+
+    <sql id="allColumns">
+        id, task_id, content, user_id, commenter_type, commenter_id, create_time
+    </sql>
+
+    <insert id="insert" parameterType="com.agent.hopaw.infra.model.entity.TaskComment">
+        INSERT INTO task_comments (task_id, content, user_id, commenter_type, commenter_id)
+        VALUES (#{taskId}, #{content}, #{userId}, #{commenterType}, #{commenterId})
+        <selectKey resultType="long" keyProperty="id" order="AFTER">
+            SELECT last_insert_rowid()
+        </selectKey>
+    </insert>
+
+    <delete id="deleteById">
+        DELETE FROM task_comments WHERE id = #{id}
+    </delete>
+
+    <select id="findById" resultMap="TaskCommentResultMap">
+        SELECT <include refid="allColumns"/>
+        FROM task_comments
+        WHERE id = #{id}
+    </select>
+
+    <select id="findByTaskId" resultMap="TaskCommentResultMap">
+        SELECT <include refid="allColumns"/>
+        FROM task_comments
+        WHERE task_id = #{taskId}
+        ORDER BY create_time ASC
+    </select>
+
+</mapper>

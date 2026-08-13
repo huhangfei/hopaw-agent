@@ -58,18 +58,6 @@
     <div id="attachmentPagination" class="pagination">
     </div>
 
-    <!-- 预览模态框 -->
-    <div class="modal-overlay" id="attachmentPreviewModal" style="display:none" onclick="closePreviewModal(event)">
-        <div class="modal modal-large" onclick="event.stopPropagation()">
-            <div class="modal-header">
-                <h3 id="previewModalTitle">预览</h3>
-                <button class="modal-close-btn" onclick="closePreviewModalDirect()">&times;</button>
-            </div>
-            <div class="modal-body" id="previewModalBody">
-            </div>
-        </div>
-    </div>
-
     <!-- 编辑模态框 -->
     <div class="modal-overlay" id="attachmentEditModal" style="display:none" onclick="closeEditModal(event)">
         <div class="modal" onclick="event.stopPropagation()" style="max-width:500px">
@@ -113,7 +101,7 @@
 </th:block>
 
 <th:block layout:fragment="extraScripts">
-    <script th:src="@{/js/marked.min.js}"></script>
+    <script th:src="@{/js/page/attachment-preview.js}"></script>
     <script th:src="@{/js/page/attachments.js}"></script>
 </th:block>
 </body>

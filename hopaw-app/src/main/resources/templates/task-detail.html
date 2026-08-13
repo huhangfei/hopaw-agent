@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>任务详情 - HoPaw</title>
+    <link rel="stylesheet" th:href="@{/css/site.css}">
+    <link rel="stylesheet" th:href="@{/css/form.css}">
+    <link rel="stylesheet" th:href="@{/css/modal.css}">
+    <link rel="stylesheet" th:href="@{/css/confirm-dialog.css}">
+    <link rel="stylesheet" th:href="@{/css/toast.css}">
+    <link rel="stylesheet" th:href="@{/css/dark-theme.css}">
+    <link rel="stylesheet" th:href="@{/css/page/tasks-board.css}">
+    <link rel="stylesheet" th:href="@{/css/page/task-detail.css}">
+</head>
+<body th:class="${currentTheme == 'dark' ? 'dark-theme' : ''}">
+<div class="task-detail-container">
+    <div class="task-detail-header">
+        <div class="task-detail-header-left">
+            <h2 id="taskDetailTitle">加载中...</h2>
+            <span class="task-status-tag" id="taskDetailStatus">-</span>
+        </div>
+        <button class="task-detail-close-btn" onclick="window.close()" title="关闭">
+            <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <line x1="18" y1="6" x2="6" y2="18"/>
+                <line x1="6" y1="6" x2="18" y2="18"/>
+            </svg>
+        </button>
+    </div>
+
+    <div class="task-detail-section task-detail-info">
+        <div class="task-detail-info-grid" id="taskDetailInfo"></div>
+    </div>
+
+    <div class="task-detail-section">
+        <h3 class="task-detail-section-title">任务内容</h3>
+        <div class="task-detail-content" id="taskDetailContent"></div>
+    </div>
+
+    <div class="task-detail-section">
+        <div class="task-detail-section-header">
+            <h3 class="task-detail-section-title">关联附件</h3>
+            <input type="file" id="taskDetailFileInput" multiple style="display:none" onchange="onTaskDetailFileSelected(this)">
+            <button class="task-action-btn btn-bind-attachment" onclick="triggerTaskDetailUpload()">
+                <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+                上传附件
+            </button>
+        </div>
+        <div class="task-detail-attachments" id="taskDetailAttachments"></div>
+    </div>
+
+    <div class="task-detail-section">
+        <h3 class="task-detail-section-title">会话记录</h3>
+        <div class="task-detail-sessions" id="taskDetailSessions"></div>
+    </div>
+
+    <div class="task-detail-section">
+        <h3 class="task-detail-section-title">评论</h3>
+        <div class="task-detail-comments" id="taskDetailComments"></div>
+        <div class="task-comment-input-wrap">
+            <textarea id="taskCommentInput" class="task-comment-input" rows="2" placeholder="输入评论..."></textarea>
+            <button class="task-action-btn btn-primary" onclick="addComment()">发表评论</button>
+        </div>
+    </div>
+
+    <div class="task-detail-section task-detail-actions" id="taskDetailActions"></div>
+</div>
+
+<div id="toast-container" class="toast-container"></div>
+
+<script th:src="@{/js/common.js}"></script>
+<script th:src="@{/js/toast.js}"></script>
+<script th:src="@{/js/modal.js}"></script>
+<script th:src="@{/js/confirm-dialog.js}"></script>
+<script th:src="@{/js/page/attachment-preview.js}"></script>
+<script th:src="@{/js/page/task-detail.js}"></script>
+</body>
+</html>

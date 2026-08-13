@@ -14,6 +14,8 @@ public class ChatSession {
     private String skillNames;
     private Long aiModelId;
     private String toolCallPermission;
+    /** 业务类型：task / null */
+    private String bizType;
     public ChatSession() {}
 
     public ChatSession(String sessionId, String userId, String title) {
@@ -118,5 +120,13 @@ public class ChatSession {
 
     public void setToolCallPermission(String toolCallPermission) {
         this.toolCallPermission = toolCallPermission;
+    }
+
+    public String getBizType() {
+        return bizType;
+    }
+
+    public void setBizType(String bizType) {
+        this.bizType = bizType;
     }
 }

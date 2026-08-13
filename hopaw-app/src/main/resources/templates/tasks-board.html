@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+      xmlns:th="http://www.thymeleaf.org"
+      layout:decorate="~{layouts/default}">
+<head>
+    <title>任务看板 - HoPaw</title>
+</head>
+<body>
+<div layout:fragment="pageTitle">📋 HoPaw - 任务看板</div>
+
+<main layout:fragment="content" class="tasks-board-container">
+    <div class="tasks-board-header">
+        <h2>任务看板</h2>
+        <div class="tasks-board-toolbar">
+            <select id="boardProjectFilter" class="board-filter-select" onchange="doSearch()">
+                <option value="">全部项目</option>
+            </select>
+            <select id="boardAgentFilter" class="board-filter-select" onchange="doSearch()">
+                <option value="">全部智能体</option>
+            </select>
+            <button class="btn-add-task" onclick="showAddTaskModal()">
+                <svg viewBox="0 0 24 24" fill="currentColor"><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/></svg>
+                新建任务
+            </button>
+        </div>
+    </div>
+
+    <div class="tasks-board-columns" id="tasksBoardColumns"></div>
+
+    <!-- 新建/编辑任务模态框 -->
+    <div class="modal-overlay" id="taskModal">
+        <div class="modal" style="max-width: 640px;">
+            <div class="modal-header">
+                <h3 id="taskModalTitle">新建任务</h3>
+                <button class="modal-close" onclick="closeTaskModal()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <form id="taskForm">
+                    <input type="hidden" id="taskId">
+                    <div class="form-group">
+                        <label for="taskTitle">任务标题 *</label>
+                        <input type="text" id="taskTitle" placeholder="请输入任务标题">
+                    </div>
+                    <div class="form-group">
+                        <label for="taskContent">任务内容（下发给智能体的指令）</label>
+                        <textarea id="taskContent" rows="5" placeholder="请输入任务内容"></textarea>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="taskAgentId">智能体 *</label>
+                            <select id="taskAgentId"></select>
+                        </div>
+                        <div class="form-group">
+                            <label for="taskProjectId">所属项目</label>
+                            <select id="taskProjectId"></select>
+                        </div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="taskStartTime">开始时间</label>
+                            <input type="datetime-local" id="taskStartTime">
+                        </div>
+                        <div class="form-group">
+                            <label>执行时段</label>
+                            <div class="time-range-input">
+                                <input type="time" id="taskExecStart" placeholder="开始">
+                                <span class="time-range-sep">~</span>
+                                <input type="time" id="taskExecEnd" placeholder="结束">
+                            </div>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label>关联附件</label>
+                        <input type="file" id="taskModalFileInput" multiple style="display:none" onchange="onTaskModalFileSelected(this)">
+                        <div class="task-attachments-select" id="taskAttachmentsSelect">
+                            <button type="button" class="btn-upload-attachment" onclick="triggerTaskModalUpload()">
+                                <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+                                上传附件
+                            </button>
+                            <div class="task-modal-att-list" id="taskModalAttList"></div>
+                        </div>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button class="btn-cancel" onclick="closeTaskModal()">取消</button>
+                <button class="btn-submit" onclick="submitTask()">保存</button>
+            </div>
+        </div>
+    </div>
+</main>
+
+<th:block layout:fragment="extraCss">
+    <link rel="stylesheet" th:href="@{/css/page/tasks-board.css}">
+</th:block>
+
+<th:block layout:fragment="extraScripts">
+    <script th:src="@{/js/page/tasks-board.js}"></script>
+</th:block>
+</body>
+</html>

@@ -103,4 +103,9 @@ public class ChatSessionService implements IChatSessionService {
         chatSessionMapper.insert(chatSession);
         return chatSession;
     }
+
+    @Override
+    public void updateBizType(String sessionId, String bizType) {
+        chatSessionMapper.updateBizType(sessionId, bizType);
+    }
 }

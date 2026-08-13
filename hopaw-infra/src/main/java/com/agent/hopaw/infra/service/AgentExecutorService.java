@@ -6,6 +6,8 @@ import com.agent.hopaw.infra.memory.IChatMemoryService;
 import com.agent.hopaw.infra.memory.ILongTermMemoryService;
 import com.agent.hopaw.infra.model.dto.*;
 import com.agent.hopaw.infra.model.entity.Agent;
+import com.agent.hopaw.infra.model.entity.TaskComment;
+import com.agent.hopaw.infra.model.entity.WorkflowTask;
 import com.agent.hopaw.infra.tool.AgentTool;
 import com.agent.hopaw.infra.tool.IAgentToolService;
 import dev.langchain4j.data.message.ImageContent;
@@ -181,6 +183,92 @@ public class AgentExecutorService implements IAgentExecutorService {
         };
         AgentExecutor agentExecutor = new AgentExecutor(agentExecutorParams, chatMemoryService, embeddingModel, systemMessageProvider, aiModelService, chatModelListenerProvider, eventPublisher, chatSessionService);
         agentExecutors.put(userChatRequest.getSessionId(), agentExecutor);
+        return agentExecutor;
+    }
+
+    @Override
+    public IAgentExecutor createTaskExecutor(WorkflowTask task, Agent agent, List<TaskComment> comments, String existingSessionId) {
+        // 1. 确定会话编号：打回重做时复用已关联会话，否则新建
+        String sessionId;
+        if (existingSessionId != null && !existingSessionId.isEmpty()) {
+            // 复用前先清理可能残留的旧执行器，避免覆盖正在运行的实例
+            stopAndRemoveAgentExecutor(existingSessionId);
+            sessionId = existingSessionId;
+        } else {
+            sessionId = UUID.randomUUID().toString();
+        }
+
+        // 2. 构建任务专用系统提示词
+        String systemMessage = "你是一个任务执行智能体。\n" +
+                "智能体名称：" + agent.getName() + "\n" +
+                "智能体描述：" + agent.getDescription() + "\n" +
+                "任务编号：" + task.getId() + "\n" +
+                "任务名称：" + task.getTitle() + "\n" +
+                "\n请根据任务内容执行，完成后给出执行结果摘要。\n" +
+                "记忆工具是你的核心工具，需要回忆什么信息时，先去调用记忆工具看看有没相关可用信息。\n" +
+                "在判断有需要调用工具就去调用，遇到危险操作，立刻停止操作。\n" +
+                "你只能使用用户提供的工具，绝对不能调用不存在的工具。\n" +
+                "\n--- 任务评论工具使用指引 ---\n" +
+                "你可以通过 workflowTaskTool 工具来操作当前任务：\n" +
+                "1. 添加任务评论（addTaskComment）：用于记录任务处理的关键细节、阶段性进展、重要决策，便于用户追踪处理过程；当你需要向用户确认信息或遇到需要用户决策的问题时，也可以通过添加评论的方式提出问题，用户会在任务评论中回复你。\n" +
+                "2. 查询当前任务（queryCurrentTask）：当需要回顾任务内容、查看用户是否有新的评论回复时调用。\n" +
+                "建议在执行关键步骤后通过评论记录处理细节，遇到不确定的问题时通过评论向用户提问而非自行猜测。\n";
+
+        // 3. 构建工具集（任务执行场景强制注入 workflowTaskTool，确保智能体可记录评论）
+        List<String> selectedToolNames = parseToolNames(agent.getTools());
+        if (!selectedToolNames.contains("workflowTaskTool")) {
+            selectedToolNames.add("workflowTaskTool");
+        }
+        List<ToolSetInfo> selectedTools;
+        if (Boolean.TRUE.equals(agent.getEnableAllTools())) {
+            selectedTools = agentToolService.getToolSets();
+        } else {
+            selectedTools = agentToolService.getToolSets().stream()
+                    .filter(t -> selectedToolNames.contains(t.getName()))
+                    .collect(Collectors.toList());
+        }
+
+        // 4. 构建内容（包含评论历史，区分评论者身份）
+        List<Content> contents = new ArrayList<>();
+        StringBuilder taskContent = new StringBuilder();
+        taskContent.append(task.getContent() != null ? task.getContent() : "");
+        if (comments != null && !comments.isEmpty()) {
+            taskContent.append("\n\n--- 评论历史 ---\n");
+            for (TaskComment comment : comments) {
+                // 区分评论者身份：agent=智能体，其他（含 null 旧数据）按用户处理
+                String role = "agent".equals(comment.getCommenterType()) ? "智能体" : "用户";
+                String commenterId = comment.getCommenterId() != null ? comment.getCommenterId() : "";
+                taskContent.append(String.format("[%s][%s:%s] %s\n",
+                        comment.getCreateTime() != null ? comment.getCreateTime() : "",
+                        role,
+                        commenterId,
+                        comment.getContent() != null ? comment.getContent() : ""));
+            }
+        }
+        contents.add(new TextContent(taskContent.toString()));
+
+        // 5. 构建 AgentExecutorParams
+        AgentExecutorParams params = new AgentExecutorParams();
+        params.setSessionId(sessionId);
+        params.setAgentId(agent.getId());
+        params.setUserId(task.getUserId());
+        params.setAiModelId(agent.getAiModelId());
+        params.setMaxMemoryRecords(agent.getMaxMemoryRecords() != null ? agent.getMaxMemoryRecords() : 10);
+        params.setMaxToolInvocations(agent.getMaxToolInvocations() != null ? agent.getMaxToolInvocations() : 3);
+        params.setEnableThinking(agent.getEnableThinking());
+        params.setVectorToolSearch(agent.getVectorToolSearch() != null ? agent.getVectorToolSearch() : false);
+        params.setVectorToolSearchMaxResults(agent.getVectorToolSearchMaxResults() != null ? agent.getVectorToolSearchMaxResults() : 5);
+        params.setToolCallPermission("auto");
+        params.setToolSets(selectedTools);
+        params.setContents(contents);
+        params.setMcpServerConfigs(mcpServerConfigService.findEnabled());
+
+        // 6. systemMessageProvider
+        Function<Long, String> systemMessageProvider = aId -> systemMessage;
+
+        // 7. 创建执行器
+        AgentExecutor agentExecutor = new AgentExecutor(params, chatMemoryService, embeddingModel, systemMessageProvider, aiModelService, chatModelListenerProvider, eventPublisher, chatSessionService);
+        agentExecutors.put(sessionId, agentExecutor);
         return agentExecutor;
     }
 

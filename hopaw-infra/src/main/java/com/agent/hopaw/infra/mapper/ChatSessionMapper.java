@@ -29,4 +29,6 @@ public interface ChatSessionMapper {
     int deleteBySessionId(@Param("sessionId") String sessionId);
 
     int deleteByAgentId(@Param("agentId") Long agentId);
+
+    int updateBizType(@Param("sessionId") String sessionId, @Param("bizType") String bizType);
 }

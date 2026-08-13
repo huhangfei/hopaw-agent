@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>附件预览 - HoPaw</title>
+    <link rel="stylesheet" th:href="@{/css/site.css}">
+    <link rel="stylesheet" th:href="@{/css/form.css}">
+    <link rel="stylesheet" th:href="@{/css/toast.css}">
+    <link rel="stylesheet" th:href="@{/css/dark-theme.css}">
+    <link rel="stylesheet" th:href="@{/css/page/attachment-preview.css}">
+</head>
+<body th:class="${currentTheme == 'dark' ? 'dark-theme' : ''}">
+<div class="attachment-preview-container">
+    <div class="attachment-preview-header">
+        <div class="attachment-preview-header-left">
+            <span class="preview-file-icon" id="previewFileIcon">📦</span>
+            <h2 id="previewTitle">附件预览</h2>
+        </div>
+        <button class="preview-close-btn" onclick="window.close()" title="关闭">
+            <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <line x1="18" y1="6" x2="6" y2="18"/>
+                <line x1="6" y1="6" x2="18" y2="18"/>
+            </svg>
+        </button>
+    </div>
+
+    <!-- 错误提示 -->
+    <div id="previewError" class="preview-error" style="display:none;"></div>
+
+    <!-- 附件元信息 -->
+    <div id="previewInfo" class="preview-info-wrap"></div>
+
+    <!-- 预览内容（按类型路由渲染） -->
+    <div class="preview-body" id="previewBody"></div>
+</div>
+
+<div id="toast-container" class="toast-container"></div>
+
+<script th:src="@{/js/common.js}"></script>
+<script th:src="@{/js/toast.js}"></script>
+<script th:src="@{/js/marked.min.js}"></script>
+<script th:src="@{/js/page/attachment-preview.js}"></script>
+<script th:inline="javascript">
+    (function () {
+        var attachment = /*[[${attachment}]]*/ null;
+        var error = /*[[${error}]]*/ null;
+
+        var errEl = document.getElementById('previewError');
+        var infoEl = document.getElementById('previewInfo');
+        var bodyEl = document.getElementById('previewBody');
+
+        if (error || !attachment) {
+            errEl.textContent = error || '附件不存在或无权访问';
+            errEl.style.display = 'block';
+            infoEl.style.display = 'none';
+            bodyEl.style.display = 'none';
+            return;
+        }
+
+        // 标题与图标
+        document.title = (attachment.originalName || '附件预览') + ' - HoPaw';
+        document.getElementById('previewTitle').textContent = attachment.originalName || '附件预览';
+        var icons = AttachmentPreview.FILE_TYPE_ICONS;
+        document.getElementById('previewFileIcon').textContent = icons[attachment.fileType] || '📦';
+
+        // 附件元信息
+        AttachmentPreview.renderInfo(attachment, infoEl);
+
+        // 按文件类型路由到不同渲染器
+        AttachmentPreview.render(attachment, bodyEl);
+    })();
+</script>
+</body>
+</html>

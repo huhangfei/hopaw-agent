@@ -15,6 +15,9 @@
 .form-group input[type="number"],
 .form-group input[type="url"],
 .form-group input[type="password"],
+.form-group input[type="datetime-local"],
+.form-group input[type="date"],
+.form-group input[type="time"],
 .form-group textarea,
 .form-group select {
     width: 100%;
@@ -90,6 +93,25 @@
 
 .form-row .form-group {
     flex: 1;
+}
+
+/* ========== 时段输入框 ========== */
+.time-range-input {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.time-range-input input[type="time"] {
+    flex: 1;
+    min-width: 0;
+}
+
+.time-range-sep {
+    flex-shrink: 0;
+    color: #9ca3af;
+    font-size: 14px;
+    font-weight: 600;
 }
 
 /* ========== Model Select (cascading provider/model selectors) ========== */
@@ -238,6 +260,9 @@ body.dark-theme .form-group input[type="text"],
 body.dark-theme .form-group input[type="number"],
 body.dark-theme .form-group input[type="url"],
 body.dark-theme .form-group input[type="password"],
+body.dark-theme .form-group input[type="datetime-local"],
+body.dark-theme .form-group input[type="date"],
+body.dark-theme .form-group input[type="time"],
 body.dark-theme .form-group textarea,
 body.dark-theme .form-group select {
     background-color: #2d2d44;
@@ -273,6 +298,10 @@ body.dark-theme .form-group select:disabled {
 }
 
 body.dark-theme .form-group .hint {
+    color: #888;
+}
+
+body.dark-theme .time-range-sep {
     color: #888;
 }
 

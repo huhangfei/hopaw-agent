@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.agent.hopaw.infra.mapper.ProjectAttachmentMapper">
+
+    <resultMap id="ProjectAttachmentResultMap" type="com.agent.hopaw.infra.model.entity.ProjectAttachment">
+        <id property="id" column="id"/>
+        <result property="projectId" column="project_id"/>
+        <result property="attachmentId" column="attachment_id"/>
+        <result property="createTime" column="create_time"/>
+    </resultMap>
+
+    <sql id="allColumns">
+        id, project_id, attachment_id, create_time
+    </sql>
+
+    <insert id="insert">
+        INSERT INTO project_attachments (project_id, attachment_id)
+        VALUES (#{projectId}, #{attachmentId})
+    </insert>
+
+    <delete id="deleteByProjectIdAndAttachmentId">
+        DELETE FROM project_attachments WHERE project_id = #{projectId} AND attachment_id = #{attachmentId}
+    </delete>
+
+    <select id="findByProjectId" resultMap="ProjectAttachmentResultMap">
+        SELECT <include refid="allColumns"/>
+        FROM project_attachments
+        WHERE project_id = #{projectId}
+        ORDER BY id ASC
+    </select>
+
+    <delete id="deleteByProjectId">
+        DELETE FROM project_attachments WHERE project_id = #{projectId}
+    </delete>
+
+</mapper>

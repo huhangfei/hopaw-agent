@@ -74,6 +74,7 @@ public class ThemeInterceptor implements HandlerInterceptor {
     private String resolveActivePage(HttpServletRequest request) {
         String path = request.getRequestURI();
         if(path.startsWith("/settings")){return "settings";}
+        if (path.startsWith("/tasks-board")) { return "tasks-board"; }
         switch (path) {
             case "/":               return "index";
             case "/models":         return "models";
@@ -89,6 +90,7 @@ public class ThemeInterceptor implements HandlerInterceptor {
             case "/accounts":       return "accounts";
             case "/agents":         return "agents";
             case "/attachments":    return "attachments";
+            case "/projects":       return "projects";
             case "/login":          return "login";
             default:                return "";
         }

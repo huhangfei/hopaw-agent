@@ -206,94 +206,9 @@
             });
     };
 
+    // 预览：复用公共模块，在新标签页打开独立预览页
     window.previewAttachment = function (id) {
-        fetch('/api/attachments/' + id)
-            .then(function (r) { return r.json(); })
-            .then(function (resp) {
-                if (resp.code === 200) {
-                    showPreviewModal(resp.data);
-                } else {
-                    showToast(resp.msg || '获取附件信息失败', 'error');
-                }
-            });
-    };
-
-    function showPreviewModal(item) {
-        var modal = document.getElementById('attachmentPreviewModal');
-        var title = document.getElementById('previewModalTitle');
-        var body = document.getElementById('previewModalBody');
-
-        title.textContent = item.originalName;
-
-        var content = '<div class="preview-container">';
-        var type = item.fileType;
-
-        if (type === 'image') {
-            content += '<img src="' + item.url + '" alt="' + escapeHtml(item.originalName) + '">';
-        } else if (type === 'video') {
-            content += '<video controls src="' + item.url + '"></video>';
-        } else if (type === 'audio') {
-            content += '<audio controls src="' + item.url + '"></audio>';
-        } else if (type === 'pdf') {
-            content += '<iframe class="preview-pdf" src="' + item.url + '"></iframe>';
-        } else if (type === 'markdown') {
-            content += '<div class="preview-markdown" id="previewMarkdownContent">加载中...</div>';
-        } else if (type === 'text') {
-            // 先显示加载中，再异步加载文件内容
-            content += '<div class="preview-text" id="previewTextContent">加载中...</div>';
-        } else {
-            content += '<div class="preview-unsupported">' +
-                '<div class="file-icon">' + (fileTypeIcons[type] || '📦') + '</div>' +
-                '<div>该文件类型不支持在线预览</div>' +
-                '</div>';
-        }
-
-        content += '<div class="preview-info">' +
-            '<span class="info-item">大小: ' + formatFileSize(item.fileSize) + '</span>' +
-            '<span class="info-item">类型: ' + escapeHtml(item.fileExtension || '') + '</span>' +
-            '<span class="info-item">来源: ' + escapeHtml(sourceLabels[item.source] || item.source || '') + '</span>' +
-            '<span class="info-item">创建时间: ' + escapeHtml(formatTime(item.createTime)) + '</span>' +
-            '<span class="info-item">更新时间: ' + escapeHtml(formatTime(item.updateTime)) + '</span>' +
-            '<a class="preview-download" href="' + item.url + '" target="_blank" download="' + escapeHtml(item.originalName) + '">下载文件</a>' +
-            '</div>';
-        content += '</div>';
-        body.innerHTML = content;
-        modal.style.display = 'flex';
-
-        // 异步加载文本/markdown内容
-        if (type === 'markdown') {
-            fetch(item.url)
-                .then(function (r) { return r.text(); })
-                .then(function (text) {
-                    var el = document.getElementById('previewMarkdownContent');
-                    if (el) el.innerHTML = marked.parse(text);
-                })
-                .catch(function () {
-                    var el = document.getElementById('previewMarkdownContent');
-                    if (el) el.textContent = '加载失败';
-                });
-        } else if (type === 'text') {
-            fetch(item.url)
-                .then(function (r) { return r.text(); })
-                .then(function (text) {
-                    var el = document.getElementById('previewTextContent');
-                    if (el) el.textContent = text;
-                })
-                .catch(function () {
-                    var el = document.getElementById('previewTextContent');
-                    if (el) el.textContent = '加载失败';
-                });
-        }
-    }
-
-    window.closePreviewModal = function (e) {
-        if (e.target === e.currentTarget) {
-            document.getElementById('attachmentPreviewModal').style.display = 'none';
-        }
-    };
-
-    window.closePreviewModalDirect = function () {
-        document.getElementById('attachmentPreviewModal').style.display = 'none';
+        AttachmentPreview.open(id);
     };
 
     window.editAttachment = function (id) {
