@@ -3,9 +3,10 @@ package com.agent.hopaw.infra.model.dto;
 import java.util.List;
 
 /**
+ * 用户聊天请求
  * @author hhf
  */
-public class UserRequest {
+public class UserChatRequest {
     private String sessionId;
     private String userId;
     private Long agentId;

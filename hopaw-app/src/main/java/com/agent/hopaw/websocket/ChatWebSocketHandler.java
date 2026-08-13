@@ -5,7 +5,7 @@ import com.agent.hopaw.infra.event.TokenUsageEvent;
 import com.agent.hopaw.infra.executor.IAgentExecutor;
 import com.agent.hopaw.infra.model.dto.AiMessageBaseInfo;
 import com.agent.hopaw.infra.model.dto.AttachmentFile;
-import com.agent.hopaw.infra.model.dto.UserRequest;
+import com.agent.hopaw.infra.model.dto.UserChatRequest;
 import com.agent.hopaw.infra.service.IAgentExecutorService;
 import com.alibaba.fastjson2.JSON;
 import com.alibaba.fastjson2.JSONObject;
@@ -92,17 +92,17 @@ public class ChatWebSocketHandler extends TextWebSocketHandler {
                 }
             }
 
-            UserRequest userRequest = new UserRequest();
-            userRequest.setAgentId(agentId);
-            userRequest.setUserId(getUserIdFromSession(session));
-            userRequest.setMessage(userMessage);
-            userRequest.setSkillNames(skillNames);
-            userRequest.setSessionId(sessionId);
-            userRequest.setAiModelId(aiModelId);
-            userRequest.setEnableThinking(enableThinking);
-            userRequest.setToolCallPermission(toolCallPermission);
-            userRequest.setFiles(files);
-            IAgentExecutor executor = agentExecutorService.createAgentExecutor(userRequest);
+            UserChatRequest userChatRequest = new UserChatRequest();
+            userChatRequest.setAgentId(agentId);
+            userChatRequest.setUserId(getUserIdFromSession(session));
+            userChatRequest.setMessage(userMessage);
+            userChatRequest.setSkillNames(skillNames);
+            userChatRequest.setSessionId(sessionId);
+            userChatRequest.setAiModelId(aiModelId);
+            userChatRequest.setEnableThinking(enableThinking);
+            userChatRequest.setToolCallPermission(toolCallPermission);
+            userChatRequest.setFiles(files);
+            IAgentExecutor executor = agentExecutorService.createChatAgentExecutor(userChatRequest);
             executor.execute();
         } catch (Exception e) {
             logger.error("handleTextMessage error", e);

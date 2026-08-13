@@ -17,7 +17,6 @@ import org.springframework.stereotype.Service;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.io.*;
 import java.nio.file.*;
 import java.util.*;
 import java.util.function.Consumer;
@@ -135,15 +134,15 @@ public class AgentExecutorService implements IAgentExecutorService {
     }
 
     @Override
-    public IAgentExecutor createAgentExecutor(UserRequest userRequest) {
-        Agent agent = userRequest.getAgentId() != null ? agentService.getAgentById(userRequest.getAgentId()) : null;
+    public IAgentExecutor createChatAgentExecutor(UserChatRequest userChatRequest) {
+        Agent agent = userChatRequest.getAgentId() != null ? agentService.getAgentById(userChatRequest.getAgentId()) : null;
         if (agent == null) {
             throw new RuntimeException("智能体不存在");
         }
-        if (userRequest.getAiModelId() == null) {
+        if (userChatRequest.getAiModelId() == null) {
             throw new RuntimeException("智能体没有设置AI模型");
         }
-        AvatarSettings avatarSettings = avatarSettingsService.getSettings(userRequest.getUserId(), agent.getId());
+        AvatarSettings avatarSettings = avatarSettingsService.getSettings(userChatRequest.getUserId(), agent.getId());
         List<String> selectedToolNames = parseToolNames(agent.getTools());
         List<ToolSetInfo> selectedTools;
         if (Boolean.TRUE.equals(agent.getEnableAllTools())) {
@@ -160,39 +159,39 @@ public class AgentExecutorService implements IAgentExecutorService {
 
         }
         AgentExecutorParams agentExecutorParams = new AgentExecutorParams();
-        agentExecutorParams.setSessionId(userRequest.getSessionId());
+        agentExecutorParams.setSessionId(userChatRequest.getSessionId());
         agentExecutorParams.setAgentId(agent.getId());
-        agentExecutorParams.setUserId(userRequest.getUserId());
-        agentExecutorParams.setAiModelId(userRequest.getAiModelId());
+        agentExecutorParams.setUserId(userChatRequest.getUserId());
+        agentExecutorParams.setAiModelId(userChatRequest.getAiModelId());
         agentExecutorParams.setMaxMemoryRecords(agent.getMaxMemoryRecords() != null ? agent.getMaxMemoryRecords() : 10);
         agentExecutorParams.setMaxToolInvocations(agent.getMaxToolInvocations() != null ? agent.getMaxToolInvocations() : 3);
-        agentExecutorParams.setEnableThinking(userRequest.getEnableThinking());
+        agentExecutorParams.setEnableThinking(userChatRequest.getEnableThinking());
         agentExecutorParams.setVectorToolSearch(agent.getVectorToolSearch() != null ? agent.getVectorToolSearch() : false);
         agentExecutorParams.setVectorToolSearchMaxResults(agent.getVectorToolSearchMaxResults() != null ? agent.getVectorToolSearchMaxResults() : 5);
-        agentExecutorParams.setSkillNames(userRequest.getSkillNames());
-        agentExecutorParams.setToolCallPermission(userRequest.getToolCallPermission());
+        agentExecutorParams.setSkillNames(userChatRequest.getSkillNames());
+        agentExecutorParams.setToolCallPermission(userChatRequest.getToolCallPermission());
         agentExecutorParams.setToolSets(selectedTools);
-        agentExecutorParams.setContents(buildContents(userRequest));
+        agentExecutorParams.setContents(buildContents(userChatRequest));
         // 加载已启用的 MCP 服务器配置
         agentExecutorParams.setMcpServerConfigs(mcpServerConfigService.findEnabled());
 
 
         Function<Long, String> systemMessageProvider = aId -> {
-            return getSystemMessage(userRequest.getSessionId(), agent, userRequest.getUserId(), selectedTools, userRequest.getSkillNames(), avatarSettings);
+            return getChatSystemMessage(userChatRequest.getSessionId(), agent, userChatRequest.getUserId(), selectedTools, userChatRequest.getSkillNames(), avatarSettings);
         };
         AgentExecutor agentExecutor = new AgentExecutor(agentExecutorParams, chatMemoryService, embeddingModel, systemMessageProvider, aiModelService, chatModelListenerProvider, eventPublisher, chatSessionService);
-        agentExecutors.put(userRequest.getSessionId(), agentExecutor);
+        agentExecutors.put(userChatRequest.getSessionId(), agentExecutor);
         return agentExecutor;
     }
 
     /**
      * 构建发送给大模型的内容列表，将图片文件转为 Base64 的 ImageContent
      */
-    private List<Content> buildContents(UserRequest userRequest) {
+    private List<Content> buildContents(UserChatRequest userChatRequest) {
         List<Content> contents = new ArrayList<>();
-        contents.add(new TextContent(userRequest.getMessage()));
+        contents.add(new TextContent(userChatRequest.getMessage()));
 
-        List<AttachmentFile> files = userRequest.getFiles();
+        List<AttachmentFile> files = userChatRequest.getFiles();
         if (files != null && !files.isEmpty()) {
             for (AttachmentFile file : files) {
                 if (!"image".equals(file.getType())) {
@@ -230,7 +229,17 @@ public class AgentExecutorService implements IAgentExecutorService {
         return "image/png";
     }
 
-    private String getSystemMessage(String sessionId, Agent agent, String userId, List<ToolSetInfo> selectedTools, List<String> skillNames,AvatarSettings avatarSettings) {
+    /**
+     * 聊天系统提示词
+     * @param sessionId
+     * @param agent
+     * @param userId
+     * @param selectedTools
+     * @param skillNames
+     * @param avatarSettings
+     * @return
+     */
+    private String getChatSystemMessage(String sessionId, Agent agent, String userId, List<ToolSetInfo> selectedTools, List<String> skillNames, AvatarSettings avatarSettings) {
         String systemMessage = "你是一个智能助手，名字叫" + agent.getName() + "," +
                 "主要工作是" + agent.getDescription() + "," +
                 "你的agentId是" + agent.getId() + "。\n" +

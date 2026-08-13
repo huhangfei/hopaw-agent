@@ -1,9 +1,5 @@
 package com.agent.hopaw.infra.executor;
 
-import com.agent.hopaw.infra.model.dto.UserRequest;
-import com.agent.hopaw.infra.model.entity.Agent;
-
-import java.util.function.BiConsumer;
 import java.util.function.Consumer;
 
 public interface IAgentExecutor {

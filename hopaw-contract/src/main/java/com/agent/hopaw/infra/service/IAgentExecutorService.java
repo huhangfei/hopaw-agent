@@ -1,7 +1,7 @@
 package com.agent.hopaw.infra.service;
 
 import com.agent.hopaw.infra.executor.IAgentExecutor;
-import com.agent.hopaw.infra.model.dto.UserRequest;
+import com.agent.hopaw.infra.model.dto.UserChatRequest;
 
 import java.util.function.Consumer;
 
@@ -24,6 +24,11 @@ public interface IAgentExecutorService {
 
     IAgentExecutor getAgentExecutor(String sessionId);
 
-    IAgentExecutor createAgentExecutor(UserRequest userRequest);
+    /**
+     * 创建聊天代理执行器
+     * @param userChatRequest
+     * @return
+     */
+    IAgentExecutor createChatAgentExecutor(UserChatRequest userChatRequest);
 
 }
