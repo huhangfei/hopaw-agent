@@ -268,6 +268,28 @@
     flex-shrink: 0;
 }
 
+/* 任务会话标识 */
+.session-tag {
+    flex-shrink: 0;
+    font-size: 10px;
+    line-height: 1;
+    padding: 2px 5px;
+    border-radius: 4px;
+    font-weight: 500;
+    white-space: nowrap;
+}
+
+.session-tag-task {
+    background: #fff3e0;
+    color: #f59e0b;
+    border: 1px solid #fcd9a3;
+}
+
+.session-list-item.active .session-tag-task {
+    background: #fff7e8;
+    border-color: #f5c785;
+}
+
 .session-edit-btn {
     display: none;
     flex-shrink: 0;
@@ -1803,6 +1825,17 @@ body.dark-theme .session-list-item-time {
 
 body.dark-theme .session-list-item.active .session-list-item-time {
     color: #7a8ac0;
+}
+
+body.dark-theme .session-tag-task {
+    background: #3d2e1a;
+    color: #ffb74d;
+    border-color: #5a4220;
+}
+
+body.dark-theme .session-list-item.active .session-tag-task {
+    background: #4a3825;
+    border-color: #6b5028;
 }
 
 body.dark-theme .session-edit-btn {

@@ -25,6 +25,10 @@ public class WorkflowTask {
     private String userId;
     /** 创建人昵称（非持久字段，由 Controller 层填充） */
     private String creatorName;
+    /** 智能体名称（非持久字段，由查询时 JOIN 填充） */
+    private String agentName;
+    /** 项目名称（非持久字段，由查询时 JOIN 填充） */
+    private String projectName;
     private LocalDateTime createTime;
     private LocalDateTime updateTime;
 
@@ -114,6 +118,22 @@ public class WorkflowTask {
 
     public void setCreatorName(String creatorName) {
         this.creatorName = creatorName;
+    }
+
+    public String getAgentName() {
+        return agentName;
+    }
+
+    public void setAgentName(String agentName) {
+        this.agentName = agentName;
+    }
+
+    public String getProjectName() {
+        return projectName;
+    }
+
+    public void setProjectName(String projectName) {
+        this.projectName = projectName;
     }
 
     public LocalDateTime getCreateTime() {

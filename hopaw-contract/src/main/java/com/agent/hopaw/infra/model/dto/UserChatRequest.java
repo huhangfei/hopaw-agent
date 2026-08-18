@@ -22,6 +22,10 @@ public class UserChatRequest {
      */
     private String toolCallPermission;
     private List<AttachmentFile> files;
+    /**
+     * 会话类型
+     */
+    private String sessionBizType;
     public String getUserId() {
         return userId;
     }
@@ -92,5 +96,13 @@ public class UserChatRequest {
 
     public void setFiles(List<AttachmentFile> files) {
         this.files = files;
+    }
+
+    public String getSessionBizType() {
+        return sessionBizType;
+    }
+
+    public void setSessionBizType(String sessionBizType) {
+        this.sessionBizType = sessionBizType;
     }
 }

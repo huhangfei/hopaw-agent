@@ -40,11 +40,6 @@ public interface IAttachmentService {
     int countAttachments(String userId, String keyword, String source, String tag, String fileType);
 
     /**
-     * 根据来源和业务ID查询附件
-     */
-    List<Attachment> getAttachmentsByBiz(String source, Long bizId);
-
-    /**
      * 根据存储路径统计引用数
      */
     int countByStoragePath(String storagePath);

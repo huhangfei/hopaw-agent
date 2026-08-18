@@ -356,6 +356,8 @@ public class DatabaseInitializer implements CommandLineRunner {
                     "update_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP" +
                     ")");
             stmt.execute("CREATE INDEX IF NOT EXISTS idx_projects_user ON projects(user_id)");
+            // 项目空间目录（增量加列）
+            ensureColumn(stmt, "projects", "space_dir", "TEXT");
 
             // 工作流 - 任务表
             stmt.execute("CREATE TABLE IF NOT EXISTS workflow_tasks (" +
@@ -388,19 +390,13 @@ public class DatabaseInitializer implements CommandLineRunner {
             // 兼容旧库：task_comments 增量补充评论者身份字段
             ensureColumn(stmt, "task_comments", "commenter_type", "TEXT");
             ensureColumn(stmt, "task_comments", "commenter_id", "TEXT");
+            // 兼容旧库：task_comments 增量补充处理状态字段，默认待处理
+            ensureColumn(stmt, "task_comments", "status", "TEXT DEFAULT 'pending'");
+            // 旧数据补齐为待处理状态
+            stmt.execute("UPDATE task_comments SET status = 'pending' WHERE status IS NULL OR status = ''");
 
             // 兼容旧库：项目状态旧值 active 迁移为 planning
             stmt.execute("UPDATE projects SET status = 'planning' WHERE status = 'active' OR status IS NULL OR status = ''");
-
-            // 工作流 - 任务附件关系表
-            stmt.execute("CREATE TABLE IF NOT EXISTS task_attachments (" +
-                    "id INTEGER PRIMARY KEY AUTOINCREMENT, " +
-                    "task_id INTEGER NOT NULL, " +
-                    "attachment_id INTEGER NOT NULL, " +
-                    "create_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP" +
-                    ")");
-            stmt.execute("CREATE INDEX IF NOT EXISTS idx_task_attachments_task ON task_attachments(task_id)");
-            stmt.execute("CREATE INDEX IF NOT EXISTS idx_task_attachments_att ON task_attachments(attachment_id)");
 
             // 工作流 - 任务会话关系表
             stmt.execute("CREATE TABLE IF NOT EXISTS task_sessions (" +
@@ -411,15 +407,6 @@ public class DatabaseInitializer implements CommandLineRunner {
                     ")");
             stmt.execute("CREATE INDEX IF NOT EXISTS idx_task_sessions_task ON task_sessions(task_id)");
             stmt.execute("CREATE INDEX IF NOT EXISTS idx_task_sessions_session ON task_sessions(session_id)");
-
-            // 工作流 - 项目附件关系表
-            stmt.execute("CREATE TABLE IF NOT EXISTS project_attachments (" +
-                    "id INTEGER PRIMARY KEY AUTOINCREMENT, " +
-                    "project_id INTEGER NOT NULL, " +
-                    "attachment_id INTEGER NOT NULL, " +
-                    "create_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP" +
-                    ")");
-            stmt.execute("CREATE INDEX IF NOT EXISTS idx_project_attachments_project ON project_attachments(project_id)");
 
             // 工作流 - 项目操作日志表
             stmt.execute("CREATE TABLE IF NOT EXISTS project_logs (" +

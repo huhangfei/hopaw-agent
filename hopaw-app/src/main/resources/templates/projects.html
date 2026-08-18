@@ -79,14 +79,19 @@
                     <div class="detail-desc" id="detailDesc"></div>
                 </div>
 
-                <!-- 附件 -->
+                <!-- 项目空间文件树 -->
                 <div class="detail-section">
                     <div class="section-title">
-                        <span>项目附件</span>
-                        <input type="file" id="projectAttachmentFileInput" multiple style="display:none" onchange="onProjectAttachmentSelected(this)">
-                        <button class="btn-text" onclick="triggerProjectAttachmentUpload()">+ 上传附件</button>
+                        <span>项目空间</span>
+                        <span class="space-toolbar">
+                            <input type="file" id="projectSpaceFileInput" multiple style="display:none" onchange="onProjectSpaceFileSelected(this)">
+                            <button class="btn-space" onclick="triggerSpaceUpload('')">上传文件</button>
+                            <button class="btn-space" onclick="showCreateFileModal('')">新建</button>
+                            <button class="btn-space" onclick="loadProjectFiles(currentProjectId)">刷新</button>
+                        </span>
                     </div>
-                    <div id="detailAttachments" class="detail-attachments"></div>
+                    <div class="space-dir-info" id="spaceDirInfo"></div>
+                    <div id="detailFiles" class="detail-files"></div>
                 </div>
 
                 <!-- 任务列表 -->
@@ -129,6 +134,17 @@
                         <label for="projectDescription">项目描述</label>
                         <textarea id="projectDescription" rows="4" placeholder="请输入项目描述"></textarea>
                     </div>
+                    <div class="form-group" id="spaceModeGroup">
+                        <label>项目空间</label>
+                        <div class="space-type-radio">
+                            <label><input type="radio" name="spaceMode" value="auto" checked onchange="onSpaceModeChange()"> 自动创建</label>
+                            <label><input type="radio" name="spaceMode" value="local" onchange="onSpaceModeChange()"> 使用本地目录</label>
+                        </div>
+                        <div id="localSpaceBox" style="display:none; margin-top:8px;">
+                            <input type="text" id="projectLocalSpaceDir" placeholder="请输入本地目录绝对路径，如 D:\my-project" style="width:100%;">
+                            <small style="color:#999;">将该本地目录作为项目空间，目录不存在时会自动创建</small>
+                        </div>
+                    </div>
                 </form>
             </div>
             <div class="modal-footer">
@@ -137,15 +153,73 @@
             </div>
         </div>
     </div>
+
+    <!-- 新建文件/目录模态框 -->
+    <div class="modal-overlay" id="spaceCreateModal">
+        <div class="modal" style="max-width: 420px;">
+            <div class="modal-header">
+                <h3 id="spaceCreateModalTitle">新建</h3>
+                <button class="modal-close" onclick="Modal.close('spaceCreateModal')">&times;</button>
+            </div>
+            <div class="modal-body">
+                <form id="spaceCreateForm">
+                    <div class="form-group">
+                        <label>类型</label>
+                        <div class="space-type-radio">
+                            <label><input type="radio" name="spaceCreateType" value="directory" checked> 目录</label>
+                            <label><input type="radio" name="spaceCreateType" value="file"> 文件</label>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label for="spaceCreateName">名称 *</label>
+                        <input type="text" id="spaceCreateName" placeholder="请输入名称">
+                    </div>
+                    <div class="form-group" id="spaceCreatePathGroup">
+                        <label>创建位置</label>
+                        <code id="spaceCreatePath" class="space-create-path">/</code>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button class="btn-cancel" onclick="Modal.close('spaceCreateModal')">取消</button>
+                <button class="btn-submit" onclick="submitSpaceCreate()">创建</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 移动/重命名模态框 -->
+    <div class="modal-overlay" id="spaceMoveModal">
+        <div class="modal" style="max-width: 420px;">
+            <div class="modal-header">
+                <h3>重命名</h3>
+                <button class="modal-close" onclick="Modal.close('spaceMoveModal')">&times;</button>
+            </div>
+            <div class="modal-body">
+                <form id="spaceMoveForm">
+                    <input type="hidden" id="spaceMoveFrom">
+                    <div class="form-group">
+                        <label>当前路径</label>
+                        <input type="text" id="spaceMoveCurrentPath" readonly>
+                    </div>
+                    <div class="form-group">
+                        <label for="spaceMoveName">新名称 *</label>
+                        <input type="text" id="spaceMoveName" placeholder="请输入新名称">
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button class="btn-cancel" onclick="Modal.close('spaceMoveModal')">取消</button>
+                <button class="btn-submit" onclick="submitSpaceMove()">确定</button>
+            </div>
+        </div>
+    </div>
 </main>
 
 <th:block layout:fragment="extraCss">
     <link rel="stylesheet" th:href="@{/css/page/projects.css}">
-    <link rel="stylesheet" th:href="@{/css/page/attachments.css}">
 </th:block>
 
 <th:block layout:fragment="extraScripts">
-    <script th:src="@{/js/page/attachment-preview.js}"></script>
     <script th:src="@{/js/page/projects.js}"></script>
 </th:block>
 </body>

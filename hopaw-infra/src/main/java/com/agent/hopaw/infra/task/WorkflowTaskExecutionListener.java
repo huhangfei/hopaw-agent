@@ -12,11 +12,11 @@ import org.springframework.stereotype.Component;
  * 监听智能体执行完成事件，更新工作流任务状态
  */
 @Component
-public class TaskExecutionListener {
-    private static final Logger logger = LoggerFactory.getLogger(TaskExecutionListener.class);
+public class WorkflowTaskExecutionListener {
+    private static final Logger logger = LoggerFactory.getLogger(WorkflowTaskExecutionListener.class);
     private final IWorkflowTaskService taskService;
 
-    public TaskExecutionListener(IWorkflowTaskService taskService) {
+    public WorkflowTaskExecutionListener(IWorkflowTaskService taskService) {
         this.taskService = taskService;
     }
 

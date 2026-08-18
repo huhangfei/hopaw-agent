@@ -98,7 +98,6 @@ public class AgentExecutor implements IAgentExecutor {
     private CountDownLatch taskLatch = new CountDownLatch(0);
     private String requestId;
     private final ApplicationEventPublisher eventPublisher;
-    private final List<Content> contents;
     private final IChatSessionService chatSessionService;
     private final AgentExecutorParams agentExecutorParams;
     private final List<McpClient> mcpClients = new ArrayList<>();
@@ -116,7 +115,6 @@ public class AgentExecutor implements IAgentExecutor {
         this.agentId = agentExecutorParams.getAgentId();
         this.userId = agentExecutorParams.getUserId();
         this.aiModelId = agentExecutorParams.getAiModelId();
-        this.contents = agentExecutorParams.getContents();
         this.sessionId = agentExecutorParams.getSessionId() != null ? agentExecutorParams.getSessionId() : UuidUtil.generateSimpleUUID();
         this.requestId = UuidUtil.generateSimpleUUID();
 
@@ -308,11 +306,11 @@ public class AgentExecutor implements IAgentExecutor {
     }
 
     @Override
-    public void execute() {
+    public void execute(List<Content> contents) {
         try {
             sendFirstState();
-            saveChatSession();
-            saveChatHistory();
+            saveChatSession(contents);
+            saveChatHistory(contents);
 
             this.memoryStore.orphanCleanup(memoryId);
 
@@ -465,7 +463,7 @@ public class AgentExecutor implements IAgentExecutor {
         }
     }
 
-    private String analyzeUserIntent() {
+    private String analyzeUserIntent(List<Content> contents) {
         try {
             ChatModelListener chatModelListener = chatModelListenerProvider.getChatModelListener(AiModelCallSourceEnum.ChatAnalyzeUserIntent, sessionId, userId, agentId);
 
@@ -729,14 +727,14 @@ public class AgentExecutor implements IAgentExecutor {
         return parts;
     }
 
-    private void saveChatSession() {
+    private void saveChatSession(List<Content> contents) {
 
 
         boolean sendSessionTitle = false;
         ChatSession chatSession=chatSessionService.getSessionBySessionId(sessionId);
         if (chatSession == null) {
             chatSession = new ChatSession();
-            String userIntent = analyzeUserIntent();
+            String userIntent = analyzeUserIntent(contents);
             if (userIntent == null) {
                 userIntent = "新任务";
             }else{
@@ -752,11 +750,12 @@ public class AgentExecutor implements IAgentExecutor {
             chatSession.setLastUpdateTime(LocalDateTime.now());
             chatSession.setCreateTime(LocalDateTime.now());
             chatSession.setToolCallPermission(agentExecutorParams.getToolCallPermission());
+            chatSession.setBizType(agentExecutorParams.getBizType());
             chatSessionService.insertSession(chatSession);
             agentMessageHandler.sendMessageToChannel(AiMessageBaseInfo.sessionTitle(sessionId, requestId, userIntent));
         } else {
             if(chatSession.getTitle().equals("新任务")){
-                String userIntent = analyzeUserIntent();
+                String userIntent = analyzeUserIntent(contents);
                 if (userIntent !=null) {
                     chatSession.setTitle(userIntent);
                     sendSessionTitle=true;
@@ -770,6 +769,7 @@ public class AgentExecutor implements IAgentExecutor {
             chatSession.setSkillNames(String.join(",", agentExecutorParams.getSkillNames() == null ? new ArrayList<>() : agentExecutorParams.getSkillNames()));
             chatSession.setLastUpdateTime(LocalDateTime.now());
             chatSession.setToolCallPermission(agentExecutorParams.getToolCallPermission());
+            // bizType 不参与 update：来源一旦确定不可修改，保持 INSERT 时写入的值
             chatSessionService.updateSession(chatSession);
         }
         if(sendSessionTitle){
@@ -778,7 +778,7 @@ public class AgentExecutor implements IAgentExecutor {
 
     }
 
-    private void saveChatHistory() {
+    private void saveChatHistory(List<Content> contents) {
         List<ChatHistory> chatHistoryList = convertToChatHistory(contents);
         for (ChatHistory chatHistory : chatHistoryList) {
             chatHistory.setUserId(userId);

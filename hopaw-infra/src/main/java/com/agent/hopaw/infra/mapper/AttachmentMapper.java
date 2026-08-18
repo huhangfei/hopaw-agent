@@ -31,8 +31,5 @@ public interface AttachmentMapper {
                                  @Param("tag") String tag,
                                  @Param("fileType") String fileType);
 
-    List<Attachment> findByBizTypeAndBizId(@Param("source") String source,
-                                           @Param("bizId") Long bizId);
-
     int countByStoragePath(@Param("storagePath") String storagePath);
 }

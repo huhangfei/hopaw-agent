@@ -170,25 +170,26 @@ function goToPage(page) {
 function loadProjectDetail(id) {
     Promise.all([
         fetch('/api/projects/' + id).then(function (r) { return r.json(); }),
-        fetch('/api/attachments/biz/project/' + id).then(function (r) { return r.json(); }),
         fetch('/api/projects/' + id + '/tasks').then(function (r) { return r.json(); }),
         fetch('/api/projects/' + id + '/logs').then(function (r) { return r.json(); })
     ]).then(function (results) {
-        var projRes = results[0], attRes = results[1], taskRes = results[2], logRes = results[3];
+        var projRes = results[0], taskRes = results[1], logRes = results[2];
         if (projRes.code !== 200 || !projRes.data) {
             showToast(projRes.msg || '加载项目详情失败', 'error');
             return;
         }
         currentProject = projRes.data;
         currentProjectId = currentProject.id;
-        renderDetail(currentProject, (attRes.data || []), (taskRes.data || []), (logRes.data || []));
+        renderDetail(currentProject, (taskRes.data || []), (logRes.data || []));
+        // 加载项目空间文件树
+        loadProjectFiles(currentProjectId);
     }).catch(function (err) {
         console.error('加载项目详情失败:', err);
         showToast('加载项目详情失败', 'error');
     });
 }
 
-function renderDetail(project, attachments, tasks, logs) {
+function renderDetail(project, tasks, logs) {
     document.getElementById('detailEmpty').style.display = 'none';
     document.getElementById('detailContent').style.display = 'block';
 
@@ -212,8 +213,13 @@ function renderDetail(project, attachments, tasks, logs) {
     // 描述
     document.getElementById('detailDesc').textContent = project.description || '暂无描述';
 
-    // 附件列表
-    renderDetailAttachments(attachments);
+    // 项目空间目录路径
+    var spaceDirEl = document.getElementById('spaceDirInfo');
+    if (project.spaceDir) {
+        spaceDirEl.innerHTML = '<span class="space-dir-label">空间目录：</span><code class="space-dir-path">' + escapeHtml(project.spaceDir) + '</code>';
+    } else {
+        spaceDirEl.innerHTML = '<span class="space-dir-label">空间目录：未创建</span>';
+    }
 
     // 任务列表
     renderDetailTasks(tasks);
@@ -263,32 +269,6 @@ function changeProjectStatus(target) {
     });
 }
 
-function renderDetailAttachments(attachments) {
-    var container = document.getElementById('detailAttachments');
-    if (!attachments || !attachments.length) {
-        container.innerHTML = '<p class="detail-empty-text">暂无附件，点击上方“上传附件”添加</p>';
-        return;
-    }
-    var iconMap = {
-        image: '🖼️', video: '🎬', audio: '🎵',
-        pdf: '📄', markdown: '📝', text: '📃', file: '📦'
-    };
-    container.innerHTML = attachments.map(function (att) {
-        var icon = iconMap[att.fileType] || '📦';
-        return '<div class="detail-att-item">' +
-            '<span class="att-icon" onclick="previewAttachment(' + att.id + ')" style="cursor:pointer">' + icon + '</span>' +
-            '<span class="att-name" title="' + escapeHtml(att.originalName || '') + '" onclick="previewAttachment(' + att.id + ')" style="cursor:pointer">' + escapeHtml(att.originalName || '') + '</span>' +
-            '<button class="btn-att-preview" onclick="previewAttachment(' + att.id + ')" title="预览">预览</button>' +
-            '<button class="btn-att-remove" onclick="removeProjectAttachment(' + att.id + ')" title="删除">删除</button>' +
-        '</div>';
-    }).join('');
-}
-
-/* ========== 附件预览（复用公共模块） ========== */
-function previewAttachment(id) {
-    AttachmentPreview.open(id);
-}
-
 // 任务状态字典（与任务看板保持一致）
 var TASK_STATUS = {
     pending:             { label: '待启动',   color: '#6b7280' },
@@ -325,6 +305,424 @@ function renderDetailTasks(tasks) {
     }).join('');
 }
 
+/* ========== 项目空间文件树 ========== */
+// 缓存最新文件树，供移动模态框列举目录使用
+var currentFileTree = [];
+
+function loadProjectFiles(id) {
+    if (!id) return;
+    var container = document.getElementById('detailFiles');
+    container.innerHTML = '<p class="detail-empty-text">加载中...</p>';
+    fetch('/api/projects/' + id + '/files')
+        .then(function (r) { return r.json(); })
+        .then(function (res) {
+            if (res.code === 200) {
+                currentFileTree = res.data || [];
+                renderFileTree(currentFileTree, container);
+            } else {
+                currentFileTree = [];
+                container.innerHTML = '<p class="detail-empty-text">' + escapeHtml(res.msg || '加载失败') + '</p>';
+            }
+        })
+        .catch(function () {
+            currentFileTree = [];
+            container.innerHTML = '<p class="detail-empty-text">加载失败</p>';
+        });
+}
+
+function renderFileTree(nodes, container) {
+    if (!nodes || !nodes.length) {
+        container.innerHTML = '<p class="detail-empty-text">项目空间为空，点击上方“上传文件”或“新建”开始</p>';
+        return;
+    }
+    var html = '<div class="file-tree-root-dropzone" data-target="">' +
+        '<span class="file-tree-root-label">/（根目录）</span>' +
+        '</div>' +
+        '<ul class="file-tree">' + nodes.map(renderFileTreeNode).join('') + '</ul>';
+    container.innerHTML = html;
+}
+
+function renderFileTreeNode(node) {
+    var icon = node.type === 'directory' ? '📁' : getFileIcon(node.name);
+    var pathAttr = escapeHtml(node.path);
+    // 节点操作按钮（悬停显示）
+    var actions;
+    if (node.type === 'directory') {
+        actions = '<span class="file-tree-actions">' +
+            '<button class="ft-btn" title="在此上传" data-action="upload" data-path="' + pathAttr + '">⬆</button>' +
+            '<button class="ft-btn" title="在此新建" data-action="create" data-path="' + pathAttr + '">＋</button>' +
+            '<button class="ft-btn" title="移动/重命名" data-action="move" data-path="' + pathAttr + '">✎</button>' +
+            '<button class="ft-btn ft-btn-danger" title="删除" data-action="delete" data-path="' + pathAttr + '">🗑</button>' +
+            '</span>';
+    } else {
+        actions = '<span class="file-tree-actions">' +
+            '<button class="ft-btn" title="移动/重命名" data-action="move" data-path="' + pathAttr + '">✎</button>' +
+            '<button class="ft-btn ft-btn-danger" title="删除" data-action="delete" data-path="' + pathAttr + '">🗑</button>' +
+            '</span>';
+    }
+
+    if (node.type === 'directory') {
+        var hasChildren = node.children && node.children.length;
+        var childHtml = '';
+        if (hasChildren) {
+            childHtml = '<ul class="file-tree">' + node.children.map(renderFileTreeNode).join('') + '</ul>';
+        }
+        // 默认折叠；有子节点时显示 +/- 切换符
+        var toggleSign = hasChildren
+            ? '<span class="file-tree-toggle" onclick="toggleFileTreeNode(this)">＋</span>'
+            : '<span class="file-tree-toggle file-tree-toggle-empty"></span>';
+        return '<li class="file-tree-item file-tree-dir collapsed">' +
+            '<div class="file-tree-row file-tree-dropzone" draggable="true" data-path="' + pathAttr + '" data-target="' + pathAttr + '" data-type="directory">' +
+            toggleSign +
+            '<span class="file-tree-name" onclick="toggleFileTreeNode(this)"><span class="file-tree-icon">' + icon + '</span>' + escapeHtml(node.name) + '</span>' +
+            actions +
+            '</div>' +
+            childHtml +
+            '</li>';
+    }
+    var sizeText = node.size != null ? formatFileSize(node.size) : '';
+    return '<li class="file-tree-item file-tree-file">' +
+        '<div class="file-tree-row" draggable="true" data-path="' + pathAttr + '" data-type="file">' +
+        '<span class="file-tree-name"><span class="file-tree-icon">' + icon + '</span>' + escapeHtml(node.name) + '</span>' +
+        actions +
+        '<span class="file-tree-size">' + sizeText + '</span>' +
+        '</div>' +
+        '</li>';
+}
+
+// 文件树节点操作事件委托
+document.addEventListener('DOMContentLoaded', function () {
+    var container = document.getElementById('detailFiles');
+    if (container) {
+        container.addEventListener('click', function (e) {
+            var btn = e.target.closest('.ft-btn');
+            if (!btn) return;
+            e.stopPropagation();
+            var action = btn.getAttribute('data-action');
+            var path = btn.getAttribute('data-path');
+            if (action === 'upload') {
+                triggerSpaceUpload(path);
+            } else if (action === 'create') {
+                showCreateFileModal(path);
+            } else if (action === 'move') {
+                showMoveFileModal(path);
+            } else if (action === 'delete') {
+                deleteProjectFile(path);
+            }
+        });
+
+        // ===== 拖拽移动：拖拽文件/目录到其他目录或根目录 =====
+        var dragPath = null; // 当前拖拽的源路径
+
+        container.addEventListener('dragstart', function (e) {
+            var row = e.target.closest('.file-tree-row');
+            if (!row) return;
+            dragPath = row.getAttribute('data-path');
+            e.dataTransfer.effectAllowed = 'move';
+            e.dataTransfer.setData('text/plain', dragPath);
+            row.classList.add('dragging');
+        });
+
+        container.addEventListener('dragend', function (e) {
+            var row = e.target.closest('.file-tree-row');
+            if (row) row.classList.remove('dragging');
+            container.querySelectorAll('.drag-over').forEach(function (el) {
+                el.classList.remove('drag-over');
+            });
+            dragPath = null;
+        });
+
+        // dragover：总是 preventDefault 允许 drop，但只对有效目标高亮
+        container.addEventListener('dragover', function (e) {
+            var dropzone = e.target.closest('.file-tree-dropzone, .file-tree-root-dropzone');
+            if (!dropzone) return;
+            e.preventDefault();
+            e.dataTransfer.dropEffect = 'move';
+            var targetPath = dropzone.getAttribute('data-target') || '';
+            container.querySelectorAll('.drag-over').forEach(function (el) {
+                el.classList.remove('drag-over');
+            });
+            if (isValidDropTarget(dragPath, targetPath)) {
+                dropzone.classList.add('drag-over');
+            }
+        });
+
+        container.addEventListener('dragleave', function (e) {
+            var dropzone = e.target.closest('.file-tree-dropzone, .file-tree-root-dropzone');
+            if (dropzone) dropzone.classList.remove('drag-over');
+        });
+
+        container.addEventListener('drop', function (e) {
+            var dropzone = e.target.closest('.file-tree-dropzone, .file-tree-root-dropzone');
+            if (!dropzone) return;
+            e.preventDefault();
+            dropzone.classList.remove('drag-over');
+            var targetPath = dropzone.getAttribute('data-target') || '';
+            if (!dragPath) return;
+            if (!isValidDropTarget(dragPath, targetPath)) {
+                // 给出无效原因提示
+                var srcParent = getParentDir(dragPath);
+                if (dragPath === targetPath) {
+                    showToast('不能移动到自身', 'info');
+                } else if (srcParent === targetPath) {
+                    showToast('文件已在此目录中', 'info');
+                } else if (targetPath.indexOf(dragPath + '/') === 0) {
+                    showToast('不能移动到子目录', 'info');
+                } else {
+                    showToast('无法移动到此目录', 'info');
+                }
+                return;
+            }
+            moveFileToDir(dragPath, targetPath);
+        });
+    }
+});
+
+// 校验拖拽目标合法性：不能拖到自身；若是目录，不能拖到自身子目录
+function isValidDropTarget(srcPath, targetDir) {
+    if (!srcPath) return false;
+    // 同一目录（目标父目录等于源父目录）也不算移动，但允许（用于无操作），此处返回 false 避免无效请求
+    var srcParent = getParentDir(srcPath);
+    if (srcParent === targetDir) return false;
+    // 不能拖到自身
+    if (srcPath === targetDir) return false;
+    // 目标是源的子目录：禁止
+    if (targetDir.indexOf(srcPath + '/') === 0) return false;
+    return true;
+}
+
+// 执行移动：源路径 → 目标目录 + 原名称
+function moveFileToDir(srcPath, targetDir) {
+    if (!currentProjectId) return;
+    var name = srcPath.indexOf('/') >= 0 ? srcPath.substring(srcPath.lastIndexOf('/') + 1) : srcPath;
+    var to = targetDir ? targetDir + '/' + name : name;
+    if (to === srcPath) return;
+    fetch('/api/projects/' + currentProjectId + '/files/move', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ from: srcPath, to: to })
+    })
+        .then(function (r) { return r.json(); })
+        .then(function (res) {
+            if (res.code === 200) {
+                showToast('已移动到「' + (targetDir ? targetDir : '根目录') + '」', 'success');
+                loadProjectFiles(currentProjectId);
+                loadProjectDetail(currentProjectId);
+            } else {
+                showToast(res.msg || '移动失败', 'error');
+            }
+        })
+        .catch(function (err) {
+            console.error('移动失败:', err);
+            showToast('移动失败', 'error');
+        });
+}
+
+function toggleFileTreeNode(el) {
+    // el 可能是 +/- 符号 span 或 file-tree-name span，它们的 parent 都是 row div
+    var row = el.parentElement;
+    var li = row.parentElement;
+    li.classList.toggle('collapsed');
+    // 同步更新 +/- 符号
+    var toggle = row.querySelector('.file-tree-toggle');
+    if (toggle && !toggle.classList.contains('file-tree-toggle-empty')) {
+        toggle.textContent = li.classList.contains('collapsed') ? '＋' : '－';
+    }
+}
+
+/* ========== 项目空间：上传 ========== */
+function triggerSpaceUpload(targetDir) {
+    spaceUploadTargetDir = targetDir || '';
+    var input = document.getElementById('projectSpaceFileInput');
+    if (input) {
+        input.value = '';
+        input.click();
+    }
+}
+
+var spaceUploadTargetDir = '';
+
+function onProjectSpaceFileSelected(input) {
+    if (!input.files || !input.files.length) return;
+    if (!currentProjectId) {
+        showToast('请先选择项目', 'error');
+        input.value = '';
+        return;
+    }
+    var formData = new FormData();
+    for (var i = 0; i < input.files.length; i++) {
+        formData.append('files', input.files[i]);
+    }
+    formData.append('targetDir', spaceUploadTargetDir);
+
+    showToast('上传中...', 'info');
+    fetch('/api/projects/' + currentProjectId + '/files/upload', {
+        method: 'POST',
+        body: formData
+    })
+        .then(function (r) { return r.json(); })
+        .then(function (res) {
+            if (res.code === 200) {
+                showToast('上传成功', 'success');
+                currentFileTree = res.data || [];
+                renderFileTree(currentFileTree, document.getElementById('detailFiles'));
+                loadProjectDetail(currentProjectId); // 刷新操作日志
+            } else {
+                showToast(res.msg || '上传失败', 'error');
+            }
+        })
+        .catch(function (err) {
+            console.error('上传失败:', err);
+            showToast('上传失败', 'error');
+        })
+        .finally(function () {
+            input.value = '';
+        });
+}
+
+/* ========== 项目空间：新建文件/目录 ========== */
+var spaceCreateTargetDir = '';
+
+function showCreateFileModal(targetDir) {
+    if (!currentProjectId) {
+        showToast('请先选择项目', 'error');
+        return;
+    }
+    spaceCreateTargetDir = targetDir || '';
+    document.getElementById('spaceCreateName').value = '';
+    document.getElementById('spaceCreatePath').textContent = spaceCreateTargetDir ? '/' + spaceCreateTargetDir : '/';
+    Modal.open('spaceCreateModal');
+    setTimeout(function () { document.getElementById('spaceCreateName').focus(); }, 100);
+}
+
+function submitSpaceCreate() {
+    var name = document.getElementById('spaceCreateName').value.trim();
+    if (!name) {
+        showToast('请输入名称', 'error');
+        return;
+    }
+    var typeEl = document.querySelector('input[name="spaceCreateType"]:checked');
+    var isDir = typeEl ? typeEl.value === 'directory' : true;
+    var fullPath = spaceCreateTargetDir ? spaceCreateTargetDir + '/' + name : name;
+
+    fetch('/api/projects/' + currentProjectId + '/files', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ path: fullPath, isDirectory: isDir })
+    })
+        .then(function (r) { return r.json(); })
+        .then(function (res) {
+            if (res.code === 200) {
+                showToast('创建成功', 'success');
+                Modal.close('spaceCreateModal');
+                currentFileTree = res.data || [];
+                renderFileTree(currentFileTree, document.getElementById('detailFiles'));
+                loadProjectDetail(currentProjectId);
+            } else {
+                showToast(res.msg || '创建失败', 'error');
+            }
+        })
+        .catch(function (err) {
+            console.error('创建失败:', err);
+            showToast('创建失败', 'error');
+        });
+}
+
+/* ========== 项目空间：删除 ========== */
+function deleteProjectFile(path) {
+    if (!currentProjectId || !path) return;
+    var name = path.indexOf('/') >= 0 ? path.substring(path.lastIndexOf('/') + 1) : path;
+    showConfirm('确定要删除「' + name + '」吗？如果是目录将递归删除，且无法恢复。').then(function (confirmed) {
+        if (!confirmed) return;
+        fetch('/api/projects/' + currentProjectId + '/files?path=' + encodeURIComponent(path), { method: 'DELETE' })
+            .then(function (r) { return r.json(); })
+            .then(function (res) {
+                if (res.code === 200) {
+                    showToast('删除成功', 'success');
+                    loadProjectFiles(currentProjectId);
+                    loadProjectDetail(currentProjectId);
+                } else {
+                    showToast(res.msg || '删除失败', 'error');
+                }
+            })
+            .catch(function (err) {
+                console.error('删除失败:', err);
+                showToast('删除失败', 'error');
+            });
+    });
+}
+
+/* ========== 项目空间：重命名（仅改名称，不改路径） ========== */
+function getParentDir(path) {
+    if (!path || path.indexOf('/') < 0) return '';
+    return path.substring(0, path.lastIndexOf('/'));
+}
+
+function showMoveFileModal(path) {
+    if (!currentProjectId || !path) return;
+    document.getElementById('spaceMoveFrom').value = path;
+    document.getElementById('spaceMoveCurrentPath').value = '/' + path;
+    var name = path.indexOf('/') >= 0 ? path.substring(path.lastIndexOf('/') + 1) : path;
+    document.getElementById('spaceMoveName').value = name;
+    Modal.open('spaceMoveModal');
+    setTimeout(function () { document.getElementById('spaceMoveName').focus(); }, 100);
+}
+
+function submitSpaceMove() {
+    var from = document.getElementById('spaceMoveFrom').value;
+    var name = document.getElementById('spaceMoveName').value.trim();
+    if (!from || !name) {
+        showToast('请填写新名称', 'error');
+        return;
+    }
+    // 仅改名称：目标 = 原父目录 + 新名称
+    var parentDir = getParentDir(from);
+    var to = parentDir ? parentDir + '/' + name : name;
+
+    fetch('/api/projects/' + currentProjectId + '/files/move', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ from: from, to: to })
+    })
+        .then(function (r) { return r.json(); })
+        .then(function (res) {
+            if (res.code === 200) {
+                showToast('操作成功', 'success');
+                Modal.close('spaceMoveModal');
+                loadProjectFiles(currentProjectId);
+                loadProjectDetail(currentProjectId);
+            } else {
+                showToast(res.msg || '操作失败', 'error');
+            }
+        })
+        .catch(function (err) {
+            console.error('重命名失败:', err);
+            showToast('操作失败', 'error');
+        });
+}
+
+function getFileIcon(name) {
+    var ext = (name.split('.').pop() || '').toLowerCase();
+    var map = {
+        txt: '📄', md: '📝', log: '📃',
+        jpg: '🖼️', jpeg: '🖼️', png: '🖼️', gif: '🖼️', bmp: '🖼️', svg: '🖼️',
+        mp4: '🎬', avi: '🎬', mov: '🎬', mkv: '🎬',
+        mp3: '🎵', wav: '🎵', flac: '🎵',
+        pdf: '📄', doc: '📄', docx: '📄', xls: '📊', xlsx: '📊',
+        zip: '📦', rar: '📦', '7z': '📦', gz: '📦',
+        java: '☕', js: '📜', ts: '📜', py: '🐍', html: '🌐', css: '🎨', json: '📋', xml: '📋'
+    };
+    return map[ext] || '📄';
+}
+
+function formatFileSize(bytes) {
+    if (!bytes || bytes <= 0) return '0 B';
+    if (bytes < 1024) return bytes + ' B';
+    if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
+    if (bytes < 1024 * 1024 * 1024) return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
+    return (bytes / (1024 * 1024 * 1024)).toFixed(1) + ' GB';
+}
+
 /* ========== 操作日志（可折叠） ========== */
 // 动作类型中文标签
 var LOG_ACTION_LABELS = {
@@ -332,12 +730,12 @@ var LOG_ACTION_LABELS = {
     update: '更新',
     status_change: '状态变更',
     delete: '删除',
-    attachment_upload: '上传附件',
-    attachment_delete: '删除附件',
-    attachment_bind: '关联附件',
-    attachment_unbind: '取消关联附件',
     task_bind: '关联任务',
-    task_unbind: '取消关联任务'
+    task_unbind: '取消关联任务',
+    file_create: '新建文件',
+    file_delete: '删除文件',
+    file_move: '移动/重命名',
+    file_upload: '上传文件'
 };
 
 function renderDetailLogs(logs) {
@@ -388,6 +786,12 @@ function showAddModal() {
     document.getElementById('projectId').value = '';
     document.getElementById('projectName').value = '';
     document.getElementById('projectDescription').value = '';
+    // 新建时显示项目空间选项，默认自动创建
+    document.getElementById('spaceModeGroup').style.display = '';
+    var autoRadio = document.querySelector('input[name="spaceMode"][value="auto"]');
+    if (autoRadio) autoRadio.checked = true;
+    document.getElementById('localSpaceBox').style.display = 'none';
+    document.getElementById('projectLocalSpaceDir').value = '';
     Modal.open('projectModal');
 }
 
@@ -398,7 +802,15 @@ function editCurrentProject() {
     document.getElementById('projectId').value = project.id || '';
     document.getElementById('projectName').value = project.name || '';
     document.getElementById('projectDescription').value = project.description || '';
+    // 编辑时不允许修改项目空间
+    document.getElementById('spaceModeGroup').style.display = 'none';
     Modal.open('projectModal');
+}
+
+function onSpaceModeChange() {
+    var localRadio = document.querySelector('input[name="spaceMode"][value="local"]');
+    var box = document.getElementById('localSpaceBox');
+    box.style.display = (localRadio && localRadio.checked) ? 'block' : 'none';
 }
 
 function closeProjectModal() {
@@ -415,14 +827,27 @@ function submitProject() {
         return;
     }
 
-    var body = JSON.stringify({ name: name, description: description });
+    var payload = { name: name, description: description };
+    // 仅新建时提交项目空间设置
+    if (!id) {
+        var localRadio = document.querySelector('input[name="spaceMode"][value="local"]');
+        if (localRadio && localRadio.checked) {
+            var localDir = document.getElementById('projectLocalSpaceDir').value.trim();
+            if (!localDir) {
+                showToast('请输入本地目录路径', 'error');
+                return;
+            }
+            payload.spaceDir = localDir;
+        }
+    }
+
     var url = id ? '/api/projects/' + id : '/api/projects';
     var method = id ? 'PUT' : 'POST';
 
     fetch(url, {
         method: method,
         headers: { 'Content-Type': 'application/json' },
-        body: body
+        body: JSON.stringify(payload)
     })
         .then(function (r) { return r.json(); })
         .then(function (res) {
@@ -439,7 +864,7 @@ function submitProject() {
             }
         })
         .catch(function (err) {
-            console.error('保存项目失败:', err);
+            console.error('提交失败:', err);
             showToast('操作失败', 'error');
         });
 }
@@ -464,76 +889,6 @@ function deleteCurrentProject() {
             })
             .catch(function (err) {
                 console.error('删除项目失败:', err);
-                showToast('删除失败', 'error');
-            });
-    });
-}
-
-/* ========== 附件直接操作（详情页内）========== */
-function triggerProjectAttachmentUpload() {
-    if (!currentProjectId) {
-        showToast('请先选择项目', 'error');
-        return;
-    }
-    document.getElementById('projectAttachmentFileInput').click();
-}
-
-function onProjectAttachmentSelected(input) {
-    if (!input.files || !input.files.length) return;
-    if (!currentProjectId) {
-        showToast('请先选择项目', 'error');
-        input.value = '';
-        return;
-    }
-
-    var formData = new FormData();
-    for (var i = 0; i < input.files.length; i++) {
-        formData.append('files', input.files[i]);
-    }
-    formData.append('source', 'project');
-    formData.append('bizId', currentProjectId);
-
-    fetch('/api/attachments/upload', {
-        method: 'POST',
-        body: formData
-    })
-        .then(function (r) { return r.json(); })
-        .then(function (res) {
-            if (res.code === 200) {
-                showToast('上传成功', 'success');
-                loadProjects(currentPage);
-                loadProjectDetail(currentProjectId);
-            } else {
-                showToast(res.msg || '上传失败', 'error');
-            }
-        })
-        .catch(function (err) {
-            console.error('上传附件失败:', err);
-            showToast('上传失败', 'error');
-        })
-        .finally(function () {
-            input.value = '';
-        });
-}
-
-function removeProjectAttachment(attId) {
-    showConfirm('确定要删除该附件吗？删除后文件将被清除且无法恢复。').then(function (confirmed) {
-        if (!confirmed) return;
-        fetch('/api/attachments/' + attId, { method: 'DELETE' })
-            .then(function (r) { return r.json(); })
-            .then(function (res) {
-                if (res.code === 200) {
-                    showToast('删除成功', 'success');
-                    loadProjects(currentPage);
-                    if (currentProjectId) {
-                        loadProjectDetail(currentProjectId);
-                    }
-                } else {
-                    showToast(res.msg || '删除失败', 'error');
-                }
-            })
-            .catch(function (err) {
-                console.error('删除附件失败:', err);
                 showToast('删除失败', 'error');
             });
     });

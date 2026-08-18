@@ -15,11 +15,6 @@ var statusMap = {
     closed: { label: '已关闭', color: '#9ca3af' }
 };
 
-var fileTypeIcons = {
-    image: '🖼️', video: '🎬', audio: '🎵',
-    pdf: '📄', markdown: '📝', text: '📃', file: '📦'
-};
-
 document.addEventListener('DOMContentLoaded', function () {
     var pathParts = window.location.pathname.split('/');
     var id = pathParts[pathParts.length - 1];
@@ -41,7 +36,6 @@ function loadTaskDetail(id) {
             }
             currentTask = res.data;
             renderTaskDetail(currentTask);
-            loadTaskAttachments(id);
             loadTaskSessions(id);
             loadComments(id);
         })
@@ -106,128 +100,6 @@ function renderTaskActions(task) {
     actionsEl.innerHTML = html;
 }
 
-/* ========== 附件 ========== */
-function loadTaskAttachments(taskId) {
-    fetch('/api/workflow/tasks/' + taskId + '/attachments')
-        .then(function (r) { return r.json(); })
-        .then(function (res) {
-            if (res.code !== 200) {
-                document.getElementById('taskDetailAttachments').innerHTML = '<div class="task-detail-empty">加载附件失败</div>';
-                return;
-            }
-            renderTaskAttachments(res.data || []);
-        })
-        .catch(function (err) {
-            console.error('加载附件失败:', err);
-            document.getElementById('taskDetailAttachments').innerHTML = '<div class="task-detail-empty">加载附件失败</div>';
-        });
-}
-
-function renderTaskAttachments(list) {
-    var container = document.getElementById('taskDetailAttachments');
-    if (!list || !list.length) {
-        container.innerHTML = '<div class="task-detail-empty">暂无关联附件</div>';
-        return;
-    }
-    container.innerHTML = list.map(function (att) {
-        var icon = fileTypeIcons[att.fileType] || '📦';
-        var attId = att.attachmentId;
-        return '<div class="task-attachment-row">' +
-            '<div class="task-attachment-info" onclick="previewAttachment(' + attId + ')">' +
-                '<span class="att-icon">' + icon + '</span>' +
-                '<span class="att-name" title="' + escapeHtml(att.originalName || '') + '">' + escapeHtml(att.originalName || '') + '</span>' +
-            '</div>' +
-            '<div class="task-attachment-actions">' +
-                '<button class="btn-mini btn-preview" onclick="previewAttachment(' + attId + ')">预览</button>' +
-                '<button class="btn-mini btn-unbind" onclick="unbindAttachment(' + currentTaskId + ', ' + attId + ')">解绑</button>' +
-            '</div>' +
-        '</div>';
-    }).join('');
-}
-
-/* ========== 附件上传 ========== */
-function triggerTaskDetailUpload() {
-    document.getElementById('taskDetailFileInput').click();
-}
-
-function onTaskDetailFileSelected(input) {
-    if (!input.files || !input.files.length) return;
-    var formData = new FormData();
-    for (var i = 0; i < input.files.length; i++) {
-        formData.append('files', input.files[i]);
-    }
-    formData.append('source', 'task');
-
-    fetch('/api/attachments/upload', {
-        method: 'POST',
-        body: formData
-    })
-        .then(function (r) { return r.json(); })
-        .then(function (res) {
-            if (res.code === 200 && res.data) {
-                var list = Array.isArray(res.data) ? res.data : [res.data];
-                var ids = list.map(function (att) { return att.id; });
-                // 上传完成后绑定到当前任务
-                bindAttachmentsToTask(currentTaskId, ids);
-            } else {
-                showToast(res.msg || '上传失败', 'error');
-            }
-        })
-        .catch(function (err) {
-            console.error('上传附件失败:', err);
-            showToast('上传失败', 'error');
-        })
-        .finally(function () {
-            input.value = '';
-        });
-}
-
-function bindAttachmentsToTask(taskId, attachmentIds) {
-    fetch('/api/workflow/tasks/' + taskId + '/attachments', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ attachmentIds: attachmentIds })
-    })
-        .then(function (r) { return r.json(); })
-        .then(function (res) {
-            if (res.code === 200) {
-                showToast('上传并关联成功', 'success');
-                loadTaskAttachments(taskId);
-            } else {
-                showToast(res.msg || '关联失败', 'error');
-            }
-        })
-        .catch(function (err) {
-            console.error('关联附件失败:', err);
-            showToast('关联失败', 'error');
-        });
-}
-
-function unbindAttachment(taskId, attId) {
-    showConfirm('确定要解绑该附件吗？').then(function (confirmed) {
-        if (!confirmed) return;
-        fetch('/api/workflow/tasks/' + taskId + '/attachments/' + attId, { method: 'DELETE' })
-            .then(function (r) { return r.json(); })
-            .then(function (res) {
-                if (res.code === 200) {
-                    showToast('解绑成功', 'success');
-                    loadTaskAttachments(taskId);
-                } else {
-                    showToast(res.msg || '解绑失败', 'error');
-                }
-            })
-            .catch(function (err) {
-                console.error('解绑附件失败:', err);
-                showToast('解绑失败', 'error');
-            });
-    });
-}
-
-/* ========== 附件预览（复用公共模块） ========== */
-function previewAttachment(id) {
-    AttachmentPreview.open(id);
-}
-
 /* ========== 会话记录 ========== */
 function loadTaskSessions(taskId) {
     fetch('/api/workflow/tasks/' + taskId + '/sessions')
@@ -254,9 +126,11 @@ function renderTaskSessions(list) {
     container.innerHTML = list.map(function (session) {
         var sid = session.sessionId || '';
         var time = formatTime(session.createTime) || '';
+        // 标题优先；无标题时回退到 sessionId
+        var displayTitle = session.title ? session.title : (sid ? sid : '会话记录');
         return '<div class="task-session-row">' +
             '<span class="task-session-info" title="' + escapeHtml(sid) + '">' +
-                (sid ? escapeHtml(sid) : '会话记录') + (time ? ' · ' + escapeHtml(time) : '') +
+                escapeHtml(displayTitle) + (time ? ' · ' + escapeHtml(time) : '') +
             '</span>' +
             '<a class="task-session-link" href="/?sessionId=' + encodeURIComponent(sid) + '" target="_blank">查看记录</a>' +
         '</div>';
@@ -373,30 +247,31 @@ function acceptTask(id) {
 }
 
 function rejectTask(id) {
-    var reason = window.prompt('请输入打回重做的原因：');
-    if (reason === null) return;
-    if (!reason.trim()) {
-        showToast('请输入打回原因', 'error');
-        return;
-    }
-    fetch('/api/workflow/tasks/' + id + '/reject', {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ reason: reason.trim() })
-    })
-        .then(function (r) { return r.json(); })
-        .then(function (res) {
-            if (res.code === 200) {
-                showToast('已打回重做', 'success');
-                loadTaskDetail(id);
-            } else {
-                showToast(res.msg || '操作失败', 'error');
-            }
+    showPrompt('请输入打回重做的原因：', '请输入原因，Ctrl+Enter 提交').then(function (reason) {
+        if (reason === null) return;
+        if (!reason) {
+            showToast('请输入打回原因', 'error');
+            return;
+        }
+        fetch('/api/workflow/tasks/' + id + '/reject', {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ reason: reason })
         })
-        .catch(function (err) {
-            console.error('打回失败:', err);
-            showToast('操作失败', 'error');
-        });
+            .then(function (r) { return r.json(); })
+            .then(function (res) {
+                if (res.code === 200) {
+                    showToast('已打回重做', 'success');
+                    loadTaskDetail(id);
+                } else {
+                    showToast(res.msg || '操作失败', 'error');
+                }
+            })
+            .catch(function (err) {
+                console.error('打回失败:', err);
+                showToast('操作失败', 'error');
+            });
+    });
 }
 
 function closeTask(id) {

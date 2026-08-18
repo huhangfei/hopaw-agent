@@ -6,6 +6,11 @@ import java.time.LocalDateTime;
  * 任务评论实体
  */
 public class TaskComment {
+    /** 状态：待处理 */
+    public static final String STATUS_PENDING = "pending";
+    /** 状态：已处理 */
+    public static final String STATUS_PROCESSED = "processed";
+
     private Long id;
     private Long taskId;
     private String content;
@@ -15,6 +20,8 @@ public class TaskComment {
     /** 评论者编号：智能体ID 或 用户ID */
     private String commenterId;
     private LocalDateTime createTime;
+    /** 处理状态：pending=待处理 / processed=已处理 */
+    private String status;
 
     public Long getId() {
         return id;
@@ -70,5 +77,13 @@ public class TaskComment {
 
     public void setCreateTime(LocalDateTime createTime) {
         this.createTime = createTime;
+    }
+
+    public String getStatus() {
+        return status;
+    }
+
+    public void setStatus(String status) {
+        this.status = status;
     }
 }

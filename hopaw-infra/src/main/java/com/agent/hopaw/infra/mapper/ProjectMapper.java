@@ -15,6 +15,9 @@ public interface ProjectMapper {
 
     int updateStatus(@Param("id") Long id, @Param("status") String status);
 
+    /** 更新项目空间目录路径 */
+    int updateSpaceDir(@Param("id") Long id, @Param("spaceDir") String spaceDir);
+
     int deleteById(@Param("id") Long id);
 
     Project findById(@Param("id") Long id);

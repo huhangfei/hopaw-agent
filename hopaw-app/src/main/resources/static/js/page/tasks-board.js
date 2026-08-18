@@ -12,8 +12,6 @@ var statusList = [
 
 var agentsCache = [];
 var projectsCache = [];
-var pendingAttachmentIds = []; // 模态框中已上传待绑定的附件ID
-var pendingAttachmentDetails = []; // 模态框中附件详情（用于显示名称）
 
 document.addEventListener('DOMContentLoaded', function () {
     loadBoard();
@@ -135,9 +133,6 @@ function showAddTaskModal() {
     document.getElementById('taskStartTime').value = '';
     document.getElementById('taskExecStart').value = '';
     document.getElementById('taskExecEnd').value = '';
-    pendingAttachmentIds = [];
-    pendingAttachmentDetails = [];
-    renderTaskModalAttList();
     populateAgentSelect('');
     populateProjectSelect('');
     Modal.open('taskModal');
@@ -162,10 +157,6 @@ function showEditTaskModal(id) {
             document.getElementById('taskExecEnd').value = execRange.end;
             populateAgentSelect(task.agentId || '');
             populateProjectSelect(task.projectId || '');
-            // 编辑模式下加载已关联的附件
-            pendingAttachmentIds = [];
-            pendingAttachmentDetails = [];
-            loadTaskModalAttachments(id);
             Modal.open('taskModal');
         })
         .catch(function (err) {
@@ -220,14 +211,9 @@ function submitTask() {
         .then(function (r) { return r.json(); })
         .then(function (res) {
             if (res.code === 200) {
-                var taskId = id || (res.data && res.data.id);
-                if (taskId && pendingAttachmentIds.length) {
-                    bindPendingAttachments(taskId);
-                } else {
-                    showToast(id ? '任务更新成功' : '任务创建成功', 'success');
-                    closeTaskModal();
-                    loadBoard();
-                }
+                showToast(id ? '任务更新成功' : '任务创建成功', 'success');
+                closeTaskModal();
+                loadBoard();
             } else {
                 showToast(res.msg || '操作失败', 'error');
             }
@@ -333,108 +319,6 @@ function populateBoardProjectFilter() {
     });
     select.innerHTML = html;
     select.value = current;
-}
-
-/* ========== 模态框附件上传 ========== */
-function triggerTaskModalUpload() {
-    document.getElementById('taskModalFileInput').click();
-}
-
-function onTaskModalFileSelected(input) {
-    if (!input.files || !input.files.length) return;
-    var formData = new FormData();
-    for (var i = 0; i < input.files.length; i++) {
-        formData.append('files', input.files[i]);
-    }
-    formData.append('source', 'task');
-
-    fetch('/api/attachments/upload', {
-        method: 'POST',
-        body: formData
-    })
-        .then(function (r) { return r.json(); })
-        .then(function (res) {
-            if (res.code === 200 && res.data) {
-                var list = Array.isArray(res.data) ? res.data : [res.data];
-                list.forEach(function (att) {
-                    pendingAttachmentIds.push(att.id);
-                    pendingAttachmentDetails.push(att);
-                });
-                renderTaskModalAttList();
-                showToast('上传成功', 'success');
-            } else {
-                showToast(res.msg || '上传失败', 'error');
-            }
-        })
-        .catch(function (err) {
-            console.error('上传附件失败:', err);
-            showToast('上传失败', 'error');
-        })
-        .finally(function () {
-            input.value = '';
-        });
-}
-
-function loadTaskModalAttachments(taskId) {
-    fetch('/api/workflow/tasks/' + taskId + '/attachments')
-        .then(function (r) { return r.json(); })
-        .then(function (res) {
-            if (res.code === 200 && res.data) {
-                pendingAttachmentIds = res.data.map(function (att) { return att.attachmentId; });
-                pendingAttachmentDetails = res.data.slice();
-                renderTaskModalAttList();
-            }
-        })
-        .catch(function (err) {
-            console.error('加载任务附件失败:', err);
-        });
-}
-
-function renderTaskModalAttList() {
-    var container = document.getElementById('taskModalAttList');
-    if (!pendingAttachmentDetails.length) {
-        container.innerHTML = '';
-        return;
-    }
-    var iconMap = {
-        image: '🖼️', video: '🎬', audio: '🎵',
-        pdf: '📄', markdown: '📝', text: '📃', file: '📦'
-    };
-    container.innerHTML = pendingAttachmentDetails.map(function (att, idx) {
-        var icon = iconMap[att.fileType] || '📦';
-        var attId = att.attachmentId || att.id;
-        return '<div class="task-modal-att-item">' +
-            '<span class="att-icon">' + icon + '</span>' +
-            '<span class="att-name" title="' + escapeHtml(att.originalName || '') + '">' + escapeHtml(att.originalName || ('附件#' + attId)) + '</span>' +
-            '<button type="button" class="att-remove" onclick="removePendingAttachment(' + idx + ')">&times;</button>' +
-        '</div>';
-    }).join('');
-}
-
-function removePendingAttachment(idx) {
-    pendingAttachmentIds.splice(idx, 1);
-    pendingAttachmentDetails.splice(idx, 1);
-    renderTaskModalAttList();
-}
-
-function bindPendingAttachments(taskId) {
-    fetch('/api/workflow/tasks/' + taskId + '/attachments', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ attachmentIds: pendingAttachmentIds })
-    })
-        .then(function (r) { return r.json(); })
-        .then(function (res) {
-            showToast('任务保存成功', 'success');
-            closeTaskModal();
-            loadBoard();
-        })
-        .catch(function (err) {
-            console.error('绑定附件失败:', err);
-            showToast('任务已保存，但附件绑定失败', 'error');
-            closeTaskModal();
-            loadBoard();
-        });
 }
 
 /* ========== 工具函数 ========== */

@@ -35,6 +35,7 @@ public class TaskCommentService implements ITaskCommentService {
         comment.setCommenterType(commenterType);
         comment.setCommenterId(commenterId);
         comment.setCreateTime(LocalDateTime.now());
+        comment.setStatus(TaskComment.STATUS_PENDING);
         taskCommentMapper.insert(comment);
         return comment;
     }
@@ -55,5 +56,19 @@ public class TaskCommentService implements ITaskCommentService {
     public List<TaskComment> getCommentsByTaskId(Long taskId) {
         List<TaskComment> list = taskCommentMapper.findByTaskId(taskId);
         return list != null ? list : new ArrayList<>();
+    }
+
+    @Override
+    public List<TaskComment> getPendingCommentsByTaskId(Long taskId) {
+        List<TaskComment> list = taskCommentMapper.findByTaskIdAndStatus(taskId, TaskComment.STATUS_PENDING);
+        return list != null ? list : new ArrayList<>();
+    }
+
+    @Override
+    public void markCommentsAsProcessed(List<Long> commentIds) {
+        if (commentIds == null || commentIds.isEmpty()) {
+            return;
+        }
+        taskCommentMapper.updateStatusByIds(commentIds, TaskComment.STATUS_PROCESSED);
     }
 }

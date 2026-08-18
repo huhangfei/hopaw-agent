@@ -194,30 +194,6 @@ public class WorkflowTaskController {
         }
     }
 
-    // 任务附件列表
-    @GetMapping("/api/workflow/tasks/{id}/attachments")
-    @ResponseBody
-    public ResponseBean getTaskAttachments(@PathVariable Long id) {
-        return ResponseBean.success(taskService.getTaskAttachments(id));
-    }
-
-    // 关联附件
-    @PostMapping("/api/workflow/tasks/{id}/attachments")
-    @ResponseBody
-    public ResponseBean bindAttachments(@PathVariable Long id, @RequestBody Map<String, List<Long>> body) {
-        List<Long> attachmentIds = body.get("attachmentIds");
-        taskService.bindAttachments(id, attachmentIds);
-        return ResponseBean.success();
-    }
-
-    // 取消关联
-    @DeleteMapping("/api/workflow/tasks/{id}/attachments/{attId}")
-    @ResponseBody
-    public ResponseBean unbindAttachment(@PathVariable Long id, @PathVariable Long attId) {
-        taskService.unbindAttachment(id, attId);
-        return ResponseBean.success();
-    }
-
     // 任务会话列表
     @GetMapping("/api/workflow/tasks/{id}/sessions")
     @ResponseBody

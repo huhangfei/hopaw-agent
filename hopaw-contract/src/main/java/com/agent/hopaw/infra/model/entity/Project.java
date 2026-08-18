@@ -12,8 +12,8 @@ public class Project {
     /** 状态：active / archived */
     private String status;
     private String userId;
-    /** 附件数（非持久字段，仅用于列表展示统计） */
-    private Integer attachmentCount;
+    /** 项目空间目录（项目工作空间的绝对路径，创建项目时根据项目编号自动生成） */
+    private String spaceDir;
     /** 创建人昵称（非持久字段，由 Controller 层填充） */
     private String creatorName;
     private LocalDateTime createTime;
@@ -59,12 +59,12 @@ public class Project {
         this.userId = userId;
     }
 
-    public Integer getAttachmentCount() {
-        return attachmentCount;
+    public String getSpaceDir() {
+        return spaceDir;
     }
 
-    public void setAttachmentCount(Integer attachmentCount) {
-        this.attachmentCount = attachmentCount;
+    public void setSpaceDir(String spaceDir) {
+        this.spaceDir = spaceDir;
     }
 
     public String getCreatorName() {

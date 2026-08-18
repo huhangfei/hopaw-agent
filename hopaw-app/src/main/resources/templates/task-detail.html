@@ -37,18 +37,6 @@
     </div>
 
     <div class="task-detail-section">
-        <div class="task-detail-section-header">
-            <h3 class="task-detail-section-title">关联附件</h3>
-            <input type="file" id="taskDetailFileInput" multiple style="display:none" onchange="onTaskDetailFileSelected(this)">
-            <button class="task-action-btn btn-bind-attachment" onclick="triggerTaskDetailUpload()">
-                <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
-                上传附件
-            </button>
-        </div>
-        <div class="task-detail-attachments" id="taskDetailAttachments"></div>
-    </div>
-
-    <div class="task-detail-section">
         <h3 class="task-detail-section-title">会话记录</h3>
         <div class="task-detail-sessions" id="taskDetailSessions"></div>
     </div>
@@ -71,7 +59,6 @@
 <script th:src="@{/js/toast.js}"></script>
 <script th:src="@{/js/modal.js}"></script>
 <script th:src="@{/js/confirm-dialog.js}"></script>
-<script th:src="@{/js/page/attachment-preview.js}"></script>
 <script th:src="@{/js/page/task-detail.js}"></script>
 </body>
 </html>

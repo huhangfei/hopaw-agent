@@ -1,6 +1,6 @@
 package com.agent.hopaw.infra.service;
 
-import com.agent.hopaw.infra.model.entity.TaskAttachment;
+import com.agent.hopaw.infra.model.dto.UserChatRequest;
 import com.agent.hopaw.infra.model.entity.TaskSession;
 import com.agent.hopaw.infra.model.entity.WorkflowTask;
 
@@ -23,10 +23,8 @@ public interface IWorkflowTaskService {
     void closeTask(Long id, String userId);
     List<WorkflowTask> findPendingExecution();
     void executeTask(Long taskId);
+    void executeTask(UserChatRequest userChatRequest);
     void updateTaskStatus(Long taskId, String status, String rejectReason);
-    void bindAttachments(Long taskId, List<Long> attachmentIds);
-    void unbindAttachment(Long taskId, Long attachmentId);
-    List<TaskAttachment> getTaskAttachments(Long taskId);
     List<TaskSession> getTaskSessions(Long taskId);
     Long findTaskIdBySessionId(String sessionId);
 }

@@ -41,6 +41,43 @@
     cursor: pointer;
 }
 
+/* ===== 带输入框的弹框（showPrompt）===== */
+.confirm-dialog-prompt {
+    width: 460px;
+}
+
+.confirm-dialog-prompt .confirm-body {
+    text-align: left;
+    padding: 24px 24px 16px;
+}
+
+.confirm-dialog-prompt .confirm-text {
+    margin-bottom: 12px;
+    text-align: left;
+}
+
+.prompt-textarea {
+    width: 100%;
+    min-height: 90px;
+    padding: 10px 12px;
+    border: 1px solid #d1d5db;
+    border-radius: 8px;
+    font-size: 14px;
+    color: #1f2937;
+    background: #fff;
+    outline: none;
+    resize: vertical;
+    font-family: inherit;
+    line-height: 1.5;
+    box-sizing: border-box;
+    transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.prompt-textarea:focus {
+    border-color: #667eea;
+    box-shadow: 0 0 0 2px rgba(102, 126, 234, 0.15);
+}
+
 .confirm-footer {
     display: flex;
     justify-content: flex-end;
@@ -117,6 +154,17 @@ body.dark-theme .confirm-btn-ok:hover {
 
 body.dark-theme .confirm-overlay {
     background: rgba(0, 0, 0, 0.7);
+}
+
+body.dark-theme .prompt-textarea {
+    background: #2d2d44;
+    border-color: #3d3d6b;
+    color: #e0e0e0;
+}
+
+body.dark-theme .prompt-textarea:focus {
+    border-color: #8ba3ff;
+    box-shadow: 0 0 0 2px rgba(139, 163, 255, 0.2);
 }
 
 body.dark-theme .confirm-dialog {

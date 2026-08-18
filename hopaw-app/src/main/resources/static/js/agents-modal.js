@@ -8,7 +8,8 @@ function showAddAgentModal() {
             var modalEl = container.firstElementChild;
             document.body.appendChild(modalEl);
 
-            modalEl.addEventListener('click', function(e) {
+            // 用 mousedown 而非 click：避免在窗体内按下、拖到遮罩释放时误关闭
+            modalEl.addEventListener('mousedown', function(e) {
                 if (e.target === modalEl) {
                     closeAndRemoveModal(modalEl);
                 }
@@ -27,7 +28,7 @@ function showEditAgentModal(agentId) {
             var modalEl = container.firstElementChild;
             document.body.appendChild(modalEl);
 
-            modalEl.addEventListener('click', function(e) {
+            modalEl.addEventListener('mousedown', function(e) {
                 if (e.target === modalEl) {
                     closeAndRemoveModal(modalEl);
                 }

@@ -14,15 +14,15 @@ import java.util.List;
  * 工作流任务后台调度器：轮询待执行任务并拉起智能体
  */
 @Component("workflowTaskScheduler")
-public class TaskScheduler {
-    private static final Logger logger = LoggerFactory.getLogger(TaskScheduler.class);
+public class WorkflowTaskScheduler {
+    private static final Logger logger = LoggerFactory.getLogger(WorkflowTaskScheduler.class);
     private final IWorkflowTaskService taskService;
 
-    public TaskScheduler(IWorkflowTaskService taskService) {
+    public WorkflowTaskScheduler(IWorkflowTaskService taskService) {
         this.taskService = taskService;
     }
 
-    @Scheduled(fixedDelay = 30000)
+    @Scheduled(fixedDelay = 5000)
     public void pollPendingTasks() {
         List<WorkflowTask> tasks = taskService.findPendingExecution();
         if (tasks == null || tasks.isEmpty()) {

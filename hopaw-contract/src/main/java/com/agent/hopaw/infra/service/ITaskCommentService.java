@@ -24,5 +24,19 @@ public interface ITaskCommentService {
     TaskComment addComment(Long taskId, String content, String userId, String commenterType, String commenterId);
 
     void deleteComment(Long id, String userId);
+
+    /**
+     * 查询任务全部评论（按时间正序）
+     */
     List<TaskComment> getCommentsByTaskId(Long taskId);
+
+    /**
+     * 查询任务下待处理评论（status=pending）
+     */
+    List<TaskComment> getPendingCommentsByTaskId(Long taskId);
+
+    /**
+     * 将指定评论ID批量标记为已处理（status=processed）
+     */
+    void markCommentsAsProcessed(List<Long> commentIds);
 }

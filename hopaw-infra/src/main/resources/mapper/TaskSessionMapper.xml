@@ -7,6 +7,7 @@
         <result property="taskId" column="task_id"/>
         <result property="sessionId" column="session_id"/>
         <result property="createTime" column="create_time"/>
+        <result property="title" column="title"/>
     </resultMap>
 
     <sql id="allColumns">
@@ -19,10 +20,11 @@
     </insert>
 
     <select id="findByTaskId" resultMap="TaskSessionResultMap">
-        SELECT <include refid="allColumns"/>
-        FROM task_sessions
-        WHERE task_id = #{taskId}
-        ORDER BY id ASC
+        SELECT ts.id, ts.task_id, ts.session_id, ts.create_time, cs.title
+        FROM task_sessions ts
+        LEFT JOIN chat_sessions cs ON ts.session_id = cs.session_id
+        WHERE ts.task_id = #{taskId}
+        ORDER BY ts.id ASC
     </select>
 
     <select id="findTaskIdBySessionId" resultType="long">

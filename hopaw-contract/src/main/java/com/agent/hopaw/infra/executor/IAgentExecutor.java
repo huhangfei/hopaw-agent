@@ -1,5 +1,8 @@
 package com.agent.hopaw.infra.executor;
 
+import dev.langchain4j.data.message.Content;
+
+import java.util.List;
 import java.util.function.Consumer;
 
 public interface IAgentExecutor {
@@ -15,5 +18,5 @@ public interface IAgentExecutor {
     void sendToolRunningContent(String callId, Object resultPartial);
     void toolApprovalComplete(String callId,Boolean allowed);
     boolean running();
-    void execute();
+    void execute(List<Content> contents);
 }

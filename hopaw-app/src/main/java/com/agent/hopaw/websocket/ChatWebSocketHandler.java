@@ -2,11 +2,10 @@ package com.agent.hopaw.websocket;
 
 import com.agent.hopaw.infra.event.AgentMessageEvent;
 import com.agent.hopaw.infra.event.TokenUsageEvent;
-import com.agent.hopaw.infra.executor.IAgentExecutor;
 import com.agent.hopaw.infra.model.dto.AiMessageBaseInfo;
 import com.agent.hopaw.infra.model.dto.AttachmentFile;
 import com.agent.hopaw.infra.model.dto.UserChatRequest;
-import com.agent.hopaw.infra.service.IAgentExecutorService;
+import com.agent.hopaw.infra.service.IChatService;
 import com.alibaba.fastjson2.JSON;
 import com.alibaba.fastjson2.JSONObject;
 import org.slf4j.Logger;
@@ -35,12 +34,12 @@ public class ChatWebSocketHandler extends TextWebSocketHandler {
     private static final ConcurrentHashMap<String, Object> SESSION_LOCK_MAP = new ConcurrentHashMap<>();
 
     private static final Logger logger = LoggerFactory.getLogger(ChatWebSocketHandler.class);
-    private final IAgentExecutorService agentExecutorService;
+    private final IChatService chatService;
     private static final ConcurrentMap<String, ConcurrentLinkedQueue<String>> userSessionMap = new ConcurrentHashMap<>();
     private static final ConcurrentMap<String, WebSocketSession> sessionMap = new ConcurrentHashMap<>();
 
-    public ChatWebSocketHandler(IAgentExecutorService agentExecutorService) {
-        this.agentExecutorService = agentExecutorService;
+    public ChatWebSocketHandler(IChatService chatService) {
+        this.chatService = chatService;
     }
 
     @Override
@@ -102,8 +101,7 @@ public class ChatWebSocketHandler extends TextWebSocketHandler {
             userChatRequest.setEnableThinking(enableThinking);
             userChatRequest.setToolCallPermission(toolCallPermission);
             userChatRequest.setFiles(files);
-            IAgentExecutor executor = agentExecutorService.createChatAgentExecutor(userChatRequest);
-            executor.execute();
+            chatService.handle(userChatRequest);
         } catch (Exception e) {
             logger.error("handleTextMessage error", e);
             sendError(session, "处理消息失败: " + e.getMessage());

@@ -82,3 +82,58 @@ function showConfirmWithCheckbox(message, checkboxLabel, defaultChecked) {
         });
     });
 }
+
+/**
+ * 带多行文本输入的弹框（替代 window.prompt）
+ * @param {string} message 提示文字
+ * @param {string} [placeholder] 输入框占位符
+ * @param {string} [defaultValue] 输入框默认值
+ * @returns {Promise<string|null>} 确定返回 trimmed 值，取消返回 null
+ */
+function showPrompt(message, placeholder, defaultValue) {
+    return new Promise(function(resolve) {
+        var overlay = document.createElement('div');
+        overlay.className = 'confirm-overlay';
+        overlay.innerHTML =
+            '<div class="confirm-dialog confirm-dialog-prompt">' +
+                '<div class="confirm-body">' +
+                    '<div class="confirm-text">' + message + '</div>' +
+                    '<textarea class="prompt-textarea" rows="4" placeholder="' + (placeholder || '') + '">' + (defaultValue || '') + '</textarea>' +
+                '</div>' +
+                '<div class="confirm-footer">' +
+                    '<button class="btn-cancel confirm-btn">取消</button>' +
+                    '<button class="btn-submit confirm-btn confirm-ok">确定</button>' +
+                '</div>' +
+            '</div>';
+
+        document.body.appendChild(overlay);
+
+        var textarea = overlay.querySelector('.prompt-textarea');
+        // 自动聚焦并选中文本
+        setTimeout(function() { textarea.focus(); textarea.select(); }, 0);
+        // Ctrl/Cmd + Enter 提交
+        textarea.addEventListener('keydown', function(e) {
+            if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
+                overlay.querySelector('.confirm-ok').click();
+            }
+        });
+
+        overlay.querySelector('.btn-cancel').addEventListener('click', function() {
+            document.body.removeChild(overlay);
+            resolve(null);
+        });
+
+        overlay.querySelector('.confirm-ok').addEventListener('click', function() {
+            var val = textarea.value.trim();
+            document.body.removeChild(overlay);
+            resolve(val);
+        });
+
+        overlay.addEventListener('mousedown', function(e) {
+            if (e.target === overlay) {
+                document.body.removeChild(overlay);
+                resolve(null);
+            }
+        });
+    });
+}

@@ -15,6 +15,8 @@
         <result property="userId" column="user_id"/>
         <result property="createTime" column="create_time"/>
         <result property="updateTime" column="update_time"/>
+        <result property="agentName" column="agent_name"/>
+        <result property="projectName" column="project_name"/>
     </resultMap>
 
     <sql id="allColumns">
@@ -50,9 +52,13 @@
     </delete>
 
     <select id="findById" resultMap="WorkflowTaskResultMap">
-        SELECT <include refid="allColumns"/>
-        FROM workflow_tasks
-        WHERE id = #{id}
+        SELECT t.id, t.title, t.content, t.status, t.project_id, t.agent_id, t.start_time,
+               t.execution_period, t.reject_reason, t.user_id, t.create_time, t.update_time,
+               a.name AS agent_name, p.name AS project_name
+        FROM workflow_tasks t
+        LEFT JOIN agents a ON t.agent_id = a.id
+        LEFT JOIN projects p ON t.project_id = p.id
+        WHERE t.id = #{id}
     </select>
 
     <select id="findByUserIdAndStatus" resultMap="WorkflowTaskResultMap">

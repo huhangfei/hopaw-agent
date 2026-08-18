@@ -17,41 +17,45 @@
         <result property="lastUpdateTime" column="last_update_time"/>
     </resultMap>
 
+    <sql id="allColumns">
+        id, session_id, agent_id, user_id, title, enable_thinking, skill_names, ai_model_id, tool_call_permission, biz_type, create_time, last_update_time
+    </sql>
+
     <select id="findAll" resultMap="ChatSessionResultMap">
-        SELECT id, session_id, agent_id, user_id, title, enable_thinking, skill_names, ai_model_id, tool_call_permission, create_time, last_update_time
+        SELECT <include refid="allColumns"/>
         FROM chat_sessions
         ORDER BY last_update_time DESC
     </select>
 
     <select id="findByUserId" resultMap="ChatSessionResultMap">
-        SELECT id, session_id, agent_id, user_id, title, enable_thinking, skill_names, ai_model_id, tool_call_permission, create_time, last_update_time
+        SELECT <include refid="allColumns"/>
         FROM chat_sessions
         WHERE user_id = #{userId}
         ORDER BY last_update_time DESC
     </select>
 
     <select id="findByUserIdAndAgentId" resultMap="ChatSessionResultMap">
-        SELECT id, session_id, agent_id, user_id, title, enable_thinking, skill_names, ai_model_id, tool_call_permission, create_time, last_update_time
+        SELECT <include refid="allColumns"/>
         FROM chat_sessions
         WHERE user_id = #{userId} AND agent_id = #{agentId}
         ORDER BY last_update_time DESC
     </select>
 
     <select id="findById" resultMap="ChatSessionResultMap">
-        SELECT id, session_id, agent_id, user_id, title, enable_thinking, skill_names, ai_model_id, tool_call_permission, create_time, last_update_time
+        SELECT <include refid="allColumns"/>
         FROM chat_sessions
         WHERE id = #{id}
     </select>
 
     <select id="findBySessionId" resultMap="ChatSessionResultMap">
-        SELECT id, session_id, agent_id, user_id, title, enable_thinking, skill_names, ai_model_id, tool_call_permission, create_time, last_update_time
+        SELECT <include refid="allColumns"/>
         FROM chat_sessions
         WHERE session_id = #{sessionId}
     </select>
 
     <insert id="insert" parameterType="com.agent.hopaw.infra.model.entity.ChatSession">
-        INSERT INTO chat_sessions (session_id, agent_id, user_id, title, enable_thinking, skill_names, ai_model_id, tool_call_permission, create_time, last_update_time)
-        VALUES (#{sessionId}, #{agentId}, #{userId}, #{title}, #{enableThinking}, #{skillNames}, #{aiModelId}, #{toolCallPermission}, #{createTime}, #{lastUpdateTime})
+        INSERT INTO chat_sessions (session_id, agent_id, user_id, title, enable_thinking, skill_names, ai_model_id, tool_call_permission, biz_type, create_time, last_update_time)
+        VALUES (#{sessionId}, #{agentId}, #{userId}, #{title}, #{enableThinking}, #{skillNames}, #{aiModelId}, #{toolCallPermission}, #{bizType}, #{createTime}, #{lastUpdateTime})
         <selectKey resultType="long" keyProperty="id" order="AFTER">
             SELECT last_insert_rowid()
         </selectKey>

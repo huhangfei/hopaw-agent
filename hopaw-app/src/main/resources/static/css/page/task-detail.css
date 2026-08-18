@@ -86,23 +86,11 @@ body {
     box-shadow: 0 1px 4px rgba(0, 0, 0, 0.05);
 }
 
-.task-detail-section-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 12px;
-    gap: 12px;
-}
-
 .task-detail-section-title {
     font-size: 15px;
     font-weight: 600;
     color: #333;
     margin: 0 0 12px 0;
-}
-
-.task-detail-section-header .task-detail-section-title {
-    margin-bottom: 0;
 }
 
 /* ========== 基本信息 ========== */
@@ -170,75 +158,6 @@ body {
 
 .task-detail-content.empty {
     color: #999;
-}
-
-/* ========== 附件列表 ========== */
-.task-detail-attachments {
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
-}
-
-.task-attachment-row {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 10px 12px;
-    border: 1px solid #e5e7eb;
-    border-radius: 8px;
-    background: #fafafa;
-    gap: 10px;
-}
-
-.task-attachment-info {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    min-width: 0;
-    flex: 1;
-    cursor: pointer;
-}
-
-.task-attachment-info .att-icon {
-    font-size: 20px;
-    flex-shrink: 0;
-}
-
-.task-attachment-info .att-name {
-    font-size: 13px;
-    color: #333;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-}
-
-.task-attachment-actions {
-    display: flex;
-    gap: 6px;
-    flex-shrink: 0;
-}
-
-.task-attachment-actions .btn-mini {
-    border: none;
-    padding: 4px 10px;
-    border-radius: 6px;
-    font-size: 12px;
-    cursor: pointer;
-    transition: opacity 0.2s;
-}
-
-.task-attachment-actions .btn-preview {
-    background: #e5e7eb;
-    color: #333;
-}
-
-.task-attachment-actions .btn-unbind {
-    background: #ef4444;
-    color: #fff;
-}
-
-.task-attachment-actions .btn-mini:hover {
-    opacity: 0.85;
 }
 
 /* ========== 会话列表 ========== */
@@ -337,7 +256,7 @@ body {
 .task-comment-input-wrap {
     display: flex;
     gap: 8px;
-    align-items: flex-end;
+    align-items: stretch;
 }
 
 .task-comment-input {
@@ -358,6 +277,13 @@ body {
 .task-comment-input:focus {
     border-color: #667eea;
     box-shadow: 0 0 0 2px rgba(102, 126, 234, 0.15);
+}
+
+/* 发表评论按钮：与输入框等高 */
+.task-comment-input-wrap .task-action-btn {
+    align-self: stretch;
+    padding: 0 18px;
+    line-height: 1.2;
 }
 
 /* ========== 操作按钮 ========== */
@@ -410,13 +336,6 @@ body {
     color: #333;
 }
 
-.task-action-btn.btn-bind-attachment {
-    background: #667eea;
-    color: #fff;
-    padding: 4px 12px;
-    font-size: 12px;
-}
-
 /* ========== 加载/空状态 ========== */
 .task-detail-loading,
 .task-detail-empty {
@@ -424,125 +343,6 @@ body {
     font-size: 13px;
     padding: 12px 0;
     text-align: center;
-}
-
-/* ========== 附件选择列表 ========== */
-.attachment-select-item {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 10px 12px;
-    border: 1px solid #e5e7eb;
-    border-radius: 8px;
-    margin-bottom: 8px;
-    background: #fafafa;
-    gap: 10px;
-}
-
-.attachment-select-item .att-info {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    min-width: 0;
-    flex: 1;
-}
-
-.attachment-select-item .att-info .att-name {
-    font-size: 13px;
-    color: #333;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-}
-
-.attachment-select-item .btn-bind {
-    background: #667eea;
-    color: #fff;
-    border: none;
-    padding: 4px 12px;
-    border-radius: 6px;
-    font-size: 12px;
-    cursor: pointer;
-    flex-shrink: 0;
-}
-
-.attachment-select-item .btn-bind:hover {
-    opacity: 0.85;
-}
-
-.attachment-select-item .btn-bound {
-    background: #e5e7eb;
-    color: #999;
-    border: none;
-    padding: 4px 12px;
-    border-radius: 6px;
-    font-size: 12px;
-    cursor: default;
-    flex-shrink: 0;
-}
-
-/* ========== 预览模态框内容 ========== */
-.preview-container {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 16px;
-}
-
-.preview-container img {
-    max-width: 100%;
-    max-height: 65vh;
-    border-radius: 8px;
-}
-
-.preview-container video,
-.preview-container audio {
-    width: 100%;
-    max-width: 800px;
-}
-
-.preview-container .preview-text {
-    width: 100%;
-    background: #1e1e1e;
-    color: #d4d4d4;
-    padding: 16px;
-    border-radius: 8px;
-    overflow: auto;
-    max-height: 55vh;
-    font-family: 'Consolas', 'Monaco', monospace;
-    font-size: 13px;
-    white-space: pre-wrap;
-    word-break: break-all;
-}
-
-.preview-container .preview-markdown {
-    width: 100%;
-    background: #fff;
-    color: #333;
-    padding: 20px 24px;
-    border-radius: 8px;
-    overflow: auto;
-    max-height: 55vh;
-    font-size: 14px;
-    line-height: 1.7;
-    border: 1px solid #e5e7eb;
-}
-
-.preview-container .preview-pdf {
-    width: 100%;
-    height: 65vh;
-    border: none;
-}
-
-.preview-container .preview-unsupported {
-    text-align: center;
-    padding: 40px;
-    color: #9ca3af;
-}
-
-.preview-container .preview-unsupported .file-icon {
-    font-size: 64px;
-    margin-bottom: 12px;
 }
 
 /* ==================== Dark Theme ==================== */
@@ -599,20 +399,6 @@ body.dark-theme .task-detail-content.empty {
     color: #888;
 }
 
-body.dark-theme .task-attachment-row {
-    background: #1a1a2e;
-    border-color: #2d2d44;
-}
-
-body.dark-theme .task-attachment-info .att-name {
-    color: #e0e0e0;
-}
-
-body.dark-theme .task-attachment-actions .btn-preview {
-    background: #2d2d44;
-    color: #c0c0c0;
-}
-
 body.dark-theme .task-session-row {
     background: #1a1a2e;
     border-color: #2d2d44;
@@ -661,24 +447,4 @@ body.dark-theme .task-action-btn.btn-secondary {
 body.dark-theme .task-detail-loading,
 body.dark-theme .task-detail-empty {
     color: #888;
-}
-
-body.dark-theme .attachment-select-item {
-    background: #1a1a2e;
-    border-color: #2d2d44;
-}
-
-body.dark-theme .attachment-select-item .att-info .att-name {
-    color: #e0e0e0;
-}
-
-body.dark-theme .attachment-select-item .btn-bound {
-    background: #2d2d44;
-    color: #888;
-}
-
-body.dark-theme .preview-container .preview-markdown {
-    background: #0d1117;
-    color: #c9d1d9;
-    border-color: #30363d;
 }

@@ -29,8 +29,12 @@ public class AgentExecutorParams {
     private String toolCallPermission;
     private List<ToolSetInfo> toolSets;
     private List<String> skillNames;
-    private List<Content> contents;
     private List<McpServerConfig> mcpServerConfigs;
+    /**
+     * 业务类型：task 表示任务会话，null 表示普通对话会话
+     * 由 saveChatSession 持久化到 chat_sessions.biz_type
+     */
+    private String bizType;
     public Long getAgentId() {
         return agentId;
     }
@@ -135,13 +139,6 @@ public class AgentExecutorParams {
         this.toolSets = toolSets;
     }
 
-    public List<Content> getContents() {
-        return contents;
-    }
-
-    public void setContents(List<Content> contents) {
-        this.contents = contents;
-    }
 
     public List<McpServerConfig> getMcpServerConfigs() {
         return mcpServerConfigs;
@@ -149,5 +146,13 @@ public class AgentExecutorParams {
 
     public void setMcpServerConfigs(List<McpServerConfig> mcpServerConfigs) {
         this.mcpServerConfigs = mcpServerConfigs;
+    }
+
+    public String getBizType() {
+        return bizType;
+    }
+
+    public void setBizType(String bizType) {
+        this.bizType = bizType;
     }
 }

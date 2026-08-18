@@ -10,6 +10,8 @@ public class TaskSession {
     private Long taskId;
     private String sessionId;
     private LocalDateTime createTime;
+    /** 会话标题（非持久字段，由查询时 JOIN chat_sessions 填充） */
+    private String title;
 
     public Long getId() {
         return id;
@@ -41,5 +43,13 @@ public class TaskSession {
 
     public void setCreateTime(LocalDateTime createTime) {
         this.createTime = createTime;
+    }
+
+    public String getTitle() {
+        return title;
+    }
+
+    public void setTitle(String title) {
+        this.title = title;
     }
 }

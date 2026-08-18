@@ -1,13 +1,12 @@
 package com.agent.hopaw.controller;
 
+import com.agent.hopaw.infra.model.dto.FileUploadItem;
 import com.agent.hopaw.infra.model.dto.ResponseBean;
 import com.agent.hopaw.infra.model.entity.Account;
-import com.agent.hopaw.infra.model.entity.Attachment;
 import com.agent.hopaw.infra.model.entity.Project;
 import com.agent.hopaw.infra.model.entity.ProjectLog;
 import com.agent.hopaw.infra.model.entity.WorkflowTask;
 import com.agent.hopaw.infra.service.IAccountService;
-import com.agent.hopaw.infra.service.IAttachmentService;
 import com.agent.hopaw.infra.service.IProjectLogService;
 import com.agent.hopaw.infra.service.IProjectService;
 import com.agent.hopaw.util.CurrentUser;
@@ -16,8 +15,10 @@ import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
 import javax.servlet.http.HttpServletRequest;
+import java.io.IOException;
 import java.util.*;
 
 @Controller
@@ -37,16 +38,13 @@ public class ProjectController {
     private final IProjectService projectService;
     private final IAccountService accountService;
     private final IProjectLogService projectLogService;
-    private final IAttachmentService attachmentService;
 
     public ProjectController(IProjectService projectService,
                              IAccountService accountService,
-                             IProjectLogService projectLogService,
-                             IAttachmentService attachmentService) {
+                             IProjectLogService projectLogService) {
         this.projectService = projectService;
         this.accountService = accountService;
         this.projectLogService = projectLogService;
-        this.attachmentService = attachmentService;
     }
 
     // 页面
@@ -170,8 +168,9 @@ public class ProjectController {
         String userId = CurrentUser.require(request);
         project.setUserId(userId);
         Project created = projectService.createProject(project);
-        // 记录日志：创建项目
-        projectLogService.log(created.getId(), userId, "create", "创建项目「" + (created.getName() != null ? created.getName() : "") + "」");
+        // 记录日志：创建项目（spaceDir 现为相对路径）
+        String spaceInfo = created.getSpaceDir() != null ? "，空间目录：" + created.getSpaceDir() : "";
+        projectLogService.log(created.getId(), userId, "create", "创建项目「" + (created.getName() != null ? created.getName() : "") + "」" + spaceInfo);
         return ResponseBean.success(created);
     }
 
@@ -234,72 +233,101 @@ public class ProjectController {
         }
     }
 
-    // 项目附件列表
-    @GetMapping("/api/projects/{id}/attachments")
+    // 项目空间文件树
+    @GetMapping("/api/projects/{id}/files")
     @ResponseBody
-    public ResponseBean getProjectAttachments(@PathVariable Long id) {
-        return ResponseBean.success(projectService.getProjectAttachments(id));
-    }
-
-    // 关联附件
-    @PostMapping("/api/projects/{id}/attachments")
-    @ResponseBody
-    public ResponseBean bindAttachments(HttpServletRequest request, @PathVariable Long id, @RequestBody Map<String, List<Long>> body) {
+    public ResponseBean getProjectFiles(HttpServletRequest request, @PathVariable Long id) {
         String userId = CurrentUser.require(request);
-        List<Long> attachmentIds = body.get("attachmentIds");
-        projectService.bindAttachments(id, attachmentIds);
-        // 记录日志：关联附件
-        if (attachmentIds != null && !attachmentIds.isEmpty()) {
-            projectLogService.log(id, userId, "attachment_bind",
-                    "关联" + attachmentIds.size() + "个附件：" + resolveAttachmentNames(attachmentIds, userId));
+        try {
+            return ResponseBean.success(projectService.listProjectFiles(id, userId));
+        } catch (Exception e) {
+            return ResponseBean.fail(e.getMessage());
         }
-        return ResponseBean.success();
     }
 
-    // 取消关联
-    @DeleteMapping("/api/projects/{id}/attachments/{attId}")
+    // 项目空间：创建文件/目录
+    @PostMapping("/api/projects/{id}/files")
     @ResponseBody
-    public ResponseBean unbindAttachment(HttpServletRequest request, @PathVariable Long id, @PathVariable Long attId) {
+    public ResponseBean createFileEntry(HttpServletRequest request, @PathVariable Long id, @RequestBody Map<String, Object> body) {
         String userId = CurrentUser.require(request);
-        // 先查出附件名用于日志
-        String attName = resolveAttachmentNames(Collections.singletonList(attId), userId);
-        projectService.unbindAttachment(id, attId);
-        // 记录日志：取消关联附件
-        projectLogService.log(id, userId, "attachment_unbind", "取消关联附件：" + attName);
-        return ResponseBean.success();
+        try {
+            String path = body.get("path") == null ? "" : body.get("path").toString();
+            boolean isDir = Boolean.TRUE.equals(body.get("isDirectory"));
+            List<?> tree = projectService.createFileEntry(id, userId, path, isDir);
+            String name = path.contains("/") ? path.substring(path.lastIndexOf('/') + 1) : path;
+            projectLogService.log(id, userId, "file_create",
+                    (isDir ? "新建目录「" : "新建文件「") + name + "」");
+            return ResponseBean.success(tree);
+        } catch (Exception e) {
+            return ResponseBean.fail(e.getMessage());
+        }
     }
 
-    /** 通过附件ID列表解析附件名称（用于日志展示） */
-    private String resolveAttachmentNames(List<Long> attachmentIds, String userId) {
-        if (attachmentIds == null || attachmentIds.isEmpty()) {
-            return "";
+    // 项目空间：删除文件/目录
+    @DeleteMapping("/api/projects/{id}/files")
+    @ResponseBody
+    public ResponseBean deleteFileEntry(HttpServletRequest request, @PathVariable Long id, @RequestParam("path") String path) {
+        String userId = CurrentUser.require(request);
+        try {
+            projectService.deleteFileEntry(id, userId, path);
+            String name = path.contains("/") ? path.substring(path.lastIndexOf('/') + 1) : path;
+            projectLogService.log(id, userId, "file_delete", "删除「" + name + "」");
+            return ResponseBean.success();
+        } catch (Exception e) {
+            return ResponseBean.fail(e.getMessage());
         }
-        List<String> names = new ArrayList<>();
-        for (Long attId : attachmentIds) {
-            try {
-                Attachment att = attachmentService.getAttachment(attId, userId);
-                if (att != null && att.getOriginalName() != null) {
-                    names.add(att.getOriginalName());
-                } else {
-                    names.add("#" + attId);
+    }
+
+    // 项目空间：移动/重命名
+    @PutMapping("/api/projects/{id}/files/move")
+    @ResponseBody
+    public ResponseBean moveFileEntry(HttpServletRequest request, @PathVariable Long id, @RequestBody Map<String, String> body) {
+        String userId = CurrentUser.require(request);
+        try {
+            String from = body.get("from");
+            String to = body.get("to");
+            projectService.moveFileEntry(id, userId, from, to);
+            String fromName = from.contains("/") ? from.substring(from.lastIndexOf('/') + 1) : from;
+            String toName = to.contains("/") ? to.substring(to.lastIndexOf('/') + 1) : to;
+            String detail = fromName.equals(toName)
+                    ? "移动「" + fromName + "」到 " + (to.contains("/") ? to.substring(0, to.lastIndexOf('/')) : "/")
+                    : "重命名「" + fromName + "」为「" + toName + "」";
+            projectLogService.log(id, userId, "file_move", detail);
+            return ResponseBean.success();
+        } catch (Exception e) {
+            return ResponseBean.fail(e.getMessage());
+        }
+    }
+
+    // 项目空间：批量上传文件
+    @PostMapping("/api/projects/{id}/files/upload")
+    @ResponseBody
+    public ResponseBean uploadProjectFiles(HttpServletRequest request,
+                                           @PathVariable Long id,
+                                           @RequestParam("files") MultipartFile[] files,
+                                           @RequestParam(value = "targetDir", required = false, defaultValue = "") String targetDir) {
+        String userId = CurrentUser.require(request);
+        try {
+            List<FileUploadItem> items = new ArrayList<>();
+            int count = 0;
+            if (files != null) {
+                for (MultipartFile file : files) {
+                    if (file == null || file.isEmpty()) {
+                        continue;
+                    }
+                    items.add(new FileUploadItem(file.getOriginalFilename(), file.getInputStream(), file.getSize()));
+                    count++;
                 }
-            } catch (Exception e) {
-                names.add("#" + attId);
             }
+            List<?> tree = projectService.uploadProjectFiles(id, userId, targetDir, items);
+            String dirLabel = (targetDir == null || targetDir.isEmpty()) ? "根目录" : targetDir;
+            projectLogService.log(id, userId, "file_upload", "上传 " + count + " 个文件到「" + dirLabel + "」");
+            return ResponseBean.success(tree);
+        } catch (IOException e) {
+            return ResponseBean.fail("读取上传文件失败：" + e.getMessage());
+        } catch (Exception e) {
+            return ResponseBean.fail(e.getMessage());
         }
-        return String.join("、", names);
-    }
-
-    /**
-     * 供 AttachmentController 在 source=project 的附件上传/删除时调用，记录项目日志。
-     * 此方法对外暴露给同包其他 Controller 调用。
-     */
-    public void logAttachmentUpload(Long projectId, String userId, String attachmentName) {
-        projectLogService.log(projectId, userId, "attachment_upload", "上传附件：「" + attachmentName + "」");
-    }
-
-    public void logAttachmentDelete(Long projectId, String userId, String attachmentName) {
-        projectLogService.log(projectId, userId, "attachment_delete", "删除附件：「" + attachmentName + "」");
     }
 
     /**

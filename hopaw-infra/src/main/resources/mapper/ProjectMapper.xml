@@ -8,13 +8,13 @@
         <result property="description" column="description"/>
         <result property="status" column="status"/>
         <result property="userId" column="user_id"/>
-        <result property="attachmentCount" column="attachment_count"/>
+        <result property="spaceDir" column="space_dir"/>
         <result property="createTime" column="create_time"/>
         <result property="updateTime" column="update_time"/>
     </resultMap>
 
     <sql id="allColumns">
-        id, name, description, status, user_id, create_time, update_time
+        id, name, description, status, user_id, space_dir, create_time, update_time
     </sql>
 
     <insert id="insert" parameterType="com.agent.hopaw.infra.model.entity.Project">
@@ -41,6 +41,13 @@
         WHERE id = #{id}
     </update>
 
+    <update id="updateSpaceDir">
+        UPDATE projects
+        SET space_dir = #{spaceDir},
+            update_time = CURRENT_TIMESTAMP
+        WHERE id = #{id}
+    </update>
+
     <delete id="deleteById">
         DELETE FROM projects WHERE id = #{id}
     </delete>
@@ -52,8 +59,7 @@
     </select>
 
     <select id="findByUserIdWithFilters" resultMap="ProjectResultMap">
-        SELECT p.id, p.name, p.description, p.status, p.user_id, p.create_time, p.update_time,
-               (SELECT COUNT(*) FROM attachments a WHERE a.source = 'project' AND a.biz_id = p.id) AS attachment_count
+        SELECT p.id, p.name, p.description, p.status, p.user_id, p.space_dir, p.create_time, p.update_time
         FROM projects p
         WHERE p.user_id = #{userId}
         <if test="keyword != null and keyword != ''">

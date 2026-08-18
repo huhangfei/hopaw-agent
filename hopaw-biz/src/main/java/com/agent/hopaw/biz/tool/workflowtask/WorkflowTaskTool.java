@@ -8,6 +8,7 @@ import com.agent.hopaw.infra.tool.AgentTool;
 import com.agent.hopaw.infra.tool.ToolSecurityLevel;
 import com.agent.hopaw.infra.util.InvocationParametersWrapper;
 import dev.langchain4j.agent.tool.P;
+import dev.langchain4j.agent.tool.SearchBehavior;
 import dev.langchain4j.agent.tool.Tool;
 import dev.langchain4j.invocation.InvocationParameters;
 import org.springframework.stereotype.Component;
@@ -57,8 +58,8 @@ public class WorkflowTaskTool implements AgentTool {
      * 通过当前会话编号反查关联的任务。
      */
     @ToolSecurityLevel(ToolSecurityLevel.Level.SAFE)
-    @Tool(value = {"查询当前任务", "查询当前正在执行的工作流任务详情及评论历史"})
-    public String queryCurrentTask(InvocationParameters invocationParameters) {
+    @Tool(value = {"查询当前任务", "查询当前正在执行的工作流任务详情及评论历史"}, searchBehavior = SearchBehavior.ALWAYS_VISIBLE)
+    public String queryCurrentWorkflowTask(InvocationParameters invocationParameters) {
         InvocationParametersWrapper wrapper = InvocationParametersWrapper.create(invocationParameters);
         Long taskId = workflowTaskService.findTaskIdBySessionId(wrapper.getSessionId());
         if (taskId == null) {
@@ -102,8 +103,8 @@ public class WorkflowTaskTool implements AgentTool {
      * 用于记录任务处理的关键细节，或向用户提出问题等待用户评论回复。
      */
     @ToolSecurityLevel(ToolSecurityLevel.Level.SAFE)
-    @Tool(value = {"添加任务评论", "向当前任务添加一条智能体评论，可用于记录处理关键细节或向用户提问"})
-    public String addTaskComment(@P("评论内容：记录处理关键细节，或向用户提出的问题") String content,
+    @Tool(value = {"添加任务评论", "向当前任务添加一条智能体评论，可用于记录处理关键细节或向用户提问"}, searchBehavior = SearchBehavior.ALWAYS_VISIBLE)
+    public String addWorkflowTaskComment(@P("评论内容：记录处理关键细节，或向用户提出的问题") String content,
                                  InvocationParameters invocationParameters) {
         InvocationParametersWrapper wrapper = InvocationParametersWrapper.create(invocationParameters);
         Long taskId = workflowTaskService.findTaskIdBySessionId(wrapper.getSessionId());

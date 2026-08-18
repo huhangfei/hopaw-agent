@@ -94,13 +94,6 @@
         </if>
     </select>
 
-    <select id="findByBizTypeAndBizId" resultMap="AttachmentResultMap">
-        SELECT <include refid="allColumns"/>
-        FROM attachments
-        WHERE source = #{source} AND biz_id = #{bizId}
-        ORDER BY id DESC
-    </select>
-
     <select id="countByStoragePath" resultType="int">
         SELECT COUNT(*) FROM attachments WHERE storage_path = #{storagePath}
     </select>

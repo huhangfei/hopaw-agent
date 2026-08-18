@@ -34,7 +34,6 @@ public class AttachmentController {
     private static final Logger logger = LoggerFactory.getLogger(AttachmentController.class);
 
     private final IAttachmentService attachmentService;
-    private final ProjectController projectController;
 
     @Value("${hopaw.attachment.dir:./attachments}")
     private String attachmentDir;
@@ -44,9 +43,8 @@ public class AttachmentController {
 
     private String attachmentRoot;
 
-    public AttachmentController(IAttachmentService attachmentService, ProjectController projectController) {
+    public AttachmentController(IAttachmentService attachmentService) {
         this.attachmentService = attachmentService;
-        this.projectController = projectController;
     }
 
     @PostConstruct
@@ -103,17 +101,6 @@ public class AttachmentController {
                 }
                 Attachment attachment = doUpload(userId, file, source, bizId);
                 result.add(attachment);
-            }
-            // 若为项目附件上传，记录项目操作日志
-            if ("project".equals(source) && bizId != null && !result.isEmpty()) {
-                for (Attachment att : result) {
-                    try {
-                        projectController.logAttachmentUpload(bizId, userId,
-                                att.getOriginalName() != null ? att.getOriginalName() : "#" + att.getId());
-                    } catch (Exception ex) {
-                        logger.warn("记录项目附件上传日志失败: projectId={}", bizId, ex);
-                    }
-                }
             }
             return ResponseBean.success(result);
         } catch (Exception e) {
@@ -215,15 +202,6 @@ public class AttachmentController {
             if (attachment == null) {
                 return ResponseBean.fail("附件不存在");
             }
-            // 若为项目附件删除，记录项目操作日志
-            if ("project".equals(attachment.getSource()) && attachment.getBizId() != null) {
-                try {
-                    projectController.logAttachmentDelete(attachment.getBizId(), userId,
-                            attachment.getOriginalName() != null ? attachment.getOriginalName() : "#" + id);
-                } catch (Exception ex) {
-                    logger.warn("记录项目附件删除日志失败: projectId={}", attachment.getBizId(), ex);
-                }
-            }
             attachmentService.deleteAttachment(id, userId);
             // 删除物理文件（仅当没有其他记录引用同一文件时）
             if (attachment.getStoragePath() != null && attachmentService.countByStoragePath(attachment.getStoragePath()) <= 0) {
@@ -239,13 +217,6 @@ public class AttachmentController {
         } catch (Exception e) {
             return ResponseBean.fail(e.getMessage());
         }
-    }
-
-    @GetMapping("/api/attachments/biz/{source}/{bizId}")
-    @ResponseBody
-    public ResponseBean getAttachmentsByBiz(@PathVariable String source, @PathVariable Long bizId) {
-        List<Attachment> list = attachmentService.getAttachmentsByBiz(source, bizId);
-        return ResponseBean.success(list);
     }
 
     /**

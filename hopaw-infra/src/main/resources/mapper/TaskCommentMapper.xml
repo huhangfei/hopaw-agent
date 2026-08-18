@@ -10,15 +10,16 @@
         <result property="commenterType" column="commenter_type"/>
         <result property="commenterId" column="commenter_id"/>
         <result property="createTime" column="create_time"/>
+        <result property="status" column="status"/>
     </resultMap>
 
     <sql id="allColumns">
-        id, task_id, content, user_id, commenter_type, commenter_id, create_time
+        id, task_id, content, user_id, commenter_type, commenter_id, create_time, status
     </sql>
 
     <insert id="insert" parameterType="com.agent.hopaw.infra.model.entity.TaskComment">
-        INSERT INTO task_comments (task_id, content, user_id, commenter_type, commenter_id)
-        VALUES (#{taskId}, #{content}, #{userId}, #{commenterType}, #{commenterId})
+        INSERT INTO task_comments (task_id, content, user_id, commenter_type, commenter_id, status)
+        VALUES (#{taskId}, #{content}, #{userId}, #{commenterType}, #{commenterId}, #{status})
         <selectKey resultType="long" keyProperty="id" order="AFTER">
             SELECT last_insert_rowid()
         </selectKey>
@@ -40,5 +41,22 @@
         WHERE task_id = #{taskId}
         ORDER BY create_time ASC
     </select>
+
+    <select id="findByTaskIdAndStatus" resultMap="TaskCommentResultMap">
+        SELECT <include refid="allColumns"/>
+        FROM task_comments
+        WHERE task_id = #{taskId}
+          AND status = #{status}
+        ORDER BY create_time ASC
+    </select>
+
+    <update id="updateStatusByIds">
+        UPDATE task_comments
+        SET status = #{status}
+        WHERE id IN
+        <foreach collection="ids" item="id" open="(" separator="," close=")">
+            #{id}
+        </foreach>
+    </update>
 
 </mapper>

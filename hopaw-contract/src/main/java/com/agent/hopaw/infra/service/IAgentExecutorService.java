@@ -1,13 +1,10 @@
 package com.agent.hopaw.infra.service;
 
 import com.agent.hopaw.infra.executor.IAgentExecutor;
-import com.agent.hopaw.infra.model.dto.UserChatRequest;
-import com.agent.hopaw.infra.model.entity.Agent;
-import com.agent.hopaw.infra.model.entity.TaskComment;
-import com.agent.hopaw.infra.model.entity.WorkflowTask;
+import com.agent.hopaw.infra.model.dto.AgentExecutorParams;
 
-import java.util.List;
 import java.util.function.Consumer;
+import java.util.function.Function;
 
 public interface IAgentExecutorService {
     void addToolStopHook(String sessionId, String callId, Consumer<String> hook);
@@ -29,20 +26,11 @@ public interface IAgentExecutorService {
     IAgentExecutor getAgentExecutor(String sessionId);
 
     /**
-     * 创建聊天代理执行器
-     * @param userChatRequest
+     * 公共执行器创建方法，由各业务服务（聊天/任务）生成参数和系统提示词后调用
+     * @param params 执行器参数
+     * @param systemMessageProvider 系统提示词生成器，参数为 agentId
      * @return
      */
-    IAgentExecutor createChatAgentExecutor(UserChatRequest userChatRequest);
-
-    /**
-     * 创建任务执行代理执行器
-     * @param task 工作流任务
-     * @param agent 关联智能体
-     * @param comments 任务评论历史
-     * @param existingSessionId 已关联的会话编号（打回重做时复用，传 null 表示新建会话）
-     * @return
-     */
-    IAgentExecutor createTaskExecutor(WorkflowTask task, Agent agent, List<TaskComment> comments, String existingSessionId);
+    IAgentExecutor createAgentExecutor(AgentExecutorParams params, Function<Long, String> systemMessageProvider);
 
 }

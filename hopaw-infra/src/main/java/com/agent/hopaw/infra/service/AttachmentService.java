@@ -83,11 +83,6 @@ public class AttachmentService implements IAttachmentService {
     }
 
     @Override
-    public List<Attachment> getAttachmentsByBiz(String source, Long bizId) {
-        return attachmentMapper.findByBizTypeAndBizId(source, bizId);
-    }
-
-    @Override
     public int countByStoragePath(String storagePath) {
         return attachmentMapper.countByStoragePath(storagePath);
     }

@@ -16,4 +16,14 @@ public interface TaskCommentMapper {
     int deleteById(@Param("id") Long id);
 
     List<TaskComment> findByTaskId(@Param("taskId") Long taskId);
+
+    /**
+     * 查询任务下指定状态的评论
+     */
+    List<TaskComment> findByTaskIdAndStatus(@Param("taskId") Long taskId, @Param("status") String status);
+
+    /**
+     * 按评论ID批量更新状态
+     */
+    int updateStatusByIds(@Param("ids") List<Long> ids, @Param("status") String status);
 }
