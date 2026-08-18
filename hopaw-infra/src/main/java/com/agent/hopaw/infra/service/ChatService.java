@@ -88,16 +88,16 @@ public class ChatService implements IChatService {
         }
         AgentExecutorParams agentExecutorParams = new AgentExecutorParams();
         agentExecutorParams.setSessionId(userChatRequest.getSessionId());
-        agentExecutorParams.setAgentId(agent.getId());
         agentExecutorParams.setUserId(userChatRequest.getUserId());
         agentExecutorParams.setAiModelId(userChatRequest.getAiModelId());
-        agentExecutorParams.setMaxMemoryRecords(agent.getMaxMemoryRecords() != null ? agent.getMaxMemoryRecords() : 10);
-        agentExecutorParams.setMaxToolInvocations(agent.getMaxToolInvocations() != null ? agent.getMaxToolInvocations() : 3);
         agentExecutorParams.setEnableThinking(userChatRequest.getEnableThinking());
-        agentExecutorParams.setVectorToolSearch(agent.getVectorToolSearch() != null ? agent.getVectorToolSearch() : false);
-        agentExecutorParams.setVectorToolSearchMaxResults(agent.getVectorToolSearchMaxResults() != null ? agent.getVectorToolSearchMaxResults() : 5);
         agentExecutorParams.setSkillNames(userChatRequest.getSkillNames());
         agentExecutorParams.setToolCallPermission(userChatRequest.getToolCallPermission());
+        agentExecutorParams.setAgentId(agent.getId());
+        agentExecutorParams.setMaxMemoryRecords(agent.getMaxMemoryRecords() != null ? agent.getMaxMemoryRecords() : 10);
+        agentExecutorParams.setMaxToolInvocations(agent.getMaxToolInvocations() != null ? agent.getMaxToolInvocations() : 3);
+        agentExecutorParams.setVectorToolSearch(agent.getVectorToolSearch() != null ? agent.getVectorToolSearch() : false);
+        agentExecutorParams.setVectorToolSearchMaxResults(agent.getVectorToolSearchMaxResults() != null ? agent.getVectorToolSearchMaxResults() : 5);
         agentExecutorParams.setToolSets(selectedTools);
         // 加载已启用的 MCP 服务器配置
         agentExecutorParams.setMcpServerConfigs(mcpServerConfigService.findEnabled());

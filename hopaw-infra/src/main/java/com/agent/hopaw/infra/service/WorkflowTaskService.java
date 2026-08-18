@@ -12,6 +12,7 @@ import com.agent.hopaw.infra.model.entity.TaskComment;
 import com.agent.hopaw.infra.model.entity.TaskSession;
 import com.agent.hopaw.infra.model.entity.WorkflowTask;
 import com.agent.hopaw.infra.tool.IAgentToolService;
+import com.agent.hopaw.infra.util.UuidUtil;
 import dev.langchain4j.data.message.Content;
 import dev.langchain4j.data.message.TextContent;
 import org.slf4j.Logger;
@@ -42,14 +43,14 @@ public class WorkflowTaskService implements IWorkflowTaskService {
     private final IProjectService projectService;
 
     public WorkflowTaskService(WorkflowTaskMapper workflowTaskMapper,
-                                TaskSessionMapper taskSessionMapper,
-                                IAgentExecutorService agentExecutorService,
-                                IChatSessionService chatSessionService,
-                                IAgentService agentService,
-                                ITaskCommentService taskCommentService,
-                                IAgentToolService agentToolService,
-                                IMcpServerConfigService mcpServerConfigService,
-                                IProjectService projectService) {
+                               TaskSessionMapper taskSessionMapper,
+                               IAgentExecutorService agentExecutorService,
+                               IChatSessionService chatSessionService,
+                               IAgentService agentService,
+                               ITaskCommentService taskCommentService,
+                               IAgentToolService agentToolService,
+                               IMcpServerConfigService mcpServerConfigService,
+                               IProjectService projectService) {
         this.workflowTaskMapper = workflowTaskMapper;
         this.taskSessionMapper = taskSessionMapper;
         this.agentExecutorService = agentExecutorService;
@@ -211,40 +212,30 @@ public class WorkflowTaskService implements IWorkflowTaskService {
     public void executeTask(UserChatRequest userChatRequest) {
 
         Long taskId = taskSessionMapper.findTaskIdBySessionId(userChatRequest.getSessionId());
-        if (taskId != null) {
-            taskCommentService.addComment(taskId, userChatRequest.getMessage(), userChatRequest.getUserId());
-            executeTask(taskId);
+        if (taskId == null) {
+            throw new RuntimeException("会话未关联任务");
         }
-    }
 
-    @Override
-    public void executeTask(Long taskId) {
         WorkflowTask task = workflowTaskMapper.findById(taskId);
         if (task == null) {
             throw new RuntimeException("任务不存在");
         }
-        Agent agent = agentService.getAgentById(task.getAgentId());
+        Agent agent = agentService.getAgentById(userChatRequest.getAgentId());
         if (agent == null) {
             throw new RuntimeException("智能体不存在");
         }
+        taskCommentService.addComment(taskId, userChatRequest.getMessage(), userChatRequest.getUserId());
+
+        // 创建任务执行器（复用或新建会话）
+        IAgentExecutor executor = createTaskExecutor(task, agent, userChatRequest.getSessionId());
+        executeTask(task,executor);
+    }
+    private void executeTask(WorkflowTask task,IAgentExecutor executor){
+        Long taskId=task.getId();
         // 更新状态为 processing
         updateTaskStatus(taskId, "processing", null);
         // 仅查询待处理评论：避免重复处理已处理过的评论
         List<TaskComment> comments = taskCommentService.getPendingCommentsByTaskId(taskId);
-        // 查询已关联会话：打回重做时复用最近一次会话编号，保留上下文记忆
-        List<TaskSession> sessions = taskSessionMapper.findByTaskId(taskId);
-        String existingSessionId = null;
-        if (sessions != null && !sessions.isEmpty()) {
-            // findByTaskId 按 id ASC 返回，取最后一条为最近会话
-            existingSessionId = sessions.get(sessions.size() - 1).getSessionId();
-        }
-        // 创建任务执行器（复用或新建会话）
-        IAgentExecutor executor = createTaskExecutor(task, agent, existingSessionId);
-        String sessionId = executor.getSessionId();
-        // 仅新建会话时记录 task_sessions 关联；bizType 由 saveChatSession 在 INSERT 时写入
-        if (existingSessionId == null) {
-            taskSessionMapper.insert(taskId, sessionId);
-        }
         // 4. 构建内容（包含评论历史，区分评论者身份）
         List<Content> contents = new ArrayList<>();
         StringBuilder taskContent = new StringBuilder();
@@ -266,23 +257,45 @@ public class WorkflowTaskService implements IWorkflowTaskService {
         // 执行完成后将本次预取的待处理评论标记为已处理（执行期间新增的评论不受影响，将在下次执行时处理）
         List<Long> processedCommentIds = comments.stream().map(TaskComment::getId).collect(Collectors.toList());
         taskCommentService.markCommentsAsProcessed(processedCommentIds);
+
+    }
+
+    @Override
+    public void executeTask(Long taskId) {
+        WorkflowTask task = workflowTaskMapper.findById(taskId);
+        if (task == null) {
+            throw new RuntimeException("任务不存在");
+        }
+        Agent agent = agentService.getAgentById(task.getAgentId());
+        if (agent == null) {
+            throw new RuntimeException("智能体不存在");
+        }
+        // 查询已关联会话：打回重做时复用最近一次会话编号，保留上下文记忆
+        List<TaskSession> sessions = taskSessionMapper.findByTaskId(taskId);
+        String existingSessionId = null;
+        if (sessions != null && !sessions.isEmpty()) {
+            // findByTaskId 按 id ASC 返回，取最后一条为最近会话
+            existingSessionId = sessions.get(sessions.size() - 1).getSessionId();
+        }else {
+            existingSessionId = UuidUtil.generateSimpleUUID();
+            taskSessionMapper.insert(taskId, existingSessionId);
+        }
+
+        // 创建任务执行器（复用或新建会话）
+        IAgentExecutor executor = createTaskExecutor(task, agent, existingSessionId);
+        executeTask(task,executor);
     }
 
     /**
      * 创建任务执行器：生成任务场景的执行器参数和系统提示词，调用公共创建方法
-     * @param task 工作流任务
-     * @param agent 关联智能体
-     * @param existingSessionId 已关联的会话编号（打回重做时复用，传 null 表示新建会话）
+     *
+     * @param task              工作流任务
+     * @param agent             关联智能体
+     * @param sessionId 会话编号
      * @return
      */
-    private IAgentExecutor createTaskExecutor(WorkflowTask task, Agent agent,String existingSessionId) {
+    private IAgentExecutor createTaskExecutor(WorkflowTask task, Agent agent, String sessionId) {
         // 1. 确定会话编号：打回重做时复用已关联会话，否则新建
-        String sessionId;
-        if (existingSessionId != null && !existingSessionId.isEmpty()) {
-            sessionId = existingSessionId;
-        } else {
-            sessionId = UUID.randomUUID().toString();
-        }
 
         // 2. 构建任务专用系统提示词
         String systemMessage = buildTaskSystemMessage(task, agent);
