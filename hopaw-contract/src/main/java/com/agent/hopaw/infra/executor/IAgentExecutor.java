@@ -18,5 +18,18 @@ public interface IAgentExecutor {
     void sendToolRunningContent(String callId, Object resultPartial);
     void toolApprovalComplete(String callId,Boolean allowed);
     boolean running();
+
+    /**
+     * 执行
+     * 超时时间默认600秒
+     * @param contents 请求内容
+     */
     void execute(List<Content> contents);
+
+    /**
+     * 执行
+     * @param contents 请求内容
+     * @param timeout 超时时间（秒）
+     */
+    void execute(List<Content> contents,long timeout);
 }

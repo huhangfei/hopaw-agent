@@ -227,10 +227,10 @@ public class WorkflowTaskService implements IWorkflowTaskService {
         taskCommentService.addComment(taskId, userChatRequest.getMessage(), userChatRequest.getUserId());
 
         // 创建任务执行器（复用或新建会话）
-        IAgentExecutor executor = createTaskExecutor(task, agent, userChatRequest.getSessionId());
-        executeTask(task,executor);
+        IAgentExecutor executor = createTaskExecutor(task, agent, userChatRequest);
+        executeTask(task,executor,600);
     }
-    private void executeTask(WorkflowTask task,IAgentExecutor executor){
+    private void executeTask(WorkflowTask task,IAgentExecutor executor,long timeout){
         Long taskId=task.getId();
         // 更新状态为 processing
         updateTaskStatus(taskId, "processing", null);
@@ -253,7 +253,7 @@ public class WorkflowTaskService implements IWorkflowTaskService {
         }
         contents.add(new TextContent(taskContent.toString()));
         // 执行
-        executor.execute(contents);
+        executor.execute(contents,timeout);
         // 执行完成后将本次预取的待处理评论标记为已处理（执行期间新增的评论不受影响，将在下次执行时处理）
         List<Long> processedCommentIds = comments.stream().map(TaskComment::getId).collect(Collectors.toList());
         taskCommentService.markCommentsAsProcessed(processedCommentIds);
@@ -280,10 +280,15 @@ public class WorkflowTaskService implements IWorkflowTaskService {
             existingSessionId = UuidUtil.generateSimpleUUID();
             taskSessionMapper.insert(taskId, existingSessionId);
         }
-
+        UserChatRequest userChatRequest = new UserChatRequest();
+        userChatRequest.setSessionId(existingSessionId);
+        userChatRequest.setUserId(task.getUserId());
+        userChatRequest.setAiModelId(agent.getAiModelId());
+        userChatRequest.setEnableThinking(agent.getEnableThinking());
+        userChatRequest.setToolCallPermission("auto");
         // 创建任务执行器（复用或新建会话）
-        IAgentExecutor executor = createTaskExecutor(task, agent, existingSessionId);
-        executeTask(task,executor);
+        IAgentExecutor executor = createTaskExecutor(task, agent, userChatRequest);
+        executeTask(task,executor,1800);
     }
 
     /**
@@ -291,16 +296,15 @@ public class WorkflowTaskService implements IWorkflowTaskService {
      *
      * @param task              工作流任务
      * @param agent             关联智能体
-     * @param sessionId 会话编号
+     * @param userChatRequest 请求
      * @return
      */
-    private IAgentExecutor createTaskExecutor(WorkflowTask task, Agent agent, String sessionId) {
-        // 1. 确定会话编号：打回重做时复用已关联会话，否则新建
+    private IAgentExecutor createTaskExecutor(WorkflowTask task, Agent agent, UserChatRequest userChatRequest) {
 
-        // 2. 构建任务专用系统提示词
+        // 构建任务专用系统提示词
         String systemMessage = buildTaskSystemMessage(task, agent);
 
-        // 3. 构建工具集（任务执行场景强制注入 workflowTaskTool，确保智能体可记录评论）
+        // 构建工具集（任务执行场景强制注入 workflowTaskTool，确保智能体可记录评论）
         List<String> selectedToolNames = parseToolNames(agent.getTools());
         if (!selectedToolNames.contains("workflowTaskTool")) {
             selectedToolNames.add("workflowTaskTool");
@@ -314,27 +318,32 @@ public class WorkflowTaskService implements IWorkflowTaskService {
                     .collect(Collectors.toList());
         }
 
-        // 5. 构建 AgentExecutorParams
-        AgentExecutorParams params = new AgentExecutorParams();
-        params.setSessionId(sessionId);
-        params.setAgentId(agent.getId());
-        params.setUserId(task.getUserId());
-        params.setAiModelId(agent.getAiModelId());
-        params.setMaxMemoryRecords(agent.getMaxMemoryRecords() != null ? agent.getMaxMemoryRecords() : 10);
-        params.setMaxToolInvocations(agent.getMaxToolInvocations() != null ? agent.getMaxToolInvocations() : 3);
-        params.setEnableThinking(agent.getEnableThinking());
-        params.setVectorToolSearch(agent.getVectorToolSearch() != null ? agent.getVectorToolSearch() : false);
-        params.setVectorToolSearchMaxResults(agent.getVectorToolSearchMaxResults() != null ? agent.getVectorToolSearchMaxResults() : 5);
-        params.setToolCallPermission("auto");
-        params.setToolSets(selectedTools);
-        params.setMcpServerConfigs(mcpServerConfigService.findEnabled());
-        params.setBizType("task");
+        // 构建 AgentExecutorParams
+        AgentExecutorParams agentExecutorParams = new AgentExecutorParams();
+        agentExecutorParams.setSessionId(userChatRequest.getSessionId());
+        agentExecutorParams.setUserId(userChatRequest.getUserId());
+        agentExecutorParams.setAiModelId(userChatRequest.getAiModelId());
+        agentExecutorParams.setEnableThinking(userChatRequest.getEnableThinking());
+        agentExecutorParams.setSkillNames(userChatRequest.getSkillNames());
+        agentExecutorParams.setToolCallPermission(userChatRequest.getToolCallPermission());
 
-        // 6. systemMessageProvider
+        agentExecutorParams.setAgentId(agent.getId());
+        agentExecutorParams.setMaxMemoryRecords(agent.getMaxMemoryRecords() != null ? agent.getMaxMemoryRecords() : 10);
+        agentExecutorParams.setMaxToolInvocations(agent.getMaxToolInvocations() != null ? agent.getMaxToolInvocations() : 3);
+        agentExecutorParams.setVectorToolSearch(agent.getVectorToolSearch() != null ? agent.getVectorToolSearch() : false);
+        agentExecutorParams.setVectorToolSearchMaxResults(agent.getVectorToolSearchMaxResults() != null ? agent.getVectorToolSearchMaxResults() : 5);
+        agentExecutorParams.setToolSets(selectedTools);
+        agentExecutorParams.setBizType("task");
+        agentExecutorParams.setMcpServerConfigs(mcpServerConfigService.findEnabled());
+
+
+
+
+        // systemMessageProvider
         Function<Long, String> systemMessageProvider = aId -> systemMessage;
 
-        // 7. 调用公共创建方法（已内置旧执行器清理逻辑）
-        IAgentExecutor agentExecutor = agentExecutorService.createAgentExecutor(params, systemMessageProvider);
+        // 调用公共创建方法（已内置旧执行器清理逻辑）
+        IAgentExecutor agentExecutor = agentExecutorService.createAgentExecutor(agentExecutorParams, systemMessageProvider);
         return agentExecutor;
     }
 

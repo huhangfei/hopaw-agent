@@ -306,7 +306,11 @@ public class AgentExecutor implements IAgentExecutor {
     }
 
     @Override
-    public void execute(List<Content> contents) {
+    public void execute(List<Content> contents){
+        execute(contents,600L);
+    }
+    @Override
+    public void execute(List<Content> contents,long timeout) {
         try {
             sendFirstState();
             saveChatSession(contents);
@@ -437,7 +441,7 @@ public class AgentExecutor implements IAgentExecutor {
                         agentMessageHandler.toolCallHandler(AiToolCallMessageInfo.STATUS_EXECUTED, toolExecutionRequest.id(),toolExecutionRequest.name(),toolExecutionRequest.arguments(),toolExecution.result());
                     });
             tokenStream.start();
-            taskLatch.await(600, TimeUnit.SECONDS);
+            taskLatch.await(timeout, TimeUnit.SECONDS);
         } catch (Exception e) {
             logger.error("\n(注: 流式响应失败: " + e.getMessage() + ")\n可以尝试清理对话或强停试试。", e);
             agentMessageHandler.onErrorHandler(e);
