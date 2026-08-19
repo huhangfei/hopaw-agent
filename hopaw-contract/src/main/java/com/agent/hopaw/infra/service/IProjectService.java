@@ -5,6 +5,8 @@ import com.agent.hopaw.infra.model.dto.FileUploadItem;
 import com.agent.hopaw.infra.model.entity.Project;
 import com.agent.hopaw.infra.model.entity.WorkflowTask;
 
+import java.io.File;
+import java.nio.file.Path;
 import java.util.List;
 
 /**
@@ -59,4 +61,18 @@ public interface IProjectService {
      * @return 上传后的文件树
      */
     List<FileTreeNode> uploadProjectFiles(Long projectId, String userId, String targetDir, List<FileUploadItem> items);
+
+    /**
+     * 解析项目空间内文件/目录的绝对路径（已校验路径穿越）。
+     * 用于下载场景：调用方据此决定直接流式下载（文件）还是打包下载（目录）。
+     * @param relativePath 相对路径，空串表示整个项目空间根目录
+     */
+    Path resolveDownloadPath(Long projectId, String userId, String relativePath);
+
+    /**
+     * 将项目空间内指定文件/目录打包为 ZIP 临时文件。
+     * @param relativePath 相对路径，空串表示打包整个项目空间
+     * @return 临时 ZIP 文件（调用方负责删除）
+     */
+    File createDownloadZip(Long projectId, String userId, String relativePath);
 }

@@ -6,9 +6,14 @@ import com.agent.hopaw.infra.model.dto.FileTreeNode;
 import com.agent.hopaw.infra.model.dto.FileUploadItem;
 import com.agent.hopaw.infra.model.entity.Project;
 import com.agent.hopaw.infra.model.entity.WorkflowTask;
+import net.lingala.zip4j.ZipFile;
+import net.lingala.zip4j.exception.ZipException;
+import net.lingala.zip4j.model.ZipParameters;
+import net.lingala.zip4j.model.enums.CompressionMethod;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -52,6 +57,12 @@ public class ProjectService implements IProjectService {
     /** 项目空间根目录（所有项目的工作空间目录都放置在此目录下） */
     private final String projectSpaceRoot;
 
+    /** 下载用临时目录（存放打包产生的 zip 文件，由定时任务清理） */
+    private final String tempDownloadsDir;
+
+    /** 临时文件最大保留时长：1 小时（超过则清理） */
+    private static final long TEMP_MAX_AGE_MS = 60 * 60 * 1000L;
+
     public ProjectService(ProjectMapper projectMapper,
                           WorkflowTaskMapper workflowTaskMapper,
                           @Value("${hopaw.project.space.dir:./project-spaces}") String projectSpaceDir) {
@@ -66,7 +77,14 @@ public class ProjectService implements IProjectService {
         if (!rootDir.exists()) {
             rootDir.mkdirs();
         }
+        // 初始化下载临时目录：{java.io.tmpdir}/hopaw-downloads
+        File tempDir = new File(System.getProperty("java.io.tmpdir"), "hopaw-downloads");
+        if (!tempDir.exists()) {
+            tempDir.mkdirs();
+        }
+        this.tempDownloadsDir = tempDir.getAbsolutePath();
         logger.info("项目空间根目录: {}", this.projectSpaceRoot);
+        logger.info("下载临时目录: {}", this.tempDownloadsDir);
     }
 
     @Override
@@ -554,5 +572,91 @@ public class ProjectService implements IProjectService {
             counter++;
         } while (Files.exists(candidate));
         return candidate;
+    }
+
+    /* ==================== 项目空间下载 ==================== */
+
+    @Override
+    public Path resolveDownloadPath(Long projectId, String userId, String relativePath) {
+        Path root = getProjectSpaceRoot(projectId, userId);
+        // 空路径表示下载整个项目空间根目录
+        if (relativePath == null || relativePath.trim().isEmpty()) {
+            return root;
+        }
+        Path resolved = resolveSafePath(root, relativePath);
+        if (!Files.exists(resolved)) {
+            throw new RuntimeException("文件或目录不存在：" + relativePath);
+        }
+        return resolved;
+    }
+
+    @Override
+    public File createDownloadZip(Long projectId, String userId, String relativePath) {
+        Path root = getProjectSpaceRoot(projectId, userId);
+        Path source;
+        if (relativePath == null || relativePath.trim().isEmpty()) {
+            // 打包整个项目空间
+            source = root;
+        } else {
+            source = resolveSafePath(root, relativePath);
+        }
+        if (!Files.exists(source)) {
+            throw new RuntimeException("文件或目录不存在：" + relativePath);
+        }
+        // 确保临时目录存在
+        File tempDir = new File(tempDownloadsDir);
+        if (!tempDir.exists() && !tempDir.mkdirs()) {
+            throw new RuntimeException("无法创建下载临时目录");
+        }
+        // 生成唯一临时文件名
+        String tempName = "proj" + projectId + "_" + System.currentTimeMillis() + ".zip";
+        File zipFile = new File(tempDir, tempName);
+        try {
+            ZipFile zip = new ZipFile(zipFile);
+            ZipParameters params = new ZipParameters();
+            params.setCompressionMethod(CompressionMethod.DEFLATE);
+            if (Files.isDirectory(source)) {
+                zip.addFolder(source.toFile(), params);
+            } else {
+                zip.addFile(source.toFile(), params);
+            }
+            logger.info("项目[{}]已生成下载zip: {}", projectId, zipFile.getAbsolutePath());
+            return zipFile;
+        } catch (ZipException e) {
+            if (zipFile.exists()) {
+                zipFile.delete();
+            }
+            throw new RuntimeException("打包失败：" + e.getMessage(), e);
+        }
+    }
+
+    /**
+     * 定时清理下载临时文件：每小时执行一次，删除超过 1 小时的遗留 zip 文件。
+     * 兜底机制：即使下载流式传输中 JVM 崩溃或客户端断连，也能回收磁盘空间。
+     */
+    @Scheduled(fixedDelay = 60 * 60 * 1000)
+    public void cleanupTempDownloads() {
+        File tempDir = new File(tempDownloadsDir);
+        if (!tempDir.exists()) {
+            return;
+        }
+        File[] files = tempDir.listFiles();
+        if (files == null) {
+            return;
+        }
+        long threshold = System.currentTimeMillis() - TEMP_MAX_AGE_MS;
+        int cleaned = 0;
+        for (File f : files) {
+            if (f.isFile() && f.lastModified() < threshold) {
+                if (f.delete()) {
+                    cleaned++;
+                } else {
+                    logger.warn("清理临时下载文件失败: {}", f.getAbsolutePath());
+                }
+            }
+        }
+        if (cleaned > 0) {
+            logger.info("已清理 {} 个过期的下载临时文件", cleaned);
+        }
     }
 }

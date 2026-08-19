@@ -13,14 +13,46 @@ var statusList = [
 var agentsCache = [];
 var projectsCache = [];
 
+// 自动刷新倒计时
+var REFRESH_INTERVAL_SEC = 5;
+var refreshLastTickAt = Date.now();
+
 document.addEventListener('DOMContentLoaded', function () {
     loadBoard();
     loadAgents();
     loadProjects();
+    startRefreshCountdown();
 });
 
 function doSearch() {
     loadBoard();
+}
+
+/* ========== 5 秒自动刷新倒计时 ========== */
+function startRefreshCountdown() {
+    refreshLastTickAt = Date.now();
+    updateRefreshCountdownText();
+    setInterval(function () {
+        var elapsed = Math.floor((Date.now() - refreshLastTickAt) / 1000);
+        var remaining = REFRESH_INTERVAL_SEC - elapsed;
+        if (remaining <= 0) {
+            // 倒计时归零：刷新看板并重置计时基准
+            loadBoard();
+            refreshLastTickAt = Date.now();
+            remaining = REFRESH_INTERVAL_SEC;
+        }
+        updateRefreshCountdownText(remaining);
+    }, 1000);
+}
+
+function updateRefreshCountdownText(remaining) {
+    if (typeof remaining === 'undefined') {
+        remaining = REFRESH_INTERVAL_SEC;
+    }
+    var el = document.getElementById('refreshCountdown');
+    if (el) {
+        el.textContent = remaining + 's 后刷新';
+    }
 }
 
 function getFilters() {

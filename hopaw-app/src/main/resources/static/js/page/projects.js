@@ -349,6 +349,7 @@ function renderFileTreeNode(node) {
     var actions;
     if (node.type === 'directory') {
         actions = '<span class="file-tree-actions">' +
+            '<button class="ft-btn" title="下载目录" data-action="download" data-path="' + pathAttr + '">⬇</button>' +
             '<button class="ft-btn" title="在此上传" data-action="upload" data-path="' + pathAttr + '">⬆</button>' +
             '<button class="ft-btn" title="在此新建" data-action="create" data-path="' + pathAttr + '">＋</button>' +
             '<button class="ft-btn" title="移动/重命名" data-action="move" data-path="' + pathAttr + '">✎</button>' +
@@ -356,6 +357,7 @@ function renderFileTreeNode(node) {
             '</span>';
     } else {
         actions = '<span class="file-tree-actions">' +
+            '<button class="ft-btn" title="下载文件" data-action="download" data-path="' + pathAttr + '">⬇</button>' +
             '<button class="ft-btn" title="移动/重命名" data-action="move" data-path="' + pathAttr + '">✎</button>' +
             '<button class="ft-btn ft-btn-danger" title="删除" data-action="delete" data-path="' + pathAttr + '">🗑</button>' +
             '</span>';
@@ -408,6 +410,8 @@ document.addEventListener('DOMContentLoaded', function () {
                 showMoveFileModal(path);
             } else if (action === 'delete') {
                 deleteProjectFile(path);
+            } else if (action === 'download') {
+                downloadProjectFile(path);
             }
         });
 
@@ -528,6 +532,28 @@ function toggleFileTreeNode(el) {
     if (toggle && !toggle.classList.contains('file-tree-toggle-empty')) {
         toggle.textContent = li.classList.contains('collapsed') ? '＋' : '－';
     }
+}
+
+/* ========== 项目空间：下载 ========== */
+function downloadProjectFile(path) {
+    if (!currentProjectId) return;
+    // 直接打开下载链接：浏览器会触发文件下载，不影响当前页面
+    var url = '/api/projects/' + currentProjectId + '/files/download';
+    if (path) {
+        url += '?path=' + encodeURIComponent(path);
+    }
+    window.location.href = url;
+}
+
+function downloadAllProjectFiles() {
+    if (!currentProjectId) {
+        showToast('请先选择项目', 'error');
+        return;
+    }
+    // path 为空 → 后端打包整个项目空间为 zip
+    var url = '/api/projects/' + currentProjectId + '/files/download';
+    showToast('正在打包下载，请稍候...', 'info');
+    window.location.href = url;
 }
 
 /* ========== 项目空间：上传 ========== */

@@ -87,22 +87,26 @@
     </update>
 
     <select id="findByUserIdWithFilters" resultMap="WorkflowTaskResultMap">
-        SELECT <include refid="allColumns"/>
-        FROM workflow_tasks
-        WHERE user_id = #{userId}
+        SELECT t.id, t.title, t.content, t.status, t.project_id, t.agent_id, t.start_time,
+               t.execution_period, t.reject_reason, t.user_id, t.create_time, t.update_time,
+               a.name AS agent_name, p.name AS project_name
+        FROM workflow_tasks t
+        LEFT JOIN agents a ON t.agent_id = a.id
+        LEFT JOIN projects p ON t.project_id = p.id
+        WHERE t.user_id = #{userId}
         <if test="keyword != null and keyword != ''">
-            AND (title LIKE CONCAT('%', #{keyword}, '%') OR content LIKE CONCAT('%', #{keyword}, '%'))
+            AND (t.title LIKE CONCAT('%', #{keyword}, '%') OR t.content LIKE CONCAT('%', #{keyword}, '%'))
         </if>
         <if test="status != null and status != ''">
-            AND status = #{status}
+            AND t.status = #{status}
         </if>
         <if test="projectId != null">
-            AND project_id = #{projectId}
+            AND t.project_id = #{projectId}
         </if>
         <if test="agentId != null">
-            AND agent_id = #{agentId}
+            AND t.agent_id = #{agentId}
         </if>
-        ORDER BY id DESC
+        ORDER BY t.id DESC
         LIMIT #{size} OFFSET #{offset}
     </select>
 

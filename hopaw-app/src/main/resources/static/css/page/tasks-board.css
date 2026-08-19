@@ -69,6 +69,19 @@
     height: 20px;
 }
 
+.board-refresh-countdown {
+    display: inline-flex;
+    align-items: center;
+    padding: 6px 12px;
+    font-size: 12px;
+    color: #667eea;
+    background: rgba(102, 126, 234, 0.08);
+    border: 1px solid rgba(102, 126, 234, 0.25);
+    border-radius: 12px;
+    white-space: nowrap;
+    user-select: none;
+}
+
 /* ========== 看板列 ========== */
 .tasks-board-columns {
     display: flex;
@@ -79,8 +92,8 @@
 }
 
 .board-column {
-    flex: 0 0 260px;
-    min-width: 260px;
+    flex: 0 0 220px;
+    min-width: 220px;
     background: #f8f9fa;
     border-radius: 8px;
     display: flex;
@@ -244,6 +257,12 @@ body.dark-theme .btn-add-task {
 
 body.dark-theme .btn-add-task:hover {
     background: #667eea;
+}
+
+body.dark-theme .board-refresh-countdown {
+    color: #8ba3ff;
+    background: rgba(139, 163, 255, 0.08);
+    border-color: rgba(139, 163, 255, 0.25);
 }
 
 body.dark-theme .board-column {

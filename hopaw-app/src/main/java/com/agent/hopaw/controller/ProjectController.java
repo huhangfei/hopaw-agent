@@ -18,7 +18,13 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
 import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
 import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
+import java.net.URLEncoder;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.*;
 
 @Controller
@@ -328,6 +334,81 @@ public class ProjectController {
         } catch (Exception e) {
             return ResponseBean.fail(e.getMessage());
         }
+    }
+
+    /* ==================== 项目空间下载 ==================== */
+
+    /**
+     * 下载项目空间内的文件或目录。
+     * - path 为空：打包整个项目空间为 zip 下载
+     * - path 指向文件：直接流式下载
+     * - path 指向目录：打包该目录为 zip 下载
+     */
+    @GetMapping("/api/projects/{id}/files/download")
+    public void downloadProjectFile(HttpServletRequest request,
+                                    HttpServletResponse response,
+                                    @PathVariable Long id,
+                                    @RequestParam(value = "path", required = false, defaultValue = "") String path) {
+        String userId = CurrentUser.require(request);
+        try {
+            Path resolved = projectService.resolveDownloadPath(id, userId, path);
+            if (Files.isDirectory(resolved)) {
+                // 目录或整空间：打包 zip 下载
+                java.io.File zipFile = projectService.createDownloadZip(id, userId, path);
+                try {
+                    String downloadName = buildDownloadName(path, true);
+                    response.setContentType("application/zip");
+                    response.setHeader("Content-Disposition", buildContentDisposition(downloadName));
+                    response.setContentLengthLong(zipFile.length());
+                    try (InputStream in = Files.newInputStream(zipFile.toPath());
+                         OutputStream out = response.getOutputStream()) {
+                        in.transferTo(out);
+                    }
+                } finally {
+                    // 下载完成或异常后立即清理临时文件
+                    if (!zipFile.delete()) {
+                        logger.warn("删除临时zip失败: {}", zipFile.getAbsolutePath());
+                    }
+                }
+            } else {
+                // 单文件：直接流式下载，不产生临时文件
+                String fileName = resolved.getFileName().toString();
+                response.setContentType(Files.probeContentType(resolved));
+                if (response.getContentType() == null) {
+                    response.setContentType("application/octet-stream");
+                }
+                response.setHeader("Content-Disposition", buildContentDisposition(fileName));
+                response.setContentLengthLong(Files.size(resolved));
+                try (InputStream in = Files.newInputStream(resolved);
+                     OutputStream out = response.getOutputStream()) {
+                    in.transferTo(out);
+                }
+            }
+        } catch (Exception e) {
+            logger.error("下载项目[{}]文件失败: path={}", id, path, e);
+            try {
+                response.reset();
+                response.setContentType("application/json;charset=UTF-8");
+                response.getWriter().write("{\"code\":500,\"msg\":\"下载失败：" +
+                        e.getMessage().replace("\"", "\\\"") + "\"}");
+            } catch (IOException ignored) {
+            }
+        }
+    }
+
+    /** 构造下载文件名：目录取末段名加 .zip，整空间取项目名加 .zip */
+    private String buildDownloadName(String path, boolean isZip) {
+        if (path == null || path.trim().isEmpty()) {
+            return "project-space" + (isZip ? ".zip" : "");
+        }
+        String name = path.contains("/") ? path.substring(path.lastIndexOf('/') + 1) : path;
+        return isZip ? name + ".zip" : name;
+    }
+
+    /** 构造 Content-Disposition 头，使用 RFC 5987 编码以支持中文文件名 */
+    private String buildContentDisposition(String fileName) throws IOException {
+        String encoded = URLEncoder.encode(fileName, "UTF-8").replace("+", "%20");
+        return "attachment; filename=\"" + encoded + "\"; filename*=UTF-8''" + encoded;
     }
 
     /**
