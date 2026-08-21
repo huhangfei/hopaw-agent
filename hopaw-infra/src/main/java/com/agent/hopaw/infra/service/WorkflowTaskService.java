@@ -135,6 +135,11 @@ public class WorkflowTaskService implements IWorkflowTaskService {
     }
 
     @Override
+    public WorkflowTask getTaskById(Long id) {
+        return workflowTaskMapper.findById(id);
+    }
+
+    @Override
     public List<WorkflowTask> getTasksByStatus(String userId, String status) {
         return workflowTaskMapper.findByUserIdAndStatus(userId, status);
     }
@@ -192,11 +197,14 @@ public class WorkflowTaskService implements IWorkflowTaskService {
         if (!TaskStatusEnum.PENDING_ACCEPTANCE.getCode().equals(existing.getStatus())) {
             throw new RuntimeException("当前任务状态不允许驳回");
         }
-        // 记录驳回原因
+        // 记录驳回原因，任务置为已驳回状态，由后台调度器扫描拉起重做（不在此处同步执行，避免接口长时间阻塞）
         updateTaskStatus(id, TaskStatusEnum.REJECTED.getCode(), reason);
-        // 立即重新执行
-        updateTaskStatus(id, TaskStatusEnum.PROCESSING.getCode(), null);
-        executeTask(id);
+        // 打回原因同时写入任务评论（用户身份），重做时智能体可通过评论历史感知驳回理由
+        try {
+            taskCommentService.addComment(id, reason, userId);
+        } catch (Exception e) {
+            logger.warn("打回原因写入任务评论失败: taskId={}", id, e);
+        }
     }
 
     @Override
@@ -209,6 +217,23 @@ public class WorkflowTaskService implements IWorkflowTaskService {
             throw new RuntimeException("无权操作该任务");
         }
         updateTaskStatus(id, TaskStatusEnum.CLOSED.getCode(), null);
+    }
+
+    @Override
+    public void redoTask(Long id, String userId) {
+        WorkflowTask existing = workflowTaskMapper.findById(id);
+        if (existing == null) {
+            throw new RuntimeException("任务不存在");
+        }
+        if (!userId.equals(existing.getUserId())) {
+            throw new RuntimeException("无权操作该任务");
+        }
+        TaskStatusEnum current = TaskStatusEnum.fromCode(existing.getStatus());
+        if (current == null || !current.canTransitionTo(TaskStatusEnum.PENDING_EXECUTION)) {
+            throw new RuntimeException("当前任务状态不允许重做");
+        }
+        // 重置为待执行，由后台调度器扫描拉起重跑（同时清空历史驳回/失败原因）
+        updateTaskStatus(id, TaskStatusEnum.PENDING_EXECUTION.getCode(), null);
     }
 
     @Override

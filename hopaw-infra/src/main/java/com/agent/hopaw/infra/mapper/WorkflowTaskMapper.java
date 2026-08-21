@@ -20,6 +20,7 @@ public interface WorkflowTaskMapper {
     List<WorkflowTask> findByUserIdAndStatus(@Param("userId") String userId,
                                              @Param("status") String status);
 
+    /** 查询待执行及打回重做（已驳回）任务，按ID正序 */
     List<WorkflowTask> findPendingExecution();
 
     int updateStatus(@Param("id") Long id,

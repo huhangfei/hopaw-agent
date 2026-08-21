@@ -67,4 +67,30 @@ public enum TaskStatusEnum {
         }
         return codes;
     }
+
+    /** 判断从当前状态是否可流转到目标状态（按正常流转规则） */
+    public boolean canTransitionTo(TaskStatusEnum target) {
+        if (target == null) {
+            return false;
+        }
+        switch (this) {
+            case PENDING:
+                return target == PENDING_EXECUTION || target == CLOSED;
+            case PENDING_EXECUTION:
+                return target == PROCESSING || target == CLOSED;
+            case PROCESSING:
+                return target == PENDING_ACCEPTANCE || target == FAILED || target == REJECTED;
+            case PENDING_ACCEPTANCE:
+                return target == COMPLETED || target == REJECTED || target == CLOSED;
+            case FAILED:
+                return target == PENDING_EXECUTION || target == CLOSED;
+            case REJECTED:
+                return target == PROCESSING || target == CLOSED;
+            case COMPLETED:
+                return target == PENDING_EXECUTION;
+            case CLOSED:
+            default:
+                return false;
+        }
+    }
 }

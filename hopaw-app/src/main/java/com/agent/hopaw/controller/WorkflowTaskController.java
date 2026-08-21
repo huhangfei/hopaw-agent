@@ -194,6 +194,19 @@ public class WorkflowTaskController {
         }
     }
 
+    // 重做任务（已完成/失败 → 待执行）
+    @PutMapping("/api/workflow/tasks/{id}/redo")
+    @ResponseBody
+    public ResponseBean redoTask(HttpServletRequest request, @PathVariable Long id) {
+        String userId = CurrentUser.require(request);
+        try {
+            taskService.redoTask(id, userId);
+            return ResponseBean.success();
+        } catch (Exception e) {
+            return ResponseBean.fail(e.getMessage());
+        }
+    }
+
     // 任务会话列表
     @GetMapping("/api/workflow/tasks/{id}/sessions")
     @ResponseBody

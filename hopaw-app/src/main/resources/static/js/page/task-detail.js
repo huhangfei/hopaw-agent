@@ -65,10 +65,19 @@ function renderTaskDetail(task) {
     if (task.executionPeriod && task.executionPeriod > 0) {
         infoHtml += '<div class="task-detail-info-item"><span class="info-label">执行时段</span><span class="info-value">' + task.executionPeriod + ' 分钟</span></div>';
     }
-    if (task.rejectReason) {
-        infoHtml += '<div class="task-detail-info-item"><span class="info-label">驳回/失败原因</span><span class="info-value">' + escapeHtml(task.rejectReason) + '</span></div>';
-    }
     document.getElementById('taskDetailInfo').innerHTML = infoHtml;
+
+    // 驳回/失败原因：独立突出显示区域（任务内容上方）
+    var reasonEl = document.getElementById('taskDetailRejectReason');
+    var reasonTextEl = document.getElementById('taskDetailRejectReasonText');
+    var reasonLabelEl = document.getElementById('taskDetailRejectReasonLabel');
+    if (task.rejectReason) {
+        reasonTextEl.textContent = task.rejectReason;
+        reasonLabelEl.textContent = task.status === 'rejected' ? '驳回原因' : '失败原因';
+        reasonEl.style.display = 'block';
+    } else {
+        reasonEl.style.display = 'none';
+    }
 
     var contentEl = document.getElementById('taskDetailContent');
     if (task.content) {
@@ -94,7 +103,10 @@ function renderTaskActions(task) {
         html += '<button class="task-action-btn btn-warning" onclick="rejectTask(' + task.id + ')">打回重做</button>';
         html += '<button class="task-action-btn btn-secondary" onclick="closeTask(' + task.id + ')">关闭任务</button>';
     } else if (status === 'failed') {
+        html += '<button class="task-action-btn btn-primary" onclick="redoTask(' + task.id + ')">重做</button>';
         html += '<button class="task-action-btn btn-secondary" onclick="closeTask(' + task.id + ')">关闭任务</button>';
+    } else if (status === 'completed') {
+        html += '<button class="task-action-btn btn-primary" onclick="redoTask(' + task.id + ')">重做</button>';
     }
 
     actionsEl.innerHTML = html;
@@ -307,6 +319,26 @@ function closeTask(id) {
             })
             .catch(function (err) {
                 console.error('关闭失败:', err);
+                showToast('操作失败', 'error');
+            });
+    });
+}
+
+function redoTask(id) {
+    showConfirm('确定要重做该任务吗？任务将重置为待执行状态并自动重新运行。').then(function (confirmed) {
+        if (!confirmed) return;
+        fetch('/api/workflow/tasks/' + id + '/redo', { method: 'PUT' })
+            .then(function (r) { return r.json(); })
+            .then(function (res) {
+                if (res.code === 200) {
+                    showToast('任务已重置为待执行', 'success');
+                    loadTaskDetail(id);
+                } else {
+                    showToast(res.msg || '操作失败', 'error');
+                }
+            })
+            .catch(function (err) {
+                console.error('重做失败:', err);
                 showToast('操作失败', 'error');
             });
     });

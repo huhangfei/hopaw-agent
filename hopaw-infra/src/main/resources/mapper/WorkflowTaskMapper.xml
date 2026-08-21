@@ -71,10 +71,11 @@
         ORDER BY id DESC
     </select>
 
+    <!-- 待执行 + 打回重做（已驳回）任务均由后台调度器拉起 -->
     <select id="findPendingExecution" resultMap="WorkflowTaskResultMap">
         SELECT <include refid="allColumns"/>
         FROM workflow_tasks
-        WHERE status = 'pending_execution'
+        WHERE status IN ('pending_execution', 'rejected')
         ORDER BY id ASC
     </select>
 

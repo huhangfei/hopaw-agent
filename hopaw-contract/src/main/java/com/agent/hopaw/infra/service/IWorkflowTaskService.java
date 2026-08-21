@@ -21,10 +21,16 @@ public interface IWorkflowTaskService {
     void acceptTask(Long id, String userId);
     void rejectTask(Long id, String userId, String reason);
     void closeTask(Long id, String userId);
+
+    /** 重做任务：已完成/失败的任务重置为待执行，由后台调度器拉起重跑 */
+    void redoTask(Long id, String userId);
     List<WorkflowTask> findPendingExecution();
     void executeTask(Long taskId);
     void executeTask(UserChatRequest userChatRequest);
     void updateTaskStatus(Long taskId, String status, String rejectReason);
     List<TaskSession> getTaskSessions(Long taskId);
     Long findTaskIdBySessionId(String sessionId);
+
+    /** 按ID查询任务（不做用户归属校验，供内部流程使用） */
+    WorkflowTask getTaskById(Long id);
 }

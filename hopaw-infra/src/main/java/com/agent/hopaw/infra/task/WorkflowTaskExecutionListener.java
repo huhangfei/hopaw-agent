@@ -3,6 +3,7 @@ package com.agent.hopaw.infra.task;
 import com.agent.hopaw.infra.constant.TaskStatusEnum;
 import com.agent.hopaw.infra.event.AgentMessageEvent;
 import com.agent.hopaw.infra.model.dto.AiMessageBaseInfo;
+import com.agent.hopaw.infra.model.entity.WorkflowTask;
 import com.agent.hopaw.infra.service.IWorkflowTaskService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -37,11 +38,29 @@ public class WorkflowTaskExecutionListener {
             return; // 非任务会话
         }
         if ("done".equals(type) || "task-done".equals(type)) {
-            logger.info("任务执行完成，更新状态为待验收: taskId={}", taskId);
-            taskService.updateTaskStatus(taskId, TaskStatusEnum.PENDING_ACCEPTANCE.getCode(), null);
+            updateStatusIfTransitionAllowed(taskId, TaskStatusEnum.PENDING_ACCEPTANCE, null);
         } else if ("error".equals(type)) {
-            logger.info("任务执行失败: taskId={}, error={}", taskId, message.getContent());
-            taskService.updateTaskStatus(taskId, TaskStatusEnum.FAILED.getCode(), message.getContent());
+            updateStatusIfTransitionAllowed(taskId, TaskStatusEnum.FAILED, message.getContent());
         }
+    }
+
+    /**
+     * 按正常状态流转规则更新任务状态：仅当当前状态允许流转到目标状态时才更新，否则跳过
+     * （例如任务已被用户关闭/验收后，迟到的执行完成事件不应再覆盖状态）
+     */
+    private void updateStatusIfTransitionAllowed(Long taskId, TaskStatusEnum target, String rejectReason) {
+        WorkflowTask task = taskService.getTaskById(taskId);
+        if (task == null) {
+            logger.warn("任务不存在，跳过状态更新: taskId={}, target={}", taskId, target.getCode());
+            return;
+        }
+        TaskStatusEnum current = TaskStatusEnum.fromCode(task.getStatus());
+        if (current == null || !current.canTransitionTo(target)) {
+            logger.info("任务状态不允许流转，跳过更新: taskId={}, current={}, target={}",
+                    taskId, task.getStatus(), target.getCode());
+            return;
+        }
+        logger.info("任务执行事件更新状态: taskId={}, {} -> {}", taskId, current.getCode(), target.getCode());
+        taskService.updateTaskStatus(taskId, target.getCode(), rejectReason);
     }
 }
