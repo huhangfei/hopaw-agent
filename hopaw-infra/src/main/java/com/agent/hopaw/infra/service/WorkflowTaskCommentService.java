@@ -7,7 +7,7 @@ import com.agent.hopaw.infra.constant.TaskCommentTypeEnum;
 import com.agent.hopaw.infra.mapper.TaskCommentMapper;
 import com.agent.hopaw.infra.mapper.WorkflowTaskMapper;
 import com.agent.hopaw.infra.model.entity.Agent;
-import com.agent.hopaw.infra.model.entity.TaskComment;
+import com.agent.hopaw.infra.model.entity.WorkflowTaskComment;
 import com.agent.hopaw.infra.model.entity.WorkflowTask;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -18,18 +18,18 @@ import java.util.ArrayList;
 import java.util.List;
 
 @Service
-public class TaskCommentService implements ITaskCommentService {
-    private static final Logger logger = LoggerFactory.getLogger(TaskCommentService.class);
+public class WorkflowTaskCommentService implements IWorkflowTaskCommentService {
+    private static final Logger logger = LoggerFactory.getLogger(WorkflowTaskCommentService.class);
 
     private final TaskCommentMapper taskCommentMapper;
     private final WorkflowTaskMapper workflowTaskMapper;
     private final IProjectLogService projectLogService;
     private final IAgentService agentService;
 
-    public TaskCommentService(TaskCommentMapper taskCommentMapper,
-                              WorkflowTaskMapper workflowTaskMapper,
-                              IProjectLogService projectLogService,
-                              IAgentService agentService) {
+    public WorkflowTaskCommentService(TaskCommentMapper taskCommentMapper,
+                                      WorkflowTaskMapper workflowTaskMapper,
+                                      IProjectLogService projectLogService,
+                                      IAgentService agentService) {
         this.taskCommentMapper = taskCommentMapper;
         this.workflowTaskMapper = workflowTaskMapper;
         this.projectLogService = projectLogService;
@@ -37,20 +37,20 @@ public class TaskCommentService implements ITaskCommentService {
     }
 
     @Override
-    public TaskComment addComment(Long taskId, String content, String userId) {
+    public WorkflowTaskComment addComment(Long taskId, String content, String userId) {
         // 用户评论：评论者身份默认为 user
         return addComment(taskId, content, userId, TaskCommenterTypeEnum.USER.getCode(), userId, TaskCommentTypeEnum.DEFAULT.getCode());
     }
 
     @Override
-    public TaskComment addComment(Long taskId, String content, String userId, String commenterType, String commenterId) {
+    public WorkflowTaskComment addComment(Long taskId, String content, String userId, String commenterType, String commenterId) {
         return addComment(taskId, content, userId, commenterType, commenterId, TaskCommentTypeEnum.DEFAULT.getCode());
     }
 
     @Override
-    public TaskComment addComment(Long taskId, String content, String userId, String commenterType, String commenterId, String commentType) {
+    public WorkflowTaskComment addComment(Long taskId, String content, String userId, String commenterType, String commenterId, String commentType) {
         TaskCommentTypeEnum typeEnum = TaskCommentTypeEnum.fromCode(commentType);
-        TaskComment comment = new TaskComment();
+        WorkflowTaskComment comment = new WorkflowTaskComment();
         comment.setTaskId(taskId);
         comment.setContent(content);
         comment.setUserId(userId);
@@ -60,12 +60,12 @@ public class TaskCommentService implements ITaskCommentService {
         comment.setCreateTime(LocalDateTime.now());
         comment.setStatus(TaskCommentStatusEnum.PENDING.getCode());
         taskCommentMapper.insert(comment);
-        logCommentToProject(taskId, userId, commenterType, commenterId, typeEnum);
+        logCommentToProject(taskId, userId, commenterType, commenterId, typeEnum, content);
         return comment;
     }
 
     /** 新增任务评论写入关联项目的操作日志（不记录评论内容，仅记录动作） */
-    private void logCommentToProject(Long taskId, String userId, String commenterType, String commenterId, TaskCommentTypeEnum commentType) {
+    private void logCommentToProject(Long taskId, String userId, String commenterType, String commenterId, TaskCommentTypeEnum commentType, String content) {
         try {
             WorkflowTask task = workflowTaskMapper.findById(taskId);
             if (task == null || task.getProjectId() == null) {
@@ -75,7 +75,7 @@ public class TaskCommentService implements ITaskCommentService {
             boolean byAgent = TaskCommenterTypeEnum.isAgent(commenterType);
             String detail = taskLabel + " 新增" + (byAgent ? TaskCommenterTypeEnum.AGENT.getDescription() : TaskCommenterTypeEnum.USER.getDescription()) + "评论";
             if (commentType.isSummary()) {
-                detail += "（总结）";
+                detail +="："+ content;
             }
             // 评论类型 → 项目日志类型映射：普通评论→默认日志，总结评论→重点日志
             String logType = commentType.isSummary() ? ProjectLogTypeEnum.IMPORTANT.getCode() : ProjectLogTypeEnum.DEFAULT.getCode();
@@ -98,7 +98,7 @@ public class TaskCommentService implements ITaskCommentService {
 
     @Override
     public void deleteComment(Long id, String userId) {
-        TaskComment existing = taskCommentMapper.findById(id);
+        WorkflowTaskComment existing = taskCommentMapper.findById(id);
         if (existing == null) {
             throw new RuntimeException("评论不存在");
         }
@@ -109,14 +109,14 @@ public class TaskCommentService implements ITaskCommentService {
     }
 
     @Override
-    public List<TaskComment> getCommentsByTaskId(Long taskId) {
-        List<TaskComment> list = taskCommentMapper.findByTaskId(taskId);
+    public List<WorkflowTaskComment> getCommentsByTaskId(Long taskId) {
+        List<WorkflowTaskComment> list = taskCommentMapper.findByTaskId(taskId);
         return list != null ? list : new ArrayList<>();
     }
 
     @Override
-    public List<TaskComment> getPendingCommentsByTaskId(Long taskId) {
-        List<TaskComment> list = taskCommentMapper.findByTaskIdAndStatus(taskId, TaskCommentStatusEnum.PENDING.getCode());
+    public List<WorkflowTaskComment> getPendingCommentsByTaskId(Long taskId) {
+        List<WorkflowTaskComment> list = taskCommentMapper.findByTaskIdAndStatus(taskId, TaskCommentStatusEnum.PENDING.getCode());
         return list != null ? list : new ArrayList<>();
     }
 

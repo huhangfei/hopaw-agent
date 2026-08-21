@@ -11,7 +11,6 @@ html, body {
 /* 预览主体 */
 .preview-body {
     background: #fff;
-    padding: 16px;
     min-height: 100%;
     box-sizing: border-box;
 }
@@ -44,7 +43,7 @@ html, body {
     padding: 16px;
     border-radius: 8px;
     overflow: auto;
-    max-height: 75vh;
+    max-height: 90vh;
     font-family: 'Consolas', 'Monaco', monospace;
     font-size: 13px;
     white-space: pre-wrap;
@@ -59,7 +58,7 @@ html, body {
     padding: 20px 24px;
     border-radius: 8px;
     overflow: auto;
-    max-height: 75vh;
+    max-height: 90vh;
     font-size: 14px;
     line-height: 1.7;
     border: 1px solid #e5e7eb;
@@ -158,7 +157,6 @@ html, body {
 .preview-download-wrap {
     width: 100%;
     text-align: center;
-    margin-top: 8px;
 }
 
 .preview-download {

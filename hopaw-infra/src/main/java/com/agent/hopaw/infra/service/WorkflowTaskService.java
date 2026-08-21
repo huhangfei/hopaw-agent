@@ -1,5 +1,6 @@
 package com.agent.hopaw.infra.service;
 
+import com.agent.hopaw.infra.constant.AgentExecutorBizTypeEnum;
 import com.agent.hopaw.infra.constant.TaskCommenterTypeEnum;
 import com.agent.hopaw.infra.constant.TaskCommentTypeEnum;
 import com.agent.hopaw.infra.constant.TaskStatusEnum;
@@ -12,7 +13,7 @@ import com.agent.hopaw.infra.model.dto.UserChatRequest;
 import com.agent.hopaw.infra.model.entity.Agent;
 import com.agent.hopaw.infra.model.entity.Project;
 import com.agent.hopaw.infra.model.entity.ProjectLog;
-import com.agent.hopaw.infra.model.entity.TaskComment;
+import com.agent.hopaw.infra.model.entity.WorkflowTaskComment;
 import com.agent.hopaw.infra.model.entity.TaskSession;
 import com.agent.hopaw.infra.model.entity.WorkflowTask;
 import com.agent.hopaw.infra.tool.IAgentToolService;
@@ -29,7 +30,6 @@ import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
-import java.util.UUID;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
@@ -42,7 +42,7 @@ public class WorkflowTaskService implements IWorkflowTaskService {
     private final IAgentExecutorService agentExecutorService;
     private final IChatSessionService chatSessionService;
     private final IAgentService agentService;
-    private final ITaskCommentService taskCommentService;
+    private final IWorkflowTaskCommentService taskCommentService;
     private final IAgentToolService agentToolService;
     private final IMcpServerConfigService mcpServerConfigService;
     private final IProjectService projectService;
@@ -53,7 +53,7 @@ public class WorkflowTaskService implements IWorkflowTaskService {
                                IAgentExecutorService agentExecutorService,
                                IChatSessionService chatSessionService,
                                IAgentService agentService,
-                               ITaskCommentService taskCommentService,
+                               IWorkflowTaskCommentService taskCommentService,
                                IAgentToolService agentToolService,
                                IMcpServerConfigService mcpServerConfigService,
                                IProjectService projectService,
@@ -268,14 +268,14 @@ public class WorkflowTaskService implements IWorkflowTaskService {
         // 更新状态为 processing
         updateTaskStatus(taskId, TaskStatusEnum.PROCESSING.getCode(), null);
         // 仅查询待处理评论：避免重复处理已处理过的评论
-        List<TaskComment> comments = taskCommentService.getPendingCommentsByTaskId(taskId);
+        List<WorkflowTaskComment> comments = taskCommentService.getPendingCommentsByTaskId(taskId);
         // 4. 构建内容（包含评论历史，区分评论者身份）
         List<Content> contents = new ArrayList<>();
         StringBuilder taskContent = new StringBuilder();
         taskContent.append(task.getContent() != null ? task.getContent() : "");
         if (comments != null && !comments.isEmpty()) {
             taskContent.append("\n\n--- 评论历史 ---\n");
-            for (TaskComment comment : comments) {
+            for (WorkflowTaskComment comment : comments) {
                 if (TaskCommenterTypeEnum.isAgent(comment.getCommenterType())) {
                     continue;
                 }
@@ -291,7 +291,7 @@ public class WorkflowTaskService implements IWorkflowTaskService {
         // 执行
         executor.execute(contents,timeout);
         // 执行完成后将本次预取的待处理评论标记为已处理（执行期间新增的评论不受影响，将在下次执行时处理）
-        List<Long> processedCommentIds = comments.stream().map(TaskComment::getId).collect(Collectors.toList());
+        List<Long> processedCommentIds = comments.stream().map(WorkflowTaskComment::getId).collect(Collectors.toList());
         taskCommentService.markCommentsAsProcessed(processedCommentIds);
 
     }
@@ -369,7 +369,7 @@ public class WorkflowTaskService implements IWorkflowTaskService {
         agentExecutorParams.setVectorToolSearch(agent.getVectorToolSearch() != null ? agent.getVectorToolSearch() : false);
         agentExecutorParams.setVectorToolSearchMaxResults(agent.getVectorToolSearchMaxResults() != null ? agent.getVectorToolSearchMaxResults() : 5);
         agentExecutorParams.setToolSets(selectedTools);
-        agentExecutorParams.setBizType("task");
+        agentExecutorParams.setBizType(AgentExecutorBizTypeEnum.WorkflowTaskChat);
         agentExecutorParams.setMcpServerConfigs(mcpServerConfigService.findEnabled());
 
 

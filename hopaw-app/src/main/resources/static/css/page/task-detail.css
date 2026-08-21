@@ -151,6 +151,42 @@ body {
     white-space: pre-wrap;
 }
 
+/* 失败原因下方操作提示 */
+.task-detail-reject-reason .reject-reason-tip {
+    display: flex;
+    align-items: flex-start;
+    gap: 6px;
+    margin-top: 10px;
+    padding-top: 10px;
+    border-top: 1px dashed rgba(239, 68, 68, 0.35);
+    font-size: 13px;
+    color: #b45309;
+    line-height: 1.6;
+}
+
+.task-detail-reject-reason .reject-reason-tip svg {
+    width: 15px;
+    height: 15px;
+    flex-shrink: 0;
+    margin-top: 2px;
+}
+
+/* 会话行：清空历史按钮 */
+.task-session-row .task-session-clear {
+    background: none;
+    border: none;
+    cursor: pointer;
+    font-size: 12px;
+    color: #ef4444;
+    padding: 2px 4px;
+    white-space: nowrap;
+}
+
+.task-session-row .task-session-clear:hover {
+    color: #dc2626;
+    text-decoration: underline;
+}
+
 /* ========== 执行时段胶囊 ========== */
 .time-range-value {
     display: flex;
@@ -478,6 +514,19 @@ body.dark-theme .task-detail-reject-reason .reject-reason-title {
 
 body.dark-theme .task-detail-reject-reason .reject-reason-text {
     color: #fca5a5;
+}
+
+body.dark-theme .task-detail-reject-reason .reject-reason-tip {
+    border-top-color: rgba(239, 68, 68, 0.35);
+    color: #fbbf24;
+}
+
+body.dark-theme .task-session-row .task-session-clear {
+    color: #f87171;
+}
+
+body.dark-theme .task-session-row .task-session-clear:hover {
+    color: #ef4444;
 }
 
 body.dark-theme .time-range-badge {

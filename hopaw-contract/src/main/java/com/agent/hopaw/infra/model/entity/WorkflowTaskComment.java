@@ -5,7 +5,7 @@ import java.time.LocalDateTime;
 /**
  * 任务评论实体
  */
-public class TaskComment {
+public class WorkflowTaskComment {
     private Long id;
     private Long taskId;
     private String content;

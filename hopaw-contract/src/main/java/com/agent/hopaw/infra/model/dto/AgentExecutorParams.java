@@ -1,5 +1,6 @@
 package com.agent.hopaw.infra.model.dto;
 
+import com.agent.hopaw.infra.constant.AgentExecutorBizTypeEnum;
 import com.agent.hopaw.infra.tool.AgentTool;
 import com.agent.hopaw.infra.model.entity.McpServerConfig;
 import dev.langchain4j.data.message.Content;
@@ -34,7 +35,7 @@ public class AgentExecutorParams {
      * 业务类型：task 表示任务会话，null 表示普通对话会话
      * 由 saveChatSession 持久化到 chat_sessions.biz_type
      */
-    private String bizType;
+    private AgentExecutorBizTypeEnum bizType;
     public Long getAgentId() {
         return agentId;
     }
@@ -148,11 +149,11 @@ public class AgentExecutorParams {
         this.mcpServerConfigs = mcpServerConfigs;
     }
 
-    public String getBizType() {
+    public AgentExecutorBizTypeEnum getBizType() {
         return bizType;
     }
 
-    public void setBizType(String bizType) {
+    public void setBizType(AgentExecutorBizTypeEnum bizType) {
         this.bizType = bizType;
     }
 }

@@ -1493,7 +1493,7 @@ function renderSessionList(sessions) {
     var html = '';
     sessions.forEach(function(s) {
         var activeClass = (s.sessionId === currentSessionId) ? ' active' : '';
-        var isTask = s.bizType === 'task';
+        var isTask = s.bizType === 'workflow-task-chat';
         var taskClass = isTask ? ' session-list-item-task' : '';
         var title = s.title || '未命名会话';
         var timeStr = formatSessionTime(s.lastUpdateTime || s.createTime);

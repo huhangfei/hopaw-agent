@@ -19,6 +19,10 @@
         var params = new URLSearchParams(window.location.search);
         var url = params.get('url');
         var name = params.get('name') || '';
+        // 独立页面打开时，标签页标题显示文件名
+        if (name) {
+            document.title = name + ' - 文件预览';
+        }
         FilePreview.render(url, name, document.getElementById('previewBody'));
     })();
 </script>

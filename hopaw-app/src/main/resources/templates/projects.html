@@ -119,6 +119,13 @@
                         <span class="logs-toggle-icon" id="logsToggleIcon">▾</span>
                     </div>
                     <div class="logs-body" id="detailLogs"></div>
+                    <div class="logs-pagination" id="logsPagination" style="display: none;">
+                        <div class="pagination-btns">
+                            <button class="pagination-btn" id="btnLogPrevPage" onclick="goToLogPage(logsPage - 1)">上一页</button>
+                            <span class="pagination-current" id="logsPaginationCurrent"></span>
+                            <button class="pagination-btn" id="btnLogNextPage" onclick="goToLogPage(logsPage + 1)">下一页</button>
+                        </div>
+                    </div>
                 </div>
             </div>
         </section>
@@ -224,10 +231,20 @@
 
     <!-- 文件预览模态框 -->
     <div class="modal-overlay" id="projectFilePreviewModal">
-        <div class="modal-card modal-wide project-file-preview-card">
+        <div class="modal modal-wide project-file-preview-card">
             <div class="modal-header">
                 <h3 id="previewModalTitle">文件预览</h3>
-                <button class="modal-close" onclick="Modal.close('projectFilePreviewModal')">&times;</button>
+                <div class="preview-header-actions">
+                    <button class="preview-new-tab-btn" onclick="openPreviewInNewTab()" title="在新页面打开预览">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/>
+                            <polyline points="15 3 21 3 21 9"/>
+                            <line x1="10" y1="14" x2="21" y2="3"/>
+                        </svg>
+                        <span>新页面打开</span>
+                    </button>
+                    <button class="modal-close" onclick="Modal.close('projectFilePreviewModal')">&times;</button>
+                </div>
             </div>
             <div class="modal-body project-file-preview-body">
                 <iframe id="projectFilePreviewFrame" class="project-file-preview-frame" frameborder="0"></iframe>
@@ -241,6 +258,7 @@
 </th:block>
 
 <th:block layout:fragment="extraScripts">
+    <script th:src="@{/js/marked.min.js}"></script>
     <script th:src="@{/js/page/projects.js}"></script>
 </th:block>
 </body>

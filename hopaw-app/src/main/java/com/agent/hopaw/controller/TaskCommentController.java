@@ -2,7 +2,7 @@ package com.agent.hopaw.controller;
 
 import com.agent.hopaw.infra.constant.TaskCommenterTypeEnum;
 import com.agent.hopaw.infra.model.dto.ResponseBean;
-import com.agent.hopaw.infra.service.ITaskCommentService;
+import com.agent.hopaw.infra.service.IWorkflowTaskCommentService;
 import com.agent.hopaw.util.CurrentUser;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.*;
@@ -12,9 +12,9 @@ import java.util.Map;
 
 @Controller
 public class TaskCommentController {
-    private final ITaskCommentService commentService;
+    private final IWorkflowTaskCommentService commentService;
 
-    public TaskCommentController(ITaskCommentService commentService) {
+    public TaskCommentController(IWorkflowTaskCommentService commentService) {
         this.commentService = commentService;
     }
 

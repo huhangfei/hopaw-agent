@@ -2,7 +2,7 @@
 <!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
 <mapper namespace="com.agent.hopaw.infra.mapper.TaskCommentMapper">
 
-    <resultMap id="TaskCommentResultMap" type="com.agent.hopaw.infra.model.entity.TaskComment">
+    <resultMap id="TaskCommentResultMap" type="com.agent.hopaw.infra.model.entity.WorkflowTaskComment">
         <id property="id" column="id"/>
         <result property="taskId" column="task_id"/>
         <result property="content" column="content"/>
@@ -18,7 +18,7 @@
         id, task_id, content, user_id, commenter_type, commenter_id, comment_type, create_time, status
     </sql>
 
-    <insert id="insert" parameterType="com.agent.hopaw.infra.model.entity.TaskComment">
+    <insert id="insert" parameterType="com.agent.hopaw.infra.model.entity.WorkflowTaskComment">
         INSERT INTO task_comments (task_id, content, user_id, commenter_type, commenter_id, comment_type, status)
         VALUES (#{taskId}, #{content}, #{userId}, #{commenterType}, #{commenterId}, #{commentType}, #{status})
         <selectKey resultType="long" keyProperty="id" order="AFTER">

@@ -1,5 +1,6 @@
 package com.agent.hopaw.infra.service;
 
+import com.agent.hopaw.infra.constant.AgentExecutorBizTypeEnum;
 import com.agent.hopaw.infra.executor.IAgentExecutor;
 import com.agent.hopaw.infra.memory.ILongTermMemoryService;
 import com.agent.hopaw.infra.model.dto.AgentExecutorParams;
@@ -101,6 +102,7 @@ public class ChatService implements IChatService {
         agentExecutorParams.setToolSets(selectedTools);
         // 加载已启用的 MCP 服务器配置
         agentExecutorParams.setMcpServerConfigs(mcpServerConfigService.findEnabled());
+        agentExecutorParams.setBizType(AgentExecutorBizTypeEnum.Chat);
 
 
         Function<Long, String> systemMessageProvider = aId -> {

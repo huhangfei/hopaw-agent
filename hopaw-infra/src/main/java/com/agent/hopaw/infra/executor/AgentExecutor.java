@@ -591,7 +591,6 @@ public class AgentExecutor implements IAgentExecutor {
                 logger.warn("MCP configs found but no client was created, proceeding without MCP tools");
             }
         }
-
         ChatModelListener chatModelListener = chatModelListenerProvider.getChatModelListener(AiModelCallSourceEnum.Chat, sessionId, userId, agentId);
         StreamingChatModel streamingModel = aiModelService.createStreamingChatModel(agentExecutorParams.getAiModelId(), agentExecutorParams.getEnableThinking(), chatModelListener);
         return aiBuilder.streamingChatModel(streamingModel).build();
@@ -754,7 +753,7 @@ public class AgentExecutor implements IAgentExecutor {
             chatSession.setLastUpdateTime(LocalDateTime.now());
             chatSession.setCreateTime(LocalDateTime.now());
             chatSession.setToolCallPermission(agentExecutorParams.getToolCallPermission());
-            chatSession.setBizType(agentExecutorParams.getBizType());
+            chatSession.setBizType(agentExecutorParams.getBizType().getAiModelCallSourceEnum().getValue());
             chatSessionService.insertSession(chatSession);
             agentMessageHandler.sendMessageToChannel(AiMessageBaseInfo.sessionTitle(sessionId, requestId, userIntent));
         } else {

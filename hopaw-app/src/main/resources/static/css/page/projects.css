@@ -809,6 +809,15 @@
     border-radius: 1px;
 }
 
+/* 操作日志分页 */
+.logs-pagination {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    padding: 10px 0 2px 0;
+    flex-shrink: 0;
+}
+
 .log-item {
     position: relative;
     padding: 6px 0 12px 0;
@@ -881,6 +890,85 @@
     color: #555;
     line-height: 1.5;
     word-break: break-word;
+}
+
+/* 日志内容 Markdown 元素样式 */
+.log-item .log-detail p { margin: 0 0 4px 0; }
+.log-item .log-detail p:last-child { margin-bottom: 0; }
+.log-item .log-detail h1,
+.log-item .log-detail h2,
+.log-item .log-detail h3,
+.log-item .log-detail h4 {
+    margin: 6px 0 4px 0;
+    font-size: 1.05em;
+    font-weight: 600;
+    line-height: 1.4;
+}
+.log-item .log-detail h1:first-child,
+.log-item .log-detail h2:first-child,
+.log-item .log-detail h3:first-child { margin-top: 0; }
+.log-item .log-detail ul,
+.log-item .log-detail ol { margin: 2px 0 4px 0; padding-left: 20px; }
+.log-item .log-detail li { margin-bottom: 2px; }
+.log-item .log-detail code {
+    background: #f3f4f6;
+    padding: 1px 5px;
+    border-radius: 3px;
+    font-family: 'Consolas', 'Monaco', monospace;
+    font-size: 0.9em;
+    color: #374151;
+}
+.log-item .log-detail pre {
+    background: #1e1e1e;
+    color: #d4d4d4;
+    padding: 10px 12px;
+    border-radius: 6px;
+    overflow: auto;
+    margin: 4px 0;
+}
+.log-item .log-detail pre code {
+    background: none;
+    padding: 0;
+    color: inherit;
+    font-size: 12px;
+}
+.log-item .log-detail blockquote {
+    border-left: 3px solid #d1d5db;
+    padding-left: 10px;
+    color: #6b7280;
+    margin: 4px 0;
+}
+.log-item .log-detail table {
+    border-collapse: collapse;
+    margin: 4px 0;
+    max-width: 100%;
+    display: block;
+    overflow-x: auto;
+}
+.log-item .log-detail th,
+.log-item .log-detail td {
+    border: 1px solid #e5e7eb;
+    padding: 4px 10px;
+    text-align: left;
+    font-size: 12px;
+}
+.log-item .log-detail th {
+    background: #f9fafb;
+    font-weight: 600;
+}
+.log-item .log-detail a {
+    color: #4f46e5;
+    text-decoration: none;
+}
+.log-item .log-detail a:hover { text-decoration: underline; }
+.log-item .log-detail img {
+    max-width: 100%;
+    border-radius: 4px;
+}
+.log-item .log-detail hr {
+    border: none;
+    border-top: 1px solid #e5e7eb;
+    margin: 6px 0;
 }
 
 .log-item .log-meta {
@@ -1157,6 +1245,39 @@ body.dark-theme .file-tree-root-dropzone.drag-over {
     max-height: 90vh;
 }
 
+/* 头部操作区：外链按钮 + 关闭按钮 */
+.preview-header-actions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.preview-new-tab-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 5px 12px;
+    background: #f0f2ff;
+    border: 1px solid #dce0fb;
+    border-radius: 6px;
+    color: #667eea;
+    font-size: 13px;
+    cursor: pointer;
+    transition: all 0.2s;
+    white-space: nowrap;
+}
+
+.preview-new-tab-btn:hover {
+    background: #e8ecff;
+    border-color: #c5cdfa;
+}
+
+.preview-new-tab-btn svg {
+    width: 14px;
+    height: 14px;
+    flex-shrink: 0;
+}
+
 .project-file-preview-body {
     padding: 0;
     overflow: hidden;
@@ -1171,6 +1292,17 @@ body.dark-theme .file-tree-root-dropzone.drag-over {
 
 body.dark-theme .project-file-preview-frame {
     background: #16213e;
+}
+
+body.dark-theme .preview-new-tab-btn {
+    background: #2d3358;
+    border-color: #3d4270;
+    color: #8ba3ff;
+}
+
+body.dark-theme .preview-new-tab-btn:hover {
+    background: #363d6a;
+    border-color: #4d5488;
 }
 
 body.dark-theme .file-tree-toggle {
@@ -1268,6 +1400,38 @@ body.dark-theme .log-item .log-action {
 
 body.dark-theme .log-item .log-detail {
     color: #c0c0c0;
+}
+
+body.dark-theme .log-item .log-detail code {
+    background: #2d2d44;
+    color: #e0e0e0;
+}
+
+body.dark-theme .log-item .log-detail pre {
+    background: #16213e;
+    color: #d4d4d4;
+}
+
+body.dark-theme .log-item .log-detail blockquote {
+    border-left-color: #2d2d44;
+    color: #888;
+}
+
+body.dark-theme .log-item .log-detail th {
+    background: #16213e;
+}
+
+body.dark-theme .log-item .log-detail th,
+body.dark-theme .log-item .log-detail td {
+    border-color: #2d2d44;
+}
+
+body.dark-theme .log-item .log-detail a {
+    color: #8ba3ff;
+}
+
+body.dark-theme .log-item .log-detail hr {
+    border-top-color: #2d2d44;
 }
 
 body.dark-theme .log-item .log-meta {

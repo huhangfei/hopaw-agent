@@ -71,9 +71,12 @@ function renderTaskDetail(task) {
     var reasonEl = document.getElementById('taskDetailRejectReason');
     var reasonTextEl = document.getElementById('taskDetailRejectReasonText');
     var reasonLabelEl = document.getElementById('taskDetailRejectReasonLabel');
+    var reasonTipEl = document.getElementById('taskDetailRejectReasonTip');
     if (task.rejectReason) {
         reasonTextEl.textContent = task.rejectReason;
         reasonLabelEl.textContent = task.status === 'rejected' ? '驳回原因' : '失败原因';
+        // 失败状态追加提示：会话上下文异常时建议清空会话历史后重试
+        reasonTipEl.style.display = (task.status === 'failed') ? 'flex' : 'none';
         reasonEl.style.display = 'block';
     } else {
         reasonEl.style.display = 'none';
@@ -145,8 +148,30 @@ function renderTaskSessions(list) {
                 escapeHtml(displayTitle) + (time ? ' · ' + escapeHtml(time) : '') +
             '</span>' +
             '<a class="task-session-link" href="/?sessionId=' + encodeURIComponent(sid) + '" target="_blank">查看记录</a>' +
+            '<button class="task-session-link task-session-clear" title="清空该会话的历史记录" onclick="clearTaskSessionHistory(\'' + escapeHtml(sid) + '\')">清空历史</button>' +
         '</div>';
     }).join('');
+}
+
+/** 清空指定任务会话的历史记录（复用会话清理接口） */
+function clearTaskSessionHistory(sessionId) {
+    if (!sessionId) return;
+    showConfirm('确定清空该会话的历史记录吗？清空后智能体将丢失该会话的上下文记忆，且不可恢复。').then(function (confirmed) {
+        if (!confirmed) return;
+        fetch('/api/session/' + encodeURIComponent(sessionId) + '/clear', { method: 'POST' })
+            .then(function (r) { return r.json(); })
+            .then(function (res) {
+                if (res.code === 200) {
+                    showToast('会话历史已清空', 'success');
+                } else {
+                    showToast(res.msg || '清空失败', 'error');
+                }
+            })
+            .catch(function (err) {
+                console.error('清空会话历史失败:', err);
+                showToast('清空失败', 'error');
+            });
+    });
 }
 
 /* ========== 评论 ========== */

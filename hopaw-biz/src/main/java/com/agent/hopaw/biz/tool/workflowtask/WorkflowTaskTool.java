@@ -2,9 +2,9 @@ package com.agent.hopaw.biz.tool.workflowtask;
 
 import com.agent.hopaw.infra.constant.TaskCommenterTypeEnum;
 import com.agent.hopaw.infra.constant.TaskCommentTypeEnum;
-import com.agent.hopaw.infra.model.entity.TaskComment;
+import com.agent.hopaw.infra.model.entity.WorkflowTaskComment;
 import com.agent.hopaw.infra.model.entity.WorkflowTask;
-import com.agent.hopaw.infra.service.ITaskCommentService;
+import com.agent.hopaw.infra.service.IWorkflowTaskCommentService;
 import com.agent.hopaw.infra.service.IWorkflowTaskService;
 import com.agent.hopaw.infra.tool.AgentTool;
 import com.agent.hopaw.infra.tool.ToolSecurityLevel;
@@ -28,9 +28,9 @@ public class WorkflowTaskTool implements AgentTool {
     private static final DateTimeFormatter TIME_FMT = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm");
 
     private final IWorkflowTaskService workflowTaskService;
-    private final ITaskCommentService taskCommentService;
+    private final IWorkflowTaskCommentService taskCommentService;
 
-    public WorkflowTaskTool(IWorkflowTaskService workflowTaskService, ITaskCommentService taskCommentService) {
+    public WorkflowTaskTool(IWorkflowTaskService workflowTaskService, IWorkflowTaskCommentService taskCommentService) {
         this.workflowTaskService = workflowTaskService;
         this.taskCommentService = taskCommentService;
     }
@@ -82,10 +82,10 @@ public class WorkflowTaskTool implements AgentTool {
         }
 
         // 评论历史
-        List<TaskComment> comments = taskCommentService.getCommentsByTaskId(taskId);
+        List<WorkflowTaskComment> comments = taskCommentService.getCommentsByTaskId(taskId);
         if (comments != null && !comments.isEmpty()) {
             sb.append("\n--- 评论历史 ---\n");
-            for (TaskComment comment : comments) {
+            for (WorkflowTaskComment comment : comments) {
                 // 区分评论者身份：agent=智能体，其他（含 null 旧数据）按用户处理
                 String role = TaskCommenterTypeEnum.isAgent(comment.getCommenterType()) ? TaskCommenterTypeEnum.AGENT.getDescription() : TaskCommenterTypeEnum.USER.getDescription();
                 String commenterId = comment.getCommenterId() != null ? comment.getCommenterId() : "";

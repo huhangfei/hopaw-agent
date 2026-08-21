@@ -10,7 +10,10 @@ var currentProjectId = null;     // 当前选中的项目ID
 var currentProject = null;        // 当前选中的项目对象
 var logsExpanded = true;          // 操作日志展开状态（默认展开）
 var logsCache = [];               // 操作日志缓存（用于类型切换时重渲染）
-var logFilter = 'all';            // 日志过滤类型：all=全部 / important=重点
+var logFilter = 'all';            // 日志过滤类型：all=全部 / important=重要
+var LOGS_PAGE_SIZE = 10;          // 操作日志分页大小
+var logsPage = 1;                 // 操作日志当前页码
+var logsTotalPages = 1;           // 操作日志总页数
 
 // 项目状态字典
 var PROJECT_STATUS = {
@@ -170,7 +173,8 @@ function goToPage(page) {
 
 /* ========== 右侧项目详情 ========== */
 function loadProjectDetail(id) {
-    // 切换项目时重置日志过滤为全部
+    // 切换项目时重置日志过滤，并默认翻到最后一页（渲染时钳制到实际总页数，即最新日志）
+    logsPage = Number.MAX_SAFE_INTEGER;
     if (logFilter !== 'all') {
         logFilter = 'all';
         var filterBtns = document.querySelectorAll('#logFilterToggle .log-filter-btn');
@@ -570,6 +574,8 @@ function downloadAllProjectFiles() {
 }
 
 /* ========== 项目空间：预览 ========== */
+var currentPreviewSrc = '';  // 当前预览页地址（嵌套的公共预览组件页，供新窗口打开）
+
 function previewProjectFile(path) {
     if (!currentProjectId || !path) return;
     var name = path.indexOf('/') >= 0 ? path.substring(path.lastIndexOf('/') + 1) : path;
@@ -577,12 +583,19 @@ function previewProjectFile(path) {
     var fileUrl = '/api/projects/' + currentProjectId + '/files/preview?path=' + encodeURIComponent(path);
     var previewSrc = '/file-preview?url=' + encodeURIComponent(fileUrl) +
         '&name=' + encodeURIComponent(name);
+    currentPreviewSrc = previewSrc;
     var iframe = document.getElementById('projectFilePreviewFrame');
     if (iframe) {
         iframe.src = previewSrc;
     }
     document.getElementById('previewModalTitle').textContent = name;
     Modal.open('projectFilePreviewModal');
+}
+
+/* 新页面打开当前预览内容（弹框内嵌套的预览组件页） */
+function openPreviewInNewTab() {
+    if (!currentPreviewSrc) return;
+    window.open(currentPreviewSrc, '_blank');
 }
 
 /* ========== 项目空间：上传 ========== */
@@ -815,14 +828,23 @@ function renderLogsByFilter() {
         logs = logs.filter(function (log) { return log.logType === 'important'; });
     }
 
+    countEl.textContent = '(' + logs.length + ')';
+
     if (!logs.length) {
-        countEl.textContent = '(' + logs.length + ')';
+        logsTotalPages = 1;
+        logsPage = 1;
         container.innerHTML = '<p class="detail-empty-text">' + (logFilter === 'important' ? '暂无重点日志' : '暂无操作日志') + '</p>';
+        updateLogsPagination();
         return;
     }
-    countEl.textContent = '(' + logs.length + ')';
-    // 后端按时间正序返回（最早在前），直接渲染
-    container.innerHTML = logs.map(function (log) {
+
+    // 计算总页数并截取当前页数据（每页 LOGS_PAGE_SIZE 条）
+    logsTotalPages = Math.ceil(logs.length / LOGS_PAGE_SIZE) || 1;
+    if (logsPage > logsTotalPages) logsPage = logsTotalPages;
+    var pageLogs = logs.slice((logsPage - 1) * LOGS_PAGE_SIZE, logsPage * LOGS_PAGE_SIZE);
+
+    // 后端按时间正序返回（最早在前），渲染当前页
+    container.innerHTML = pageLogs.map(function (log) {
         var actionLabel = LOG_ACTION_LABELS[log.action] || log.action || '操作';
         var isImportant = log.logType === 'important';
         return '<div class="log-item' + (isImportant ? ' log-item-important' : '') + '">' +
@@ -831,8 +853,8 @@ function renderLogsByFilter() {
                 '<div class="log-line">' +
                     '<span class="log-action">' + escapeHtml(actionLabel) + '</span>' +
                     (isImportant ? '<span class="log-important-badge">重点</span>' : '') +
-                    '<span class="log-detail">' + escapeHtml(log.detail || '') + '</span>' +
                 '</div>' +
+                '<div class="log-detail">' + renderLogDetail(log.detail) + '</div>' +
                 '<div class="log-meta">' +
                     '<span class="log-operator">' + escapeHtml(log.operatorName || '未知') + '</span>' +
                     '<span class="log-time">' + formatTime(log.createTime) + '</span>' +
@@ -840,12 +862,44 @@ function renderLogsByFilter() {
             '</div>' +
         '</div>';
     }).join('');
+    updateLogsPagination();
+}
+
+/* 日志内容 Markdown 渲染：无内容时返回空串，marked 未加载时降级为纯文本 */
+function renderLogDetail(detail) {
+    if (!detail) return '';
+    if (typeof marked !== 'undefined' && marked.parse) {
+        return marked.parse(detail);
+    }
+    return escapeHtml(detail);
+}
+
+/* 更新日志分页控件显示状态：折叠或不足一页时隐藏 */
+function updateLogsPagination() {
+    var paginationEl = document.getElementById('logsPagination');
+    if (!paginationEl) return;
+    if (!logsExpanded || logsTotalPages <= 1) {
+        paginationEl.style.display = 'none';
+        return;
+    }
+    paginationEl.style.display = 'flex';
+    document.getElementById('logsPaginationCurrent').textContent = logsPage + ' / ' + logsTotalPages;
+    document.getElementById('btnLogPrevPage').disabled = logsPage <= 1;
+    document.getElementById('btnLogNextPage').disabled = logsPage >= logsTotalPages;
+}
+
+/* 日志翻页 */
+function goToLogPage(page) {
+    if (page < 1 || page > logsTotalPages || page === logsPage) return;
+    logsPage = page;
+    renderLogsByFilter();
 }
 
 /* 切换日志过滤类型（全部/总结），并同步连体按钮选中态 */
 function switchLogFilter(filter, event) {
     if (event) event.stopPropagation();
     logFilter = filter;
+    logsPage = Number.MAX_SAFE_INTEGER;  // 切换过滤类型时默认翻到最后一页（最新日志）
     var btns = document.querySelectorAll('#logFilterToggle .log-filter-btn');
     btns.forEach(function (btn) {
         btn.classList.toggle('active', btn.getAttribute('data-filter') === filter);
@@ -859,6 +913,7 @@ function toggleProjectLogs() {
     var iconEl = document.getElementById('logsToggleIcon');
     container.style.display = logsExpanded ? 'block' : 'none';
     iconEl.textContent = logsExpanded ? '▾' : '▸';
+    updateLogsPagination();
 }
 
 /* ========== 新建/编辑项目 ========== */
