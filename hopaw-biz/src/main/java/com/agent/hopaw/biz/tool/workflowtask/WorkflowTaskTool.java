@@ -1,5 +1,7 @@
 package com.agent.hopaw.biz.tool.workflowtask;
 
+import com.agent.hopaw.infra.constant.TaskCommenterTypeEnum;
+import com.agent.hopaw.infra.constant.TaskCommentTypeEnum;
 import com.agent.hopaw.infra.model.entity.TaskComment;
 import com.agent.hopaw.infra.model.entity.WorkflowTask;
 import com.agent.hopaw.infra.service.ITaskCommentService;
@@ -85,10 +87,12 @@ public class WorkflowTaskTool implements AgentTool {
             sb.append("\n--- 评论历史 ---\n");
             for (TaskComment comment : comments) {
                 // 区分评论者身份：agent=智能体，其他（含 null 旧数据）按用户处理
-                String role = "agent".equals(comment.getCommenterType()) ? "智能体" : "用户";
+                String role = TaskCommenterTypeEnum.isAgent(comment.getCommenterType()) ? TaskCommenterTypeEnum.AGENT.getDescription() : TaskCommenterTypeEnum.USER.getDescription();
                 String commenterId = comment.getCommenterId() != null ? comment.getCommenterId() : "";
                 String time = comment.getCreateTime() != null ? comment.getCreateTime().format(TIME_FMT) : "";
-                sb.append("[").append(time).append("][").append(role).append(":").append(commenterId).append("] ")
+                // 总结评论追加类型标记，便于智能体识别重要节点
+                String typeMark = TaskCommentTypeEnum.fromCode(comment.getCommentType()).isSummary() ? "[总结]" : "";
+                sb.append("[").append(time).append("][").append(role).append(":").append(commenterId).append("]").append(typeMark).append(" ")
                         .append(comment.getContent() != null ? comment.getContent() : "")
                         .append("\n");
             }
@@ -103,8 +107,9 @@ public class WorkflowTaskTool implements AgentTool {
      * 用于记录任务处理的关键细节，或向用户提出问题等待用户评论回复。
      */
     @ToolSecurityLevel(ToolSecurityLevel.Level.SAFE)
-    @Tool(value = {"添加任务评论", "向当前任务添加一条智能体评论，可用于记录处理关键细节或向用户提问"}, searchBehavior = SearchBehavior.ALWAYS_VISIBLE)
-    public String addWorkflowTaskComment(@P("评论内容：记录处理关键细节，或向用户提出的问题") String content,
+    @Tool(value = {"添加任务评论", "向当前任务添加一条智能体评论，可用于记录处理细节或向用户提问。请通过 commentType 参数指明评论类型"}, searchBehavior = SearchBehavior.ALWAYS_VISIBLE)
+    public String addWorkflowTaskComment(@P("评论内容：记录处理细节，或向用户提出的问题") String content,
+                                 @P(value = "评论类型：default=普通评论（用于日常记录、提问、进度说明等）；summary=总结评论（用于任务阶段总结、关键结论、最终交付摘要）。请根据评论内容选择对应类型", required = false) String commentType,
                                  InvocationParameters invocationParameters) {
         InvocationParametersWrapper wrapper = InvocationParametersWrapper.create(invocationParameters);
         Long taskId = workflowTaskService.findTaskIdBySessionId(wrapper.getSessionId());
@@ -116,7 +121,7 @@ public class WorkflowTaskTool implements AgentTool {
         }
         // 智能体评论：commenterType=agent，commenterId=智能体ID
         taskCommentService.addComment(taskId, content.trim(), wrapper.getUserId(),
-                "agent", String.valueOf(wrapper.getAgentId()));
+                TaskCommenterTypeEnum.AGENT.getCode(), String.valueOf(wrapper.getAgentId()), commentType);
         return "成功：任务评论已添加";
     }
 }

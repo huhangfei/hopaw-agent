@@ -138,6 +138,22 @@ function renderTaskSessions(list) {
 }
 
 /* ========== 评论 ========== */
+// 当前评论类型：default=普通 / summary=总结
+var currentCommentType = 'default';
+
+function switchCommentType(type, event) {
+    if (event) event.preventDefault();
+    currentCommentType = type;
+    var btns = document.querySelectorAll('#commentTypeToggle .comment-type-btn');
+    btns.forEach(function (btn) {
+        btn.classList.toggle('active', btn.getAttribute('data-type') === type);
+    });
+    var input = document.getElementById('taskCommentInput');
+    if (input) {
+        input.placeholder = type === 'summary' ? '输入总结评论（将标记为任务关键节点）...' : '输入评论...';
+    }
+}
+
 function loadComments(taskId) {
     fetch('/api/workflow/tasks/' + taskId + '/comments')
         .then(function (r) { return r.json(); })
@@ -166,9 +182,11 @@ function renderComments(comments) {
         var roleLabel = isAgent ? '智能体' : '用户';
         var roleClass = isAgent ? 'comment-item-agent' : 'comment-item-user';
         var who = isAgent ? (c.commenterId || '智能体') : (c.userId || '匿名');
-        return '<div class="comment-item ' + roleClass + '">' +
+        var isSummary = c.commentType === 'summary';
+        return '<div class="comment-item ' + roleClass + (isSummary ? ' comment-item-summary' : '') + '">' +
             '<div class="comment-item-header">' +
                 '<span class="comment-item-user">' + escapeHtml(roleLabel + ' · ' + who) + '</span>' +
+                (isSummary ? '<span class="comment-summary-badge">总结</span>' : '') +
                 '<span class="comment-item-time">' + escapeHtml(formatTime(c.createTime)) + '</span>' +
             '</div>' +
             '<div class="comment-item-content">' + escapeHtml(c.content || '') + '</div>' +
@@ -187,7 +205,7 @@ function addComment() {
     fetch('/api/workflow/tasks/' + currentTaskId + '/comments', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ content: content })
+        body: JSON.stringify({ content: content, commentType: currentCommentType })
     })
         .then(function (r) { return r.json(); })
         .then(function (res) {

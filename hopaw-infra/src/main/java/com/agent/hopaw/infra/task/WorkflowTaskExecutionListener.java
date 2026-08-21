@@ -1,5 +1,6 @@
 package com.agent.hopaw.infra.task;
 
+import com.agent.hopaw.infra.constant.TaskStatusEnum;
 import com.agent.hopaw.infra.event.AgentMessageEvent;
 import com.agent.hopaw.infra.model.dto.AiMessageBaseInfo;
 import com.agent.hopaw.infra.service.IWorkflowTaskService;
@@ -37,10 +38,10 @@ public class WorkflowTaskExecutionListener {
         }
         if ("done".equals(type) || "task-done".equals(type)) {
             logger.info("任务执行完成，更新状态为待验收: taskId={}", taskId);
-            taskService.updateTaskStatus(taskId, "pending_acceptance", null);
+            taskService.updateTaskStatus(taskId, TaskStatusEnum.PENDING_ACCEPTANCE.getCode(), null);
         } else if ("error".equals(type)) {
             logger.info("任务执行失败: taskId={}, error={}", taskId, message.getContent());
-            taskService.updateTaskStatus(taskId, "failed", message.getContent());
+            taskService.updateTaskStatus(taskId, TaskStatusEnum.FAILED.getCode(), message.getContent());
         }
     }
 }

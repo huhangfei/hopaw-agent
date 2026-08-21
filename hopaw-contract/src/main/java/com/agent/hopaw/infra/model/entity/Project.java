@@ -9,7 +9,7 @@ public class Project {
     private Long id;
     private String name;
     private String description;
-    /** 状态：active / archived */
+    /** 状态，见 ProjectStatusEnum：planning / in_progress / paused / completed / archived */
     private String status;
     private String userId;
     /** 项目空间目录（项目工作空间的绝对路径，创建项目时根据项目编号自动生成） */

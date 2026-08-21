@@ -10,7 +10,7 @@ public class WorkflowTask {
     private String title;
     /** 任务内容（下发给智能体的指令） */
     private String content;
-    /** 状态：pending / pending_execution / processing / pending_acceptance / failed / completed / rejected */
+    /** 状态，见 TaskStatusEnum：pending / pending_execution / processing / pending_acceptance / failed / completed / rejected / closed */
     private String status;
     /** 关联项目ID（可选） */
     private Long projectId;

@@ -1,5 +1,6 @@
 package com.agent.hopaw.controller;
 
+import com.agent.hopaw.infra.constant.TaskCommenterTypeEnum;
 import com.agent.hopaw.infra.model.dto.ResponseBean;
 import com.agent.hopaw.infra.service.ITaskCommentService;
 import com.agent.hopaw.util.CurrentUser;
@@ -28,7 +29,9 @@ public class TaskCommentController {
     public ResponseBean addComment(HttpServletRequest request, @PathVariable Long taskId, @RequestBody Map<String, String> body) {
         String userId = CurrentUser.require(request);
         String content = body.get("content");
-        return ResponseBean.success(commentService.addComment(taskId, content, userId));
+        String commentType = body.get("commentType");
+        return ResponseBean.success(commentService.addComment(taskId, content, userId,
+                TaskCommenterTypeEnum.USER.getCode(), userId, commentType));
     }
 
     @DeleteMapping("/api/workflow/comments/{id}")

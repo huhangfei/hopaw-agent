@@ -83,6 +83,16 @@ public class AttachmentController {
         return "attachment-preview";
     }
 
+    /**
+     * 公共文件预览页：仅负责文件内容展示和下载，不绑定任何业务逻辑。
+     * 接收 URL 参数 url（文件内容 URL）和 name（文件名），由前端按扩展名路由渲染。
+     * 供 iframe 嵌套使用（附件预览、项目空间文件预览等场景复用）。
+     */
+    @GetMapping("/file-preview")
+    public String filePreviewPage() {
+        return "file-preview";
+    }
+
     @PostMapping("/api/attachments/upload")
     @ResponseBody
     public ResponseBean upload(HttpServletRequest request,

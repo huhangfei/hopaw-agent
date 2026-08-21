@@ -12,8 +12,10 @@ public class ProjectLog {
     private String operatorId;
     /** 操作者昵称（冗余存储，便于历史展示） */
     private String operatorName;
-    /** 动作类型：create / update / status_change / delete / attachment_upload / attachment_delete / task_bind / task_unbind */
+    /** 动作类型：create / update / status_change / delete / attachment_upload / attachment_delete / task_bind / task_unbind / task_status / task_comment */
     private String action;
+    /** 日志类型，见 ProjectLogTypeEnum：default=默认 / important=重点 */
+    private String logType;
     /** 操作内容描述 */
     private String detail;
     private LocalDateTime createTime;
@@ -56,6 +58,14 @@ public class ProjectLog {
 
     public void setAction(String action) {
         this.action = action;
+    }
+
+    public String getLogType() {
+        return logType;
+    }
+
+    public void setLogType(String logType) {
+        this.logType = logType;
     }
 
     public String getDetail() {

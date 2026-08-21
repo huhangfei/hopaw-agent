@@ -1,5 +1,8 @@
 package com.agent.hopaw.infra.service;
 
+import com.agent.hopaw.infra.constant.TaskCommenterTypeEnum;
+import com.agent.hopaw.infra.constant.TaskCommentTypeEnum;
+import com.agent.hopaw.infra.constant.TaskStatusEnum;
 import com.agent.hopaw.infra.executor.IAgentExecutor;
 import com.agent.hopaw.infra.mapper.TaskSessionMapper;
 import com.agent.hopaw.infra.mapper.WorkflowTaskMapper;
@@ -8,6 +11,7 @@ import com.agent.hopaw.infra.model.dto.ToolSetInfo;
 import com.agent.hopaw.infra.model.dto.UserChatRequest;
 import com.agent.hopaw.infra.model.entity.Agent;
 import com.agent.hopaw.infra.model.entity.Project;
+import com.agent.hopaw.infra.model.entity.ProjectLog;
 import com.agent.hopaw.infra.model.entity.TaskComment;
 import com.agent.hopaw.infra.model.entity.TaskSession;
 import com.agent.hopaw.infra.model.entity.WorkflowTask;
@@ -21,6 +25,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -41,6 +46,7 @@ public class WorkflowTaskService implements IWorkflowTaskService {
     private final IAgentToolService agentToolService;
     private final IMcpServerConfigService mcpServerConfigService;
     private final IProjectService projectService;
+    private final IProjectLogService projectLogService;
 
     public WorkflowTaskService(WorkflowTaskMapper workflowTaskMapper,
                                TaskSessionMapper taskSessionMapper,
@@ -50,7 +56,8 @@ public class WorkflowTaskService implements IWorkflowTaskService {
                                ITaskCommentService taskCommentService,
                                IAgentToolService agentToolService,
                                IMcpServerConfigService mcpServerConfigService,
-                               IProjectService projectService) {
+                               IProjectService projectService,
+                               IProjectLogService projectLogService) {
         this.workflowTaskMapper = workflowTaskMapper;
         this.taskSessionMapper = taskSessionMapper;
         this.agentExecutorService = agentExecutorService;
@@ -60,11 +67,12 @@ public class WorkflowTaskService implements IWorkflowTaskService {
         this.agentToolService = agentToolService;
         this.mcpServerConfigService = mcpServerConfigService;
         this.projectService = projectService;
+        this.projectLogService = projectLogService;
     }
 
     @Override
     public WorkflowTask createTask(WorkflowTask task) {
-        task.setStatus("pending");
+        task.setStatus(TaskStatusEnum.PENDING.getCode());
         LocalDateTime now = LocalDateTime.now();
         task.setCreateTime(now);
         task.setUpdateTime(now);
@@ -151,10 +159,10 @@ public class WorkflowTaskService implements IWorkflowTaskService {
         if (!userId.equals(existing.getUserId())) {
             throw new RuntimeException("无权操作该任务");
         }
-        if (!"pending".equals(existing.getStatus())) {
+        if (!TaskStatusEnum.PENDING.getCode().equals(existing.getStatus())) {
             throw new RuntimeException("当前任务状态不允许审批");
         }
-        updateTaskStatus(id, "pending_execution", null);
+        updateTaskStatus(id, TaskStatusEnum.PENDING_EXECUTION.getCode(), null);
     }
 
     @Override
@@ -166,10 +174,10 @@ public class WorkflowTaskService implements IWorkflowTaskService {
         if (!userId.equals(existing.getUserId())) {
             throw new RuntimeException("无权操作该任务");
         }
-        if (!"pending_acceptance".equals(existing.getStatus())) {
+        if (!TaskStatusEnum.PENDING_ACCEPTANCE.getCode().equals(existing.getStatus())) {
             throw new RuntimeException("当前任务状态不允许验收");
         }
-        updateTaskStatus(id, "completed", null);
+        updateTaskStatus(id, TaskStatusEnum.COMPLETED.getCode(), null);
     }
 
     @Override
@@ -181,13 +189,13 @@ public class WorkflowTaskService implements IWorkflowTaskService {
         if (!userId.equals(existing.getUserId())) {
             throw new RuntimeException("无权操作该任务");
         }
-        if (!"pending_acceptance".equals(existing.getStatus())) {
+        if (!TaskStatusEnum.PENDING_ACCEPTANCE.getCode().equals(existing.getStatus())) {
             throw new RuntimeException("当前任务状态不允许驳回");
         }
         // 记录驳回原因
-        updateTaskStatus(id, "rejected", reason);
+        updateTaskStatus(id, TaskStatusEnum.REJECTED.getCode(), reason);
         // 立即重新执行
-        updateTaskStatus(id, "processing", null);
+        updateTaskStatus(id, TaskStatusEnum.PROCESSING.getCode(), null);
         executeTask(id);
     }
 
@@ -200,7 +208,7 @@ public class WorkflowTaskService implements IWorkflowTaskService {
         if (!userId.equals(existing.getUserId())) {
             throw new RuntimeException("无权操作该任务");
         }
-        updateTaskStatus(id, "closed", null);
+        updateTaskStatus(id, TaskStatusEnum.CLOSED.getCode(), null);
     }
 
     @Override
@@ -233,7 +241,7 @@ public class WorkflowTaskService implements IWorkflowTaskService {
     private void executeTask(WorkflowTask task,IAgentExecutor executor,long timeout){
         Long taskId=task.getId();
         // 更新状态为 processing
-        updateTaskStatus(taskId, "processing", null);
+        updateTaskStatus(taskId, TaskStatusEnum.PROCESSING.getCode(), null);
         // 仅查询待处理评论：避免重复处理已处理过的评论
         List<TaskComment> comments = taskCommentService.getPendingCommentsByTaskId(taskId);
         // 4. 构建内容（包含评论历史，区分评论者身份）
@@ -243,11 +251,14 @@ public class WorkflowTaskService implements IWorkflowTaskService {
         if (comments != null && !comments.isEmpty()) {
             taskContent.append("\n\n--- 评论历史 ---\n");
             for (TaskComment comment : comments) {
-                if ("agent".equals(comment.getCommenterType())) {
+                if (TaskCommenterTypeEnum.isAgent(comment.getCommenterType())) {
                     continue;
                 }
-                taskContent.append(String.format("[%s] %s\n",
+                // 总结评论追加类型标记，便于智能体识别重要节点
+                String typeMark = TaskCommentTypeEnum.fromCode(comment.getCommentType()).isSummary() ? "[总结]" : "";
+                taskContent.append(String.format("[%s]%s %s\n",
                         comment.getCreateTime() != null ? comment.getCreateTime() : "",
+                        typeMark,
                         comment.getContent() != null ? comment.getContent() : ""));
             }
         }
@@ -376,6 +387,8 @@ public class WorkflowTaskService implements IWorkflowTaskService {
                     systemMsgBuilder.append("\n--- 项目细节 ---\n");
                     systemMsgBuilder.append("本任务关联项目「").append(project.getName()).append("」，项目描述为：\n");
                     systemMsgBuilder.append(project.getDescription()).append("\n");
+                    // 注入项目重点日志，为智能体提供项目历史关键结论（含各任务总结评论）
+                    appendImportantProjectLogs(systemMsgBuilder, task.getProjectId());
                     // 存储层只保留相对路径，任务提示词需要注入真实绝对路径
                     String absSpacePath = projectService.getProjectSpaceAbsolutePath(task.getProjectId(), task.getUserId());
                     if (absSpacePath != null && !absSpacePath.isEmpty()) {
@@ -393,6 +406,31 @@ public class WorkflowTaskService implements IWorkflowTaskService {
         return systemMsgBuilder.toString();
     }
 
+    /** 将项目重点日志（important 类型）追加到任务系统提示词，为智能体提供项目历史关键结论 */
+    private void appendImportantProjectLogs(StringBuilder systemMsgBuilder, Long projectId) {
+        try {
+            List<ProjectLog> importantLogs = projectLogService.getImportantLogsByProjectId(projectId);
+            if (importantLogs == null || importantLogs.isEmpty()) {
+                return;
+            }
+            DateTimeFormatter fmt = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm");
+            systemMsgBuilder.append("\n--- 项目重点日志 ---\n");
+            systemMsgBuilder.append("以下是该项目历史沉淀的重点信息（含各任务的关键结论与总结），执行任务时请充分参考：\n");
+            for (ProjectLog logItem : importantLogs) {
+                systemMsgBuilder.append('[')
+                        .append(logItem.getCreateTime() != null ? logItem.getCreateTime().format(fmt) : "时间未知")
+                        .append("][")
+                        .append(logItem.getOperatorName() != null ? logItem.getOperatorName() : "未知")
+                        .append("] ")
+                        .append(logItem.getDetail() != null ? logItem.getDetail() : "")
+                        .append('\n');
+            }
+        } catch (Exception e) {
+            // 重点日志注入失败不阻断任务执行
+            logger.warn("注入项目重点日志失败，项目[{}]: {}", projectId, e.getMessage());
+        }
+    }
+
     private List<String> parseToolNames(String toolsStr) {
         if (toolsStr == null || toolsStr.isEmpty()) {
             return new ArrayList<>();
@@ -402,7 +440,36 @@ public class WorkflowTaskService implements IWorkflowTaskService {
 
     @Override
     public void updateTaskStatus(Long taskId, String status, String rejectReason) {
+        WorkflowTask task = workflowTaskMapper.findById(taskId);
         workflowTaskMapper.updateStatus(taskId, status, rejectReason);
+        // 任务关联了项目且状态实际发生变化时，写入项目操作日志
+        if (task == null || task.getProjectId() == null || status == null || status.equals(task.getStatus())) {
+            return;
+        }
+        logTaskStatusToProject(task, status);
+    }
+
+    /** 任务状态变更写入关联项目的操作日志；智能体驱动的状态以智能体身份记录 */
+    private void logTaskStatusToProject(WorkflowTask task, String newStatus) {
+        try {
+            TaskStatusEnum statusEnum = TaskStatusEnum.fromCode(newStatus);
+            String label = statusEnum != null ? statusEnum.getDescription() : newStatus;
+            String detail = "任务「" + (task.getTitle() != null ? task.getTitle() : "#" + task.getId()) + "」(#" + task.getId() + ") 状态变更为「" + label + "」";
+            if (statusEnum != null && statusEnum.isAgentDriven()) {
+                String operatorName = "智能体";
+                if (task.getAgentId() != null) {
+                    Agent agent = agentService.getAgentById(task.getAgentId());
+                    if (agent != null && agent.getName() != null) {
+                        operatorName = "智能体「" + agent.getName() + "」";
+                    }
+                }
+                projectLogService.log(task.getProjectId(), task.getUserId(), operatorName, "task_status", detail);
+            } else {
+                projectLogService.log(task.getProjectId(), task.getUserId(), "task_status", detail);
+            }
+        } catch (Exception e) {
+            logger.warn("任务状态变更写入项目日志失败: taskId={}, status={}", task.getId(), newStatus, e);
+        }
     }
 
     @Override

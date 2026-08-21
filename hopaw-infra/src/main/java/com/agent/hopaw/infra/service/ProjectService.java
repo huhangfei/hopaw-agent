@@ -1,5 +1,6 @@
 package com.agent.hopaw.infra.service;
 
+import com.agent.hopaw.infra.constant.ProjectStatusEnum;
 import com.agent.hopaw.infra.mapper.ProjectMapper;
 import com.agent.hopaw.infra.mapper.WorkflowTaskMapper;
 import com.agent.hopaw.infra.model.dto.FileTreeNode;
@@ -29,27 +30,11 @@ import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Comparator;
-import java.util.HashSet;
 import java.util.List;
-import java.util.Set;
 
 @Service
 public class ProjectService implements IProjectService {
     private static final Logger logger = LoggerFactory.getLogger(ProjectService.class);
-
-    /** 允许的项目状态值 */
-    private static final Set<String> ALLOWED_STATUS = new HashSet<>(Arrays.asList(
-            "planning", "in_progress", "paused", "completed", "archived"
-    ));
-    /** 状态流转规则：key 可流转到 value 集合中的任一状态 */
-    private static final java.util.Map<String, Set<String>> TRANSITIONS = new java.util.HashMap<>();
-    static {
-        TRANSITIONS.put("planning", new HashSet<>(Arrays.asList("in_progress", "archived")));
-        TRANSITIONS.put("in_progress", new HashSet<>(Arrays.asList("paused", "completed", "archived")));
-        TRANSITIONS.put("paused", new HashSet<>(Arrays.asList("in_progress", "archived")));
-        TRANSITIONS.put("completed", new HashSet<>(Arrays.asList("in_progress", "archived")));
-        TRANSITIONS.put("archived", new HashSet<>(Arrays.asList("planning")));
-    }
 
     private final ProjectMapper projectMapper;
     private final WorkflowTaskMapper workflowTaskMapper;
@@ -89,7 +74,7 @@ public class ProjectService implements IProjectService {
 
     @Override
     public Project createProject(Project project) {
-        project.setStatus("planning");
+        project.setStatus(ProjectStatusEnum.PLANNING.getCode());
         LocalDateTime now = LocalDateTime.now();
         project.setCreateTime(now);
         project.setUpdateTime(now);
@@ -195,7 +180,7 @@ public class ProjectService implements IProjectService {
 
     @Override
     public void updateStatus(Long id, String status, String userId) {
-        if (!ALLOWED_STATUS.contains(status)) {
+        if (ProjectStatusEnum.fromCode(status) == null) {
             throw new RuntimeException("非法的项目状态: " + status);
         }
         Project existing = projectMapper.findById(id);
@@ -212,10 +197,11 @@ public class ProjectService implements IProjectService {
         projectMapper.updateStatus(id, status);
     }
 
-    /** 校验状态流转是否合法 */
+    /** 校验状态流转是否合法（规则见 ProjectStatusEnum） */
     private void validateTransition(String from, String to) {
-        Set<String> allowed = TRANSITIONS.get(from);
-        if (allowed == null || !allowed.contains(to)) {
+        ProjectStatusEnum fromEnum = ProjectStatusEnum.fromCode(from);
+        ProjectStatusEnum toEnum = ProjectStatusEnum.fromCode(to);
+        if (fromEnum == null || toEnum == null || !fromEnum.canTransitionTo(toEnum)) {
             throw new RuntimeException("不允许从状态[" + from + "]流转到[" + to + "]");
         }
     }

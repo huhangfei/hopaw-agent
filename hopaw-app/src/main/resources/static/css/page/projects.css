@@ -325,6 +325,14 @@
     background: #ffebee;
 }
 
+.btn-view-tasks {
+    color: #7b1fa2;
+}
+
+.btn-view-tasks:hover {
+    background: #f3e5f5;
+}
+
 /* 详情区块 */
 .detail-section {
     margin-bottom: 24px;
@@ -754,6 +762,36 @@
     flex-shrink: 0;
 }
 
+/* 日志类型连体切换按钮：全部 / 关键 */
+.log-filter-toggle {
+    display: inline-flex;
+    border: 1px solid #d1d5db;
+    border-radius: 8px;
+    overflow: hidden;
+    flex-shrink: 0;
+    margin-right: 8px;
+}
+
+.log-filter-btn {
+    padding: 3px 14px;
+    font-size: 12px;
+    border: none;
+    background: #f3f4f6;
+    color: #666;
+    cursor: pointer;
+    transition: background 0.15s, color 0.15s;
+    font-family: inherit;
+}
+
+.log-filter-btn + .log-filter-btn {
+    border-left: 1px solid #d1d5db;
+}
+
+.log-filter-btn.active {
+    background: #667eea;
+    color: #fff;
+}
+
 /* 日志列表 - 时间线样式 */
 .logs-body {
     position: relative;
@@ -809,6 +847,29 @@
     font-size: 11px;
     color: #667eea;
     background: #eef0ff;
+    padding: 1px 8px;
+    border-radius: 10px;
+    flex-shrink: 0;
+    white-space: nowrap;
+}
+
+/* 重点类型日志：橙色圆点 + 徽章 + 浅橙背景 */
+.log-item.log-item-important {
+    background: #fffbeb;
+    border-radius: 6px;
+    padding-left: 8px;
+    margin-left: -8px;
+}
+
+.log-item .log-dot-important {
+    background: #f59e0b;
+}
+
+.log-item .log-important-badge {
+    font-size: 11px;
+    color: #b45309;
+    background: #fef3c7;
+    border: 1px solid #fcd34d;
     padding: 1px 8px;
     border-radius: 10px;
     flex-shrink: 0;
@@ -954,6 +1015,14 @@ body.dark-theme .btn-edit-project:hover {
     background: #1e3a5f;
 }
 
+body.dark-theme .btn-view-tasks {
+    color: #b39ddb;
+}
+
+body.dark-theme .btn-view-tasks:hover {
+    background: #3a2a4d;
+}
+
 body.dark-theme .btn-delete-project:hover {
     background: #3d2020;
 }
@@ -1083,6 +1152,27 @@ body.dark-theme .file-tree-root-dropzone.drag-over {
     outline-color: #8ba3ff;
 }
 
+/* ========== 文件预览模态框 ========== */
+.project-file-preview-card {
+    max-height: 90vh;
+}
+
+.project-file-preview-body {
+    padding: 0;
+    overflow: hidden;
+}
+
+.project-file-preview-frame {
+    width: 100%;
+    height: 75vh;
+    border: none;
+    background: #fff;
+}
+
+body.dark-theme .project-file-preview-frame {
+    background: #16213e;
+}
+
 body.dark-theme .file-tree-toggle {
     color: #888;
 }
@@ -1133,10 +1223,42 @@ body.dark-theme .logs-body::before {
     background: #2d2d44;
 }
 
+body.dark-theme .log-filter-toggle {
+    border-color: #3d3d6b;
+}
+
+body.dark-theme .log-filter-btn {
+    background: #2d2d44;
+    color: #c0c0c0;
+}
+
+body.dark-theme .log-filter-btn + .log-filter-btn {
+    border-left-color: #3d3d6b;
+}
+
+body.dark-theme .log-filter-btn.active {
+    background: #8ba3ff;
+    color: #1a1a2e;
+}
+
 body.dark-theme .log-item .log-dot {
     background: #8ba3ff;
     border-color: #16213e;
     box-shadow: 0 0 0 1px #2d2d44;
+}
+
+body.dark-theme .log-item.log-item-important {
+    background: #2a2313;
+}
+
+body.dark-theme .log-item .log-dot-important {
+    background: #f59e0b;
+}
+
+body.dark-theme .log-item .log-important-badge {
+    color: #fbbf24;
+    background: #3a2a10;
+    border-color: #6b4e12;
 }
 
 body.dark-theme .log-item .log-action {

@@ -18,31 +18,77 @@ var REFRESH_INTERVAL_SEC = 5;
 var refreshLastTickAt = Date.now();
 
 document.addEventListener('DOMContentLoaded', function () {
+    applyFiltersFromUrl();
     loadBoard();
     loadAgents();
     loadProjects();
     startRefreshCountdown();
 });
 
+/* ========== 解析URL参数，默认选中指定项目（如 /tasks-board?projectId=1） ========== */
+function applyFiltersFromUrl() {
+    var urlParams = new URLSearchParams(window.location.search);
+    var projectId = urlParams.get('projectId');
+    if (!projectId) return;
+    var select = document.getElementById('boardProjectFilter');
+    if (!select) return;
+    // 项目列表尚未加载完成，先插入临时选项使选中值生效，列表加载后会被真实选项替换
+    var opt = document.createElement('option');
+    opt.value = projectId;
+    opt.textContent = '项目#' + projectId;
+    select.appendChild(opt);
+    select.value = projectId;
+}
+
 function doSearch() {
     loadBoard();
 }
 
 /* ========== 5 秒自动刷新倒计时 ========== */
+var isBoardRefreshing = false;
+var REFRESH_SPINNER_SVG = '<svg class="refresh-spinner" viewBox="0 0 24 24" fill="none">'
+    + '<circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="3" stroke-dasharray="42" stroke-dashoffset="28" stroke-linecap="round"/>'
+    + '</svg>';
+
 function startRefreshCountdown() {
     refreshLastTickAt = Date.now();
     updateRefreshCountdownText();
     setInterval(function () {
+        // 刷新进行中：暂停倒计时，避免动画被文本覆盖
+        if (isBoardRefreshing) return;
         var elapsed = Math.floor((Date.now() - refreshLastTickAt) / 1000);
         var remaining = REFRESH_INTERVAL_SEC - elapsed;
         if (remaining <= 0) {
-            // 倒计时归零：刷新看板并重置计时基准
-            loadBoard();
-            refreshLastTickAt = Date.now();
-            remaining = REFRESH_INTERVAL_SEC;
+            // 倒计时归零：刷新看板（带刷新中动画），完成后重置计时基准
+            triggerAutoRefresh();
+            return;
         }
         updateRefreshCountdownText(remaining);
     }, 1000);
+}
+
+/** 倒计时归零触发的自动刷新：刷新期间显示动画，完成后恢复倒计时 */
+function triggerAutoRefresh() {
+    isBoardRefreshing = true;
+    setRefreshingState(true);
+    Promise.resolve(loadBoard()).finally(function () {
+        isBoardRefreshing = false;
+        setRefreshingState(false);
+        refreshLastTickAt = Date.now();
+        updateRefreshCountdownText(REFRESH_INTERVAL_SEC);
+    });
+}
+
+/** 切换刷新中状态：显示旋转图标 + "刷新中"文案 */
+function setRefreshingState(refreshing) {
+    var el = document.getElementById('refreshCountdown');
+    if (!el) return;
+    if (refreshing) {
+        el.classList.add('refreshing');
+        el.innerHTML = REFRESH_SPINNER_SVG + '<span>刷新中…</span>';
+    } else {
+        el.classList.remove('refreshing');
+    }
 }
 
 function updateRefreshCountdownText(remaining) {
@@ -72,7 +118,7 @@ function loadBoard() {
     if (filters.agentId) params.push('agentId=' + encodeURIComponent(filters.agentId));
     if (params.length) url += '?' + params.join('&');
 
-    fetch(url)
+    return fetch(url)
         .then(function (r) { return r.json(); })
         .then(function (res) {
             if (res.code !== 200) {
@@ -351,6 +397,10 @@ function populateBoardProjectFilter() {
     });
     select.innerHTML = html;
     select.value = current;
+    // 原选中值不在项目列表中（如项目已删除或URL参数失效）时，回退为全部项目
+    if (select.selectedIndex === -1) {
+        select.value = '';
+    }
 }
 
 /* ========== 工具函数 ========== */

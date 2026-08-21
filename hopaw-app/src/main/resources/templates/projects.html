@@ -55,6 +55,9 @@
                         <span class="status-badge" id="detailStatusBadge"></span>
                     </div>
                     <div class="detail-actions">
+                        <button class="btn-icon btn-view-tasks" title="查看任务" onclick="goToTaskBoard()">
+                            <svg viewBox="0 0 24 24" fill="currentColor"><path d="M10 18h4V6h-4v12zm-6 0h4V6H4v12zM16 6v12h4V6h-4z"/></svg>
+                        </button>
                         <button class="btn-icon btn-edit-project" title="编辑" onclick="editCurrentProject()">
                             <svg viewBox="0 0 24 24" fill="currentColor"><path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/></svg>
                         </button>
@@ -109,6 +112,10 @@
                     <div class="section-title logs-section-header" id="logsHeader" onclick="toggleProjectLogs()">
                         <span class="logs-title">操作日志</span>
                         <span class="logs-count" id="logsCount"></span>
+                        <div class="log-filter-toggle" id="logFilterToggle" onclick="event.stopPropagation()">
+                            <button type="button" class="log-filter-btn active" data-filter="all" onclick="switchLogFilter('all', event)">全部</button>
+                            <button type="button" class="log-filter-btn" data-filter="important" onclick="switchLogFilter('important', event)">重点</button>
+                        </div>
                         <span class="logs-toggle-icon" id="logsToggleIcon">▾</span>
                     </div>
                     <div class="logs-body" id="detailLogs"></div>
@@ -211,6 +218,19 @@
             <div class="modal-footer">
                 <button class="btn-cancel" onclick="Modal.close('spaceMoveModal')">取消</button>
                 <button class="btn-submit" onclick="submitSpaceMove()">确定</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 文件预览模态框 -->
+    <div class="modal-overlay" id="projectFilePreviewModal">
+        <div class="modal-card modal-wide project-file-preview-card">
+            <div class="modal-header">
+                <h3 id="previewModalTitle">文件预览</h3>
+                <button class="modal-close" onclick="Modal.close('projectFilePreviewModal')">&times;</button>
+            </div>
+            <div class="modal-body project-file-preview-body">
+                <iframe id="projectFilePreviewFrame" class="project-file-preview-frame" frameborder="0"></iframe>
             </div>
         </div>
     </div>

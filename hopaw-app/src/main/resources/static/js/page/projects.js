@@ -9,6 +9,8 @@ var searchTimer = null;
 var currentProjectId = null;     // 当前选中的项目ID
 var currentProject = null;        // 当前选中的项目对象
 var logsExpanded = true;          // 操作日志展开状态（默认展开）
+var logsCache = [];               // 操作日志缓存（用于类型切换时重渲染）
+var logFilter = 'all';            // 日志过滤类型：all=全部 / important=重点
 
 // 项目状态字典
 var PROJECT_STATUS = {
@@ -168,6 +170,14 @@ function goToPage(page) {
 
 /* ========== 右侧项目详情 ========== */
 function loadProjectDetail(id) {
+    // 切换项目时重置日志过滤为全部
+    if (logFilter !== 'all') {
+        logFilter = 'all';
+        var filterBtns = document.querySelectorAll('#logFilterToggle .log-filter-btn');
+        filterBtns.forEach(function (btn) {
+            btn.classList.toggle('active', btn.getAttribute('data-filter') === 'all');
+        });
+    }
     Promise.all([
         fetch('/api/projects/' + id).then(function (r) { return r.json(); }),
         fetch('/api/projects/' + id + '/tasks').then(function (r) { return r.json(); }),
@@ -357,6 +367,7 @@ function renderFileTreeNode(node) {
             '</span>';
     } else {
         actions = '<span class="file-tree-actions">' +
+            '<button class="ft-btn" title="预览" data-action="preview" data-path="' + pathAttr + '">👁</button>' +
             '<button class="ft-btn" title="下载文件" data-action="download" data-path="' + pathAttr + '">⬇</button>' +
             '<button class="ft-btn" title="移动/重命名" data-action="move" data-path="' + pathAttr + '">✎</button>' +
             '<button class="ft-btn ft-btn-danger" title="删除" data-action="delete" data-path="' + pathAttr + '">🗑</button>' +
@@ -412,6 +423,8 @@ document.addEventListener('DOMContentLoaded', function () {
                 deleteProjectFile(path);
             } else if (action === 'download') {
                 downloadProjectFile(path);
+            } else if (action === 'preview') {
+                previewProjectFile(path);
             }
         });
 
@@ -554,6 +567,22 @@ function downloadAllProjectFiles() {
     var url = '/api/projects/' + currentProjectId + '/files/download';
     showToast('正在打包下载，请稍候...', 'info');
     window.location.href = url;
+}
+
+/* ========== 项目空间：预览 ========== */
+function previewProjectFile(path) {
+    if (!currentProjectId || !path) return;
+    var name = path.indexOf('/') >= 0 ? path.substring(path.lastIndexOf('/') + 1) : path;
+    // 构造内联预览 URL（供 iframe 内的公共预览组件加载文件内容）
+    var fileUrl = '/api/projects/' + currentProjectId + '/files/preview?path=' + encodeURIComponent(path);
+    var previewSrc = '/file-preview?url=' + encodeURIComponent(fileUrl) +
+        '&name=' + encodeURIComponent(name);
+    var iframe = document.getElementById('projectFilePreviewFrame');
+    if (iframe) {
+        iframe.src = previewSrc;
+    }
+    document.getElementById('previewModalTitle').textContent = name;
+    Modal.open('projectFilePreviewModal');
 }
 
 /* ========== 项目空间：上传 ========== */
@@ -758,6 +787,8 @@ var LOG_ACTION_LABELS = {
     delete: '删除',
     task_bind: '关联任务',
     task_unbind: '取消关联任务',
+    task_status: '任务状态变更',
+    task_comment: '任务评论',
     file_create: '新建文件',
     file_delete: '删除文件',
     file_move: '移动/重命名',
@@ -765,6 +796,12 @@ var LOG_ACTION_LABELS = {
 };
 
 function renderDetailLogs(logs) {
+    logsCache = logs || [];
+    renderLogsByFilter();
+}
+
+/* 按当前过滤类型渲染日志：all=全部 / important=仅重点类型 */
+function renderLogsByFilter() {
     var container = document.getElementById('detailLogs');
     var countEl = document.getElementById('logsCount');
     var iconEl = document.getElementById('logsToggleIcon');
@@ -773,20 +810,27 @@ function renderDetailLogs(logs) {
     container.style.display = logsExpanded ? 'block' : 'none';
     iconEl.textContent = logsExpanded ? '▾' : '▸';
 
-    if (!logs || !logs.length) {
-        countEl.textContent = '(0)';
-        container.innerHTML = '<p class="detail-empty-text">暂无操作日志</p>';
+    var logs = logsCache;
+    if (logFilter === 'important') {
+        logs = logs.filter(function (log) { return log.logType === 'important'; });
+    }
+
+    if (!logs.length) {
+        countEl.textContent = '(' + logs.length + ')';
+        container.innerHTML = '<p class="detail-empty-text">' + (logFilter === 'important' ? '暂无重点日志' : '暂无操作日志') + '</p>';
         return;
     }
     countEl.textContent = '(' + logs.length + ')';
     // 后端按时间正序返回（最早在前），直接渲染
     container.innerHTML = logs.map(function (log) {
         var actionLabel = LOG_ACTION_LABELS[log.action] || log.action || '操作';
-        return '<div class="log-item">' +
-            '<div class="log-dot"></div>' +
+        var isImportant = log.logType === 'important';
+        return '<div class="log-item' + (isImportant ? ' log-item-important' : '') + '">' +
+            '<div class="log-dot' + (isImportant ? ' log-dot-important' : '') + '"></div>' +
             '<div class="log-content">' +
                 '<div class="log-line">' +
                     '<span class="log-action">' + escapeHtml(actionLabel) + '</span>' +
+                    (isImportant ? '<span class="log-important-badge">重点</span>' : '') +
                     '<span class="log-detail">' + escapeHtml(log.detail || '') + '</span>' +
                 '</div>' +
                 '<div class="log-meta">' +
@@ -796,6 +840,17 @@ function renderDetailLogs(logs) {
             '</div>' +
         '</div>';
     }).join('');
+}
+
+/* 切换日志过滤类型（全部/总结），并同步连体按钮选中态 */
+function switchLogFilter(filter, event) {
+    if (event) event.stopPropagation();
+    logFilter = filter;
+    var btns = document.querySelectorAll('#logFilterToggle .log-filter-btn');
+    btns.forEach(function (btn) {
+        btn.classList.toggle('active', btn.getAttribute('data-filter') === filter);
+    });
+    renderLogsByFilter();
 }
 
 function toggleProjectLogs() {
@@ -819,6 +874,12 @@ function showAddModal() {
     document.getElementById('localSpaceBox').style.display = 'none';
     document.getElementById('projectLocalSpaceDir').value = '';
     Modal.open('projectModal');
+}
+
+/** 跳转到任务看板并默认选中当前项目 */
+function goToTaskBoard() {
+    if (!currentProjectId) return;
+    window.location.href = '/tasks-board?projectId=' + encodeURIComponent(currentProjectId);
 }
 
 function editCurrentProject() {

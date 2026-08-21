@@ -1,11 +1,12 @@
 /**
- * 附件预览公共模块
+ * 附件预览模块
  *
- * 用途：
- *  1. 各业务页面调用 AttachmentPreview.open(id) 在新标签页打开独立预览页（推荐，避免重复代码）。
- *  2. 独立预览页调用 AttachmentPreview.render(item, container) 按 fileType 路由到不同渲染器渲染预览内容。
+ * 职责：
+ *  1. AttachmentPreview.open(id) - 在新标签页打开独立附件预览页
+ *  2. AttachmentPreview.renderInfo(item, container) - 渲染附件元信息（大小/类型/来源/时间）
  *
- * 按文件类型路由到不同渲染器（renderImage / renderVideo / ... / renderUnsupported），实现解耦。
+ * 预览体（preview-body）渲染逻辑已提取到公共组件 file-preview.js，由 attachment-preview.html
+ * 通过 iframe 嵌入 /file-preview?url=...&name=... 复用。
  */
 var AttachmentPreview = (function () {
 
@@ -32,97 +33,6 @@ var AttachmentPreview = (function () {
     }
 
     /**
-     * 按文件类型路由到对应渲染器，将预览内容渲染到指定容器
-     * @param {Object} item 附件对象
-     * @param {HTMLElement} container 渲染目标容器
-     */
-    function render(item, container) {
-        if (!item || !container) return;
-        var type = item.fileType || 'file';
-        var html = '<div class="preview-container">';
-        switch (type) {
-            case 'image':    html += renderImage(item); break;
-            case 'video':    html += renderVideo(item); break;
-            case 'audio':    html += renderAudio(item); break;
-            case 'pdf':      html += renderPdf(item); break;
-            case 'markdown': html += renderMarkdown(item); break;
-            case 'text':     html += renderText(item); break;
-            default:         html += renderUnsupported(item); break;
-        }
-        html += renderDownload(item);
-        html += '</div>';
-        container.innerHTML = html;
-
-        // markdown / text 需要异步加载文件内容
-        if (type === 'markdown') {
-            loadTextContent(item.url, 'previewMarkdownContent', true);
-        } else if (type === 'text') {
-            loadTextContent(item.url, 'previewTextContent', false);
-        }
-    }
-
-    /* ====== 各类型渲染器（解耦，便于单独维护/扩展） ====== */
-
-    function renderImage(item) {
-        return '<img src="' + item.url + '" alt="' + escapeAttr(item.originalName) + '">';
-    }
-
-    function renderVideo(item) {
-        return '<video controls src="' + item.url + '"></video>';
-    }
-
-    function renderAudio(item) {
-        return '<audio controls src="' + item.url + '"></audio>';
-    }
-
-    function renderPdf(item) {
-        return '<iframe class="preview-pdf" src="' + item.url + '"></iframe>';
-    }
-
-    function renderMarkdown(item) {
-        return '<div class="preview-markdown" id="previewMarkdownContent">加载中...</div>';
-    }
-
-    function renderText(item) {
-        return '<div class="preview-text" id="previewTextContent">加载中...</div>';
-    }
-
-    function renderUnsupported(item) {
-        var type = item.fileType || 'file';
-        return '<div class="preview-unsupported">' +
-            '<div class="file-icon">' + (FILE_TYPE_ICONS[type] || '📦') + '</div>' +
-            '<div>该文件类型不支持在线预览</div>' +
-            '</div>';
-    }
-
-    function renderDownload(item) {
-        return '<div class="preview-download-wrap">' +
-            '<a class="preview-download" href="' + item.url + '" target="_blank" download="' + escapeAttr(item.originalName) + '">下载文件</a>' +
-            '</div>';
-    }
-
-    /**
-     * 异步加载文本/Markdown 文件内容
-     */
-    function loadTextContent(url, elId, isMarkdown) {
-        fetch(url)
-            .then(function (r) { return r.text(); })
-            .then(function (text) {
-                var el = document.getElementById(elId);
-                if (!el) return;
-                if (isMarkdown && window.marked) {
-                    el.innerHTML = marked.parse(text);
-                } else {
-                    el.textContent = text;
-                }
-            })
-            .catch(function () {
-                var el = document.getElementById(elId);
-                if (el) el.textContent = '加载失败';
-            });
-    }
-
-    /**
      * 渲染附件元信息（大小/类型/来源/时间）
      */
     function renderInfo(item, container) {
@@ -138,11 +48,6 @@ var AttachmentPreview = (function () {
     }
 
     /* ====== 工具函数（模块内私有） ====== */
-
-    function escapeAttr(str) {
-        if (str === null || str === undefined) return '';
-        return String(str).replace(/"/g, '&quot;');
-    }
 
     function escapeHtml(str) {
         if (str === null || str === undefined) return '';
@@ -170,7 +75,6 @@ var AttachmentPreview = (function () {
 
     return {
         open: open,
-        render: render,
         renderInfo: renderInfo,
         FILE_TYPE_ICONS: FILE_TYPE_ICONS,
         SOURCE_LABELS: SOURCE_LABELS

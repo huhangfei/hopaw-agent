@@ -22,6 +22,13 @@
     color: #333;
 }
 
+/* 标题行：倒计时按钮紧跟标题 */
+.tasks-board-title {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
 .tasks-board-toolbar {
     display: flex;
     align-items: center;
@@ -80,6 +87,20 @@
     border-radius: 12px;
     white-space: nowrap;
     user-select: none;
+}
+
+/* 刷新中状态：旋转图标动画 */
+.board-refresh-countdown .refresh-spinner {
+    width: 12px;
+    height: 12px;
+    margin-right: 5px;
+    flex-shrink: 0;
+    animation: refresh-spin 0.8s linear infinite;
+}
+
+@keyframes refresh-spin {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
 }
 
 /* ========== 看板列 ========== */

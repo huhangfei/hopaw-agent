@@ -1,5 +1,6 @@
 package com.agent.hopaw.controller;
 
+import com.agent.hopaw.infra.constant.TaskStatusEnum;
 import com.agent.hopaw.infra.model.dto.ResponseBean;
 import com.agent.hopaw.infra.model.entity.WorkflowTask;
 import com.agent.hopaw.infra.service.IWorkflowTaskService;
@@ -45,13 +46,12 @@ public class WorkflowTaskController {
             @RequestParam(required = false) Long agentId) {
         String userId = CurrentUser.require(request);
         Map<String, Object> result = new LinkedHashMap<>();
-        String[] statuses = {"pending", "pending_execution", "processing", "pending_acceptance", "completed", "failed"};
-        for (String status : statuses) {
+        for (TaskStatusEnum status : TaskStatusEnum.boardOrder()) {
             // 需要按 userId + status + projectId + agentId 查询
             // 但 getTasksByStatus 只接受 userId + status
             // 改用 getTasksPage 大 size 查询
-            List<WorkflowTask> tasks = taskService.getTasksPage(userId, null, status, projectId, agentId, 1, 1000);
-            result.put(status, tasks);
+            List<WorkflowTask> tasks = taskService.getTasksPage(userId, null, status.getCode(), projectId, agentId, 1, 1000);
+            result.put(status.getCode(), tasks);
         }
         return ResponseBean.success(result);
     }

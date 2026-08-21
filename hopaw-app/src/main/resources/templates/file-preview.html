@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>文件预览</title>
+    <link rel="stylesheet" th:href="@{/css/site.css}">
+    <link rel="stylesheet" th:href="@{/css/dark-theme.css}">
+    <link rel="stylesheet" th:href="@{/css/page/file-preview.css}">
+</head>
+<body th:class="${currentTheme == 'dark' ? 'dark-theme' : ''}">
+<!-- 预览内容（按文件类型路由渲染） -->
+<div class="preview-body" id="previewBody"></div>
+
+<script th:src="@{/js/common.js}"></script>
+<script th:src="@{/js/marked.min.js}"></script>
+<script th:src="@{/js/page/file-preview.js}"></script>
+<script>
+    (function () {
+        var params = new URLSearchParams(window.location.search);
+        var url = params.get('url');
+        var name = params.get('name') || '';
+        FilePreview.render(url, name, document.getElementById('previewBody'));
+    })();
+</script>
+</body>
+</html>

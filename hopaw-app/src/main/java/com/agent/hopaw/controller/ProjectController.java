@@ -1,5 +1,6 @@
 package com.agent.hopaw.controller;
 
+import com.agent.hopaw.infra.constant.ProjectStatusEnum;
 import com.agent.hopaw.infra.model.dto.FileUploadItem;
 import com.agent.hopaw.infra.model.dto.ResponseBean;
 import com.agent.hopaw.infra.model.entity.Account;
@@ -30,16 +31,6 @@ import java.util.*;
 @Controller
 public class ProjectController {
     private static final Logger logger = LoggerFactory.getLogger(ProjectController.class);
-
-    /** 项目状态中文标签（用于日志文案） */
-    private static final Map<String, String> STATUS_LABELS = new HashMap<>();
-    static {
-        STATUS_LABELS.put("planning", "规划中");
-        STATUS_LABELS.put("in_progress", "进行中");
-        STATUS_LABELS.put("paused", "已暂停");
-        STATUS_LABELS.put("completed", "已完成");
-        STATUS_LABELS.put("archived", "已归档");
-    }
 
     private final IProjectService projectService;
     private final IAccountService accountService;
@@ -157,8 +148,8 @@ public class ProjectController {
             String fromStatus = before.getStatus();
             projectService.updateStatus(id, status, userId);
             // 记录日志：状态流转
-            String fromLabel = STATUS_LABELS.getOrDefault(fromStatus, fromStatus);
-            String toLabel = STATUS_LABELS.getOrDefault(status, status);
+            String fromLabel = resolveStatusLabel(fromStatus);
+            String toLabel = resolveStatusLabel(status);
             projectLogService.log(id, userId, "status_change",
                     "项目状态由「" + fromLabel + "」变更为「" + toLabel + "」");
             return ResponseBean.success();
@@ -409,6 +400,50 @@ public class ProjectController {
     private String buildContentDisposition(String fileName) throws IOException {
         String encoded = URLEncoder.encode(fileName, "UTF-8").replace("+", "%20");
         return "attachment; filename=\"" + encoded + "\"; filename*=UTF-8''" + encoded;
+    }
+
+    /**
+     * 项目空间文件内联预览：以 inline 方式流式输出文件内容，供 iframe 预览组件加载。
+     * 仅支持单文件预览（不支持目录）。
+     */
+    @GetMapping("/api/projects/{id}/files/preview")
+    public void previewProjectFile(HttpServletRequest request,
+                                   HttpServletResponse response,
+                                   @PathVariable Long id,
+                                   @RequestParam("path") String path) {
+        String userId = CurrentUser.require(request);
+        try {
+            Path resolved = projectService.resolveDownloadPath(id, userId, path);
+            if (Files.isDirectory(resolved)) {
+                response.setContentType("application/json;charset=UTF-8");
+                response.getWriter().write("{\"code\":400,\"msg\":\"不支持预览目录\"}");
+                return;
+            }
+            String fileName = resolved.getFileName().toString();
+            String contentType = Files.probeContentType(resolved);
+            response.setContentType(contentType != null ? contentType : "application/octet-stream");
+            response.setHeader("Content-Disposition", "inline");
+            response.setContentLengthLong(Files.size(resolved));
+            try (InputStream in = Files.newInputStream(resolved);
+                 OutputStream out = response.getOutputStream()) {
+                in.transferTo(out);
+            }
+        } catch (Exception e) {
+            logger.error("预览项目[{}]文件失败: path={}", id, path, e);
+            try {
+                response.reset();
+                response.setContentType("application/json;charset=UTF-8");
+                response.getWriter().write("{\"code\":500,\"msg\":\"预览失败：" +
+                        e.getMessage().replace("\"", "\\\"") + "\"}");
+            } catch (IOException ignored) {
+            }
+        }
+    }
+
+    /** 解析项目状态中文标签（用于日志文案），未知状态原样返回 */
+    private String resolveStatusLabel(String status) {
+        ProjectStatusEnum statusEnum = ProjectStatusEnum.fromCode(status);
+        return statusEnum != null ? statusEnum.getDescription() : status;
     }
 
     /**

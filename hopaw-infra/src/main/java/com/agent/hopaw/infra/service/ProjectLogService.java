@@ -1,5 +1,6 @@
 package com.agent.hopaw.infra.service;
 
+import com.agent.hopaw.infra.constant.ProjectLogTypeEnum;
 import com.agent.hopaw.infra.mapper.ProjectLogMapper;
 import com.agent.hopaw.infra.model.entity.Account;
 import com.agent.hopaw.infra.model.entity.ProjectLog;
@@ -25,11 +26,16 @@ public class ProjectLogService implements IProjectLogService {
     @Override
     public void log(Long projectId, String operatorId, String action, String detail) {
         String operatorName = resolveOperatorName(operatorId);
-        log(projectId, operatorId, operatorName, action, detail);
+        log(projectId, operatorId, operatorName, action, detail, ProjectLogTypeEnum.DEFAULT.getCode());
     }
 
     @Override
     public void log(Long projectId, String operatorId, String operatorName, String action, String detail) {
+        log(projectId, operatorId, operatorName, action, detail, ProjectLogTypeEnum.DEFAULT.getCode());
+    }
+
+    @Override
+    public void log(Long projectId, String operatorId, String operatorName, String action, String detail, String logType) {
         if (projectId == null) {
             return;
         }
@@ -39,6 +45,7 @@ public class ProjectLogService implements IProjectLogService {
             log.setOperatorId(operatorId);
             log.setOperatorName(operatorName != null ? operatorName : "未知");
             log.setAction(action);
+            log.setLogType(ProjectLogTypeEnum.fromCode(logType).getCode());
             log.setDetail(detail);
             projectLogMapper.insert(log);
         } catch (Exception e) {
@@ -50,6 +57,12 @@ public class ProjectLogService implements IProjectLogService {
     @Override
     public List<ProjectLog> getLogsByProjectId(Long projectId) {
         List<ProjectLog> list = projectLogMapper.findByProjectId(projectId);
+        return list != null ? list : new ArrayList<>();
+    }
+
+    @Override
+    public List<ProjectLog> getImportantLogsByProjectId(Long projectId) {
+        List<ProjectLog> list = projectLogMapper.findByProjectIdAndLogType(projectId, ProjectLogTypeEnum.IMPORTANT.getCode());
         return list != null ? list : new ArrayList<>();
     }
 

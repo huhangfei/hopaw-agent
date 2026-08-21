@@ -9,17 +9,18 @@
         <result property="userId" column="user_id"/>
         <result property="commenterType" column="commenter_type"/>
         <result property="commenterId" column="commenter_id"/>
+        <result property="commentType" column="comment_type"/>
         <result property="createTime" column="create_time"/>
         <result property="status" column="status"/>
     </resultMap>
 
     <sql id="allColumns">
-        id, task_id, content, user_id, commenter_type, commenter_id, create_time, status
+        id, task_id, content, user_id, commenter_type, commenter_id, comment_type, create_time, status
     </sql>
 
     <insert id="insert" parameterType="com.agent.hopaw.infra.model.entity.TaskComment">
-        INSERT INTO task_comments (task_id, content, user_id, commenter_type, commenter_id, status)
-        VALUES (#{taskId}, #{content}, #{userId}, #{commenterType}, #{commenterId}, #{status})
+        INSERT INTO task_comments (task_id, content, user_id, commenter_type, commenter_id, comment_type, status)
+        VALUES (#{taskId}, #{content}, #{userId}, #{commenterType}, #{commenterId}, #{commentType}, #{status})
         <selectKey resultType="long" keyProperty="id" order="AFTER">
             SELECT last_insert_rowid()
         </selectKey>

@@ -394,6 +394,12 @@ public class DatabaseInitializer implements CommandLineRunner {
             ensureColumn(stmt, "task_comments", "status", "TEXT DEFAULT 'pending'");
             // 旧数据补齐为待处理状态
             stmt.execute("UPDATE task_comments SET status = 'pending' WHERE status IS NULL OR status = ''");
+            // 兼容旧库：task_comments 增量补充评论类型字段，默认普通评论
+            ensureColumn(stmt, "task_comments", "comment_type", "TEXT DEFAULT 'default'");
+            // 旧数据补齐为默认类型
+            stmt.execute("UPDATE task_comments SET comment_type = 'default' WHERE comment_type IS NULL OR comment_type = ''");
+            // 兼容旧值迁移：keypoint → summary
+            stmt.execute("UPDATE task_comments SET comment_type = 'summary' WHERE comment_type = 'keypoint'");
 
             // 兼容旧库：项目状态旧值 active 迁移为 planning
             stmt.execute("UPDATE projects SET status = 'planning' WHERE status = 'active' OR status IS NULL OR status = ''");
@@ -419,6 +425,12 @@ public class DatabaseInitializer implements CommandLineRunner {
                     "create_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP" +
                     ")");
             stmt.execute("CREATE INDEX IF NOT EXISTS idx_project_logs_project ON project_logs(project_id)");
+            // 兼容旧库：project_logs 增量补充日志类型字段，默认普通日志
+            ensureColumn(stmt, "project_logs", "log_type", "TEXT DEFAULT 'default'");
+            // 旧数据补齐为默认类型
+            stmt.execute("UPDATE project_logs SET log_type = 'default' WHERE log_type IS NULL OR log_type = ''");
+            // 兼容旧值迁移：keypoint/summary → important（项目日志类型与评论类型解耦）
+            stmt.execute("UPDATE project_logs SET log_type = 'important' WHERE log_type IN ('keypoint', 'summary')");
 
             log.info("Database tables created");
         }

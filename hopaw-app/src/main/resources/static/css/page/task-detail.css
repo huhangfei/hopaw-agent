@@ -226,6 +226,22 @@ body {
     color: #5a78ff;
 }
 
+/* 总结评论：左侧橙色色条 + 徽章 */
+.comment-item-summary {
+    border-left-color: #f59e0b;
+}
+
+.comment-summary-badge {
+    font-size: 11px;
+    padding: 1px 8px;
+    border-radius: 10px;
+    background: #fef3c7;
+    color: #b45309;
+    border: 1px solid #fcd34d;
+    flex-shrink: 0;
+    line-height: 1.5;
+}
+
 .comment-item-header {
     display: flex;
     justify-content: space-between;
@@ -254,6 +270,41 @@ body {
 }
 
 .task-comment-input-wrap {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+/* 评论类型连体切换按钮：默认 / 总结 */
+.comment-type-toggle {
+    display: inline-flex;
+    align-self: flex-start;
+    border: 1px solid #d1d5db;
+    border-radius: 8px;
+    overflow: hidden;
+}
+
+.comment-type-btn {
+    padding: 5px 18px;
+    font-size: 13px;
+    border: none;
+    background: #f3f4f6;
+    color: #666;
+    cursor: pointer;
+    transition: background 0.15s, color 0.15s;
+    font-family: inherit;
+}
+
+.comment-type-btn + .comment-type-btn {
+    border-left: 1px solid #d1d5db;
+}
+
+.comment-type-btn.active {
+    background: #667eea;
+    color: #fff;
+}
+
+.task-comment-input-row {
     display: flex;
     gap: 8px;
     align-items: stretch;
@@ -422,6 +473,30 @@ body.dark-theme .comment-item-user {
 
 body.dark-theme .comment-item-agent .comment-item-user {
     color: #8ba3ff;
+}
+
+body.dark-theme .comment-type-toggle {
+    border-color: #3d3d6b;
+}
+
+body.dark-theme .comment-type-btn {
+    background: #2d2d44;
+    color: #c0c0c0;
+}
+
+body.dark-theme .comment-type-btn + .comment-type-btn {
+    border-left-color: #3d3d6b;
+}
+
+body.dark-theme .comment-type-btn.active {
+    background: #8ba3ff;
+    color: #1a1a2e;
+}
+
+body.dark-theme .comment-summary-badge {
+    background: #3a2a10;
+    color: #fbbf24;
+    border-color: #6b4e12;
 }
 
 body.dark-theme .comment-item-content {

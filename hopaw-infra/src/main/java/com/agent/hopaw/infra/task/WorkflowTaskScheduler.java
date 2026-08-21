@@ -1,5 +1,6 @@
 package com.agent.hopaw.infra.task;
 
+import com.agent.hopaw.infra.constant.TaskStatusEnum;
 import com.agent.hopaw.infra.model.entity.WorkflowTask;
 import com.agent.hopaw.infra.service.IWorkflowTaskService;
 import org.slf4j.Logger;
@@ -38,7 +39,7 @@ public class WorkflowTaskScheduler {
                 taskService.executeTask(task.getId());
             } catch (Exception e) {
                 logger.error("拉起任务失败: id={}, error={}", task.getId(), e.getMessage(), e);
-                taskService.updateTaskStatus(task.getId(), "failed", e.getMessage());
+                taskService.updateTaskStatus(task.getId(), TaskStatusEnum.FAILED.getCode(), e.getMessage());
             }
         }
     }

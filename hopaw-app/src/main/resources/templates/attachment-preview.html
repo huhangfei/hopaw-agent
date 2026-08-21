@@ -30,15 +30,14 @@
     <!-- 附件元信息 -->
     <div id="previewInfo" class="preview-info-wrap"></div>
 
-    <!-- 预览内容（按类型路由渲染） -->
-    <div class="preview-body" id="previewBody"></div>
+    <!-- 预览内容（嵌入公共文件预览组件） -->
+    <iframe class="preview-body-iframe" id="previewBodyFrame" frameborder="0"></iframe>
 </div>
 
 <div id="toast-container" class="toast-container"></div>
 
 <script th:src="@{/js/common.js}"></script>
 <script th:src="@{/js/toast.js}"></script>
-<script th:src="@{/js/marked.min.js}"></script>
 <script th:src="@{/js/page/attachment-preview.js}"></script>
 <script th:inline="javascript">
     (function () {
@@ -47,13 +46,13 @@
 
         var errEl = document.getElementById('previewError');
         var infoEl = document.getElementById('previewInfo');
-        var bodyEl = document.getElementById('previewBody');
+        var frameEl = document.getElementById('previewBodyFrame');
 
         if (error || !attachment) {
             errEl.textContent = error || '附件不存在或无权访问';
             errEl.style.display = 'block';
             infoEl.style.display = 'none';
-            bodyEl.style.display = 'none';
+            frameEl.style.display = 'none';
             return;
         }
 
@@ -66,8 +65,10 @@
         // 附件元信息
         AttachmentPreview.renderInfo(attachment, infoEl);
 
-        // 按文件类型路由到不同渲染器
-        AttachmentPreview.render(attachment, bodyEl);
+        // 通过 iframe 嵌入公共文件预览组件
+        var previewSrc = '/file-preview?url=' + encodeURIComponent(attachment.url) +
+            '&name=' + encodeURIComponent(attachment.originalName || '');
+        frameEl.src = previewSrc;
     })();
 </script>
 </body>

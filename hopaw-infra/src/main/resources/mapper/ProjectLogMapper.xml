@@ -8,22 +8,31 @@
         <result property="operatorId" column="operator_id"/>
         <result property="operatorName" column="operator_name"/>
         <result property="action" column="action"/>
+        <result property="logType" column="log_type"/>
         <result property="detail" column="detail"/>
         <result property="createTime" column="create_time"/>
     </resultMap>
 
     <insert id="insert" parameterType="com.agent.hopaw.infra.model.entity.ProjectLog">
-        INSERT INTO project_logs (project_id, operator_id, operator_name, action, detail)
-        VALUES (#{projectId}, #{operatorId}, #{operatorName}, #{action}, #{detail})
+        INSERT INTO project_logs (project_id, operator_id, operator_name, action, log_type, detail)
+        VALUES (#{projectId}, #{operatorId}, #{operatorName}, #{action}, #{logType}, #{detail})
         <selectKey resultType="long" keyProperty="id" order="AFTER">
             SELECT last_insert_rowid()
         </selectKey>
     </insert>
 
     <select id="findByProjectId" resultMap="ProjectLogResultMap">
-        SELECT id, project_id, operator_id, operator_name, action, detail, create_time
+        SELECT id, project_id, operator_id, operator_name, action, log_type, detail, create_time
         FROM project_logs
         WHERE project_id = #{projectId}
+        ORDER BY id ASC
+    </select>
+
+    <select id="findByProjectIdAndLogType" resultMap="ProjectLogResultMap">
+        SELECT id, project_id, operator_id, operator_name, action, log_type, detail, create_time
+        FROM project_logs
+        WHERE project_id = #{projectId}
+          AND log_type = #{logType}
         ORDER BY id ASC
     </select>
 

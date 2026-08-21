@@ -23,6 +23,12 @@ public interface ITaskCommentService {
      */
     TaskComment addComment(Long taskId, String content, String userId, String commenterType, String commenterId);
 
+    /**
+     * 添加评论（区分评论者身份和评论类型）
+     * @param commentType 评论类型：default=普通 / summary=总结
+     */
+    TaskComment addComment(Long taskId, String content, String userId, String commenterType, String commenterId, String commentType);
+
     void deleteComment(Long id, String userId);
 
     /**

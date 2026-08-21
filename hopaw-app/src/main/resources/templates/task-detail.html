@@ -45,8 +45,14 @@
         <h3 class="task-detail-section-title">评论</h3>
         <div class="task-detail-comments" id="taskDetailComments"></div>
         <div class="task-comment-input-wrap">
-            <textarea id="taskCommentInput" class="task-comment-input" rows="2" placeholder="输入评论..."></textarea>
-            <button class="task-action-btn btn-primary" onclick="addComment()">发表评论</button>
+            <div class="comment-type-toggle" id="commentTypeToggle">
+                <button type="button" class="comment-type-btn active" data-type="default" onclick="switchCommentType('default', event)">普通</button>
+                <button type="button" class="comment-type-btn" data-type="summary" onclick="switchCommentType('summary', event)">总结</button>
+            </div>
+            <div class="task-comment-input-row">
+                <textarea id="taskCommentInput" class="task-comment-input" rows="2" placeholder="输入评论..."></textarea>
+                <button class="task-action-btn btn-primary" onclick="addComment()">发表评论</button>
+            </div>
         </div>
     </div>
 
