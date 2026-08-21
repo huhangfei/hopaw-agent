@@ -1,6 +1,7 @@
 package com.agent.hopaw.infra.model.entity;
 
 import java.time.LocalDateTime;
+import java.util.List;
 
 /**
  * 工作流任务实体
@@ -29,6 +30,8 @@ public class WorkflowTask {
     private String agentName;
     /** 项目名称（非持久字段，由查询时 JOIN 填充） */
     private String projectName;
+    /** 前置条件列表（非持久字段：创建/更新时由前端提交，详情查询时填充） */
+    private List<WorkflowTaskPrecondition> preconditions;
     private LocalDateTime createTime;
     private LocalDateTime updateTime;
 
@@ -134,6 +137,14 @@ public class WorkflowTask {
 
     public void setProjectName(String projectName) {
         this.projectName = projectName;
+    }
+
+    public List<WorkflowTaskPrecondition> getPreconditions() {
+        return preconditions;
+    }
+
+    public void setPreconditions(List<WorkflowTaskPrecondition> preconditions) {
+        this.preconditions = preconditions;
     }
 
     public LocalDateTime getCreateTime() {

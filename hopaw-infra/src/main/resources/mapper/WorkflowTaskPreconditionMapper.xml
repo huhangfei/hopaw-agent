@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.agent.hopaw.infra.mapper.WorkflowTaskPreconditionMapper">
+
+    <resultMap id="PreconditionResultMap" type="com.agent.hopaw.infra.model.entity.WorkflowTaskPrecondition">
+        <id property="id" column="id"/>
+        <result property="taskId" column="task_id"/>
+        <result property="preTaskId" column="pre_task_id"/>
+        <result property="requiredStatus" column="required_status"/>
+        <result property="createTime" column="create_time"/>
+        <result property="preTaskTitle" column="pre_task_title"/>
+        <result property="preTaskStatus" column="pre_task_status"/>
+    </resultMap>
+
+    <insert id="insert">
+        INSERT INTO workflow_task_preconditions (task_id, pre_task_id, required_status)
+        VALUES (#{item.taskId}, #{item.preTaskId}, #{item.requiredStatus})
+    </insert>
+
+    <select id="findByTaskId" resultMap="PreconditionResultMap">
+        SELECT pc.id, pc.task_id, pc.pre_task_id, pc.required_status, pc.create_time,
+               t.title AS pre_task_title, t.status AS pre_task_status
+        FROM workflow_task_preconditions pc
+        LEFT JOIN workflow_tasks t ON pc.pre_task_id = t.id
+        WHERE pc.task_id = #{taskId}
+        ORDER BY pc.id ASC
+    </select>
+
+    <delete id="deleteByTaskId">
+        DELETE FROM workflow_task_preconditions WHERE task_id = #{taskId}
+    </delete>
+
+    <delete id="deleteByPreTaskId">
+        DELETE FROM workflow_task_preconditions WHERE pre_task_id = #{preTaskId}
+    </delete>
+
+</mapper>

@@ -12,6 +12,16 @@ var statusList = [
 
 var agentsCache = [];
 var projectsCache = [];
+var tasksCache = [];
+
+/* 前置任务要求状态（多选） */
+var PRECONDITION_STATUS_OPTIONS = [
+    { key: 'pending_acceptance', label: '待验收' },
+    { key: 'completed', label: '已完成' },
+    { key: 'failed', label: '失败' }
+];
+/* 当前编辑中的前置条件：[{ preTaskId, requiredStatus: ['completed', ...] }] */
+var preconditionRows = [];
 
 // 自动刷新倒计时
 var REFRESH_INTERVAL_SEC = 5;
@@ -22,6 +32,7 @@ document.addEventListener('DOMContentLoaded', function () {
     loadBoard();
     loadAgents();
     loadProjects();
+    loadTasksForPreconditions();
     startRefreshCountdown();
 });
 
@@ -213,6 +224,8 @@ function showAddTaskModal() {
     document.getElementById('taskExecEnd').value = '';
     populateAgentSelect('');
     populateProjectSelect('');
+    initPreconditionRows([]);
+    populatePreconditionTaskSelect('');
     Modal.open('taskModal');
 }
 
@@ -235,6 +248,8 @@ function showEditTaskModal(id) {
             document.getElementById('taskExecEnd').value = execRange.end;
             populateAgentSelect(task.agentId || '');
             populateProjectSelect(task.projectId || '');
+            initPreconditionRows(task.preconditions || []);
+            populatePreconditionTaskSelect(task.id);
             Modal.open('taskModal');
         })
         .catch(function (err) {
@@ -276,6 +291,14 @@ function submitTask() {
     };
     if (projectId) {
         payload.projectId = Number(projectId);
+    }
+    // 前置条件：勾选状态为空时不提交该条
+    var preconditions = buildPreconditionsPayload();
+    if (preconditions === null) {
+        return;
+    }
+    if (preconditions.length) {
+        payload.preconditions = preconditions;
     }
 
     var url = id ? '/api/workflow/tasks/' + id : '/api/workflow/tasks';
@@ -401,6 +424,170 @@ function populateBoardProjectFilter() {
     if (select.selectedIndex === -1) {
         select.value = '';
     }
+}
+
+/* ========== 前置任务条件 ========== */
+
+/** 加载任务列表用于前置任务选择（复用看板接口，按状态展平） */
+function loadTasksForPreconditions() {
+    fetch('/api/workflow/tasks/board')
+        .then(function (r) { return r.json(); })
+        .then(function (res) {
+            if (res.code !== 200 || !res.data) return;
+            var list = [];
+            statusList.forEach(function (status) {
+                (res.data[status.key] || []).forEach(function (task) {
+                    list.push(task);
+                });
+            });
+            tasksCache = list;
+        })
+        .catch(function (err) {
+            console.error('加载任务列表（前置条件）失败:', err);
+        });
+}
+
+/** 填充前置任务下拉框；编辑模式下排除任务自身；选择了关联项目时仅显示该项目下的任务 */
+function populatePreconditionTaskSelect(excludeId) {
+    var select = document.getElementById('preconditionTaskSelect');
+    if (!select) return;
+    var projectEl = document.getElementById('taskProjectId');
+    var projectId = projectEl ? projectEl.value : '';
+    var html = '<option value="">请选择前置任务</option>';
+    tasksCache.forEach(function (task) {
+        if (excludeId && String(task.id) === String(excludeId)) {
+            return;
+        }
+        if (projectId && String(task.projectId || '') !== String(projectId)) {
+            return;
+        }
+        var statusInfo = statusList.filter(function (s) { return s.key === task.status; })[0];
+        var statusLabel = statusInfo ? statusInfo.label : '';
+        html += '<option value="' + task.id + '">' +
+            escapeHtml(task.title || ('任务#' + task.id)) +
+            (statusLabel ? '（' + statusLabel + '）' : '') +
+            '</option>';
+    });
+    select.innerHTML = html;
+}
+
+/** 关联项目变化时刷新前置任务下拉框（按新项目过滤），并移除不在该项目下的已添加前置条件 */
+function onTaskProjectChange() {
+    var currentId = document.getElementById('taskId').value;
+    populatePreconditionTaskSelect(currentId);
+    filterPreconditionRowsByProject();
+}
+
+/** 选择了关联项目时，仅保留该项目下的前置条件行；未选择项目时不限制 */
+function filterPreconditionRowsByProject() {
+    var projectEl = document.getElementById('taskProjectId');
+    var projectId = projectEl ? projectEl.value : '';
+    if (!projectId) return;
+    var before = preconditionRows.length;
+    preconditionRows = preconditionRows.filter(function (row) {
+        var task = tasksCache.filter(function (t) { return t.id === row.preTaskId; })[0];
+        return task && String(task.projectId || '') === String(projectId);
+    });
+    if (preconditionRows.length !== before) {
+        renderPreconditionList();
+    }
+}
+
+/** 初始化前置条件编辑行（编辑模式回显后端配置） */
+function initPreconditionRows(preconditions) {
+    preconditionRows = (preconditions || []).map(function (pc) {
+        return {
+            preTaskId: pc.preTaskId,
+            title: pc.preTaskTitle || '',
+            requiredStatus: (pc.requiredStatus || '').split(',').filter(function (s) { return s; })
+        };
+    });
+    renderPreconditionList();
+}
+
+/** 渲染前置条件列表：每行显示前置任务标题 + 要求状态多选 + 删除按钮 */
+function renderPreconditionList() {
+    var container = document.getElementById('preconditionList');
+    if (!container) return;
+    if (!preconditionRows.length) {
+        container.innerHTML = '';
+        return;
+    }
+    container.innerHTML = preconditionRows.map(function (row, idx) {
+        var checkboxes = PRECONDITION_STATUS_OPTIONS.map(function (opt) {
+            var checked = row.requiredStatus.indexOf(opt.key) >= 0 ? ' checked' : '';
+            return '<label class="precondition-status-item">' +
+                '<input type="checkbox"' + checked + ' onchange="togglePreconditionStatus(' + idx + ', \'' + opt.key + '\')">' +
+                '<span>' + opt.label + '</span>' +
+                '</label>';
+        }).join('');
+        return '<div class="precondition-row">' +
+            '<div class="precondition-row-head">' +
+                '<span class="precondition-task-title">#' + row.preTaskId + ' ' + escapeHtml(row.title || '') + '</span>' +
+                '<button type="button" class="precondition-remove" onclick="removePrecondition(' + idx + ')" title="移除该前置任务">&times;</button>' +
+            '</div>' +
+            '<div class="precondition-status-group">' + checkboxes + '</div>' +
+        '</div>';
+    }).join('');
+}
+
+/** 下拉选择后添加一条前置条件 */
+function addPrecondition() {
+    var select = document.getElementById('preconditionTaskSelect');
+    var val = select ? select.value : '';
+    if (!val) {
+        showToast('请选择前置任务', 'error');
+        return;
+    }
+    var preTaskId = Number(val);
+    var exists = preconditionRows.some(function (row) { return row.preTaskId === preTaskId; });
+    if (exists) {
+        showToast('该前置任务已添加', 'error');
+        return;
+    }
+    var task = tasksCache.filter(function (t) { return t.id === preTaskId; })[0];
+    preconditionRows.push({
+        preTaskId: preTaskId,
+        title: task ? (task.title || '') : '',
+        requiredStatus: []
+    });
+    select.value = '';
+    renderPreconditionList();
+}
+
+/** 切换某条前置条件的要求状态勾选 */
+function togglePreconditionStatus(idx, statusKey) {
+    var row = preconditionRows[idx];
+    if (!row) return;
+    var pos = row.requiredStatus.indexOf(statusKey);
+    if (pos >= 0) {
+        row.requiredStatus.splice(pos, 1);
+    } else {
+        row.requiredStatus.push(statusKey);
+    }
+}
+
+/** 移除一条前置条件 */
+function removePrecondition(idx) {
+    preconditionRows.splice(idx, 1);
+    renderPreconditionList();
+}
+
+/** 构造提交给后端的 preconditions 数组；存在未勾选状态的行时返回 null 并提示 */
+function buildPreconditionsPayload() {
+    for (var i = 0; i < preconditionRows.length; i++) {
+        var row = preconditionRows[i];
+        if (!row.requiredStatus.length) {
+            showToast('前置任务「' + (row.title || '#' + row.preTaskId) + '」请至少勾选一个要求状态', 'error');
+            return null;
+        }
+    }
+    return preconditionRows.map(function (row) {
+        return {
+            preTaskId: row.preTaskId,
+            requiredStatus: row.requiredStatus.join(',')
+        };
+    });
 }
 
 /* ========== 工具函数 ========== */

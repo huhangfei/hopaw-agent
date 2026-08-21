@@ -35,6 +35,11 @@ public class WorkflowTaskScheduler {
                 if (task.getStartTime() != null && task.getStartTime().isAfter(LocalDateTime.now())) {
                     continue;
                 }
+                // 前置条件检查：所有前置任务状态命中要求状态（多选任意命中）才允许执行
+                if (!taskService.isPreconditionsSatisfied(task.getId())) {
+                    logger.info("任务前置条件未满足，暂缓拉起: id={}, title={}", task.getId(), task.getTitle());
+                    continue;
+                }
                 logger.info("拉起任务: id={}, title={}", task.getId(), task.getTitle());
                 taskService.executeTask(task.getId());
             } catch (Exception e) {

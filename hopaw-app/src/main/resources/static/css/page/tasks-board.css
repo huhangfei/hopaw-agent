@@ -253,6 +253,116 @@
     padding: 20px 0;
 }
 
+/* ==================== 前置任务条件（任务模态框） ==================== */
+.precondition-add-row {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+}
+
+.precondition-add-row select {
+    flex: 1;
+    padding: 8px 10px;
+    border: 1px solid #d1d5db;
+    border-radius: 6px;
+    background: #fff;
+    font-size: 13px;
+    color: #333;
+    outline: none;
+}
+
+.precondition-add-row select:focus {
+    border-color: #667eea;
+}
+
+.btn-precondition-add {
+    flex-shrink: 0;
+    padding: 8px 16px;
+    border: none;
+    border-radius: 6px;
+    background: #667eea;
+    color: #fff;
+    font-size: 13px;
+    cursor: pointer;
+    transition: background 0.2s;
+}
+
+.btn-precondition-add:hover {
+    background: #5a6fd8;
+}
+
+.precondition-list {
+    margin-top: 8px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.precondition-row {
+    border: 1px solid #e5e7eb;
+    border-radius: 6px;
+    padding: 8px 10px;
+    background: #fafbfc;
+}
+
+.precondition-row-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+}
+
+.precondition-task-title {
+    font-size: 13px;
+    font-weight: 600;
+    color: #333;
+    word-break: break-word;
+}
+
+.precondition-remove {
+    flex-shrink: 0;
+    width: 22px;
+    height: 22px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: none;
+    border-radius: 4px;
+    background: transparent;
+    color: #999;
+    font-size: 16px;
+    line-height: 1;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.precondition-remove:hover {
+    background: #fee;
+    color: #ef4444;
+}
+
+.precondition-status-group {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px 14px;
+    margin-top: 6px;
+}
+
+.precondition-status-item {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 13px;
+    color: #555;
+    cursor: pointer;
+    user-select: none;
+}
+
+.precondition-status-item input[type="checkbox"] {
+    cursor: pointer;
+    accent-color: #667eea;
+}
+
 /* ==================== Dark Theme ==================== */
 body.dark-theme .tasks-board-container {
     background: #1a1a2e;
@@ -337,4 +447,49 @@ body.dark-theme .task-card-time {
 
 body.dark-theme .board-column-empty {
     color: #666;
+}
+
+/* ==================== Dark Theme - 前置任务条件 ==================== */
+body.dark-theme .precondition-add-row select {
+    background: #2d2d44;
+    border-color: #3d3d6b;
+    color: #c0c0c0;
+}
+
+body.dark-theme .precondition-add-row select:focus {
+    border-color: #8ba3ff;
+}
+
+body.dark-theme .btn-precondition-add {
+    background: #5a6fd6;
+}
+
+body.dark-theme .btn-precondition-add:hover {
+    background: #667eea;
+}
+
+body.dark-theme .precondition-row {
+    background: #16213e;
+    border-color: #2d2d44;
+}
+
+body.dark-theme .precondition-task-title {
+    color: #e0e0e0;
+}
+
+body.dark-theme .precondition-remove {
+    color: #888;
+}
+
+body.dark-theme .precondition-remove:hover {
+    background: #3d2d44;
+    color: #f87171;
+}
+
+body.dark-theme .precondition-status-item {
+    color: #c0c0c0;
+}
+
+body.dark-theme .precondition-status-item input[type="checkbox"] {
+    accent-color: #8ba3ff;
 }

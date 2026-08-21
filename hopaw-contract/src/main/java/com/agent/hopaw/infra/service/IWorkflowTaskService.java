@@ -3,6 +3,7 @@ package com.agent.hopaw.infra.service;
 import com.agent.hopaw.infra.model.dto.UserChatRequest;
 import com.agent.hopaw.infra.model.entity.TaskSession;
 import com.agent.hopaw.infra.model.entity.WorkflowTask;
+import com.agent.hopaw.infra.model.entity.WorkflowTaskPrecondition;
 
 import java.util.List;
 
@@ -33,4 +34,13 @@ public interface IWorkflowTaskService {
 
     /** 按ID查询任务（不做用户归属校验，供内部流程使用） */
     WorkflowTask getTaskById(Long id);
+
+    /** 查询任务配置的前置条件列表 */
+    List<WorkflowTaskPrecondition> getPreconditions(Long taskId);
+
+    /**
+     * 检查任务所有前置条件是否满足：每个前置任务的当前状态命中其要求状态（多选，任意命中即可）即满足；
+     * 未配置前置条件视为满足
+     */
+    boolean isPreconditionsSatisfied(Long taskId);
 }

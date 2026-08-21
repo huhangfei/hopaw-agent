@@ -378,6 +378,17 @@ public class DatabaseInitializer implements CommandLineRunner {
             stmt.execute("CREATE INDEX IF NOT EXISTS idx_workflow_tasks_status ON workflow_tasks(status)");
             stmt.execute("CREATE INDEX IF NOT EXISTS idx_workflow_tasks_project ON workflow_tasks(project_id)");
 
+            // 工作流 - 任务前置条件表（任务可配置多个前置任务，每个前置任务要求状态多选，逗号分隔存储）
+            stmt.execute("CREATE TABLE IF NOT EXISTS workflow_task_preconditions (" +
+                    "id INTEGER PRIMARY KEY AUTOINCREMENT, " +
+                    "task_id INTEGER NOT NULL, " +
+                    "pre_task_id INTEGER NOT NULL, " +
+                    "required_status TEXT NOT NULL, " +
+                    "create_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP" +
+                    ")");
+            stmt.execute("CREATE INDEX IF NOT EXISTS idx_task_preconditions_task ON workflow_task_preconditions(task_id)");
+            stmt.execute("CREATE INDEX IF NOT EXISTS idx_task_preconditions_pre ON workflow_task_preconditions(pre_task_id)");
+
             // 工作流 - 任务评论表
             stmt.execute("CREATE TABLE IF NOT EXISTS task_comments (" +
                     "id INTEGER PRIMARY KEY AUTOINCREMENT, " +

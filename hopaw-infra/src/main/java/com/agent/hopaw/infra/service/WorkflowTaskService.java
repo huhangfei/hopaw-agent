@@ -7,6 +7,7 @@ import com.agent.hopaw.infra.constant.TaskStatusEnum;
 import com.agent.hopaw.infra.executor.IAgentExecutor;
 import com.agent.hopaw.infra.mapper.TaskSessionMapper;
 import com.agent.hopaw.infra.mapper.WorkflowTaskMapper;
+import com.agent.hopaw.infra.mapper.WorkflowTaskPreconditionMapper;
 import com.agent.hopaw.infra.model.dto.AgentExecutorParams;
 import com.agent.hopaw.infra.model.dto.ToolSetInfo;
 import com.agent.hopaw.infra.model.dto.UserChatRequest;
@@ -14,6 +15,7 @@ import com.agent.hopaw.infra.model.entity.Agent;
 import com.agent.hopaw.infra.model.entity.Project;
 import com.agent.hopaw.infra.model.entity.ProjectLog;
 import com.agent.hopaw.infra.model.entity.WorkflowTaskComment;
+import com.agent.hopaw.infra.model.entity.WorkflowTaskPrecondition;
 import com.agent.hopaw.infra.model.entity.TaskSession;
 import com.agent.hopaw.infra.model.entity.WorkflowTask;
 import com.agent.hopaw.infra.tool.IAgentToolService;
@@ -38,6 +40,7 @@ public class WorkflowTaskService implements IWorkflowTaskService {
     private static final Logger logger = LoggerFactory.getLogger(WorkflowTaskService.class);
 
     private final WorkflowTaskMapper workflowTaskMapper;
+    private final WorkflowTaskPreconditionMapper preconditionMapper;
     private final TaskSessionMapper taskSessionMapper;
     private final IAgentExecutorService agentExecutorService;
     private final IChatSessionService chatSessionService;
@@ -49,6 +52,7 @@ public class WorkflowTaskService implements IWorkflowTaskService {
     private final IProjectLogService projectLogService;
 
     public WorkflowTaskService(WorkflowTaskMapper workflowTaskMapper,
+                               WorkflowTaskPreconditionMapper preconditionMapper,
                                TaskSessionMapper taskSessionMapper,
                                IAgentExecutorService agentExecutorService,
                                IChatSessionService chatSessionService,
@@ -59,6 +63,7 @@ public class WorkflowTaskService implements IWorkflowTaskService {
                                IProjectService projectService,
                                IProjectLogService projectLogService) {
         this.workflowTaskMapper = workflowTaskMapper;
+        this.preconditionMapper = preconditionMapper;
         this.taskSessionMapper = taskSessionMapper;
         this.agentExecutorService = agentExecutorService;
         this.chatSessionService = chatSessionService;
@@ -77,6 +82,7 @@ public class WorkflowTaskService implements IWorkflowTaskService {
         task.setCreateTime(now);
         task.setUpdateTime(now);
         workflowTaskMapper.insert(task);
+        savePreconditions(task.getId(), task.getPreconditions());
         return task;
     }
 
@@ -105,6 +111,7 @@ public class WorkflowTaskService implements IWorkflowTaskService {
         }
         existing.setUpdateTime(LocalDateTime.now());
         workflowTaskMapper.update(existing);
+        savePreconditions(existing.getId(), task.getPreconditions());
         return existing;
     }
 
@@ -119,6 +126,9 @@ public class WorkflowTaskService implements IWorkflowTaskService {
             throw new RuntimeException("无权删除该任务");
         }
         taskSessionMapper.deleteByTaskId(id);
+        // 前置条件双向清理：该任务自己的配置 + 以该任务为前置的其他任务关联（避免删除任务导致其他任务永久阻塞）
+        preconditionMapper.deleteByTaskId(id);
+        preconditionMapper.deleteByPreTaskId(id);
         workflowTaskMapper.deleteById(id);
     }
 
@@ -131,6 +141,7 @@ public class WorkflowTaskService implements IWorkflowTaskService {
         if (!userId.equals(task.getUserId())) {
             return null;
         }
+        task.setPreconditions(getPreconditions(id));
         return task;
     }
 
@@ -462,6 +473,86 @@ public class WorkflowTaskService implements IWorkflowTaskService {
         }
         return Arrays.stream(toolsStr.split(",")).collect(Collectors.toList());
     }
+
+    /* ========== 前置任务条件 ========== */
+
+    /**
+     * 保存任务前置条件：先删除旧配置再重建。
+     * 逐条校验：前置任务必须存在、不能是任务自身、要求状态不能为空且必须为合法状态值。
+     * 前端未传 preconditions 字段（null）时视为清空配置。
+     */
+    private void savePreconditions(Long taskId, List<WorkflowTaskPrecondition> preconditions) {
+        preconditionMapper.deleteByTaskId(taskId);
+        if (preconditions == null || preconditions.isEmpty()) {
+            return;
+        }
+        for (WorkflowTaskPrecondition pc : preconditions) {
+            if (pc == null || pc.getPreTaskId() == null) {
+                continue;
+            }
+            if (pc.getPreTaskId().equals(taskId)) {
+                throw new RuntimeException("前置任务不能是任务自身");
+            }
+            WorkflowTask preTask = workflowTaskMapper.findById(pc.getPreTaskId());
+            if (preTask == null) {
+                throw new RuntimeException("前置任务不存在: #" + pc.getPreTaskId());
+            }
+            String requiredStatus = normalizeRequiredStatus(pc.getRequiredStatus());
+            if (requiredStatus == null) {
+                throw new RuntimeException("前置任务「" + (preTask.getTitle() != null ? preTask.getTitle() : "#" + preTask.getId()) + "」未勾选要求状态");
+            }
+            WorkflowTaskPrecondition item = new WorkflowTaskPrecondition();
+            item.setTaskId(taskId);
+            item.setPreTaskId(pc.getPreTaskId());
+            item.setRequiredStatus(requiredStatus);
+            preconditionMapper.insert(item);
+        }
+    }
+
+    /** 规范化要求状态：按逗号拆分过滤非法值，返回合法状态的逗号分隔串；无合法状态返回 null */
+    private String normalizeRequiredStatus(String requiredStatus) {
+        if (requiredStatus == null || requiredStatus.trim().isEmpty()) {
+            return null;
+        }
+        List<String> valid = new ArrayList<>();
+        for (String code : requiredStatus.split(",")) {
+            String trimmed = code.trim();
+            if (!trimmed.isEmpty() && TaskStatusEnum.fromCode(trimmed) != null && !valid.contains(trimmed)) {
+                valid.add(trimmed);
+            }
+        }
+        return valid.isEmpty() ? null : String.join(",", valid);
+    }
+
+    @Override
+    public List<WorkflowTaskPrecondition> getPreconditions(Long taskId) {
+        List<WorkflowTaskPrecondition> list = preconditionMapper.findByTaskId(taskId);
+        return list != null ? list : new ArrayList<>();
+    }
+
+    @Override
+    public boolean isPreconditionsSatisfied(Long taskId) {
+        List<WorkflowTaskPrecondition> preconditions = getPreconditions(taskId);
+        if (preconditions.isEmpty()) {
+            return true;
+        }
+        for (WorkflowTaskPrecondition pc : preconditions) {
+            WorkflowTask preTask = workflowTaskMapper.findById(pc.getPreTaskId());
+            // 前置任务已被删除（关联未清理的容错场景）视为满足，避免任务永久卡住
+            if (preTask == null) {
+                continue;
+            }
+            // 要求状态为多选：前置任务当前状态命中任意一个勾选状态即满足
+            List<String> required = parseToolNames(pc.getRequiredStatus());
+            if (!required.contains(preTask.getStatus())) {
+                logger.info("任务前置条件未满足: taskId={}, preTaskId={}, preTaskStatus={}, required={}",
+                        taskId, pc.getPreTaskId(), preTask.getStatus(), pc.getRequiredStatus());
+                return false;
+            }
+        }
+        return true;
+    }
+
 
     @Override
     public void updateTaskStatus(Long taskId, String status, String rejectReason) {

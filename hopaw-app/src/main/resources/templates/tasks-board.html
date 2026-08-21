@@ -55,7 +55,7 @@
                         </div>
                         <div class="form-group">
                             <label for="taskProjectId">所属项目</label>
-                            <select id="taskProjectId"></select>
+                            <select id="taskProjectId" onchange="onTaskProjectChange()"></select>
                         </div>
                     </div>
                     <div class="form-row">
@@ -71,6 +71,14 @@
                                 <input type="time" id="taskExecEnd" placeholder="结束">
                             </div>
                         </div>
+                    </div>
+                    <div class="form-group">
+                        <label>前置任务（全部满足勾选状态后任务才会被拉起执行）</label>
+                        <div class="precondition-add-row">
+                            <select id="preconditionTaskSelect"></select>
+                            <button type="button" class="btn-precondition-add" onclick="addPrecondition()">添加</button>
+                        </div>
+                        <div id="preconditionList" class="precondition-list"></div>
                     </div>
                 </form>
             </div>
