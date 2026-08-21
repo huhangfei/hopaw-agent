@@ -18,9 +18,7 @@
 
     var sourceLabels = {
         upload: '附件上传',
-        chat: '会话文件',
-        task: '任务附件',
-        project: '项目附件'
+        chat: '会话文件'
     };
 
     // 初始化
@@ -103,7 +101,8 @@
             }).join('');
         }
 
-        var sourceLabel = sourceLabels[item.source] || item.source || '附件上传';
+        // 旧数据来源（task/project）已下线，未知来源统一显示为附件上传
+        var sourceLabel = sourceLabels[item.source] || '附件上传';
         var fileSize = formatFileSize(item.fileSize);
         var uploadTime = formatTime(item.createTime);
 
@@ -218,7 +217,9 @@
                 if (resp.code === 200) {
                     var item = resp.data;
                     document.getElementById('editOriginalName').value = item.originalName || '';
-                    document.getElementById('editSource').value = item.source || 'upload';
+                    // 旧数据来源（task/project）已不在选项中，回退为附件上传
+                    var sourceVal = sourceLabels[item.source] ? item.source : 'upload';
+                    document.getElementById('editSource').value = sourceVal;
                     document.getElementById('editTags').value = item.tags || '';
                     document.getElementById('editRemark').value = item.remark || '';
                     document.getElementById('attachmentEditModal').setAttribute('data-id', id);

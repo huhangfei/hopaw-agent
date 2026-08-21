@@ -32,7 +32,7 @@
             <div class="chat-header-title">
                 <span class="chat-header-desc" id="chat-header-desc" th:text="${selectedAgent.description}"></span>
             </div>
-            <div class="header-actions">
+            <div class="chat-header-actions">
                 <button class="btn-add-header" onclick="createNewSession()" title="新会话">
                     <svg viewBox="0 0 24 24" fill="currentColor" width="14" height="14"><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/></svg>
                     新会话
@@ -191,19 +191,28 @@
                             </button>
                             <div class="tool-permission-dropdown-menu" id="toolPermissionDropdownMenu">
                                 <div class="tool-permission-item user_control" data-value="user_control" onclick="selectToolPermission('user_control')">
-                                    <span class="tool-permission-item-dot user_control"></span>
-                                    <span class="tool-permission-item-name">用户控制</span>
-                                    <span class="tool-permission-item-check" id="check_user_control">✓</span>
+                                    <div class="tool-permission-item-main">
+                                        <span class="tool-permission-item-dot user_control"></span>
+                                        <span class="tool-permission-item-name">用户控制</span>
+                                        <span class="tool-permission-item-check" id="check_user_control">✓</span>
+                                    </div>
+                                    <div class="tool-permission-item-desc">除安全工具外，每次工具调用均需你确认后执行</div>
                                 </div>
                                 <div class="tool-permission-item smart_call" data-value="smart_call" onclick="selectToolPermission('smart_call')">
-                                    <span class="tool-permission-item-dot smart_call"></span>
-                                    <span class="tool-permission-item-name">智能调用</span>
-                                    <span class="tool-permission-item-check" id="check_smart_call">✓</span>
+                                    <div class="tool-permission-item-main">
+                                        <span class="tool-permission-item-dot smart_call"></span>
+                                        <span class="tool-permission-item-name">智能调用</span>
+                                        <span class="tool-permission-item-check" id="check_smart_call">✓</span>
+                                    </div>
+                                    <div class="tool-permission-item-desc">安全工具自动执行，其余智能判断风险，高风险才需确认</div>
                                 </div>
                                 <div class="tool-permission-item auto" data-value="auto" onclick="selectToolPermission('auto')">
-                                    <span class="tool-permission-item-dot auto"></span>
-                                    <span class="tool-permission-item-name">完全自动</span>
-                                    <span class="tool-permission-item-check" id="check_auto">✓</span>
+                                    <div class="tool-permission-item-main">
+                                        <span class="tool-permission-item-dot auto"></span>
+                                        <span class="tool-permission-item-name">完全自动</span>
+                                        <span class="tool-permission-item-check" id="check_auto">✓</span>
+                                    </div>
+                                    <div class="tool-permission-item-desc">所有工具调用直接执行，无需确认</div>
                                 </div>
                             </div>
                         </div>

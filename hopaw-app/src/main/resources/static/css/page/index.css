@@ -368,11 +368,12 @@
     font-size: 14px;
     color: #666;
 }
-.header-actions {
+.chat-header-actions {
     display: flex;
+    align-items: center;
     gap: 8px;
 }
-.header-actions button {
+.chat-header-actions button {
     height: 32px;
     border: none;
     border-radius: 6px;
@@ -385,30 +386,9 @@
     white-space: nowrap;
     flex-shrink: 0;
 }
-.header-actions button svg {
+.chat-header-actions button svg {
     width: 16px;
     height: 16px;
-}
-.header-actions .btn-edit {
-    background: #2196F3;
-    color: white;
-}
-.header-actions .btn-delete {
-    background: #f44336;
-    color: white;
-}
-.header-actions .btn-clear {
-    background: #9c27b0;
-    color: white;
-}
-.header-actions .btn-edit:hover {
-    background: #1976D2;
-}
-.header-actions .btn-delete:hover {
-    background: #d32f2f;
-}
-.header-actions .btn-clear:hover {
-    background: #7b1fa2;
 }
 .chat-messages {
     flex: 1;
@@ -661,7 +641,7 @@
     position: absolute;
     bottom: calc(100% + 6px);
     right: 0;
-    min-width: 140px;
+    min-width: 250px;
     background: #fff;
     border: 1px solid #e0e0e0;
     border-radius: 8px;
@@ -676,8 +656,8 @@
 
 .tool-permission-item {
     display: flex;
-    align-items: center;
-    gap: 8px;
+    flex-direction: column;
+    gap: 2px;
     padding: 8px 14px;
     cursor: pointer;
     font-size: 13px;
@@ -700,8 +680,34 @@
     color: #ff9800;
 }
 
+.tool-permission-item-main {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
 .tool-permission-item-name {
     flex: 1;
+}
+
+.tool-permission-item-desc {
+    font-size: 11px;
+    line-height: 1.4;
+    color: #999;
+    padding-left: 16px;
+    white-space: normal;
+}
+
+.tool-permission-item.user_control .tool-permission-item-desc {
+    color: #7cb87c;
+}
+
+.tool-permission-item.smart_call .tool-permission-item-desc {
+    color: #9aa7ee;
+}
+
+.tool-permission-item.auto .tool-permission-item-desc {
+    color: #e0a76a;
 }
 
 .tool-permission-item-dot {
@@ -2014,6 +2020,22 @@ body.dark-theme .tool-permission-item.auto:hover {
 
 body.dark-theme .tool-permission-item-check {
     color: #8ba3ff;
+}
+
+body.dark-theme .tool-permission-item-desc {
+    color: #888;
+}
+
+body.dark-theme .tool-permission-item.user_control .tool-permission-item-desc {
+    color: #66bb6a;
+}
+
+body.dark-theme .tool-permission-item.smart_call .tool-permission-item-desc {
+    color: #8ba3ff;
+}
+
+body.dark-theme .tool-permission-item.auto .tool-permission-item-desc {
+    color: #ffa726;
 }
 
 body.dark-theme .tool-permission-item.user_control .tool-permission-item-check {
