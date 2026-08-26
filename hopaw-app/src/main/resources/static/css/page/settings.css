@@ -373,6 +373,100 @@ body.dark-theme .settings-input:focus {
     border-color: #8ba3ff;
 }
 
+/* ========== 工作流任务线程池设置 ========== */
+.workflow-pool-tip {
+    margin: 0 0 18px;
+    font-size: 13px;
+    color: #888;
+    line-height: 1.6;
+    background: #f5f6ff;
+    border-left: 3px solid #667eea;
+    border-radius: 4px;
+    padding: 10px 12px;
+}
+
+.pool-default-tip {
+    font-size: 12px;
+    color: #999;
+    font-weight: normal;
+}
+
+.workflow-pool-stats {
+    background: white;
+    border-radius: 12px;
+    padding: 24px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+    max-width: 600px;
+    margin-top: 20px;
+}
+
+.workflow-pool-stats h3 {
+    margin: 0 0 16px;
+    font-size: 15px;
+    color: #333;
+}
+
+.pool-stats-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 12px;
+}
+
+.pool-stat-item {
+    background: #f5f6ff;
+    border-radius: 8px;
+    padding: 14px 8px;
+    text-align: center;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.pool-stat-value {
+    font-size: 22px;
+    font-weight: 700;
+    color: #667eea;
+}
+
+.pool-stat-label {
+    font-size: 12px;
+    color: #999;
+}
+
+.pool-stats-config {
+    margin-top: 14px;
+    font-size: 12px;
+    color: #888;
+}
+
+body.dark-theme .workflow-pool-tip {
+    background: #2d2d44;
+    color: #c0c0c0;
+    border-left-color: #8ba3ff;
+}
+
+body.dark-theme .workflow-pool-stats {
+    background: #1e3a5f;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+}
+
+body.dark-theme .workflow-pool-stats h3 {
+    color: #e0e0e0;
+}
+
+body.dark-theme .pool-stat-item {
+    background: #2d2d44;
+}
+
+body.dark-theme .pool-stat-value {
+    color: #8ba3ff;
+}
+
+body.dark-theme .pool-stat-label,
+body.dark-theme .pool-stats-config {
+    color: #888;
+}
+
 body.dark-theme .memory-prompt-input {
     background: #2d2d44;
     border-color: #3d3d6b;

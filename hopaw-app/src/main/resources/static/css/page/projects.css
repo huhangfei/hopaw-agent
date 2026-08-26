@@ -278,10 +278,12 @@
 
 .status-badge {
     display: inline-block;
-    padding: 3px 12px;
-    border-radius: 12px;
+    padding: 5px 16px;
+    border-radius: 14px;
     color: #fff;
-    font-size: 12px;
+    font-size: 14px;
+    font-weight: 600;
+    letter-spacing: 1px;
     flex-shrink: 0;
 }
 
@@ -361,12 +363,6 @@
     text-decoration: underline;
 }
 
-.task-count {
-    font-size: 12px;
-    color: #999;
-    font-weight: normal;
-}
-
 /* 状态流转按钮 */
 .status-actions {
     display: flex;
@@ -405,40 +401,73 @@
     border-radius: 8px;
 }
 
-/* 任务列表 */
-.detail-tasks {
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
-}
-
-.detail-task-item {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 10px 12px;
-    background: #fafafa;
-    border: 1px solid #f0f0f0;
-    border-radius: 8px;
-    text-decoration: none;
+/* ========== 项目任务（可折叠，卡片网格） ========== */
+.detail-tasks-section .tasks-section-header {
+    cursor: pointer;
+    user-select: none;
+    padding: 8px 10px;
+    margin: -10px -10px 10px -10px;
+    border-radius: 6px;
     transition: background 0.15s;
-    gap: 8px;
 }
 
-.detail-task-item:hover {
+.detail-tasks-section .tasks-section-header:hover {
     background: #f0f2ff;
 }
 
-.detail-task-item .task-main {
-    display: flex;
-    flex-direction: column;
-    gap: 4px;
+.detail-tasks-section .tasks-title {
     flex: 1;
-    min-width: 0;
 }
 
-.detail-task-item .task-name {
+.detail-tasks-section .tasks-count {
+    font-size: 12px;
+    color: #999;
+    font-weight: normal;
+    margin-right: 8px;
+}
+
+.detail-tasks-section .tasks-toggle-icon {
+    font-size: 14px;
+    color: #999;
+    flex-shrink: 0;
+}
+
+.detail-tasks {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(230px, 1fr));
+    gap: 10px;
+}
+
+/* 单个任务卡片：左侧状态色条 */
+.detail-task-card {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    padding: 12px 14px;
+    background: #fafafa;
+    border: 1px solid #f0f0f0;
+    border-left: 4px solid #999;
+    border-radius: 8px;
+    text-decoration: none;
+    transition: background 0.15s, transform 0.15s, box-shadow 0.15s;
+}
+
+.detail-task-card:hover {
+    background: #f0f2ff;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(102, 126, 234, 0.15);
+}
+
+.detail-task-card .task-card-head {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 8px;
+}
+
+.detail-task-card .task-name {
     font-size: 13px;
+    font-weight: 600;
     color: #333;
     flex: 1;
     min-width: 0;
@@ -447,20 +476,20 @@
     text-overflow: ellipsis;
 }
 
-.detail-task-item .task-sub {
+.detail-task-card .task-status-badge {
+    font-size: 11px;
+    color: #fff;
+    border-radius: 4px;
+    padding: 2px 8px;
+    flex-shrink: 0;
+    white-space: nowrap;
+}
+
+.detail-task-card .task-sub {
     display: flex;
     gap: 12px;
     font-size: 11px;
     color: #999;
-}
-
-.detail-task-item .task-status {
-    font-size: 12px;
-    flex-shrink: 0;
-    padding: 2px 8px;
-    border-radius: 10px;
-    background: #f5f5f5;
-    align-self: center;
 }
 
 /* 详情内空提示 */
@@ -1135,10 +1164,6 @@ body.dark-theme .btn-space:hover {
     background: #2d3a5f;
 }
 
-body.dark-theme .task-count {
-    color: #888;
-}
-
 body.dark-theme .btn-status {
     background: #2d2d44;
 }
@@ -1156,25 +1181,31 @@ body.dark-theme .detail-desc {
     color: #c0c0c0;
 }
 
-body.dark-theme .detail-task-item {
+body.dark-theme .detail-tasks-section .tasks-section-header:hover {
+    background: #2d2d44;
+}
+
+body.dark-theme .detail-tasks-section .tasks-count,
+body.dark-theme .detail-tasks-section .tasks-toggle-icon {
+    color: #888;
+}
+
+body.dark-theme .detail-task-card {
     background: #1a1a2e;
     border-color: #2d2d44;
 }
 
-body.dark-theme .detail-task-item:hover {
+body.dark-theme .detail-task-card:hover {
     background: #2d3a5f;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
 }
 
-body.dark-theme .detail-task-item .task-name {
+body.dark-theme .detail-task-card .task-name {
     color: #e0e0e0;
 }
 
-body.dark-theme .detail-task-item .task-sub {
+body.dark-theme .detail-task-card .task-sub {
     color: #888;
-}
-
-body.dark-theme .detail-task-item .task-status {
-    background: #2d2d44;
 }
 
 body.dark-theme .detail-empty-text {

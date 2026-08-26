@@ -1,0 +1,45 @@
+<th:block th:fragment="content" xmlns:th="http://www.thymeleaf.org">
+<div class="settings-panel active" id="tab-workflow-pool">
+    <div class="settings-form">
+        <p class="workflow-pool-tip">工作流任务线程池：控制可同时执行的任务数量。超出核心线程数的任务先进入排队，队列满后等待下轮调度自动重试（任务不丢失）。</p>
+        <div class="form-group">
+            <label for="poolCoreSize">核心线程数 <span class="pool-default-tip">（默认 2，常驻并发任务数）</span></label>
+            <input type="number" id="poolCoreSize" class="settings-input" min="1" max="32" placeholder="2">
+        </div>
+        <div class="form-group">
+            <label for="poolMaxSize">最大线程数 <span class="pool-default-tip">（默认 4，峰值并发上限）</span></label>
+            <input type="number" id="poolMaxSize" class="settings-input" min="1" max="64" placeholder="4">
+        </div>
+        <div class="form-group">
+            <label for="poolQueueCapacity">排队任务数上限 <span class="pool-default-tip">（默认 20，超出后任务等待重试）</span></label>
+            <input type="number" id="poolQueueCapacity" class="settings-input" min="0" max="1000" placeholder="20">
+        </div>
+        <div class="settings-actions">
+            <button class="btn-save-settings" onclick="saveWorkflowPoolSettings()">保存并应用</button>
+        </div>
+    </div>
+
+    <div class="workflow-pool-stats">
+        <h3>运行状态</h3>
+        <div class="pool-stats-grid">
+            <div class="pool-stat-item">
+                <span class="pool-stat-value" id="statActiveCount">-</span>
+                <span class="pool-stat-label">执行中</span>
+            </div>
+            <div class="pool-stat-item">
+                <span class="pool-stat-value" id="statPoolSize">-</span>
+                <span class="pool-stat-label">当前线程数</span>
+            </div>
+            <div class="pool-stat-item">
+                <span class="pool-stat-value" id="statQueuedTasks">-</span>
+                <span class="pool-stat-label">排队中</span>
+            </div>
+            <div class="pool-stat-item">
+                <span class="pool-stat-value" id="statCompletedTasks">-</span>
+                <span class="pool-stat-label">已完成</span>
+            </div>
+        </div>
+        <div class="pool-stats-config" id="statPoolConfig"></div>
+    </div>
+</div>
+</th:block>

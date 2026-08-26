@@ -19,6 +19,7 @@
         <a th:href="@{/settings/account}" class="settings-tab" th:classappend="${currentTab == 'account' ? 'active' : ''}">账号设置</a>
         <a th:href="@{/settings/backup}" class="settings-tab" th:classappend="${currentTab == 'backup' ? 'active' : ''}">备份与恢复</a>
         <a th:href="@{/settings/scheduled-tasks}" class="settings-tab" th:classappend="${currentTab == 'scheduled-tasks' ? 'active' : ''}">定时任务</a>
+        <a th:href="@{/settings/workflow-pool}" class="settings-tab" th:classappend="${currentTab == 'workflow-pool' ? 'active' : ''}">任务线程池</a>
     </div>
 
     <div th:replace="~{__${'settings/' + currentTab}__ :: content}"></div>

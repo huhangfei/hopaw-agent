@@ -9,6 +9,7 @@ var searchTimer = null;
 var currentProjectId = null;     // 当前选中的项目ID
 var currentProject = null;        // 当前选中的项目对象
 var logsExpanded = true;          // 操作日志展开状态（默认展开）
+var tasksExpanded = false;        // 项目任务展开状态（默认折叠）
 var logsCache = [];               // 操作日志缓存（用于类型切换时重渲染）
 var logFilter = 'all';            // 日志过滤类型：all=全部 / important=重要
 var LOGS_PAGE_SIZE = 10;          // 操作日志分页大小
@@ -210,11 +211,12 @@ function renderDetail(project, tasks, logs) {
     // 名称
     document.getElementById('detailName').textContent = project.name || '';
 
-    // 状态徽标
+    // 状态徽标（突出显示：状态色底 + 同色发光环）
     var st = PROJECT_STATUS[project.status] || { label: project.status || '未知', color: '#999' };
     var badge = document.getElementById('detailStatusBadge');
     badge.textContent = st.label;
     badge.style.background = st.color;
+    badge.style.boxShadow = '0 0 0 3px ' + st.color + '33, 0 2px 10px ' + st.color + '55';
 
     // 创建人 / 创建时间
     var metaEl = document.getElementById('detailMeta');
@@ -295,9 +297,21 @@ var TASK_STATUS = {
     closed:              { label: '已关闭',   color: '#9ca3af' }
 };
 
+/** 折叠/展开项目任务区（默认折叠） */
+function toggleProjectTasks() {
+    tasksExpanded = !tasksExpanded;
+    var container = document.getElementById('detailTasks');
+    var iconEl = document.getElementById('tasksToggleIcon');
+    container.style.display = tasksExpanded ? 'grid' : 'none';
+    iconEl.textContent = tasksExpanded ? '▾' : '▸';
+}
+
 function renderDetailTasks(tasks) {
     var container = document.getElementById('detailTasks');
     var countEl = document.getElementById('taskCount');
+    // 渲染时同步折叠状态（切换项目后保持当前展开/折叠状态）
+    container.style.display = tasksExpanded ? 'grid' : 'none';
+    document.getElementById('tasksToggleIcon').textContent = tasksExpanded ? '▾' : '▸';
     if (!tasks || !tasks.length) {
         countEl.textContent = '(0)';
         container.innerHTML = '<p class="detail-empty-text">暂无任务</p>';
@@ -306,15 +320,15 @@ function renderDetailTasks(tasks) {
     countEl.textContent = '(' + tasks.length + ')';
     container.innerHTML = tasks.map(function (task) {
         var st = TASK_STATUS[task.status] || { label: task.status || '未知', color: '#999' };
-        return '<a class="detail-task-item" href="/tasks-board/' + task.id + '" target="_blank">' +
-            '<div class="task-main">' +
+        return '<a class="detail-task-card" href="/tasks-board/' + task.id + '" target="_blank" style="border-left-color:' + st.color + '">' +
+            '<div class="task-card-head">' +
                 '<span class="task-name" title="' + escapeHtml(task.title || '') + '">' + escapeHtml(task.title || '') + '</span>' +
-                '<span class="task-sub">' +
-                    '<span class="task-creator">' + escapeHtml(task.creatorName || '未知') + '</span>' +
-                    '<span class="task-time">' + formatTime(task.createTime) + '</span>' +
-                '</span>' +
+                '<span class="task-status-badge" style="background:' + st.color + '">' + st.label + '</span>' +
             '</div>' +
-            '<span class="task-status" style="color:' + st.color + '">' + st.label + '</span>' +
+            '<div class="task-sub">' +
+                '<span class="task-creator">' + escapeHtml(task.creatorName || '未知') + '</span>' +
+                '<span class="task-time">' + formatTime(task.createTime) + '</span>' +
+            '</div>' +
         '</a>';
     }).join('');
 }

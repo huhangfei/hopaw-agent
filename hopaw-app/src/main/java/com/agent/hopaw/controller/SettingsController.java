@@ -3,6 +3,7 @@ package com.agent.hopaw.controller;
 import com.agent.hopaw.infra.model.dto.ResponseBean;
 import com.agent.hopaw.infra.model.entity.Account;
 import com.agent.hopaw.infra.service.AccountService;
+import com.agent.hopaw.infra.task.WorkflowTaskThreadPool;
 import com.agent.hopaw.service.BackupService;
 import com.agent.hopaw.biz.util.MailUtil;
 import com.agent.hopaw.util.CurrentUser;
@@ -36,16 +37,20 @@ public class SettingsController {
         put("account",      new String[] {"/js/page/settings-account.js", null});
         put("backup",       new String[] {"/js/page/settings-backup.js", null});
         put("scheduled-tasks", new String[] {"/js/page/scheduled-tasks.js", "/css/page/scheduled-tasks.css"});
+        put("workflow-pool", new String[] {"/js/page/settings-workflow-pool.js", null});
     }};
 
     private final MailUtil mailUtil;
     private final AccountService accountService;
     private final BackupService backupService;
+    private final WorkflowTaskThreadPool workflowTaskThreadPool;
 
-    public SettingsController(MailUtil mailUtil, AccountService accountService, BackupService backupService) {
+    public SettingsController(MailUtil mailUtil, AccountService accountService, BackupService backupService,
+                              WorkflowTaskThreadPool workflowTaskThreadPool) {
         this.mailUtil = mailUtil;
         this.accountService = accountService;
         this.backupService = backupService;
+        this.workflowTaskThreadPool = workflowTaskThreadPool;
     }
 
     @GetMapping("/settings")
@@ -131,6 +136,30 @@ public class SettingsController {
         accountService.update(account);
         CurrentUser.set(request, userId, account);
         return ResponseBean.success();
+    }
+
+    /**
+     * 按最新配置重建工作流任务线程池（设置页保存后调用）
+     */
+    @PostMapping("/api/settings/workflow-pool/reload")
+    @ResponseBody
+    public ResponseBean reloadWorkflowPool() {
+        try {
+            workflowTaskThreadPool.reload();
+            return ResponseBean.success(workflowTaskThreadPool.getStats());
+        } catch (Exception e) {
+            log.error("重建工作流线程池失败", e);
+            return ResponseBean.fail("重建线程池失败: " + e.getMessage());
+        }
+    }
+
+    /**
+     * 查询工作流任务线程池运行状态
+     */
+    @GetMapping("/api/settings/workflow-pool/status")
+    @ResponseBody
+    public ResponseBean workflowPoolStatus() {
+        return ResponseBean.success(workflowTaskThreadPool.getStats());
     }
 
     @PostMapping("/api/mail/test")

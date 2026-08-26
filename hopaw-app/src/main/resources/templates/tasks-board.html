@@ -28,9 +28,40 @@
             <svg viewBox="0 0 24 24" fill="currentColor"><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/></svg>
             新建任务
         </button>
+        <div class="view-switch" id="viewSwitch">
+            <button type="button" class="view-switch-btn active" id="viewBtnBoard" onclick="switchView('board')" title="看板视图">
+                <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="5" height="18" rx="1"/><rect x="10" y="3" width="5" height="12" rx="1"/><rect x="17" y="3" width="4" height="8" rx="1"/></svg>
+                看板
+            </button>
+            <button type="button" class="view-switch-btn" id="viewBtnTable" onclick="switchView('table')" title="列表视图">
+                <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>
+                列表
+            </button>
+        </div>
     </div>
 
     <div class="tasks-board-columns" id="tasksBoardColumns"></div>
+
+    <!-- 列表视图：按创建时间倒序分页展示所有任务 -->
+    <div class="tasks-table-view" id="tasksTableView" style="display:none;">
+        <div class="tasks-table-wrapper">
+            <table class="tasks-table">
+                <thead>
+                    <tr>
+                        <th>任务</th>
+                        <th>状态</th>
+                        <th>智能体</th>
+                        <th>所属项目</th>
+                        <th>开始时间</th>
+                        <th>创建时间</th>
+                        <th class="th-actions">操作</th>
+                    </tr>
+                </thead>
+                <tbody id="tasksTableBody"></tbody>
+            </table>
+        </div>
+        <div class="table-pagination" id="tablePagination"></div>
+    </div>
 
     <!-- 新建/编辑任务模态框 -->
     <div class="modal-overlay" id="taskModal">

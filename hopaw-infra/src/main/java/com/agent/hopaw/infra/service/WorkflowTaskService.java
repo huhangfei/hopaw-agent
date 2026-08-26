@@ -231,6 +231,10 @@ public class WorkflowTaskService implements IWorkflowTaskService {
         if (!userId.equals(existing.getUserId())) {
             throw new RuntimeException("无权操作该任务");
         }
+        // 处理中的任务不允许关闭，避免执行流程被打断（其余状态均可关闭）
+        if (TaskStatusEnum.PROCESSING.getCode().equals(existing.getStatus())) {
+            throw new RuntimeException("处理中的任务不允许关闭");
+        }
         updateTaskStatus(id, TaskStatusEnum.CLOSED.getCode(), null);
     }
 

@@ -123,6 +123,201 @@
     user-select: none;
 }
 
+/* ========== 视图切换（看板/列表） ========== */
+.view-switch {
+    display: inline-flex;
+    background: #f1f2f6;
+    border-radius: 8px;
+    padding: 3px;
+    gap: 2px;
+    flex-shrink: 0;
+}
+
+.view-switch-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    border: none;
+    background: transparent;
+    padding: 6px 13px;
+    border-radius: 6px;
+    font-size: 13px;
+    color: #666;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: all 0.2s;
+}
+
+.view-switch-btn:hover {
+    color: #667eea;
+}
+
+.view-switch-btn.active {
+    background: #667eea;
+    color: #fff;
+    box-shadow: 0 2px 6px rgba(102, 126, 234, 0.35);
+}
+
+/* ========== 列表视图：任务表格 ========== */
+.tasks-table-view {
+    margin-top: 4px;
+}
+
+.tasks-table-wrapper {
+    background: #fff;
+    border-radius: 12px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+    overflow-x: auto;
+}
+
+.tasks-table {
+    width: 100%;
+    border-collapse: collapse;
+    min-width: 900px;
+}
+
+.tasks-table th {
+    text-align: left;
+    padding: 12px 16px;
+    font-size: 13px;
+    font-weight: 600;
+    color: #888;
+    border-bottom: 2px solid #f0f0f5;
+    white-space: nowrap;
+    background: #fafbff;
+}
+
+.tasks-table th.th-actions,
+.tasks-table td.td-actions {
+    text-align: right;
+}
+
+.tasks-table td {
+    padding: 11px 16px;
+    font-size: 13px;
+    color: #333;
+    border-bottom: 1px solid #f5f5fa;
+    vertical-align: middle;
+}
+
+.tasks-table tbody tr {
+    cursor: pointer;
+    transition: background 0.15s;
+}
+
+.tasks-table tbody tr:hover {
+    background: #f8f9ff;
+}
+
+.tasks-table tbody tr:last-child td {
+    border-bottom: none;
+}
+
+.table-task-id {
+    color: #999;
+    font-size: 12px;
+    margin-right: 8px;
+}
+
+.table-task-title {
+    font-weight: 600;
+    color: #333;
+}
+
+.table-status-badge {
+    display: inline-block;
+    padding: 3px 10px;
+    border-radius: 10px;
+    font-size: 12px;
+    color: #fff;
+    white-space: nowrap;
+}
+
+.tasks-table .td-time {
+    color: #888;
+    white-space: nowrap;
+    font-size: 12px;
+}
+
+.table-empty {
+    text-align: center;
+    color: #999;
+    padding: 40px 0 !important;
+    cursor: default;
+}
+
+.table-action-btn {
+    border: none;
+    background: transparent;
+    padding: 4px 8px;
+    border-radius: 4px;
+    font-size: 12px;
+    color: #667eea;
+    cursor: pointer;
+    white-space: nowrap;
+}
+
+.table-action-btn:hover {
+    background: rgba(102, 126, 234, 0.1);
+}
+
+.table-action-btn.warn {
+    color: #d97706;
+}
+
+.table-action-btn.warn:hover {
+    background: rgba(245, 158, 11, 0.12);
+}
+
+.table-action-btn.danger {
+    color: #ef4444;
+}
+
+.table-action-btn.danger:hover {
+    background: #fee;
+}
+
+.table-action-muted {
+    color: #bbb;
+    font-size: 12px;
+}
+
+/* 表格分页 */
+.table-pagination {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 10px;
+    margin-top: 14px;
+    font-size: 13px;
+    color: #888;
+    min-height: 32px;
+}
+
+.table-pagination .pagination-btn {
+    min-width: 64px;
+    height: 30px;
+    padding: 0 12px;
+    border: 1px solid #e0e0e6;
+    background: #fff;
+    border-radius: 6px;
+    font-size: 12px;
+    color: #667eea;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.table-pagination .pagination-btn:hover:not(:disabled) {
+    border-color: #667eea;
+    background: rgba(102, 126, 234, 0.06);
+}
+
+.table-pagination .pagination-btn:disabled {
+    color: #bbb;
+    cursor: not-allowed;
+    background: #fafafa;
+}
+
 @keyframes refresh-spin {
     from { transform: rotate(0deg); }
     to { transform: rotate(360deg); }
@@ -214,29 +409,18 @@
     border-color: #c0c0c0;
 }
 
-.task-card-delete {
+/* 卡片操作按钮组：右上角竖向排列（编辑/关闭/删除） */
+.task-card-actions {
     position: absolute;
     top: 8px;
     right: 8px;
-    width: 24px;
-    height: 24px;
     display: flex;
-    align-items: center;
-    justify-content: center;
-    border: none;
-    border-radius: 4px;
-    background: transparent;
-    color: #bbb;
-    cursor: pointer;
-    opacity: 0;
-    transition: all 0.2s;
+    flex-direction: column;
+    gap: 4px;
+    z-index: 2;
 }
 
-/* 编辑按钮：位于删除按钮左侧 */
-.task-card-edit {
-    position: absolute;
-    top: 8px;
-    right: 38px;
+.task-card-actions button {
     width: 24px;
     height: 24px;
     display: flex;
@@ -252,13 +436,19 @@
 }
 
 .task-card:hover .task-card-delete,
-.task-card:hover .task-card-edit {
+.task-card:hover .task-card-edit,
+.task-card:hover .task-card-close {
     opacity: 1;
 }
 
 .task-card-edit:hover {
     background: rgba(102, 126, 234, 0.12);
     color: #667eea;
+}
+
+.task-card-close:hover {
+    background: rgba(245, 158, 11, 0.12);
+    color: #f59e0b;
 }
 
 .task-card-delete:hover {
@@ -456,6 +646,110 @@ body.dark-theme .board-refresh-countdown {
     border-color: rgba(139, 163, 255, 0.25);
 }
 
+/* ===== 暗色：视图切换 ===== */
+body.dark-theme .view-switch {
+    background: #2d2d44;
+}
+
+body.dark-theme .view-switch-btn {
+    color: #c0c0c0;
+}
+
+body.dark-theme .view-switch-btn:hover {
+    color: #8ba3ff;
+}
+
+body.dark-theme .view-switch-btn.active {
+    background: #8ba3ff;
+    color: #1a1a2e;
+    box-shadow: 0 2px 6px rgba(139, 163, 255, 0.3);
+}
+
+/* ===== 暗色：列表视图表格 ===== */
+body.dark-theme .tasks-table-wrapper {
+    background: #16213e;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+}
+
+body.dark-theme .tasks-table th {
+    color: #c0c0c0;
+    border-bottom-color: #2d2d44;
+    background: #1a2440;
+}
+
+body.dark-theme .tasks-table td {
+    color: #e0e0e0;
+    border-bottom-color: #2d2d44;
+}
+
+body.dark-theme .tasks-table tbody tr:hover {
+    background: #1e2a4d;
+}
+
+body.dark-theme .table-task-id {
+    color: #888;
+}
+
+body.dark-theme .table-task-title {
+    color: #e0e0e0;
+}
+
+body.dark-theme .tasks-table .td-time {
+    color: #888;
+}
+
+body.dark-theme .table-empty {
+    color: #888;
+}
+
+body.dark-theme .table-action-btn {
+    color: #8ba3ff;
+}
+
+body.dark-theme .table-action-btn:hover {
+    background: rgba(139, 163, 255, 0.15);
+}
+
+body.dark-theme .table-action-btn.warn {
+    color: #fbbf24;
+}
+
+body.dark-theme .table-action-btn.warn:hover {
+    background: rgba(251, 191, 36, 0.15);
+}
+
+body.dark-theme .table-action-btn.danger {
+    color: #ef4444;
+}
+
+body.dark-theme .table-action-btn.danger:hover {
+    background: #3d1d2d;
+}
+
+body.dark-theme .table-action-muted {
+    color: #666;
+}
+
+body.dark-theme .table-pagination {
+    color: #888;
+}
+
+body.dark-theme .table-pagination .pagination-btn {
+    background: #16213e;
+    border-color: #2d2d44;
+    color: #8ba3ff;
+}
+
+body.dark-theme .table-pagination .pagination-btn:hover:not(:disabled) {
+    border-color: #8ba3ff;
+    background: #1e2a4d;
+}
+
+body.dark-theme .table-pagination .pagination-btn:disabled {
+    color: #555;
+    background: #16213e;
+}
+
 body.dark-theme .board-column {
     background: #16213e;
 }
@@ -486,6 +780,15 @@ body.dark-theme .task-card-edit {
 body.dark-theme .task-card-edit:hover {
     background: rgba(139, 163, 255, 0.15);
     color: #8ba3ff;
+}
+
+body.dark-theme .task-card-close {
+    color: #666;
+}
+
+body.dark-theme .task-card-close:hover {
+    background: rgba(251, 191, 36, 0.15);
+    color: #fbbf24;
 }
 
 body.dark-theme .task-card-delete {

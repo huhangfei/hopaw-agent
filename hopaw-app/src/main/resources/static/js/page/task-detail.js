@@ -172,12 +172,15 @@ function renderTaskActions(task) {
     } else if (status === 'pending_acceptance') {
         html += '<button class="task-action-btn btn-success" onclick="acceptTask(' + task.id + ')">验收通过</button>';
         html += '<button class="task-action-btn btn-warning" onclick="rejectTask(' + task.id + ')">打回重做</button>';
-        html += '<button class="task-action-btn btn-secondary" onclick="closeTask(' + task.id + ')">关闭任务</button>';
     } else if (status === 'failed') {
         html += '<button class="task-action-btn btn-primary" onclick="redoTask(' + task.id + ')">重做</button>';
-        html += '<button class="task-action-btn btn-secondary" onclick="closeTask(' + task.id + ')">关闭任务</button>';
     } else if (status === 'completed') {
         html += '<button class="task-action-btn btn-primary" onclick="redoTask(' + task.id + ')">重做</button>';
+    }
+
+    // 除处理中/已关闭外，任何状态均可关闭
+    if (status !== 'processing' && status !== 'closed') {
+        html += '<button class="task-action-btn btn-secondary" onclick="closeTask(' + task.id + ')">关闭任务</button>';
     }
 
     actionsEl.innerHTML = html;

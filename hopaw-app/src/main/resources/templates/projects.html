@@ -98,13 +98,14 @@
                     <div id="detailFiles" class="detail-files"></div>
                 </div>
 
-                <!-- 任务列表 -->
-                <div class="detail-section">
-                    <div class="section-title">
-                        <span>项目任务</span>
-                        <span class="task-count" id="taskCount"></span>
+                <!-- 任务列表（可折叠，默认折叠） -->
+                <div class="detail-section detail-tasks-section">
+                    <div class="section-title tasks-section-header" id="tasksHeader" onclick="toggleProjectTasks()">
+                        <span class="tasks-title">项目任务</span>
+                        <span class="tasks-count" id="taskCount"></span>
+                        <span class="tasks-toggle-icon" id="tasksToggleIcon">▸</span>
                     </div>
-                    <div id="detailTasks" class="detail-tasks"></div>
+                    <div id="detailTasks" class="detail-tasks" style="display: none;"></div>
                 </div>
 
                 <!-- 操作日志（可折叠） -->

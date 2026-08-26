@@ -602,6 +602,10 @@ public class DatabaseInitializer implements CommandLineRunner {
                         "SELECT 'Avatar Task', 'avatar', '0 0/2 * * * *', 1, 'Execute avatar module task every 30 seconds', 1 " +
                         "WHERE NOT EXISTS (SELECT 1 FROM scheduled_tasks WHERE task_type = 'avatar')");
             }
+            // 工作流任务轮询：内置调度任务（新库初始化与老库升级均需保障存在，每 5 秒一次）
+            stmt.execute("INSERT INTO scheduled_tasks (task_name, task_type, cron_expression, enabled, description, builtin) " +
+                    "SELECT 'Workflow Task Poll', 'workflowTaskPoll', '0/5 * * * * *', 1, 'Poll pending workflow tasks every 5 seconds', 1 " +
+                    "WHERE NOT EXISTS (SELECT 1 FROM scheduled_tasks WHERE task_type = 'workflowTaskPoll')");
 
             long accountCount = countTableRows(stmt, "accounts");
             if (accountCount == 0) {

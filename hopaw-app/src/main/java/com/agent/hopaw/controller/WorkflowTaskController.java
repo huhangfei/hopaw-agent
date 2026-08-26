@@ -56,6 +56,33 @@ public class WorkflowTaskController {
         return ResponseBean.success(result);
     }
 
+    // 任务分页列表（表格视图：所有状态含已关闭，按创建时间倒序）
+    @GetMapping("/api/workflow/tasks/page")
+    @ResponseBody
+    public ResponseBean getTasksPage(HttpServletRequest request,
+            @RequestParam(required = false, defaultValue = "1") int page,
+            @RequestParam(required = false, defaultValue = "15") int size,
+            @RequestParam(required = false) String keyword,
+            @RequestParam(required = false) String status,
+            @RequestParam(required = false) Long projectId,
+            @RequestParam(required = false) Long agentId) {
+        String userId = CurrentUser.require(request);
+        if (page < 1) {
+            page = 1;
+        }
+        if (size < 1 || size > 100) {
+            size = 15;
+        }
+        List<WorkflowTask> tasks = taskService.getTasksPage(userId, keyword, status, projectId, agentId, page, size);
+        int total = taskService.countTasks(userId, keyword, status, projectId, agentId);
+        Map<String, Object> result = new LinkedHashMap<>();
+        result.put("list", tasks);
+        result.put("total", total);
+        result.put("page", page);
+        result.put("size", size);
+        return ResponseBean.success(result);
+    }
+
     // 任务详情
     @GetMapping("/api/workflow/tasks/{id}")
     @ResponseBody

@@ -107,7 +107,7 @@
         <if test="agentId != null">
             AND t.agent_id = #{agentId}
         </if>
-        ORDER BY t.id DESC
+        ORDER BY t.create_time DESC, t.id DESC
         LIMIT #{size} OFFSET #{offset}
     </select>
 
