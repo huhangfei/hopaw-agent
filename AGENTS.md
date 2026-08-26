@@ -69,6 +69,8 @@ See `.trae/skills/agenttool-develop-install/SKILL.md` for full plugin developmen
 
 - SQLite database: `agent.db` in project root (auto-created)
 - Plugin directory: `plugins/`
+- Attachment directory: `attachments/` (config: `hopaw.attachment.dir`)
+- Project space directory: `project-spaces/` (config: `hopaw.project.space.dir`) — each project gets a subdir by project ID as its workspace; task execution prompts restrict file ops to within the project's space
 - Profiles: `dev` (default, DEBUG logging), `prod` (INFO logging)
 - Config: `hopaw-app/src/main/resources/application.properties`
 - Dev-specific: `application-dev.properties` (not committed — see `.gitignore`)
@@ -98,5 +100,5 @@ See `hopaw-plugin-repo/DOCKER.md` for full deployment guide.
 
 - `hopaw-tool-webpage` module is **commented out** in root `pom.xml` (not built)
 - `application-dev.properties` is gitignored — won't be in repo
-- `agent.db`, `plugins/`, `plugin-packages/`, `skills/`, `uploads/` are all gitignored runtime artifacts
+- `agent.db`, `plugins/`, `plugin-packages/`, `skills/`, `uploads/`, `attachments/`, `project-spaces/` are all gitignored runtime artifacts
 - Java compiler plugin sets source/target to 16, but project property is Java 17 — trust `java.version=17` in pom.xml properties

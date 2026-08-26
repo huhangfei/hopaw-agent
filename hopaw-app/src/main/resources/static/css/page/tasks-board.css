@@ -20,16 +20,12 @@
 .tasks-board-header h2 {
     font-size: 20px;
     color: #333;
+    margin: 0;
+    white-space: nowrap;
 }
 
-/* 标题行：倒计时按钮紧跟标题 */
-.tasks-board-title {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-}
-
-.tasks-board-toolbar {
+/* 筛选区：搜索条件在前，紧跟刷新按钮与自动刷新倒计时 */
+.tasks-board-filters {
     display: flex;
     align-items: center;
     gap: 12px;
@@ -65,6 +61,44 @@
     font-size: 14px;
     transition: background 0.2s;
     white-space: nowrap;
+    margin-left: auto;
+}
+
+/* 刷新按钮：位于筛选条件之后 */
+.btn-board-refresh {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 14px;
+    border: 1px solid rgba(102, 126, 234, 0.35);
+    border-radius: 8px;
+    background: #fff;
+    color: #667eea;
+    font-size: 14px;
+    cursor: pointer;
+    transition: background 0.2s, border-color 0.2s;
+    white-space: nowrap;
+}
+
+.btn-board-refresh:hover:not(:disabled) {
+    background: rgba(102, 126, 234, 0.08);
+    border-color: #667eea;
+}
+
+.btn-board-refresh:disabled {
+    cursor: not-allowed;
+    opacity: 0.7;
+}
+
+.btn-board-refresh .refresh-icon {
+    width: 15px;
+    height: 15px;
+    flex-shrink: 0;
+}
+
+/* 刷新中：图标旋转 */
+.btn-board-refresh.refreshing .refresh-icon {
+    animation: refresh-spin 0.8s linear infinite;
 }
 
 .btn-add-task:hover {
@@ -89,15 +123,6 @@
     user-select: none;
 }
 
-/* 刷新中状态：旋转图标动画 */
-.board-refresh-countdown .refresh-spinner {
-    width: 12px;
-    height: 12px;
-    margin-right: 5px;
-    flex-shrink: 0;
-    animation: refresh-spin 0.8s linear infinite;
-}
-
 @keyframes refresh-spin {
     from { transform: rotate(0deg); }
     to { transform: rotate(360deg); }
@@ -113,8 +138,8 @@
 }
 
 .board-column {
-    flex: 0 0 220px;
-    min-width: 220px;
+    flex: 1 1 0;
+    min-width: 170px;
     background: #f8f9fa;
     border-radius: 8px;
     display: flex;
@@ -207,8 +232,33 @@
     transition: all 0.2s;
 }
 
-.task-card:hover .task-card-delete {
+/* 编辑按钮：位于删除按钮左侧 */
+.task-card-edit {
+    position: absolute;
+    top: 8px;
+    right: 38px;
+    width: 24px;
+    height: 24px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: none;
+    border-radius: 4px;
+    background: transparent;
+    color: #bbb;
+    cursor: pointer;
+    opacity: 0;
+    transition: all 0.2s;
+}
+
+.task-card:hover .task-card-delete,
+.task-card:hover .task-card-edit {
     opacity: 1;
+}
+
+.task-card-edit:hover {
+    background: rgba(102, 126, 234, 0.12);
+    color: #667eea;
 }
 
 .task-card-delete:hover {
@@ -382,6 +432,16 @@ body.dark-theme .board-filter-select:focus {
     border-color: #8ba3ff;
 }
 
+body.dark-theme .btn-board-refresh {
+    background: #2d2d44;
+    border-color: rgba(139, 163, 255, 0.4);
+    color: #8ba3ff;
+}
+
+body.dark-theme .btn-board-refresh:hover:not(:disabled) {
+    border-color: #8ba3ff;
+}
+
 body.dark-theme .btn-add-task {
     background: #5a6fd6;
 }
@@ -417,6 +477,15 @@ body.dark-theme .task-card {
 body.dark-theme .task-card:hover {
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
     border-color: #3d3d6b;
+}
+
+body.dark-theme .task-card-edit {
+    color: #666;
+}
+
+body.dark-theme .task-card-edit:hover {
+    background: rgba(139, 163, 255, 0.15);
+    color: #8ba3ff;
 }
 
 body.dark-theme .task-card-delete {

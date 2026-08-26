@@ -869,7 +869,8 @@ function renderLogsByFilter() {
 function renderLogDetail(detail) {
     if (!detail) return '';
     if (typeof marked !== 'undefined' && marked.parse) {
-        return marked.parse(detail);
+        // breaks:true 保留单换行（日志内容多为按行分段的清单文本，与聊天页 index.js 的渲染行为保持一致）
+        return marked.parse(detail, { breaks: true, gfm: true });
     }
     return escapeHtml(detail);
 }

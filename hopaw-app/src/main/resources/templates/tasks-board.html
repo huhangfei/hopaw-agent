@@ -10,22 +10,24 @@
 
 <main layout:fragment="content" class="tasks-board-container">
     <div class="tasks-board-header">
-        <div class="tasks-board-title">
-            <h2>任务看板</h2>
-            <span class="board-refresh-countdown" id="refreshCountdown" title="每 5 秒自动刷新看板">5s 后刷新</span>
-        </div>
-        <div class="tasks-board-toolbar">
+        <h2>任务看板</h2>
+        <div class="tasks-board-filters">
             <select id="boardProjectFilter" class="board-filter-select" onchange="doSearch()">
                 <option value="">全部项目</option>
             </select>
             <select id="boardAgentFilter" class="board-filter-select" onchange="doSearch()">
                 <option value="">全部智能体</option>
             </select>
-            <button class="btn-add-task" onclick="showAddTaskModal()">
-                <svg viewBox="0 0 24 24" fill="currentColor"><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/></svg>
-                新建任务
+            <button type="button" class="btn-board-refresh" id="boardRefreshBtn" onclick="manualRefreshBoard()" title="刷新看板">
+                <svg class="refresh-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
+                <span class="refresh-label">刷新</span>
             </button>
+            <span class="board-refresh-countdown" id="refreshCountdown" title="每 5 秒自动刷新看板">5s 后刷新</span>
         </div>
+        <button class="btn-add-task" onclick="showAddTaskModal()">
+            <svg viewBox="0 0 24 24" fill="currentColor"><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/></svg>
+            新建任务
+        </button>
     </div>
 
     <div class="tasks-board-columns" id="tasksBoardColumns"></div>

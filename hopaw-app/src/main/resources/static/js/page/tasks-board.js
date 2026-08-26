@@ -57,20 +57,17 @@ function doSearch() {
 
 /* ========== 5 秒自动刷新倒计时 ========== */
 var isBoardRefreshing = false;
-var REFRESH_SPINNER_SVG = '<svg class="refresh-spinner" viewBox="0 0 24 24" fill="none">'
-    + '<circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="3" stroke-dasharray="42" stroke-dashoffset="28" stroke-linecap="round"/>'
-    + '</svg>';
 
 function startRefreshCountdown() {
     refreshLastTickAt = Date.now();
     updateRefreshCountdownText();
     setInterval(function () {
-        // 刷新进行中：暂停倒计时，避免动画被文本覆盖
+        // 刷新进行中：暂停倒计时
         if (isBoardRefreshing) return;
         var elapsed = Math.floor((Date.now() - refreshLastTickAt) / 1000);
         var remaining = REFRESH_INTERVAL_SEC - elapsed;
         if (remaining <= 0) {
-            // 倒计时归零：刷新看板（带刷新中动画），完成后重置计时基准
+            // 倒计时归零：刷新看板（按钮进入刷新中状态），完成后重置计时基准
             triggerAutoRefresh();
             return;
         }
@@ -78,7 +75,7 @@ function startRefreshCountdown() {
     }, 1000);
 }
 
-/** 倒计时归零触发的自动刷新：刷新期间显示动画，完成后恢复倒计时 */
+/** 倒计时归零触发的自动刷新：刷新期间按钮显示动画，完成后恢复倒计时 */
 function triggerAutoRefresh() {
     isBoardRefreshing = true;
     setRefreshingState(true);
@@ -90,15 +87,26 @@ function triggerAutoRefresh() {
     });
 }
 
-/** 切换刷新中状态：显示旋转图标 + "刷新中"文案 */
+/** 手动点击刷新按钮：与自动刷新共用同一流程 */
+function manualRefreshBoard() {
+    if (isBoardRefreshing) return;
+    triggerAutoRefresh();
+}
+
+/** 切换刷新中状态：刷新按钮图标旋转 + "刷新中"文案，倒计时暂时隐藏 */
 function setRefreshingState(refreshing) {
-    var el = document.getElementById('refreshCountdown');
-    if (!el) return;
-    if (refreshing) {
-        el.classList.add('refreshing');
-        el.innerHTML = REFRESH_SPINNER_SVG + '<span>刷新中…</span>';
-    } else {
-        el.classList.remove('refreshing');
+    var btn = document.getElementById('boardRefreshBtn');
+    if (btn) {
+        btn.classList.toggle('refreshing', refreshing);
+        btn.disabled = refreshing;
+        var label = btn.querySelector('.refresh-label');
+        if (label) {
+            label.textContent = refreshing ? '刷新中' : '刷新';
+        }
+    }
+    var countdown = document.getElementById('refreshCountdown');
+    if (countdown) {
+        countdown.style.visibility = refreshing ? 'hidden' : 'visible';
     }
 }
 
@@ -191,9 +199,15 @@ function renderTaskCard(task) {
           '</div>'
         : '';
 
-    // 处理中的任务不显示删除按钮
-    var deleteBtnHtml = task.status !== 'processing'
-        ? '<button class="task-card-delete" onclick="event.stopPropagation(); deleteTask(' + task.id + ')" title="删除任务">' +
+    // 处理中的任务不显示编辑、删除按钮
+    var actionBtnsHtml = task.status !== 'processing'
+        ? '<button class="task-card-edit" onclick="event.stopPropagation(); showEditTaskModal(' + task.id + ')" title="编辑任务">' +
+            '<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">' +
+                '<path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>' +
+                '<path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>' +
+            '</svg>' +
+          '</button>' +
+          '<button class="task-card-delete" onclick="event.stopPropagation(); deleteTask(' + task.id + ')" title="删除任务">' +
             '<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">' +
                 '<polyline points="3 6 5 6 21 6"/>' +
                 '<path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>' +
@@ -202,7 +216,7 @@ function renderTaskCard(task) {
         : '';
 
     return '<div class="task-card" onclick="window.open(\'/tasks-board/' + task.id + '\', \'_blank\', \'width=900,height=700\')">' +
-        deleteBtnHtml +
+        actionBtnsHtml +
         '<div class="task-card-title">' + escapeHtml(title) + '</div>' +
         '<div class="task-card-agent">' +
             '<svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="7" width="18" height="13" rx="2"/><circle cx="8" cy="12" r="1.5" fill="currentColor"/><circle cx="16" cy="12" r="1.5" fill="currentColor"/></svg>' +

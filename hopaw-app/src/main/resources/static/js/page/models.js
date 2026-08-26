@@ -288,6 +288,32 @@ function closeModelModal() {
     Modal.close('modelModal');
 }
 
+/* ========== 保存模型 loading 遮罩 ========== */
+var MODEL_SAVING_OVERLAY_ID = 'modelSavingOverlay';
+
+/** 显示全屏遮罩：保存后端会自动检测能力并验证模型，耗时较长 */
+function showModelSavingOverlay() {
+    hideModelSavingOverlay();
+    var overlay = document.createElement('div');
+    overlay.id = MODEL_SAVING_OVERLAY_ID;
+    overlay.className = 'model-saving-overlay';
+    overlay.innerHTML =
+        '<div class="model-saving-card">' +
+            '<div class="model-saving-spinner"></div>' +
+            '<div class="model-saving-text">正在保存模型…</div>' +
+            '<div class="model-saving-hint">保存后将自动检测能力并验证模型，可能需要一些时间</div>' +
+        '</div>';
+    document.body.appendChild(overlay);
+}
+
+/** 移除遮罩 */
+function hideModelSavingOverlay() {
+    var overlay = document.getElementById(MODEL_SAVING_OVERLAY_ID);
+    if (overlay) {
+        overlay.remove();
+    }
+}
+
 function submitModel() {
     const modelName = document.getElementById('modelName').value.trim();
 
@@ -295,13 +321,13 @@ function submitModel() {
         showToast('请输入模型名称', 'error');
         return;
     }
-    
+
     const data = {
         providerId: parseInt(document.getElementById('modelProviderId').value),
         modelName: modelName,
         extParams: document.getElementById('modelExtParams').value.trim() || null
     };
-    
+
     let url, method;
     if (currentModelId) {
         url = '/api/models/' + currentModelId;
@@ -311,7 +337,8 @@ function submitModel() {
         url = '/api/models';
         method = 'POST';
     }
-    
+
+    showModelSavingOverlay();
     fetch(url, {
         method: method,
         headers: {
@@ -336,6 +363,9 @@ function submitModel() {
     .catch(error => {
         console.error('请求失败:', error);
         showToast('请求失败', 'error');
+    })
+    .finally(function() {
+        hideModelSavingOverlay();
     });
 }
 

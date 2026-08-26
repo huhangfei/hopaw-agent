@@ -591,7 +591,7 @@ public class AgentExecutor implements IAgentExecutor {
                 logger.warn("MCP configs found but no client was created, proceeding without MCP tools");
             }
         }
-        ChatModelListener chatModelListener = chatModelListenerProvider.getChatModelListener(AiModelCallSourceEnum.Chat, sessionId, userId, agentId);
+        ChatModelListener chatModelListener = chatModelListenerProvider.getChatModelListener(agentExecutorParams.getBizType().getAiModelCallSourceEnum(), sessionId, userId, agentId);
         StreamingChatModel streamingModel = aiModelService.createStreamingChatModel(agentExecutorParams.getAiModelId(), agentExecutorParams.getEnableThinking(), chatModelListener);
         return aiBuilder.streamingChatModel(streamingModel).build();
     }

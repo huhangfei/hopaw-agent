@@ -95,6 +95,10 @@ public class WorkflowTaskService implements IWorkflowTaskService {
         if (!userId.equals(existing.getUserId())) {
             throw new RuntimeException("无权修改该任务");
         }
+        // 处理中的任务不允许编辑，避免执行中的指令被篡改
+        if (TaskStatusEnum.PROCESSING.getCode().equals(existing.getStatus())) {
+            throw new RuntimeException("处理中的任务不允许编辑");
+        }
         existing.setTitle(task.getTitle());
         existing.setContent(task.getContent());
         if (task.getProjectId() != null) {
