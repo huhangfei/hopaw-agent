@@ -123,7 +123,7 @@ function saveSettings() {
 }
 
 function loadMemoryTaskStatus() {
-    fetch('/api/tasks/type/longTermMemory')
+    fetch('/api/scheduled-tasks/type/longTermMemory')
         .then(function(r) { return r.json(); })
         .then(function(resp) {
             if (resp.msg !== 'success' || !resp.data) {
@@ -163,7 +163,7 @@ function toggleMemoryTask() {
 
     showConfirm('确定要' + action + '记忆整理定时任务吗？').then(function(confirmed) {
         if (!confirmed) return;
-        fetch('/api/tasks/' + taskId + '/enabled', {
+        fetch('/api/scheduled-tasks/' + taskId + '/enabled', {
             method: 'PUT',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ enabled: newEnabled })

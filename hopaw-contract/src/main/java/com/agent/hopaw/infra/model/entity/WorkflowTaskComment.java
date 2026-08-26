@@ -19,6 +19,8 @@ public class WorkflowTaskComment {
     private LocalDateTime createTime;
     /** 处理状态：pending=待处理 / processed=已处理，见 TaskCommentStatusEnum */
     private String status;
+    /** 评论者名称（非持久字段，查询时 JOIN 联查：智能体名称或用户昵称） */
+    private String commenterName;
 
     public Long getId() {
         return id;
@@ -90,5 +92,13 @@ public class WorkflowTaskComment {
 
     public void setStatus(String status) {
         this.status = status;
+    }
+
+    public String getCommenterName() {
+        return commenterName;
+    }
+
+    public void setCommenterName(String commenterName) {
+        this.commenterName = commenterName;
     }
 }

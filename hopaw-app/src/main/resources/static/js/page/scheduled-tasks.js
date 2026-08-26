@@ -11,7 +11,7 @@ function setupToggle() {
 }
 
 function loadTasks() {
-    fetch('/api/tasks')
+    fetch('/api/scheduled-tasks')
         .then(function(r) { return r.json(); })
         .then(function(resp) {
             if (resp.msg !== 'success') return;
@@ -76,7 +76,7 @@ function showAddModal() {
 }
 
 function showEditModal(id) {
-    fetch('/api/tasks/' + id)
+    fetch('/api/scheduled-tasks/' + id)
         .then(function(r) { return r.json(); })
         .then(function(resp) {
             if (resp.msg !== 'success' || !resp.data) {
@@ -133,7 +133,7 @@ function submitTask() {
         builtin: builtin
     });
 
-    var url = id ? '/api/tasks/' + id : '/api/tasks';
+    var url = id ? '/api/scheduled-tasks/' + id : '/api/scheduled-tasks';
     var method = id ? 'PUT' : 'POST';
 
     fetch(url, {
@@ -159,7 +159,7 @@ function submitTask() {
 function deleteTask(id) {
     showConfirm('确定要删除此定时任务吗？').then(function(confirmed) {
         if (!confirmed) return;
-        fetch('/api/tasks/' + id, { method: 'DELETE' })
+        fetch('/api/scheduled-tasks/' + id, { method: 'DELETE' })
             .then(function(r) { return r.json(); })
             .then(function(resp) {
                 if (resp.msg === 'success') {
@@ -180,7 +180,7 @@ function toggleTask(id, currentEnabled) {
     var action = newEnabled === 1 ? '启用' : '禁用';
     showConfirm('确定要' + action + '此定时任务吗？').then(function(confirmed) {
         if (!confirmed) return;
-        fetch('/api/tasks/' + id)
+        fetch('/api/scheduled-tasks/' + id)
             .then(function(r) { return r.json(); })
             .then(function(resp) {
                 if (resp.msg !== 'success' || !resp.data) {
@@ -189,7 +189,7 @@ function toggleTask(id, currentEnabled) {
                 }
                 var task = resp.data;
                 task.enabled = newEnabled;
-                return fetch('/api/tasks/' + id, {
+                return fetch('/api/scheduled-tasks/' + id, {
                     method: 'PUT',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify(task)

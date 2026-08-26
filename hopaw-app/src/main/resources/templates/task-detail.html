@@ -52,6 +52,15 @@
         </div>
     </div>
 
+    <!-- 前置任务：展示关联的前置任务、当前状态及是否满足要求；无前置任务时隐藏 -->
+    <div class="task-detail-section task-detail-preconditions" id="taskDetailPreconditions" style="display: none;">
+        <h3 class="task-detail-section-title">
+            前置任务
+            <span class="precondition-summary" id="preconditionSummary"></span>
+        </h3>
+        <div class="precondition-list" id="preconditionList"></div>
+    </div>
+
     <div class="task-detail-section">
         <h3 class="task-detail-section-title">任务内容</h3>
         <div class="task-detail-content" id="taskDetailContent"></div>

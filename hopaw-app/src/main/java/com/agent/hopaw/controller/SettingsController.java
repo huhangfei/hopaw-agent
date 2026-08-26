@@ -35,6 +35,7 @@ public class SettingsController {
         put("plugin-store", new String[] {"/js/page/settings-plugin-store.js", null});
         put("account",      new String[] {"/js/page/settings-account.js", null});
         put("backup",       new String[] {"/js/page/settings-backup.js", null});
+        put("scheduled-tasks", new String[] {"/js/page/scheduled-tasks.js", "/css/page/scheduled-tasks.css"});
     }};
 
     private final MailUtil mailUtil;

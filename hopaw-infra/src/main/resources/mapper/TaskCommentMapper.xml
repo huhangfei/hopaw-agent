@@ -12,10 +12,12 @@
         <result property="commentType" column="comment_type"/>
         <result property="createTime" column="create_time"/>
         <result property="status" column="status"/>
+        <result property="commenterName" column="commenter_name"/>
     </resultMap>
 
     <sql id="allColumns">
-        id, task_id, content, user_id, commenter_type, commenter_id, comment_type, create_time, status
+        c.id, c.task_id, c.content, c.user_id, c.commenter_type, c.commenter_id, c.comment_type, c.create_time, c.status,
+        CASE WHEN c.commenter_type = 'agent' THEN ag.name ELSE COALESCE(ac.nickname, ac.username) END AS commenter_name
     </sql>
 
     <insert id="insert" parameterType="com.agent.hopaw.infra.model.entity.WorkflowTaskComment">
@@ -32,23 +34,29 @@
 
     <select id="findById" resultMap="TaskCommentResultMap">
         SELECT <include refid="allColumns"/>
-        FROM task_comments
-        WHERE id = #{id}
+        FROM task_comments c
+        LEFT JOIN agents ag ON c.commenter_type = 'agent' AND c.commenter_id = CAST(ag.id AS TEXT)
+        LEFT JOIN accounts ac ON (c.commenter_type IS NULL OR c.commenter_type != 'agent') AND c.commenter_id = ac.user_id
+        WHERE c.id = #{id}
     </select>
 
     <select id="findByTaskId" resultMap="TaskCommentResultMap">
         SELECT <include refid="allColumns"/>
-        FROM task_comments
-        WHERE task_id = #{taskId}
-        ORDER BY create_time ASC
+        FROM task_comments c
+        LEFT JOIN agents ag ON c.commenter_type = 'agent' AND c.commenter_id = CAST(ag.id AS TEXT)
+        LEFT JOIN accounts ac ON (c.commenter_type IS NULL OR c.commenter_type != 'agent') AND c.commenter_id = ac.user_id
+        WHERE c.task_id = #{taskId}
+        ORDER BY c.create_time ASC
     </select>
 
     <select id="findByTaskIdAndStatus" resultMap="TaskCommentResultMap">
         SELECT <include refid="allColumns"/>
-        FROM task_comments
-        WHERE task_id = #{taskId}
-          AND status = #{status}
-        ORDER BY create_time ASC
+        FROM task_comments c
+        LEFT JOIN agents ag ON c.commenter_type = 'agent' AND c.commenter_id = CAST(ag.id AS TEXT)
+        LEFT JOIN accounts ac ON (c.commenter_type IS NULL OR c.commenter_type != 'agent') AND c.commenter_id = ac.user_id
+        WHERE c.task_id = #{taskId}
+          AND c.status = #{status}
+        ORDER BY c.create_time ASC
     </select>
 
     <update id="updateStatusByIds">

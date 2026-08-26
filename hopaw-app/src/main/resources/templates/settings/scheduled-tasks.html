@@ -1,18 +1,8 @@
-<!DOCTYPE html>
-<html xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
-      xmlns:th="http://www.thymeleaf.org"
-      layout:decorate="~{layouts/default}">
-<head>
-    <title>定时任务管理 - HoPaw</title>
-</head>
-<body>
-<div layout:fragment="pageTitle">🤖 HoPaw - 定时任务管理</div>
-
-<main layout:fragment="content" class="tasks-container">
-    <div class="tasks-header">
-        <h2>定时任务管理</h2>
+<th:block th:fragment="content" xmlns:th="http://www.thymeleaf.org">
+<div class="settings-panel active" id="tab-scheduled-tasks">
+    <div class="scheduled-tasks-toolbar">
+        <button class="btn-save-settings" onclick="showAddModal()">添加任务</button>
     </div>
-
     <div class="tasks-card">
         <table class="tasks-table">
             <thead>
@@ -81,14 +71,5 @@
             </div>
         </div>
     </div>
-</main>
-
-<th:block layout:fragment="extraCss">
-    <link rel="stylesheet" th:href="@{/css/page/tasks.css}">
+</div>
 </th:block>
-
-<th:block layout:fragment="extraScripts">
-    <script th:src="@{/js/page/tasks.js}"></script>
-</th:block>
-</body>
-</html>

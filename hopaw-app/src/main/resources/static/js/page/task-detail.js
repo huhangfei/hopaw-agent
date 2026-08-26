@@ -91,7 +91,75 @@ function renderTaskDetail(task) {
         contentEl.textContent = '暂无任务内容';
     }
 
+    renderPreconditions(task.preconditions || []);
     renderTaskActions(task);
+}
+
+/* ========== 前置任务展示 ========== */
+
+/** 判断单条前置条件是否满足：前置任务当前状态命中任一要求状态即满足；前置任务已删除视为满足（与后端调度逻辑一致） */
+function isPreconditionSatisfied(pc) {
+    if (!pc.preTaskStatus) return true;
+    var required = (pc.requiredStatus || '').split(',').map(function (s) { return s.trim(); }).filter(Boolean);
+    return required.indexOf(pc.preTaskStatus) !== -1;
+}
+
+/** 渲染前置任务列表：每条展示前置任务标题、当前状态、要求状态及满足与否；无前置任务时隐藏区块 */
+function renderPreconditions(preconditions) {
+    var sectionEl = document.getElementById('taskDetailPreconditions');
+    var listEl = document.getElementById('preconditionList');
+    var summaryEl = document.getElementById('preconditionSummary');
+
+    if (!preconditions.length) {
+        sectionEl.style.display = 'none';
+        return;
+    }
+
+    var satisfiedCount = 0;
+    var html = preconditions.map(function (pc) {
+        var satisfied = isPreconditionSatisfied(pc);
+        if (satisfied) satisfiedCount++;
+
+        // 前置任务当前状态徽标（已删除的前置任务显示占位）
+        var statusInfo = statusMap[pc.preTaskStatus];
+        var statusBadge;
+        if (pc.preTaskStatus && statusInfo) {
+            statusBadge = '<span class="pc-status-tag" style="background:' + statusInfo.color + '">' + statusInfo.label + '</span>';
+        } else {
+            statusBadge = '<span class="pc-status-tag pc-status-deleted">已删除</span>';
+        }
+
+        // 要求状态标签组（多选）
+        var required = (pc.requiredStatus || '').split(',').map(function (s) { return s.trim(); }).filter(Boolean);
+        var requiredHtml = required.map(function (code) {
+            var info = statusMap[code];
+            return '<span class="pc-required-tag' + (code === pc.preTaskStatus ? ' pc-required-hit' : '') + '">' +
+                (info ? info.label : code) + '</span>';
+        }).join('');
+
+        var title = pc.preTaskTitle ? escapeHtml(pc.preTaskTitle) : ('前置任务 #' + pc.preTaskId);
+
+        return '<div class="pc-item' + (satisfied ? ' pc-item-satisfied' : ' pc-item-unsatisfied') + '">' +
+            '<div class="pc-item-head">' +
+                '<a class="pc-task-link" href="/tasks-board/' + pc.preTaskId + '" target="_blank" title="查看前置任务详情">' +
+                    '#' + pc.preTaskId + ' ' + title +
+                '</a>' +
+                statusBadge +
+                '<span class="pc-satisfied-badge' + (satisfied ? ' pc-satisfied-yes' : ' pc-satisfied-no') + '">' +
+                    (satisfied ? '✓ 已满足' : '✗ 未满足') +
+                '</span>' +
+            '</div>' +
+            '<div class="pc-item-required">' +
+                '<span class="pc-required-label">要求状态：</span>' +
+                (requiredHtml || '<span class="pc-required-none">未设置</span>') +
+            '</div>' +
+        '</div>';
+    }).join('');
+
+    listEl.innerHTML = html;
+    summaryEl.textContent = satisfiedCount + '/' + preconditions.length + ' 已满足';
+    summaryEl.className = 'precondition-summary' + (satisfiedCount === preconditions.length ? ' all-satisfied' : '');
+    sectionEl.style.display = 'block';
 }
 
 function renderTaskActions(task) {
@@ -218,13 +286,15 @@ function renderComments(comments) {
         var isAgent = c.commenterType === 'agent';
         var roleLabel = isAgent ? '智能体' : '用户';
         var roleClass = isAgent ? 'comment-item-agent' : 'comment-item-user';
-        var who = isAgent ? (c.commenterId || '智能体') : (c.userId || '匿名');
+        // 评论者名称：优先用联查出的名称（智能体名/用户昵称），缺失时回退到ID
+        var fallbackName = isAgent ? (c.commenterId ? '智能体#' + c.commenterId : '智能体') : (c.userId || '匿名');
+        var who = c.commenterName || fallbackName;
         var isSummary = c.commentType === 'summary';
         return '<div class="comment-item ' + roleClass + (isSummary ? ' comment-item-summary' : '') + '">' +
             '<div class="comment-item-header">' +
                 '<span class="comment-item-user">' + escapeHtml(roleLabel + ' · ' + who) + '</span>' +
-                (isSummary ? '<span class="comment-summary-badge">总结</span>' : '') +
                 '<span class="comment-item-time">' + escapeHtml(formatTime(c.createTime)) + '</span>' +
+                (isSummary ? '<span class="comment-summary-badge">总结</span>' : '') +
             '</div>' +
             '<div class="comment-item-content">' + escapeHtml(c.content || '') + '</div>' +
         '</div>';
