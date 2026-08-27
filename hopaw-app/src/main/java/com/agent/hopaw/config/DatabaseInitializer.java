@@ -352,8 +352,8 @@ public class DatabaseInitializer implements CommandLineRunner {
                     "description TEXT, " +
                     "status TEXT DEFAULT 'active', " +
                     "user_id TEXT NOT NULL, " +
-                    "create_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP, " +
-                    "update_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP" +
+                    "create_time TIMESTAMP DEFAULT (datetime('now','localtime')), " +
+                    "update_time TIMESTAMP DEFAULT (datetime('now','localtime'))" +
                     ")");
             stmt.execute("CREATE INDEX IF NOT EXISTS idx_projects_user ON projects(user_id)");
             // 项目空间目录（增量加列）
@@ -371,8 +371,8 @@ public class DatabaseInitializer implements CommandLineRunner {
                     "execution_period INTEGER, " +
                     "reject_reason TEXT, " +
                     "user_id TEXT NOT NULL, " +
-                    "create_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP, " +
-                    "update_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP" +
+                    "create_time TIMESTAMP DEFAULT (datetime('now','localtime')), " +
+                    "update_time TIMESTAMP DEFAULT (datetime('now','localtime'))" +
                     ")");
             stmt.execute("CREATE INDEX IF NOT EXISTS idx_workflow_tasks_user ON workflow_tasks(user_id)");
             stmt.execute("CREATE INDEX IF NOT EXISTS idx_workflow_tasks_status ON workflow_tasks(status)");
@@ -384,7 +384,7 @@ public class DatabaseInitializer implements CommandLineRunner {
                     "task_id INTEGER NOT NULL, " +
                     "pre_task_id INTEGER NOT NULL, " +
                     "required_status TEXT NOT NULL, " +
-                    "create_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP" +
+                    "create_time TIMESTAMP DEFAULT (datetime('now','localtime'))" +
                     ")");
             stmt.execute("CREATE INDEX IF NOT EXISTS idx_task_preconditions_task ON workflow_task_preconditions(task_id)");
             stmt.execute("CREATE INDEX IF NOT EXISTS idx_task_preconditions_pre ON workflow_task_preconditions(pre_task_id)");
@@ -395,7 +395,7 @@ public class DatabaseInitializer implements CommandLineRunner {
                     "task_id INTEGER NOT NULL, " +
                     "content TEXT NOT NULL, " +
                     "user_id TEXT NOT NULL, " +
-                    "create_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP" +
+                    "create_time TIMESTAMP DEFAULT (datetime('now','localtime'))" +
                     ")");
             stmt.execute("CREATE INDEX IF NOT EXISTS idx_task_comments_task ON task_comments(task_id)");
             // 兼容旧库：task_comments 增量补充评论者身份字段
@@ -420,7 +420,7 @@ public class DatabaseInitializer implements CommandLineRunner {
                     "id INTEGER PRIMARY KEY AUTOINCREMENT, " +
                     "task_id INTEGER NOT NULL, " +
                     "session_id TEXT NOT NULL, " +
-                    "create_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP" +
+                    "create_time TIMESTAMP DEFAULT (datetime('now','localtime'))" +
                     ")");
             stmt.execute("CREATE INDEX IF NOT EXISTS idx_task_sessions_task ON task_sessions(task_id)");
             stmt.execute("CREATE INDEX IF NOT EXISTS idx_task_sessions_session ON task_sessions(session_id)");
@@ -433,7 +433,7 @@ public class DatabaseInitializer implements CommandLineRunner {
                     "operator_name TEXT, " +
                     "action TEXT, " +
                     "detail TEXT, " +
-                    "create_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP" +
+                    "create_time TIMESTAMP DEFAULT (datetime('now','localtime'))" +
                     ")");
             stmt.execute("CREATE INDEX IF NOT EXISTS idx_project_logs_project ON project_logs(project_id)");
             // 兼容旧库：project_logs 增量补充日志类型字段，默认普通日志
@@ -443,8 +443,43 @@ public class DatabaseInitializer implements CommandLineRunner {
             // 兼容旧值迁移：keypoint/summary → important（项目日志类型与评论类型解耦）
             stmt.execute("UPDATE project_logs SET log_type = 'important' WHERE log_type IN ('keypoint', 'summary')");
 
+            // 一次性迁移：历史数据时间由 UTC 转本地时间
+            //（旧版 create_time/update_time 依赖 CURRENT_TIMESTAMP 默认值与 UPDATE 写入，SQLite 中均为 UTC）
+            migrateUtcTimeToLocal(stmt);
+
             log.info("Database tables created");
         }
+    }
+
+    /**
+     * 工作流相关表的历史时间数据迁移：UTC → 本地时间。
+     * 旧版所有 insert 依赖列默认值 CURRENT_TIMESTAMP（UTC）、update 用 CURRENT_TIMESTAMP，
+     * 导致界面显示时间少 8 小时；迁移后新写入已改为 datetime('now','localtime')。
+     * 通过 schema_migrations 标记表保证只执行一次。
+     */
+    private void migrateUtcTimeToLocal(Statement stmt) throws Exception {
+        stmt.execute("CREATE TABLE IF NOT EXISTS schema_migrations (" +
+                "name TEXT PRIMARY KEY, " +
+                "done_at TIMESTAMP DEFAULT (datetime('now','localtime'))" +
+                ")");
+        try (ResultSet rs = stmt.executeQuery(
+                "SELECT COUNT(*) FROM schema_migrations WHERE name = 'utc_time_to_local'")) {
+            if (rs.next() && rs.getInt(1) > 0) {
+                return;
+            }
+        }
+        stmt.execute("UPDATE projects SET " +
+                "create_time = datetime(create_time, 'localtime'), " +
+                "update_time = datetime(update_time, 'localtime')");
+        stmt.execute("UPDATE workflow_tasks SET " +
+                "create_time = datetime(create_time, 'localtime'), " +
+                "update_time = datetime(update_time, 'localtime')");
+        stmt.execute("UPDATE task_comments SET create_time = datetime(create_time, 'localtime')");
+        stmt.execute("UPDATE project_logs SET create_time = datetime(create_time, 'localtime')");
+        stmt.execute("UPDATE workflow_task_preconditions SET create_time = datetime(create_time, 'localtime')");
+        stmt.execute("UPDATE task_sessions SET create_time = datetime(create_time, 'localtime')");
+        stmt.execute("INSERT INTO schema_migrations (name) VALUES ('utc_time_to_local')");
+        log.info("Migrated UTC timestamps to local time for workflow tables");
     }
 
     private void initializeDefaultData() throws Exception {

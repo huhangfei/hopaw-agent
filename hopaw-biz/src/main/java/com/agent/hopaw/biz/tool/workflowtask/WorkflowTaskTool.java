@@ -346,7 +346,7 @@ public class WorkflowTaskTool implements AgentTool {
     @ToolSecurityLevel(ToolSecurityLevel.Level.SAFE)
     @Tool(value = {"添加任务评论", "向当前任务添加一条智能体评论，可用于记录处理细节或向用户提问。请通过 commentType 参数指明评论类型"}, searchBehavior = SearchBehavior.ALWAYS_VISIBLE)
     public String addWorkflowTaskComment(@P("评论内容：记录处理细节，或向用户提出的问题") String content,
-                                 @P(value = "评论类型：default=普通评论（用于日常记录、提问、进度说明等）；summary=总结评论（用于任务阶段总结、关键结论、最终交付摘要）。请根据评论内容选择对应类型", required = false) String commentType,
+                                 @P(value = "评论类型：summary=总结评论（用于任务阶段总结、关键结论、最终交付摘要）；default=普通评论（用于日常记录、提问、进度说明等）。请根据评论内容认真选择对应类型") String commentType,
                                  InvocationParameters invocationParameters) {
         InvocationParametersWrapper wrapper = InvocationParametersWrapper.create(invocationParameters);
         Long taskId = workflowTaskService.findTaskIdBySessionId(wrapper.getSessionId());

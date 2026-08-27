@@ -292,7 +292,7 @@ function closeModelModal() {
 var MODEL_SAVING_OVERLAY_ID = 'modelSavingOverlay';
 
 /** 显示全屏遮罩：保存后端会自动检测能力并验证模型，耗时较长 */
-function showModelSavingOverlay() {
+function showModelSavingOverlay(text, hint) {
     hideModelSavingOverlay();
     var overlay = document.createElement('div');
     overlay.id = MODEL_SAVING_OVERLAY_ID;
@@ -300,8 +300,8 @@ function showModelSavingOverlay() {
     overlay.innerHTML =
         '<div class="model-saving-card">' +
             '<div class="model-saving-spinner"></div>' +
-            '<div class="model-saving-text">正在保存模型…</div>' +
-            '<div class="model-saving-hint">保存后将自动检测能力并验证模型，可能需要一些时间</div>' +
+            '<div class="model-saving-text">' + (text || '正在保存模型…') + '</div>' +
+            '<div class="model-saving-hint">' + (hint || '保存后将自动检测能力并验证模型，可能需要一些时间') + '</div>' +
         '</div>';
     document.body.appendChild(overlay);
 }
@@ -370,7 +370,7 @@ function submitModel() {
 }
 
 function testModel(id) {
-    showToast('正在检测模型能力...', 'info');
+    showModelSavingOverlay('正在检测模型能力…', '将测试文本与图片能力，可能需要一些时间');
 
     fetch('/api/models/' + id + '/test', {
         method: 'POST'
@@ -383,6 +383,9 @@ function testModel(id) {
     .catch(error => {
         console.error('检测失败:', error);
         showToast('检测请求失败', 'error');
+    })
+    .finally(function() {
+        hideModelSavingOverlay();
     });
 }
 
@@ -412,6 +415,7 @@ function deleteModel(id) {
 // ==================== ExtParams View Toggle ====================
 
 var EXT_PARAMS_KEYS = [
+    { key: 'enableThinking', type: 'boolean', defaultTrue: true },
     { key: 'temperature', type: 'number' },
     { key: 'timeoutSeconds', type: 'number' },
     { key: 'reasoningEffort', type: 'text' },
@@ -474,7 +478,8 @@ function syncExtParamsToForm(target) {
 
         var val = obj[def.key];
         if (def.type === 'boolean') {
-            el.checked = val === true;
+            // 默认启用的开关：缺省视为 true
+            el.checked = def.defaultTrue ? val !== false : val === true;
         } else if (def.type === 'number') {
             el.value = (val !== undefined && val !== null) ? val : '';
         } else {
@@ -501,7 +506,10 @@ function syncFormToExtParams(target) {
         if (!el) return;
 
         if (def.type === 'boolean') {
-            if (el.checked) {
+            // 默认启用的开关：不勾选时显式写 false，保证关闭语义可持久化
+            if (def.defaultTrue) {
+                obj[def.key] = el.checked;
+            } else if (el.checked) {
                 obj[def.key] = true;
             } else {
                 delete obj[def.key];

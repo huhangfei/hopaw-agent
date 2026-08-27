@@ -88,7 +88,7 @@ public class AiModelService implements IAiModelService {
             aiModelVO.setAiModelProvider(provider);
             ChatModelFactory factory = factories.get(aiModelVO.getAiModelProvider().getSdkName().toLowerCase());
             ChatModelListener chatModelListener = chatModelListenerProvider.getChatModelListener(AiModelCallSourceEnum.ModelTest, null, null, null);
-            ChatModel chatModel = factory.createChatModel(aiModelVO, false, chatModelListener);
+            ChatModel chatModel = factory.createChatModel(aiModelVO, null, chatModelListener);
             ModelCapabilityTestResult result = factory.testModelCapability(chatModel);
 
             log.info("模型能力测试结果 [{}]: {}", aiModel.getModelName(), result.getMessage());
@@ -145,6 +145,7 @@ public class AiModelService implements IAiModelService {
 
     public String getDefaultAiModelExtParamsJson(){
         AiModelExtParams aiModelExtParams = new AiModelExtParams("reasoning_content", true, true, "high", 0.5, 30L, false, false,false);
+        aiModelExtParams.setEnableThinking(true);
         return JSON.toJSONString(aiModelExtParams);
     }
 

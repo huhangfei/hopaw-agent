@@ -881,6 +881,46 @@
     flex-wrap: wrap;
 }
 
+/* 日志条目操作按钮（改类型/删除）：默认隐藏，悬浮显示 */
+.log-item .log-actions {
+    margin-left: auto;
+    display: inline-flex;
+    gap: 4px;
+    opacity: 0;
+    transition: opacity 0.2s;
+}
+
+.log-item:hover .log-actions {
+    opacity: 1;
+}
+
+.log-item .log-action-btn {
+    width: 22px;
+    height: 22px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border: none;
+    border-radius: 4px;
+    background: transparent;
+    color: #999;
+    font-size: 13px;
+    line-height: 1;
+    cursor: pointer;
+    padding: 0;
+    transition: all 0.2s;
+}
+
+.log-item .log-btn-type:hover {
+    color: #f59e0b;
+    background: #fef3c7;
+}
+
+.log-item .log-btn-delete:hover {
+    color: #ef4444;
+    background: #fee2e2;
+}
+
 .log-item .log-action {
     font-size: 11px;
     color: #667eea;
@@ -1427,6 +1467,21 @@ body.dark-theme .log-item .log-important-badge {
 body.dark-theme .log-item .log-action {
     color: #8ba3ff;
     background: #2d3358;
+}
+
+/* 暗色主题：日志操作按钮 */
+body.dark-theme .log-item .log-action-btn {
+    color: #888;
+}
+
+body.dark-theme .log-item .log-btn-type:hover {
+    color: #fbbf24;
+    background: #3a2a10;
+}
+
+body.dark-theme .log-item .log-btn-delete:hover {
+    color: #f87171;
+    background: #3d1f1f;
 }
 
 body.dark-theme .log-item .log-detail {

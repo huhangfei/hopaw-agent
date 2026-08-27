@@ -76,6 +76,14 @@ public abstract class BaseChatModelFactory implements ChatModelFactory {
         return val != null ? (Boolean) val : false;
     }
 
+    /**
+     * 获取是否启用思考模式（模型级 extParams 优先，缺省回退 provider 级，均未配置时默认启用）
+     */
+    public Boolean getEnableThinking(AiModelVO aiModelVO) {
+        Object val = getExtParams(aiModelVO, "enableThinking");
+        return val != null ? (Boolean) val : true;
+    }
+
     private Object getExtParams(AiModelVO aiModelVO, String paramName) {
         if(aiModelVO.getExtParams()!=null){
             JSONObject jsonObject = JSON.parseObject(aiModelVO.getExtParams());

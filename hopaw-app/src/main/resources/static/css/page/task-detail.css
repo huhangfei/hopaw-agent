@@ -481,6 +481,46 @@ body {
     flex-shrink: 0;
 }
 
+/* 评论操作按钮（改类型/删除）：默认隐藏，悬浮评论时显示 */
+.comment-item-actions {
+    display: inline-flex;
+    gap: 4px;
+    flex-shrink: 0;
+    opacity: 0;
+    transition: opacity 0.2s;
+}
+
+.comment-item:hover .comment-item-actions {
+    opacity: 1;
+}
+
+.comment-action-btn {
+    width: 22px;
+    height: 22px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border: none;
+    border-radius: 4px;
+    background: transparent;
+    color: #999;
+    font-size: 13px;
+    line-height: 1;
+    cursor: pointer;
+    padding: 0;
+    transition: all 0.2s;
+}
+
+.comment-btn-type:hover {
+    color: #f59e0b;
+    background: #fef3c7;
+}
+
+.comment-btn-delete:hover {
+    color: #ef4444;
+    background: #fee2e2;
+}
+
 .comment-item-content {
     font-size: 13px;
     color: #555;
@@ -809,6 +849,21 @@ body.dark-theme .comment-summary-badge {
     background: #3a2a10;
     color: #fbbf24;
     border-color: #6b4e12;
+}
+
+/* 暗色主题：评论操作按钮 */
+body.dark-theme .comment-action-btn {
+    color: #888;
+}
+
+body.dark-theme .comment-btn-type:hover {
+    color: #fbbf24;
+    background: #3a2a10;
+}
+
+body.dark-theme .comment-btn-delete:hover {
+    color: #f87171;
+    background: #3d1f1f;
 }
 
 body.dark-theme .comment-item-content {

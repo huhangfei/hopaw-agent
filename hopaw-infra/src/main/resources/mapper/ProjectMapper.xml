@@ -18,8 +18,8 @@
     </sql>
 
     <insert id="insert" parameterType="com.agent.hopaw.infra.model.entity.Project">
-        INSERT INTO projects (name, description, status, user_id)
-        VALUES (#{name}, #{description}, #{status}, #{userId})
+        INSERT INTO projects (name, description, status, user_id, create_time, update_time)
+        VALUES (#{name}, #{description}, #{status}, #{userId}, datetime('now','localtime'), datetime('now','localtime'))
         <selectKey resultType="long" keyProperty="id" order="AFTER">
             SELECT last_insert_rowid()
         </selectKey>
@@ -30,21 +30,21 @@
         SET name = #{name},
             description = #{description},
             status = #{status},
-            update_time = CURRENT_TIMESTAMP
+            update_time = datetime('now','localtime')
         WHERE id = #{id}
     </update>
 
     <update id="updateStatus">
         UPDATE projects
         SET status = #{status},
-            update_time = CURRENT_TIMESTAMP
+            update_time = datetime('now','localtime')
         WHERE id = #{id}
     </update>
 
     <update id="updateSpaceDir">
         UPDATE projects
         SET space_dir = #{spaceDir},
-            update_time = CURRENT_TIMESTAMP
+            update_time = datetime('now','localtime')
         WHERE id = #{id}
     </update>
 

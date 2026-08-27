@@ -34,11 +34,25 @@ public class AesEncryptionUtil {
 
     private static SecretKey secretKey;
 
+    /** 实例密钥：通过 new AesEncryptionUtil(keyBytes) 指定（如备份导入时使用压缩包内旧密钥） */
+    private final SecretKey instanceKey;
+
     private final Path keyPath;
 
     public AesEncryptionUtil() {
         String home = System.getProperty("user.home");
         this.keyPath = Paths.get(home, ".hopaw", "encryption.key");
+        this.instanceKey = null;
+    }
+
+    /**
+     * 使用外部指定的密钥构造实例（不触发 @PostConstruct，不影响本机静态密钥）。
+     * 用于备份导入等场景：用备份包内的旧密钥解密历史密文。
+     */
+    public AesEncryptionUtil(byte[] keyBytes) {
+        String home = System.getProperty("user.home");
+        this.keyPath = Paths.get(home, ".hopaw", "encryption.key");
+        this.instanceKey = new SecretKeySpec(keyBytes, ALGORITHM);
     }
 
     @PostConstruct
@@ -112,9 +126,49 @@ public class AesEncryptionUtil {
     }
 
     /**
-     * 加密明文，返回带前缀的 Base64 密文
+     * 判断值是否为 {AES} 密文格式
+     */
+    public static boolean isEncrypted(String value) {
+        return value != null && value.startsWith(ENCRYPTED_PREFIX);
+    }
+
+    /**
+     * 加密明文，返回带前缀的 Base64 密文（使用本机密钥）
      */
     public static String encrypt(String plainText) {
+        return doEncrypt(plainText, secretKey);
+    }
+
+    /**
+     * 解密密文，如果未加密则原文返回（使用本机密钥）
+     */
+    public static String decrypt(String cipherText) {
+        return doDecrypt(cipherText, secretKey);
+    }
+
+    /**
+     * 使用实例密钥加密（配合 new AesEncryptionUtil(byte[] keyBytes) 使用）
+     */
+    public String encryptWith(String plainText) {
+        requireInstanceKey();
+        return doEncrypt(plainText, instanceKey);
+    }
+
+    /**
+     * 使用实例密钥解密（配合 new AesEncryptionUtil(byte[] keyBytes) 使用）
+     */
+    public String decryptWith(String cipherText) {
+        requireInstanceKey();
+        return doDecrypt(cipherText, instanceKey);
+    }
+
+    private void requireInstanceKey() {
+        if (instanceKey == null) {
+            throw new IllegalStateException("未指定实例密钥，请使用 AesEncryptionUtil(byte[] keyBytes) 构造");
+        }
+    }
+
+    private static String doEncrypt(String plainText, SecretKey key) {
         if (plainText == null || plainText.isBlank()) {
             return plainText;
         }
@@ -128,7 +182,7 @@ public class AesEncryptionUtil {
 
             Cipher cipher = Cipher.getInstance(TRANSFORMATION);
             GCMParameterSpec spec = new GCMParameterSpec(GCM_TAG_LENGTH, iv);
-            cipher.init(Cipher.ENCRYPT_MODE, secretKey, spec);
+            cipher.init(Cipher.ENCRYPT_MODE, key, spec);
 
             byte[] cipherText = cipher.doFinal(plainText.getBytes(java.nio.charset.StandardCharsets.UTF_8));
 
@@ -142,10 +196,7 @@ public class AesEncryptionUtil {
         }
     }
 
-    /**
-     * 解密密文，如果未加密则原文返回
-     */
-    public static String decrypt(String cipherText) {
+    private static String doDecrypt(String cipherText, SecretKey key) {
         if (cipherText == null || cipherText.isBlank()) {
             return cipherText;
         }
@@ -163,7 +214,7 @@ public class AesEncryptionUtil {
 
             Cipher cipher = Cipher.getInstance(TRANSFORMATION);
             GCMParameterSpec spec = new GCMParameterSpec(GCM_TAG_LENGTH, iv);
-            cipher.init(Cipher.DECRYPT_MODE, secretKey, spec);
+            cipher.init(Cipher.DECRYPT_MODE, key, spec);
 
             byte[] plainText = cipher.doFinal(encrypted);
             return new String(plainText, java.nio.charset.StandardCharsets.UTF_8);

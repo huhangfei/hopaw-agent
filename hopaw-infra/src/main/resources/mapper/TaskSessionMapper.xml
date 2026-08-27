@@ -15,8 +15,8 @@
     </sql>
 
     <insert id="insert">
-        INSERT INTO task_sessions (task_id, session_id)
-        VALUES (#{taskId}, #{sessionId})
+        INSERT INTO task_sessions (task_id, session_id, create_time)
+        VALUES (#{taskId}, #{sessionId}, datetime('now','localtime'))
     </insert>
 
     <select id="findByTaskId" resultMap="TaskSessionResultMap">

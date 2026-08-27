@@ -17,11 +17,15 @@ import java.util.Map;
 public class OpenAiChatModelFactory extends  BaseChatModelFactory {
 
     @Override
-    public ChatModel createChatModel(AiModelVO aiModel, boolean enableThinking, ChatModelListener monitoringService) {
+    public ChatModel createChatModel(AiModelVO aiModel, Boolean enableThinking, ChatModelListener monitoringService) {
         AiModelProvider aiModelProvider=aiModel.getAiModelProvider();
         Map<String, Object> extraParams = new HashMap<>(0);
+        if(enableThinking==null){
+            enableThinking=super.getEnableThinking(aiModel);
+        }
+        Boolean finalEnableThinking = enableThinking;
         extraParams.put("thinking",new HashMap(1){{
-            put("type", enableThinking ? "enabled" : "disabled");
+            put("type", finalEnableThinking ? "enabled" : "disabled");
         }});
         var builder = OpenAiChatModel.builder()
                 .apiKey(aiModelProvider.getApiKey())
@@ -44,11 +48,15 @@ public class OpenAiChatModelFactory extends  BaseChatModelFactory {
     }
 
     @Override
-    public StreamingChatModel createStreamingChatModel(AiModelVO aiModel,boolean enableThinking, ChatModelListener monitoringService) {
+    public StreamingChatModel createStreamingChatModel(AiModelVO aiModel,Boolean enableThinking, ChatModelListener monitoringService) {
         AiModelProvider aiModelProvider=aiModel.getAiModelProvider();
         Map<String, Object> extraParams = new HashMap<>(0);
+        if(enableThinking==null){
+            enableThinking=super.getEnableThinking(aiModel);
+        }
+        Boolean finalEnableThinking = enableThinking;
         extraParams.put("thinking",new HashMap(1){{
-            put("type", enableThinking ? "enabled" : "disabled");
+            put("type", finalEnableThinking ? "enabled" : "disabled");
         }});
         var builder = OpenAiStreamingChatModel.builder()
                 .accumulateToolCallId(true)

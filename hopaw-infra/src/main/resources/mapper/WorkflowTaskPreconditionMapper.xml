@@ -13,8 +13,8 @@
     </resultMap>
 
     <insert id="insert">
-        INSERT INTO workflow_task_preconditions (task_id, pre_task_id, required_status)
-        VALUES (#{item.taskId}, #{item.preTaskId}, #{item.requiredStatus})
+        INSERT INTO workflow_task_preconditions (task_id, pre_task_id, required_status, create_time)
+        VALUES (#{item.taskId}, #{item.preTaskId}, #{item.requiredStatus}, datetime('now','localtime'))
     </insert>
 
     <select id="findByTaskId" resultMap="PreconditionResultMap">

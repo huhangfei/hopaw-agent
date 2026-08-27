@@ -66,6 +66,24 @@ public class ProjectLogService implements IProjectLogService {
         return list != null ? list : new ArrayList<>();
     }
 
+    @Override
+    public boolean deleteLog(Long logId) {
+        if (logId == null || projectLogMapper.findById(logId) == null) {
+            return false;
+        }
+        return projectLogMapper.deleteById(logId) > 0;
+    }
+
+    @Override
+    public boolean updateLogType(Long logId, String logType) {
+        if (logId == null || projectLogMapper.findById(logId) == null) {
+            return false;
+        }
+        // 未匹配的类型按枚举规则归一为 default
+        String normalized = ProjectLogTypeEnum.fromCode(logType).getCode();
+        return projectLogMapper.updateLogType(logId, normalized) > 0;
+    }
+
     /** 通过 userId 解析操作者昵称 */
     private String resolveOperatorName(String userId) {
         if (userId == null) {

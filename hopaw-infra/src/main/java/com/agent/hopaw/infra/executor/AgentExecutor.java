@@ -115,7 +115,7 @@ public class AgentExecutor implements IAgentExecutor {
         this.agentId = agentExecutorParams.getAgentId();
         this.userId = agentExecutorParams.getUserId();
         this.aiModelId = agentExecutorParams.getAiModelId();
-        this.sessionId = agentExecutorParams.getSessionId() != null ? agentExecutorParams.getSessionId() : UuidUtil.generateSimpleUUID();
+        this.sessionId = agentExecutorParams.getSessionId();
         this.requestId = UuidUtil.generateSimpleUUID();
 
         this.chatSessionService = chatSessionService;

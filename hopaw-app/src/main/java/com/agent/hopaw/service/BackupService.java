@@ -55,7 +55,6 @@ public class BackupService {
     private final TtsConfigMapper ttsConfigMapper;
     private final LongTermMemoryMapper longTermMemoryMapper;
     private final ILongTermMemoryService longTermMemoryService;
-    private final AesEncryptionUtil aesEncryptionUtil;
     private final Path encryptionKeyPath;
 
     public BackupService(SysConfigMapper sysConfigMapper,
@@ -65,8 +64,7 @@ public class BackupService {
                          AvatarConfigMapper avatarConfigMapper,
                          TtsConfigMapper ttsConfigMapper,
                          LongTermMemoryMapper longTermMemoryMapper,
-                         ILongTermMemoryService longTermMemoryService,
-                         AesEncryptionUtil aesEncryptionUtil) {
+                         ILongTermMemoryService longTermMemoryService) {
         this.sysConfigMapper = sysConfigMapper;
         this.aiModelProviderMapper = aiModelProviderMapper;
         this.aiModelMapper = aiModelMapper;
@@ -75,7 +73,6 @@ public class BackupService {
         this.ttsConfigMapper = ttsConfigMapper;
         this.longTermMemoryMapper = longTermMemoryMapper;
         this.longTermMemoryService = longTermMemoryService;
-        this.aesEncryptionUtil = aesEncryptionUtil;
         this.encryptionKeyPath = Paths.get(System.getProperty("user.home"), ".hopaw", "encryption.key");
     }
 
@@ -192,7 +189,8 @@ public class BackupService {
     /**
      * 从备份 zip 文件导入数据。zip 可选加密，password 为空表示无密码。
      * 导入语义：按主键 id upsert（存在则更新，不存在则插入）。
-     * 加密字段（apiKey、敏感 SysConfig）导入时使用本机 encryption.key 重新加密。
+     * 加密字段（apiKey、敏感 SysConfig）用备份包内旧密钥解密后，以本机当前密钥重新加密写入；
+     * 本机 encryption.key 不会被覆盖，本机已有数据不受影响。
      *
      * @return 导入结果摘要
      */
@@ -219,26 +217,24 @@ public class BackupService {
             StringBuilder summary = new StringBuilder();
             int total = 0;
 
-            // 先还原加密密钥，保证后续密文能正确解密
+            // 不覆盖本机密钥：读取备份包内旧密钥仅用于本次导入解密，
+            // 历史密文解密后以本机当前密钥重新加密写入，保证与本机数据密钥一致
+            ReEncryptStats reStats = new ReEncryptStats();
             Path keyFile = tempDir.resolve("encryption.key");
-            boolean hasEncryptedData = Files.exists(tempDir.resolve("sys_config.json"))
-                    || Files.exists(tempDir.resolve("ai_model_providers.json"));
+            AesEncryptionUtil oldKeyUtil = null;
             if (Files.exists(keyFile)) {
-                Files.createDirectories(encryptionKeyPath.getParent());
-                Files.write(encryptionKeyPath, Files.readAllBytes(keyFile));
-                aesEncryptionUtil.reload();
-                summary.append("encryption_key: 已还原\n");
-                log.info("已还原加密密钥: {}", encryptionKeyPath);
-            } else if (hasEncryptedData) {
-                throw new IllegalArgumentException("备份包未包含 encryption.key，无法解密加密字段，请使用含密钥的完整备份包");
+                oldKeyUtil = new AesEncryptionUtil(Files.readAllBytes(keyFile));
+                summary.append("encryption_key: 使用备份包内密钥解密并以本机密钥重加密（本机密钥不变）\n");
+                log.info("使用备份包内密钥解密导入数据，本机密钥保持不变: {}", encryptionKeyPath);
             } else {
-                summary.append("encryption_key: 备份包无加密数据，无需密钥\n");
+                summary.append("encryption_key: 备份包未包含密钥，加密字段按原样导入\n");
+                log.warn("备份包未包含 encryption.key，加密字段将按原样导入（仅当与本机密钥一致时可解密）");
             }
 
             // sys_config.json
             Path sysConfigFile = tempDir.resolve("sys_config.json");
             if (Files.exists(sysConfigFile)) {
-                int n = importSysConfig(sysConfigFile);
+                int n = importSysConfig(sysConfigFile, oldKeyUtil, reStats);
                 total += n;
                 summary.append("sys_config: ").append(n).append(" 条\n");
             }
@@ -247,7 +243,7 @@ public class BackupService {
             Path providerFile = tempDir.resolve("ai_model_providers.json");
             Path modelFile = tempDir.resolve("ai_models.json");
             if (Files.exists(providerFile)) {
-                int n = importAiModelProviders(providerFile);
+                int n = importAiModelProviders(providerFile, oldKeyUtil, reStats);
                 total += n;
                 summary.append("ai_model_providers: ").append(n).append(" 条\n");
             }
@@ -287,6 +283,11 @@ public class BackupService {
                 summary.append("long_term_memory: ").append(n).append(" 条\n");
             }
 
+            if (reStats.reEncrypted > 0 || reStats.keptAsIs > 0 || reStats.failed > 0) {
+                summary.append("密文迁移: 重加密 ").append(reStats.reEncrypted)
+                        .append(" 条, 原样保留 ").append(reStats.keptAsIs)
+                        .append(" 条, 解密失败 ").append(reStats.failed).append(" 条\n");
+            }
             summary.insert(0, "导入完成，共 " + total + " 条记录\n");
             return summary.toString();
         } finally {
@@ -295,12 +296,13 @@ public class BackupService {
         }
     }
 
-    private int importSysConfig(Path file) throws Exception {
+    private int importSysConfig(Path file, AesEncryptionUtil oldKeyUtil, ReEncryptStats stats) throws Exception {
         String json = Files.readString(file, StandardCharsets.UTF_8);
         List<SysConfig> configs = JSON.parseArray(json, SysConfig.class);
         int count = 0;
         for (SysConfig config : configs) {
-            // 备份导出时未解密，导入时也保持原密文（密钥已随备份还原）
+            // 备份保留原密文：先用备份包内旧密钥解密，再用本机密钥重新加密写入
+            config.setConfigValue(reEncryptIfNeeded(config.getConfigValue(), oldKeyUtil, stats));
             SysConfig existing = config.getId() != null ? findSysConfigById(config.getId()) : null;
             if (existing == null && config.getConfigKey() != null) {
                 existing = sysConfigMapper.findByKey(config.getConfigKey());
@@ -326,12 +328,13 @@ public class BackupService {
         return null;
     }
 
-    private int importAiModelProviders(Path file) throws Exception {
+    private int importAiModelProviders(Path file, AesEncryptionUtil oldKeyUtil, ReEncryptStats stats) throws Exception {
         String json = Files.readString(file, StandardCharsets.UTF_8);
         List<AiModelProvider> providers = JSON.parseArray(json, AiModelProvider.class);
         int count = 0;
         for (AiModelProvider provider : providers) {
-            // 备份导出时未解密，导入时也保持原密文 apiKey（密钥已随备份还原）
+            // 备份保留原密文 apiKey：先用备份包内旧密钥解密，再用本机密钥重新加密写入
+            provider.setApiKey(reEncryptIfNeeded(provider.getApiKey(), oldKeyUtil, stats));
             AiModelProvider existing = provider.getId() != null ? aiModelProviderMapper.findById(provider.getId()) : null;
             if (existing != null) {
                 aiModelProviderMapper.update(provider);
@@ -423,6 +426,38 @@ public class BackupService {
         }
         // 复用长时记忆导入逻辑：重新生成向量并保留 createTime/parentId 关系
         return longTermMemoryService.restoreUserMemories(memories);
+    }
+
+    /**
+     * 密文迁移统计
+     */
+    private static class ReEncryptStats {
+        int reEncrypted = 0;
+        int keptAsIs = 0;
+        int failed = 0;
+    }
+
+    /**
+     * 密文迁移：若值为 {AES} 密文，先用备份包内旧密钥解密，再用本机密钥重新加密。
+     * 备份包无密钥或解密失败时按原样返回，不阻塞整体导入。
+     */
+    private String reEncryptIfNeeded(String value, AesEncryptionUtil oldKeyUtil, ReEncryptStats stats) {
+        if (value == null || !AesEncryptionUtil.isEncrypted(value)) {
+            return value;
+        }
+        if (oldKeyUtil == null) {
+            stats.keptAsIs++;
+            return value;
+        }
+        try {
+            String plain = oldKeyUtil.decryptWith(value);
+            stats.reEncrypted++;
+            return AesEncryptionUtil.encrypt(plain);
+        } catch (Exception e) {
+            stats.failed++;
+            log.warn("备份密文使用旧密钥解密失败，按原样导入", e);
+            return value;
+        }
     }
 
     private static void deleteRecursive(File f) {

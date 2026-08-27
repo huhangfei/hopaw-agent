@@ -867,6 +867,10 @@ function renderLogsByFilter() {
                 '<div class="log-line">' +
                     '<span class="log-action">' + escapeHtml(actionLabel) + '</span>' +
                     (isImportant ? '<span class="log-important-badge">重点</span>' : '') +
+                    '<span class="log-actions">' +
+                        '<button type="button" class="log-action-btn log-btn-type" title="' + (isImportant ? '转为默认日志' : '转为重点日志') + '" onclick="toggleLogType(' + log.id + ', \'' + (isImportant ? 'default' : 'important') + '\')">' + (isImportant ? '☆' : '★') + '</button>' +
+                        '<button type="button" class="log-action-btn log-btn-delete" title="删除日志" onclick="deleteProjectLog(' + log.id + ')">✕</button>' +
+                    '</span>' +
                 '</div>' +
                 '<div class="log-detail">' + renderLogDetail(log.detail) + '</div>' +
                 '<div class="log-meta">' +
@@ -877,6 +881,57 @@ function renderLogsByFilter() {
         '</div>';
     }).join('');
     updateLogsPagination();
+}
+
+/* 删除项目操作日志 */
+function deleteProjectLog(logId) {
+    if (!currentProjectId || !logId) return;
+    showConfirm('确定删除这条操作日志吗？删除后不可恢复。').then(function (confirmed) {
+        if (!confirmed) return;
+        fetch('/api/projects/' + currentProjectId + '/logs/' + logId, { method: 'DELETE' })
+            .then(function (r) { return r.json(); })
+            .then(function (res) {
+                if (res.code !== 200) {
+                    showToast(res.msg || '删除失败', 'error');
+                    return;
+                }
+                showToast('删除成功', 'success');
+                // 从缓存中移除后重渲染（保持当前过滤/分页状态）
+                logsCache = logsCache.filter(function (l) { return l.id !== logId; });
+                renderLogsByFilter();
+            })
+            .catch(function (err) {
+                console.error('删除日志失败:', err);
+                showToast('删除失败', 'error');
+            });
+    });
+}
+
+/* 更新日志类型：targetType 为 default / important */
+function toggleLogType(logId, targetType) {
+    if (!currentProjectId || !logId || !targetType) return;
+    fetch('/api/projects/' + currentProjectId + '/logs/' + logId + '/type', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ logType: targetType })
+    })
+        .then(function (r) { return r.json(); })
+        .then(function (res) {
+            if (res.code !== 200) {
+                showToast(res.msg || '更新失败', 'error');
+                return;
+            }
+            showToast(targetType === 'important' ? '已标记为重点日志' : '已转为默认日志', 'success');
+            // 更新缓存后重渲染
+            logsCache.forEach(function (l) {
+                if (l.id === logId) l.logType = targetType;
+            });
+            renderLogsByFilter();
+        })
+        .catch(function (err) {
+            console.error('更新日志类型失败:', err);
+            showToast('更新失败', 'error');
+        });
 }
 
 /* 日志内容 Markdown 渲染：无内容时返回空串，marked 未加载时降级为纯文本 */

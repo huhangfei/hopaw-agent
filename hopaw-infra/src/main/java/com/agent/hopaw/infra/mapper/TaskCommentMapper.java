@@ -26,4 +26,9 @@ public interface TaskCommentMapper {
      * 按评论ID批量更新状态
      */
     int updateStatusByIds(@Param("ids") List<Long> ids, @Param("status") String status);
+
+    /**
+     * 更新评论类型（default / summary）
+     */
+    int updateCommentType(@Param("id") Long id, @Param("commentType") String commentType);
 }

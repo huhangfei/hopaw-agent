@@ -116,6 +116,34 @@ public class ProjectController {
         return ResponseBean.success(logs);
     }
 
+    // 删除项目操作日志
+    @DeleteMapping("/api/projects/{id}/logs/{logId}")
+    @ResponseBody
+    public ResponseBean deleteProjectLog(HttpServletRequest request, @PathVariable Long id, @PathVariable Long logId) {
+        String userId = CurrentUser.require(request);
+        Project project = projectService.getProject(id, userId);
+        if (project == null) {
+            return ResponseBean.fail("项目不存在或无权访问");
+        }
+        boolean ok = projectLogService.deleteLog(logId);
+        return ok ? ResponseBean.success("删除成功") : ResponseBean.fail("日志不存在或已删除");
+    }
+
+    // 更新项目操作日志类型
+    @PutMapping("/api/projects/{id}/logs/{logId}/type")
+    @ResponseBody
+    public ResponseBean updateProjectLogType(HttpServletRequest request, @PathVariable Long id,
+                                             @PathVariable Long logId, @RequestBody java.util.Map<String, String> body) {
+        String userId = CurrentUser.require(request);
+        Project project = projectService.getProject(id, userId);
+        if (project == null) {
+            return ResponseBean.fail("项目不存在或无权访问");
+        }
+        String logType = body == null ? null : body.get("logType");
+        boolean ok = projectLogService.updateLogType(logId, logType);
+        return ok ? ResponseBean.success("更新成功") : ResponseBean.fail("日志不存在");
+    }
+
     /** 填充项目创建人昵称 */
     private void fillCreatorName(Project project) {
         if (project == null || project.getUserId() == null) return;

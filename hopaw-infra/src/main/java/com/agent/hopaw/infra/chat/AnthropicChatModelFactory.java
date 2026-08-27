@@ -16,7 +16,7 @@ import java.util.List;
 public class AnthropicChatModelFactory extends BaseChatModelFactory {
 
     @Override
-    public ChatModel createChatModel(AiModelVO aiModel, boolean enableThinking, ChatModelListener monitoringService) {
+    public ChatModel createChatModel(AiModelVO aiModel, Boolean enableThinking, ChatModelListener monitoringService) {
         AiModelProvider aiModelProvider = aiModel.getAiModelProvider();
         var builder = AnthropicChatModel.builder()
                 .apiKey(aiModelProvider.getApiKey())
@@ -28,6 +28,9 @@ public class AnthropicChatModelFactory extends BaseChatModelFactory {
                 .timeout(java.time.Duration.ofSeconds(super.getTimeoutSeconds(aiModel)))
                 .returnThinking(super.getSendThinking(aiModel))
                 .sendThinking(super.getSendThinking(aiModel));
+        if(enableThinking==null){
+            enableThinking=super.getEnableThinking(aiModel);
+        }
         if (enableThinking) {
             builder.thinkingType("enabled");
         }
@@ -38,7 +41,7 @@ public class AnthropicChatModelFactory extends BaseChatModelFactory {
     }
 
     @Override
-    public StreamingChatModel createStreamingChatModel(AiModelVO aiModel, boolean enableThinking, ChatModelListener monitoringService) {
+    public StreamingChatModel createStreamingChatModel(AiModelVO aiModel, Boolean enableThinking, ChatModelListener monitoringService) {
         AiModelProvider aiModelProvider = aiModel.getAiModelProvider();
         var builder = AnthropicStreamingChatModel.builder()
                 .apiKey(aiModelProvider.getApiKey())
@@ -50,6 +53,9 @@ public class AnthropicChatModelFactory extends BaseChatModelFactory {
                 .timeout(java.time.Duration.ofSeconds(super.getTimeoutSeconds(aiModel)))
                 .returnThinking(super.getSendThinking(aiModel))
                 .sendThinking(super.getSendThinking(aiModel));
+        if(enableThinking==null){
+            enableThinking=super.getEnableThinking(aiModel);
+        }
         if (enableThinking) {
             builder.thinkingType("enabled");
         }

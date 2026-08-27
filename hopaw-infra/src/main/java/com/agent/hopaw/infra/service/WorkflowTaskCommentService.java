@@ -60,7 +60,10 @@ public class WorkflowTaskCommentService implements IWorkflowTaskCommentService {
         comment.setCreateTime(LocalDateTime.now());
         comment.setStatus(TaskCommentStatusEnum.PENDING.getCode());
         taskCommentMapper.insert(comment);
-        logCommentToProject(taskId, userId, commenterType, commenterId, typeEnum, content);
+        // 仅总结评论写入项目日志，普通评论不记录
+        if (typeEnum.isSummary()) {
+            logCommentToProject(taskId, userId, commenterType, commenterId, typeEnum, content);
+        }
         return comment;
     }
 
@@ -106,6 +109,28 @@ public class WorkflowTaskCommentService implements IWorkflowTaskCommentService {
             throw new RuntimeException("无权删除该评论");
         }
         taskCommentMapper.deleteById(id);
+    }
+
+    @Override
+    public void updateCommentType(Long id, String commentType, String userId) {
+        WorkflowTaskComment existing = taskCommentMapper.findById(id);
+        if (existing == null) {
+            throw new RuntimeException("评论不存在");
+        }
+        if (!userId.equals(existing.getUserId())) {
+            throw new RuntimeException("无权修改该评论");
+        }
+        TaskCommentTypeEnum typeEnum = TaskCommentTypeEnum.fromCode(commentType);
+        // 目标类型与当前一致时无需变更
+        if (typeEnum.getCode().equals(existing.getCommentType())) {
+            return;
+        }
+        taskCommentMapper.updateCommentType(id, typeEnum.getCode());
+        // 普通评论转为总结评论时，同步写入关联项目的操作日志（作为任务关键节点）
+        if (typeEnum.isSummary()) {
+            logCommentToProject(existing.getTaskId(), existing.getUserId(),
+                    existing.getCommenterType(), existing.getCommenterId(), typeEnum, existing.getContent());
+        }
     }
 
     @Override

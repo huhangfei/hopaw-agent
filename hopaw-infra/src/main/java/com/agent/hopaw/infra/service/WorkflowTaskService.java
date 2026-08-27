@@ -198,6 +198,12 @@ public class WorkflowTaskService implements IWorkflowTaskService {
             throw new RuntimeException("当前任务状态不允许验收");
         }
         updateTaskStatus(id, TaskStatusEnum.COMPLETED.getCode(), null);
+        // 验收通过自动写入用户评论，留下验收记录
+        try {
+            taskCommentService.addComment(id, "验收通过", userId);
+        } catch (Exception e) {
+            logger.warn("验收评论写入失败: taskId={}", id, e);
+        }
     }
 
     @Override
@@ -253,6 +259,13 @@ public class WorkflowTaskService implements IWorkflowTaskService {
         }
         // 重置为待执行，由后台调度器扫描拉起重跑（同时清空历史驳回/失败原因）
         updateTaskStatus(id, TaskStatusEnum.PENDING_EXECUTION.getCode(), null);
+        // 重做自动写入用户评论，记录原状态便于追溯
+        try {
+            String originLabel = current != null ? current.getDescription() : existing.getStatus();
+            taskCommentService.addComment(id, "任务重做（原状态：" + originLabel + "）", userId);
+        } catch (Exception e) {
+            logger.warn("重做评论写入失败: taskId={}", id, e);
+        }
     }
 
     @Override
@@ -293,11 +306,7 @@ public class WorkflowTaskService implements IWorkflowTaskService {
         StringBuilder taskContent = new StringBuilder();
         taskContent.append(task.getContent() != null ? task.getContent() : "");
         if (comments != null && !comments.isEmpty()) {
-            taskContent.append("\n\n--- 评论历史 ---\n");
             for (WorkflowTaskComment comment : comments) {
-                if (TaskCommenterTypeEnum.isAgent(comment.getCommenterType())) {
-                    continue;
-                }
                 // 总结评论追加类型标记，便于智能体识别重要节点
                 String typeMark = TaskCommentTypeEnum.fromCode(comment.getCommentType()).isSummary() ? "[总结]" : "";
                 taskContent.append(String.format("[%s]%s %s\n",

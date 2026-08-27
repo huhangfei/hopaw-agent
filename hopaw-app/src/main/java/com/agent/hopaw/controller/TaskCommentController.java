@@ -45,4 +45,17 @@ public class TaskCommentController {
             return ResponseBean.fail(e.getMessage());
         }
     }
+
+    @PutMapping("/api/workflow/comments/{id}/type")
+    @ResponseBody
+    public ResponseBean updateCommentType(HttpServletRequest request, @PathVariable Long id, @RequestBody Map<String, String> body) {
+        String userId = CurrentUser.require(request);
+        String commentType = body == null ? null : body.get("commentType");
+        try {
+            commentService.updateCommentType(id, commentType, userId);
+            return ResponseBean.success();
+        } catch (Exception e) {
+            return ResponseBean.fail(e.getMessage());
+        }
+    }
 }

@@ -35,4 +35,21 @@ public interface IProjectLogService {
 
     /** 查询项目重点日志（important 类型），按时间正序 */
     List<ProjectLog> getImportantLogsByProjectId(Long projectId);
+
+    /**
+     * 按日志ID删除项目操作日志
+     *
+     * @param logId 日志ID
+     * @return 删除成功返回 true；日志不存在返回 false
+     */
+    boolean deleteLog(Long logId);
+
+    /**
+     * 更新日志类型（default / important 互转）
+     *
+     * @param logId   日志ID
+     * @param logType 目标日志类型，见 ProjectLogTypeEnum
+     * @return 更新成功返回 true；日志不存在或类型无效返回 false
+     */
+    boolean updateLogType(Long logId, String logType);
 }

@@ -298,10 +298,59 @@ function renderComments(comments) {
                 '<span class="comment-item-user">' + escapeHtml(roleLabel + ' · ' + who) + '</span>' +
                 '<span class="comment-item-time">' + escapeHtml(formatTime(c.createTime)) + '</span>' +
                 (isSummary ? '<span class="comment-summary-badge">总结</span>' : '') +
+                '<span class="comment-item-actions">' +
+                    '<button type="button" class="comment-action-btn comment-btn-type" title="' + (isSummary ? '转为普通评论' : '转为总结评论（将记录为任务关键节点）') + '" onclick="toggleCommentType(' + c.id + ', \'' + (isSummary ? 'default' : 'summary') + '\')">' + (isSummary ? '☆' : '★') + '</button>' +
+                    '<button type="button" class="comment-action-btn comment-btn-delete" title="删除评论" onclick="deleteComment(' + c.id + ')">✕</button>' +
+                '</span>' +
             '</div>' +
             '<div class="comment-item-content">' + escapeHtml(c.content || '') + '</div>' +
         '</div>';
     }).join('');
+}
+
+/* 删除任务评论 */
+function deleteComment(id) {
+    if (!id) return;
+    showConfirm('确定删除这条评论吗？删除后不可恢复。').then(function (confirmed) {
+        if (!confirmed) return;
+        fetch('/api/workflow/comments/' + id, { method: 'DELETE' })
+            .then(function (r) { return r.json(); })
+            .then(function (res) {
+                if (res.code !== 200) {
+                    showToast(res.msg || '删除失败', 'error');
+                    return;
+                }
+                showToast('删除成功', 'success');
+                loadComments(currentTaskId);
+            })
+            .catch(function (err) {
+                console.error('删除评论失败:', err);
+                showToast('删除失败', 'error');
+            });
+    });
+}
+
+/* 更新评论类型：targetType 为 default / summary */
+function toggleCommentType(id, targetType) {
+    if (!id || !targetType) return;
+    fetch('/api/workflow/comments/' + id + '/type', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ commentType: targetType })
+    })
+        .then(function (r) { return r.json(); })
+        .then(function (res) {
+            if (res.code !== 200) {
+                showToast(res.msg || '更新失败', 'error');
+                return;
+            }
+            showToast(targetType === 'summary' ? '已转为总结评论' : '已转为普通评论', 'success');
+            loadComments(currentTaskId);
+        })
+        .catch(function (err) {
+            console.error('更新评论类型失败:', err);
+            showToast('更新失败', 'error');
+        });
 }
 
 function addComment() {

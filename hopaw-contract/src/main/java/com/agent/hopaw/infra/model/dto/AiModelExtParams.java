@@ -13,6 +13,10 @@ public class AiModelExtParams {
     private Boolean logRequests;
     private Boolean logResponses;
     private Boolean accumulateToolCallId;
+    /**
+     * 是否启用思考模式（默认 true）
+     */
+    private Boolean enableThinking;
     public AiModelExtParams() {}
 
 
@@ -98,5 +102,13 @@ public class AiModelExtParams {
 
     public void setAccumulateToolCallId(Boolean accumulateToolCallId) {
         this.accumulateToolCallId = accumulateToolCallId;
+    }
+
+    public Boolean getEnableThinking() {
+        return enableThinking;
+    }
+
+    public void setEnableThinking(Boolean enableThinking) {
+        this.enableThinking = enableThinking;
     }
 }
