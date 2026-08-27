@@ -6,6 +6,7 @@ import com.agent.hopaw.infra.model.entity.McpServerConfig;
 import dev.langchain4j.data.message.Content;
 
 import java.util.List;
+import java.util.Map;
 
 /**
  * @author hhf
@@ -20,7 +21,7 @@ public class AgentExecutorParams {
     private Boolean enableThinking;
     private Boolean vectorToolSearch;
     private Integer vectorToolSearchMaxResults;
-    private String extParams;
+    private Map<String,Object> extParams;
     /**
      * 工具执行权限
      * user_control 用户控制
@@ -108,11 +109,11 @@ public class AgentExecutorParams {
         this.vectorToolSearchMaxResults = vectorToolSearchMaxResults;
     }
 
-    public String getExtParams() {
+    public Map<String,Object> getExtParams() {
         return extParams;
     }
 
-    public void setExtParams(String extParams) {
+    public void setExtParams(Map<String,Object> extParams) {
         this.extParams = extParams;
     }
 

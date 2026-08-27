@@ -31,6 +31,7 @@ public interface IWorkflowTaskService {
     void updateTaskStatus(Long taskId, String status, String rejectReason);
     List<TaskSession> getTaskSessions(Long taskId);
     Long findTaskIdBySessionId(String sessionId);
+    List<String> getSessionIdsByProjectId(Long projectId);
 
     /** 按ID查询任务（不做用户归属校验，供内部流程使用） */
     WorkflowTask getTaskById(Long id);

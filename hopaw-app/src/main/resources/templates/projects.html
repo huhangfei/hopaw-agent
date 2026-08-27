@@ -53,6 +53,8 @@
                     <div class="detail-title-area">
                         <h3 id="detailName"></h3>
                         <span class="status-badge" id="detailStatusBadge"></span>
+                        <!-- 状态流转按钮（跟随状态徽标） -->
+                        <span class="status-actions" id="statusActions"></span>
                     </div>
                     <div class="detail-actions">
                         <button class="btn-icon btn-view-tasks" title="查看任务" onclick="goToTaskBoard()">
@@ -70,16 +72,10 @@
                 <!-- 创建人/创建时间 -->
                 <div class="detail-meta" id="detailMeta"></div>
 
-                <!-- 状态流转 -->
-                <div class="detail-section">
-                    <div class="section-title">项目状态</div>
-                    <div class="status-actions" id="statusActions"></div>
-                </div>
-
                 <!-- 描述 -->
                 <div class="detail-section">
                     <div class="section-title">项目描述</div>
-                    <div class="detail-desc" id="detailDesc"></div>
+                    <div class="detail-desc md-content" id="detailDesc"></div>
                 </div>
 
                 <!-- 项目空间文件树 -->
@@ -98,14 +94,25 @@
                     <div id="detailFiles" class="detail-files"></div>
                 </div>
 
-                <!-- 任务列表（可折叠，默认折叠） -->
+                <!-- 任务列表（可折叠，默认展开） -->
                 <div class="detail-section detail-tasks-section">
                     <div class="section-title tasks-section-header" id="tasksHeader" onclick="toggleProjectTasks()">
                         <span class="tasks-title">项目任务</span>
                         <span class="tasks-count" id="taskCount"></span>
-                        <span class="tasks-toggle-icon" id="tasksToggleIcon">▸</span>
+                        <button class="btn-add-task-detail" onclick="event.stopPropagation(); showAddTaskModal(currentProjectId)" title="为当前项目新建任务">＋ 新建任务</button>
+                        <span class="tasks-toggle-icon" id="tasksToggleIcon">▾</span>
                     </div>
-                    <div id="detailTasks" class="detail-tasks" style="display: none;"></div>
+                    <div id="detailTasks" class="detail-tasks"></div>
+                </div>
+
+                <!-- Token 用量统计（可折叠，默认展开） -->
+                <div class="detail-section detail-token-section">
+                    <div class="section-title token-section-header" id="tokenHeader" onclick="toggleProjectToken()">
+                        <span class="token-title">Token 用量</span>
+                        <span class="token-stats-summary" id="projectTokenSummary" onclick="event.stopPropagation()"></span>
+                        <span class="token-toggle-icon" id="tokenToggleIcon">▾</span>
+                    </div>
+                    <div class="token-chart-wrap" id="projectTokenChart"></div>
                 </div>
 
                 <!-- 操作日志（可折叠） -->
@@ -252,14 +259,21 @@
             </div>
         </div>
     </div>
+    <!-- 新建/编辑任务模态框（公共组件，与任务看板共用） -->
+    <div th:replace="~{fragment/task-modal :: taskModal}"></div>
 </main>
 
 <th:block layout:fragment="extraCss">
+    <link rel="stylesheet" th:href="@{/css/task-modal.css}">
+    <link rel="stylesheet" th:href="@{/css/md-content.css}">
     <link rel="stylesheet" th:href="@{/css/page/projects.css}">
 </th:block>
 
 <th:block layout:fragment="extraScripts">
     <script th:src="@{/js/marked.min.js}"></script>
+    <script th:src="@{/js/chart.umd.min.js}"></script>
+    <script th:src="@{/js/notice.js}"></script>
+    <script th:src="@{/js/page/task-modal.js}"></script>
     <script th:src="@{/js/page/projects.js}"></script>
 </th:block>
 </body>

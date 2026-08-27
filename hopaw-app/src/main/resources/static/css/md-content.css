@@ -1,0 +1,111 @@
+/* ==================== Markdown 内容渲染公共样式（项目描述/任务内容等共用 .md-content 容器） ==================== */
+.md-content {
+    font-size: 14px;
+    line-height: 1.7;
+    word-break: break-word;
+}
+
+.md-content p { margin: 0 0 8px 0; }
+.md-content p:last-child { margin-bottom: 0; }
+
+.md-content h1,
+.md-content h2,
+.md-content h3,
+.md-content h4,
+.md-content h5,
+.md-content h6 {
+    margin: 12px 0 6px 0;
+    font-weight: 600;
+    line-height: 1.4;
+}
+.md-content h1 { font-size: 1.4em; border-bottom: 1px solid #e5e7eb; padding-bottom: 4px; }
+.md-content h2 { font-size: 1.25em; border-bottom: 1px solid #e5e7eb; padding-bottom: 3px; }
+.md-content h3 { font-size: 1.1em; }
+.md-content h1:first-child,
+.md-content h2:first-child,
+.md-content h3:first-child,
+.md-content h4:first-child { margin-top: 0; }
+
+.md-content ul,
+.md-content ol { margin: 4px 0 8px 0; padding-left: 22px; }
+.md-content li { margin-bottom: 3px; }
+
+.md-content code {
+    background: #f3f4f6;
+    padding: 1px 5px;
+    border-radius: 3px;
+    font-family: 'Consolas', 'Monaco', monospace;
+    font-size: 0.9em;
+    color: #374151;
+}
+
+.md-content pre {
+    background: #1e1e1e;
+    color: #d4d4d4;
+    padding: 10px 14px;
+    border-radius: 6px;
+    overflow: auto;
+    margin: 6px 0;
+}
+.md-content pre code {
+    background: none;
+    padding: 0;
+    color: inherit;
+    font-size: 13px;
+}
+
+.md-content blockquote {
+    border-left: 3px solid #d1d5db;
+    padding-left: 10px;
+    color: #6b7280;
+    margin: 6px 0;
+}
+
+.md-content table {
+    border-collapse: collapse;
+    margin: 6px 0;
+    max-width: 100%;
+    display: block;
+    overflow-x: auto;
+}
+.md-content th,
+.md-content td {
+    border: 1px solid #e5e7eb;
+    padding: 5px 10px;
+    text-align: left;
+    font-size: 13px;
+}
+.md-content th {
+    background: #f9fafb;
+    font-weight: 600;
+}
+
+.md-content a { color: #4f46e5; text-decoration: none; }
+.md-content a:hover { text-decoration: underline; }
+
+.md-content img { max-width: 100%; border-radius: 4px; }
+
+.md-content hr { border: none; border-top: 1px solid #e5e7eb; margin: 8px 0; }
+
+/* ==================== Dark Theme ==================== */
+body.dark-theme .md-content code {
+    background: #2d2d44;
+    color: #c0c0c0;
+}
+
+body.dark-theme .md-content h1,
+body.dark-theme .md-content h2 { border-bottom-color: #2d2d44; }
+
+body.dark-theme .md-content blockquote {
+    border-left-color: #3d3d6b;
+    color: #999;
+}
+
+body.dark-theme .md-content th,
+body.dark-theme .md-content td { border-color: #2d2d44; }
+
+body.dark-theme .md-content th { background: #16213e; }
+
+body.dark-theme .md-content a { color: #8ba3ff; }
+
+body.dark-theme .md-content hr { border-top-color: #2d2d44; }

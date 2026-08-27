@@ -9,12 +9,15 @@ var searchTimer = null;
 var currentProjectId = null;     // 当前选中的项目ID
 var currentProject = null;        // 当前选中的项目对象
 var logsExpanded = true;          // 操作日志展开状态（默认展开）
-var tasksExpanded = false;        // 项目任务展开状态（默认折叠）
+var tasksExpanded = true;         // 项目任务展开状态（默认展开）
+var tokenExpanded = true;         // Token 用量展开状态（默认展开）
 var logsCache = [];               // 操作日志缓存（用于类型切换时重渲染）
 var logFilter = 'all';            // 日志过滤类型：all=全部 / important=重要
 var LOGS_PAGE_SIZE = 10;          // 操作日志分页大小
 var logsPage = 1;                 // 操作日志当前页码
 var logsTotalPages = 1;           // 操作日志总页数
+var projectSessionIds = [];       // 当前项目关联的会话ID集合：用于匹配 WebSocket 消息
+var projectWs = null;             // Token 用量监听 WebSocket
 
 // 项目状态字典
 var PROJECT_STATUS = {
@@ -35,7 +38,56 @@ var STATUS_TRANSITIONS = {
 
 document.addEventListener('DOMContentLoaded', function () {
     loadProjects(1);
+    // 订阅全局通知：项目/任务状态变更时刷新
+    connectNoticeWebSocket(handleProjectNotice);
+    // 订阅会话消息：本项目会话产生 token 消耗时刷新用量统计
+    connectProjectWebSocket();
+    // 预加载任务弹框所需下拉数据（智能体/项目/前置任务，公共 task-modal.js）
+    loadAgents();
+    loadProjectsForTaskModal();
+    loadTasksForPreconditions();
 });
+
+/* 任务弹框保存成功后的刷新回调（供公共 task-modal.js 调用） */
+window.onTaskModalSaved = function () {
+    if (currentProjectId != null) {
+        loadProjectDetail(currentProjectId);
+    }
+};
+
+/** 加载项目下拉数据（复用公共弹框缓存，避免与本页 loadProjects 分页函数重名冲突） */
+function loadProjectsForTaskModal() {
+    fetch('/api/projects/page?page=1&size=100')
+        .then(function (r) { return r.json(); })
+        .then(function (res) {
+            if (res.code === 200 && res.data) {
+                projectsCache = res.data.list || [];
+                populateProjectSelect('');
+                populateBoardProjectFilter();
+            }
+        })
+        .catch(function (err) {
+            console.error('加载项目列表失败:', err);
+        });
+}
+
+/** 全局通知处理：项目状态变更刷新详情；任务状态变更仅在影响当前项目时刷新 */
+function handleProjectNotice(data) {
+    if (!data || data.subtype !== 'status_change') return;
+    var c = data.content || {};
+    if (data.type === 'project') {
+        // 项目列表始终刷新；详情仅刷新当前打开的项目
+        loadProjects(currentPage);
+        if (currentProjectId != null && Number(c.projectId) === Number(currentProjectId)) {
+            loadProjectDetail(currentProjectId);
+        }
+    } else if (data.type === 'task') {
+        // 任务状态变化影响所属项目的详情页（任务列表/统计）
+        if (currentProjectId != null && c.projectId != null && Number(c.projectId) === Number(currentProjectId)) {
+            loadProjectDetail(currentProjectId);
+        }
+    }
+}
 
 /* ========== 搜索 ========== */
 function handleSearchKeyup(event) {
@@ -198,6 +250,10 @@ function loadProjectDetail(id) {
         renderDetail(currentProject, (taskRes.data || []), (logRes.data || []));
         // 加载项目空间文件树
         loadProjectFiles(currentProjectId);
+        // 加载项目 Token 用量统计
+        loadProjectTokenUsage(currentProjectId);
+        // 加载项目关联会话ID集合（WebSocket 消息匹配用）
+        loadProjectSessionIds(currentProjectId);
     }).catch(function (err) {
         console.error('加载项目详情失败:', err);
         showToast('加载项目详情失败', 'error');
@@ -226,8 +282,10 @@ function renderDetail(project, tasks, logs) {
     // 状态流转按钮
     renderStatusActions(project.status);
 
-    // 描述
-    document.getElementById('detailDesc').textContent = project.description || '暂无描述';
+    // 描述（Markdown 渲染，容器带 md-content 样式类）
+    document.getElementById('detailDesc').innerHTML = project.description
+        ? renderMarkdownText(project.description)
+        : '暂无描述';
 
     // 项目空间目录路径
     var spaceDirEl = document.getElementById('spaceDirInfo');
@@ -297,13 +355,22 @@ var TASK_STATUS = {
     closed:              { label: '已关闭',   color: '#9ca3af' }
 };
 
-/** 折叠/展开项目任务区（默认折叠） */
+/** 折叠/展开项目任务区（默认展开） */
 function toggleProjectTasks() {
     tasksExpanded = !tasksExpanded;
     var container = document.getElementById('detailTasks');
     var iconEl = document.getElementById('tasksToggleIcon');
     container.style.display = tasksExpanded ? 'grid' : 'none';
     iconEl.textContent = tasksExpanded ? '▾' : '▸';
+}
+
+/** 折叠/展开 Token 用量区（默认展开） */
+function toggleProjectToken() {
+    tokenExpanded = !tokenExpanded;
+    var chartEl = document.getElementById('projectTokenChart');
+    var iconEl = document.getElementById('tokenToggleIcon');
+    chartEl.style.display = tokenExpanded ? '' : 'none';
+    iconEl.textContent = tokenExpanded ? '▾' : '▸';
 }
 
 function renderDetailTasks(tasks) {
@@ -320,7 +387,9 @@ function renderDetailTasks(tasks) {
     countEl.textContent = '(' + tasks.length + ')';
     container.innerHTML = tasks.map(function (task) {
         var st = TASK_STATUS[task.status] || { label: task.status || '未知', color: '#999' };
-        return '<a class="detail-task-card" href="/tasks-board/' + task.id + '" target="_blank" style="border-left-color:' + st.color + '">' +
+        return '<a class="detail-task-card" href="/tasks-board/' + task.id + '" target="_blank" ' +
+            'onclick="window.open(\'/tasks-board/' + task.id + '\', \'_blank\', \'width=900,height=700\'); return false;" ' +
+            'style="border-left-color:' + st.color + '">' +
             '<div class="task-card-head">' +
                 '<span class="task-name" title="' + escapeHtml(task.title || '') + '">' + escapeHtml(task.title || '') + '</span>' +
                 '<span class="task-status-badge" style="background:' + st.color + '">' + st.label + '</span>' +
@@ -934,14 +1003,19 @@ function toggleLogType(logId, targetType) {
         });
 }
 
-/* 日志内容 Markdown 渲染：无内容时返回空串，marked 未加载时降级为纯文本 */
-function renderLogDetail(detail) {
-    if (!detail) return '';
+/* 通用 Markdown 渲染：无内容时返回空串，marked 未加载时降级为转义纯文本 */
+function renderMarkdownText(text) {
+    if (!text) return '';
     if (typeof marked !== 'undefined' && marked.parse) {
-        // breaks:true 保留单换行（日志内容多为按行分段的清单文本，与聊天页 index.js 的渲染行为保持一致）
-        return marked.parse(detail, { breaks: true, gfm: true });
+        // breaks:true 保留单换行（与聊天页/日志渲染行为保持一致）
+        return marked.parse(text, { breaks: true, gfm: true });
     }
-    return escapeHtml(detail);
+    return escapeHtml(text);
+}
+
+/* 日志内容 Markdown 渲染 */
+function renderLogDetail(detail) {
+    return renderMarkdownText(detail);
 }
 
 /* 更新日志分页控件显示状态：折叠或不足一页时隐藏 */
@@ -1122,4 +1196,165 @@ function formatTime(time) {
     var t = String(time).replace('T', ' ');
     // 截取到分钟
     return t.substring(0, 16);
+}
+
+/* ========== 项目 Token 用量统计 ========== */
+var projectTokenChart = null;
+
+/** 加载项目关联的所有会话ID：用于过滤 WebSocket 消息 */
+function loadProjectSessionIds(projectId) {
+    if (!projectId) return;
+    fetch('/api/projects/' + projectId + '/session-ids').then(function (r) { return r.json(); }).then(function (res) {
+        if (res.code === 200) {
+            projectSessionIds = (res.data || []).filter(Boolean);
+        }
+    }).catch(function (err) {
+        console.error('加载项目会话ID失败:', err);
+    });
+}
+
+/** 监听会话 WebSocket：本项目会话产生 token 消耗时实时刷新柱状统计图 */
+function connectProjectWebSocket() {
+    var protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+    try {
+        projectWs = new WebSocket(protocol + '//' + window.location.host + '/ws/chat');
+    } catch (e) {
+        console.error('创建 WebSocket 失败:', e);
+        return;
+    }
+    projectWs.onmessage = function (event) {
+        var data;
+        try { data = JSON.parse(event.data); } catch (e) { return; }
+        if (data.type !== 'token_usage') return;
+        if (!data.sessionId || projectSessionIds.indexOf(data.sessionId) === -1) return;
+        // 本项目会话产生了 token 消耗：刷新柱状统计图
+        if (currentProjectId != null) {
+            loadProjectTokenUsage(currentProjectId);
+        }
+    };
+    projectWs.onclose = function () {
+        // 断线重连（页面可能长时间停留）
+        setTimeout(connectProjectWebSocket, 5000);
+    };
+}
+
+function loadProjectTokenUsage(projectId) {
+    fetch('/api/projects/' + projectId + '/token-usage?limit=30').then(function (r) { return r.json(); }).then(function (res) {
+        if (res.code === 200 && res.data) {
+            renderProjectTokenUsage(res.data);
+        }
+    }).catch(function (err) {
+        console.error('加载项目 Token 用量失败:', err);
+    });
+}
+
+function renderProjectTokenUsage(data) {
+    var summaryEl = document.getElementById('projectTokenSummary');
+    var chartEl = document.getElementById('projectTokenChart');
+    if (!summaryEl || !chartEl) return;
+
+    // 渲染时同步折叠状态（切换项目后保持当前展开/折叠状态）
+    chartEl.style.display = tokenExpanded ? '' : 'none';
+    document.getElementById('tokenToggleIcon').textContent = tokenExpanded ? '▾' : '▸';
+
+    var summary = data.summary || {};
+    var list = data.list || [];
+
+    if (!list.length) {
+        summaryEl.innerHTML = '';
+        if (projectTokenChart) {
+            projectTokenChart.destroy();
+            projectTokenChart = null;
+        }
+        chartEl.innerHTML = '<div class="token-chart-empty">暂无用量记录</div>';
+        return;
+    }
+
+    summaryEl.innerHTML = '<span class="ts-in">↑ ' + formatTokenCount(summary.inputTokens || 0) + '</span>'
+        + '<span class="ts-out">↓ ' + formatTokenCount(summary.outputTokens || 0) + '</span>'
+        + '<span class="ts-total">总 ' + formatTokenCount(summary.totalTokens || 0) + '</span>'
+        + '<span class="ts-count">' + (summary.id || 0) + ' 次</span>';
+
+    // 按时间正序展示最近 30 条
+    var ordered = list.slice().reverse();
+    renderBizTokenChart(chartEl, ordered, 'projectTokenChartCanvas', function (chart) {
+        projectTokenChart = chart;
+    });
+}
+
+/** 项目/任务详情页通用 token 柱状图渲染（参考会话右下角统计样式） */
+function renderBizTokenChart(container, data, canvasId, onCreated) {
+    var existing = document.getElementById(canvasId);
+    if (existing) {
+        existing.parentNode.innerHTML = '<canvas id="' + canvasId + '"></canvas>';
+    } else {
+        container.innerHTML = '<canvas id="' + canvasId + '"></canvas>';
+    }
+    var canvas = document.getElementById(canvasId);
+    var isDark = document.body.classList.contains('dark-theme');
+
+    var labels = data.map(function (d) {
+        return d.createTime ? String(d.createTime).replace('T', ' ').substring(5, 16) : '';
+    });
+    var inputData = data.map(function (d) { return d.inputTokens || 0; });
+    var outputData = data.map(function (d) { return d.outputTokens || 0; });
+
+    var chart = new Chart(canvas, {
+        type: 'bar',
+        data: {
+            labels: labels,
+            datasets: [
+                { label: '输入', data: inputData, backgroundColor: '#2196F3', borderRadius: 3 },
+                { label: '输出', data: outputData, backgroundColor: '#4CAF50', borderRadius: 3 }
+            ]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            animation: { duration: 600, easing: 'easeOutQuart' },
+            plugins: {
+                legend: { display: false },
+                tooltip: {
+                    callbacks: {
+                        label: function (ctx) {
+                            return ctx.dataset.label + ': ' + ctx.raw.toLocaleString();
+                        },
+                        footer: function (items) {
+                            var total = items.reduce(function (sum, item) { return sum + item.raw; }, 0);
+                            return '总量: ' + total.toLocaleString();
+                        }
+                    }
+                }
+            },
+            scales: {
+                x: {
+                    stacked: true,
+                    grid: { display: false },
+                    ticks: { font: { size: 9 }, color: isDark ? '#888' : '#999', maxRotation: 45 }
+                },
+                y: {
+                    stacked: true,
+                    beginAtZero: true,
+                    ticks: {
+                        font: { size: 9 },
+                        color: isDark ? '#888' : '#999',
+                        callback: function (v) {
+                            return v >= 1000 ? (v / 1000).toFixed(0) + 'k' : v;
+                        }
+                    },
+                    grid: { color: isDark ? '#2d2d44' : '#f0f0f0' }
+                }
+            },
+            interaction: { intersect: false, mode: 'index' }
+        }
+    });
+    onCreated(chart);
+}
+
+/** token 数量格式化（1.2w 形式） */
+function formatTokenCount(n) {
+    n = Number(n) || 0;
+    if (n >= 10000) return (n / 10000).toFixed(1) + 'w';
+    if (n >= 1000) return (n / 1000).toFixed(1) + 'k';
+    return String(n);
 }

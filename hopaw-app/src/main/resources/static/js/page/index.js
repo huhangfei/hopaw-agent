@@ -923,7 +923,6 @@ var tokenChart = null;
 function handleTokenUsageMessage(data) {
     if (!currentAgentId) return;
     if (data.sessionId !== currentSessionId) return;
-    if (data.source !== 'chat') return;
 
     var entry = {
         id: data.id,
@@ -948,7 +947,7 @@ function handleTokenUsageMessage(data) {
 
 function loadTokenUsage(minId) {
     if (!currentAgentId) return;
-    var url = '/api/token-usage/today?sessionId=' + currentSessionId+"&source=chat";
+    var url = '/api/token-usage/today?sessionId=' + currentSessionId;
     if (minId) url += '&minId=' + minId;
     fetch(url).then(function(r) { return r.json(); }).then(function(res) {
         if (res.code === 200 && res.data) {
@@ -971,7 +970,7 @@ function loadTokenUsage(minId) {
     var pad = function(n) { return String(n).padStart(2, '0'); };
     var startStr = now.getFullYear() + '-' + pad(now.getMonth()+1) + '-' + pad(now.getDate()) + ' 00:00:00';
     var endStr = now.getFullYear() + '-' + pad(now.getMonth()+1) + '-' + pad(now.getDate()) + ' 23:59:59';
-    var statsUrl = '/api/token-usage/daily-stats?startTime=' + encodeURIComponent(startStr) + '&endTime=' + encodeURIComponent(endStr) + '&sessionId=' + currentSessionId+'&source=chat';
+    var statsUrl = '/api/token-usage/daily-stats?startTime=' + encodeURIComponent(startStr) + '&endTime=' + encodeURIComponent(endStr) + '&sessionId=' + currentSessionId;
     fetch(statsUrl).then(function(r) { return r.json(); }).then(function(sres) {
         if (sres.code === 200 && sres.data && sres.data.length > 0) {
             var today = sres.data[0];

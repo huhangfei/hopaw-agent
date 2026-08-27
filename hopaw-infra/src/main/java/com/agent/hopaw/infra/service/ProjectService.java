@@ -1,6 +1,7 @@
 package com.agent.hopaw.infra.service;
 
 import com.agent.hopaw.infra.constant.ProjectStatusEnum;
+import com.agent.hopaw.infra.enums.GlobalNoticeTypeEnum;
 import com.agent.hopaw.infra.mapper.ProjectMapper;
 import com.agent.hopaw.infra.mapper.WorkflowTaskMapper;
 import com.agent.hopaw.infra.model.dto.FileTreeNode;
@@ -38,6 +39,7 @@ public class ProjectService implements IProjectService {
 
     private final ProjectMapper projectMapper;
     private final WorkflowTaskMapper workflowTaskMapper;
+    private final IGlobalNoticeService globalNoticeService;
 
     /** 项目空间根目录（所有项目的工作空间目录都放置在此目录下） */
     private final String projectSpaceRoot;
@@ -50,9 +52,11 @@ public class ProjectService implements IProjectService {
 
     public ProjectService(ProjectMapper projectMapper,
                           WorkflowTaskMapper workflowTaskMapper,
-                          @Value("${hopaw.project.space.dir:./project-spaces}") String projectSpaceDir) {
+                          @Value("${hopaw.project.space.dir:./project-spaces}") String projectSpaceDir,
+                          IGlobalNoticeService globalNoticeService) {
         this.projectMapper = projectMapper;
         this.workflowTaskMapper = workflowTaskMapper;
+        this.globalNoticeService = globalNoticeService;
         // 解析为绝对路径，确保后续文件操作一致
         File rootDir = new File(projectSpaceDir);
         if (!rootDir.isAbsolute()) {
@@ -195,6 +199,17 @@ public class ProjectService implements IProjectService {
         }
         validateTransition(existing.getStatus(), status);
         projectMapper.updateStatus(id, status);
+        // 状态变更：推送全局通知（子类型 status_change）
+        try {
+            java.util.Map<String, Object> content = new java.util.HashMap<>();
+            content.put("projectId", id);
+            content.put("name", existing.getName());
+            content.put("oldStatus", existing.getStatus());
+            content.put("newStatus", status);
+            globalNoticeService.notify(userId, GlobalNoticeTypeEnum.PROJECT, "status_change", content);
+        } catch (Exception e) {
+            logger.warn("项目状态变更通知推送失败: projectId={}", id, e);
+        }
     }
 
     /** 校验状态流转是否合法（规则见 ProjectStatusEnum） */
@@ -646,3 +661,4 @@ public class ProjectService implements IProjectService {
         }
     }
 }
+

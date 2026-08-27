@@ -10,6 +10,8 @@
     <link rel="stylesheet" th:href="@{/css/toast.css}">
     <link rel="stylesheet" th:href="@{/css/dark-theme.css}">
     <link rel="stylesheet" th:href="@{/css/page/tasks-board.css}">
+    <link rel="stylesheet" th:href="@{/css/task-modal.css}">
+    <link rel="stylesheet" th:href="@{/css/md-content.css}">
     <link rel="stylesheet" th:href="@{/css/page/task-detail.css}">
 </head>
 <body th:class="${currentTheme == 'dark' ? 'dark-theme' : ''}">
@@ -19,12 +21,26 @@
             <h2 id="taskDetailTitle">加载中...</h2>
             <span class="task-status-tag" id="taskDetailStatus">-</span>
         </div>
-        <button class="task-detail-close-btn" onclick="window.close()" title="关闭">
-            <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                <line x1="18" y1="6" x2="6" y2="18"/>
-                <line x1="6" y1="6" x2="18" y2="18"/>
-            </svg>
-        </button>
+        <div class="task-detail-header-actions">
+            <button class="task-detail-header-btn btn-header-edit" id="btnEditTask" title="编辑任务" style="display: none;" onclick="editCurrentTask()">
+                <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
+                    <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
+                </svg>
+            </button>
+            <button class="task-detail-header-btn btn-header-delete" id="btnDeleteTask" title="删除任务" onclick="deleteCurrentTask()">
+                <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <polyline points="3 6 5 6 21 6"/>
+                    <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
+                </svg>
+            </button>
+            <button class="task-detail-close-btn" onclick="window.close()" title="关闭">
+                <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <line x1="18" y1="6" x2="6" y2="18"/>
+                    <line x1="6" y1="6" x2="18" y2="18"/>
+                </svg>
+            </button>
+        </div>
     </div>
 
     <div class="task-detail-section task-detail-info">
@@ -56,19 +72,36 @@
     <div class="task-detail-section task-detail-preconditions" id="taskDetailPreconditions" style="display: none;">
         <h3 class="task-detail-section-title">
             前置任务
-            <span class="precondition-summary" id="preconditionSummary"></span>
-        </h3>
-        <div class="precondition-list" id="preconditionList"></div>
+            <span class="precondition-summary" id="taskDetailPreconditionSummary"></span>
+        </div>
+        <div class="precondition-list" id="taskDetailPreconditionList"></div>
     </div>
 
     <div class="task-detail-section">
         <h3 class="task-detail-section-title">任务内容</h3>
-        <div class="task-detail-content" id="taskDetailContent"></div>
+        <div class="task-detail-content md-content" id="taskDetailContent"></div>
     </div>
 
     <div class="task-detail-section">
         <h3 class="task-detail-section-title">会话记录</h3>
-        <div class="task-detail-sessions" id="taskDetailSessions"></div>
+        <div class="task-session-panel">
+            <div class="task-detail-sessions" id="taskDetailSessions"></div>
+            <!-- 会话执行中指示器：订阅 WebSocket 收到本任务会话消息时显示（与列表同容器） -->
+            <div class="task-session-running" id="taskSessionRunning" style="display: none;">
+                <span class="running-dot"></span>
+                <span class="running-label">执行中</span>
+                <span class="running-ticker" id="taskSessionTicker"></span>
+                <span class="running-cursor"></span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Token 用量统计 -->
+    <div class="task-detail-section task-detail-token-section">
+        <h3 class="task-detail-section-title">Token 用量
+            <span class="token-stats-summary" id="taskTokenSummary"></span>
+        </h3>
+        <div class="token-chart-wrap" id="taskTokenChart"></div>
     </div>
 
     <div class="task-detail-section">
@@ -89,12 +122,20 @@
     <div class="task-detail-section task-detail-actions" id="taskDetailActions"></div>
 </div>
 
+<!-- 新建/编辑任务模态框（公共组件，与任务看板/项目详情页共用） -->
+<div th:replace="~{fragment/task-modal :: taskModal}"></div>
+
 <div id="toast-container" class="toast-container"></div>
 
 <script th:src="@{/js/common.js}"></script>
 <script th:src="@{/js/toast.js}"></script>
+<script th:src="@{/js/chart.umd.min.js}"></script>
+<script th:src="@{/js/marked.min.js}"></script>
 <script th:src="@{/js/modal.js}"></script>
 <script th:src="@{/js/confirm-dialog.js}"></script>
+<script th:src="@{/js/notice.js}"></script>
+<!-- 任务弹框公共脚本（编辑/删除前置依赖：需在页面脚本之前加载） -->
+<script th:src="@{/js/page/task-modal.js}"></script>
 <script th:src="@{/js/page/task-detail.js}"></script>
 </body>
 </html>

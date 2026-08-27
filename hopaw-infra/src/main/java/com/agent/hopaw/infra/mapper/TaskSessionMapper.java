@@ -15,5 +15,7 @@ public interface TaskSessionMapper {
 
     Long findTaskIdBySessionId(@Param("sessionId") String sessionId);
 
+    List<String> findSessionIdsByProjectId(@Param("projectId") Long projectId);
+
     int deleteByTaskId(@Param("taskId") Long taskId);
 }

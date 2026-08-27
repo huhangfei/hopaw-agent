@@ -4,6 +4,7 @@ import com.agent.hopaw.infra.constant.AgentExecutorBizTypeEnum;
 import com.agent.hopaw.infra.constant.TaskCommenterTypeEnum;
 import com.agent.hopaw.infra.constant.TaskCommentTypeEnum;
 import com.agent.hopaw.infra.constant.TaskStatusEnum;
+import com.agent.hopaw.infra.enums.GlobalNoticeTypeEnum;
 import com.agent.hopaw.infra.executor.IAgentExecutor;
 import com.agent.hopaw.infra.mapper.TaskSessionMapper;
 import com.agent.hopaw.infra.mapper.WorkflowTaskMapper;
@@ -31,6 +32,7 @@ import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.HashMap;
 import java.util.List;
 import java.util.function.Function;
 import java.util.stream.Collectors;
@@ -50,6 +52,7 @@ public class WorkflowTaskService implements IWorkflowTaskService {
     private final IMcpServerConfigService mcpServerConfigService;
     private final IProjectService projectService;
     private final IProjectLogService projectLogService;
+    private final IGlobalNoticeService globalNoticeService;
 
     public WorkflowTaskService(WorkflowTaskMapper workflowTaskMapper,
                                WorkflowTaskPreconditionMapper preconditionMapper,
@@ -61,7 +64,8 @@ public class WorkflowTaskService implements IWorkflowTaskService {
                                IAgentToolService agentToolService,
                                IMcpServerConfigService mcpServerConfigService,
                                IProjectService projectService,
-                               IProjectLogService projectLogService) {
+                               IProjectLogService projectLogService,
+                               IGlobalNoticeService globalNoticeService) {
         this.workflowTaskMapper = workflowTaskMapper;
         this.preconditionMapper = preconditionMapper;
         this.taskSessionMapper = taskSessionMapper;
@@ -73,6 +77,7 @@ public class WorkflowTaskService implements IWorkflowTaskService {
         this.mcpServerConfigService = mcpServerConfigService;
         this.projectService = projectService;
         this.projectLogService = projectLogService;
+        this.globalNoticeService = globalNoticeService;
     }
 
     @Override
@@ -183,6 +188,12 @@ public class WorkflowTaskService implements IWorkflowTaskService {
             throw new RuntimeException("当前任务状态不允许审批");
         }
         updateTaskStatus(id, TaskStatusEnum.PENDING_EXECUTION.getCode(), null);
+        // 审核通过自动写入用户评论，下发给智能体作为开始处理的指令提示
+        try {
+            taskCommentService.addComment(id, "已审核通过，开始处理吧", userId);
+        } catch (Exception e) {
+            logger.warn("审核评论写入失败: taskId={}", id, e);
+        }
     }
 
     @Override
@@ -304,9 +315,11 @@ public class WorkflowTaskService implements IWorkflowTaskService {
         // 4. 构建内容（包含评论历史，区分评论者身份）
         List<Content> contents = new ArrayList<>();
         StringBuilder taskContent = new StringBuilder();
-        taskContent.append(task.getContent() != null ? task.getContent() : "");
         if (comments != null && !comments.isEmpty()) {
             for (WorkflowTaskComment comment : comments) {
+                if(comment.getCommenterType().equals(TaskCommenterTypeEnum.AGENT.getCode())){
+                    continue;
+                }
                 // 总结评论追加类型标记，便于智能体识别重要节点
                 String typeMark = TaskCommentTypeEnum.fromCode(comment.getCommentType()).isSummary() ? "[总结]" : "";
                 taskContent.append(String.format("[%s]%s %s\n",
@@ -400,7 +413,10 @@ public class WorkflowTaskService implements IWorkflowTaskService {
         agentExecutorParams.setBizType(AgentExecutorBizTypeEnum.WorkflowTaskChat);
         agentExecutorParams.setMcpServerConfigs(mcpServerConfigService.findEnabled());
 
-
+        agentExecutorParams.setExtParams(new HashMap<>(){{
+            put("workflowTaskId",task.getId());
+            put("workflowTaskProjectId",task.getProjectId());
+        }});
 
 
         // systemMessageProvider
@@ -423,15 +439,15 @@ public class WorkflowTaskService implements IWorkflowTaskService {
         systemMsgBuilder.append("记忆工具是你的核心工具，需要回忆什么信息时，先去调用记忆工具看看有没相关可用信息。\n");
         systemMsgBuilder.append("在判断有需要调用工具就去调用，遇到危险操作，立刻停止操作。\n");
         systemMsgBuilder.append("你只能使用用户提供的工具，绝对不能调用不存在的工具。\n");
-        systemMsgBuilder.append("\n--- 任务评论工具使用指引 ---\n");
-        systemMsgBuilder.append("你可以通过工具来操作当前任务：\n");
-        systemMsgBuilder.append("1. 添加任务评论：用于记录任务处理的关键细节、阶段性进展、重要决策，便于用户追踪处理过程；当你需要向用户确认信息或遇到需要用户决策的问题时，也可以通过添加评论的方式提出问题，用户会在任务评论中回复你。\n");
-        systemMsgBuilder.append("2. 查询当前任务：当需要回顾任务内容、查看用户是否有新的评论回复时调用。\n");
-        systemMsgBuilder.append("建议在执行关键步骤后通过评论记录处理细节，遇到不确定的问题时通过评论向用户提问而非自行猜测。\n");
-        systemMsgBuilder.append("每次处理完成后调用任务工具写入最终执行的结果总结。\n");
         systemMsgBuilder.append("任务编号：").append(task.getId()).append("\n");
         systemMsgBuilder.append("任务名称：").append(task.getTitle()).append("\n");
         systemMsgBuilder.append("任务内容：").append(task.getContent()).append("\n");
+        systemMsgBuilder.append("任务评论工具使用指引：\n");
+        systemMsgBuilder.append("1. 添加任务评论：用于记录任务处理的关键细节、阶段性进展、重要决策，便于用户追踪处理过程；当你需要向用户确认信息或遇到需要用户决策的问题时，也可以通过添加评论的方式提出问题，用户会在任务评论中回复你。\n");
+        systemMsgBuilder.append("2. 查询当前任务：当需要回顾任务内容、查看用户是否有新的评论回复时调用。\n");
+        systemMsgBuilder.append("任务处理要求：\n");
+        systemMsgBuilder.append("在执行关键步骤后通过评论记录处理细节，遇到不确定的问题时通过评论向用户提问而非自行猜测。\n");
+        systemMsgBuilder.append("每次处理完成后必须调用任务评论工具写入最终执行的结果总结。\n");
         // 若任务关联了项目，注入项目空间目录限制
         if (task.getProjectId() != null) {
             try {
@@ -575,11 +591,31 @@ public class WorkflowTaskService implements IWorkflowTaskService {
     public void updateTaskStatus(Long taskId, String status, String rejectReason) {
         WorkflowTask task = workflowTaskMapper.findById(taskId);
         workflowTaskMapper.updateStatus(taskId, status, rejectReason);
-        // 任务关联了项目且状态实际发生变化时，写入项目操作日志
-        if (task == null || task.getProjectId() == null || status == null || status.equals(task.getStatus())) {
+        if (task == null || status == null || status.equals(task.getStatus())) {
+            return;
+        }
+        // 状态实际变化：推送全局通知（含子类型 status_change）
+        notifyTaskStatusChange(task, status);
+        // 任务关联了项目时，写入项目操作日志
+        if (task.getProjectId() == null) {
             return;
         }
         logTaskStatusToProject(task, status);
+    }
+
+    /** 任务状态变更全局通知：子类型 status_change */
+    private void notifyTaskStatusChange(WorkflowTask task, String newStatus) {
+        try {
+            java.util.Map<String, Object> content = new java.util.HashMap<>();
+            content.put("taskId", task.getId());
+            content.put("projectId", task.getProjectId());
+            content.put("title", task.getTitle());
+            content.put("oldStatus", task.getStatus());
+            content.put("newStatus", newStatus);
+            globalNoticeService.notify(task.getUserId(), GlobalNoticeTypeEnum.TASK, "status_change", content);
+        } catch (Exception e) {
+            logger.warn("任务状态变更通知推送失败: taskId={}", task.getId(), e);
+        }
     }
 
     /** 任务状态变更写入关联项目的操作日志；智能体驱动的状态以智能体身份记录 */
@@ -614,5 +650,11 @@ public class WorkflowTaskService implements IWorkflowTaskService {
     @Override
     public Long findTaskIdBySessionId(String sessionId) {
         return taskSessionMapper.findTaskIdBySessionId(sessionId);
+    }
+
+    @Override
+    public List<String> getSessionIdsByProjectId(Long projectId) {
+        List<String> list = taskSessionMapper.findSessionIdsByProjectId(projectId);
+        return list != null ? list : new ArrayList<>();
     }
 }

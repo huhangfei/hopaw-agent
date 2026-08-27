@@ -6,6 +6,8 @@ import dev.langchain4j.model.chat.listener.ChatModelListener;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Component;
 
+import java.util.Map;
+
 @Component
 public class ChatModelListenerProvider implements IChatModelListenerProvider{
     private final ApplicationEventPublisher eventPublisher;
@@ -16,6 +18,20 @@ public class ChatModelListenerProvider implements IChatModelListenerProvider{
 
     @Override
     public ChatModelListener getChatModelListener(AiModelCallSourceEnum source,String sessionId, String userId, Long agentId) {
-        return new LangChain4jChatModelListener(source).setAgentId(agentId).setUserId(userId).setSessionId(sessionId).setEventPublisher(eventPublisher);
+        return new LangChain4jChatModelListener(source)
+                .setAgentId(agentId)
+                .setUserId(userId)
+                .setSessionId(sessionId)
+                .setEventPublisher(eventPublisher);
+    }
+
+    @Override
+    public ChatModelListener getChatModelListener(AiModelCallSourceEnum source, String sessionId, String userId, Long agentId, Map<String, Object> exData) {
+        return new LangChain4jChatModelListener(source)
+                .setAgentId(agentId)
+                .setUserId(userId)
+                .setSessionId(sessionId)
+                .setExData(exData)
+                .setEventPublisher(eventPublisher);
     }
 }

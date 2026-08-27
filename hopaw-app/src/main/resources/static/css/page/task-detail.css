@@ -56,6 +56,37 @@ body {
     color: #333;
 }
 
+/* 头部操作按钮组（编辑/删除/关闭） */
+.task-detail-header-actions {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    flex-shrink: 0;
+}
+
+.task-detail-header-btn {
+    background: transparent;
+    border: none;
+    color: #999;
+    cursor: pointer;
+    padding: 6px;
+    border-radius: 6px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background 0.2s, color 0.2s;
+}
+
+.task-detail-header-btn.btn-header-edit:hover {
+    background: #eef2ff;
+    color: #4f46e5;
+}
+
+.task-detail-header-btn.btn-header-delete:hover {
+    background: #fef2f2;
+    color: #ef4444;
+}
+
 /* ========== 状态标签 ========== */
 .task-status-tag {
     display: inline-block;
@@ -326,6 +357,111 @@ body {
     text-decoration: underline;
 }
 
+/* ========== 会话记录面板：列表与执行指示器合并为同一容器 ========== */
+.task-session-panel {
+    border: 1px solid #e5e7eb;
+    border-radius: 8px;
+    background: #fafafa;
+    overflow: hidden;
+}
+
+.task-detail-sessions {
+    display: flex;
+    flex-direction: column;
+}
+
+/* ========== 执行中指示行（面板底部一行，与列表同容器） ========== */
+.task-session-running {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 9px 12px;
+    background: rgba(59, 130, 246, 0.07);
+    border-top: 1px solid rgba(59, 130, 246, 0.35);
+    overflow: hidden;
+    /* 呼吸光圈动画：突出执行中状态 */
+    animation: running-pulse 1.6s ease-in-out infinite;
+}
+
+@keyframes running-pulse {
+    0%, 100% { box-shadow: inset 0 0 0 0 rgba(59, 130, 246, 0); }
+    50% { box-shadow: inset 0 0 12px 0 rgba(59, 130, 246, 0.15); }
+}
+
+.task-session-running .running-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: #3b82f6;
+    flex-shrink: 0;
+    animation: dot-blink 1s ease-in-out infinite;
+}
+
+@keyframes dot-blink {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.25; }
+}
+
+.task-session-running .running-label {
+    color: #3b82f6;
+    font-size: 12px;
+    font-weight: 600;
+    white-space: nowrap;
+    flex-shrink: 0;
+}
+
+/* 打字机文本：持续追加到右侧，超长丢弃左侧旧内容 */
+.task-session-running .running-ticker {
+    flex: 1;
+    min-width: 0;
+    font-size: 12px;
+    color: #888;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+/* 打字机光标：闪烁竖线 */
+.task-session-running .running-cursor {
+    display: inline-block;
+    width: 2px;
+    height: 14px;
+    background: #3b82f6;
+    flex-shrink: 0;
+    animation: cursor-blink 0.8s step-end infinite;
+}
+
+@keyframes cursor-blink {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0; }
+}
+
+body.dark-theme .task-session-panel {
+    background: #1a1a2e;
+    border-color: #2d2d44;
+}
+
+body.dark-theme .task-session-row {
+    border-bottom-color: #2d2d44;
+}
+
+body.dark-theme .task-session-running {
+    background: rgba(59, 130, 246, 0.12);
+    border-top-color: rgba(139, 163, 255, 0.35);
+}
+
+body.dark-theme .task-session-running .running-label {
+    color: #8ba3ff;
+}
+
+body.dark-theme .task-session-running .running-cursor {
+    background: #8ba3ff;
+}
+
+body.dark-theme .task-session-running .running-ticker {
+    color: #c0c0c0;
+}
+
 /* ========== 执行时段胶囊 ========== */
 .time-range-value {
     display: flex;
@@ -356,13 +492,9 @@ body {
     padding-left: 2px;
 }
 
-/* ========== 任务内容 ========== */
+/* ========== 任务内容（Markdown 渲染，元素样式见 md-content.css） ========== */
 .task-detail-content {
-    font-size: 14px;
     color: #333;
-    line-height: 1.7;
-    white-space: pre-wrap;
-    word-break: break-word;
 }
 
 .task-detail-content.empty {
@@ -381,10 +513,15 @@ body {
     justify-content: space-between;
     align-items: center;
     padding: 10px 12px;
-    border: 1px solid #e5e7eb;
-    border-radius: 8px;
-    background: #fafafa;
+    border: none;
+    border-radius: 0;
+    background: transparent;
+    border-bottom: 1px solid #e5e7eb;
     gap: 10px;
+}
+
+.task-session-row:last-child {
+    border-bottom: none;
 }
 
 .task-session-info {
@@ -740,6 +877,20 @@ body.dark-theme .task-detail-close-btn:hover {
     color: #e0e0e0;
 }
 
+body.dark-theme .task-detail-header-btn {
+    color: #888;
+}
+
+body.dark-theme .task-detail-header-btn.btn-header-edit:hover {
+    background: #2d2d44;
+    color: #8ba3ff;
+}
+
+body.dark-theme .task-detail-header-btn.btn-header-delete:hover {
+    background: #3d2d44;
+    color: #f87171;
+}
+
 body.dark-theme .task-detail-section {
     background: #16213e;
     box-shadow: 0 1px 4px rgba(0, 0, 0, 0.3);
@@ -755,6 +906,65 @@ body.dark-theme .task-detail-info-item .info-label {
 
 body.dark-theme .task-detail-info-item .info-value {
     color: #c0c0c0;
+}
+
+/* ========== Token 用量统计模块（参考会话右下角统计样式） ========== */
+.task-detail-token-section .task-detail-section-title {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+
+.token-stats-summary {
+    font-size: 12px;
+    font-weight: 400;
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+
+.token-stats-summary .ts-in { color: #2196F3; }
+.token-stats-summary .ts-out { color: #4CAF50; }
+.token-stats-summary .ts-total { color: #666; }
+.token-stats-summary .ts-count {
+    color: #667eea;
+    background: rgba(102, 126, 234, 0.08);
+    border: 1px solid rgba(102, 126, 234, 0.25);
+    padding: 1px 8px;
+    border-radius: 10px;
+    white-space: nowrap;
+}
+
+body.dark-theme .token-stats-summary .ts-total { color: #c0c0c0; }
+
+.token-chart-wrap {
+    background: #fafbfc;
+    border: 1px solid #eee;
+    border-radius: 8px;
+    padding: 12px;
+    height: 180px;
+    position: relative;
+}
+
+.token-chart-empty {
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #999;
+    font-size: 12px;
+}
+
+body.dark-theme .token-chart-wrap {
+    background: #1a1a2e;
+    border-color: #2d2d44;
+}
+
+body.dark-theme .token-chart-empty {
+    color: #888;
 }
 
 body.dark-theme .task-detail-reject-reason {
@@ -800,11 +1010,6 @@ body.dark-theme .task-detail-content {
 
 body.dark-theme .task-detail-content.empty {
     color: #888;
-}
-
-body.dark-theme .task-session-row {
-    background: #1a1a2e;
-    border-color: #2d2d44;
 }
 
 body.dark-theme .task-session-info {

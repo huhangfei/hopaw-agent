@@ -1,0 +1,58 @@
+<!-- 任务新建/编辑模态框（任务看板与项目详情页共用，逻辑见 js/page/task-modal.js） -->
+<div th:fragment="taskModal" class="modal-overlay" id="taskModal">
+    <div class="modal" style="max-width: 640px;">
+        <div class="modal-header">
+            <h3 id="taskModalTitle">新建任务</h3>
+            <button class="modal-close" onclick="closeTaskModal()">&times;</button>
+        </div>
+        <div class="modal-body">
+            <form id="taskForm">
+                <input type="hidden" id="taskId">
+                <div class="form-group">
+                    <label for="taskTitle">任务标题 *</label>
+                    <input type="text" id="taskTitle" placeholder="请输入任务标题">
+                </div>
+                <div class="form-group">
+                    <label for="taskContent">任务内容（下发给智能体的指令）</label>
+                    <textarea id="taskContent" rows="5" placeholder="请输入任务内容"></textarea>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="taskAgentId">智能体 *</label>
+                        <select id="taskAgentId"></select>
+                    </div>
+                    <div class="form-group">
+                        <label for="taskProjectId">所属项目</label>
+                        <select id="taskProjectId" onchange="onTaskProjectChange()"></select>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label>前置任务（全部满足勾选状态后任务才会被拉起执行）</label>
+                    <div class="precondition-add-row">
+                        <select id="preconditionTaskSelect"></select>
+                        <button type="button" class="btn-precondition-add" onclick="addPrecondition()">添加</button>
+                    </div>
+                    <div id="preconditionList" class="precondition-list"></div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="taskStartTime">开始时间</label>
+                        <input type="datetime-local" id="taskStartTime">
+                    </div>
+                    <div class="form-group">
+                        <label>执行时段</label>
+                        <div class="time-range-input">
+                            <input type="time" id="taskExecStart" placeholder="开始">
+                            <span class="time-range-sep">~</span>
+                            <input type="time" id="taskExecEnd" placeholder="结束">
+                        </div>
+                    </div>
+                </div>
+            </form>
+        </div>
+        <div class="modal-footer">
+            <button class="btn-cancel" onclick="closeTaskModal()">取消</button>
+            <button class="btn-submit" onclick="submitTask()">保存</button>
+        </div>
+    </div>
+</div>

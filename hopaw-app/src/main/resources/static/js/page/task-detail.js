@@ -3,6 +3,10 @@
  */
 var currentTaskId = null;
 var currentTask = null;
+/* 本任务关联的会话ID集合：用于匹配 WebSocket 消息 */
+var taskSessionIds = [];
+var taskWs = null;
+var taskWsRunning = false;
 
 var statusMap = {
     pending: { label: '待启动', color: '#6b7280' },
@@ -24,7 +28,34 @@ document.addEventListener('DOMContentLoaded', function () {
     }
     currentTaskId = Number(id);
     loadTaskDetail(currentTaskId);
+    connectTaskWebSocket();
+    // 订阅全局通知：仅刷新当前打开的任务（或所属项目）
+    connectNoticeWebSocket(handleTaskDetailNotice);
+    // 预加载任务弹框所需下拉数据（智能体/项目/前置任务，公共 task-modal.js）
+    loadAgents();
+    loadProjects();
+    loadTasksForPreconditions();
 });
+
+/* 任务弹框保存成功后的刷新回调（供公共 task-modal.js 调用） */
+window.onTaskModalSaved = function () {
+    if (currentTaskId != null) {
+        loadTaskDetail(currentTaskId);
+    }
+};
+
+/** 全局通知处理：任务状态变更时若正是当前任务则刷新；项目状态变更刷新详情基础信息 */
+function handleTaskDetailNotice(data) {
+    if (!data || data.subtype !== 'status_change' || currentTaskId == null) return;
+    var c = data.content || {};
+    if (data.type === 'task' && c.taskId != null && Number(c.taskId) === Number(currentTaskId)) {
+        showToast('任务状态已变更，正在刷新', 'success');
+        loadTaskDetail(currentTaskId);
+    } else if (data.type === 'project' && currentTask && currentTask.projectId != null
+        && c.projectId != null && Number(c.projectId) === Number(currentTask.projectId)) {
+        loadTaskDetail(currentTaskId);
+    }
+}
 
 function loadTaskDetail(id) {
     fetch('/api/workflow/tasks/' + id)
@@ -38,6 +69,7 @@ function loadTaskDetail(id) {
             renderTaskDetail(currentTask);
             loadTaskSessions(id);
             loadComments(id);
+            loadTaskTokenUsage(id);
         })
         .catch(function (err) {
             console.error('加载任务失败:', err);
@@ -85,7 +117,12 @@ function renderTaskDetail(task) {
     var contentEl = document.getElementById('taskDetailContent');
     if (task.content) {
         contentEl.classList.remove('empty');
-        contentEl.textContent = task.content;
+        // 任务内容按 Markdown 渲染（marked 未加载时降级为转义纯文本）
+        if (typeof marked !== 'undefined' && marked.parse) {
+            contentEl.innerHTML = marked.parse(task.content, { breaks: true, gfm: true });
+        } else {
+            contentEl.textContent = task.content;
+        }
     } else {
         contentEl.classList.add('empty');
         contentEl.textContent = '暂无任务内容';
@@ -107,8 +144,9 @@ function isPreconditionSatisfied(pc) {
 /** 渲染前置任务列表：每条展示前置任务标题、当前状态、要求状态及满足与否；无前置任务时隐藏区块 */
 function renderPreconditions(preconditions) {
     var sectionEl = document.getElementById('taskDetailPreconditions');
-    var listEl = document.getElementById('preconditionList');
-    var summaryEl = document.getElementById('preconditionSummary');
+    // 注意：ID 使用 taskDetail 前缀，避免与公共任务弹框(task-modal)内的 preconditionList 重复
+    var listEl = document.getElementById('taskDetailPreconditionList');
+    var summaryEl = document.getElementById('taskDetailPreconditionSummary');
 
     if (!preconditions.length) {
         sectionEl.style.display = 'none';
@@ -184,6 +222,43 @@ function renderTaskActions(task) {
     }
 
     actionsEl.innerHTML = html;
+
+    // 头部编辑按钮：处理中不可编辑（与看板规则一致），已关闭可编辑
+    var editBtn = document.getElementById('btnEditTask');
+    if (editBtn) {
+        editBtn.style.display = (status === 'processing') ? 'none' : 'flex';
+    }
+}
+
+/* ========== 头部编辑/删除 ========== */
+
+/** 编辑当前任务：复用公共任务弹框回显 */
+function editCurrentTask() {
+    if (currentTaskId == null) return;
+    showEditTaskModal(currentTaskId);
+}
+
+/** 删除当前任务：确认后调用删除接口，成功后关闭详情窗口 */
+function deleteCurrentTask() {
+    if (currentTaskId == null) return;
+    showConfirm('确定要删除该任务吗？删除后不可恢复。').then(function (confirmed) {
+        if (!confirmed) return;
+        fetch('/api/workflow/tasks/' + currentTaskId, { method: 'DELETE' })
+            .then(function (r) { return r.json(); })
+            .then(function (res) {
+                if (res.code === 200) {
+                    showToast('删除成功', 'success');
+                    // 详情窗口无返回目标，延迟关闭给用户留出提示时间
+                    setTimeout(function () { window.close(); }, 600);
+                } else {
+                    showToast(res.msg || '删除失败', 'error');
+                }
+            })
+            .catch(function (err) {
+                console.error('删除任务失败:', err);
+                showToast('删除失败', 'error');
+            });
+    });
 }
 
 /* ========== 会话记录 ========== */
@@ -204,6 +279,11 @@ function loadTaskSessions(taskId) {
 }
 
 function renderTaskSessions(list) {
+    // 记录会话ID集合，供 WebSocket 消息匹配使用
+    taskSessionIds = (list || []).map(function (session) {
+        return session.sessionId || '';
+    }).filter(Boolean);
+
     var container = document.getElementById('taskDetailSessions');
     if (!list || !list.length) {
         container.innerHTML = '<div class="task-detail-empty">暂无会话记录</div>';
@@ -243,6 +323,145 @@ function clearTaskSessionHistory(sessionId) {
                 showToast('清空失败', 'error');
             });
     });
+}
+
+/* ========== 会话执行状态监听（WebSocket） ========== */
+/* 打字机缓冲区：持续追加内容，超过固定长度时丢弃最左侧旧内容 */
+var tickerBuffer = '';
+var TICKER_MAX_LEN = 150;
+/* 当前正在输出参数的工具调用ID：同一工具的分片不重复拼接标签 */
+var currentToolCallId = null;
+/* 已收到过流式分片的工具调用集合：全量数据仅在无分片时补充展示 */
+var streamSeen = {};
+
+/** 订阅会话 WebSocket：消息的 sessionId 属于本任务时展示执行中指示，结束时刷新任务页 */
+function connectTaskWebSocket() {
+    var protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+    try {
+        taskWs = new WebSocket(protocol + '//' + window.location.host + '/ws/chat');
+    } catch (e) {
+        console.error('创建 WebSocket 失败:', e);
+        return;
+    }
+    taskWs.onmessage = function (event) {
+        var data;
+        try { data = JSON.parse(event.data); } catch (e) { return; }
+        if (!data.sessionId || taskSessionIds.indexOf(data.sessionId) === -1) return;
+
+        if (data.type === 'received') {
+            showSessionRunning();
+            // 新一轮执行：清空打字机缓冲区，从零开始追加
+            tickerBuffer = '';
+            currentToolCallId = null;
+            streamSeen = {};
+            var tEl = document.getElementById('taskSessionTicker');
+            if (tEl) tEl.textContent = '';
+        } else if (data.type === 'chunk') {
+            showSessionRunning();
+            appendTicker(data.content);
+        } else if (data.type === 'tool_call') {
+            showSessionRunning();
+            handleToolCallTicker(data);
+        } else if (data.type === 'thinking') {
+            showSessionRunning();
+            appendTicker(data.content);
+        } else if (data.type === 'token_usage') {
+            // 本任务会话产生了 token 消耗：刷新柱状统计图
+            loadTaskTokenUsage(currentTaskId);
+        } else if (data.type === 'session-title') {
+            // 用户意图分析生成了会话标题：刷新会话列表展示新标题
+            loadTaskSessions(currentTaskId);
+        } else if (data.type === 'task-done' || data.type === 'done' || data.type === 'error') {
+            if (taskWsRunning) {
+                hideSessionRunning();
+                showToast('会话执行结束，已刷新任务信息', 'success');
+                loadTaskDetail(currentTaskId);
+            }
+        }
+    };
+    taskWs.onclose = function () {
+        // 断线重连（页面可能长时间停留在详情页）
+        setTimeout(connectTaskWebSocket, 5000);
+    };
+}
+
+/** 工具调用打字机展示：标签只在新工具时拼接一次，参数/结果分片持续追加 */
+function handleToolCallTicker(data) {
+    var isNewTool = data.toolCallId && data.toolCallId !== currentToolCallId;
+    if (data.status === 'preparing') {
+        // 参数流式分片：新工具先拼标签，同一工具的后续分片只追加参数内容
+        if (isNewTool) {
+            currentToolCallId = data.toolCallId;
+            appendTicker(' [调用工具 ' + (data.toolName || '') + '] ');
+        }
+        if (data.argumentsPartial != null) {
+            streamSeen['a:' + data.toolCallId] = true;
+            appendTicker(String(data.argumentsPartial));
+        }
+    } else if (data.status === 'started') {
+        if (isNewTool) {
+            currentToolCallId = data.toolCallId;
+            appendTicker(' [调用工具 ' + (data.toolName || '') + '] ');
+        }
+        // 全量参数仅在未收到过分片时补充展示（分片已展示则不重复）
+        if (data.arguments != null && !streamSeen['a:' + data.toolCallId]) {
+            appendTicker(formatTickerJson(data.arguments));
+        }
+    } else if (data.status === 'running') {
+        // 执行结果流式分片
+        if (data.resultPartial != null) {
+            streamSeen['r:' + data.toolCallId] = true;
+            appendTicker(String(data.resultPartial));
+        }
+    } else if (data.status === 'executed') {
+        currentToolCallId = null;
+        if (data.result != null && !streamSeen['r:' + data.toolCallId]) {
+            appendTicker(' [工具返回] ' + formatTickerJson(data.result));
+        }
+    } else if (data.status === 'failed' || data.status === 'rejected') {
+        currentToolCallId = null;
+        appendTicker(' [工具' + (data.status === 'failed' ? '执行失败' : '被拒绝') + '] ');
+    }
+}
+
+/** 参数/结果对象转紧凑字符串（超长截断） */
+function formatTickerJson(obj) {
+    if (obj == null) return '';
+    var text;
+    if (typeof obj === 'string') {
+        text = obj;
+    } else {
+        try { text = JSON.stringify(obj); } catch (e) { text = String(obj); }
+    }
+    return text.length > 200 ? text.slice(0, 200) + '…' : text;
+}
+
+/** 显示"执行中"指示器 */
+function showSessionRunning() {
+    var el = document.getElementById('taskSessionRunning');
+    if (!el) return;
+    el.style.display = 'flex';
+    taskWsRunning = true;
+}
+
+/** 隐藏执行中指示器 */
+function hideSessionRunning() {
+    var el = document.getElementById('taskSessionRunning');
+    if (el) el.style.display = 'none';
+    taskWsRunning = false;
+}
+
+/** 打字机追加：内容持续拼接到缓冲区右侧，超长丢弃最左侧旧内容 */
+function appendTicker(content) {
+    if (!content) return;
+    var text = String(content).replace(/\s+/g, ' ').trim();
+    if (!text) return;
+    tickerBuffer += text;
+    if (tickerBuffer.length > TICKER_MAX_LEN) {
+        tickerBuffer = tickerBuffer.slice(tickerBuffer.length - TICKER_MAX_LEN);
+    }
+    var el = document.getElementById('taskSessionTicker');
+    if (el) el.textContent = tickerBuffer;
 }
 
 /* ========== 评论 ========== */
@@ -558,4 +777,122 @@ function escapeHtml(str) {
         .replace(/>/g, '&gt;')
         .replace(/"/g, '&quot;')
         .replace(/'/g, '&#39;');
+}
+
+/* ========== 任务 Token 用量统计（参考会话右下角统计样式） ========== */
+var taskTokenChart = null;
+
+function loadTaskTokenUsage(taskId) {
+    fetch('/api/workflow/tasks/' + taskId + '/token-usage?limit=30')
+        .then(function (r) { return r.json(); })
+        .then(function (res) {
+            if (res.code === 200 && res.data) {
+                renderTaskTokenUsage(res.data);
+            }
+        })
+        .catch(function (err) {
+            console.error('加载任务 Token 用量失败:', err);
+        });
+}
+
+function renderTaskTokenUsage(data) {
+    var summaryEl = document.getElementById('taskTokenSummary');
+    var chartEl = document.getElementById('taskTokenChart');
+    if (!summaryEl || !chartEl) return;
+
+    var summary = data.summary || {};
+    var list = data.list || [];
+
+    if (!list.length) {
+        summaryEl.innerHTML = '';
+        if (taskTokenChart) {
+            taskTokenChart.destroy();
+            taskTokenChart = null;
+        }
+        chartEl.innerHTML = '<div class="token-chart-empty">暂无用量记录</div>';
+        return;
+    }
+
+    summaryEl.innerHTML = '<span class="ts-in">↑ ' + formatTokenCount(summary.inputTokens || 0) + '</span>'
+        + '<span class="ts-out">↓ ' + formatTokenCount(summary.outputTokens || 0) + '</span>'
+        + '<span class="ts-total">总 ' + formatTokenCount(summary.totalTokens || 0) + '</span>'
+        + '<span class="ts-count">' + (summary.id || 0) + ' 次</span>';
+
+    // 按时间正序展示最近 30 条
+    var ordered = list.slice().reverse();
+    renderTaskTokenChart(chartEl, ordered);
+}
+
+function renderTaskTokenChart(container, data) {
+    container.innerHTML = '<canvas id="taskTokenChartCanvas"></canvas>';
+    var canvas = document.getElementById('taskTokenChartCanvas');
+    var isDark = document.body.classList.contains('dark-theme');
+
+    var labels = data.map(function (d) {
+        return d.createTime ? String(d.createTime).replace('T', ' ').substring(5, 16) : '';
+    });
+    var inputData = data.map(function (d) { return d.inputTokens || 0; });
+    var outputData = data.map(function (d) { return d.outputTokens || 0; });
+
+    if (taskTokenChart) {
+        taskTokenChart.destroy();
+        taskTokenChart = null;
+    }
+    taskTokenChart = new Chart(canvas, {
+        type: 'bar',
+        data: {
+            labels: labels,
+            datasets: [
+                { label: '输入', data: inputData, backgroundColor: '#2196F3', borderRadius: 3 },
+                { label: '输出', data: outputData, backgroundColor: '#4CAF50', borderRadius: 3 }
+            ]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            animation: { duration: 600, easing: 'easeOutQuart' },
+            plugins: {
+                legend: { display: false },
+                tooltip: {
+                    callbacks: {
+                        label: function (ctx) {
+                            return ctx.dataset.label + ': ' + ctx.raw.toLocaleString();
+                        },
+                        footer: function (items) {
+                            var total = items.reduce(function (sum, item) { return sum + item.raw; }, 0);
+                            return '总量: ' + total.toLocaleString();
+                        }
+                    }
+                }
+            },
+            scales: {
+                x: {
+                    stacked: true,
+                    grid: { display: false },
+                    ticks: { font: { size: 9 }, color: isDark ? '#888' : '#999', maxRotation: 45 }
+                },
+                y: {
+                    stacked: true,
+                    beginAtZero: true,
+                    ticks: {
+                        font: { size: 9 },
+                        color: isDark ? '#888' : '#999',
+                        callback: function (v) {
+                            return v >= 1000 ? (v / 1000).toFixed(0) + 'k' : v;
+                        }
+                    },
+                    grid: { color: isDark ? '#2d2d44' : '#f0f0f0' }
+                }
+            },
+            interaction: { intersect: false, mode: 'index' }
+        }
+    });
+}
+
+/** token 数量格式化（1.2w 形式） */
+function formatTokenCount(n) {
+    n = Number(n) || 0;
+    if (n >= 10000) return (n / 10000).toFixed(1) + 'w';
+    if (n >= 1000) return (n / 1000).toFixed(1) + 'k';
+    return String(n);
 }

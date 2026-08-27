@@ -15,6 +15,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.context.ApplicationEventPublisher;
 
 import java.time.LocalDateTime;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 /**
@@ -42,6 +43,14 @@ public class LangChain4jChatModelListener implements ChatModelListener {
      * 用户编号
      */
     private String userId;
+    /**
+     * 扩展参数
+     */
+    private Map<String,Object> exData;
+    public LangChain4jChatModelListener setExData(Map<String,Object> exData) {
+        this.exData = exData;
+        return this;
+    }
 
     public LangChain4jChatModelListener setAgentId(Long agentId) {
         this.agentId = agentId;
@@ -142,6 +151,7 @@ public class LangChain4jChatModelListener implements ChatModelListener {
                             source.getValue(),
                             LocalDateTime.now()
                     );
+                    message.setExData(exData);
                     eventPublisher.publishEvent(message);
                 } catch (Exception e) {
                     logger.error("发布 Token 用量消息失败", e);

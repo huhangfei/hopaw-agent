@@ -173,6 +173,24 @@ public class DatabaseInitializer implements CommandLineRunner {
                     "create_time DATETIME DEFAULT CURRENT_TIMESTAMP" +
                     ")");
 
+            // 项目/工作流任务维度 token 用量表
+            stmt.execute("CREATE TABLE IF NOT EXISTS biz_token_usage (" +
+                    "id INTEGER PRIMARY KEY AUTOINCREMENT, " +
+                    "project_id INTEGER, " +
+                    "task_id INTEGER, " +
+                    "agent_id INTEGER, " +
+                    "model_name TEXT, " +
+                    "input_tokens INTEGER DEFAULT 0, " +
+                    "output_tokens INTEGER DEFAULT 0, " +
+                    "total_tokens INTEGER DEFAULT 0, " +
+                    "user_id TEXT, " +
+                    "session_id TEXT, " +
+                    "source TEXT, " +
+                    "create_time DATETIME DEFAULT (datetime('now','localtime'))" +
+                    ")");
+            stmt.execute("CREATE INDEX IF NOT EXISTS idx_biz_token_usage_project ON biz_token_usage(project_id)");
+            stmt.execute("CREATE INDEX IF NOT EXISTS idx_biz_token_usage_task ON biz_token_usage(task_id)");
+
             stmt.execute("CREATE TABLE IF NOT EXISTS sys_config (" +
                     "id INTEGER PRIMARY KEY AUTOINCREMENT, " +
                     "config_key TEXT NOT NULL UNIQUE, " +

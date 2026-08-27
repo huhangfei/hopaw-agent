@@ -1,10 +1,14 @@
-package com.agent.hopaw.infra.event;
+package com.agent.hopaw.infra.model.entity;
 
 import java.time.LocalDateTime;
-import java.util.Map;
 
-public class TokenUsageEvent {
-
+/**
+ * 项目/工作流任务维度 Token 用量
+ */
+public class BizTokenUsage {
+    private Long id;
+    private Long projectId;
+    private Long taskId;
     private Long agentId;
     private String modelName;
     private Integer inputTokens;
@@ -13,29 +17,14 @@ public class TokenUsageEvent {
     private String userId;
     private String sessionId;
     private String source;
-
-    /**
-     * 扩展参数
-     */
-    private Map<String,Object> exData;
     private LocalDateTime createTime;
 
-    public TokenUsageEvent() {
-    }
-
-    public TokenUsageEvent(Long agentId, String modelName, Integer inputTokens, Integer outputTokens,
-                           Integer totalTokens, String userId, String sessionId, String source, LocalDateTime createTime) {
-        this.agentId = agentId;
-        this.modelName = modelName;
-        this.inputTokens = inputTokens;
-        this.outputTokens = outputTokens;
-        this.totalTokens = totalTokens;
-        this.userId = userId;
-        this.sessionId = sessionId;
-        this.source = source;
-        this.createTime = createTime;
-    }
-
+    public Long getId() { return id; }
+    public void setId(Long id) { this.id = id; }
+    public Long getProjectId() { return projectId; }
+    public void setProjectId(Long projectId) { this.projectId = projectId; }
+    public Long getTaskId() { return taskId; }
+    public void setTaskId(Long taskId) { this.taskId = taskId; }
     public Long getAgentId() { return agentId; }
     public void setAgentId(Long agentId) { this.agentId = agentId; }
     public String getModelName() { return modelName; }
@@ -54,12 +43,4 @@ public class TokenUsageEvent {
     public void setSource(String source) { this.source = source; }
     public LocalDateTime getCreateTime() { return createTime; }
     public void setCreateTime(LocalDateTime createTime) { this.createTime = createTime; }
-
-    public Map<String, Object> getExData() {
-        return exData;
-    }
-
-    public void setExData(Map<String, Object> exData) {
-        this.exData = exData;
-    }
 }

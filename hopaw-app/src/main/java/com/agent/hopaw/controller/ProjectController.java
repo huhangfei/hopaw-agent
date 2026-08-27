@@ -8,8 +8,10 @@ import com.agent.hopaw.infra.model.entity.Project;
 import com.agent.hopaw.infra.model.entity.ProjectLog;
 import com.agent.hopaw.infra.model.entity.WorkflowTask;
 import com.agent.hopaw.infra.service.IAccountService;
+import com.agent.hopaw.infra.service.IBizTokenUsageService;
 import com.agent.hopaw.infra.service.IProjectLogService;
 import com.agent.hopaw.infra.service.IProjectService;
+import com.agent.hopaw.infra.service.IWorkflowTaskService;
 import com.agent.hopaw.util.CurrentUser;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -35,13 +37,19 @@ public class ProjectController {
     private final IProjectService projectService;
     private final IAccountService accountService;
     private final IProjectLogService projectLogService;
+    private final IBizTokenUsageService bizTokenUsageService;
+    private final IWorkflowTaskService workflowTaskService;
 
     public ProjectController(IProjectService projectService,
                              IAccountService accountService,
-                             IProjectLogService projectLogService) {
+                             IProjectLogService projectLogService,
+                             IBizTokenUsageService bizTokenUsageService,
+                             IWorkflowTaskService workflowTaskService) {
         this.projectService = projectService;
         this.accountService = accountService;
         this.projectLogService = projectLogService;
+        this.bizTokenUsageService = bizTokenUsageService;
+        this.workflowTaskService = workflowTaskService;
     }
 
     // 页面
@@ -142,6 +150,34 @@ public class ProjectController {
         String logType = body == null ? null : body.get("logType");
         boolean ok = projectLogService.updateLogType(logId, logType);
         return ok ? ResponseBean.success("更新成功") : ResponseBean.fail("日志不存在");
+    }
+
+    // 项目维度 Token 用量统计
+    @GetMapping("/api/projects/{id}/token-usage")
+    @ResponseBody
+    public ResponseBean getProjectTokenUsage(HttpServletRequest request, @PathVariable Long id,
+            @RequestParam(required = false, defaultValue = "30") int limit) {
+        String userId = CurrentUser.require(request);
+        Project project = projectService.getProject(id, userId);
+        if (project == null) {
+            return ResponseBean.fail("项目不存在或无权访问");
+        }
+        if (limit < 1 || limit > 200) {
+            limit = 30;
+        }
+        return ResponseBean.success(bizTokenUsageService.getProjectUsage(id, limit));
+    }
+
+    // 项目关联的所有会话ID（供前端匹配 WebSocket 消息）
+    @GetMapping("/api/projects/{id}/session-ids")
+    @ResponseBody
+    public ResponseBean getProjectSessionIds(HttpServletRequest request, @PathVariable Long id) {
+        String userId = CurrentUser.require(request);
+        Project project = projectService.getProject(id, userId);
+        if (project == null) {
+            return ResponseBean.fail("项目不存在或无权访问");
+        }
+        return ResponseBean.success(workflowTaskService.getSessionIdsByProjectId(id));
     }
 
     /** 填充项目创建人昵称 */

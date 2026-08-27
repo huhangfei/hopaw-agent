@@ -264,7 +264,8 @@
 .detail-title-area {
     display: flex;
     align-items: center;
-    gap: 12px;
+    flex-wrap: wrap;
+    gap: 8px 12px;
     flex: 1;
     min-width: 0;
 }
@@ -363,19 +364,21 @@
     text-decoration: underline;
 }
 
-/* 状态流转按钮 */
+/* 状态流转按钮（位于标题行状态徽标之后） */
 .status-actions {
-    display: flex;
+    display: inline-flex;
     flex-wrap: wrap;
-    gap: 8px;
+    align-items: center;
+    gap: 6px;
+    min-width: 0;
 }
 
 .btn-status {
-    padding: 6px 14px;
+    padding: 4px 10px;
     border: 1px solid #ddd;
     border-radius: 6px;
     background: #fff;
-    font-size: 13px;
+    font-size: 12px;
     cursor: pointer;
     transition: all 0.2s;
 }
@@ -386,16 +389,12 @@
 
 .status-tip {
     color: #aaa;
-    font-size: 13px;
+    font-size: 12px;
 }
 
-/* 描述 */
+/* 描述（Markdown 渲染，元素样式见 md-content.css） */
 .detail-desc {
-    font-size: 14px;
     color: #555;
-    line-height: 1.6;
-    white-space: pre-wrap;
-    word-break: break-word;
     padding: 12px;
     background: #fafafa;
     border-radius: 8px;
@@ -430,6 +429,34 @@
     font-size: 14px;
     color: #999;
     flex-shrink: 0;
+}
+
+/* 新建任务按钮（复用任务弹框，默认选中当前项目） */
+.detail-tasks-section .btn-add-task-detail {
+    flex-shrink: 0;
+    padding: 4px 12px;
+    margin-left: 4px;
+    border: none;
+    border-radius: 6px;
+    background: #667eea;
+    color: #fff;
+    font-size: 12px;
+    line-height: 1.5;
+    cursor: pointer;
+    transition: background 0.2s;
+}
+
+.detail-tasks-section .btn-add-task-detail:hover {
+    background: #5a6fd8;
+}
+
+body.dark-theme .detail-tasks-section .btn-add-task-detail {
+    background: #5a6fd6;
+    color: #e0e0e0;
+}
+
+body.dark-theme .detail-tasks-section .btn-add-task-detail:hover {
+    background: #667eea;
 }
 
 .detail-tasks {
@@ -1297,6 +1324,95 @@ body.dark-theme .ft-btn {
 
 body.dark-theme .ft-btn:hover {
     background: #2d3a5f;
+}
+
+/* ========== Token 用量统计模块（参考会话右下角统计样式） ========== */
+.detail-token-section .token-section-header {
+    cursor: pointer;
+    user-select: none;
+    padding: 8px 10px;
+    margin: -10px -10px 10px -10px;
+    border-radius: 6px;
+    transition: background 0.15s;
+}
+
+.detail-token-section .token-section-header:hover {
+    background: #f0f2ff;
+}
+
+.detail-token-section .token-title {
+    flex: 1;
+}
+
+.detail-token-section .token-toggle-icon {
+    font-size: 14px;
+    color: #999;
+    flex-shrink: 0;
+}
+
+body.dark-theme .detail-token-section .token-section-header:hover {
+    background: #2d3a5f;
+}
+
+body.dark-theme .detail-token-section .token-toggle-icon {
+    color: #888;
+}
+
+.detail-token-section .section-title {
+    gap: 10px;
+}
+
+.token-stats-summary {
+    font-size: 12px;
+    font-weight: 400;
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+
+.token-stats-summary .ts-in { color: #2196F3; }
+.token-stats-summary .ts-out { color: #4CAF50; }
+.token-stats-summary .ts-total { color: #666; }
+.token-stats-summary .ts-count {
+    color: #667eea;
+    background: rgba(102, 126, 234, 0.08);
+    border: 1px solid rgba(102, 126, 234, 0.25);
+    padding: 1px 8px;
+    border-radius: 10px;
+    white-space: nowrap;
+}
+
+body.dark-theme .token-stats-summary .ts-total { color: #c0c0c0; }
+
+.token-chart-wrap {
+    background: #fff;
+    border: 1px solid #eee;
+    border-radius: 10px;
+    padding: 12px;
+    height: 180px;
+    position: relative;
+}
+
+.token-chart-empty {
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #999;
+    font-size: 12px;
+}
+
+body.dark-theme .token-chart-wrap {
+    background: #16213e;
+    border-color: #2d2d44;
+}
+
+body.dark-theme .token-chart-empty {
+    color: #888;
+}
+
+body.dark-theme .ft-btn-danger {
     color: #8ba3ff;
 }
 

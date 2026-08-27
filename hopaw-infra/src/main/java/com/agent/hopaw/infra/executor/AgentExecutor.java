@@ -469,7 +469,7 @@ public class AgentExecutor implements IAgentExecutor {
 
     private String analyzeUserIntent(List<Content> contents) {
         try {
-            ChatModelListener chatModelListener = chatModelListenerProvider.getChatModelListener(AiModelCallSourceEnum.ChatAnalyzeUserIntent, sessionId, userId, agentId);
+            ChatModelListener chatModelListener = chatModelListenerProvider.getChatModelListener(AiModelCallSourceEnum.ChatAnalyzeUserIntent, sessionId, userId, agentId,agentExecutorParams.getExtParams());
 
             InvocationParametersWrapper invocationParametersWrapper = InvocationParametersWrapper.create()
                     .setUserId(userId)
@@ -495,7 +495,7 @@ public class AgentExecutor implements IAgentExecutor {
 
     private String analyzeToolCall(ToolInfo toolInfo,String arguments) {
         try {
-            ChatModelListener chatModelListener = chatModelListenerProvider.getChatModelListener(AiModelCallSourceEnum.ChatToolCallCheck, sessionId, userId, agentId);
+            ChatModelListener chatModelListener = chatModelListenerProvider.getChatModelListener(AiModelCallSourceEnum.ChatToolCallCheck, sessionId, userId, agentId,agentExecutorParams.getExtParams());
             String systemMessage="你只是一个工具调用安全检查员，你需要判断用户提交到调用是否需要人工介入？只需要返回给用户：是或否";
 
             List<Content> contents=new ArrayList<>();
@@ -591,7 +591,7 @@ public class AgentExecutor implements IAgentExecutor {
                 logger.warn("MCP configs found but no client was created, proceeding without MCP tools");
             }
         }
-        ChatModelListener chatModelListener = chatModelListenerProvider.getChatModelListener(agentExecutorParams.getBizType().getAiModelCallSourceEnum(), sessionId, userId, agentId);
+        ChatModelListener chatModelListener = chatModelListenerProvider.getChatModelListener(agentExecutorParams.getBizType().getAiModelCallSourceEnum(), sessionId, userId, agentId,agentExecutorParams.getExtParams());
         StreamingChatModel streamingModel = aiModelService.createStreamingChatModel(agentExecutorParams.getAiModelId(), agentExecutorParams.getEnableThinking(), chatModelListener);
         return aiBuilder.streamingChatModel(streamingModel).build();
     }

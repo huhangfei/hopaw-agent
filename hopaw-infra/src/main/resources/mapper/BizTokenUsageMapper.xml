@@ -1,0 +1,64 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.agent.hopaw.infra.mapper.BizTokenUsageMapper">
+
+    <resultMap id="BizTokenUsageResultMap" type="com.agent.hopaw.infra.model.entity.BizTokenUsage">
+        <id property="id" column="id"/>
+        <result property="projectId" column="project_id"/>
+        <result property="taskId" column="task_id"/>
+        <result property="agentId" column="agent_id"/>
+        <result property="modelName" column="model_name"/>
+        <result property="inputTokens" column="input_tokens"/>
+        <result property="outputTokens" column="output_tokens"/>
+        <result property="totalTokens" column="total_tokens"/>
+        <result property="userId" column="user_id"/>
+        <result property="sessionId" column="session_id"/>
+        <result property="source" column="source"/>
+        <result property="createTime" column="create_time"/>
+    </resultMap>
+
+    <insert id="insert" parameterType="com.agent.hopaw.infra.model.entity.BizTokenUsage">
+        INSERT INTO biz_token_usage (project_id, task_id, agent_id, model_name, input_tokens, output_tokens,
+                                     total_tokens, user_id, session_id, source, create_time)
+        VALUES (#{projectId}, #{taskId}, #{agentId}, #{modelName}, #{inputTokens}, #{outputTokens},
+                #{totalTokens}, #{userId}, #{sessionId}, #{source}, #{createTime})
+    </insert>
+
+    <select id="summaryByProject" resultMap="BizTokenUsageResultMap">
+        SELECT
+        COALESCE(SUM(input_tokens), 0) AS input_tokens,
+        COALESCE(SUM(output_tokens), 0) AS output_tokens,
+        COALESCE(SUM(total_tokens), 0) AS total_tokens,
+        COUNT(*) AS id
+        FROM biz_token_usage
+        WHERE project_id = #{projectId}
+    </select>
+
+    <select id="summaryByTask" resultMap="BizTokenUsageResultMap">
+        SELECT
+        COALESCE(SUM(input_tokens), 0) AS input_tokens,
+        COALESCE(SUM(output_tokens), 0) AS output_tokens,
+        COALESCE(SUM(total_tokens), 0) AS total_tokens,
+        COUNT(*) AS id
+        FROM biz_token_usage
+        WHERE task_id = #{taskId}
+    </select>
+
+    <select id="listByProject" resultMap="BizTokenUsageResultMap">
+        SELECT id, project_id, task_id, agent_id, model_name, input_tokens, output_tokens, total_tokens,
+               user_id, session_id, source, create_time
+        FROM biz_token_usage
+        WHERE project_id = #{projectId}
+        ORDER BY id DESC
+        LIMIT #{limit}
+    </select>
+
+    <select id="listByTask" resultMap="BizTokenUsageResultMap">
+        SELECT id, project_id, task_id, agent_id, model_name, input_tokens, output_tokens, total_tokens,
+               user_id, session_id, source, create_time
+        FROM biz_token_usage
+        WHERE task_id = #{taskId}
+        ORDER BY id DESC
+        LIMIT #{limit}
+    </select>
+</mapper>

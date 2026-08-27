@@ -3,6 +3,7 @@ package com.agent.hopaw.controller;
 import com.agent.hopaw.infra.constant.TaskStatusEnum;
 import com.agent.hopaw.infra.model.dto.ResponseBean;
 import com.agent.hopaw.infra.model.entity.WorkflowTask;
+import com.agent.hopaw.infra.service.IBizTokenUsageService;
 import com.agent.hopaw.infra.service.IWorkflowTaskService;
 import com.agent.hopaw.util.CurrentUser;
 import org.slf4j.Logger;
@@ -19,10 +20,13 @@ public class WorkflowTaskController {
     private static final Logger logger = LoggerFactory.getLogger(WorkflowTaskController.class);
     private final IWorkflowTaskService taskService;
     private final ProjectController projectController;
+    private final IBizTokenUsageService bizTokenUsageService;
 
-    public WorkflowTaskController(IWorkflowTaskService taskService, ProjectController projectController) {
+    public WorkflowTaskController(IWorkflowTaskService taskService, ProjectController projectController,
+                                  IBizTokenUsageService bizTokenUsageService) {
         this.taskService = taskService;
         this.projectController = projectController;
+        this.bizTokenUsageService = bizTokenUsageService;
     }
 
     // 看板页面
@@ -239,5 +243,21 @@ public class WorkflowTaskController {
     @ResponseBody
     public ResponseBean getTaskSessions(@PathVariable Long id) {
         return ResponseBean.success(taskService.getTaskSessions(id));
+    }
+
+    // 任务维度 Token 用量统计
+    @GetMapping("/api/workflow/tasks/{id}/token-usage")
+    @ResponseBody
+    public ResponseBean getTaskTokenUsage(HttpServletRequest request, @PathVariable Long id,
+            @RequestParam(required = false, defaultValue = "30") int limit) {
+        String userId = CurrentUser.require(request);
+        WorkflowTask task = taskService.getTask(id, userId);
+        if (task == null) {
+            return ResponseBean.fail("任务不存在");
+        }
+        if (limit < 1 || limit > 200) {
+            limit = 30;
+        }
+        return ResponseBean.success(bizTokenUsageService.getTaskUsage(id, limit));
     }
 }

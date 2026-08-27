@@ -31,6 +31,13 @@
         SELECT task_id FROM task_sessions WHERE session_id = #{sessionId} LIMIT 1
     </select>
 
+    <select id="findSessionIdsByProjectId" resultType="string">
+        SELECT ts.session_id
+        FROM task_sessions ts
+        INNER JOIN workflow_tasks wt ON wt.id = ts.task_id
+        WHERE wt.project_id = #{projectId}
+    </select>
+
     <delete id="deleteByTaskId">
         DELETE FROM task_sessions WHERE task_id = #{taskId}
     </delete>
