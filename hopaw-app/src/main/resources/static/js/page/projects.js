@@ -19,6 +19,8 @@ var logsTotalPages = 1;           // 操作日志总页数
 var projectSessionIds = [];       // 当前项目关联的会话ID集合：用于匹配 WebSocket 消息
 var projectWs = null;             // Token 用量监听 WebSocket
 var currentProjectAgentSessionId = ''; // 项目管理智能体会话ID：用于 WebSocket 消息匹配
+// 空间目录编辑按钮铅笔图标（与迭代提示词编辑按钮风格一致）
+var PENCIL_SVG = '<svg viewBox=""0 0 24 24"" width=""14"" height=""14"" fill=""none"" stroke=""currentColor"" stroke-width=""2"" stroke-linecap=""round"" stroke-linejoin=""round""><path d=""M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7""/><path d=""M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z""/></svg>';
 
 // 项目状态字典
 var PROJECT_STATUS = {
@@ -298,13 +300,8 @@ function renderDetail(project, tasks, logs) {
     // 智能体迭代区块（配置了项目管理智能体时展示）
     renderProjectAgentSection(project);
 
-    // 项目空间目录路径
-    var spaceDirEl = document.getElementById('spaceDirInfo');
-    if (project.spaceDir) {
-        spaceDirEl.innerHTML = '<span class="space-dir-label">空间目录：</span><code class="space-dir-path">' + escapeHtml(project.spaceDir) + '</code>';
-    } else {
-        spaceDirEl.innerHTML = '<span class="space-dir-label">空间目录：未创建</span>';
-    }
+    // 项目空间目录路径（后跟🖊图标，点击可修改目录地址）
+    renderSpaceDirRow(project);
 
     // 任务列表
     renderDetailTasks(tasks);
@@ -1208,6 +1205,56 @@ function submitProject() {
         });
 }
 
+/**
+ * 修改项目空间目录：弹框输入新地址（支持相对路径与绝对路径），
+ * 修改成功后刷新详情与文件树。
+ */
+function editProjectSpaceDir() {
+    if (!currentProjectId || !currentProject) return;
+    var placeholder = '相对路径（如 my-space 或 project-spaces/101）或绝对路径（如 D:\\data\\project）';
+    showPrompt('修改空间目录（相对路径以服务运行目录为起点）', placeholder, currentProject.spaceDir || '')
+        .then(function (newDir) {
+            if (newDir === null) return; // 取消
+            if (!newDir) {
+                showToast('空间目录不能为空', 'error');
+                return;
+            }
+            fetch('/api/projects/' + currentProjectId + '/space-dir', {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ spaceDir: newDir })
+            })
+                .then(function (r) { return r.json(); })
+                .then(function (res) {
+                    if (res.code === 200) {
+                        showToast('空间目录已修改', 'success');
+                        // 更新当前项目对象并重渲染目录行，然后刷新文件树
+                        currentProject = res.data || currentProject;
+                        renderSpaceDirRow(currentProject);
+                        loadProjectFiles(currentProjectId);
+                    } else {
+                        showToast(res.msg || '修改失败', 'error');
+                    }
+                })
+                .catch(function (err) {
+                    console.error('修改空间目录失败:', err);
+                    showToast('修改失败', 'error');
+                });
+        });
+}
+
+/** 单独重渲染空间目录行（含🖊编辑按钮） */
+function renderSpaceDirRow(project) {
+    var spaceDirEl = document.getElementById('spaceDirInfo');
+    if (!spaceDirEl) return;
+    if (project.spaceDir) {
+        spaceDirEl.innerHTML = '<span class="space-dir-label">空间目录：</span><code class="space-dir-path">' + escapeHtml(project.spaceDir) + '</code>' +
+            '<button class="space-dir-edit-btn" title="修改空间目录" onclick="editProjectSpaceDir()">' + PENCIL_SVG + '</button>';
+    } else {
+        spaceDirEl.innerHTML = '<span class="space-dir-label">空间目录：未创建</span>' +
+            '<button class="space-dir-edit-btn" title="设置空间目录" onclick="editProjectSpaceDir()">' + PENCIL_SVG + '</button>';
+    }
+}
 function deleteCurrentProject() {
     if (!currentProjectId) return;
     showConfirm('确定要删除该项目吗？删除后无法恢复。').then(function (confirmed) {
