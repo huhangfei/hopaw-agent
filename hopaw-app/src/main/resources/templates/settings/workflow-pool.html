@@ -43,5 +43,49 @@
             <div class="pool-stats-config" id="statPoolConfig"></div>
         </div>
     </div>
+
+    <p class="workflow-pool-tip" style="margin-top: 24px;">项目线程池：控制可同时执行的项目智能体迭代数量（与工作流任务线程池完全隔离）。超出核心线程数的项目先进入排队，队列满后等待下轮调度自动重试。</p>
+    <div class="settings-row">
+        <div class="settings-form">
+            <div class="form-group">
+                <label for="projPoolCoreSize">核心线程数 <span class="pool-default-tip">（默认 2，常驻并发项目数）</span></label>
+                <input type="number" id="projPoolCoreSize" class="settings-input" min="1" max="32" placeholder="2">
+            </div>
+            <div class="form-group">
+                <label for="projPoolMaxSize">最大线程数 <span class="pool-default-tip">（默认 4，峰值并发上限）</span></label>
+                <input type="number" id="projPoolMaxSize" class="settings-input" min="1" max="64" placeholder="4">
+            </div>
+            <div class="form-group">
+                <label for="projPoolQueueCapacity">排队项目数上限 <span class="pool-default-tip">（默认 20，超出后项目等待重试）</span></label>
+                <input type="number" id="projPoolQueueCapacity" class="settings-input" min="0" max="1000" placeholder="20">
+            </div>
+            <div class="settings-actions">
+                <button class="btn-save-settings" onclick="saveProjectPoolSettings()">保存并应用</button>
+            </div>
+        </div>
+
+        <div class="workflow-pool-stats">
+            <h3>运行状态</h3>
+            <div class="pool-stats-grid">
+                <div class="pool-stat-item">
+                    <span class="pool-stat-value" id="projStatActiveCount">-</span>
+                    <span class="pool-stat-label">执行中</span>
+                </div>
+                <div class="pool-stat-item">
+                    <span class="pool-stat-value" id="projStatPoolSize">-</span>
+                    <span class="pool-stat-label">当前线程数</span>
+                </div>
+                <div class="pool-stat-item">
+                    <span class="pool-stat-value" id="projStatQueuedProjects">-</span>
+                    <span class="pool-stat-label">排队中</span>
+                </div>
+                <div class="pool-stat-item">
+                    <span class="pool-stat-value" id="projStatCompletedProjects">-</span>
+                    <span class="pool-stat-label">已完成</span>
+                </div>
+            </div>
+            <div class="pool-stats-config" id="projStatPoolConfig"></div>
+        </div>
+    </div>
 </div>
 </th:block>

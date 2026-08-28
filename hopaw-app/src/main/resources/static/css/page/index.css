@@ -290,6 +290,18 @@
     border-color: #f5c785;
 }
 
+/* 项目会话标识 */
+.session-tag-project {
+    background: #e8f0fe;
+    color: #4285f4;
+    border: 1px solid #c3d9fb;
+}
+
+.session-list-item.active .session-tag-project {
+    background: #eef4ff;
+    border-color: #a8c6f8;
+}
+
 .session-edit-btn {
     display: none;
     flex-shrink: 0;
@@ -1842,6 +1854,17 @@ body.dark-theme .session-tag-task {
 body.dark-theme .session-list-item.active .session-tag-task {
     background: #4a3825;
     border-color: #6b5028;
+}
+
+body.dark-theme .session-tag-project {
+    background: #1d2942;
+    color: #8ba3ff;
+    border-color: #2d4370;
+}
+
+body.dark-theme .session-list-item.active .session-tag-project {
+    background: #243355;
+    border-color: #3a4f82;
 }
 
 body.dark-theme .session-edit-btn {

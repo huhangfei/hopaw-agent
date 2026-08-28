@@ -14,6 +14,14 @@ public class Project {
     private String userId;
     /** 项目空间目录（项目工作空间的绝对路径，创建项目时根据项目编号自动生成） */
     private String spaceDir;
+    /** 项目管理智能体编号（配置后可由调度任务自动迭代项目） */
+    private Long agentId;
+    /** 是否启用自动迭代：true=启用（启用后由定时任务周期性驱动项目管理智能体） */
+    private Boolean autoIterate;
+    /** 自动迭代要求提示词：启用自动迭代时带入项目管理智能体的额外迭代要求 */
+    private String iteratePrompt;
+    /** 项目管理智能体会话编号（自动迭代执行器复用该会话保留上下文） */
+    private String sessionId;
     /** 创建人昵称（非持久字段，由 Controller 层填充） */
     private String creatorName;
     private LocalDateTime createTime;
@@ -65,6 +73,38 @@ public class Project {
 
     public void setSpaceDir(String spaceDir) {
         this.spaceDir = spaceDir;
+    }
+
+    public Long getAgentId() {
+        return agentId;
+    }
+
+    public void setAgentId(Long agentId) {
+        this.agentId = agentId;
+    }
+
+    public Boolean getAutoIterate() {
+        return autoIterate;
+    }
+
+    public void setAutoIterate(Boolean autoIterate) {
+        this.autoIterate = autoIterate;
+    }
+
+    public String getIteratePrompt() {
+        return iteratePrompt;
+    }
+
+    public void setIteratePrompt(String iteratePrompt) {
+        this.iteratePrompt = iteratePrompt;
+    }
+
+    public String getSessionId() {
+        return sessionId;
+    }
+
+    public void setSessionId(String sessionId) {
+        this.sessionId = sessionId;
     }
 
     public String getCreatorName() {

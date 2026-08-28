@@ -272,9 +272,28 @@ function renderTaskCard(task) {
             '<svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="7" width="18" height="13" rx="2"/><circle cx="8" cy="12" r="1.5" fill="currentColor"/><circle cx="16" cy="12" r="1.5" fill="currentColor"/></svg>' +
             escapeHtml(agentName) +
         '</div>' +
+        taskCreatorHtml(task) +
         projectHtml +
         (timeText ? '<div class="task-card-time">' + escapeHtml(timeText) + '</div>' : '') +
     '</div>';
+}
+
+/**
+ * 任务创建者展示：智能体创建显示智能体名称（机器人图标），用户创建显示用户信息（人形图标）。
+ */
+function taskCreatorHtml(task) {
+    var isAgent = task.creatorType === 'agent';
+    var name;
+    if (isAgent) {
+        name = task.creatorAgentName || (task.creatorAgentId ? '智能体#' + task.creatorAgentId : '智能体');
+    } else {
+        name = task.creatorName || '用户';
+    }
+    var icon = isAgent
+        ? '<svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="8" width="16" height="12" rx="2"/><circle cx="9" cy="13" r="1.2" fill="currentColor"/><circle cx="15" cy="13" r="1.2" fill="currentColor"/><path d="M12 8V5"/><circle cx="12" cy="3.5" r="1.2"/></svg>'
+        : '<svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>';
+    return '<div class="task-card-creator ' + (isAgent ? 'creator-agent' : 'creator-user') + '">' + icon +
+        '<span>' + escapeHtml(name) + '</span></div>';
 }
 
 /* ========== 列表视图：按创建时间倒序分页展示所有任务 ========== */
@@ -306,7 +325,7 @@ function loadTaskTable() {
 function renderTableRows(list) {
     var tbody = document.getElementById('tasksTableBody');
     if (!list.length) {
-        tbody.innerHTML = '<tr><td colspan="7" class="table-empty">暂无任务</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="8" class="table-empty">暂无任务</td></tr>';
         return;
     }
     tbody.innerHTML = list.map(function (task) {
@@ -333,6 +352,7 @@ function renderTableRows(list) {
             '<td><span class="table-task-id">#' + task.id + '</span><span class="table-task-title">' + escapeHtml(title) + '</span></td>' +
             '<td><span class="table-status-badge" style="background:' + meta.color + '">' + escapeHtml(meta.label) + '</span></td>' +
             '<td>' + escapeHtml(agentName) + '</td>' +
+            '<td>' + taskCreatorHtml(task) + '</td>' +
             '<td>' + escapeHtml(projectName) + '</td>' +
             '<td class="td-time">' + startTime + '</td>' +
             '<td class="td-time">' + createTime + '</td>' +

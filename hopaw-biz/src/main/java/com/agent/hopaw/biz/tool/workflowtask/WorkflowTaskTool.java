@@ -161,7 +161,7 @@ public class WorkflowTaskTool implements AgentTool {
                                   @P("执行智能体编号") Long agentId,
                                   @P(value = "关联项目编号，可不关联", required = false) Long projectId,
                                   @P(value = "开始时间，格式 yyyy-MM-dd HH:mm，不填则创建后可立即审核执行", required = false) String startTime,
-                                  @P(value = "执行时段（分钟），用于限制任务执行时长", required = false) Integer executionPeriod,
+                                  @P(value = "执行时段（分钟），用于限制任务执行开始区间", required = false) Integer executionPeriod,
                                   InvocationParameters invocationParameters) {
         InvocationParametersWrapper wrapper = InvocationParametersWrapper.create(invocationParameters);
         if (title == null || title.trim().isEmpty()) {
@@ -187,6 +187,11 @@ public class WorkflowTaskTool implements AgentTool {
             task.setStartTime(start);
             task.setExecutionPeriod(executionPeriod);
             task.setUserId(wrapper.getUserId());
+            // 智能体创建的任务：记录创建者类型与创建者智能体（前端按创建者类型展示不同图标与名称）
+            if (wrapper.getAgentId() != null) {
+                task.setCreatorType(TaskCommenterTypeEnum.AGENT.getCode());
+                task.setCreatorAgentId(wrapper.getAgentId());
+            }
             WorkflowTask created = workflowTaskService.createTask(task);
             // 关联了项目则记录项目操作日志（与页面创建任务行为一致）
             if (created.getProjectId() != null) {
@@ -360,6 +365,70 @@ public class WorkflowTaskTool implements AgentTool {
         taskCommentService.addComment(taskId, content.trim(), wrapper.getUserId(),
                 TaskCommenterTypeEnum.AGENT.getCode(), String.valueOf(wrapper.getAgentId()), commentType);
         return "成功：任务评论已添加";
+    }
+
+    /**
+     * 审核工作流任务：待启动任务审核通过后进入待执行，由系统调度执行。
+     */
+    @ToolSecurityLevel(ToolSecurityLevel.Level.PARAM_REQUIRE_APPROVAL)
+    @Tool(value = {"审核工作流任务", "审核待启动的工作流任务，审核通过后进入待执行状态，由系统自动调度执行智能体处理"}, searchBehavior = SearchBehavior.ALWAYS_VISIBLE)
+    public String approveWorkflowTask(@P("任务编号") Long taskId,
+                                      InvocationParameters invocationParameters) {
+        InvocationParametersWrapper wrapper = InvocationParametersWrapper.create(invocationParameters);
+        WorkflowTask task = workflowTaskService.getTask(taskId, wrapper.getUserId());
+        if (task == null) {
+            return "失败：任务不存在或无权访问";
+        }
+        try {
+            workflowTaskService.approveTask(taskId, wrapper.getUserId());
+            return "成功：任务已审核通过，进入待执行状态，任务ID：" + taskId;
+        } catch (RuntimeException e) {
+            return "失败：" + e.getMessage();
+        }
+    }
+
+    /**
+     * 验收工作流任务：待验收任务验收通过后标记为已完成。
+     */
+    @ToolSecurityLevel(ToolSecurityLevel.Level.PARAM_REQUIRE_APPROVAL)
+    @Tool(value = {"验收工作流任务", "验收待验收的工作流任务，确认执行结果符合要求后任务标记为已完成"}, searchBehavior = SearchBehavior.ALWAYS_VISIBLE)
+    public String acceptWorkflowTask(@P("任务编号") Long taskId,
+                                     InvocationParameters invocationParameters) {
+        InvocationParametersWrapper wrapper = InvocationParametersWrapper.create(invocationParameters);
+        WorkflowTask task = workflowTaskService.getTask(taskId, wrapper.getUserId());
+        if (task == null) {
+            return "失败：任务不存在或无权访问";
+        }
+        try {
+            workflowTaskService.acceptTask(taskId, wrapper.getUserId());
+            return "成功：任务已验收通过，任务ID：" + taskId;
+        } catch (RuntimeException e) {
+            return "失败：" + e.getMessage();
+        }
+    }
+
+    /**
+     * 驳回工作流任务：待验收任务验收不通过时驳回（注明原因），由系统安排重做。
+     */
+    @ToolSecurityLevel(ToolSecurityLevel.Level.PARAM_REQUIRE_APPROVAL)
+    @Tool(value = {"驳回工作流任务", "驳回待验收的工作流任务并注明驳回原因，驳回后任务转为失败状态等待处理"}, searchBehavior = SearchBehavior.ALWAYS_VISIBLE)
+    public String rejectWorkflowTask(@P("任务编号") Long taskId,
+                                     @P("驳回原因：说明执行结果不符合要求的具体原因") String reason,
+                                     InvocationParameters invocationParameters) {
+        InvocationParametersWrapper wrapper = InvocationParametersWrapper.create(invocationParameters);
+        WorkflowTask task = workflowTaskService.getTask(taskId, wrapper.getUserId());
+        if (task == null) {
+            return "失败：任务不存在或无权访问";
+        }
+        if (reason == null || reason.trim().isEmpty()) {
+            return "失败：驳回原因不能为空";
+        }
+        try {
+            workflowTaskService.rejectTask(taskId, wrapper.getUserId(), reason.trim());
+            return "成功：任务已驳回，任务ID：" + taskId;
+        } catch (RuntimeException e) {
+            return "失败：" + e.getMessage();
+        }
     }
 
     /** 状态码转中文描述，未知状态原样返回 */

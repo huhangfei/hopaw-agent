@@ -12,7 +12,8 @@ public enum  AiModelCallSourceEnum {
     ModelTest("model-test", "模型测试"),
     MemoryOrganize("memory-organize", "记忆整理"),
     AgentTask("agent-task", "智能体定时任务"),
-    WorkflowTaskChat("workflow-task-chat", "工作流会话任务");
+    WorkflowTaskChat("workflow-task-chat", "工作流会话任务"), 
+    ProjectChat("project-chat", "项目管理会话");
 
     public String getValue() {
         return value;

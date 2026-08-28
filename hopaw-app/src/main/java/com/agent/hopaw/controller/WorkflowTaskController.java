@@ -2,7 +2,9 @@ package com.agent.hopaw.controller;
 
 import com.agent.hopaw.infra.constant.TaskStatusEnum;
 import com.agent.hopaw.infra.model.dto.ResponseBean;
+import com.agent.hopaw.infra.model.entity.Account;
 import com.agent.hopaw.infra.model.entity.WorkflowTask;
+import com.agent.hopaw.infra.service.IAccountService;
 import com.agent.hopaw.infra.service.IBizTokenUsageService;
 import com.agent.hopaw.infra.service.IWorkflowTaskService;
 import com.agent.hopaw.util.CurrentUser;
@@ -21,12 +23,14 @@ public class WorkflowTaskController {
     private final IWorkflowTaskService taskService;
     private final ProjectController projectController;
     private final IBizTokenUsageService bizTokenUsageService;
+    private final IAccountService accountService;
 
     public WorkflowTaskController(IWorkflowTaskService taskService, ProjectController projectController,
-                                  IBizTokenUsageService bizTokenUsageService) {
+                                  IBizTokenUsageService bizTokenUsageService, IAccountService accountService) {
         this.taskService = taskService;
         this.projectController = projectController;
         this.bizTokenUsageService = bizTokenUsageService;
+        this.accountService = accountService;
     }
 
     // 看板页面
@@ -55,6 +59,7 @@ public class WorkflowTaskController {
             // 但 getTasksByStatus 只接受 userId + status
             // 改用 getTasksPage 大 size 查询
             List<WorkflowTask> tasks = taskService.getTasksPage(userId, null, status.getCode(), projectId, agentId, 1, 1000);
+            tasks.forEach(this::fillCreatorInfo);
             result.put(status.getCode(), tasks);
         }
         return ResponseBean.success(result);
@@ -78,6 +83,7 @@ public class WorkflowTaskController {
             size = 15;
         }
         List<WorkflowTask> tasks = taskService.getTasksPage(userId, keyword, status, projectId, agentId, page, size);
+        tasks.forEach(this::fillCreatorInfo);
         int total = taskService.countTasks(userId, keyword, status, projectId, agentId);
         Map<String, Object> result = new LinkedHashMap<>();
         result.put("list", tasks);
@@ -96,6 +102,7 @@ public class WorkflowTaskController {
         if (task == null) {
             return ResponseBean.fail("任务不存在");
         }
+        fillCreatorInfo(task);
         return ResponseBean.success(task);
     }
 
@@ -106,6 +113,7 @@ public class WorkflowTaskController {
         String userId = CurrentUser.require(request);
         task.setUserId(userId);
         WorkflowTask created = taskService.createTask(task);
+        fillCreatorInfo(created);
         // 若任务关联了项目，记录项目操作日志
         if (created.getProjectId() != null) {
             try {
@@ -243,6 +251,25 @@ public class WorkflowTaskController {
     @ResponseBody
     public ResponseBean getTaskSessions(@PathVariable Long id) {
         return ResponseBean.success(taskService.getTaskSessions(id));
+    }
+
+    /** 填充任务创建者信息：用户创建填充创建人昵称，智能体创建回填创建者智能体名称 */
+    private void fillCreatorInfo(WorkflowTask task) {
+        if (task == null) {
+            return;
+        }
+        if ("agent".equals(task.getCreatorType())) {
+            if (task.getCreatorAgentName() == null && task.getCreatorAgentId() != null) {
+                task.setCreatorAgentName("智能体#" + task.getCreatorAgentId());
+            }
+            return;
+        }
+        if (task.getUserId() != null) {
+            Account account = accountService.getByUserId(task.getUserId());
+            if (account != null) {
+                task.setCreatorName(account.getNickname() != null ? account.getNickname() : account.getUsername());
+            }
+        }
     }
 
     // 任务维度 Token 用量统计

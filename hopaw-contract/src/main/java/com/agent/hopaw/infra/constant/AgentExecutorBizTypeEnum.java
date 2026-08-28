@@ -5,7 +5,8 @@ package com.agent.hopaw.infra.constant;
  */
 public enum AgentExecutorBizTypeEnum {
     Chat("chat", "聊天", AiModelCallSourceEnum.Chat),
-    WorkflowTaskChat("workflowTaskChat", "工作流任务", AiModelCallSourceEnum.WorkflowTaskChat);
+    WorkflowTaskChat("workflowTaskChat", "工作流任务", AiModelCallSourceEnum.WorkflowTaskChat),
+    ProjectChat("projectChat", "项目管理", AiModelCallSourceEnum.ProjectChat);
     private String value;
     private String description;
     private AiModelCallSourceEnum aiModelCallSourceEnum;

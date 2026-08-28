@@ -33,4 +33,13 @@ public interface ProjectMapper {
                                  @Param("status") String status);
 
     List<Project> findByUserId(@Param("userId") String userId);
+
+    /** 查询启用自动迭代的进行中项目（已配置项目管理智能体） */
+    List<Project> findAutoIterateProjects();
+
+    /** 更新项目管理智能体会话编号 */
+    int updateSessionId(@Param("id") Long id, @Param("sessionId") String sessionId);
+
+    /** 按会话编号反查项目 */
+    Project findBySessionId(@Param("sessionId") String sessionId);
 }

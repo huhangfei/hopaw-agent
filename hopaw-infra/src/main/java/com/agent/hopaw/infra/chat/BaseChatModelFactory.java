@@ -43,7 +43,7 @@ public abstract class BaseChatModelFactory implements ChatModelFactory {
 
     public String getReasoningEffort(AiModelVO aiModelVO) {
         Object val = getExtParams(aiModelVO, "reasoningEffort");
-        return val != null ? (String) val : "medium";
+        return val != null ? (String) val : "high";
     }
 
     public Double getTemperature(AiModelVO aiModelVO) {

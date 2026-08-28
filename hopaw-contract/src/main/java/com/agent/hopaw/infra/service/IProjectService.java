@@ -17,6 +17,12 @@ public interface IProjectService {
     Project updateProject(Project project, String userId);
     /** 更新项目状态 */
     void updateStatus(Long id, String status, String userId);
+    /**
+     * 更新项目自动迭代配置（开启/关闭 + 迭代要求提示词），供项目详情页快捷操作。
+     * @param autoIterate 传入 null 表示不修改开关状态
+     * @param iteratePrompt 传入 null 表示不修改提示词（空字符串表示清空）
+     */
+    Project updateIterateConfig(Long id, Boolean autoIterate, String iteratePrompt, String userId);
     void deleteProject(Long id, String userId);
     Project getProject(Long id, String userId);
     List<Project> getProjectsPage(String userId, String keyword, String status, int page, int size);
@@ -75,4 +81,13 @@ public interface IProjectService {
      * @return 临时 ZIP 文件（调用方负责删除）
      */
     File createDownloadZip(Long projectId, String userId, String relativePath);
+
+    /** 查询启用自动迭代的进行中项目（已配置项目管理智能体） */
+    List<Project> findAutoIterateProjects();
+
+    /** 更新项目管理智能体会话编号 */
+    void updateSessionId(Long projectId, String sessionId);
+
+    /** 按会话编号反查项目（项目管理智能体工具场景） */
+    Project getProjectBySessionId(String sessionId);
 }

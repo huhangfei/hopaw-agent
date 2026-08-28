@@ -24,8 +24,14 @@ public class WorkflowTask {
     /** 驳回/失败原因 */
     private String rejectReason;
     private String userId;
+    /** 创建者类型：user=用户创建，agent=智能体创建 */
+    private String creatorType;
+    /** 创建者智能体编号（creatorType=agent 时有值） */
+    private Long creatorAgentId;
     /** 创建人昵称（非持久字段，由 Controller 层填充） */
     private String creatorName;
+    /** 创建者智能体名称（非持久字段，由查询时 JOIN 填充） */
+    private String creatorAgentName;
     /** 智能体名称（非持久字段，由查询时 JOIN 填充） */
     private String agentName;
     /** 项目名称（非持久字段，由查询时 JOIN 填充） */
@@ -113,6 +119,30 @@ public class WorkflowTask {
 
     public void setUserId(String userId) {
         this.userId = userId;
+    }
+
+    public String getCreatorType() {
+        return creatorType;
+    }
+
+    public void setCreatorType(String creatorType) {
+        this.creatorType = creatorType;
+    }
+
+    public Long getCreatorAgentId() {
+        return creatorAgentId;
+    }
+
+    public void setCreatorAgentId(Long creatorAgentId) {
+        this.creatorAgentId = creatorAgentId;
+    }
+
+    public String getCreatorAgentName() {
+        return creatorAgentName;
+    }
+
+    public void setCreatorAgentName(String creatorAgentName) {
+        this.creatorAgentName = creatorAgentName;
     }
 
     public String getCreatorName() {

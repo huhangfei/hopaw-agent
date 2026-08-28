@@ -519,6 +519,15 @@ body.dark-theme .detail-tasks-section .btn-add-task-detail:hover {
     color: #999;
 }
 
+/* 任务创建者按类型着色：智能体创建绿色 / 用户创建橙色 */
+.detail-task-card .task-creator.creator-agent {
+    color: #10b981;
+}
+
+.detail-task-card .task-creator.creator-user {
+    color: #f59e0b;
+}
+
 /* 详情内空提示 */
 .detail-empty-text {
     color: #aaa;
@@ -1275,6 +1284,14 @@ body.dark-theme .detail-task-card .task-sub {
     color: #888;
 }
 
+body.dark-theme .detail-task-card .task-creator.creator-agent {
+    color: #34d399;
+}
+
+body.dark-theme .detail-task-card .task-creator.creator-user {
+    color: #fbbf24;
+}
+
 body.dark-theme .detail-empty-text {
     color: #666;
 }
@@ -1392,6 +1409,344 @@ body.dark-theme .token-stats-summary .ts-total { color: #c0c0c0; }
     padding: 12px;
     height: 180px;
     position: relative;
+}
+
+/* ========== 项目管理智能体迭代 ========== */
+
+/* 智能体信息（详情页） */
+.project-agent-info {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    margin-bottom: 12px;
+    background: #fff;
+    border: 1px solid #eee;
+    border-radius: 10px;
+    padding: 12px;
+}
+
+.agent-info-item {
+    display: flex;
+    align-items: center;
+    font-size: 13px;
+    min-width: 0;
+}
+
+.agent-info-item .info-label {
+    color: #888;
+    flex-shrink: 0;
+}
+
+.agent-info-item .info-value {
+    color: #333;
+    font-weight: 500;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.agent-info-item .info-value.agent-enabled {
+    color: #10b981;
+}
+
+/* 项目智能伙伴操作按钮（开启/关闭迭代、管理提示词） */
+.btn-agent-action {
+    flex-shrink: 0;
+    margin-left: 12px;
+    padding: 3px 12px;
+    font-size: 12px;
+    border: 1px solid #d1d5db;
+    border-radius: 6px;
+    background: #f9fafb;
+    color: #555;
+    cursor: pointer;
+    transition: all .15s ease;
+}
+
+.btn-agent-action:hover {
+    border-color: #4285f4;
+    color: #4285f4;
+    background: #f0f5ff;
+}
+
+.btn-agent-action.btn-agent-action-enable {
+    border-color: #34d399;
+    color: #059669;
+    background: #ecfdf5;
+}
+
+.btn-agent-action.btn-agent-action-enable:hover {
+    border-color: #10b981;
+    background: #d1fae5;
+}
+
+/* 图标按钮（笔图标，紧凑方形） */
+.btn-agent-action.btn-agent-action-icon {
+    padding: 3px 8px;
+    font-size: 14px;
+    line-height: 1;
+}
+
+/* 手动执行迭代按钮（蓝紫色主操作色） */
+.btn-agent-action.btn-agent-action-run {
+    border-color: #4285f4;
+    color: #4285f4;
+    background: #eef4ff;
+}
+
+.btn-agent-action.btn-agent-action-run:hover {
+    border-color: #3b78e7;
+    background: #dce9ff;
+}
+
+.btn-agent-action:disabled {
+    opacity: .6;
+    cursor: not-allowed;
+}
+
+/* 会话面板（参考任务详情页会话展示） */
+.project-session-panel {
+    border: 1px solid #e5e7eb;
+    border-radius: 10px;
+    overflow: hidden;
+}
+
+.project-session-empty {
+    padding: 14px 12px;
+    font-size: 13px;
+    color: #999;
+    background: #fff;
+}
+
+.project-session-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 10px 12px;
+    background: #fff;
+    border-bottom: 1px solid #e5e7eb;
+    gap: 10px;
+}
+
+.project-session-row:last-child {
+    border-bottom: none;
+}
+
+.project-session-info {
+    font-size: 13px;
+    color: #666;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    flex: 1;
+}
+
+.project-session-link {
+    color: #667eea;
+    text-decoration: none;
+    font-size: 13px;
+    white-space: nowrap;
+    flex-shrink: 0;
+}
+
+.project-session-link:hover {
+    text-decoration: underline;
+}
+
+.project-session-row .project-session-clear {
+    background: none;
+    border: none;
+    cursor: pointer;
+    font-size: 12px;
+    color: #ef4444;
+    padding: 2px 4px;
+    white-space: nowrap;
+}
+
+.project-session-row .project-session-clear:hover {
+    color: #dc2626;
+}
+
+/* ========== 会话执行中指示行（参考任务详情页打字机实现） ========== */
+.project-session-running {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 9px 12px;
+    margin-top: 8px;
+    background: rgba(59, 130, 246, 0.07);
+    border: 1px solid rgba(59, 130, 246, 0.35);
+    border-radius: 10px;
+    overflow: hidden;
+    /* 呼吸光圈动画：突出执行中状态 */
+    animation: proj-running-pulse 1.6s ease-in-out infinite;
+}
+
+@keyframes proj-running-pulse {
+    0%, 100% { box-shadow: inset 0 0 0 0 rgba(59, 130, 246, 0); }
+    50% { box-shadow: inset 0 0 12px 0 rgba(59, 130, 246, 0.15); }
+}
+
+.project-session-running .running-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: #3b82f6;
+    flex-shrink: 0;
+    animation: proj-dot-blink 1s ease-in-out infinite;
+}
+
+@keyframes proj-dot-blink {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.25; }
+}
+
+.project-session-running .running-label {
+    color: #3b82f6;
+    font-size: 12px;
+    font-weight: 600;
+    white-space: nowrap;
+    flex-shrink: 0;
+}
+
+/* 打字机文本：持续追加到右侧，超长丢弃左侧旧内容 */
+.project-session-running .running-ticker {
+    flex: 1;
+    min-width: 0;
+    font-size: 12px;
+    color: #888;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+/* 打字机光标：闪烁竖线 */
+.project-session-running .running-cursor {
+    display: inline-block;
+    width: 2px;
+    height: 14px;
+    background: #3b82f6;
+    flex-shrink: 0;
+    animation: proj-cursor-blink 0.8s step-end infinite;
+}
+
+@keyframes proj-cursor-blink {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0; }
+}
+
+/* 弹框表单提示（projects 页专用，form.css 未定义） */
+.form-group .form-hint {
+    display: block;
+    margin-top: 4px;
+    font-size: 12px;
+    color: #999;
+    line-height: 1.5;
+}
+
+/* 暗色主题 */
+body.dark-theme .project-agent-info {
+    background: #16213e;
+    border-color: #2d2d44;
+}
+
+body.dark-theme .agent-info-item .info-label {
+    color: #888;
+}
+
+body.dark-theme .agent-info-item .info-value {
+    color: #e0e0e0;
+}
+
+body.dark-theme .btn-agent-action {
+    border-color: #2d2d44;
+    background: #16213e;
+    color: #c0c0c0;
+}
+
+body.dark-theme .btn-agent-action:hover {
+    border-color: #8ba3ff;
+    color: #8ba3ff;
+    background: #1d2942;
+}
+
+body.dark-theme .btn-agent-action.btn-agent-action-enable {
+    border-color: #2f6b52;
+    color: #4ade80;
+    background: #12281e;
+}
+
+body.dark-theme .btn-agent-action.btn-agent-action-enable:hover {
+    border-color: #34d399;
+    background: #1a3a2a;
+}
+
+body.dark-theme .btn-agent-action.btn-agent-action-run {
+    border-color: #5b7bd5;
+    color: #8ba3ff;
+    background: #1d2942;
+}
+
+body.dark-theme .btn-agent-action.btn-agent-action-run:hover {
+    border-color: #8ba3ff;
+    background: #243355;
+}
+
+body.dark-theme .agent-info-item .info-value.agent-enabled {
+    color: #34d399;
+}
+
+body.dark-theme .project-session-panel {
+    border-color: #2d2d44;
+}
+
+body.dark-theme .project-session-empty {
+    color: #888;
+    background: #16213e;
+}
+
+body.dark-theme .project-session-row {
+    background: #16213e;
+    border-bottom-color: #2d2d44;
+}
+
+body.dark-theme .project-session-info {
+    color: #888;
+}
+
+body.dark-theme .project-session-link {
+    color: #8ba3ff;
+}
+
+body.dark-theme .project-session-row .project-session-clear {
+    color: #f87171;
+}
+
+body.dark-theme .project-session-row .project-session-clear:hover {
+    color: #ef4444;
+}
+
+body.dark-theme .project-session-running {
+    background: rgba(59, 130, 246, 0.12);
+    border-color: rgba(139, 163, 255, 0.35);
+}
+
+body.dark-theme .project-session-running .running-label {
+    color: #8ba3ff;
+}
+
+body.dark-theme .project-session-running .running-cursor {
+    background: #8ba3ff;
+}
+
+body.dark-theme .project-session-running .running-ticker {
+    color: #c0c0c0;
+}
+
+body.dark-theme .form-group .form-hint {
+    color: #888;
 }
 
 .token-chart-empty {

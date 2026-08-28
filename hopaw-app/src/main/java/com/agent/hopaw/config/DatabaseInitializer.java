@@ -376,6 +376,12 @@ public class DatabaseInitializer implements CommandLineRunner {
             stmt.execute("CREATE INDEX IF NOT EXISTS idx_projects_user ON projects(user_id)");
             // 项目空间目录（增量加列）
             ensureColumn(stmt, "projects", "space_dir", "TEXT");
+            // 项目管理智能体配置（增量加列）
+            ensureColumn(stmt, "projects", "agent_id", "INTEGER");
+            ensureColumn(stmt, "projects", "auto_iterate", "INTEGER");
+            ensureColumn(stmt, "projects", "session_id", "TEXT");
+            // 自动迭代要求提示词（增量加列）
+            ensureColumn(stmt, "projects", "iterate_prompt", "TEXT");
 
             // 工作流 - 任务表
             stmt.execute("CREATE TABLE IF NOT EXISTS workflow_tasks (" +
@@ -395,6 +401,9 @@ public class DatabaseInitializer implements CommandLineRunner {
             stmt.execute("CREATE INDEX IF NOT EXISTS idx_workflow_tasks_user ON workflow_tasks(user_id)");
             stmt.execute("CREATE INDEX IF NOT EXISTS idx_workflow_tasks_status ON workflow_tasks(status)");
             stmt.execute("CREATE INDEX IF NOT EXISTS idx_workflow_tasks_project ON workflow_tasks(project_id)");
+            // 兼容旧库：任务创建者类型字段（增量加列），智能体创建的任务记录创建者智能体
+            ensureColumn(stmt, "workflow_tasks", "creator_type", "TEXT");
+            ensureColumn(stmt, "workflow_tasks", "creator_agent_id", "INTEGER");
 
             // 工作流 - 任务前置条件表（任务可配置多个前置任务，每个前置任务要求状态多选，逗号分隔存储）
             stmt.execute("CREATE TABLE IF NOT EXISTS workflow_task_preconditions (" +
@@ -659,7 +668,13 @@ public class DatabaseInitializer implements CommandLineRunner {
             stmt.execute("INSERT INTO scheduled_tasks (task_name, task_type, cron_expression, enabled, description, builtin) " +
                     "SELECT 'Workflow Task Poll', 'workflowTaskPoll', '0/5 * * * * *', 1, 'Poll pending workflow tasks every 5 seconds', 1 " +
                     "WHERE NOT EXISTS (SELECT 1 FROM scheduled_tasks WHERE task_type = 'workflowTaskPoll')");
-
+            // 项目自动迭代轮询：内置调度任务（新库初始化与老库升级均需保障存在，每分钟一次）
+            stmt.execute("INSERT INTO scheduled_tasks (task_name, task_type, cron_expression, enabled, description, builtin) " +
+                    "SELECT 'Project Auto Iterate', 'projectAutoIterate', '0 * * * * *', 1, 'Auto iterate in-progress projects with project agent every minute', 1 " +
+                    "WHERE NOT EXISTS (SELECT 1 FROM scheduled_tasks WHERE task_type = 'projectAutoIterate')");
+            // 老库升级：已存在但仍是旧的 5 分钟间隔时，统一调整为每分钟一次（用户手动改过的非默认值不受影响）
+            stmt.execute("UPDATE scheduled_tasks SET cron_expression = '0 * * * * *', description = 'Auto iterate in-progress projects with project agent every minute' " +
+                    "WHERE task_type = 'projectAutoIterate' AND cron_expression = '0 */5 * * * *'");            
             long accountCount = countTableRows(stmt, "accounts");
             if (accountCount == 0) {
                 log.info("Initializing default account...");

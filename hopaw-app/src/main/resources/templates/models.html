@@ -154,8 +154,13 @@
                                     <span class="ext-params-form-hint">超时秒数</span>
                                 </div>
                                 <div class="ext-params-form-row">
+                                    <label for="providerForm_enableThinking">enableThinking</label>
+                                    <input type="checkbox" id="providerForm_enableThinking">
+                                    <span class="ext-params-form-hint">默认: true</span>
+                                </div>
+                                <div class="ext-params-form-row">
                                     <label for="providerForm_reasoningEffort">reasoningEffort</label>
-                                    <input type="text" id="providerForm_reasoningEffort" list="reasoningEffortOptions" placeholder="默认: medium">
+                                    <input type="text" id="providerForm_reasoningEffort" list="reasoningEffortOptions" placeholder="默认: high">
                                     <datalist id="reasoningEffortOptions">
                                         <option value="low">low - 低</option>
                                         <option value="medium">medium - 中</option>
@@ -266,7 +271,7 @@
                                 </div>
                                 <div class="ext-params-form-row">
                                     <label for="modelForm_reasoningEffort">reasoningEffort</label>
-                                    <input type="text" id="modelForm_reasoningEffort" list="reasoningEffortOptions" placeholder="默认: medium">
+                                    <input type="text" id="modelForm_reasoningEffort" list="reasoningEffortOptions" placeholder="默认: high">
                                     <span class="ext-params-form-hint">可输入自定义值</span>
                                 </div>
                                 <div class="ext-params-form-row">

@@ -23,6 +23,29 @@ public interface IWorkflowTaskService {
     void rejectTask(Long id, String userId, String reason);
     void closeTask(Long id, String userId);
 
+    /**
+     * 审核任务（带评论者身份）：智能体审核时自动评论以智能体身份写入，
+     * 用户审核时以用户身份写入
+     *
+     * @param id 任务编号
+     * @param userId 任务归属用户
+     * @param commenterType 评论者类型：user / agent
+     * @param commenterId 评论者编号（智能体审核时为智能体ID）
+     */
+    void approveTask(Long id, String userId, String commenterType, String commenterId);
+
+    /**
+     * 验收任务（带评论者身份）：智能体验收时自动评论以智能体身份写入，
+     * 用户验收时以用户身份写入
+     */
+    void acceptTask(Long id, String userId, String commenterType, String commenterId);
+
+    /**
+     * 驳回任务（带评论者身份）：智能体驳回时自动评论以智能体身份写入，
+     * 用户驳回时以用户身份写入
+     */
+    void rejectTask(Long id, String userId, String reason, String commenterType, String commenterId);
+
     /** 重做任务：已完成/失败的任务重置为待执行，由后台调度器拉起重跑 */
     void redoTask(Long id, String userId);
     List<WorkflowTask> findPendingExecution();

@@ -92,6 +92,7 @@ function renderTaskDetail(task) {
     var infoHtml = '' +
         '<div class="task-detail-info-item"><span class="info-label">智能体</span><span class="info-value">' + escapeHtml(agentName) + '</span></div>' +
         '<div class="task-detail-info-item"><span class="info-label">所属项目</span><span class="info-value">' + escapeHtml(projectName) + '</span></div>' +
+        '<div class="task-detail-info-item"><span class="info-label">创建者</span><span class="info-value">' + taskDetailCreatorHtml(task) + '</span></div>' +
         '<div class="task-detail-info-item"><span class="info-label">创建时间</span><span class="info-value">' + escapeHtml(formatTime(task.createTime)) + '</span></div>' +
         '<div class="task-detail-info-item"><span class="info-label">开始时间</span><span class="info-value">' + escapeHtml(formatTime(task.startTime) || '未设置') + '</span></div>';
     if (task.executionPeriod && task.executionPeriod > 0) {
@@ -777,6 +778,24 @@ function escapeHtml(str) {
         .replace(/>/g, '&gt;')
         .replace(/"/g, '&quot;')
         .replace(/'/g, '&#39;');
+}
+
+/**
+ * 任务详情页创建者展示：智能体创建显示智能体名称（机器人图标），
+ * 用户创建显示用户昵称（人形图标），不同图标突出区分创建者类型。
+ */
+function taskDetailCreatorHtml(task) {
+    var isAgent = task.creatorType === 'agent';
+    var name;
+    if (isAgent) {
+        name = task.creatorAgentName || (task.creatorAgentId ? '智能体#' + task.creatorAgentId : '智能体');
+    } else {
+        name = task.creatorName || '用户';
+    }
+    var icon = isAgent
+        ? '<svg class="creator-icon" viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="8" width="16" height="12" rx="2"/><circle cx="9" cy="13" r="1.2" fill="currentColor"/><circle cx="15" cy="13" r="1.2" fill="currentColor"/><path d="M12 8V5"/><circle cx="12" cy="3.5" r="1.2"/></svg>'
+        : '<svg class="creator-icon" viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>';
+    return '<span class="task-creator-tag ' + (isAgent ? 'creator-agent' : 'creator-user') + '">' + icon + escapeHtml(name) + '</span>';
 }
 
 /* ========== 任务 Token 用量统计（参考会话右下角统计样式） ========== */

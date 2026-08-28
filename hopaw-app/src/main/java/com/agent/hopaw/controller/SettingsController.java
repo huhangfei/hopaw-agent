@@ -3,6 +3,7 @@ package com.agent.hopaw.controller;
 import com.agent.hopaw.infra.model.dto.ResponseBean;
 import com.agent.hopaw.infra.model.entity.Account;
 import com.agent.hopaw.infra.service.AccountService;
+import com.agent.hopaw.infra.task.ProjectThreadPool;
 import com.agent.hopaw.infra.task.WorkflowTaskThreadPool;
 import com.agent.hopaw.service.BackupService;
 import com.agent.hopaw.biz.util.MailUtil;
@@ -44,13 +45,16 @@ public class SettingsController {
     private final AccountService accountService;
     private final BackupService backupService;
     private final WorkflowTaskThreadPool workflowTaskThreadPool;
+    private final ProjectThreadPool projectThreadPool;
 
     public SettingsController(MailUtil mailUtil, AccountService accountService, BackupService backupService,
-                              WorkflowTaskThreadPool workflowTaskThreadPool) {
+                              WorkflowTaskThreadPool workflowTaskThreadPool,
+                              ProjectThreadPool projectThreadPool) {
         this.mailUtil = mailUtil;
         this.accountService = accountService;
         this.backupService = backupService;
         this.workflowTaskThreadPool = workflowTaskThreadPool;
+        this.projectThreadPool = projectThreadPool;
     }
 
     @GetMapping("/settings")
@@ -160,6 +164,30 @@ public class SettingsController {
     @ResponseBody
     public ResponseBean workflowPoolStatus() {
         return ResponseBean.success(workflowTaskThreadPool.getStats());
+    }
+
+    /**
+     * 按最新配置重建项目线程池（设置页保存后调用）
+     */
+    @PostMapping("/api/settings/project-pool/reload")
+    @ResponseBody
+    public ResponseBean reloadProjectPool() {
+        try {
+            projectThreadPool.reload();
+            return ResponseBean.success(projectThreadPool.getStats());
+        } catch (Exception e) {
+            log.error("重建项目线程池失败", e);
+            return ResponseBean.fail("重建线程池失败: " + e.getMessage());
+        }
+    }
+
+    /**
+     * 查询项目线程池运行状态
+     */
+    @GetMapping("/api/settings/project-pool/status")
+    @ResponseBody
+    public ResponseBean projectPoolStatus() {
+        return ResponseBean.success(projectThreadPool.getStats());
     }
 
     @PostMapping("/api/mail/test")

@@ -1493,13 +1493,17 @@ function renderSessionList(sessions) {
     sessions.forEach(function(s) {
         var activeClass = (s.sessionId === currentSessionId) ? ' active' : '';
         var isTask = s.bizType === 'workflow-task-chat';
+        var isProject = s.bizType === 'project-chat';
         var taskClass = isTask ? ' session-list-item-task' : '';
+        var projectClass = isProject ? ' session-list-item-project' : '';
         var title = s.title || '未命名会话';
         var timeStr = formatSessionTime(s.lastUpdateTime || s.createTime);
         // 任务会话标识标签
         var taskBadge = isTask ? '<span class="session-tag session-tag-task" title="任务会话">任务</span>' : '';
-        html += '<div class="session-list-item' + activeClass + taskClass + '" data-session-id="' + escapeHtml(s.sessionId) + '" data-id="' + (s.id || '') + '" data-biz-type="' + (s.bizType || '') + '">';
-        html += taskBadge;
+        // 项目会话标识标签
+        var projectBadge = isProject ? '<span class="session-tag session-tag-project" title="项目会话">项目</span>' : '';
+        html += '<div class="session-list-item' + activeClass + taskClass + projectClass + '" data-session-id="' + escapeHtml(s.sessionId) + '" data-id="' + (s.id || '') + '" data-biz-type="' + (s.bizType || '') + '">';
+        html += taskBadge + projectBadge;
         html += '<span class="session-list-item-title">' + escapeHtml(title) + '</span>';
         html += '<span class="session-list-item-time">' + escapeHtml(timeStr) + '</span>';
         html += '<button class="session-edit-btn" onclick="event.stopPropagation();showEditSessionTitle(this,' + (s.id || 0) + ')" title="编辑标题"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg></button>';

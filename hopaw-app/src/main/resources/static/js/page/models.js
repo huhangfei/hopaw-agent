@@ -420,8 +420,8 @@ var EXT_PARAMS_KEYS = [
     { key: 'timeoutSeconds', type: 'number' },
     { key: 'reasoningEffort', type: 'text' },
     { key: 'thinkingContentKey', type: 'text' },
-    { key: 'sendThinking', type: 'boolean' },
-    { key: 'returnThinking', type: 'boolean' },
+    { key: 'sendThinking', type: 'boolean', defaultTrue: true },
+    { key: 'returnThinking', type: 'boolean', defaultTrue: true },
     { key: 'logRequests', type: 'boolean' },
     { key: 'logResponses', type: 'boolean' },
     { key: 'accumulateToolCallId', type: 'boolean' }

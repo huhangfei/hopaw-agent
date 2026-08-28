@@ -77,6 +77,25 @@ public class ProjectService implements IProjectService {
     }
 
     @Override
+    public List<Project> findAutoIterateProjects() {
+        List<Project> list = projectMapper.findAutoIterateProjects();
+        return list != null ? list : new ArrayList<>();
+    }
+
+    @Override
+    public void updateSessionId(Long projectId, String sessionId) {
+        projectMapper.updateSessionId(projectId, sessionId);
+    }
+
+    @Override
+    public Project getProjectBySessionId(String sessionId) {
+        if (sessionId == null || sessionId.trim().isEmpty()) {
+            return null;
+        }
+        return projectMapper.findBySessionId(sessionId.trim());
+    }
+
+    @Override
     public Project createProject(Project project) {
         project.setStatus(ProjectStatusEnum.PLANNING.getCode());
         LocalDateTime now = LocalDateTime.now();
@@ -172,10 +191,42 @@ public class ProjectService implements IProjectService {
         }
         existing.setName(project.getName());
         existing.setDescription(project.getDescription());
+        // 项目管理智能体与自动迭代设置随编辑更新（允许清空）
+        existing.setAgentId(project.getAgentId());
+        existing.setAutoIterate(project.getAutoIterate());
+        // 自动迭代要求提示词随编辑更新（允许清空）
+        existing.setIteratePrompt(project.getIteratePrompt());
         // 状态变更走 updateStatus 接口，这里仅当传入了合法状态且与当前不同时校验流转
         if (project.getStatus() != null && !project.getStatus().equals(existing.getStatus())) {
             validateTransition(existing.getStatus(), project.getStatus());
             existing.setStatus(project.getStatus());
+        }
+        existing.setUpdateTime(LocalDateTime.now());
+        projectMapper.update(existing);
+        return existing;
+    }
+
+    @Override
+    public Project updateIterateConfig(Long id, Boolean autoIterate, String iteratePrompt, String userId) {
+        Project existing = projectMapper.findById(id);
+        if (existing == null) {
+            throw new RuntimeException("项目不存在");
+        }
+        if (!userId.equals(existing.getUserId())) {
+            throw new RuntimeException("无权修改该项目");
+        }
+        if (autoIterate == null && iteratePrompt == null) {
+            return existing; // 无变更
+        }
+        // 开启自动迭代前校验：必须已配置项目管理智能体
+        if (Boolean.TRUE.equals(autoIterate) && existing.getAgentId() == null) {
+            throw new RuntimeException("请先配置项目管理智能体再开启自动迭代");
+        }
+        if (autoIterate != null) {
+            existing.setAutoIterate(autoIterate);
+        }
+        if (iteratePrompt != null) {
+            existing.setIteratePrompt(iteratePrompt);
         }
         existing.setUpdateTime(LocalDateTime.now());
         projectMapper.update(existing);

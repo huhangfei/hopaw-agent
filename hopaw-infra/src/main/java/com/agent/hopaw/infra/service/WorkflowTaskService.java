@@ -82,6 +82,10 @@ public class WorkflowTaskService implements IWorkflowTaskService {
 
     @Override
     public WorkflowTask createTask(WorkflowTask task) {
+        // 创建者类型默认用户；智能体创建任务时由工具层显式设置 creatorType=agent 与 creatorAgentId
+        if (task.getCreatorType() == null || task.getCreatorType().isEmpty()) {
+            task.setCreatorType("user");
+        }
         task.setStatus(TaskStatusEnum.PENDING.getCode());
         LocalDateTime now = LocalDateTime.now();
         task.setCreateTime(now);
@@ -177,6 +181,11 @@ public class WorkflowTaskService implements IWorkflowTaskService {
 
     @Override
     public void approveTask(Long id, String userId) {
+        approveTask(id, userId, TaskCommenterTypeEnum.USER.getCode(), userId);
+    }
+
+    @Override
+    public void approveTask(Long id, String userId, String commenterType, String commenterId) {
         WorkflowTask existing = workflowTaskMapper.findById(id);
         if (existing == null) {
             throw new RuntimeException("任务不存在");
@@ -188,9 +197,9 @@ public class WorkflowTaskService implements IWorkflowTaskService {
             throw new RuntimeException("当前任务状态不允许审批");
         }
         updateTaskStatus(id, TaskStatusEnum.PENDING_EXECUTION.getCode(), null);
-        // 审核通过自动写入用户评论，下发给智能体作为开始处理的指令提示
+        // 审核通过自动写入评论（按评论者身份记录），下发给智能体作为开始处理的指令提示
         try {
-            taskCommentService.addComment(id, "已审核通过，开始处理吧", userId);
+            taskCommentService.addComment(id, "已审核通过，开始处理吧", userId, commenterType, commenterId);
         } catch (Exception e) {
             logger.warn("审核评论写入失败: taskId={}", id, e);
         }
@@ -198,6 +207,11 @@ public class WorkflowTaskService implements IWorkflowTaskService {
 
     @Override
     public void acceptTask(Long id, String userId) {
+        acceptTask(id, userId, TaskCommenterTypeEnum.USER.getCode(), userId);
+    }
+
+    @Override
+    public void acceptTask(Long id, String userId, String commenterType, String commenterId) {
         WorkflowTask existing = workflowTaskMapper.findById(id);
         if (existing == null) {
             throw new RuntimeException("任务不存在");
@@ -209,9 +223,9 @@ public class WorkflowTaskService implements IWorkflowTaskService {
             throw new RuntimeException("当前任务状态不允许验收");
         }
         updateTaskStatus(id, TaskStatusEnum.COMPLETED.getCode(), null);
-        // 验收通过自动写入用户评论，留下验收记录
+        // 验收通过自动写入评论（按评论者身份记录），留下验收记录
         try {
-            taskCommentService.addComment(id, "验收通过", userId);
+            taskCommentService.addComment(id, "验收通过", userId, commenterType, commenterId);
         } catch (Exception e) {
             logger.warn("验收评论写入失败: taskId={}", id, e);
         }
@@ -219,6 +233,11 @@ public class WorkflowTaskService implements IWorkflowTaskService {
 
     @Override
     public void rejectTask(Long id, String userId, String reason) {
+        rejectTask(id, userId, reason, TaskCommenterTypeEnum.USER.getCode(), userId);
+    }
+
+    @Override
+    public void rejectTask(Long id, String userId, String reason, String commenterType, String commenterId) {
         WorkflowTask existing = workflowTaskMapper.findById(id);
         if (existing == null) {
             throw new RuntimeException("任务不存在");
@@ -231,9 +250,9 @@ public class WorkflowTaskService implements IWorkflowTaskService {
         }
         // 记录驳回原因，任务置为已驳回状态，由后台调度器扫描拉起重做（不在此处同步执行，避免接口长时间阻塞）
         updateTaskStatus(id, TaskStatusEnum.REJECTED.getCode(), reason);
-        // 打回原因同时写入任务评论（用户身份），重做时智能体可通过评论历史感知驳回理由
+        // 打回原因同时写入任务评论（按评论者身份记录），重做时智能体可通过评论历史感知驳回理由
         try {
-            taskCommentService.addComment(id, reason, userId);
+            taskCommentService.addComment(id, reason, userId, commenterType, commenterId);
         } catch (Exception e) {
             logger.warn("打回原因写入任务评论失败: taskId={}", id, e);
         }

@@ -103,6 +103,26 @@ public class ProjectTool implements AgentTool {
     }
 
     /**
+     * 查询当前项目：通过当前会话编号反查关联的项目（项目管理智能体场景）。
+     */
+    @ToolSecurityLevel(ToolSecurityLevel.Level.SAFE)
+    @Tool(value = {"查询当前项目", "查询当前会话关联的项目详情（项目管理智能体场景使用）"}, searchBehavior = SearchBehavior.ALWAYS_VISIBLE)
+    public String getCurrentProject(InvocationParameters invocationParameters) {
+        InvocationParametersWrapper wrapper = InvocationParametersWrapper.create(invocationParameters);
+        Project p = projectService.getProjectBySessionId(wrapper.getSessionId());
+        if (p == null) {
+            return "失败：当前会话未关联任何项目";
+        }
+        StringBuilder sb = new StringBuilder();
+        sb.append("项目ID：").append(p.getId()).append("\n");
+        sb.append("项目名称：").append(p.getName()).append("\n");
+        sb.append("项目状态：").append(statusText(p.getStatus())).append("\n");
+        sb.append("项目描述：").append(p.getDescription() != null && !p.getDescription().isEmpty() ? p.getDescription() : "无").append("\n");
+        sb.append("空间目录：").append(p.getSpaceDir() != null ? p.getSpaceDir() : "未创建").append("\n");
+        return "成功：\n" + sb;
+    }
+
+    /**
      * 保存项目：项目编号为空时新增项目，非空时更新已有项目。
      * 更新时仅覆盖传入的非空字段（名称必填），状态需符合流转规则。
      */
@@ -131,12 +151,19 @@ public class ProjectTool implements AgentTool {
                 Project created = projectService.createProject(project);
                 return "成功：项目已创建，项目ID：" + created.getId() + "，状态：" + statusText(created.getStatus());
             }
-            // 更新
+            // 更新：先读取现有项目，保留智能体与自动迭代配置（工具未提供这些参数，避免误清空）
+            Project existing = projectService.getProject(projectId, wrapper.getUserId());
+            if (existing == null) {
+                return "失败：项目不存在或无权访问";
+            }
             Project project = new Project();
             project.setId(projectId);
             project.setName(name.trim());
             project.setDescription(description);
             project.setStatus(status == null || status.trim().isEmpty() ? null : status.trim());
+            project.setAgentId(existing.getAgentId());
+            project.setAutoIterate(existing.getAutoIterate());
+            project.setIteratePrompt(existing.getIteratePrompt());
             Project updated = projectService.updateProject(project, wrapper.getUserId());
             return "成功：项目已更新，项目ID：" + updated.getId() + "，状态：" + statusText(updated.getStatus());
         } catch (RuntimeException e) {

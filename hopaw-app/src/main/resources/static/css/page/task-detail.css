@@ -148,6 +148,26 @@ body {
     word-break: break-word;
 }
 
+/* 任务创建者标签：智能体创建（绿色机器人图标）/ 用户创建（橙色人形图标） */
+.task-creator-tag {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 13px;
+}
+
+.task-creator-tag .creator-icon {
+    flex-shrink: 0;
+}
+
+.task-creator-tag.creator-agent {
+    color: #10b981;
+}
+
+.task-creator-tag.creator-user {
+    color: #f59e0b;
+}
+
 /* ========== 前置任务展示 ========== */
 .task-detail-preconditions .task-detail-section-title {
     display: flex;
@@ -906,6 +926,14 @@ body.dark-theme .task-detail-info-item .info-label {
 
 body.dark-theme .task-detail-info-item .info-value {
     color: #c0c0c0;
+}
+
+body.dark-theme .task-creator-tag.creator-agent {
+    color: #34d399;
+}
+
+body.dark-theme .task-creator-tag.creator-user {
+    color: #fbbf24;
 }
 
 /* ========== Token 用量统计模块（参考会话右下角统计样式） ========== */

@@ -18,6 +18,7 @@ var logsPage = 1;                 // 操作日志当前页码
 var logsTotalPages = 1;           // 操作日志总页数
 var projectSessionIds = [];       // 当前项目关联的会话ID集合：用于匹配 WebSocket 消息
 var projectWs = null;             // Token 用量监听 WebSocket
+var currentProjectAgentSessionId = ''; // 项目管理智能体会话ID：用于 WebSocket 消息匹配
 
 // 项目状态字典
 var PROJECT_STATUS = {
@@ -254,6 +255,8 @@ function loadProjectDetail(id) {
         loadProjectTokenUsage(currentProjectId);
         // 加载项目关联会话ID集合（WebSocket 消息匹配用）
         loadProjectSessionIds(currentProjectId);
+        // 加载项目管理智能体会话（标题等展示）
+        loadProjectSession(currentProjectId);
     }).catch(function (err) {
         console.error('加载项目详情失败:', err);
         showToast('加载项目详情失败', 'error');
@@ -286,6 +289,9 @@ function renderDetail(project, tasks, logs) {
     document.getElementById('detailDesc').innerHTML = project.description
         ? renderMarkdownText(project.description)
         : '暂无描述';
+
+    // 智能体迭代区块（配置了项目管理智能体时展示）
+    renderProjectAgentSection(project);
 
     // 项目空间目录路径
     var spaceDirEl = document.getElementById('spaceDirInfo');
@@ -1066,6 +1072,11 @@ function showAddModal() {
     document.getElementById('projectId').value = '';
     document.getElementById('projectName').value = '';
     document.getElementById('projectDescription').value = '';
+    // 项目管理智能体与自动迭代默认关闭
+    populateProjectAgentSelect('');
+    document.getElementById('projectAutoIterate').checked = false;
+    document.getElementById('projectIteratePrompt').value = '';
+    onProjectAutoIterateChange();
     // 新建时显示项目空间选项，默认自动创建
     document.getElementById('spaceModeGroup').style.display = '';
     var autoRadio = document.querySelector('input[name="spaceMode"][value="auto"]');
@@ -1088,9 +1099,23 @@ function editCurrentProject() {
     document.getElementById('projectId').value = project.id || '';
     document.getElementById('projectName').value = project.name || '';
     document.getElementById('projectDescription').value = project.description || '';
+    // 回填项目管理智能体与自动迭代设置
+    populateProjectAgentSelect(project.agentId || '');
+    document.getElementById('projectAutoIterate').checked = !!project.autoIterate;
+    document.getElementById('projectIteratePrompt').value = project.iteratePrompt || '';
+    onProjectAutoIterateChange();
     // 编辑时不允许修改项目空间
     document.getElementById('spaceModeGroup').style.display = 'none';
     Modal.open('projectModal');
+}
+
+/** 自动迭代勾选切换：控制迭代要求提示词输入框显隐 */
+function onProjectAutoIterateChange() {
+    var checked = document.getElementById('projectAutoIterate').checked;
+    var group = document.getElementById('projectIteratePromptGroup');
+    if (group) {
+        group.style.display = checked ? 'block' : 'none';
+    }
 }
 
 function onSpaceModeChange() {
@@ -1113,7 +1138,17 @@ function submitProject() {
         return;
     }
 
-    var payload = { name: name, description: description };
+    var agentSel = document.getElementById('projectAgentId');
+    var payload = {
+        name: name,
+        description: description,
+        agentId: agentSel && agentSel.value ? Number(agentSel.value) : null,
+        autoIterate: document.getElementById('projectAutoIterate').checked,
+        // 自动迭代要求提示词（取消勾选时传空，后端允许清空）
+        iteratePrompt: document.getElementById('projectAutoIterate').checked
+            ? (document.getElementById('projectIteratePrompt').value || '').trim()
+            : ''
+    };
     // 仅新建时提交项目空间设置
     if (!id) {
         var localRadio = document.querySelector('input[name="spaceMode"][value="local"]');
@@ -1225,17 +1260,152 @@ function connectProjectWebSocket() {
     projectWs.onmessage = function (event) {
         var data;
         try { data = JSON.parse(event.data); } catch (e) { return; }
-        if (data.type !== 'token_usage') return;
-        if (!data.sessionId || projectSessionIds.indexOf(data.sessionId) === -1) return;
-        // 本项目会话产生了 token 消耗：刷新柱状统计图
-        if (currentProjectId != null) {
-            loadProjectTokenUsage(currentProjectId);
+        if (!data.sessionId) return;
+        var isAgentSession = (data.sessionId === currentProjectAgentSessionId);
+        if (data.type === 'session-title') {
+            // 项目管理智能体会话生成了标题：刷新会话展示
+            if (isAgentSession && currentProjectId != null) {
+                loadProjectSession(currentProjectId);
+            }
+            return;
+        }
+        if (data.type === 'token_usage') {
+            if (!isAgentSession && projectSessionIds.indexOf(data.sessionId) === -1) return;
+            // 本项目会话产生了 token 消耗：刷新柱状统计图
+            if (currentProjectId != null) {
+                loadProjectTokenUsage(currentProjectId);
+            }
+            return;
+        }
+        // 执行内容实时展示（参考任务详情页打字机实现）：仅针对项目管理智能体会话
+        if (!isAgentSession) return;
+        if (data.type === 'received') {
+            // 新一轮执行：重置打字机并显示执行中指示
+            resetProjectSessionTicker();
+        } else if (data.type === 'chunk') {
+            showProjectSessionRunning();
+            appendProjectSessionTicker(data.content);
+        } else if (data.type === 'tool_call') {
+            showProjectSessionRunning();
+            handleProjectToolCallTicker(data);
+        } else if (data.type === 'thinking') {
+            showProjectSessionRunning();
+            appendProjectSessionTicker(data.content);
+        } else if (data.type === 'task-done' || data.type === 'done' || data.type === 'error') {
+            // 项目智能体一轮迭代结束：隐藏执行中指示并刷新项目详情（任务/状态可能已更新）
+            if (projectWsRunning) {
+                hideProjectSessionRunning();
+                showToast('项目智能体执行结束，已刷新项目信息', 'success');
+            }
+            if (currentProjectId != null) {
+                loadProjectDetail(currentProjectId);
+            }
         }
     };
     projectWs.onclose = function () {
         // 断线重连（页面可能长时间停留）
         setTimeout(connectProjectWebSocket, 5000);
     };
+}
+
+/* ========== 项目智能体会话实时输出（打字机，参考任务详情页） ========== */
+/* 打字机缓冲区：持续追加内容，超过固定长度时丢弃最左侧旧内容 */
+var projectTickerBuffer = '';
+var PROJECT_TICKER_MAX_LEN = 150;
+/* 当前正在输出参数的工具调用ID：同一工具的分片不重复拼接标签 */
+var projectCurrentToolCallId = null;
+/* 已收到过流式分片的工具调用集合：全量数据仅在无分片时补充展示 */
+var projectStreamSeen = {};
+/* 执行中指示状态：用于结束时判断是否需要提示与刷新 */
+var projectWsRunning = false;
+
+/** 新一轮执行：清空打字机缓冲并显示执行中指示 */
+function resetProjectSessionTicker() {
+    showProjectSessionRunning();
+    projectTickerBuffer = '';
+    projectCurrentToolCallId = null;
+    projectStreamSeen = {};
+    var tEl = document.getElementById('projectSessionTicker');
+    if (tEl) tEl.textContent = '';
+}
+
+/** 工具调用打字机展示：标签只在新工具时拼接一次，参数/结果分片持续追加 */
+function handleProjectToolCallTicker(data) {
+    var isNewTool = data.toolCallId && data.toolCallId !== projectCurrentToolCallId;
+    if (data.status === 'preparing') {
+        // 参数流式分片：新工具先拼标签，同一工具的后续分片只追加参数内容
+        if (isNewTool) {
+            projectCurrentToolCallId = data.toolCallId;
+            appendProjectSessionTicker(' [调用工具 ' + (data.toolName || '') + '] ');
+        }
+        if (data.argumentsPartial != null) {
+            projectStreamSeen['a:' + data.toolCallId] = true;
+            appendProjectSessionTicker(String(data.argumentsPartial));
+        }
+    } else if (data.status === 'started') {
+        if (isNewTool) {
+            projectCurrentToolCallId = data.toolCallId;
+            appendProjectSessionTicker(' [调用工具 ' + (data.toolName || '') + '] ');
+        }
+        // 全量参数仅在未收到过分片时补充展示（分片已展示则不重复）
+        if (data.arguments != null && !projectStreamSeen['a:' + data.toolCallId]) {
+            appendProjectSessionTicker(formatProjectTickerJson(data.arguments));
+        }
+    } else if (data.status === 'running') {
+        // 执行结果流式分片
+        if (data.resultPartial != null) {
+            projectStreamSeen['r:' + data.toolCallId] = true;
+            appendProjectSessionTicker(String(data.resultPartial));
+        }
+    } else if (data.status === 'executed') {
+        projectCurrentToolCallId = null;
+        if (data.result != null && !projectStreamSeen['r:' + data.toolCallId]) {
+            appendProjectSessionTicker(' [工具返回] ' + formatProjectTickerJson(data.result));
+        }
+    } else if (data.status === 'failed' || data.status === 'rejected') {
+        projectCurrentToolCallId = null;
+        appendProjectSessionTicker(' [工具' + (data.status === 'failed' ? '执行失败' : '被拒绝') + '] ');
+    }
+}
+
+/** 参数/结果对象转紧凑字符串（超长截断） */
+function formatProjectTickerJson(obj) {
+    if (obj == null) return '';
+    var text;
+    if (typeof obj === 'string') {
+        text = obj;
+    } else {
+        try { text = JSON.stringify(obj); } catch (e) { text = String(obj); }
+    }
+    return text.length > 200 ? text.slice(0, 200) + '…' : text;
+}
+
+/** 显示"执行中"指示器 */
+function showProjectSessionRunning() {
+    var el = document.getElementById('projectSessionRunning');
+    if (!el) return;
+    el.style.display = 'flex';
+    projectWsRunning = true;
+}
+
+/** 隐藏执行中指示器 */
+function hideProjectSessionRunning() {
+    var el = document.getElementById('projectSessionRunning');
+    if (el) el.style.display = 'none';
+    projectWsRunning = false;
+}
+
+/** 打字机追加：内容持续拼接到缓冲区右侧，超长丢弃最左侧旧内容 */
+function appendProjectSessionTicker(content) {
+    if (!content) return;
+    var text = String(content).replace(/\s+/g, ' ').trim();
+    if (!text) return;
+    projectTickerBuffer += text;
+    if (projectTickerBuffer.length > PROJECT_TICKER_MAX_LEN) {
+        projectTickerBuffer = projectTickerBuffer.slice(projectTickerBuffer.length - PROJECT_TICKER_MAX_LEN);
+    }
+    var el = document.getElementById('projectSessionTicker');
+    if (el) el.textContent = projectTickerBuffer;
 }
 
 function loadProjectTokenUsage(projectId) {
@@ -1357,4 +1527,210 @@ function formatTokenCount(n) {
     if (n >= 10000) return (n / 10000).toFixed(1) + 'w';
     if (n >= 1000) return (n / 1000).toFixed(1) + 'k';
     return String(n);
+}
+
+/* ========== 项目管理智能体迭代 ========== */
+
+/** 渲染智能体迭代区块（配置了项目管理智能体时展示） */
+function renderProjectAgentSection(project) {
+    var sectionEl = document.getElementById('projectAgentSection');
+    var infoEl = document.getElementById('projectAgentInfo');
+    if (!sectionEl || !infoEl) return;
+
+    if (!project.agentId) {
+        sectionEl.style.display = 'none';
+        currentProjectAgentSessionId = '';
+        return;
+    }
+
+    sectionEl.style.display = 'block';
+    // 智能体名称：优先从 agentsCache 匹配，回退显示编号
+    var agentName = '智能体#' + project.agentId;
+    (typeof agentsCache !== 'undefined' ? agentsCache : []).forEach(function (agent) {
+        if (String(agent.id) === String(project.agentId)) {
+            agentName = agent.name || agentName;
+        }
+    });
+    var autoIterateText = project.autoIterate ? '已启用' : '未启用';
+    // 操作按钮：开启/关闭自动迭代 + 提示词管理
+    var toggleBtn = project.autoIterate
+        ? '<button class="btn-agent-action" onclick="toggleProjectAutoIterate(false)">关闭迭代</button>'
+        : '<button class="btn-agent-action btn-agent-action-enable" onclick="toggleProjectAutoIterate(true)">开启迭代</button>';
+    var promptBtn = '<button class="btn-agent-action btn-agent-action-icon" title="管理提示词" onclick="manageProjectIteratePrompt()">&#128393;</button>';
+    // 已配置项目管理智能体即可手动下发指令（不依赖自动迭代开关）
+    var runBtn = project.agentId
+        ? '<button class="btn-agent-action btn-agent-action-run" id="btnRunIterate" onclick="showProjectIteratePrompt()">下发指令</button>'
+        : '';
+    var infoHtml = '<div class="agent-info-item">' +
+            '<span class="info-label">项目管理智能体：</span><span class="info-value">' + escapeHtml(agentName) + '</span>' +
+            runBtn +
+        '</div>' +
+        '<div class="agent-info-item">' +
+            '<span class="info-label">自动迭代：</span><span class="info-value' + (project.autoIterate ? ' agent-enabled' : '') + '">' + autoIterateText + '</span>' +
+            toggleBtn +
+        '</div>' +
+        '<div class="agent-info-item">' +
+            '<span class="info-label">迭代要求：</span><span class="info-value">' + (project.iteratePrompt ? escapeHtml(project.iteratePrompt) : '未设置') + '</span>' +
+            promptBtn +
+        '</div>';
+    infoEl.innerHTML = infoHtml;
+}
+
+/** 项目详情页：弹出指令输入框，下发一轮项目迭代（同步调用，返回执行结果与失败原因） */
+function showProjectIteratePrompt() {
+    if (!currentProjectId) return;
+    showPrompt('下发指令', '输入要下发给项目管理智能体的指令（留空则执行默认项目迭代）：').then(function (input) {
+        if (input === null) return; // 取消
+        runProjectIterate(input);
+    });
+}
+
+/** 执行一轮项目迭代：userMessage 为空时走默认迭代指令 */
+function runProjectIterate(userMessage) {
+    if (!currentProjectId) return;
+    var btn = document.getElementById('btnRunIterate');
+    if (btn) {
+        btn.disabled = true;
+        btn.textContent = '执行中…';
+        btn.classList.remove('btn-agent-action-run');
+    }
+    fetch('/api/projects/' + currentProjectId + '/iterate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userMessage: userMessage || '' })
+    })
+        .then(function (r) { return r.json(); })
+        .then(function (res) {
+            if (res.code === 200 && res.data) {
+                // data: { success, message }
+                showToast(res.data.message || (res.data.success ? '迭代执行完成' : '迭代执行失败'), res.data.success ? 'success' : 'error');
+            } else {
+                showToast(res.msg || '执行失败', 'error');
+            }
+            // 刷新详情：更新会话面板/任务列表/操作日志
+            loadProjectDetail(currentProjectId);
+        })
+        .catch(function (err) {
+            console.error('手动执行项目迭代失败:', err);
+            showToast('执行请求失败', 'error');
+            if (btn) { btn.disabled = false; btn.textContent = '下发指令'; btn.classList.add('btn-agent-action-run'); }
+        });
+}
+
+/** 项目详情页：开启/关闭自动迭代（二次确认后提交） */
+function toggleProjectAutoIterate(enabled) {
+    if (!currentProjectId) return;
+    var confirmMsg = enabled
+        ? '开启后，系统将按调度周期自动驱动项目管理智能体迭代本项目，是否确认开启？'
+        : '关闭后，项目管理智能体将不再自动迭代本项目，是否确认关闭？';
+    showConfirm(confirmMsg).then(function (confirmed) {
+        if (!confirmed) return;
+        fetch('/api/projects/' + currentProjectId + '/iterate-config', {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ autoIterate: enabled })
+        }).then(function (r) { return r.json(); }).then(function (res) {
+            if (res.code === 200) {
+                showToast(enabled ? '自动迭代已开启' : '自动迭代已关闭', 'success');
+                loadProjectDetail(currentProjectId);
+            } else {
+                showToast(res.msg || '操作失败', 'error');
+            }
+        }).catch(function (err) {
+            console.error('更新自动迭代配置失败:', err);
+            showToast('操作失败', 'error');
+        });
+    });
+}
+
+/** 项目详情页：管理迭代要求提示词（多行输入弹框） */
+function manageProjectIteratePrompt() {
+    if (!currentProject) return;
+    var current = currentProject.iteratePrompt || '';
+    showPrompt('编辑自动迭代要求提示词（启用自动迭代时注入项目管理智能体）',
+        '如：每轮迭代优先处理待验收任务、产出物写入 docs 目录等', current
+    ).then(function (val) {
+        if (val === null) return; // 取消
+        fetch('/api/projects/' + currentProjectId + '/iterate-config', {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ iteratePrompt: val })
+        }).then(function (r) { return r.json(); }).then(function (res) {
+            if (res.code === 200) {
+                showToast('迭代要求提示词已保存', 'success');
+                loadProjectDetail(currentProjectId);
+            } else {
+                showToast(res.msg || '保存失败', 'error');
+            }
+        }).catch(function (err) {
+            console.error('保存迭代要求提示词失败:', err);
+            showToast('保存失败', 'error');
+        });
+    });
+}
+
+/** 加载项目管理智能体会话（标题等展示） */
+function loadProjectSession(projectId) {
+    if (!projectId) return;
+    fetch('/api/projects/' + projectId + '/session')
+        .then(function (r) { return r.json(); })
+        .then(function (res) {
+            if (res.code === 200) {
+                renderProjectSession(res.data);
+            }
+        })
+        .catch(function (err) {
+            console.error('加载项目会话失败:', err);
+        });
+}
+
+/** 渲染项目管理智能体会话面板（参考任务详情页会话展示逻辑） */
+function renderProjectSession(session) {
+    var panelEl = document.getElementById('projectSessionPanel');
+    if (!panelEl) return;
+
+    if (!session || !session.sessionId) {
+        currentProjectAgentSessionId = '';
+        panelEl.innerHTML = '<div class="project-session-empty">暂无迭代会话（启用自动迭代后由调度任务自动创建）</div>';
+        return;
+    }
+
+    var sid = session.sessionId;
+    currentProjectAgentSessionId = sid;
+    var time = formatTime(session.createTime) || '';
+    // 标题优先；无标题时回退到 sessionId
+    var displayTitle = session.title ? session.title : sid;
+    var rowHtml = '<div class="project-session-row">' +
+            '<span class="project-session-info" title="' + escapeHtml(sid) + '">' +
+                escapeHtml(displayTitle) + (time ? ' · ' + escapeHtml(time) : '') +
+            '</span>' +
+            '<a class="project-session-link" href="/?sessionId=' + encodeURIComponent(sid) + '" target="_blank">查看记录</a>' +
+            '<button class="project-session-link project-session-clear" title="清空该会话的历史记录" data-sid="' + escapeHtml(sid) + '">清空历史</button>' +
+        '</div>';
+    panelEl.innerHTML = rowHtml;
+    var btn = panelEl.querySelector('.project-session-clear');
+    if (btn) {
+        btn.onclick = function () { clearProjectSessionHistory(this.getAttribute('data-sid')); };
+    }
+}
+
+/** 清空项目管理智能体会话的历史记录（复用会话清理接口） */
+function clearProjectSessionHistory(sessionId) {
+    if (!sessionId) return;
+    showConfirm('确定清空该会话的历史记录吗？清空后智能体将丢失该会话的上下文记忆，且不可恢复。').then(function (confirmed) {
+        if (!confirmed) return;
+        fetch('/api/session/' + encodeURIComponent(sessionId) + '/clear', { method: 'POST' })
+            .then(function (r) { return r.json(); })
+            .then(function (res) {
+                if (res.code === 200) {
+                    showToast('会话历史已清空', 'success');
+                } else {
+                    showToast(res.msg || '清空失败', 'error');
+                }
+            })
+            .catch(function (err) {
+                console.error('清空会话历史失败:', err);
+                showToast('清空失败', 'error');
+            });
+    });
 }

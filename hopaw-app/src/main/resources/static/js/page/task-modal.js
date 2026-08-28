@@ -154,6 +154,7 @@ function loadAgents() {
                 agentsCache = res.data.list || [];
                 populateAgentSelect('');
                 populateBoardAgentFilter();
+                populateProjectAgentSelect('');
             }
         })
         .catch(function (err) {
@@ -194,6 +195,18 @@ function populateProjectSelect(selectedId) {
     projectsCache.forEach(function (project) {
         var sel = String(project.id) === String(selectedId) ? ' selected' : '';
         html += '<option value="' + project.id + '"' + sel + '>' + escapeHtml(project.name || ('项目#' + project.id)) + '</option>';
+    });
+    select.innerHTML = html;
+}
+
+/* 项目管理智能体下拉填充（项目页弹框，宿主页面无对应元素时跳过） */
+function populateProjectAgentSelect(selectedId) {
+    var select = document.getElementById('projectAgentId');
+    if (!select) return;
+    var html = '<option value="">未设置（不启用）</option>';
+    agentsCache.forEach(function (agent) {
+        var sel = String(agent.id) === String(selectedId) ? ' selected' : '';
+        html += '<option value="' + agent.id + '"' + sel + '>' + escapeHtml(agent.name || ('智能体#' + agent.id)) + '</option>';
     });
     select.innerHTML = html;
 }

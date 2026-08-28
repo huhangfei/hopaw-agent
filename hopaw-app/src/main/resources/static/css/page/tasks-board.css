@@ -471,6 +471,22 @@
     color: #667eea;
 }
 
+/* 任务创建者：智能体创建（绿色机器人）/ 用户创建（橙色人形），图标区分突出 */
+.task-card-creator {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 12px;
+}
+
+.task-card-creator.creator-agent {
+    color: #10b981;
+}
+
+.task-card-creator.creator-user {
+    color: #f59e0b;
+}
+
 .task-card-project {
     display: flex;
     align-items: center;
@@ -696,6 +712,14 @@ body.dark-theme .task-card-title {
 
 body.dark-theme .task-card-agent {
     color: #8ba3ff;
+}
+
+body.dark-theme .task-card-creator.creator-agent {
+    color: #34d399;
+}
+
+body.dark-theme .task-card-creator.creator-user {
+    color: #fbbf24;
 }
 
 body.dark-theme .task-card-project {

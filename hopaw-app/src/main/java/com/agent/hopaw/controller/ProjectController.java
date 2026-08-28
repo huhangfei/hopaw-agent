@@ -7,8 +7,11 @@ import com.agent.hopaw.infra.model.entity.Account;
 import com.agent.hopaw.infra.model.entity.Project;
 import com.agent.hopaw.infra.model.entity.ProjectLog;
 import com.agent.hopaw.infra.model.entity.WorkflowTask;
+import com.agent.hopaw.infra.model.entity.ChatSession;
 import com.agent.hopaw.infra.service.IAccountService;
+import com.agent.hopaw.infra.service.IChatSessionService;
 import com.agent.hopaw.infra.service.IBizTokenUsageService;
+import com.agent.hopaw.infra.service.IProjectIterateService;
 import com.agent.hopaw.infra.service.IProjectLogService;
 import com.agent.hopaw.infra.service.IProjectService;
 import com.agent.hopaw.infra.service.IWorkflowTaskService;
@@ -39,17 +42,23 @@ public class ProjectController {
     private final IProjectLogService projectLogService;
     private final IBizTokenUsageService bizTokenUsageService;
     private final IWorkflowTaskService workflowTaskService;
+    private final IChatSessionService chatSessionService;
+    private final IProjectIterateService projectIterateService;
 
     public ProjectController(IProjectService projectService,
                              IAccountService accountService,
                              IProjectLogService projectLogService,
                              IBizTokenUsageService bizTokenUsageService,
-                             IWorkflowTaskService workflowTaskService) {
+                             IWorkflowTaskService workflowTaskService,
+                             IChatSessionService chatSessionService,
+                             IProjectIterateService projectIterateService) {
         this.projectService = projectService;
         this.accountService = accountService;
         this.projectLogService = projectLogService;
         this.bizTokenUsageService = bizTokenUsageService;
         this.workflowTaskService = workflowTaskService;
+        this.chatSessionService = chatSessionService;
+        this.projectIterateService = projectIterateService;
     }
 
     // 页面
@@ -180,6 +189,22 @@ public class ProjectController {
         return ResponseBean.success(workflowTaskService.getSessionIdsByProjectId(id));
     }
 
+    // 项目管理智能体会话信息（标题等，供详情页展示）
+    @GetMapping("/api/projects/{id}/session")
+    @ResponseBody
+    public ResponseBean getProjectSession(HttpServletRequest request, @PathVariable Long id) {
+        String userId = CurrentUser.require(request);
+        Project project = projectService.getProject(id, userId);
+        if (project == null) {
+            return ResponseBean.fail("项目不存在或无权访问");
+        }
+        ChatSession session = null;
+        if (project.getSessionId() != null && !project.getSessionId().isEmpty()) {
+            session = chatSessionService.getSessionBySessionId(project.getSessionId());
+        }
+        return ResponseBean.success(session);
+    }
+
     /** 填充项目创建人昵称 */
     private void fillCreatorName(Project project) {
         if (project == null || project.getUserId() == null) return;
@@ -195,6 +220,53 @@ public class ProjectController {
         Account account = accountService.getByUserId(task.getUserId());
         if (account != null) {
             task.setCreatorName(account.getNickname() != null ? account.getNickname() : account.getUsername());
+        }
+    }
+
+    // 更新项目自动迭代配置（开启/关闭 + 迭代要求提示词）
+    @PutMapping("/api/projects/{id}/iterate-config")
+    @ResponseBody
+    public ResponseBean updateIterateConfig(HttpServletRequest request, @PathVariable Long id, @RequestBody Map<String, Object> body) {
+        String userId = CurrentUser.require(request);
+        Boolean autoIterate = body.get("autoIterate") != null ? Boolean.valueOf(String.valueOf(body.get("autoIterate"))) : null;
+        String iteratePrompt = body.get("iteratePrompt") != null ? String.valueOf(body.get("iteratePrompt")) : null;
+        try {
+            Project before = projectService.getProject(id, userId);
+            if (before == null) {
+                return ResponseBean.fail("项目不存在或无权访问");
+            }
+            Project updated = projectService.updateIterateConfig(id, autoIterate, iteratePrompt, userId);
+            // 记录日志：迭代开关变更 / 提示词更新
+            if (autoIterate != null && !autoIterate.equals(before.getAutoIterate())) {
+                projectLogService.log(id, userId, "auto_iterate",
+                        autoIterate ? "项目智能伙伴自动迭代已开启" : "项目智能伙伴自动迭代已关闭");
+            }
+            if (iteratePrompt != null && !iteratePrompt.equals(before.getIteratePrompt() == null ? "" : before.getIteratePrompt())) {
+                projectLogService.log(id, userId, "auto_iterate", "项目智能伙伴迭代要求提示词已更新");
+            }
+            return ResponseBean.success(updated);
+        } catch (Exception e) {
+            return ResponseBean.fail(e.getMessage());
+        }
+    }
+
+    // 手动下发指令执行一轮项目迭代（同步执行，返回执行结果与失败原因）
+    @PostMapping("/api/projects/{id}/iterate")
+    @ResponseBody
+    public ResponseBean executeIterate(HttpServletRequest request, @PathVariable Long id,
+            @RequestBody(required = false) Map<String, String> body) {
+        String userId = CurrentUser.require(request);
+        try {
+            Project project = projectService.getProject(id, userId);
+            if (project == null) {
+                return ResponseBean.fail("项目不存在或无权访问");
+            }
+            String userMessage = (body != null && body.get("userMessage") != null && !body.get("userMessage").trim().isEmpty())
+                    ? body.get("userMessage").trim() : null;
+            return ResponseBean.success(projectIterateService.executeProjectIterate(id, userMessage));
+        } catch (Exception e) {
+            logger.error("手动执行项目迭代失败: projectId={}", id, e);
+            return ResponseBean.fail(e.getMessage() != null ? e.getMessage() : "执行失败（未知异常）");
         }
     }
 

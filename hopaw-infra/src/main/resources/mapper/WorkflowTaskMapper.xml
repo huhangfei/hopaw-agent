@@ -13,6 +13,9 @@
         <result property="executionPeriod" column="execution_period"/>
         <result property="rejectReason" column="reject_reason"/>
         <result property="userId" column="user_id"/>
+        <result property="creatorType" column="creator_type"/>
+        <result property="creatorAgentId" column="creator_agent_id"/>
+        <result property="creatorAgentName" column="creator_agent_name"/>
         <result property="createTime" column="create_time"/>
         <result property="updateTime" column="update_time"/>
         <result property="agentName" column="agent_name"/>
@@ -21,12 +24,12 @@
 
     <sql id="allColumns">
         id, title, content, status, project_id, agent_id, start_time, execution_period,
-        reject_reason, user_id, create_time, update_time
+        reject_reason, user_id, creator_type, creator_agent_id, create_time, update_time
     </sql>
 
     <insert id="insert" parameterType="com.agent.hopaw.infra.model.entity.WorkflowTask">
-        INSERT INTO workflow_tasks (title, content, status, project_id, agent_id, start_time, execution_period, reject_reason, user_id, create_time, update_time)
-        VALUES (#{title}, #{content}, #{status}, #{projectId}, #{agentId}, #{startTime}, #{executionPeriod}, #{rejectReason}, #{userId}, datetime('now','localtime'), datetime('now','localtime'))
+        INSERT INTO workflow_tasks (title, content, status, project_id, agent_id, start_time, execution_period, reject_reason, user_id, creator_type, creator_agent_id, create_time, update_time)
+        VALUES (#{title}, #{content}, #{status}, #{projectId}, #{agentId}, #{startTime}, #{executionPeriod}, #{rejectReason}, #{userId}, #{creatorType}, #{creatorAgentId}, datetime('now','localtime'), datetime('now','localtime'))
         <selectKey resultType="long" keyProperty="id" order="AFTER">
             SELECT last_insert_rowid()
         </selectKey>
@@ -53,11 +56,14 @@
 
     <select id="findById" resultMap="WorkflowTaskResultMap">
         SELECT t.id, t.title, t.content, t.status, t.project_id, t.agent_id, t.start_time,
-               t.execution_period, t.reject_reason, t.user_id, t.create_time, t.update_time,
-               a.name AS agent_name, p.name AS project_name
+               t.execution_period, t.reject_reason, t.user_id, t.creator_type, t.creator_agent_id,
+               t.create_time, t.update_time,
+               a.name AS agent_name, p.name AS project_name,
+               ca.name AS creator_agent_name
         FROM workflow_tasks t
         LEFT JOIN agents a ON t.agent_id = a.id
         LEFT JOIN projects p ON t.project_id = p.id
+        LEFT JOIN agents ca ON t.creator_agent_id = ca.id
         WHERE t.id = #{id}
     </select>
 
@@ -89,11 +95,14 @@
 
     <select id="findByUserIdWithFilters" resultMap="WorkflowTaskResultMap">
         SELECT t.id, t.title, t.content, t.status, t.project_id, t.agent_id, t.start_time,
-               t.execution_period, t.reject_reason, t.user_id, t.create_time, t.update_time,
-               a.name AS agent_name, p.name AS project_name
+               t.execution_period, t.reject_reason, t.user_id, t.creator_type, t.creator_agent_id,
+               t.create_time, t.update_time,
+               a.name AS agent_name, p.name AS project_name,
+               ca.name AS creator_agent_name
         FROM workflow_tasks t
         LEFT JOIN agents a ON t.agent_id = a.id
         LEFT JOIN projects p ON t.project_id = p.id
+        LEFT JOIN agents ca ON t.creator_agent_id = ca.id
         WHERE t.user_id = #{userId}
         <if test="keyword != null and keyword != ''">
             AND (t.title LIKE CONCAT('%', #{keyword}, '%') OR t.content LIKE CONCAT('%', #{keyword}, '%'))

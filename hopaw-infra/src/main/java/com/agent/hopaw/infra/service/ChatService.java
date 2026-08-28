@@ -1,6 +1,7 @@
 package com.agent.hopaw.infra.service;
 
 import com.agent.hopaw.infra.constant.AgentExecutorBizTypeEnum;
+import com.agent.hopaw.infra.constant.AiModelCallSourceEnum;
 import com.agent.hopaw.infra.executor.IAgentExecutor;
 import com.agent.hopaw.infra.memory.ILongTermMemoryService;
 import com.agent.hopaw.infra.model.dto.AgentExecutorParams;
@@ -10,6 +11,7 @@ import com.agent.hopaw.infra.model.dto.SkillInfo;
 import com.agent.hopaw.infra.model.dto.ToolSetInfo;
 import com.agent.hopaw.infra.model.dto.UserChatRequest;
 import com.agent.hopaw.infra.model.entity.Agent;
+import com.agent.hopaw.infra.model.entity.ChatSession;
 import com.agent.hopaw.infra.tool.AgentTool;
 import com.agent.hopaw.infra.tool.IAgentToolService;
 import dev.langchain4j.data.message.Content;
@@ -45,8 +47,10 @@ public class ChatService implements IChatService {
     private final IMcpServerConfigService mcpServerConfigService;
     private final IAgentExecutorService agentExecutorService;
     private final IWorkflowTaskService workflowTaskService;
+    private final IChatSessionService chatSessionService;
+    private final IProjectIterateService projectIterateService;
 
-    public ChatService(IAgentService agentService, IAgentToolService agentToolService, IAvatarSettingsService avatarSettingsService, ISkillService skillService, ILongTermMemoryService longTermMemoryService, ISysConfigService sysConfigService, IMcpServerConfigService mcpServerConfigService, IAgentExecutorService agentExecutorService, IWorkflowTaskService workflowTaskService) {
+    public ChatService(IAgentService agentService, IAgentToolService agentToolService, IAvatarSettingsService avatarSettingsService, ISkillService skillService, ILongTermMemoryService longTermMemoryService, ISysConfigService sysConfigService, IMcpServerConfigService mcpServerConfigService, IAgentExecutorService agentExecutorService, IWorkflowTaskService workflowTaskService, IChatSessionService chatSessionService, IProjectIterateService projectIterateService) {
         this.agentService = agentService;
         this.agentToolService = agentToolService;
         this.avatarSettingsService = avatarSettingsService;
@@ -56,12 +60,21 @@ public class ChatService implements IChatService {
         this.mcpServerConfigService = mcpServerConfigService;
         this.agentExecutorService = agentExecutorService;
         this.workflowTaskService = workflowTaskService;
+        this.chatSessionService = chatSessionService;
+        this.projectIterateService = projectIterateService;
     }
 
     @Override
     public void handle(UserChatRequest userChatRequest) {
-        if(userChatRequest.getSessionBizType() != null && userChatRequest.getSessionBizType() == "task"){
+        String sessionBizType = resolveSessionBizType(userChatRequest);
+        // 任务会话：走工作流任务执行（复用任务会话上下文）
+        if (AiModelCallSourceEnum.WorkflowTaskChat.getValue().equals(sessionBizType)) {
             workflowTaskService.executeTask(userChatRequest);
+            return;
+        }
+        // 项目会话：重新唤起历史项目会话，由项目管理智能体处理用户消息
+        if (AiModelCallSourceEnum.ProjectChat.getValue().equals(sessionBizType)) {
+            projectIterateService.executeProjectChat(userChatRequest);
             return;
         }
         Agent agent = userChatRequest.getAgentId() != null ? agentService.getAgentById(userChatRequest.getAgentId()) : null;
@@ -110,6 +123,22 @@ public class ChatService implements IChatService {
         };
         IAgentExecutor agentExecutor = agentExecutorService.createAgentExecutor(agentExecutorParams, systemMessageProvider);
         agentExecutor.execute(buildContents(userChatRequest));
+    }
+
+    /**
+     * 解析会话业务类型：优先取请求显式传入的类型，否则按会话编号从会话表读取（来源在首次插入时确定）
+     */
+    private String resolveSessionBizType(UserChatRequest userChatRequest) {
+        if (userChatRequest.getSessionBizType() != null) {
+            return userChatRequest.getSessionBizType();
+        }
+        if (userChatRequest.getSessionId() != null) {
+            ChatSession session = chatSessionService.getSessionBySessionId(userChatRequest.getSessionId());
+            if (session != null) {
+                return session.getBizType();
+            }
+        }
+        return null;
     }
 
     /**
