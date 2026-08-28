@@ -236,6 +236,9 @@ function handleToolCall(data, requestId) {
         msgState.streamingMarkdownContent = '';
         msgState.lastMessageType = 'tool_call';
 
+        // 消息流中同步渲染扳手图标：连续工具调用合并同一行
+        appendToolInlineIcon(messagesDiv, data);
+
         var toolCallContainer = document.createElement('div');
         toolCallContainer.className = 'tool-call-container';
 
@@ -489,6 +492,71 @@ function handleToolCall(data, requestId) {
         messagesDiv.scrollTop = messagesDiv.scrollHeight;
     }
     if (toolExecList) toolExecList.scrollTop = toolExecList.scrollHeight;
+}
+
+/**
+ * 在消息流中渲染工具调用扳手图标。
+ * 与历史渲染保持一致：若消息流最后一个元素已是图标行（连续工具调用），复用同一行；否则新建一行。
+ */
+function appendToolInlineIcon(messagesDiv, data) {
+    if (!messagesDiv) return;
+    // 已渲染过该工具调用的图标则跳过（同一工具调用会有多个状态事件）
+    if (messagesDiv.querySelector('.tool-inline-icon[data-tool-call-id="' + data.toolCallId + '"]')) {
+        return;
+    }
+    var row = messagesDiv.lastElementChild;
+    if (!row || !row.classList || !row.classList.contains('tool-inline-row')) {
+        row = document.createElement('div');
+        row.className = 'tool-inline-row';
+        messagesDiv.appendChild(row);
+    }
+    var inlineName = data.toolName || 'Unknown Tool';
+    if (data.toolDescriptions && data.toolDescriptions.length > 0) {
+        inlineName = data.toolDescriptions[0] || inlineName;
+    }
+    var icon = document.createElement('span');
+    icon.className = 'tool-inline-icon';
+    icon.setAttribute('data-tool-call-id', data.toolCallId);
+    icon.title = inlineName; // 鼠标移上显示工具名称
+    icon.textContent = '🔧';
+    icon.onclick = function() {
+        scrollToToolCall(icon);
+    };
+    row.appendChild(icon);
+}
+
+/**
+ * 点击消息流中的扳手图标：右侧工具执行列表滑动到对应工具调用项并展开详情。
+ */
+function scrollToToolCall(el) {
+    var callId = el.getAttribute('data-tool-call-id');
+    if (!callId) return;
+    var toolCall = document.querySelector('.tool-call[data-tool-call-id="' + callId + '"]');
+    if (!toolCall) return;
+
+    // 仅滚动工具执行列表容器，避免整页滚动
+    var container = document.getElementById('toolExecList');
+    if (container) {
+        var containerRect = container.getBoundingClientRect();
+        var itemRect = toolCall.getBoundingClientRect();
+        container.scrollTop += itemRect.top - containerRect.top - 10;
+    }
+
+    // 展开详情
+    var body = toolCall.querySelector('.tool-call-body');
+    if (body) {
+        body.classList.remove('collapsed');
+        body.classList.add('open');
+    }
+    var toggle = toolCall.querySelector('.tool-call-toggle');
+    if (toggle) {
+        toggle.classList.add('open');
+    }
+
+    // 高亮定位到的工具调用项，便于识别
+    toolCall.classList.remove('flash');
+    void toolCall.offsetWidth; // 重新触发动画
+    toolCall.classList.add('flash');
 }
 
 function showLoadingMessage() {

@@ -48,6 +48,7 @@ public class ChatController {
         model.addAttribute("currentUserId", currentUserId);
         model.addAttribute("agentExecutorState", false);
         model.addAttribute("chatHistory", Collections.emptyList());
+        model.addAttribute("chatFlow", Collections.emptyList());
 
         List<ChatSession> chatSessions = chatSessionService.getSessionsByUserId(currentUserId);
         model.addAttribute("chatSessions", chatSessions);
@@ -78,6 +79,8 @@ public class ChatController {
 
 
                 model.addAttribute("chatHistory", chatHistory);
+                // 消息渲染流：普通消息原样、连续的工具调用合并为一组，供消息列表按行渲染工具图标
+                model.addAttribute("chatFlow", buildChatFlow(chatHistory));
                 model.addAttribute("agentExecutorState", agentExecutorService.isAgentExecutorRunning(session.getSessionId()));
                 selectedAgent=agents.stream().filter(agent -> agent.getId().equals(session.getAgentId())).findFirst().orElse(null);
                 aiModelId=session.getAiModelId();
@@ -105,5 +108,35 @@ public class ChatController {
         return "index";
     }
 
+    /**
+     * 将会话历史转换为消息渲染流：
+     * 普通消息（text/thinking/image/error/warn 等）保持原样，
+     * 连续的工具调用消息合并为一组，供消息列表按行渲染工具调用图标。
+     */
+    private List<Map<String, Object>> buildChatFlow(List<ChatHistoryVO> chatHistory) {
+        List<Map<String, Object>> flow = new ArrayList<>();
+        List<ChatHistoryVO> toolGroup = null;
+        for (ChatHistoryVO chat : chatHistory) {
+            if ("tool_call".equals(chat.getMessageType())) {
+                // 与上一条同为工具调用：并入当前分组
+                if (toolGroup == null) {
+                    toolGroup = new ArrayList<>();
+                    Map<String, Object> group = new HashMap<>();
+                    group.put("type", "tools");
+                    group.put("tools", toolGroup);
+                    flow.add(group);
+                }
+                toolGroup.add(chat);
+            } else {
+                // 非工具调用消息：结束当前工具分组
+                toolGroup = null;
+                Map<String, Object> message = new HashMap<>();
+                message.put("type", "message");
+                message.put("chat", chat);
+                flow.add(message);
+            }
+        }
+        return flow;
+    }
 
 }

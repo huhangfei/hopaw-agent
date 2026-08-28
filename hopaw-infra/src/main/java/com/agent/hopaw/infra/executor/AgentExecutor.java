@@ -900,6 +900,11 @@ public class AgentExecutor implements IAgentExecutor {
             AiMessageBaseInfo info = AiMessageBaseInfo.build(type,sessionId, requestId).content(message);
             sendMessageToChannel(info);
             messageTypeChangedChatHistoryHandler(type);
+            // error/warn 类型消息独立入库，刷新页面后可重新渲染
+            ChatHistory errorChat = new ChatHistory(agentId, "agent", type, message);
+            errorChat.setSessionId(sessionId);
+            errorChat.setUserId(userId);
+            chatHistoryConsumer.accept(errorChat);
             taskDone();
         }
 

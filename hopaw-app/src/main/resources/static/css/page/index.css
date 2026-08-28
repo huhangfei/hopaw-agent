@@ -1175,6 +1175,41 @@
     flex-direction: column;
     gap: 8px;
 }
+/* 消息列表中的工具调用图标行：连续工具调用合并为一行 */
+.tool-inline-row {
+    align-self: flex-start;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    padding: 0 10px;
+}
+.tool-inline-icon {
+    cursor: pointer;
+    font-size: 15px;
+    width: 28px;
+    height: 28px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    background: #f0f2f5;
+    border: 1px solid rgba(102, 126, 234, 0.25);
+    border-radius: 8px;
+    user-select: none;
+    transition: background .15s ease, border-color .15s ease, transform .15s ease;
+}
+.tool-inline-icon:hover {
+    background: rgba(102, 126, 234, 0.12);
+    border-color: rgba(102, 126, 234, 0.55);
+    transform: translateY(-1px) scale(1.08);
+}
+/* 消息流扳手图标点击后，右侧对应工具调用项的高亮闪烁 */
+@keyframes toolCallFlash {
+    0% { box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.55); }
+    100% { box-shadow: 0 0 0 3px rgba(102, 126, 234, 0); }
+}
+.tool-call.flash {
+    animation: toolCallFlash 1.2s ease-out;
+}
 .message.tool-call-message {
     max-width: 80%;
 }
@@ -2072,6 +2107,25 @@ body.dark-theme .tool-permission-item.auto .tool-permission-item-check {
 body.dark-theme .tool-call {
     background: rgba(139, 163, 255, 0.1);
     border-color: rgba(139, 163, 255, 0.3);
+}
+
+body.dark-theme .tool-inline-icon {
+    background: #16213e;
+    border-color: rgba(139, 163, 255, 0.3);
+}
+
+body.dark-theme .tool-inline-icon:hover {
+    background: rgba(139, 163, 255, 0.15);
+    border-color: rgba(139, 163, 255, 0.6);
+}
+
+@keyframes toolCallFlashDark {
+    0% { box-shadow: 0 0 0 3px rgba(139, 163, 255, 0.55); }
+    100% { box-shadow: 0 0 0 3px rgba(139, 163, 255, 0); }
+}
+
+body.dark-theme .tool-call.flash {
+    animation: toolCallFlashDark 1.2s ease-out;
 }
 
 body.dark-theme .tool-call-name {

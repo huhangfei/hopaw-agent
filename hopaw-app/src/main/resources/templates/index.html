@@ -82,7 +82,8 @@
             </div>
         </div>
         <div th:if="${selectedAgent != null}" class="chat-messages" id="chatMessages">
-            <div th:each="chat : ${chatHistory}" th:if="${chat.messageType != 'tool_call'}"
+            <th:block th:each="item : ${chatFlow}" th:with="chat=${item['type'] == 'message' ? item['chat'] : null}">
+            <div th:if="${item['type'] == 'message'}"
                  th:switch="${chat.messageType}"
                  th:classappend="${chat.role == 'user' ? 'user' : 'agent'}" class="message">
                 <div th:case="'text'">
@@ -117,7 +118,36 @@
                         </button>
                     </div>
                 </div>
+                <div th:case="'error'" th:classappend="'error-message'">
+                    <div class="message-label" th:text="${chat.agent != null ? chat.agent.name : 'Agent'} + ' (错误)'"></div>
+                    <div th:text="${chat.content}" class="message-content error-content"></div>
+                    <div class="message-footer">
+                        <div class="message-time"
+                             th:text="${chat.createTime.toLocalDate().equals(T(java.time.LocalDate).now()) ? #temporals.format(chat.createTime, 'HH:mm:ss') : #temporals.format(chat.createTime, 'yyyy-MM-dd HH:mm:ss')}"></div>
+                        <button class="message-copy-btn" th:attr="data-content=${chat.content}" onclick="copyMessageContent(this)" title="复制消息">
+                            <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+                        </button>
+                    </div>
+                </div>
+                <div th:case="'warn'" th:classappend="'warn-message'">
+                    <div class="message-label" th:text="${chat.agent != null ? chat.agent.name : 'Agent'} + ' (警告)'"></div>
+                    <div th:text="${chat.content}" class="message-content error-content"></div>
+                    <div class="message-footer">
+                        <div class="message-time"
+                             th:text="${chat.createTime.toLocalDate().equals(T(java.time.LocalDate).now()) ? #temporals.format(chat.createTime, 'HH:mm:ss') : #temporals.format(chat.createTime, 'yyyy-MM-dd HH:mm:ss')}"></div>
+                        <button class="message-copy-btn" th:attr="data-content=${chat.content}" onclick="copyMessageContent(this)" title="复制消息">
+                            <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+                        </button>
+                    </div>
+                </div>
             </div>
+            <!-- 连续的工具调用消息合并渲染为一行扳手图标：悬停显示工具名称，点击定位右侧工具执行列表并展开详情 -->
+            <div th:if="${item['type'] == 'tools'}" class="tool-inline-row">
+                <span th:each="t : ${item['tools']}" class="tool-inline-icon"
+                      th:attr="data-tool-call-id=${t.toolCallId}, title=${t.toolName}"
+                      onclick="scrollToToolCall(this)">🔧</span>
+            </div>
+            </th:block>
             <div th:if="${chatHistory.size()==0}" class="empty-state" id="chatHistoryEmptyState">
             <svg viewBox="0 0 24 24" fill="currentColor">
                 <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/>
