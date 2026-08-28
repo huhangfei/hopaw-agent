@@ -33,6 +33,17 @@ public interface IProjectLogService {
     /** 查询项目操作日志，按时间正序 */
     List<ProjectLog> getLogsByProjectId(Long projectId);
 
+    /**
+     * 分页查询项目操作日志，最新在前。
+     * @param page 页码，从1开始
+     * @param size 每页数量
+     * @return 当前页日志列表
+     */
+    List<ProjectLog> getLogsPage(Long projectId, int page, int size);
+
+    /** 统计项目操作日志总数 */
+    int countLogs(Long projectId);
+
     /** 查询项目重点日志（important 类型），按时间正序 */
     List<ProjectLog> getImportantLogsByProjectId(Long projectId);
 

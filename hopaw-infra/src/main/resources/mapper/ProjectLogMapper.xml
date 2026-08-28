@@ -28,6 +28,21 @@
         ORDER BY id ASC
     </select>
 
+    <!-- 分页查询项目日志：最新在前，供智能体按页回看历史操作 -->
+    <select id="findPageByProjectId" resultMap="ProjectLogResultMap">
+        SELECT id, project_id, operator_id, operator_name, action, log_type, detail, create_time
+        FROM project_logs
+        WHERE project_id = #{projectId}
+        ORDER BY id DESC
+        LIMIT #{size} OFFSET #{offset}
+    </select>
+
+    <select id="countByProjectId" resultType="int">
+        SELECT COUNT(*)
+        FROM project_logs
+        WHERE project_id = #{projectId}
+    </select>
+
     <select id="findByProjectIdAndLogType" resultMap="ProjectLogResultMap">
         SELECT id, project_id, operator_id, operator_name, action, log_type, detail, create_time
         FROM project_logs

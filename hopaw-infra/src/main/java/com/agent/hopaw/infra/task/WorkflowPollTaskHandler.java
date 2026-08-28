@@ -12,6 +12,8 @@ import java.time.LocalDateTime;
 import java.util.List;
 import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 /**
  * 工作流任务轮询 Handler：复用 DynamicTaskService 动态定时任务机制。
@@ -25,6 +27,10 @@ public class WorkflowPollTaskHandler implements TaskHandler {
 
     /** 任务类型标识，对应 scheduled_tasks.task_type */
     public static final String TYPE = "workflowTaskPoll";
+
+    /** 执行时段格式：HH:mm-HH:mm（每日允许拉起的时间窗口，支持跨天如 22:00-06:00） */
+    private static final Pattern EXECUTION_PERIOD_PATTERN =
+            Pattern.compile("^([01]\\d|2[0-3]):([0-5]\\d)-([01]\\d|2[0-3]):([0-5]\\d)$");
 
     private final IWorkflowTaskService taskService;
     private final WorkflowTaskThreadPool threadPool;
@@ -65,6 +71,11 @@ public class WorkflowPollTaskHandler implements TaskHandler {
                 if (task.getStartTime() != null && task.getStartTime().isAfter(LocalDateTime.now())) {
                     continue;
                 }
+                // 执行时段窗口检查：当前时刻不在每日允许拉起的时间窗口内时暂缓
+                if (!isWithinExecutionWindow(task.getExecutionPeriod())) {
+                    logger.debug("任务不在执行时段窗口内，暂缓拉起: id={}, window={}", task.getId(), task.getExecutionPeriod());
+                    continue;
+                }
                 // 前置条件检查：所有前置任务状态命中要求状态（多选任意命中）才允许执行
                 if (!taskService.isPreconditionsSatisfied(task.getId())) {
                     logger.info("任务前置条件未满足，暂缓拉起: id={}, title={}", task.getId(), task.getTitle());
@@ -91,5 +102,29 @@ public class WorkflowPollTaskHandler implements TaskHandler {
                 taskService.updateTaskStatus(task.getId(), TaskStatusEnum.FAILED.getCode(), e.getMessage());
             }
         }
+    }
+
+    /**
+     * 判断当前时刻是否在执行时段窗口内：
+     * - 窗口为空、格式不合法或结束<=开始（历史脏数据）：不限制，视为命中
+     * - 合法窗口（start < end，如 09:00-18:00）：start <= 当前 <= end
+     */
+    private boolean isWithinExecutionWindow(String window) {
+        if (window == null || window.trim().isEmpty()) {
+            return true;
+        }
+        Matcher matcher = EXECUTION_PERIOD_PATTERN.matcher(window.trim());
+        if (!matcher.matches()) {
+            return true;
+        }
+        int startMin = Integer.parseInt(matcher.group(1)) * 60 + Integer.parseInt(matcher.group(2));
+        int endMin = Integer.parseInt(matcher.group(3)) * 60 + Integer.parseInt(matcher.group(4));
+        if (startMin >= endMin) {
+            // 反向窗口视为非法数据：不限制
+            return true;
+        }
+        LocalDateTime now = LocalDateTime.now();
+        int curMin = now.getHour() * 60 + now.getMinute();
+        return curMin >= startMin && curMin <= endMin;
     }
 }

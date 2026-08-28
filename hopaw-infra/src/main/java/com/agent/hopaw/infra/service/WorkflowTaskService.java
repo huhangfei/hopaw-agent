@@ -35,11 +35,16 @@ import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.function.Function;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
 @Service
 public class WorkflowTaskService implements IWorkflowTaskService {
     private static final Logger logger = LoggerFactory.getLogger(WorkflowTaskService.class);
+    /** 执行时段格式：HH:mm-HH:mm（每日允许调度拉起的时间窗口，支持跨天如 22:00-06:00） */
+    private static final Pattern EXECUTION_PERIOD_PATTERN =
+            Pattern.compile("^([01]\\d|2[0-3]):([0-5]\\d)-([01]\\d|2[0-3]):([0-5]\\d)$");
 
     private final WorkflowTaskMapper workflowTaskMapper;
     private final WorkflowTaskPreconditionMapper preconditionMapper;
@@ -86,6 +91,7 @@ public class WorkflowTaskService implements IWorkflowTaskService {
         if (task.getCreatorType() == null || task.getCreatorType().isEmpty()) {
             task.setCreatorType("user");
         }
+        validateExecutionPeriod(task.getExecutionPeriod());
         task.setStatus(TaskStatusEnum.PENDING.getCode());
         LocalDateTime now = LocalDateTime.now();
         task.setCreateTime(now);
@@ -120,6 +126,7 @@ public class WorkflowTaskService implements IWorkflowTaskService {
             existing.setStartTime(task.getStartTime());
         }
         if (task.getExecutionPeriod() != null) {
+            validateExecutionPeriod(task.getExecutionPeriod());
             existing.setExecutionPeriod(task.getExecutionPeriod());
         }
         existing.setUpdateTime(LocalDateTime.now());
@@ -325,6 +332,23 @@ public class WorkflowTaskService implements IWorkflowTaskService {
         IAgentExecutor executor = createTaskExecutor(task, agent, userChatRequest);
         executeTask(task,executor,600);
     }
+    /** 校验执行时段格式：HH:mm-HH:mm 且结束时间必须大于开始时间（空表示不限制） */
+    private void validateExecutionPeriod(String executionPeriod) {
+        if (executionPeriod == null || executionPeriod.trim().isEmpty()) {
+            return;
+        }
+        Matcher matcher = EXECUTION_PERIOD_PATTERN.matcher(executionPeriod.trim());
+        if (!matcher.matches()) {
+            throw new RuntimeException("执行时段格式不正确，应为 HH:mm-HH:mm（如 09:00-18:00）");
+        }
+        String start = matcher.group(1) + ":" + matcher.group(2);
+        String end = matcher.group(3) + ":" + matcher.group(4);
+        // HH:mm 固定格式下字符串比较等价于时间序比较
+        if (end.compareTo(start) <= 0) {
+            throw new RuntimeException("执行时段的结束时间必须大于开始时间");
+        }
+    }
+
     private void executeTask(WorkflowTask task,IAgentExecutor executor,long timeout){
         Long taskId=task.getId();
         // 更新状态为 processing

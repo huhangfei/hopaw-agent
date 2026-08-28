@@ -161,7 +161,8 @@ public class WorkflowTaskTool implements AgentTool {
                                   @P("执行智能体编号") Long agentId,
                                   @P(value = "关联项目编号，可不关联", required = false) Long projectId,
                                   @P(value = "开始时间，格式 yyyy-MM-dd HH:mm，不填则创建后可立即审核执行", required = false) String startTime,
-                                  @P(value = "执行时段（分钟），用于限制任务执行开始区间", required = false) Integer executionPeriod,
+                                  @P(value = "执行时段，格式 HH:mm-HH:mm（如 09:00-18:00），限制调度拉起任务的每日时间窗口，可不填表示不限制", required = false) String executionPeriod,
+                                  @P(value = "前置任务配置，格式：任务编号:要求状态[|任务编号:要求状态...]，如 \"3:completed,failed|5:pending_acceptance\"；要求状态为状态码（多个状态逗号分隔），可选值 pending/pending_execution/processing/pending_acceptance/completed/failed/rejected/closed；不填表示无前置任务", required = false) String preconditions,
                                   InvocationParameters invocationParameters) {
         InvocationParametersWrapper wrapper = InvocationParametersWrapper.create(invocationParameters);
         if (title == null || title.trim().isEmpty()) {
@@ -219,7 +220,8 @@ public class WorkflowTaskTool implements AgentTool {
                                      @P(value = "执行智能体编号，空表示保持原值", required = false) Long agentId,
                                      @P(value = "关联项目编号，空表示保持原值", required = false) Long projectId,
                                      @P(value = "开始时间，格式 yyyy-MM-dd HH:mm，空表示保持原值", required = false) String startTime,
-                                     @P(value = "执行时段（分钟），空表示保持原值", required = false) Integer executionPeriod,
+                                     @P(value = "执行时段，格式 HH:mm-HH:mm（如 09:00-18:00），空表示保持原值", required = false) String executionPeriod,
+                                     @P(value = "前置任务配置，格式：任务编号:要求状态[|任务编号:要求状态...]，如 \"3:completed,failed|5:pending_acceptance\"；要求状态为状态码（多个状态逗号分隔），可选值 pending/pending_execution/processing/pending_acceptance/completed/failed/rejected/closed；空表示保持原值；传 \"none\" 清空全部前置任务", required = false) String preconditions,
                                      InvocationParameters invocationParameters) {
         InvocationParametersWrapper wrapper = InvocationParametersWrapper.create(invocationParameters);
         WorkflowTask existing = workflowTaskService.getTask(taskId, wrapper.getUserId());

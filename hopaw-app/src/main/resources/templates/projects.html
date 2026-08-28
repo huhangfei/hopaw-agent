@@ -83,6 +83,12 @@
                     <div class="section-title">项目智能伙伴</div>
                     <div class="project-agent-info" id="projectAgentInfo"></div>
                     <div class="project-session-panel" id="projectSessionPanel"></div>
+                    <div class="project-session-running" id="projectSessionRunning" style="display:none;">
+                        <span class="running-dot"></span>
+                        <span class="running-label">执行中</span>
+                        <span class="running-ticker" id="projectSessionTicker"></span>
+                        <span class="running-cursor"></span>
+                    </div>
                 </div>
 
                 <!-- 项目空间文件树 -->
@@ -166,19 +172,19 @@
                     </div>
                     <div class="form-group">
                         <label for="projectAgentId">项目管理智能体</label>
-                        <select id="projectAgentId"></select>
+                        <select id="projectAgentId" onchange="onProjectAgentChange()"></select>
                         <small class="form-hint">设置后可由该智能体自动分析项目、创建并审核验收任务</small>
                     </div>
-                    <div class="form-group">
+                    <div class="form-group" id="projectAutoIterateGroup" style="display:none;">
                         <label class="checkbox-label">
                             <input type="checkbox" id="projectAutoIterate" onchange="onProjectAutoIterateChange()">
                             启用自动迭代（定时驱动项目管理智能体推进项目）
                         </label>
                     </div>
                     <div class="form-group" id="projectIteratePromptGroup" style="display:none;">
-                        <label for="projectIteratePrompt">自动迭代要求提示词</label>
-                        <textarea id="projectIteratePrompt" rows="3" placeholder="启用自动迭代后追加给项目管理智能体的额外要求，如：每轮迭代优先处理待验收任务、产出物写入 docs 目录等"></textarea>
-                        <small class="form-hint">仅在启用自动迭代时生效，作为额外迭代要求注入项目管理智能体</small>
+                        <label for="projectIteratePrompt">迭代要求提示词</label>
+                        <textarea id="projectIteratePrompt" rows="3" placeholder="追加给项目管理智能体的额外迭代要求，如：每轮迭代优先处理待验收任务、产出物写入 docs 目录等"></textarea>
+                        <small class="form-hint">自动迭代与手动下发指令时均生效，作为额外迭代要求注入项目管理智能体</small>
                     </div>
                     <div class="form-group" id="spaceModeGroup">
                         <label>项目空间</label>

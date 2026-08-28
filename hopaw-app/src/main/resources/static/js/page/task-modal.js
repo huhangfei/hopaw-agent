@@ -60,7 +60,7 @@ function showEditTaskModal(id) {
             document.getElementById('taskTitle').value = task.title || '';
             document.getElementById('taskContent').value = task.content || '';
             document.getElementById('taskStartTime').value = toDateTimeLocal(task.startTime);
-            var execRange = toExecTimeRange(task.startTime, task.executionPeriod);
+            var execRange = toExecTimeRange(task.executionPeriod);
             document.getElementById('taskExecStart').value = execRange.start;
             document.getElementById('taskExecEnd').value = execRange.end;
             populateAgentSelect(task.agentId || '');
@@ -88,10 +88,16 @@ function submitTask() {
     var startTime = document.getElementById('taskStartTime').value;
     var execStart = document.getElementById('taskExecStart').value;
     var execEnd = document.getElementById('taskExecEnd').value;
-    var executionPeriod = calcExecMinutes(execStart, execEnd);
+    // 执行时段：每日允许调度拉起的时间窗口 HH:mm-HH:mm；两端都填才生效
+    var executionPeriod = (execStart && execEnd && execStart !== execEnd) ? (execStart + '-' + execEnd) : null;
 
     if (!title) {
         showToast('请输入任务标题', 'error');
+        return;
+    }
+    // 执行时段窗口限制：结束时间必须大于开始时间（不支持反向窗口，跨天需求请按规则正序填写）
+    if (execStart && execEnd && execEnd <= execStart) {
+        showToast('执行时段的结束时间必须大于开始时间', 'error');
         return;
     }
     if (!agentId) {
@@ -413,29 +419,10 @@ function toDateTimeLocal(timeStr) {
         'T' + pad(d.getHours()) + ':' + pad(d.getMinutes());
 }
 
-/** 由 startTime + executionPeriod（分钟）反推执行时段 HH:mm~HH:mm */
-function toExecTimeRange(startTime, execMinutes) {
-    if (!startTime) return { start: '', end: '' };
-    var d = new Date(startTime);
-    if (isNaN(d.getTime())) return { start: '', end: '' };
-    var pad = function (n) { return n < 10 ? '0' + n : n; };
-    var start = pad(d.getHours()) + ':' + pad(d.getMinutes());
-    if (!execMinutes || execMinutes <= 0) return { start: start, end: '' };
-    var endD = new Date(d.getTime() + execMinutes * 60 * 1000);
-    var end = pad(endD.getHours()) + ':' + pad(endD.getMinutes());
-    return { start: start, end: end };
-}
-
-/** 由两个 HH:mm 时间计算分钟差，返回整数或 null */
-function calcExecMinutes(execStart, execEnd) {
-    if (!execStart || !execEnd) return null;
-    var s = execStart.split(':');
-    var e = execEnd.split(':');
-    if (s.length < 2 || e.length < 2) return null;
-    var sMin = Number(s[0]) * 60 + Number(s[1]);
-    var eMin = Number(e[0]) * 60 + Number(e[1]);
-    if (isNaN(sMin) || isNaN(eMin)) return null;
-    var diff = eMin - sMin;
-    if (diff <= 0) return null;
-    return diff;
+/** 解析执行时段窗口 HH:mm-HH:mm，回填弹框两个 time 输入 */
+function toExecTimeRange(executionPeriod) {
+    if (!executionPeriod || typeof executionPeriod !== 'string') return { start: '', end: '' };
+    var m = executionPeriod.trim().match(/^(\d{2}:\d{2})-(\d{2}:\d{2})$/);
+    if (!m) return { start: '', end: '' };
+    return { start: m[1], end: m[2] };
 }

@@ -61,6 +61,19 @@ public class ProjectLogService implements IProjectLogService {
     }
 
     @Override
+    public List<ProjectLog> getLogsPage(Long projectId, int page, int size) {
+        int pageNo = Math.max(page, 1);
+        int pageSize = Math.max(Math.min(size, 100), 1);
+        List<ProjectLog> list = projectLogMapper.findPageByProjectId(projectId, (pageNo - 1) * pageSize, pageSize);
+        return list != null ? list : new ArrayList<>();
+    }
+
+    @Override
+    public int countLogs(Long projectId) {
+        return projectLogMapper.countByProjectId(projectId);
+    }
+
+    @Override
     public List<ProjectLog> getImportantLogsByProjectId(Long projectId) {
         List<ProjectLog> list = projectLogMapper.findByProjectIdAndLogType(projectId, ProjectLogTypeEnum.IMPORTANT.getCode());
         return list != null ? list : new ArrayList<>();

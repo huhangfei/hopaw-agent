@@ -160,6 +160,19 @@
     background: #f5f5f5;
 }
 
+/* 自动迭代运行中：状态前闪烁机器人图标 */
+.project-list-item .list-item-robot {
+    flex-shrink: 0;
+    font-size: 14px;
+    line-height: 1;
+    animation: robotBlink 1.2s ease-in-out infinite;
+}
+
+@keyframes robotBlink {
+    0%, 100% { opacity: 1; transform: scale(1); }
+    50% { opacity: 0.35; transform: scale(0.92); }
+}
+
 /* 列表空状态 */
 .projects-empty {
     text-align: center;

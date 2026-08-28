@@ -185,8 +185,13 @@ function clearDetail() {
 function buildProjectListItem(project) {
     var st = PROJECT_STATUS[project.status] || { label: project.status || '未知', color: '#999' };
     var activeCls = (project.id === currentProjectId) ? ' active' : '';
+    // 开启自动迭代：状态前加闪烁机器人图标
+    var robotIcon = project.autoIterate
+        ? '<span class="list-item-robot" title="自动迭代运行中">&#129302;</span>'
+        : '';
     return '<div class="project-list-item' + activeCls + '" onclick="selectProject(' + project.id + ')" data-id="' + project.id + '">' +
         '<div class="list-item-name">' + escapeHtml(project.name || '') + '</div>' +
+        robotIcon +
         '<span class="list-item-status" style="color:' + st.color + '">' + st.label + '</span>' +
     '</div>';
 }
@@ -1076,7 +1081,7 @@ function showAddModal() {
     populateProjectAgentSelect('');
     document.getElementById('projectAutoIterate').checked = false;
     document.getElementById('projectIteratePrompt').value = '';
-    onProjectAutoIterateChange();
+    onProjectAgentChange();
     // 新建时显示项目空间选项，默认自动创建
     document.getElementById('spaceModeGroup').style.display = '';
     var autoRadio = document.querySelector('input[name="spaceMode"][value="auto"]');
@@ -1103,7 +1108,7 @@ function editCurrentProject() {
     populateProjectAgentSelect(project.agentId || '');
     document.getElementById('projectAutoIterate').checked = !!project.autoIterate;
     document.getElementById('projectIteratePrompt').value = project.iteratePrompt || '';
-    onProjectAutoIterateChange();
+    onProjectAgentChange();
     // 编辑时不允许修改项目空间
     document.getElementById('spaceModeGroup').style.display = 'none';
     Modal.open('projectModal');
@@ -1111,13 +1116,28 @@ function editCurrentProject() {
 
 /** 自动迭代勾选切换：控制迭代要求提示词输入框显隐 */
 function onProjectAutoIterateChange() {
-    var checked = document.getElementById('projectAutoIterate').checked;
-    var group = document.getElementById('projectIteratePromptGroup');
-    if (group) {
-        group.style.display = checked ? 'block' : 'none';
-    }
 }
 
+/** 项目管理智能体选择切换：未选择智能体时隐藏自动迭代与迭代要求（自动迭代依赖智能体） */
+function onProjectAgentChange() {
+    var agentSel = document.getElementById('projectAgentId');
+    var hasAgent = !!(agentSel && agentSel.value);
+    var iterateGroup = document.getElementById('projectAutoIterateGroup');
+    if (iterateGroup) {
+        iterateGroup.style.display = hasAgent ? 'block' : 'none';
+    }
+    var promptGroup = document.getElementById('projectIteratePromptGroup');
+    if (promptGroup) {
+        promptGroup.style.display = hasAgent ? 'block' : 'none';
+    }
+    if (!hasAgent) {
+        // 未选智能体：强制关闭自动迭代（提示词保留输入内容，仅隐藏）
+        var autoCheck = document.getElementById('projectAutoIterate');
+        if (autoCheck && autoCheck.checked) {
+            autoCheck.checked = false;
+        }
+    }
+}
 function onSpaceModeChange() {
     var localRadio = document.querySelector('input[name="spaceMode"][value="local"]');
     var box = document.getElementById('localSpaceBox');
@@ -1143,11 +1163,9 @@ function submitProject() {
         name: name,
         description: description,
         agentId: agentSel && agentSel.value ? Number(agentSel.value) : null,
-        autoIterate: document.getElementById('projectAutoIterate').checked,
-        // 自动迭代要求提示词（取消勾选时传空，后端允许清空）
-        iteratePrompt: document.getElementById('projectAutoIterate').checked
-            ? (document.getElementById('projectIteratePrompt').value || '').trim()
-            : ''
+        // 未选智能体时强制关闭自动迭代；迭代要求提示词独立提交（手动下发指令时同样生效，不随勾选清空）
+        autoIterate: !!(agentSel && agentSel.value) && document.getElementById('projectAutoIterate').checked,
+        iteratePrompt: (document.getElementById('projectIteratePrompt').value || '').trim()
     };
     // 仅新建时提交项目空间设置
     if (!id) {
@@ -1633,6 +1651,8 @@ function toggleProjectAutoIterate(enabled) {
             if (res.code === 200) {
                 showToast(enabled ? '自动迭代已开启' : '自动迭代已关闭', 'success');
                 loadProjectDetail(currentProjectId);
+                // 同步刷新项目列表（列表机器人图标随开关状态变化）
+                loadProjects(currentPage);
             } else {
                 showToast(res.msg || '操作失败', 'error');
             }
@@ -1647,7 +1667,7 @@ function toggleProjectAutoIterate(enabled) {
 function manageProjectIteratePrompt() {
     if (!currentProject) return;
     var current = currentProject.iteratePrompt || '';
-    showPrompt('编辑自动迭代要求提示词（启用自动迭代时注入项目管理智能体）',
+    showPrompt('编辑迭代要求提示词（自动迭代与手动下发指令时注入项目管理智能体）',
         '如：每轮迭代优先处理待验收任务、产出物写入 docs 目录等', current
     ).then(function (val) {
         if (val === null) return; // 取消

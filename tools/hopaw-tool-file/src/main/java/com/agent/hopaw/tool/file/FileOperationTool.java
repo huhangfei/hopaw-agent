@@ -280,6 +280,92 @@ public class FileOperationTool implements AgentTool {
         }
     }
 
+    @ToolSecurityLevel(ToolSecurityLevel.Level.PARAM_REQUIRE_APPROVAL)
+    @Tool(value = {"替换文件内容", "在指定行范围内将匹配内容替换为新内容（支持普通文本与正则）", "文件写入"})
+    public String replaceInLines(
+            @P(description = "文件路径") String filePath,
+            @P(description = "要查找的内容：普通文本或正则表达式（由 isRegex 参数决定）") String searchText,
+            @P(description = "替换后的内容，正则模式下可用 $1、$2 引用捕获组") String replacement,
+            @P(description = "起始行号(从1开始)，为空表示从第1行开始", required = false) Integer startLine,
+            @P(description = "结束行号，为空表示到最后一行", required = false) Integer endLine,
+            @P(description = "是否使用正则表达式匹配，默认否", required = false) Boolean isRegex) {
+        try {
+            Path path = Paths.get(filePath).toAbsolutePath().normalize();
+            if (!Files.exists(path)) {
+                return "错误: 文件不存在: " + filePath;
+            }
+            if (!Files.isRegularFile(path)) {
+                return "错误: 路径不是文件: " + filePath;
+            }
+            if (searchText == null || searchText.isEmpty()) {
+                return "错误: 查找内容不能为空";
+            }
+
+            int start = startLine != null && startLine > 0 ? startLine : 1;
+            int end = endLine != null && endLine > 0 ? endLine : Integer.MAX_VALUE;
+            if (start > end) {
+                return "错误: 起始行号不能大于结束行号";
+            }
+
+            List<String> allLines = Files.readAllLines(path);
+            boolean useRegex = isRegex != null && isRegex;
+            Pattern regexPattern = null;
+            if (useRegex) {
+                try {
+                    regexPattern = Pattern.compile(searchText);
+                } catch (Exception e) {
+                    return "错误: 无效的正则表达式 - " + e.getMessage();
+                }
+            }
+
+            int replacedCount = 0;
+            List<String> changedLines = new ArrayList<>();
+            for (int i = 0; i < allLines.size(); i++) {
+                int lineNo = i + 1;
+                String line = allLines.get(i);
+                if (lineNo < start || lineNo > end) {
+                    continue;
+                }
+                String newLine;
+                if (useRegex) {
+                    newLine = regexPattern.matcher(line).replaceAll(replacement == null ? "" : replacement);
+                } else {
+                    newLine = line.replace(searchText, replacement == null ? "" : replacement);
+                }
+                if (!newLine.equals(line)) {
+                    replacedCount++;
+                    if (changedLines.size() < 20) {
+                        // 记录前20处变更明细，避免超大结果
+                        changedLines.add(String.format("%6d: %s%n     -> %s", lineNo, truncateLine(line, new String[]{searchText}), truncateLine(newLine, new String[]{replacement == null ? "" : replacement})));
+                    }
+                }
+                allLines.set(i, newLine);
+            }
+
+            if (replacedCount == 0) {
+                return "未找到匹配内容，文件未修改。行范围: " + start + (end == Integer.MAX_VALUE ? " 至末尾" : " 至 " + end);
+            }
+
+            Files.write(path, allLines);
+
+            StringBuilder result = new StringBuilder();
+            result.append("成功替换 ").append(replacedCount).append(" 行，文件: ").append(filePath).append("\n");
+            if (!changedLines.isEmpty()) {
+                result.append("变更明细（最多显示20行）:\n");
+                for (String cl : changedLines) {
+                    result.append(cl).append("\n");
+                }
+                if (replacedCount > changedLines.size()) {
+                    result.append("... 其余 ").append(replacedCount - changedLines.size()).append(" 行变更省略\n");
+                }
+            }
+            return result.toString();
+        } catch (IOException e) {
+            log.error("替换文件内容失败: {}", filePath, e);
+            return "错误: 替换文件内容失败 - " + e.getMessage();
+        }
+    }
+
     @ToolSecurityLevel(ToolSecurityLevel.Level.ALL_REQUIRE_APPROVAL)
     @Tool(value = {"删除文件", "删除指定文件", "文件删除"})
     public String deleteFile(@P(description = "文件路径") String filePath) {

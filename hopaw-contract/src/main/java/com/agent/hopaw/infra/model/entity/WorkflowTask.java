@@ -19,8 +19,8 @@ public class WorkflowTask {
     private Long agentId;
     /** 可选开始时间 */
     private LocalDateTime startTime;
-    /** 可选执行时段（分钟） */
-    private Integer executionPeriod;
+    /** 可选执行时段（HH:mm-HH:mm，如 09:00-18:00）：限制调度拉起任务的每日时间窗口，为空不限制 */
+    private String executionPeriod;
     /** 驳回/失败原因 */
     private String rejectReason;
     private String userId;
@@ -97,11 +97,11 @@ public class WorkflowTask {
         this.startTime = startTime;
     }
 
-    public Integer getExecutionPeriod() {
+    public String getExecutionPeriod() {
         return executionPeriod;
     }
 
-    public void setExecutionPeriod(Integer executionPeriod) {
+    public void setExecutionPeriod(String executionPeriod) {
         this.executionPeriod = executionPeriod;
     }
 

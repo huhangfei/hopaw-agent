@@ -301,9 +301,9 @@ public class ProjectIterateService implements IProjectIterateService {
         sb.append("5. 如果项目所有目标都已达成（任务全部完成且无待处理事项），调用保存项目工具将项目状态更新为 completed（已完成）；\n");
         sb.append("6. 每轮处理后给出简明的本轮迭代总结。\n");
 
-        // 自动迭代要求提示词：用户配置的额外迭代要求（启用自动迭代时生效）
+        // 迭代要求提示词：用户配置的额外迭代要求（自动迭代与手动下发指令均生效）
         if (project.getIteratePrompt() != null && !project.getIteratePrompt().trim().isEmpty()) {
-            sb.append("\n--- 本次自动迭代要求 ---\n");
+            sb.append("\n--- 本次迭代要求 ---\n");
             sb.append(project.getIteratePrompt().trim()).append("\n");
         }
 

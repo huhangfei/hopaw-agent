@@ -95,8 +95,8 @@ function renderTaskDetail(task) {
         '<div class="task-detail-info-item"><span class="info-label">创建者</span><span class="info-value">' + taskDetailCreatorHtml(task) + '</span></div>' +
         '<div class="task-detail-info-item"><span class="info-label">创建时间</span><span class="info-value">' + escapeHtml(formatTime(task.createTime)) + '</span></div>' +
         '<div class="task-detail-info-item"><span class="info-label">开始时间</span><span class="info-value">' + escapeHtml(formatTime(task.startTime) || '未设置') + '</span></div>';
-    if (task.executionPeriod && task.executionPeriod > 0) {
-        infoHtml += '<div class="task-detail-info-item"><span class="info-label">执行时段</span><span class="info-value">' + task.executionPeriod + ' 分钟</span></div>';
+    if (task.executionPeriod) {
+        infoHtml += '<div class="task-detail-info-item"><span class="info-label">执行时段</span><span class="info-value">' + escapeHtml(String(task.executionPeriod).replace('-', '~')) + '（每日）</span></div>';
     }
     document.getElementById('taskDetailInfo').innerHTML = infoHtml;
 
@@ -741,26 +741,27 @@ function formatDateOnly(timeStr) {
 
 /**
  * 构造执行时段展示 HTML：
- * - 有开始时间 + 执行时段：HH:mm~HH:mm（下方小字显示日期与时长）
+ * - 有执行时段窗口：HH:mm~HH:mm（每日），下方小字附开始时间日期
  * - 仅有开始时间：HH:mm（下方小字显示日期）
  * - 都没有：未设置
  */
 function buildTimeRangeHtml(startTime, executionPeriod) {
+    if (executionPeriod && typeof executionPeriod === 'string') {
+        var win = executionPeriod.replace('-', '~');
+        var subText = startTime ? (formatDateOnly(startTime) + ' ' + formatHM(startTime)) : '每日窗口';
+        return '<div class="task-detail-info-item">' +
+            '<span class="info-label">执行时段</span>' +
+            '<span class="info-value time-range-value">' +
+                '<span class="time-range-badge">' + escapeHtml(win) + '</span>' +
+                '<span class="time-range-sub">' + escapeHtml(subText) + '</span>' +
+            '</span>' +
+        '</div>';
+    }
     if (!startTime) {
         return '<div class="task-detail-info-item"><span class="info-label">执行时段</span><span class="info-value">未设置</span></div>';
     }
-    var startHM = formatHM(startTime);
-    var dateStr = formatDateOnly(startTime);
-    var badgeText, subText;
-    if (executionPeriod && executionPeriod > 0) {
-        var endDate = new Date(new Date(startTime).getTime() + executionPeriod * 60 * 1000);
-        var endHM = formatHM(endDate);
-        badgeText = startHM + '~' + endHM;
-        subText = dateStr + ' · ' + executionPeriod + '分钟';
-    } else {
-        badgeText = startHM;
-        subText = dateStr;
-    }
+    var badgeText = formatHM(startTime);
+    var subText = formatDateOnly(startTime);
     return '<div class="task-detail-info-item">' +
         '<span class="info-label">执行时段</span>' +
         '<span class="info-value time-range-value">' +

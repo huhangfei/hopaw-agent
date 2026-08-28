@@ -2,6 +2,8 @@ package com.agent.hopaw.biz.tool.project;
 
 import com.agent.hopaw.infra.constant.ProjectStatusEnum;
 import com.agent.hopaw.infra.model.entity.Project;
+import com.agent.hopaw.infra.model.entity.ProjectLog;
+import com.agent.hopaw.infra.service.IProjectLogService;
 import com.agent.hopaw.infra.service.IProjectService;
 import com.agent.hopaw.infra.tool.AgentTool;
 import com.agent.hopaw.infra.tool.ToolSecurityLevel;
@@ -25,9 +27,11 @@ public class ProjectTool implements AgentTool {
     private static final DateTimeFormatter TIME_FMT = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm");
 
     private final IProjectService projectService;
+    private final IProjectLogService projectLogService;
 
-    public ProjectTool(IProjectService projectService) {
+    public ProjectTool(IProjectService projectService, IProjectLogService projectLogService) {
         this.projectService = projectService;
+        this.projectLogService = projectLogService;
     }
 
     @Override
@@ -37,7 +41,7 @@ public class ProjectTool implements AgentTool {
 
     @Override
     public String getDescription() {
-        return "项目工具：查询项目列表、查询项目详情、保存项目（新增或更新）、删除项目";
+        return "项目工具：查询项目列表、查询项目详情、保存项目（新增或更新）、删除项目、查询项目操作日志";
     }
 
     @Override
@@ -187,6 +191,47 @@ public class ProjectTool implements AgentTool {
         }
     }
 
+    /**
+     * 分页查询项目操作日志（最新在前），供智能体了解项目历史操作与进展。
+     */
+    @ToolSecurityLevel(ToolSecurityLevel.Level.SAFE)
+    @Tool(value = {"查询项目日志", "分页查询项目操作日志（最新在前），了解项目历史操作与进展"}, searchBehavior = SearchBehavior.ALWAYS_VISIBLE)
+    public String findProjectLogs(@P("项目编号") Long projectId,
+                                  @P(value = "页码，从1开始，默认1", required = false) Integer page,
+                                  @P(value = "每页数量，默认20，最大100", required = false) Integer size,
+                                  InvocationParameters invocationParameters) {
+        InvocationParametersWrapper wrapper = InvocationParametersWrapper.create(invocationParameters);
+        // 校验项目归属，避免越权查询他人项目日志
+        Project project = projectService.getProject(projectId, wrapper.getUserId());
+        if (project == null) {
+            return "失败：项目不存在或无权访问";
+        }
+        int pageNo = (page == null || page < 1) ? 1 : page;
+        int pageSize = (size == null || size < 1) ? 20 : Math.min(size, 100);
+        int total = projectLogService.countLogs(projectId);
+        if (total == 0) {
+            return "成功：项目【" + project.getName() + "】暂无操作日志";
+        }
+        int totalPages = (total + pageSize - 1) / pageSize;
+        if (pageNo > totalPages) {
+            pageNo = totalPages;
+        }
+        List<ProjectLog> logs = projectLogService.getLogsPage(projectId, pageNo, pageSize);
+        StringBuilder sb = new StringBuilder();
+        sb.append("项目【").append(project.getName()).append("】共 ").append(total)
+                .append(" 条操作日志，当前第 ").append(pageNo).append("/").append(totalPages)
+                .append(" 页（每页 ").append(pageSize).append(" 条，最新在前）：\n");
+        for (ProjectLog log : logs) {
+            sb.append("[").append(log.getCreateTime() != null ? log.getCreateTime().format(TIME_FMT) : "").append("]")
+                    .append("[").append(logText(log.getLogType())).append("]")
+                    .append(log.getOperatorName() != null ? log.getOperatorName() : "未知")
+                    .append(" ").append(actionText(log.getAction()))
+                    .append("：").append(brief(log.getDetail(), 80))
+                    .append("\n");
+        }
+        return "成功：\n" + sb;
+    }
+
     /** 状态码转中文描述，未知状态原样返回 */
     private String statusText(String code) {
         ProjectStatusEnum e = ProjectStatusEnum.fromCode(code);
@@ -200,5 +245,28 @@ public class ProjectTool implements AgentTool {
         }
         String t = text.replace("\n", " ").trim();
         return t.length() > max ? t.substring(0, max) + "..." : t;
+    }
+
+    /** 日志类型转中文标签 */
+    private String logText(String logType) {
+        return "important".equals(logType) ? "重点" : "普通";
+    }
+
+    /** 日志动作转中文描述，未知动作原样返回 */
+    private String actionText(String action) {
+        if (action == null) return "操作";
+        switch (action) {
+            case "create": return "创建项目";
+            case "update": return "更新项目";
+            case "status_change": return "状态变更";
+            case "delete": return "删除";
+            case "attachment_upload": return "上传附件";
+            case "attachment_delete": return "删除附件";
+            case "task_bind": return "关联任务";
+            case "task_unbind": return "解除关联任务";
+            case "task_status": return "任务状态变更";
+            case "task_comment": return "任务评论";
+            default: return action;
+        }
     }
 }

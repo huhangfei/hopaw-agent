@@ -14,6 +14,14 @@ public interface ProjectLogMapper {
     /** 按项目ID查询日志，按创建时间正序（最早在前） */
     List<ProjectLog> findByProjectId(@Param("projectId") Long projectId);
 
+    /** 分页查询项目日志，最新在前 */
+    List<ProjectLog> findPageByProjectId(@Param("projectId") Long projectId,
+                                         @Param("offset") int offset,
+                                         @Param("size") int size);
+
+    /** 统计项目日志总数 */
+    int countByProjectId(@Param("projectId") Long projectId);
+
     /** 按项目ID和日志类型查询日志，按创建时间正序（最早在前） */
     List<ProjectLog> findByProjectIdAndLogType(@Param("projectId") Long projectId, @Param("logType") String logType);
 
