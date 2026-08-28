@@ -261,7 +261,14 @@
     </main>
     <aside class="tool-panel">
         <div class="tool-panel-section tool-panel-top">
-            <div class="tool-panel-title">会话列表</div>
+            <div class="tool-panel-title session-panel-title">
+                <span>会话列表</span>
+                <div class="session-type-filter" id="sessionTypeFilter">
+                    <span class="session-type-tab active" data-type="chat" onclick="filterSessionsByType('chat')">聊天</span>
+                    <span class="session-type-tab" data-type="project" onclick="filterSessionsByType('project')">项目</span>
+                    <span class="session-type-tab" data-type="task" onclick="filterSessionsByType('task')">任务</span>
+                </div>
+            </div>
             <div class="tool-panel-body session-list-body" id="sessionList">
             </div>
         </div>

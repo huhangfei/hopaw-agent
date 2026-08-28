@@ -233,6 +233,42 @@
     max-height: 150px;
 }
 
+/* 会话列表头部：标题 + 右侧类型筛选选项 */
+.session-panel-title {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+}
+.session-type-filter {
+    display: flex;
+    gap: 2px;
+    background: #f0f2f5;
+    border-radius: 6px;
+    padding: 2px;
+}
+.session-type-tab {
+    font-size: 11px;
+    line-height: 1;
+    padding: 4px 8px;
+    border-radius: 4px;
+    cursor: pointer;
+    color: #888;
+    font-weight: 500;
+    white-space: nowrap;
+    transition: background 0.15s, color 0.15s;
+    user-select: none;
+}
+.session-type-tab:hover {
+    color: #667eea;
+}
+.session-type-tab.active {
+    background: #fff;
+    color: #667eea;
+    font-weight: 600;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.08);
+}
+
 .session-list-item {
     display: flex;
     align-items: center;
@@ -1861,6 +1897,24 @@ body.dark-theme .tool-panel-mid {
 
 body.dark-theme .session-list-item {
     color: #ccc;
+}
+
+body.dark-theme .session-type-filter {
+    background: #2d2d44;
+}
+
+body.dark-theme .session-type-tab {
+    color: #888;
+}
+
+body.dark-theme .session-type-tab:hover {
+    color: #8ba3ff;
+}
+
+body.dark-theme .session-type-tab.active {
+    background: #16213e;
+    color: #8ba3ff;
+    box-shadow: none;
 }
 
 body.dark-theme .session-list-item:hover {

@@ -10,6 +10,8 @@ var currentModelId = null;
 var currentSessionId = null;
 var currentToolCallPermission = 'smart_call';
 var attachedFiles = []; // { url, type, name }
+// 会话列表类型筛选：chat=聊天 / project=项目 / task=任务，默认取当前会话的类型
+var sessionTypeFilter = 'chat';
 
 if (typeof marked !== 'undefined') {
     marked.setOptions({
@@ -1182,6 +1184,16 @@ window.onload = function() {
         currentSessionId = initialCurrentSessionId;
     }
 
+    // 默认选中当前会话所属的类型（无会话时默认聊天）
+    var currentSession = (initialChatSessions || []).find(function(s) { return s.sessionId === currentSessionId; });
+    sessionTypeFilter = currentSession ? sessionFilterTypeOf(currentSession.bizType) : 'chat';
+    var initialFilterBox = document.getElementById('sessionTypeFilter');
+    if (initialFilterBox) {
+        initialFilterBox.querySelectorAll('.session-type-tab').forEach(function(tab) {
+            tab.classList.toggle('active', tab.getAttribute('data-type') === sessionTypeFilter);
+        });
+    }
+
     if (initialToolCallPermission) {
         currentToolCallPermission = initialToolCallPermission;
         selectToolPermission(initialToolCallPermission);
@@ -1548,17 +1560,50 @@ function selectModel(modelId, modelName) {
     }
 }
 
+/**
+ * 会话业务类型归一为筛选类型：workflow-task-chat→task / project-chat→project / 其他→chat
+ */
+function sessionFilterTypeOf(bizType) {
+    if (bizType === 'workflow-task-chat') return 'task';
+    if (bizType === 'project-chat') return 'project';
+    return 'chat';
+}
+
+/**
+ * 切换会话列表类型筛选：更新选项选中态并重新渲染列表。
+ */
+function filterSessionsByType(type) {
+    if (type !== 'chat' && type !== 'project' && type !== 'task') return;
+    if (sessionTypeFilter === type) return;
+    sessionTypeFilter = type;
+
+    var filterBox = document.getElementById('sessionTypeFilter');
+    if (filterBox) {
+        filterBox.querySelectorAll('.session-type-tab').forEach(function(tab) {
+            tab.classList.toggle('active', tab.getAttribute('data-type') === type);
+        });
+    }
+
+    renderSessionList(initialChatSessions);
+}
+
 function renderSessionList(sessions) {
     var container = document.getElementById('sessionList');
     if (!container) return;
 
-    if (!sessions || sessions.length === 0) {
-        container.innerHTML = '<div class="session-list-empty">暂无会话</div>';
+    // 按当前筛选类型过滤会话
+    var filtered = (sessions || []).filter(function(s) {
+        return sessionFilterTypeOf(s.bizType) === sessionTypeFilter;
+    });
+
+    if (filtered.length === 0) {
+        var typeLabel = sessionTypeFilter === 'project' ? '项目' : (sessionTypeFilter === 'task' ? '任务' : '聊天');
+        container.innerHTML = '<div class="session-list-empty">暂无' + typeLabel + '会话</div>';
         return;
     }
 
     var html = '';
-    sessions.forEach(function(s) {
+    filtered.forEach(function(s) {
         var activeClass = (s.sessionId === currentSessionId) ? ' active' : '';
         var isTask = s.bizType === 'workflow-task-chat';
         var isProject = s.bizType === 'project-chat';
@@ -1611,6 +1656,11 @@ function updateSessionTitle(sessionId, newTitle) {
     var emptyEl = container.querySelector('.session-list-empty');
     if (emptyEl) {
         emptyEl.remove();
+    }
+
+    // 新会话由首页聊天创建，属聊天类型：当前筛选非聊天时不插入，避免类型错乱
+    if (sessionTypeFilter !== 'chat') {
+        return;
     }
 
     var item = document.createElement('div');
