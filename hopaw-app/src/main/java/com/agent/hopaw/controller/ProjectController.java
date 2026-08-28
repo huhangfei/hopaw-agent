@@ -270,6 +270,29 @@ public class ProjectController {
         }
     }
 
+    // 修改项目空间目录（支持相对路径与绝对路径，相对路径以服务运行目录为起点）
+    @PutMapping("/api/projects/{id}/space-dir")
+    @ResponseBody
+    public ResponseBean updateSpaceDir(HttpServletRequest request, @PathVariable Long id,
+            @RequestBody Map<String, String> body) {
+        String userId = CurrentUser.require(request);
+        String newSpaceDir = body != null ? body.get("spaceDir") : null;
+        try {
+            Project before = projectService.getProject(id, userId);
+            if (before == null) {
+                return ResponseBean.fail("项目不存在或无权访问");
+            }
+            Project updated = projectService.updateProjectSpaceDir(id, newSpaceDir, userId);
+            // 记录日志：空间目录变更
+            projectLogService.log(id, userId, "update",
+                    "空间目录由「" + (before.getSpaceDir() != null ? before.getSpaceDir() : "未设置") + "」改为「" + updated.getSpaceDir() + "」");
+            return ResponseBean.success(updated);
+        } catch (Exception e) {
+            logger.error("修改项目空间目录失败: projectId={}", id, e);
+            return ResponseBean.fail(e.getMessage() != null ? e.getMessage() : "修改失败（未知异常）");
+        }
+    }
+
     // 项目状态流转
     @PutMapping("/api/projects/{id}/status")
     @ResponseBody

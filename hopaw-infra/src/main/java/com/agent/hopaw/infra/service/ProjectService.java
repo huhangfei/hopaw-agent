@@ -44,6 +44,9 @@ public class ProjectService implements IProjectService {
     /** 项目空间根目录（所有项目的工作空间目录都放置在此目录下） */
     private final String projectSpaceRoot;
 
+    /** 项目空间目录原始配置值（可能为相对路径，用于生成存储用的相对路径） */
+    private final String projectSpaceDirConfig;
+
     /** 下载用临时目录（存放打包产生的 zip 文件，由定时任务清理） */
     private final String tempDownloadsDir;
 
@@ -57,6 +60,8 @@ public class ProjectService implements IProjectService {
         this.projectMapper = projectMapper;
         this.workflowTaskMapper = workflowTaskMapper;
         this.globalNoticeService = globalNoticeService;
+        // 保存原始配置值（自动创建项目空间时按此生成存储用的相对路径）
+        this.projectSpaceDirConfig = projectSpaceDir;
         // 解析为绝对路径，确保后续文件操作一致
         File rootDir = new File(projectSpaceDir);
         if (!rootDir.isAbsolute()) {
@@ -143,20 +148,23 @@ public class ProjectService implements IProjectService {
 
     /**
      * 根据项目编号创建项目空间目录：{projectSpaceRoot}/{projectId}
-     * @return 项目空间绝对路径
+     * 存储相对路径（相对服务运行目录），便于跨环境迁移
+     * @return 项目空间相对路径
      */
     private String createProjectSpace(Long projectId) {
         if (projectId == null) {
             return null;
         }
         try {
-            String relativeDir = String.valueOf(projectId);
-            Path spacePath = Paths.get(projectSpaceRoot, relativeDir).toAbsolutePath().normalize();
+            // 以运行目录为基准的相对路径：{配置的项目空间目录}/{projectId}
+            String relativeDir = new File(projectSpaceDirConfig).toPath().resolve(String.valueOf(projectId))
+                    .normalize().toString().replace('\\', '/');
+            // 确保实际目录存在（按绝对路径创建）
+            Path spacePath = Paths.get(projectSpaceRoot, String.valueOf(projectId)).toAbsolutePath().normalize();
             Files.createDirectories(spacePath);
-            String absPath = spacePath.toString();
-            projectMapper.updateSpaceDir(projectId, absPath);
-            logger.info("已创建项目[{}]空间目录: {}", projectId, absPath);
-            return absPath;
+            projectMapper.updateSpaceDir(projectId, relativeDir);
+            logger.info("已创建项目[{}]空间目录: {}（相对路径: {}）", projectId, spacePath, relativeDir);
+            return relativeDir;
         } catch (Exception e) {
             logger.error("创建项目[{}]空间目录失败", projectId, e);
             throw new RuntimeException("创建项目空间目录失败: " + e.getMessage());
@@ -165,7 +173,7 @@ public class ProjectService implements IProjectService {
 
     /**
      * 将存储的项目空间路径解析为绝对路径。
-     * 新数据为相对路径（相对 projectSpaceRoot）；兼容旧数据（可能存储的是绝对路径）。
+     * 支持相对路径（相对服务运行目录 user.dir）；兼容旧数据（可能存储的是绝对路径）。
      */
     private Path resolveSpaceDirAbsolutePath(String storedSpaceDir) {
         if (storedSpaceDir == null || storedSpaceDir.isEmpty()) {
@@ -176,8 +184,46 @@ public class ProjectService implements IProjectService {
             // 兼容旧数据：存储的是绝对路径，直接使用
             return p.toAbsolutePath().normalize();
         }
-        // 相对路径：拼接项目空间根目录
-        return Paths.get(projectSpaceRoot, storedSpaceDir).toAbsolutePath().normalize();
+        // 相对路径：以服务运行目录为起点解析
+        return new File(System.getProperty("user.dir")).toPath().resolve(p).toAbsolutePath().normalize();
+    }
+
+    @Override
+    public Project updateProjectSpaceDir(Long id, String newSpaceDir, String userId) {
+        Project existing = projectMapper.findById(id);
+        if (existing == null) {
+            throw new RuntimeException("项目不存在");
+        }
+        if (!userId.equals(existing.getUserId())) {
+            throw new RuntimeException("无权修改该项目");
+        }
+        if (newSpaceDir == null || newSpaceDir.trim().isEmpty()) {
+            throw new RuntimeException("空间目录不能为空");
+        }
+        String dir = newSpaceDir.trim();
+        try {
+            // 解析为新目录的绝对路径（相对路径以运行目录为起点），不存在则创建
+            Path newPath = resolveSpaceDirAbsolutePath(dir);
+            if (newPath == null) {
+                throw new RuntimeException("空间目录地址无效");
+            }
+            Files.createDirectories(newPath);
+            if (!Files.isDirectory(newPath)) {
+                throw new RuntimeException("指定路径不是目录: " + dir);
+            }
+            // 存储原样地址（相对路径保持相对、绝对路径保持绝对），便于展示与迁移
+            projectMapper.updateSpaceDir(id, dir);
+            existing.setSpaceDir(dir);
+            existing.setUpdateTime(LocalDateTime.now());
+            projectMapper.update(existing);
+            logger.info("项目[{}]空间目录已修改为: {}", id, dir);
+            return existing;
+        } catch (RuntimeException e) {
+            throw e;
+        } catch (Exception e) {
+            logger.error("项目[{}]修改空间目录失败: {}", id, dir, e);
+            throw new RuntimeException("修改空间目录失败: " + e.getMessage());
+        }
     }
 
     @Override

@@ -15,6 +15,13 @@ import java.util.List;
 public interface IProjectService {
     Project createProject(Project project);
     Project updateProject(Project project, String userId);
+
+    /**
+     * 修改项目空间目录（支持相对路径与绝对路径，相对路径以服务运行目录为起点）。
+     * @param newSpaceDir 新的空间目录地址
+     * @return 更新后的项目
+     */
+    Project updateProjectSpaceDir(Long id, String newSpaceDir, String userId);
     /** 更新项目状态 */
     void updateStatus(Long id, String status, String userId);
     /**
