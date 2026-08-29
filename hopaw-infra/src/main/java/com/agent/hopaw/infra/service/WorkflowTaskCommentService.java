@@ -85,10 +85,9 @@ public class WorkflowTaskCommentService implements IWorkflowTaskCommentService {
                     ? NotifyEventEnum.TASK_SUMMARY_COMMENTED : NotifyEventEnum.TASK_COMMENTED;
             String byAgent = TaskCommenterTypeEnum.isAgent(commenterType) ? "智能体" : "用户";
             String commentKind = commentType.isSummary() ? "总结评论" : "普通评论";
-            String commentPreview = content != null && content.length() > 50
-                    ? content.substring(0, 50) + "…" : String.valueOf(content);
+            // 评论内容完整发送，不截断
             String notifyContent = "任务「" + (task.getTitle() != null ? task.getTitle() : "#" + taskId)
-                    + "」(#" + taskId + ") 收到" + byAgent + commentKind + "：" + commentPreview;
+                    + "」(#" + taskId + ") 收到" + byAgent + commentKind + "：" + String.valueOf(content);
             notificationService.sendForProject(task.getProjectId(), event.getCode(),
                     event.getDescription(), notifyContent);
         } catch (Exception e) {
