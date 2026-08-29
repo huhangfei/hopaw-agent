@@ -69,44 +69,49 @@ public class NotificationService implements INotificationService {
         if (projectId == null || eventCode == null) {
             return;
         }
-        // 异步发送：通知失败不影响业务主流程
-        CompletableFuture.runAsync(() -> doSendForProject(projectId, eventCode, title, content), notifyExecutor);
+        // 同步捕获并校验项目通知配置快照，再异步发送。
+        // 关键点：事件触发时调用的线程（通常仍在事务内）直接读取项目配置，可读到本次尚未提交的
+        // 最新勾选/项目名称；若改为在异步线程里再查库，可能读到事务提交前的旧数据，甚至项目尚未入库，
+        // 造成通知丢失或发送到过期渠道，因此这里先取快照、后异步投递。
+        Project project;
+        try {
+            project = projectMapper.findById(projectId);
+        } catch (Exception e) {
+            logger.warn("项目通知快照读取失败: projectId={}, event={}", projectId, eventCode, e);
+            return;
+        }
+        if (project == null) {
+            return;
+        }
+        List<String> events = parseStringArray(project.getNotifyEvents());
+        if (!events.contains(eventCode)) {
+            return; // 项目未勾选该通知事项
+        }
+        List<Long> channelIds = parseLongArray(project.getNotifyChannels());
+        if (channelIds.isEmpty()) {
+            return; // 项目未绑定通知渠道
+        }
+        NotifyEventEnum event = NotifyEventEnum.fromCode(eventCode);
+        String eventLabel = event != null ? event.getDescription() : eventCode;
+        // 内容附加项目名称前缀，便于接收端识别来源
+        String finalContent = "项目「" + project.getName() + "」" + (content != null ? content : "");
+        String finalTitle = title != null ? title : eventLabel;
+        List<Long> targetChannelIds = new ArrayList<>(channelIds);
+        // 异步发送：通知失败不影响业务主流程，且使用已捕获的快照数据（避开通话线程事务未提交的读取差异）
+        CompletableFuture.runAsync(() -> doSend(targetChannelIds, finalTitle, finalContent), notifyExecutor);
     }
 
-    /** 实际执行项目通知：校验事项勾选 → 逐渠道发送 */
-    private void doSendForProject(Long projectId, String eventCode, String title, String content) {
-        try {
-            Project project = projectMapper.findById(projectId);
-            if (project == null) {
-                return;
-            }
-            // 校验项目勾选了该通知事项
-            List<String> events = parseStringArray(project.getNotifyEvents());
-            if (events == null || !events.contains(eventCode)) {
-                return;
-            }
-            List<Long> channelIds = parseLongArray(project.getNotifyChannels());
-            if (channelIds == null || channelIds.isEmpty()) {
-                return;
-            }
-            NotifyEventEnum event = NotifyEventEnum.fromCode(eventCode);
-            String eventLabel = event != null ? event.getDescription() : eventCode;
-            // 内容附加项目名称前缀，便于接收端识别来源
-            String finalContent = "项目「" + project.getName() + "」" + (content != null ? content : "");
-            String finalTitle = title != null ? title : eventLabel;
-            for (Long channelId : channelIds) {
-                try {
-                    String err = sendByChannelId(channelId, finalTitle, finalContent);
-                    if (err != null) {
-                        logger.warn("项目通知发送失败: projectId={}, event={}, channelId={}, 原因: {}",
-                                projectId, eventCode, channelId, err);
-                    }
-                } catch (Exception e) {
-                    logger.warn("项目通知发送异常: projectId={}, event={}, channelId={}", projectId, eventCode, channelId, e);
+    /** 执行项目通知：逐渠道发送（使用已捕获的快照数据，不再重新查库） */
+    private void doSend(List<Long> channelIds, String finalTitle, String finalContent) {
+        for (Long channelId : channelIds) {
+            try {
+                String err = sendByChannelId(channelId, finalTitle, finalContent);
+                if (err != null) {
+                    logger.warn("项目通知发送失败: channelId={}, 原因: {}", channelId, err);
                 }
+            } catch (Exception e) {
+                logger.warn("项目通知发送异常: channelId={}", channelId, e);
             }
-        } catch (Exception e) {
-            logger.warn("项目通知处理失败: projectId={}, event={}", projectId, eventCode, e);
         }
     }
 

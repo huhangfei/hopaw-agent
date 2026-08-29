@@ -43,13 +43,23 @@ var STATUS_TRANSITIONS = {
 
 // 通知事项字典（与后端 NotifyEventEnum 对应）
 var NOTIFY_EVENTS = [
+    // 任务事件
     { code: 'task_created', label: '任务创建' },
+    { code: 'task_approved', label: '任务审核通过' },
+    { code: 'task_started', label: '任务开始处理' },
     { code: 'task_pending_acceptance', label: '任务待验收' },
     { code: 'task_completed', label: '任务完成' },
     { code: 'task_failed', label: '任务失败' },
     { code: 'task_redo', label: '任务重做' },
+    { code: 'task_rejected', label: '任务驳回' },
+    { code: 'task_closed', label: '任务关闭' },
+    { code: 'task_deleted', label: '任务删除' },
+    // 项目事件
+    { code: 'project_created', label: '项目创建' },
     { code: 'project_status_changed', label: '项目状态变更' },
-    { code: 'project_iterate_failed', label: '项目迭代失败' }
+    { code: 'project_deleted', label: '项目删除' },
+    { code: 'project_iterate_failed', label: '项目迭代失败' },
+    { code: 'project_iterate_completed', label: '项目迭代完成' }
 ];
 // 通知方式字典（与后端 NotifyChannelTypeEnum 对应）
 var NOTIFY_CHANNEL_TYPES = {
@@ -1170,12 +1180,14 @@ function onSpaceModeChange() {
 /* ========== 通知系统：渠道加载 / 项目表单多选（渠道管理在设置页） ========== */
 
 /** 加载当前用户通知渠道并渲染项目表单多选 */
-function loadNotifyChannels() {
+function loadNotifyChannels(selectedIds) {
+    // 加载当前用户通知渠道并渲染项目表单多选
+    // @param selectedIds 勾选的渠道编号数组：不传保留现有勾选，传 [] 清空（新建），传具体数组回填（编辑）
     fetch('/api/notify/channels')
         .then(function (r) { return r.json(); })
         .then(function (res) {
             notifyChannelsCache = res.code === 200 ? (res.data || []) : [];
-            renderNotifyChannelCheckboxes();
+            renderNotifyChannelCheckboxes(selectedIds);
         })
         .catch(function (err) {
             console.error('加载通知渠道失败:', err);

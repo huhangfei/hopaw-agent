@@ -113,6 +113,13 @@ public class ProjectService implements IProjectService {
         project.setUpdateTime(now);
         applyNotifyListsToJson(project);
         projectMapper.insert(project);
+        // 项目创建：发送外部通知（按项目本次提交的通知渠道/事项配置）
+        try {
+            notificationService.sendForProject(project.getId(), NotifyEventEnum.PROJECT_CREATED.getCode(),
+                    NotifyEventEnum.PROJECT_CREATED.getDescription(), "项目已创建");
+        } catch (Exception e) {
+            logger.warn("项目创建外部通知发送失败: projectId={}", project.getId(), e);
+        }
         // 项目空间：若前端指定了本地目录则直接使用，否则按项目编号自动创建
         String customSpaceDir = project.getSpaceDir();
         String spaceDir;
@@ -354,6 +361,14 @@ public class ProjectService implements IProjectService {
         }
         if (!userId.equals(existing.getUserId())) {
             throw new RuntimeException("无权删除该项目");
+        }
+        // 项目删除：发送外部通知。须在 deleteById 前触发——通知服务同步读取项目配置快照，
+        // 删除后读不到；@Transactional 内同连接读取可见（读己之提交/未提交），快照数据正确。
+        try {
+            notificationService.sendForProject(id, NotifyEventEnum.PROJECT_DELETED.getCode(),
+                    NotifyEventEnum.PROJECT_DELETED.getDescription(), "项目已删除");
+        } catch (Exception e) {
+            logger.warn("项目删除外部通知发送失败: projectId={}", id, e);
         }
         projectMapper.deleteById(id);
     }

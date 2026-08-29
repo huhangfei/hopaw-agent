@@ -111,6 +111,54 @@
     margin-top: 12px;
 }
 
+/* 表单底部按钮（设置页无 modal-footer 容器，需单独定义 btn-submit） */
+.notify-channel-form-btns .btn-cancel {
+    background: #fff;
+    color: #666;
+    border: 1px solid #ccc;
+    padding: 8px 20px;
+    border-radius: 6px;
+    font-size: 13px;
+    cursor: pointer;
+    transition: all .15s;
+}
+
+.notify-channel-form-btns .btn-cancel:hover {
+    background: #f5f5f5;
+    color: #333;
+}
+
+.notify-channel-form-btns .btn-submit {
+    background: linear-gradient(135deg, #667eea, #764ba2);
+    color: #fff;
+    border: none;
+    padding: 8px 20px;
+    border-radius: 6px;
+    font-size: 13px;
+    cursor: pointer;
+    transition: all .15s;
+}
+
+.notify-channel-form-btns .btn-submit:hover {
+    opacity: .92;
+    transform: translateY(-1px);
+}
+
+body.dark-theme .notify-channel-form-btns .btn-cancel {
+    background: #16213e;
+    color: #c0c0c0;
+    border-color: #2d2d44;
+}
+
+body.dark-theme .notify-channel-form-btns .btn-cancel:hover {
+    background: #2d2d44;
+    color: #e0e0e0;
+}
+
+body.dark-theme .notify-channel-form-btns .btn-submit {
+    background: linear-gradient(135deg, #8ba3ff, #764ba2);
+}
+
 /* ========== 通知渠道管理：暗色主题 ========== */
 body.dark-theme .notify-channel-item {
     border-color: #2d2d44;

@@ -156,6 +156,15 @@ public class ProjectIterateService implements IProjectIterateService {
                 } catch (Exception e) {
                     logger.warn("项目迭代失败外部通知发送失败: projectId={}", projectId, e);
                 }
+            } else {
+                // 迭代成功：发送外部通知（按项目通知配置）
+                try {
+                    notificationService.sendForProject(projectId, NotifyEventEnum.PROJECT_ITERATE_COMPLETED.getCode(),
+                            NotifyEventEnum.PROJECT_ITERATE_COMPLETED.getDescription(),
+                            "项目自动迭代执行完成");
+                } catch (Exception e) {
+                    logger.warn("项目迭代完成外部通知发送失败: projectId={}", projectId, e);
+                }
             }
         }
         return success

@@ -103,7 +103,7 @@ public class WorkflowTaskService implements IWorkflowTaskService {
         workflowTaskMapper.insert(task);
         savePreconditions(task.getId(), task.getPreconditions());
         // 任务创建：发送外部通知（按项目通知配置）
-        sendTaskNotify(task, NotifyEventEnum.TASK_CREATED);
+        sendTaskNotify(task, NotifyEventEnum.TASK_CREATED, null, null);
         return task;
     }
 
@@ -156,6 +156,8 @@ public class WorkflowTaskService implements IWorkflowTaskService {
         preconditionMapper.deleteByTaskId(id);
         preconditionMapper.deleteByPreTaskId(id);
         workflowTaskMapper.deleteById(id);
+        // 任务删除：发送外部通知（任务已删，项目仍在，通知配置读取不受影响）
+        sendTaskNotify(existing, NotifyEventEnum.TASK_DELETED, null, null);
     }
 
     @Override
@@ -210,6 +212,8 @@ public class WorkflowTaskService implements IWorkflowTaskService {
             throw new RuntimeException("当前任务状态不允许审批");
         }
         updateTaskStatus(id, TaskStatusEnum.PENDING_EXECUTION.getCode(), null);
+        // 审核通过：发送任务外部通知（按项目通知配置，审核→待执行）
+        sendTaskNotify(existing, NotifyEventEnum.TASK_APPROVED, TaskStatusEnum.PENDING_EXECUTION.getCode(), null);
         // 审核通过自动写入评论（按评论者身份记录），下发给智能体作为开始处理的指令提示
         try {
             taskCommentService.addComment(id, "已审核通过，开始处理吧", userId, commenterType, commenterId);
@@ -303,7 +307,7 @@ public class WorkflowTaskService implements IWorkflowTaskService {
         // 重置为待执行，由后台调度器扫描拉起重跑（同时清空历史驳回/失败原因）
         updateTaskStatus(id, TaskStatusEnum.PENDING_EXECUTION.getCode(), null);
         // 任务重做：发送外部通知（按项目通知配置）
-        sendTaskNotify(existing, NotifyEventEnum.TASK_REDO);
+        sendTaskNotify(existing, NotifyEventEnum.TASK_REDO, TaskStatusEnum.PENDING_EXECUTION.getCode(), null);
         // 重做自动写入用户评论，记录原状态便于追溯
         try {
             String originLabel = current != null ? current.getDescription() : existing.getStatus();
@@ -641,14 +645,14 @@ public class WorkflowTaskService implements IWorkflowTaskService {
     @Override
     public void updateTaskStatus(Long taskId, String status, String rejectReason) {
         WorkflowTask task = workflowTaskMapper.findById(taskId);
-        workflowTaskMapper.updateStatus(taskId, status, rejectReason);
         if (task == null || status == null || status.equals(task.getStatus())) {
             return;
         }
+        workflowTaskMapper.updateStatus(taskId, status, rejectReason);
         // 状态实际变化：推送全局通知（含子类型 status_change）
         notifyTaskStatusChange(task, status);
-        // 状态实际变化：发送外部通知（任务完成/失败/待验收，按项目通知配置）
-        notifyTaskExternal(task, status);
+        // 状态实际变化：发送外部通知（任务开始处理/完成/失败/待验收/驳回/关闭，按项目通知配置）
+        notifyTaskExternal(task, status, rejectReason);
         // 任务关联了项目时，写入项目操作日志
         if (task.getProjectId() == null) {
             return;
@@ -656,10 +660,13 @@ public class WorkflowTaskService implements IWorkflowTaskService {
         logTaskStatusToProject(task, status);
     }
 
-    /** 任务状态变化对应的外部通知事项：完成/失败/待验收 */
-    private void notifyTaskExternal(WorkflowTask task, String newStatus) {
+    /** 任务状态变化对应的外部通知事项映射，未知状态不发通知 */
+    private void notifyTaskExternal(WorkflowTask task, String newStatus, String rejectReason) {
         NotifyEventEnum event;
         switch (newStatus) {
+            case "processing":
+                event = NotifyEventEnum.TASK_STARTED;
+                break;
             case "completed":
                 event = NotifyEventEnum.TASK_COMPLETED;
                 break;
@@ -669,26 +676,40 @@ public class WorkflowTaskService implements IWorkflowTaskService {
             case "pending_acceptance":
                 event = NotifyEventEnum.TASK_PENDING_ACCEPTANCE;
                 break;
+            case "rejected":
+                event = NotifyEventEnum.TASK_REJECTED;
+                break;
+            case "closed":
+                event = NotifyEventEnum.TASK_CLOSED;
+                break;
             default:
                 return;
         }
-        sendTaskNotify(task, event);
+        sendTaskNotify(task, event, newStatus, rejectReason);
     }
 
     /**
      * 发送任务相关外部通知（钉钉群/邮件/飞书/Webhook）：任务未关联项目时跳过，失败不影响主流程。
+     *
+     * @param newStatusCode 通知内容展示的目标状态码（状态变更场景传入；传 null 时取 task 当前状态，如创建/删除场景）
+     * @param extraDetail   附加说明（如驳回原因），可空
      */
-    private void sendTaskNotify(WorkflowTask task, NotifyEventEnum event) {
+    private void sendTaskNotify(WorkflowTask task, NotifyEventEnum event, String newStatusCode, String extraDetail) {
         if (task == null || task.getProjectId() == null) {
             return;
         }
         try {
-            TaskStatusEnum statusEnum = TaskStatusEnum.fromCode(task.getStatus());
-            String statusLabel = statusEnum != null ? statusEnum.getDescription() : String.valueOf(task.getStatus());
+            // 优先用目标状态（task 对象可能是更新前的旧数据，直接取其状态会显示滞后）
+            String statusCode = newStatusCode != null ? newStatusCode : task.getStatus();
+            TaskStatusEnum statusEnum = TaskStatusEnum.fromCode(statusCode);
+            String statusLabel = statusEnum != null ? statusEnum.getDescription() : String.valueOf(statusCode);
+            String content = "任务「" + (task.getTitle() != null ? task.getTitle() : "#" + task.getId()) + "」(#" + task.getId()
+                    + ") 当前状态：" + statusLabel;
+            if (extraDetail != null && !extraDetail.isBlank()) {
+                content += "，原因：" + extraDetail;
+            }
             notificationService.sendForProject(task.getProjectId(), event.getCode(),
-                    event.getDescription(),
-                    "任务「" + (task.getTitle() != null ? task.getTitle() : "#" + task.getId()) + "」(#" + task.getId()
-                            + ") 当前状态：" + statusLabel);
+                    event.getDescription(), content);
         } catch (Exception e) {
             logger.warn("任务外部通知发送失败: taskId={}, event={}", task.getId(), event.getCode(), e);
         }
