@@ -2060,26 +2060,65 @@ body.dark-theme .log-item .log-time {
 }
 
 /* ========== 通知系统 ========== */
-/* 项目表单：通知渠道/通知事项多选组 */
+/* 项目表单：通知设置分组容器（渠道+事项整体卡片化） */
+.notify-settings-section {
+    border: 1px solid #e8e8f0;
+    border-radius: 10px;
+    padding: 14px 16px 6px;
+    margin: 6px 0 18px;
+    background: #fafbfe;
+}
+
+.notify-settings-title {
+    font-size: 13px;
+    font-weight: 600;
+    color: #333;
+    margin-bottom: 10px;
+    padding-bottom: 8px;
+    border-bottom: 1px solid #eee;
+}
+
+.notify-settings-section .form-group {
+    margin-bottom: 14px;
+}
+
+/* 通知渠道/通知事项多选组：两列网格，白底内衬便于与分组背景区分 */
 .notify-check-group {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 6px 16px;
-    padding: 4px 0;
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 4px 12px;
+    padding: 8px 10px;
+    background: #fff;
+    border: 1px solid #ececf4;
+    border-radius: 8px;
 }
 
 .notify-check-group .checkbox-label {
     display: inline-flex;
     align-items: center;
-    gap: 4px;
+    gap: 6px;
     margin: 0;
+    padding: 4px 6px;
     font-size: 13px;
-    color: #555;
+    color: #444;
+    border-radius: 5px;
     cursor: pointer;
+    transition: background .12s;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
 
+.notify-check-group .checkbox-label:hover {
+    background: #f2f4fc;
+}
+
+/* 空态提示行（无渠道时由 JS 渲染） */
 .notify-check-group .form-hint {
-    width: 100%;
+    grid-column: 1 / -1;
+    font-size: 12px;
+    color: #999;
+    padding: 2px 4px;
 }
 
 /* 表单标签中的「管理渠道」链接 */
@@ -2095,8 +2134,27 @@ body.dark-theme .log-item .log-time {
 }
 
 /* 通知系统暗色 */
+body.dark-theme .notify-settings-section {
+    border-color: #2d2d44;
+    background: #1a1a2e;
+}
+
+body.dark-theme .notify-settings-title {
+    color: #e0e0e0;
+    border-bottom-color: #2d2d44;
+}
+
+body.dark-theme .notify-check-group {
+    background: #16213e;
+    border-color: #2d2d44;
+}
+
 body.dark-theme .notify-check-group .checkbox-label {
     color: #c0c0c0;
+}
+
+body.dark-theme .notify-check-group .checkbox-label:hover {
+    background: #2d2d44;
 }
 
 body.dark-theme .notify-channel-manage-link {

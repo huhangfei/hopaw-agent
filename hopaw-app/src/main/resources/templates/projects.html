@@ -186,19 +186,23 @@
                         <textarea id="projectIteratePrompt" rows="3" placeholder="追加给项目管理智能体的额外迭代要求，如：每轮迭代优先处理待验收任务、产出物写入 docs 目录等"></textarea>
                         <small class="form-hint">自动迭代与手动下发指令时均生效，作为额外迭代要求注入项目管理智能体</small>
                     </div>
-                    <div class="form-group">
-                        <label>
-                            通知渠道
-                            <a href="/settings/notify" class="notify-channel-manage-link">管理渠道</a>
-                        </label>
-                        <div class="notify-check-group" id="projectNotifyChannelGroup"></div>
-                        <small class="form-hint">勾选后项目关键事件将向这些渠道发送通知；渠道在「系统设置 - 通知渠道」中管理</small>
+                    <div class="notify-settings-section">
+                        <div class="notify-settings-title">通知设置</div>
+                        <div class="form-group">
+                            <label>
+                                通知渠道
+                                <a href="/settings/notify" class="notify-channel-manage-link">管理渠道</a>
+                            </label>
+                            <div class="notify-check-group" id="projectNotifyChannelGroup"></div>
+                            <small class="form-hint">勾选后项目关键事件将向这些渠道发送通知；渠道在「系统设置 - 通知渠道」中管理</small>
+                        </div>
+                        <div class="form-group">
+                            <label>通知事项</label>
+                            <div class="notify-check-group" id="projectNotifyEventGroup"></div>
+                            <small class="form-hint">勾选需要发送通知的项目与任务关键变化事件</small>
+                        </div>
                     </div>
-                    <div class="form-group">
-                        <label>通知事项</label>
-                        <div class="notify-check-group" id="projectNotifyEventGroup"></div>
-                        <small class="form-hint">勾选需要发送通知的项目与任务关键变化事件</small>
-                    </div>                    <div class="form-group" id="spaceModeGroup">
+                    <div class="form-group" id="spaceModeGroup">
                         <label>项目空间</label>
                         <div class="space-type-radio">
                             <label><input type="radio" name="spaceMode" value="auto" checked onchange="onSpaceModeChange()"> 自动创建</label>
