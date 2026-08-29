@@ -37,6 +37,19 @@ public class AgentExecutorParams {
      * 由 saveChatSession 持久化到 chat_sessions.biz_type
      */
     private AgentExecutorBizTypeEnum bizType;
+    /**
+     * 会话标题：传入时直接作为会话标题，不再从用户输入中分析。
+     * 任务/项目场景分别传任务名称、项目名称；为空时回退到用户意图分析
+     */
+    private String sessionTitle;
+
+    public String getSessionTitle() {
+        return sessionTitle;
+    }
+
+    public void setSessionTitle(String sessionTitle) {
+        this.sessionTitle = sessionTitle;
+    }
     public Long getAgentId() {
         return agentId;
     }

@@ -737,7 +737,12 @@ public class AgentExecutor implements IAgentExecutor {
         ChatSession chatSession=chatSessionService.getSessionBySessionId(sessionId);
         if (chatSession == null) {
             chatSession = new ChatSession();
-            String userIntent = analyzeUserIntent(contents);
+            // 优先使用外部传入的会话标题（任务/项目场景传任务名称、项目名称），否则从用户输入分析
+            String userIntent = agentExecutorParams.getSessionTitle();
+            boolean fromParam = userIntent != null && !userIntent.isBlank();
+            if (!fromParam) {
+                userIntent = analyzeUserIntent(contents);
+            }
             if (userIntent == null) {
                 userIntent = "新任务";
             }else{
@@ -758,10 +763,17 @@ public class AgentExecutor implements IAgentExecutor {
             agentMessageHandler.sendMessageToChannel(AiMessageBaseInfo.sessionTitle(sessionId, requestId, userIntent));
         } else {
             if(chatSession.getTitle().equals("新任务")){
-                String userIntent = analyzeUserIntent(contents);
-                if (userIntent !=null) {
-                    chatSession.setTitle(userIntent);
-                    sendSessionTitle=true;
+                // 优先使用外部传入的会话标题（任务/项目场景传任务名称、项目名称），否则从用户输入分析
+                String paramTitle = agentExecutorParams.getSessionTitle();
+                if (paramTitle != null && !paramTitle.isBlank()) {
+                    chatSession.setTitle(paramTitle);
+                    sendSessionTitle = true;
+                } else {
+                    String userIntent = analyzeUserIntent(contents);
+                    if (userIntent !=null) {
+                        chatSession.setTitle(userIntent);
+                        sendSessionTitle=true;
+                    }
                 }
             }
             chatSession.setSessionId(sessionId);

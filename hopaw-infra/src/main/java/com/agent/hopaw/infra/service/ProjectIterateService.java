@@ -260,6 +260,8 @@ public class ProjectIterateService implements IProjectIterateService {
         params.setToolSets(selectedTools);
         params.setBizType(AgentExecutorBizTypeEnum.ProjectChat);
         params.setMcpServerConfigs(mcpServerConfigService.findEnabled());
+        // 会话标题直接使用项目名称
+        params.setSessionTitle(project.getName());
         params.setExtParams(new HashMap<>() {{
             put("projectId", project.getId());
         }});

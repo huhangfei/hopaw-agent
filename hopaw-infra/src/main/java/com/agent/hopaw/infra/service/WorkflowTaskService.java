@@ -467,6 +467,8 @@ public class WorkflowTaskService implements IWorkflowTaskService {
         agentExecutorParams.setToolSets(selectedTools);
         agentExecutorParams.setBizType(AgentExecutorBizTypeEnum.WorkflowTaskChat);
         agentExecutorParams.setMcpServerConfigs(mcpServerConfigService.findEnabled());
+        // 会话标题直接使用任务名称
+        agentExecutorParams.setSessionTitle(task.getTitle());
 
         agentExecutorParams.setExtParams(new HashMap<>(){{
             put("workflowTaskId",task.getId());
