@@ -39,6 +39,7 @@ public class SettingsController {
         put("backup",       new String[] {"/js/page/settings-backup.js", null});
         put("scheduled-tasks", new String[] {"/js/page/scheduled-tasks.js", "/css/page/scheduled-tasks.css"});
         put("workflow-pool", new String[] {"/js/page/settings-workflow-pool.js", null});
+        put("notify",       new String[] {"/js/page/settings-notify.js", "/css/page/settings-notify.css"});
     }};
 
     private final MailUtil mailUtil;
