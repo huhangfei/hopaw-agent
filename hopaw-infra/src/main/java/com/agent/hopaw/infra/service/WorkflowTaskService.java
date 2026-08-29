@@ -1,6 +1,7 @@
 package com.agent.hopaw.infra.service;
 
 import com.agent.hopaw.infra.constant.AgentExecutorBizTypeEnum;
+import com.agent.hopaw.infra.constant.NotifyEventEnum;
 import com.agent.hopaw.infra.constant.TaskCommenterTypeEnum;
 import com.agent.hopaw.infra.constant.TaskCommentTypeEnum;
 import com.agent.hopaw.infra.constant.TaskStatusEnum;
@@ -58,6 +59,7 @@ public class WorkflowTaskService implements IWorkflowTaskService {
     private final IProjectService projectService;
     private final IProjectLogService projectLogService;
     private final IGlobalNoticeService globalNoticeService;
+    private final INotificationService notificationService;
 
     public WorkflowTaskService(WorkflowTaskMapper workflowTaskMapper,
                                WorkflowTaskPreconditionMapper preconditionMapper,
@@ -70,7 +72,8 @@ public class WorkflowTaskService implements IWorkflowTaskService {
                                IMcpServerConfigService mcpServerConfigService,
                                IProjectService projectService,
                                IProjectLogService projectLogService,
-                               IGlobalNoticeService globalNoticeService) {
+                               IGlobalNoticeService globalNoticeService,
+                               INotificationService notificationService) {
         this.workflowTaskMapper = workflowTaskMapper;
         this.preconditionMapper = preconditionMapper;
         this.taskSessionMapper = taskSessionMapper;
@@ -83,6 +86,7 @@ public class WorkflowTaskService implements IWorkflowTaskService {
         this.projectService = projectService;
         this.projectLogService = projectLogService;
         this.globalNoticeService = globalNoticeService;
+        this.notificationService = notificationService;
     }
 
     @Override
@@ -98,6 +102,8 @@ public class WorkflowTaskService implements IWorkflowTaskService {
         task.setUpdateTime(now);
         workflowTaskMapper.insert(task);
         savePreconditions(task.getId(), task.getPreconditions());
+        // 任务创建：发送外部通知（按项目通知配置）
+        sendTaskNotify(task, NotifyEventEnum.TASK_CREATED);
         return task;
     }
 
@@ -296,6 +302,8 @@ public class WorkflowTaskService implements IWorkflowTaskService {
         }
         // 重置为待执行，由后台调度器扫描拉起重跑（同时清空历史驳回/失败原因）
         updateTaskStatus(id, TaskStatusEnum.PENDING_EXECUTION.getCode(), null);
+        // 任务重做：发送外部通知（按项目通知配置）
+        sendTaskNotify(existing, NotifyEventEnum.TASK_REDO);
         // 重做自动写入用户评论，记录原状态便于追溯
         try {
             String originLabel = current != null ? current.getDescription() : existing.getStatus();
@@ -639,11 +647,51 @@ public class WorkflowTaskService implements IWorkflowTaskService {
         }
         // 状态实际变化：推送全局通知（含子类型 status_change）
         notifyTaskStatusChange(task, status);
+        // 状态实际变化：发送外部通知（任务完成/失败/待验收，按项目通知配置）
+        notifyTaskExternal(task, status);
         // 任务关联了项目时，写入项目操作日志
         if (task.getProjectId() == null) {
             return;
         }
         logTaskStatusToProject(task, status);
+    }
+
+    /** 任务状态变化对应的外部通知事项：完成/失败/待验收 */
+    private void notifyTaskExternal(WorkflowTask task, String newStatus) {
+        NotifyEventEnum event;
+        switch (newStatus) {
+            case "completed":
+                event = NotifyEventEnum.TASK_COMPLETED;
+                break;
+            case "failed":
+                event = NotifyEventEnum.TASK_FAILED;
+                break;
+            case "pending_acceptance":
+                event = NotifyEventEnum.TASK_PENDING_ACCEPTANCE;
+                break;
+            default:
+                return;
+        }
+        sendTaskNotify(task, event);
+    }
+
+    /**
+     * 发送任务相关外部通知（钉钉群/邮件/飞书/Webhook）：任务未关联项目时跳过，失败不影响主流程。
+     */
+    private void sendTaskNotify(WorkflowTask task, NotifyEventEnum event) {
+        if (task == null || task.getProjectId() == null) {
+            return;
+        }
+        try {
+            TaskStatusEnum statusEnum = TaskStatusEnum.fromCode(task.getStatus());
+            String statusLabel = statusEnum != null ? statusEnum.getDescription() : String.valueOf(task.getStatus());
+            notificationService.sendForProject(task.getProjectId(), event.getCode(),
+                    event.getDescription(),
+                    "任务「" + (task.getTitle() != null ? task.getTitle() : "#" + task.getId()) + "」(#" + task.getId()
+                            + ") 当前状态：" + statusLabel);
+        } catch (Exception e) {
+            logger.warn("任务外部通知发送失败: taskId={}, event={}", task.getId(), event.getCode(), e);
+        }
     }
 
     /** 任务状态变更全局通知：子类型 status_change */

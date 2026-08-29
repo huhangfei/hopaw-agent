@@ -186,7 +186,19 @@
                         <textarea id="projectIteratePrompt" rows="3" placeholder="追加给项目管理智能体的额外迭代要求，如：每轮迭代优先处理待验收任务、产出物写入 docs 目录等"></textarea>
                         <small class="form-hint">自动迭代与手动下发指令时均生效，作为额外迭代要求注入项目管理智能体</small>
                     </div>
-                    <div class="form-group" id="spaceModeGroup">
+                    <div class="form-group">
+                        <label>
+                            通知渠道
+                            <a href="javascript:void(0)" class="notify-channel-manage-link" onclick="openNotifyChannelModal()">管理渠道</a>
+                        </label>
+                        <div class="notify-check-group" id="projectNotifyChannelGroup"></div>
+                        <small class="form-hint">勾选后项目关键事件将向这些渠道发送通知；点击「管理渠道」可新增钉钉群/飞书/邮件/Webhook 渠道</small>
+                    </div>
+                    <div class="form-group">
+                        <label>通知事项</label>
+                        <div class="notify-check-group" id="projectNotifyEventGroup"></div>
+                        <small class="form-hint">勾选需要发送通知的项目与任务关键变化事件</small>
+                    </div>                    <div class="form-group" id="spaceModeGroup">
                         <label>项目空间</label>
                         <div class="space-type-radio">
                             <label><input type="radio" name="spaceMode" value="auto" checked onchange="onSpaceModeChange()"> 自动创建</label>
@@ -206,6 +218,48 @@
         </div>
     </div>
 
+    <!-- 通知渠道管理模态框 -->
+    <div class="modal-overlay" id="notifyChannelModal">
+        <div class="modal" style="max-width: 620px;">
+            <div class="modal-header">
+                <h3>通知渠道管理</h3>
+                <button class="modal-close" onclick="closeNotifyChannelModal()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="notify-channel-list" id="notifyChannelList"></div>
+                <div id="notifyChannelFormBox" style="display:none; margin-top:12px; border-top:1px solid #eee; padding-top:12px;">
+                    <form id="notifyChannelForm">
+                        <input type="hidden" id="notifyChannelId">
+                        <div class="form-group">
+                            <label for="notifyChannelName">渠道名称 *</label>
+                            <input type="text" id="notifyChannelName" placeholder="如：项目通知钉钉群">
+                        </div>
+                        <div class="form-group">
+                            <label for="notifyChannelType">通知方式 *</label>
+                            <select id="notifyChannelType" onchange="onNotifyChannelTypeChange()">
+                                <option value="dingtalk">钉钉群</option>
+                                <option value="feishu">飞书</option>
+                                <option value="email">邮件</option>
+                                <option value="webhook">Webhook</option>
+                            </select>
+                        </div>
+                        <div id="notifyChannelConfigBox"></div>
+                        <div class="form-group">
+                            <label class="checkbox-label">
+                                <input type="checkbox" id="notifyChannelEnabled" checked>
+                                启用该渠道
+                            </label>
+                        </div>
+                    </form>
+                    <div class="notify-channel-form-btns">
+                        <button class="btn-cancel" onclick="closeNotifyChannelForm()">取消</button>
+                        <button class="btn-submit" onclick="saveNotifyChannel()">保存</button>
+                    </div>
+                </div>
+                <button type="button" class="notify-channel-add-btn" id="notifyChannelAddBtn" onclick="openNotifyChannelForm()">+ 新增渠道</button>
+            </div>
+        </div>
+    </div>
     <!-- 新建文件/目录模态框 -->
     <div class="modal-overlay" id="spaceCreateModal">
         <div class="modal" style="max-width: 420px;">

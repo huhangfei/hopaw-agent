@@ -1,6 +1,7 @@
 package com.agent.hopaw.infra.service;
 
 import com.agent.hopaw.infra.constant.AgentExecutorBizTypeEnum;
+import com.agent.hopaw.infra.constant.NotifyEventEnum;
 import com.agent.hopaw.infra.constant.ProjectStatusEnum;
 import com.agent.hopaw.infra.constant.TaskStatusEnum;
 import com.agent.hopaw.infra.executor.IAgentExecutor;
@@ -55,6 +56,7 @@ public class ProjectIterateService implements IProjectIterateService {
     private final IMcpServerConfigService mcpServerConfigService;
     private final IProjectService projectService;
     private final IProjectLogService projectLogService;
+    private final INotificationService notificationService;
 
     public ProjectIterateService(ProjectMapper projectMapper,
                                  WorkflowTaskMapper workflowTaskMapper,
@@ -63,7 +65,8 @@ public class ProjectIterateService implements IProjectIterateService {
                                  IAgentToolService agentToolService,
                                  IMcpServerConfigService mcpServerConfigService,
                                  IProjectService projectService,
-                                 IProjectLogService projectLogService) {
+                                 IProjectLogService projectLogService,
+                                 INotificationService notificationService) {
         this.projectMapper = projectMapper;
         this.workflowTaskMapper = workflowTaskMapper;
         this.agentService = agentService;
@@ -72,6 +75,7 @@ public class ProjectIterateService implements IProjectIterateService {
         this.mcpServerConfigService = mcpServerConfigService;
         this.projectService = projectService;
         this.projectLogService = projectLogService;
+        this.notificationService = notificationService;
     }
 
     @Override
@@ -142,6 +146,16 @@ public class ProjectIterateService implements IProjectIterateService {
                         "auto_iterate", success ? "项目自动迭代已执行" : "项目自动迭代执行失败：" + failReason);
             } catch (Exception e) {
                 logger.warn("项目自动迭代日志记录失败: projectId={}", projectId, e);
+            }
+            // 迭代失败：发送外部通知（钉钉群/邮件/飞书/Webhook，按项目通知配置）
+            if (!success) {
+                try {
+                    notificationService.sendForProject(projectId, NotifyEventEnum.PROJECT_ITERATE_FAILED.getCode(),
+                            NotifyEventEnum.PROJECT_ITERATE_FAILED.getDescription(),
+                            "项目自动迭代执行失败：" + failReason);
+                } catch (Exception e) {
+                    logger.warn("项目迭代失败外部通知发送失败: projectId={}", projectId, e);
+                }
             }
         }
         return success

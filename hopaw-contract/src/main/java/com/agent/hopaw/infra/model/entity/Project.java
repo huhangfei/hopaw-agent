@@ -1,6 +1,7 @@
 package com.agent.hopaw.infra.model.entity;
 
 import java.time.LocalDateTime;
+import java.util.List;
 
 /**
  * 项目实体
@@ -26,6 +27,14 @@ public class Project {
     private String sessionId;
     /** 创建人昵称（非持久字段，由 Controller 层填充） */
     private String creatorName;
+    /** 通知渠道编号列表（持久字段，JSON 数组字符串，如 "[1,2]"）：事件发生时向这些渠道发送通知 */
+    private String notifyChannels;
+    /** 通知事项编码列表（持久字段，JSON 数组字符串，如 "[\"task_failed\"]"），见 NotifyEventEnum */
+    private String notifyEvents;
+    /** 通知渠道编号列表（非持久字段：由 Service 层与 notifyChannels JSON 互转，接口出入参使用） */
+    private List<Long> notifyChannelIds;
+    /** 通知事项编码列表（非持久字段：由 Service 层与 notifyEvents JSON 互转，接口出入参使用） */
+    private List<String> notifyEventCodes;
     private LocalDateTime createTime;
     private LocalDateTime updateTime;
 
@@ -123,6 +132,38 @@ public class Project {
 
     public void setCreatorName(String creatorName) {
         this.creatorName = creatorName;
+    }
+
+    public String getNotifyChannels() {
+        return notifyChannels;
+    }
+
+    public void setNotifyChannels(String notifyChannels) {
+        this.notifyChannels = notifyChannels;
+    }
+
+    public String getNotifyEvents() {
+        return notifyEvents;
+    }
+
+    public void setNotifyEvents(String notifyEvents) {
+        this.notifyEvents = notifyEvents;
+    }
+
+    public List<Long> getNotifyChannelIds() {
+        return notifyChannelIds;
+    }
+
+    public void setNotifyChannelIds(List<Long> notifyChannelIds) {
+        this.notifyChannelIds = notifyChannelIds;
+    }
+
+    public List<String> getNotifyEventCodes() {
+        return notifyEventCodes;
+    }
+
+    public void setNotifyEventCodes(List<String> notifyEventCodes) {
+        this.notifyEventCodes = notifyEventCodes;
     }
 
     public LocalDateTime getCreateTime() {

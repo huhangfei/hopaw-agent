@@ -1,5 +1,6 @@
 package com.agent.hopaw.infra.service;
 
+import com.agent.hopaw.infra.constant.NotifyEventEnum;
 import com.agent.hopaw.infra.constant.ProjectStatusEnum;
 import com.agent.hopaw.infra.enums.GlobalNoticeTypeEnum;
 import com.agent.hopaw.infra.mapper.ProjectMapper;
@@ -8,6 +9,7 @@ import com.agent.hopaw.infra.model.dto.FileTreeNode;
 import com.agent.hopaw.infra.model.dto.FileUploadItem;
 import com.agent.hopaw.infra.model.entity.Project;
 import com.agent.hopaw.infra.model.entity.WorkflowTask;
+import com.alibaba.fastjson2.JSON;
 import net.lingala.zip4j.ZipFile;
 import net.lingala.zip4j.exception.ZipException;
 import net.lingala.zip4j.model.ZipParameters;
@@ -40,6 +42,7 @@ public class ProjectService implements IProjectService {
     private final ProjectMapper projectMapper;
     private final WorkflowTaskMapper workflowTaskMapper;
     private final IGlobalNoticeService globalNoticeService;
+    private final INotificationService notificationService;
 
     /** 项目空间根目录（所有项目的工作空间目录都放置在此目录下） */
     private final String projectSpaceRoot;
@@ -56,10 +59,12 @@ public class ProjectService implements IProjectService {
     public ProjectService(ProjectMapper projectMapper,
                           WorkflowTaskMapper workflowTaskMapper,
                           @Value("${hopaw.project.space.dir:./project-spaces}") String projectSpaceDir,
-                          IGlobalNoticeService globalNoticeService) {
+                          IGlobalNoticeService globalNoticeService,
+                          INotificationService notificationService) {
         this.projectMapper = projectMapper;
         this.workflowTaskMapper = workflowTaskMapper;
         this.globalNoticeService = globalNoticeService;
+        this.notificationService = notificationService;
         // 保存原始配置值（自动创建项目空间时按此生成存储用的相对路径）
         this.projectSpaceDirConfig = projectSpaceDir;
         // 解析为绝对路径，确保后续文件操作一致
@@ -106,6 +111,7 @@ public class ProjectService implements IProjectService {
         LocalDateTime now = LocalDateTime.now();
         project.setCreateTime(now);
         project.setUpdateTime(now);
+        applyNotifyListsToJson(project);
         projectMapper.insert(project);
         // 项目空间：若前端指定了本地目录则直接使用，否则按项目编号自动创建
         String customSpaceDir = project.getSpaceDir();
@@ -248,6 +254,14 @@ public class ProjectService implements IProjectService {
             validateTransition(existing.getStatus(), project.getStatus());
             existing.setStatus(project.getStatus());
         }
+        // 通知渠道与通知事项随编辑更新（列表为 null 时保留原值，空列表表示清空）
+        if (project.getNotifyChannelIds() != null) {
+            existing.setNotifyChannelIds(project.getNotifyChannelIds());
+        }
+        if (project.getNotifyEventCodes() != null) {
+            existing.setNotifyEventCodes(project.getNotifyEventCodes());
+        }
+        applyNotifyListsToJson(existing);
         existing.setUpdateTime(LocalDateTime.now());
         projectMapper.update(existing);
         return existing;
@@ -308,6 +322,18 @@ public class ProjectService implements IProjectService {
         } catch (Exception e) {
             logger.warn("项目状态变更通知推送失败: projectId={}", id, e);
         }
+        // 状态变更：发送外部通知（钉钉群/邮件/飞书/Webhook，按项目通知配置）
+        try {
+            ProjectStatusEnum newEnum = ProjectStatusEnum.fromCode(status);
+            String newLabel = newEnum != null ? newEnum.getDescription() : status;
+            ProjectStatusEnum oldEnum = ProjectStatusEnum.fromCode(existing.getStatus());
+            String oldLabel = oldEnum != null ? oldEnum.getDescription() : existing.getStatus();
+            notificationService.sendForProject(id, NotifyEventEnum.PROJECT_STATUS_CHANGED.getCode(),
+                    NotifyEventEnum.PROJECT_STATUS_CHANGED.getDescription(),
+                    "项目状态由「" + oldLabel + "」变更为「" + newLabel + "」");
+        } catch (Exception e) {
+            logger.warn("项目状态变更外部通知发送失败: projectId={}", id, e);
+        }
     }
 
     /** 校验状态流转是否合法（规则见 ProjectStatusEnum） */
@@ -342,6 +368,7 @@ public class ProjectService implements IProjectService {
             return null;
         }
         fillSpaceDirAbs(project);
+        fillNotifyLists(project);
         return project;
     }
 
@@ -352,6 +379,39 @@ public class ProjectService implements IProjectService {
         if (project == null) return;
         Path abs = resolveSpaceDirAbsolutePath(project.getSpaceDir());
         project.setSpaceDirAbs(abs != null ? abs.toString() : null);
+    }
+
+    /**
+     * 接口出参转换：将持久化的通知渠道/事项 JSON 字符串解析为列表字段（解析失败忽略，保持空）。
+     */
+    private void fillNotifyLists(Project project) {
+        if (project == null) return;
+        try {
+            if (project.getNotifyChannels() != null && !project.getNotifyChannels().isBlank()) {
+                project.setNotifyChannelIds(JSON.parseArray(project.getNotifyChannels(), Long.class));
+            }
+        } catch (Exception e) {
+            logger.warn("解析项目通知渠道配置失败: projectId={}", project.getId());
+        }
+        try {
+            if (project.getNotifyEvents() != null && !project.getNotifyEvents().isBlank()) {
+                project.setNotifyEventCodes(JSON.parseArray(project.getNotifyEvents(), String.class));
+            }
+        } catch (Exception e) {
+            logger.warn("解析项目通知事项配置失败: projectId={}", project.getId());
+        }
+    }
+
+    /**
+     * 接口入参转换：将列表字段序列化为 JSON 字符串持久化（列表为 null 时保留原值，空列表清空存储）。
+     */
+    private void applyNotifyListsToJson(Project project) {
+        if (project.getNotifyChannelIds() != null) {
+            project.setNotifyChannels(project.getNotifyChannelIds().isEmpty() ? null : JSON.toJSONString(project.getNotifyChannelIds()));
+        }
+        if (project.getNotifyEventCodes() != null) {
+            project.setNotifyEvents(project.getNotifyEventCodes().isEmpty() ? null : JSON.toJSONString(project.getNotifyEventCodes()));
+        }
     }
 
     @Override

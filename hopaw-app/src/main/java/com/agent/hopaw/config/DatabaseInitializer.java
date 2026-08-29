@@ -382,6 +382,22 @@ public class DatabaseInitializer implements CommandLineRunner {
             ensureColumn(stmt, "projects", "session_id", "TEXT");
             // 自动迭代要求提示词（增量加列）
             ensureColumn(stmt, "projects", "iterate_prompt", "TEXT");
+            // 项目通知配置（增量加列）：通知渠道编号 JSON 数组 + 通知事项编码 JSON 数组
+            ensureColumn(stmt, "projects", "notify_channels", "TEXT");
+            ensureColumn(stmt, "projects", "notify_events", "TEXT");
+
+            // 通知系统 - 通知渠道表（每种通知方式可配置多个渠道）
+            stmt.execute("CREATE TABLE IF NOT EXISTS notify_channels (" +
+                    "id INTEGER PRIMARY KEY AUTOINCREMENT, " +
+                    "name TEXT NOT NULL, " +
+                    "type TEXT NOT NULL, " +
+                    "config TEXT, " +
+                    "enabled INTEGER DEFAULT 1, " +
+                    "user_id TEXT NOT NULL, " +
+                    "create_time TIMESTAMP DEFAULT (datetime('now','localtime')), " +
+                    "update_time TIMESTAMP DEFAULT (datetime('now','localtime'))" +
+                    ")");
+            stmt.execute("CREATE INDEX IF NOT EXISTS idx_notify_channels_user ON notify_channels(user_id)");
 
             // 工作流 - 任务表
             stmt.execute("CREATE TABLE IF NOT EXISTS workflow_tasks (" +
