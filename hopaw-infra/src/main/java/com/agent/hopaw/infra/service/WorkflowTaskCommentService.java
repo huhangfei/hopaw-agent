@@ -1,5 +1,6 @@
 package com.agent.hopaw.infra.service;
 
+import com.agent.hopaw.infra.constant.NotifyEventEnum;
 import com.agent.hopaw.infra.constant.ProjectLogTypeEnum;
 import com.agent.hopaw.infra.constant.TaskCommenterTypeEnum;
 import com.agent.hopaw.infra.constant.TaskCommentStatusEnum;
@@ -25,15 +26,18 @@ public class WorkflowTaskCommentService implements IWorkflowTaskCommentService {
     private final WorkflowTaskMapper workflowTaskMapper;
     private final IProjectLogService projectLogService;
     private final IAgentService agentService;
+    private final INotificationService notificationService;
 
     public WorkflowTaskCommentService(TaskCommentMapper taskCommentMapper,
                                       WorkflowTaskMapper workflowTaskMapper,
                                       IProjectLogService projectLogService,
-                                      IAgentService agentService) {
+                                      IAgentService agentService,
+                                      INotificationService notificationService) {
         this.taskCommentMapper = taskCommentMapper;
         this.workflowTaskMapper = workflowTaskMapper;
         this.projectLogService = projectLogService;
         this.agentService = agentService;
+        this.notificationService = notificationService;
     }
 
     @Override
@@ -64,7 +68,32 @@ public class WorkflowTaskCommentService implements IWorkflowTaskCommentService {
         if (typeEnum.isSummary()) {
             logCommentToProject(taskId, userId, commenterType, commenterId, typeEnum, content);
         }
+        // 发送外部通知：普通评论/总结评论为独立通知事项（按项目通知配置）
+        notifyCommentExternal(taskId, content, typeEnum, commenterType, commenterId);
         return comment;
+    }
+
+    /** 评论外部通知：按评论类型区分普通评论/总结评论事件，失败不影响主流程 */
+    private void notifyCommentExternal(Long taskId, String content, TaskCommentTypeEnum commentType,
+                                       String commenterType, String commenterId) {
+        try {
+            WorkflowTask task = workflowTaskMapper.findById(taskId);
+            if (task == null || task.getProjectId() == null) {
+                return;
+            }
+            NotifyEventEnum event = commentType.isSummary()
+                    ? NotifyEventEnum.TASK_SUMMARY_COMMENTED : NotifyEventEnum.TASK_COMMENTED;
+            String byAgent = TaskCommenterTypeEnum.isAgent(commenterType) ? "智能体" : "用户";
+            String commentKind = commentType.isSummary() ? "总结评论" : "普通评论";
+            String commentPreview = content != null && content.length() > 50
+                    ? content.substring(0, 50) + "…" : String.valueOf(content);
+            String notifyContent = "任务「" + (task.getTitle() != null ? task.getTitle() : "#" + taskId)
+                    + "」(#" + taskId + ") 收到" + byAgent + commentKind + "：" + commentPreview;
+            notificationService.sendForProject(task.getProjectId(), event.getCode(),
+                    event.getDescription(), notifyContent);
+        } catch (Exception e) {
+            logger.warn("任务评论外部通知发送失败: taskId={}", taskId, e);
+        }
     }
 
     /** 新增任务评论写入关联项目的操作日志（不记录评论内容，仅记录动作） */

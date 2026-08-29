@@ -12,6 +12,8 @@ public enum NotifyEventEnum {
     TASK_COMPLETED("task_completed", "任务完成"),
     TASK_FAILED("task_failed", "任务失败"),
     TASK_REDO("task_redo", "任务重做"),
+    TASK_COMMENTED("task_commented", "任务普通评论"),
+    TASK_SUMMARY_COMMENTED("task_summary_commented", "任务总结评论"),
     TASK_REJECTED("task_rejected", "任务驳回"),
     TASK_CLOSED("task_closed", "任务关闭"),
     TASK_DELETED("task_deleted", "任务删除"),

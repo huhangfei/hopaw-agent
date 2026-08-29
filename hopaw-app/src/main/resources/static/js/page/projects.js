@@ -51,6 +51,8 @@ var NOTIFY_EVENTS = [
     { code: 'task_completed', label: '任务完成' },
     { code: 'task_failed', label: '任务失败' },
     { code: 'task_redo', label: '任务重做' },
+    { code: 'task_commented', label: '任务普通评论' },
+    { code: 'task_summary_commented', label: '任务总结评论' },
     { code: 'task_rejected', label: '任务驳回' },
     { code: 'task_closed', label: '任务关闭' },
     { code: 'task_deleted', label: '任务删除' },
@@ -1223,12 +1225,34 @@ function renderNotifyEventCheckboxes(selectedCodes) {
     var box = document.getElementById('projectNotifyEventGroup');
     if (!box) return;
     var keep = selectedCodes || getCheckedNotifyValues('projectNotifyEventGroup');
-    var html = '';
+    var allChecked = NOTIFY_EVENTS.every(function (ev) { return keep.indexOf(ev.code) !== -1; });
+    // 头部：全选框（横跨两列，与事件项联动）
+    var html = '<label class="notify-select-all"><input type="checkbox" id="notifyEventSelectAll"' + (allChecked ? ' checked' : '') + ' onchange="toggleAllNotifyEvents(this)"> 全选</label>';
     NOTIFY_EVENTS.forEach(function (ev) {
         var checked = keep.indexOf(ev.code) !== -1 ? ' checked' : '';
-        html += '<label class="checkbox-label"><input type="checkbox" value="' + ev.code + '"' + checked + '> ' + ev.label + '</label>';
+        html += '<label class="checkbox-label"><input type="checkbox" value="' + ev.code + '"' + checked + ' onchange="syncNotifyEventSelectAll()"> ' + ev.label + '</label>';
     });
     box.innerHTML = html;
+}
+
+/** 全选/取消全选通知事项 */
+function toggleAllNotifyEvents(master) {
+    var box = document.getElementById('projectNotifyEventGroup');
+    if (!box || !master) return;
+    box.querySelectorAll('input[type="checkbox"]:not(#notifyEventSelectAll)').forEach(function (cb) {
+        cb.checked = master.checked;
+    });
+}
+
+/** 单个事项勾选变化后同步全选框状态 */
+function syncNotifyEventSelectAll() {
+    var box = document.getElementById('projectNotifyEventGroup');
+    var master = document.getElementById('notifyEventSelectAll');
+    if (!box || !master) return;
+    var items = box.querySelectorAll('input[type="checkbox"]:not(#notifyEventSelectAll)');
+    var checkedCount = 0;
+    items.forEach(function (cb) { if (cb.checked) checkedCount++; });
+    master.checked = items.length > 0 && checkedCount === items.length;
 }
 
 /** 读取多选框容器内全部勾选值 */

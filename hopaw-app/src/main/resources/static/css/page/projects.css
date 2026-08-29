@@ -2180,10 +2180,6 @@ body.dark-theme .notify-channel-manage-link {
     min-width: 0;
 }
 
-/* 右列较窄：通知多选项改为单列，避免文字挤压 */
-.project-form-right .notify-check-group {
-    grid-template-columns: 1fr;
-}
 
 /* 窄屏（弹框内可用宽度不足时）退化为上下堆叠 */
 @media (max-width: 860px) {
@@ -2210,4 +2206,24 @@ body.dark-theme .project-form-left {
     body.dark-theme .project-form-left {
         border-bottom-color: #2d2d44;
     }
+}
+/* 通知事项：全选框头部（横跨两列） */
+.notify-check-group .notify-select-all {
+    grid-column: 1 / -1;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 12px;
+    font-weight: 600;
+    color: #667eea;
+    padding: 2px 4px 6px;
+    border-bottom: 1px dashed #e8e8f0;
+    margin-bottom: 2px;
+    cursor: pointer;
+    user-select: none;
+}
+
+body.dark-theme .notify-check-group .notify-select-all {
+    color: #8ba3ff;
+    border-bottom-color: #2d2d44;
 }
