@@ -2160,3 +2160,54 @@ body.dark-theme .notify-check-group .checkbox-label:hover {
 body.dark-theme .notify-channel-manage-link {
     color: #8ba3ff;
 }
+
+/* ========== 项目表单弹框：左右两列布局 ========== */
+.project-form-grid {
+    display: flex;
+    gap: 20px;
+    align-items: flex-start;
+}
+
+.project-form-left {
+    flex: 1 1 58%;
+    min-width: 0;
+    border-right: 1px solid #eee;
+    padding-right: 20px;
+}
+
+.project-form-right {
+    flex: 1 1 42%;
+    min-width: 0;
+}
+
+/* 右列较窄：通知多选项改为单列，避免文字挤压 */
+.project-form-right .notify-check-group {
+    grid-template-columns: 1fr;
+}
+
+/* 窄屏（弹框内可用宽度不足时）退化为上下堆叠 */
+@media (max-width: 860px) {
+    .project-form-grid {
+        flex-direction: column;
+        gap: 0;
+    }
+
+    .project-form-left {
+        border-right: none;
+        padding-right: 0;
+        border-bottom: 1px solid #eee;
+        padding-bottom: 16px;
+        margin-bottom: 16px;
+    }
+}
+
+/* 左右布局暗色 */
+body.dark-theme .project-form-left {
+    border-right-color: #2d2d44;
+}
+
+@media (max-width: 860px) {
+    body.dark-theme .project-form-left {
+        border-bottom-color: #2d2d44;
+    }
+}

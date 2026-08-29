@@ -154,7 +154,7 @@
 
     <!-- 新建/编辑项目模态框 -->
     <div class="modal-overlay" id="projectModal">
-        <div class="modal" style="max-width: 560px;">
+        <div class="modal" style="max-width: 960px;">
             <div class="modal-header">
                 <h3 id="projectModalTitle">新建项目</h3>
                 <button class="modal-close" onclick="closeProjectModal()">&times;</button>
@@ -162,55 +162,61 @@
             <div class="modal-body">
                 <form id="projectForm">
                     <input type="hidden" id="projectId">
-                    <div class="form-group">
-                        <label for="projectName">项目名称 *</label>
-                        <input type="text" id="projectName" placeholder="请输入项目名称">
-                    </div>
-                    <div class="form-group">
-                        <label for="projectDescription">项目描述</label>
-                        <textarea id="projectDescription" rows="4" placeholder="请输入项目描述"></textarea>
-                    </div>
-                    <div class="form-group">
-                        <label for="projectAgentId">项目管理智能体</label>
-                        <select id="projectAgentId" onchange="onProjectAgentChange()"></select>
-                        <small class="form-hint">设置后可由该智能体自动分析项目、创建并审核验收任务</small>
-                    </div>
-                    <div class="form-group" id="projectAutoIterateGroup" style="display:none;">
-                        <label class="checkbox-label">
-                            <input type="checkbox" id="projectAutoIterate" onchange="onProjectAutoIterateChange()">
-                            启用自动迭代（定时驱动项目管理智能体推进项目）
-                        </label>
-                    </div>
-                    <div class="form-group" id="projectIteratePromptGroup" style="display:none;">
-                        <label for="projectIteratePrompt">迭代要求提示词</label>
-                        <textarea id="projectIteratePrompt" rows="3" placeholder="追加给项目管理智能体的额外迭代要求，如：每轮迭代优先处理待验收任务、产出物写入 docs 目录等"></textarea>
-                        <small class="form-hint">自动迭代与手动下发指令时均生效，作为额外迭代要求注入项目管理智能体</small>
-                    </div>
-                    <div class="notify-settings-section">
-                        <div class="notify-settings-title">通知设置</div>
-                        <div class="form-group">
-                            <label>
-                                通知渠道
-                                <a href="/settings/notify" class="notify-channel-manage-link">管理渠道</a>
-                            </label>
-                            <div class="notify-check-group" id="projectNotifyChannelGroup"></div>
-                            <small class="form-hint">勾选后项目关键事件将向这些渠道发送通知；渠道在「系统设置 - 通知渠道」中管理</small>
+                    <div class="project-form-grid">
+                        <div class="project-form-left">
+                            <div class="form-group">
+                                <label for="projectName">项目名称 *</label>
+                                <input type="text" id="projectName" placeholder="请输入项目名称">
+                            </div>
+                            <div class="form-group">
+                                <label for="projectDescription">项目描述</label>
+                                <textarea id="projectDescription" rows="4" placeholder="请输入项目描述"></textarea>
+                            </div>
+                            <div class="form-group">
+                                <label for="projectAgentId">项目管理智能体</label>
+                                <select id="projectAgentId" onchange="onProjectAgentChange()"></select>
+                                <small class="form-hint">设置后可由该智能体自动分析项目、创建并审核验收任务</small>
+                            </div>
+                            <div class="form-group" id="projectAutoIterateGroup" style="display:none;">
+                                <label class="checkbox-label">
+                                    <input type="checkbox" id="projectAutoIterate" onchange="onProjectAutoIterateChange()">
+                                    启用自动迭代（定时驱动项目管理智能体推进项目）
+                                </label>
+                            </div>
+                            <div class="form-group" id="projectIteratePromptGroup" style="display:none;">
+                                <label for="projectIteratePrompt">迭代要求提示词</label>
+                                <textarea id="projectIteratePrompt" rows="3" placeholder="追加给项目管理智能体的额外迭代要求，如：每轮迭代优先处理待验收任务、产出物写入 docs 目录等"></textarea>
+                                <small class="form-hint">自动迭代与手动下发指令时均生效，作为额外迭代要求注入项目管理智能体</small>
+                            </div>
+                            <div class="form-group" id="spaceModeGroup">
+                                <label>项目空间</label>
+                                <div class="space-type-radio">
+                                    <label><input type="radio" name="spaceMode" value="auto" checked onchange="onSpaceModeChange()"> 自动创建</label>
+                                    <label><input type="radio" name="spaceMode" value="local" onchange="onSpaceModeChange()"> 使用本地目录</label>
+                                </div>
+                                <div id="localSpaceBox" style="display:none; margin-top:8px;">
+                                    <input type="text" id="projectLocalSpaceDir" placeholder="请输入本地目录绝对路径，如 D:\my-project" style="width:100%;">
+                                    <small style="color:#999;">将该本地目录作为项目空间，目录不存在时会自动创建</small>
+                                </div>
+                            </div>
                         </div>
-                        <div class="form-group">
-                            <label>通知事项</label>
-                            <div class="notify-check-group" id="projectNotifyEventGroup"></div>
-                            <small class="form-hint">勾选需要发送通知的项目与任务关键变化事件</small>
-                        </div>
-                    </div>
-                    <div class="form-group" id="spaceModeGroup">
-                        <label>项目空间</label>
-                        <div class="space-type-radio">
-                            <label><input type="radio" name="spaceMode" value="auto" checked onchange="onSpaceModeChange()"> 自动创建</label>
-                            <label><input type="radio" name="spaceMode" value="local" onchange="onSpaceModeChange()"> 使用本地目录</label>
-                        </div>
-                        <div id="localSpaceBox" style="display:none; margin-top:8px;">
-                            <input type="text" id="projectLocalSpaceDir" placeholder="请输入本地目录绝对路径，如 D:\my-project" style="width:100%;">
-                            <small style="color:#999;">将该本地目录作为项目空间，目录不存在时会自动创建</small>
+                        <div class="project-form-right">
+                            <div class="notify-settings-section">
+                                <div class="notify-settings-title">通知设置</div>
+                                <div class="form-group">
+                                    <label>
+                                        通知渠道
+                                        <a href="/settings/notify" class="notify-channel-manage-link">管理渠道</a>
+                                    </label>
+                                    <div class="notify-check-group" id="projectNotifyChannelGroup"></div>
+                                    <small class="form-hint">勾选后项目关键事件将向这些渠道发送通知；渠道在「系统设置 - 通知渠道」中管理</small>
+                                </div>
+                                <div class="form-group">
+                                    <label>通知事项</label>
+                                    <div class="notify-check-group" id="projectNotifyEventGroup"></div>
+                                    <small class="form-hint">勾选需要发送通知的项目与任务关键变化事件</small>
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </form>
