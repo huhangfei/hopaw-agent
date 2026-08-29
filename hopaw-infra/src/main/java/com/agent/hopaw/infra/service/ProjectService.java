@@ -216,6 +216,7 @@ public class ProjectService implements IProjectService {
             existing.setSpaceDir(dir);
             existing.setUpdateTime(LocalDateTime.now());
             projectMapper.update(existing);
+            fillSpaceDirAbs(existing);
             logger.info("项目[{}]空间目录已修改为: {}", id, dir);
             return existing;
         } catch (RuntimeException e) {
@@ -340,7 +341,17 @@ public class ProjectService implements IProjectService {
         if (!userId.equals(project.getUserId())) {
             return null;
         }
+        fillSpaceDirAbs(project);
         return project;
+    }
+
+    /**
+     * 填充展示用的空间目录绝对路径（存储值不变：相对路径按运行目录解析，绝对路径原样）。
+     */
+    private void fillSpaceDirAbs(Project project) {
+        if (project == null) return;
+        Path abs = resolveSpaceDirAbsolutePath(project.getSpaceDir());
+        project.setSpaceDirAbs(abs != null ? abs.toString() : null);
     }
 
     @Override

@@ -549,28 +549,39 @@ body.dark-theme .detail-tasks-section .btn-add-task-detail:hover {
 }
 
 /* ========== 项目空间 ========== */
-.space-dir-info {
+/* 空间目录行（标题栏内：紧跟"项目空间"文字，含复制与编辑按钮） */
+.space-dir-inline {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
     font-size: 12px;
+    font-weight: 400;
     color: #888;
-    margin-bottom: 8px;
-    word-break: break-all;
+    margin-left: 8px;
+    margin-right: auto;
+    min-width: 0;
 }
 
-.space-dir-info .space-dir-label {
+.space-dir-inline .space-dir-label {
     color: #999;
 }
 
-.space-dir-info .space-dir-path {
+.space-dir-inline .space-dir-path {
     background: #f0f0f0;
     color: #555;
     padding: 1px 6px;
     border-radius: 4px;
     font-family: 'Consolas', 'Monaco', monospace;
     font-size: 12px;
+    max-width: 280px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
 }
 
-/* 空间目录编辑按钮（🖊）：悬停高亮 */
-.space-dir-info .space-dir-edit-btn {
+/* 空间目录复制（📋）与编辑（🖊）按钮：悬停高亮 */
+.space-dir-inline .space-dir-copy-btn,
+.space-dir-inline .space-dir-edit-btn {
     border: none;
     background: transparent;
     color: #999;
@@ -580,10 +591,12 @@ body.dark-theme .detail-tasks-section .btn-add-task-detail:hover {
     display: inline-flex;
     align-items: center;
     vertical-align: middle;
+    flex-shrink: 0;
     transition: color .15s, background .15s;
 }
 
-.space-dir-info .space-dir-edit-btn:hover {
+.space-dir-inline .space-dir-copy-btn:hover,
+.space-dir-inline .space-dir-edit-btn:hover {
     color: #667eea;
     background: rgba(102, 126, 234, 0.1);
 }
@@ -1329,24 +1342,26 @@ body.dark-theme .detail-empty-text {
 }
 
 /* 项目空间暗色 */
-body.dark-theme .space-dir-info {
+body.dark-theme .space-dir-inline {
     color: #888;
 }
 
-body.dark-theme .space-dir-info .space-dir-label {
+body.dark-theme .space-dir-inline .space-dir-label {
     color: #888;
 }
 
-body.dark-theme .space-dir-info .space-dir-path {
+body.dark-theme .space-dir-inline .space-dir-path {
     background: #2d2d44;
     color: #c0c0c0;
 }
 
-body.dark-theme .space-dir-info .space-dir-edit-btn {
+body.dark-theme .space-dir-inline .space-dir-copy-btn,
+body.dark-theme .space-dir-inline .space-dir-edit-btn {
     color: #888;
 }
 
-body.dark-theme .space-dir-info .space-dir-edit-btn:hover {
+body.dark-theme .space-dir-inline .space-dir-copy-btn:hover,
+body.dark-theme .space-dir-inline .space-dir-edit-btn:hover {
     color: #8ba3ff;
     background: rgba(139, 163, 255, 0.12);
 }

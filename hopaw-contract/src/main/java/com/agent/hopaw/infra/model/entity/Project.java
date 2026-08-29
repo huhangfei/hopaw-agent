@@ -12,8 +12,10 @@ public class Project {
     /** 状态，见 ProjectStatusEnum：planning / in_progress / paused / completed / archived */
     private String status;
     private String userId;
-    /** 项目空间目录（项目工作空间的绝对路径，创建项目时根据项目编号自动生成） */
+    /** 项目空间目录（支持相对路径与绝对路径：相对路径以服务运行目录为起点，创建项目自动创建时存相对路径） */
     private String spaceDir;
+    /** 项目空间目录绝对路径（非持久字段，仅展示用：相对路径存储时按运行目录解析出的绝对路径） */
+    private String spaceDirAbs;
     /** 项目管理智能体编号（配置后可由调度任务自动迭代项目） */
     private Long agentId;
     /** 是否启用自动迭代：true=启用（启用后由定时任务周期性驱动项目管理智能体） */
@@ -73,6 +75,14 @@ public class Project {
 
     public void setSpaceDir(String spaceDir) {
         this.spaceDir = spaceDir;
+    }
+
+    public String getSpaceDirAbs() {
+        return spaceDirAbs;
+    }
+
+    public void setSpaceDirAbs(String spaceDirAbs) {
+        this.spaceDirAbs = spaceDirAbs;
     }
 
     public Long getAgentId() {

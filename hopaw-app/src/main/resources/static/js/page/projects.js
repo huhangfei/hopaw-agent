@@ -22,6 +22,8 @@ var currentProjectAgentSessionId = ''; // 项目管理智能体会话ID：用于
 // 空间目录编辑按钮铅笔图标（与迭代提示词编辑按钮风格一致）
 var PENCIL_SVG = '<svg viewBox=""0 0 24 24"" width=""14"" height=""14"" fill=""none"" stroke=""currentColor"" stroke-width=""2"" stroke-linecap=""round"" stroke-linejoin=""round""><path d=""M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7""/><path d=""M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z""/></svg>';
 
+// 空间目录复制按钮图标
+var COPY_SVG = '<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>';
 // 项目状态字典
 var PROJECT_STATUS = {
     planning:    { label: '规划中', color: '#6b7280' },
@@ -1212,7 +1214,7 @@ function submitProject() {
 function editProjectSpaceDir() {
     if (!currentProjectId || !currentProject) return;
     var placeholder = '相对路径（如 my-space 或 project-spaces/101）或绝对路径（如 D:\\data\\project）';
-    showPrompt('修改空间目录（相对路径以服务运行目录为起点）', placeholder, currentProject.spaceDir || '')
+    showPrompt('修改空间目录（当前: ' + (currentProject.spaceDirAbs || currentProject.spaceDir || '未设置') + '，相对路径以服务运行目录为起点）', placeholder, currentProject.spaceDir || '')
         .then(function (newDir) {
             if (newDir === null) return; // 取消
             if (!newDir) {
@@ -1243,16 +1245,55 @@ function editProjectSpaceDir() {
         });
 }
 
-/** 单独重渲染空间目录行（含🖊编辑按钮） */
+/** 渲染空间目录行（标题栏内：显示绝对路径 + 复制按钮 + 修改按钮） */
 function renderSpaceDirRow(project) {
     var spaceDirEl = document.getElementById('spaceDirInfo');
     if (!spaceDirEl) return;
-    if (project.spaceDir) {
-        spaceDirEl.innerHTML = '<span class="space-dir-label">空间目录：</span><code class="space-dir-path">' + escapeHtml(project.spaceDir) + '</code>' +
+    // 显示解析后的绝对路径（存储值保持不变），悬停提示存储值与解析路径
+    var display = project.spaceDirAbs || project.spaceDir;
+    if (display) {
+        var tip = (project.spaceDir && project.spaceDir !== display)
+            ? '存储: ' + project.spaceDir + '\n路径: ' + display
+            : display;
+        spaceDirEl.innerHTML = '<code class="space-dir-path" title="' + escapeHtml(tip) + '">' + escapeHtml(display) + '</code>' +
+            '<button class="space-dir-copy-btn" title="复制目录地址" onclick="copySpaceDir()">' + COPY_SVG + '</button>' +
             '<button class="space-dir-edit-btn" title="修改空间目录" onclick="editProjectSpaceDir()">' + PENCIL_SVG + '</button>';
     } else {
-        spaceDirEl.innerHTML = '<span class="space-dir-label">空间目录：未创建</span>' +
+        spaceDirEl.innerHTML = '<span class="space-dir-label">未设置</span>' +
             '<button class="space-dir-edit-btn" title="设置空间目录" onclick="editProjectSpaceDir()">' + PENCIL_SVG + '</button>';
+    }
+}
+
+/** 复制空间目录地址到剪贴板（Clipboard API 优先，降级 execCommand） */
+function copySpaceDir() {
+    if (!currentProject) return;
+    var text = currentProject.spaceDirAbs || currentProject.spaceDir || '';
+    if (!text) return;
+    function done() { showToast('目录地址已复制', 'success'); }
+    function fail() { showToast('复制失败', 'error'); }
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(text).then(done).catch(function () {
+            if (fallbackCopyText(text)) { done(); } else { fail(); }
+        });
+    } else {
+        if (fallbackCopyText(text)) { done(); } else { fail(); }
+    }
+}
+
+/** 兼容旧浏览器的复制降级方案 */
+function fallbackCopyText(text) {
+    try {
+        var ta = document.createElement('textarea');
+        ta.value = text;
+        ta.style.position = 'fixed';
+        ta.style.opacity = '0';
+        document.body.appendChild(ta);
+        ta.select();
+        var ok = document.execCommand('copy');
+        document.body.removeChild(ta);
+        return ok;
+    } catch (e) {
+        return false;
     }
 }
 function deleteCurrentProject() {

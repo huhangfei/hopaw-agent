@@ -95,6 +95,7 @@
                 <div class="detail-section">
                     <div class="section-title">
                         <span>项目空间</span>
+                        <span class="space-dir-inline" id="spaceDirInfo"></span>
                         <span class="space-toolbar">
                             <input type="file" id="projectSpaceFileInput" multiple style="display:none" onchange="onProjectSpaceFileSelected(this)">
                             <button class="btn-space" onclick="triggerSpaceUpload('')">上传文件</button>
@@ -103,7 +104,6 @@
                             <button class="btn-space" onclick="downloadAllProjectFiles()">下载全部</button>
                         </span>
                     </div>
-                    <div class="space-dir-info" id="spaceDirInfo"></div>
                     <div id="detailFiles" class="detail-files"></div>
                 </div>
 
