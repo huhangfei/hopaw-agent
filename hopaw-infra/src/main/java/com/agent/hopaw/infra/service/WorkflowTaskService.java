@@ -46,6 +46,8 @@ public class WorkflowTaskService implements IWorkflowTaskService {
     /** 执行时段格式：HH:mm-HH:mm（每日允许调度拉起的时间窗口，支持跨天如 22:00-06:00） */
     private static final Pattern EXECUTION_PERIOD_PATTERN =
             Pattern.compile("^([01]\\d|2[0-3]):([0-5]\\d)-([01]\\d|2[0-3]):([0-5]\\d)$");
+    /** 任务系统提示词注入的项目重点日志条数上限（更早历史通过项目工具查询） */
+    private static final int IMPORTANT_LOGS_INJECT_LIMIT = 10;
 
     private final WorkflowTaskMapper workflowTaskMapper;
     private final WorkflowTaskPreconditionMapper preconditionMapper;
@@ -60,6 +62,7 @@ public class WorkflowTaskService implements IWorkflowTaskService {
     private final IProjectLogService projectLogService;
     private final IGlobalNoticeService globalNoticeService;
     private final INotificationService notificationService;
+    private final com.agent.hopaw.infra.memory.ProjectMemoryService projectMemoryService;
 
     public WorkflowTaskService(WorkflowTaskMapper workflowTaskMapper,
                                WorkflowTaskPreconditionMapper preconditionMapper,
@@ -73,7 +76,8 @@ public class WorkflowTaskService implements IWorkflowTaskService {
                                IProjectService projectService,
                                IProjectLogService projectLogService,
                                IGlobalNoticeService globalNoticeService,
-                               INotificationService notificationService) {
+                               INotificationService notificationService,
+                               com.agent.hopaw.infra.memory.ProjectMemoryService projectMemoryService) {
         this.workflowTaskMapper = workflowTaskMapper;
         this.preconditionMapper = preconditionMapper;
         this.taskSessionMapper = taskSessionMapper;
@@ -87,6 +91,7 @@ public class WorkflowTaskService implements IWorkflowTaskService {
         this.projectLogService = projectLogService;
         this.globalNoticeService = globalNoticeService;
         this.notificationService = notificationService;
+        this.projectMemoryService = projectMemoryService;
     }
 
     @Override
@@ -513,6 +518,8 @@ public class WorkflowTaskService implements IWorkflowTaskService {
                     systemMsgBuilder.append("\n--- 项目细节 ---\n");
                     systemMsgBuilder.append("本任务关联项目「").append(project.getName()).append("」，项目描述为：\n");
                     systemMsgBuilder.append(project.getDescription()).append("\n");
+                    // 注入项目空间记忆：项目整体记忆 + 本任务历史执行记忆（跨用户共享，任务重做/续接时提供上下文）
+                    appendProjectSpaceMemories(systemMsgBuilder, task);
                     // 注入项目重点日志，为智能体提供项目历史关键结论（含各任务总结评论）
                     appendImportantProjectLogs(systemMsgBuilder, task.getProjectId());
                     // 存储层只保留相对路径，任务提示词需要注入真实绝对路径
@@ -532,17 +539,43 @@ public class WorkflowTaskService implements IWorkflowTaskService {
         return systemMsgBuilder.toString();
     }
 
-    /** 将项目重点日志（important 类型）追加到任务系统提示词，为智能体提供项目历史关键结论 */
+    /**
+     * 注入项目空间记忆：项目整体记忆（项目维度沉淀）+ 本任务历史执行记忆（任务维度沉淀）。
+     * 两者均跨用户共享，任务重做、续接执行时为智能体提供历史上下文。注入失败不阻断任务执行。
+     */
+    private void appendProjectSpaceMemories(StringBuilder systemMsgBuilder, WorkflowTask task) {
+        try {
+            String projectMemory = projectMemoryService.getProjectMemoryContent(task.getProjectId());
+            if (projectMemory != null && !projectMemory.isBlank()) {
+                systemMsgBuilder.append("\n--- 项目记忆 ---\n");
+                systemMsgBuilder.append("以下是项目沉淀的整体记忆（目标、进展、关键决策与经验教训），执行任务时请充分参考：\n");
+                systemMsgBuilder.append(projectMemory).append("\n");
+            }
+            String taskMemory = projectMemoryService.getTaskMemoryContent(task.getProjectId(), task.getId());
+            if (taskMemory != null && !taskMemory.isBlank()) {
+                systemMsgBuilder.append("\n--- 本任务历史记忆 ---\n");
+                systemMsgBuilder.append("以下是本任务此前执行沉淀的记忆（历史执行结论、用户反馈、未完成事项），继续处理时请充分参考：\n");
+                systemMsgBuilder.append(taskMemory).append("\n");
+            }
+        } catch (Exception e) {
+            logger.warn("注入项目空间记忆失败，任务[{}]项目[{}]: {}", task.getId(), task.getProjectId(), e.getMessage());
+        }
+    }
+
     private void appendImportantProjectLogs(StringBuilder systemMsgBuilder, Long projectId) {
         try {
             List<ProjectLog> importantLogs = projectLogService.getImportantLogsByProjectId(projectId);
             if (importantLogs == null || importantLogs.isEmpty()) {
                 return;
             }
+            // 仅注入最近10条，避免提示词过长；更多历史通过工具查询
+            int total = importantLogs.size();
+            int fromIndex = Math.max(total - IMPORTANT_LOGS_INJECT_LIMIT, 0);
+            List<ProjectLog> recentLogs = importantLogs.subList(fromIndex, total);
             DateTimeFormatter fmt = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm");
-            systemMsgBuilder.append("\n--- 项目重点日志 ---\n");
+            systemMsgBuilder.append("\n--- 项目重点日志（最近").append(recentLogs.size()).append("条） ---\n");
             systemMsgBuilder.append("以下是该项目历史沉淀的重点信息（含各任务的关键结论与总结），执行任务时请充分参考：\n");
-            for (ProjectLog logItem : importantLogs) {
+            for (ProjectLog logItem : recentLogs) {
                 systemMsgBuilder.append('[')
                         .append(logItem.getCreateTime() != null ? logItem.getCreateTime().format(fmt) : "时间未知")
                         .append("][")
@@ -550,6 +583,11 @@ public class WorkflowTaskService implements IWorkflowTaskService {
                         .append("] ")
                         .append(logItem.getDetail() != null ? logItem.getDetail() : "")
                         .append('\n');
+            }
+            if (total > recentLogs.size()) {
+                systemMsgBuilder.append("（以上仅展示最近").append(recentLogs.size())
+                        .append("条，项目共有").append(total)
+                        .append("条重点日志，如需了解更早的历史关键结论，请使用项目工具查询项目日志。）\n");
             }
         } catch (Exception e) {
             // 重点日志注入失败不阻断任务执行

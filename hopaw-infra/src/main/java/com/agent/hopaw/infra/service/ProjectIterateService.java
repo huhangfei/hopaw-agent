@@ -47,6 +47,8 @@ public class ProjectIterateService implements IProjectIterateService {
     /** 执行超时时间（秒），与定时拉起的工作流任务保持一致 */
     private static final long EXECUTE_TIMEOUT_SECONDS = 1800;
     private static final String EXECUTE_USER_MESSAGE = "【项目自动迭代】请执行本轮项目迭代检查。\n请严格按照本次自动迭代要求执行。\n";
+    /** 项目系统提示词注入的项目重点日志条数上限（更早历史通过项目工具查询） */
+    private static final int IMPORTANT_LOGS_INJECT_LIMIT = 10;
 
     private final ProjectMapper projectMapper;
     private final WorkflowTaskMapper workflowTaskMapper;
@@ -57,6 +59,7 @@ public class ProjectIterateService implements IProjectIterateService {
     private final IProjectService projectService;
     private final IProjectLogService projectLogService;
     private final INotificationService notificationService;
+    private final com.agent.hopaw.infra.memory.ProjectMemoryService projectMemoryService;
 
     public ProjectIterateService(ProjectMapper projectMapper,
                                  WorkflowTaskMapper workflowTaskMapper,
@@ -66,7 +69,8 @@ public class ProjectIterateService implements IProjectIterateService {
                                  IMcpServerConfigService mcpServerConfigService,
                                  IProjectService projectService,
                                  IProjectLogService projectLogService,
-                                 INotificationService notificationService) {
+                                 INotificationService notificationService,
+                                 com.agent.hopaw.infra.memory.ProjectMemoryService projectMemoryService) {
         this.projectMapper = projectMapper;
         this.workflowTaskMapper = workflowTaskMapper;
         this.agentService = agentService;
@@ -76,6 +80,7 @@ public class ProjectIterateService implements IProjectIterateService {
         this.projectService = projectService;
         this.projectLogService = projectLogService;
         this.notificationService = notificationService;
+        this.projectMemoryService = projectMemoryService;
     }
 
     @Override
@@ -285,14 +290,34 @@ public class ProjectIterateService implements IProjectIterateService {
         sb.append("项目状态：").append(statusText(project.getStatus())).append("\n");
         sb.append("项目描述：").append(project.getDescription() != null ? project.getDescription() : "无").append("\n");
 
-        // 注入项目重点日志，提供历史关键结论（含各任务总结评论）
+        // 注入项目空间记忆：项目维度沉淀的整体记忆（目标、进展、关键决策、经验教训）
+        try {
+            String projectMemory = projectMemoryService.getProjectMemoryContent(project.getId());
+            if (projectMemory != null && !projectMemory.isBlank()) {
+                sb.append("\n--- 项目记忆 ---\n");
+                sb.append("以下是项目沉淀的整体记忆，规划任务与推进项目时请充分参考：\n");
+                sb.append(projectMemory).append("\n");
+            }
+        } catch (Exception e) {
+            logger.warn("注入项目记忆失败，项目[{}]: {}", project.getId(), e.getMessage());
+        }
+
+        // 注入项目重点日志，提供历史关键结论（含各任务总结评论）——仅最近10条，避免提示词过长
         List<ProjectLog> importantLogs = projectLogService.getImportantLogsByProjectId(project.getId());
         if (importantLogs != null && !importantLogs.isEmpty()) {
-            sb.append("\n--- 项目重点日志 ---\n");
-            for (ProjectLog log : importantLogs) {
+            int logTotal = importantLogs.size();
+            int logFrom = Math.max(logTotal - IMPORTANT_LOGS_INJECT_LIMIT, 0);
+            List<ProjectLog> recentLogs = importantLogs.subList(logFrom, logTotal);
+            sb.append("\n--- 项目重点日志（最近").append(recentLogs.size()).append("条） ---\n");
+            for (ProjectLog log : recentLogs) {
                 sb.append("[").append(log.getCreateTime() != null ? log.getCreateTime().format(TIME_FMT) : "").append("] ")
                         .append(log.getDetail() != null ? log.getDetail() : "")
                         .append("\n");
+            }
+            if (logTotal > recentLogs.size()) {
+                sb.append("（以上仅展示最近").append(recentLogs.size())
+                        .append("条，项目共有").append(logTotal)
+                        .append("条重点日志，如需了解更早的历史关键结论，请使用项目工具查询项目日志。）\n");
             }
         }
 

@@ -944,12 +944,30 @@ public class AgentExecutor implements IAgentExecutor {
             AiToolCallMessageInfo toolCallMessageInfo= AiToolCallMessageInfo.build(status,sessionId, requestId,
                     id,
                     toolName,
-                    JSON.parseObject(arguments),
+                    parseToolArgumentsSafely(arguments),
                     result,
                     toolDescriptions
             );
             sendToolCallHistoryEventAndToChannel(toolCallMessageInfo);
             messageTypeChangedChatHistoryHandler(AiToolCallMessageInfo.TYPE_TOOL_CALL+"_"+status);
+        }
+
+        /**
+         * 解析工具调用参数 JSON：参数由模型流式生成，可能不完整或非法。
+         * 解析失败时不抛异常，返回包含失败原因与原始参数文本的兜底 Map，保证消息链路不断。
+         */
+        private Object parseToolArgumentsSafely(String arguments) {
+            if (arguments == null || arguments.isBlank()) {
+                return new com.alibaba.fastjson2.JSONObject();
+            }
+            try {
+                return JSON.parseObject(arguments);
+            } catch (Exception e) {
+                com.alibaba.fastjson2.JSONObject fallback = new com.alibaba.fastjson2.JSONObject();
+                fallback.put("parseError", "工具调用参数不是合法的完整 JSON：" + e.getMessage());
+                fallback.put("rawArguments", arguments);
+                return fallback;
+            }
         }
 
         private void thinkingHandler(PartialThinking thinking) {

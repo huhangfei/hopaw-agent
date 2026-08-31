@@ -1,0 +1,26 @@
+# hopaw-agent 容器编排
+# 使用：先执行 docker-build.bat 构建镜像，再 docker-compose up -d
+# 数据持久化：SQLite 库与全部运行时目录统一挂载在 ./data 下，容器重建不丢数据
+services:
+  hopaw-agent:
+    image: hopaw-agent:1.0.0
+    build: .
+    container_name: hopaw-agent
+    restart: unless-stopped
+    ports:
+      - "8080:8080"
+    environment:
+      TZ: Asia/Shanghai
+      # 运行时目录统一重定向到 /app/data（环境变量优先级高于 application-*.properties）
+      SPRING_DATASOURCE_URL: jdbc:sqlite:/app/data/agent.db
+      HOPAW_ATTACHMENT_DIR: /app/data/attachments
+      HOPAW_PROJECT_SPACE_DIR: /app/data/project-spaces
+      HOPAW_UPLOAD_DIR: /app/data/uploads
+      AGENT_PLUGIN_DIR: /app/data/plugins
+    volumes:
+      - ./data:/app/data
+      - ./logs:/app/logs
+      # 技能目录默认为相对路径 skills（可在系统设置中改为 /app/data/skills），挂载兜底
+      - ./data/skills:/app/skills
+    # 按需调整 JVM 内存
+    # mem_limit: 2g

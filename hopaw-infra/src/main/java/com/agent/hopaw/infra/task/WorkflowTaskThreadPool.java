@@ -128,8 +128,13 @@ public class WorkflowTaskThreadPool {
 
     /** 读取整型配置：带默认值与上下限裁剪，非法值回退默认值 */
     private int readIntConfig(String key, int defaultValue, int min, int max) {
-        String raw = sysConfigService.getValueByKey(key, String.valueOf(defaultValue));
-        if (raw == null || raw.trim().isEmpty()) {
+        String raw;
+        try {
+            raw = sysConfigService.getValueByKey(key, String.valueOf(defaultValue));
+        } catch (Exception e) {
+            // 首次启动空库时表尚未由 DatabaseInitializer 创建（其建表时机晚于 bean 初始化），
+            // 回退默认值保证应用能启动；建表后可在设置页调整并动态重建
+            logger.warn("读取线程池配置失败（库表可能尚未初始化），使用默认值: key={}, 原因: {}", key, e.getMessage());
             return defaultValue;
         }
         try {

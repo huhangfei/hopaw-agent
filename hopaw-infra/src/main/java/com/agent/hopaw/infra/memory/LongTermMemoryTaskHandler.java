@@ -1,15 +1,23 @@
 package com.agent.hopaw.infra.memory;
 
+import com.agent.hopaw.infra.constant.AgentExecutorBizTypeEnum;
 import com.agent.hopaw.infra.constant.AiModelCallSourceEnum;
 import com.agent.hopaw.infra.constant.ChatMemoryStatusEnum;
 import com.agent.hopaw.infra.constant.UserMemoryTypeEnum;
 import com.agent.hopaw.infra.mapper.ChatMemoryMapper;
 import com.agent.hopaw.infra.mapper.ChatMemoryObsoleteMapper;
 import com.agent.hopaw.infra.mapper.ChatMemoryProcessedCursorMapper;
+import com.agent.hopaw.infra.mapper.ChatSessionMapper;
+import com.agent.hopaw.infra.mapper.ProjectMapper;
+import com.agent.hopaw.infra.mapper.TaskSessionMapper;
+import com.agent.hopaw.infra.mapper.WorkflowTaskMapper;
 import com.agent.hopaw.infra.model.entity.ChatMemory;
 import com.agent.hopaw.infra.model.entity.ChatMemoryProcessedCursor;
+import com.agent.hopaw.infra.model.entity.ChatSession;
 import com.agent.hopaw.infra.model.entity.LongTermMemory;
+import com.agent.hopaw.infra.model.entity.Project;
 import com.agent.hopaw.infra.model.entity.ScheduledTask;
+import com.agent.hopaw.infra.model.entity.WorkflowTask;
 import com.agent.hopaw.infra.monitor.LangChain4jChatModelListener;
 import com.agent.hopaw.infra.service.IAiModelService;
 import com.agent.hopaw.infra.service.ISysConfigService;
@@ -54,6 +62,11 @@ public class LongTermMemoryTaskHandler implements TaskHandler {
     private final ChatMemoryObsoleteMapper chatMemoryObsoleteMapper;
     private final ChatMemoryMapper chatMemoryMapper;
     private final ChatMemoryProcessedCursorMapper processedCursorMapper;
+    private final ChatSessionMapper chatSessionMapper;
+    private final TaskSessionMapper taskSessionMapper;
+    private final WorkflowTaskMapper workflowTaskMapper;
+    private final ProjectMapper projectMapper;
+    private final ProjectMemoryService projectMemoryService;
 
     // 运行中标记，防止并发执行
     private volatile boolean running = false;
@@ -64,7 +77,12 @@ public class LongTermMemoryTaskHandler implements TaskHandler {
                                      ApplicationEventPublisher eventPublisher,
                                      ChatMemoryObsoleteMapper chatMemoryObsoleteMapper,
                                      ChatMemoryMapper chatMemoryMapper,
-                                     ChatMemoryProcessedCursorMapper processedCursorMapper) {
+                                     ChatMemoryProcessedCursorMapper processedCursorMapper,
+                                     ChatSessionMapper chatSessionMapper,
+                                     TaskSessionMapper taskSessionMapper,
+                                     WorkflowTaskMapper workflowTaskMapper,
+                                     ProjectMapper projectMapper,
+                                     ProjectMemoryService projectMemoryService) {
         this.aiModelService = aiModelService;
         this.longTermMemoryService = longTermMemoryService;
         this.sysConfigService = sysConfigService;
@@ -72,6 +90,11 @@ public class LongTermMemoryTaskHandler implements TaskHandler {
         this.chatMemoryObsoleteMapper = chatMemoryObsoleteMapper;
         this.chatMemoryMapper = chatMemoryMapper;
         this.processedCursorMapper = processedCursorMapper;
+        this.chatSessionMapper = chatSessionMapper;
+        this.taskSessionMapper = taskSessionMapper;
+        this.workflowTaskMapper = workflowTaskMapper;
+        this.projectMapper = projectMapper;
+        this.projectMemoryService = projectMemoryService;
     }
     public void processAgentMemories() {
         try {
@@ -322,22 +345,10 @@ public class LongTermMemoryTaskHandler implements TaskHandler {
         }
         //这是新消息
         String newConversation = buildMessageSummary(cleanedMessages);
-        //现有记忆
-        List<LongTermMemory> longTermMemories = longTermMemoryService.queryUserAllMemories(sessionId, userId);
 
-        //扩展知识往往较大，不输入详情
-        String longTermMemoryContent = longTermMemoryService.buildMemoryContent(longTermMemories, longTermMemory -> {
-            if (UserMemoryTypeEnum.USER_PROFILE.getCode().equals(longTermMemory.getMemoryType()) || UserMemoryTypeEnum.TASK_RECORDS.getCode().equals(longTermMemory.getMemoryType())) {
-                return true;
-            }
-            return false;
-        });
-
-        String content = "以下是需要分析的新会话内容\n";
-        content += newConversation;
-        content +=("\n===========================");
-
-        boolean handle = handle(sessionId, userId, longTermMemoryContent,content);
+        // 按会话业务类型分流：任务/项目会话沉淀到项目空间记忆（项目/任务维度，跨用户共享）；
+        // 聊天会话走原有用户维度长时记忆
+        boolean handle = dispatchMemoryByBizType(sessionId, userId, newConversation);
         if (handle) {
             // 2.1) 推进 chat_memory 游标
             long newLastChatMemoryId = lastChatMemoryId;
@@ -369,9 +380,94 @@ public class LongTermMemoryTaskHandler implements TaskHandler {
                                               computeMaxId(obsoleteIncremental)));
             processedCursorMapper.upsert(newCursor);
         }
-        longTermMemoryService.deleteExpiredTaskRecordsMemories(sessionId, userId);
+        // 过期任务记录清理仅对聊天会话的用户记忆生效
+        if (isChatSession(sessionId)) {
+            longTermMemoryService.deleteExpiredTaskRecordsMemories(sessionId, userId);
+        }
 
         logger.info("Processing memory for sessionId: {}, cleaned messages count: {}", sessionId, cleanedMessages.size());
+    }
+
+    /**
+     * 按会话业务类型分流记忆沉淀：
+     * - 聊天会话：走原有用户维度长时记忆（用户画像/任务记录/经验知识）
+     * - 任务会话：按任务维度沉淀到项目空间 memory/task-{taskId}-memory.md
+     * - 项目会话：按项目维度沉淀到项目空间 memory/project-memory.md
+     *
+     * @return 是否处理成功（成功才推进游标）
+     */
+    private boolean dispatchMemoryByBizType(String sessionId, String userId, String newConversation) {
+        String bizType = getSessionBizType(sessionId);
+
+        // 任务会话：定位任务与所属项目，写入任务记忆
+        if (AgentExecutorBizTypeEnum.WorkflowTaskChat.getAiModelCallSourceEnum().getValue().equals(bizType)) {
+            try {
+                Long taskId = taskSessionMapper.findTaskIdBySessionId(sessionId);
+                if (taskId == null) {
+                    logger.warn("任务会话记忆整理：未找到会话关联任务，跳过 sessionId={}", sessionId);
+                    return true; // 无关联任务无法沉淀，直接推进游标避免反复重试
+                }
+                WorkflowTask task = workflowTaskMapper.findById(taskId);
+                if (task == null || task.getProjectId() == null) {
+                    logger.info("任务会话记忆整理：任务[{}]无关联项目，跳过沉淀", taskId);
+                    return true;
+                }
+                projectMemoryService.updateTaskMemory(task.getProjectId(), taskId, newConversation, userId);
+                return true;
+            } catch (Exception e) {
+                logger.error("任务会话记忆整理失败 sessionId={}", sessionId, e);
+                return false;
+            }
+        }
+
+        // 项目会话：写入项目整体记忆
+        if (AgentExecutorBizTypeEnum.ProjectChat.getAiModelCallSourceEnum().getValue().equals(bizType)) {
+            try {
+                Project project = projectMapper.findBySessionId(sessionId);
+                if (project == null) {
+                    logger.warn("项目会话记忆整理：未找到会话关联项目，跳过 sessionId={}", sessionId);
+                    return true;
+                }
+                projectMemoryService.updateProjectMemory(project.getId(), newConversation, userId);
+                return true;
+            } catch (Exception e) {
+                logger.error("项目会话记忆整理失败 sessionId={}", sessionId, e);
+                return false;
+            }
+        }
+
+        // 聊天会话（默认）：原有用户维度记忆整理
+        List<LongTermMemory> longTermMemories = longTermMemoryService.queryUserAllMemories(sessionId, userId);
+        //扩展知识往往较大，不输入详情
+        String longTermMemoryContent = longTermMemoryService.buildMemoryContent(longTermMemories, longTermMemory -> {
+            if (UserMemoryTypeEnum.USER_PROFILE.getCode().equals(longTermMemory.getMemoryType()) || UserMemoryTypeEnum.TASK_RECORDS.getCode().equals(longTermMemory.getMemoryType())) {
+                return true;
+            }
+            return false;
+        });
+
+        String content = "以下是需要分析的新会话内容\n";
+        content += newConversation;
+        content +=("\n===========================");
+        return handle(sessionId, userId, longTermMemoryContent, content);
+    }
+
+    /** 查询会话业务类型值（chat / workflow-task-chat / project-chat），查不到按聊天处理 */
+    private String getSessionBizType(String sessionId) {
+        try {
+            ChatSession session = chatSessionMapper.findBySessionId(sessionId);
+            return session != null && session.getBizType() != null ? session.getBizType() : "";
+        } catch (Exception e) {
+            logger.warn("查询会话业务类型失败 sessionId={}", sessionId, e);
+            return "";
+        }
+    }
+
+    /** 是否普通聊天会话（非任务/项目会话） */
+    private boolean isChatSession(String sessionId) {
+        String bizType = getSessionBizType(sessionId);
+        return !AgentExecutorBizTypeEnum.WorkflowTaskChat.getAiModelCallSourceEnum().getValue().equals(bizType)
+                && !AgentExecutorBizTypeEnum.ProjectChat.getAiModelCallSourceEnum().getValue().equals(bizType);
     }
 
     private static long computeMaxId(List<ChatMemory> items) {
