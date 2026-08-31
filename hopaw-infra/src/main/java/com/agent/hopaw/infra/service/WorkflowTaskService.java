@@ -328,6 +328,11 @@ public class WorkflowTaskService implements IWorkflowTaskService {
     }
 
     @Override
+    public List<WorkflowTask> findProcessing() {
+        return workflowTaskMapper.findProcessing();
+    }
+
+    @Override
     public void executeTask(UserChatRequest userChatRequest) {
 
         Long taskId = taskSessionMapper.findTaskIdBySessionId(userChatRequest.getSessionId());

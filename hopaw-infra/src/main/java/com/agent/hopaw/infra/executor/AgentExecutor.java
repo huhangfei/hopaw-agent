@@ -540,7 +540,14 @@ public class AgentExecutor implements IAgentExecutor {
                 .builder(ChatAgentAssistant.class)
                 .systemMessageProvider(chatMemoryId -> systemMessageProvider.apply(agentId))
                 .chatMemory(memoryBuilder.build())
-                .executeToolsConcurrently(toolExecutor);
+                .executeToolsConcurrently(toolExecutor)
+                // 幻觉工具处理：不抛异常，而是把"工具不存在"作为工具执行结果返回给大模型，引导其改用正确工具
+                .hallucinatedToolNameStrategy(request -> {
+                    logger.warn("Hallucinated tool call detected: tool={}, requestId={}, sessionId={}",
+                            request.name(), requestId, sessionId);
+                    return ToolExecutionResultMessage.from(request,
+                            "工具 " + request.name() + " 不存在。请勿调用不存在的工具，只能使用本次会话中提供的可用工具列表里的工具。");
+                });
         List<AgentTool> selectedTools = agentExecutorParams.getToolSets().stream().map(x->x.getAgentTool()).collect(Collectors.toList());
         if (selectedTools != null && agentExecutorParams.getVectorToolSearch() != null && agentExecutorParams.getVectorToolSearch()) {
             int maxResults = agentExecutorParams.getVectorToolSearchMaxResults() != null ? agentExecutorParams.getVectorToolSearchMaxResults() : 10;

@@ -23,6 +23,9 @@ public interface WorkflowTaskMapper {
     /** 查询待执行及打回重做（已驳回）任务，按ID正序 */
     List<WorkflowTask> findPendingExecution();
 
+    /** 查询处理中状态的任务，按ID正序（供中断恢复扫描） */
+    List<WorkflowTask> findProcessing();
+
     int updateStatus(@Param("id") Long id,
                      @Param("status") String status,
                      @Param("rejectReason") String rejectReason);

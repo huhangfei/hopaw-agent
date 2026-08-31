@@ -13,6 +13,9 @@ public interface ChatHistoryMapper {
     List<ChatHistory> findBySessionId(@Param("sessionId") String sessionId, @Param("limit") int limit);
     ChatHistory findBySessionIdAndToolCallId(@Param("sessionId") String sessionId, @Param("toolCallId") String toolCallId);
 
+    /** 会话最后一条记录的时间（无记录返回null），作为会话最后活动时间 */
+    LocalDateTime findLastCreateTimeBySessionId(@Param("sessionId") String sessionId);
+
     List<ChatHistory> findByAgentIdAfterId(@Param("agentId") Long agentId, @Param("afterId") Long afterId);
 
     List<ChatHistory> findAllAfterId(@Param("afterId") Long afterId);

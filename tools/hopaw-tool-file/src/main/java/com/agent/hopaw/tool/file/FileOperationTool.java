@@ -12,8 +12,18 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 
+import javax.imageio.IIOImage;
+import javax.imageio.ImageIO;
+import javax.imageio.ImageWriteParam;
+import javax.imageio.ImageWriter;
+import javax.imageio.stream.ImageOutputStream;
+import javax.imageio.stream.MemoryCacheImageOutputStream;
+import java.awt.Graphics2D;
+import java.awt.RenderingHints;
+import java.awt.image.BufferedImage;
 import java.io.BufferedReader;
 import java.io.BufferedWriter;
+import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.FileReader;
 import java.io.FileWriter;
@@ -28,8 +38,11 @@ import java.nio.file.StandardCopyOption;
 import java.nio.file.StandardOpenOption;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Base64;
+import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutorService;
@@ -164,6 +177,136 @@ public class FileOperationTool implements AgentTool {
             log.error("按行读取文件失败: {}", filePath, e);
             return "错误: 读取文件失败 - " + e.getMessage();
         }
+    }
+
+    @ToolSecurityLevel(ToolSecurityLevel.Level.SAFE)
+    @Tool(value = {"读取图片", "读取指定路径的图片文件并返回base64编码，可通过质量参数压缩图片以减少数据量", "图片读取"})
+    public String readImage(
+            @P(description = "图片文件路径，支持 jpg/jpeg/png/bmp/gif") String filePath,
+            @P(description = "图片压缩质量(0.1-1.0)，传入时按JPEG重新编码压缩，值越小体积越小；为空则直接返回原始文件的base64", required = false) Double quality) {
+        try {
+            Path path = Paths.get(filePath).toAbsolutePath().normalize();
+            if (!Files.exists(path)) {
+                return "错误: 文件不存在: " + filePath;
+            }
+            if (!Files.isRegularFile(path)) {
+                return "错误: 路径不是文件: " + filePath;
+            }
+
+            long originalSize = Files.size(path);
+            String mime = detectImageMime(path);
+            if (mime == null) {
+                return "错误: 不是支持的图片文件(支持 jpg/jpeg/png/bmp/gif): " + filePath;
+            }
+
+            // 不压缩：直接返回原始文件内容的 base64
+            if (quality == null) {
+                byte[] bytes = Files.readAllBytes(path);
+                StringBuilder sb = new StringBuilder();
+                sb.append("图片读取成功\n");
+                sb.append("格式: ").append(mime).append("\n");
+                BufferedImage probe = ImageIO.read(path.toFile());
+                if (probe != null) {
+                    sb.append("尺寸: ").append(probe.getWidth()).append("x").append(probe.getHeight()).append("\n");
+                }
+                sb.append("原始大小: ").append(formatFileSize(originalSize)).append("\n");
+                sb.append("base64:\n").append(Base64.getEncoder().encodeToString(bytes));
+                return sb.toString();
+            }
+
+            // 压缩：按质量参数重新编码为 JPEG
+            float q = (float) Math.max(0.1, Math.min(1.0, quality));
+            BufferedImage img = ImageIO.read(path.toFile());
+            if (img == null) {
+                return "错误: 无法解码图片(格式可能不受支持): " + filePath;
+            }
+            byte[] compressed = encodeJpeg(flattenIfAlpha(img), q);
+
+            // 压缩无收益时回退原始数据
+            if (compressed.length >= originalSize) {
+                byte[] bytes = Files.readAllBytes(path);
+                StringBuilder sb = new StringBuilder();
+                sb.append("图片读取成功(质量 ").append(q).append(" 压缩未减小体积，已返回原始数据)\n");
+                sb.append("格式: ").append(mime).append("\n");
+                sb.append("尺寸: ").append(img.getWidth()).append("x").append(img.getHeight()).append("\n");
+                sb.append("大小: ").append(formatFileSize(originalSize)).append("\n");
+                sb.append("base64:\n").append(Base64.getEncoder().encodeToString(bytes));
+                return sb.toString();
+            }
+
+            StringBuilder sb = new StringBuilder();
+            sb.append("图片读取成功\n");
+            sb.append("格式: image/jpeg\n");
+            sb.append("尺寸: ").append(img.getWidth()).append("x").append(img.getHeight()).append("\n");
+            sb.append("原始大小: ").append(formatFileSize(originalSize)).append("\n");
+            sb.append("压缩后大小: ").append(formatFileSize(compressed.length))
+                    .append("(质量 ").append(q).append(")\n");
+            sb.append("base64:\n").append(Base64.getEncoder().encodeToString(compressed));
+            return sb.toString();
+        } catch (Exception e) {
+            log.error("读取图片失败: {}", filePath, e);
+            return "错误: 读取图片失败 - " + e.getMessage();
+        }
+    }
+
+    private String detectImageMime(Path path) {
+        String name = path.getFileName().toString().toLowerCase(Locale.ROOT);
+        if (name.endsWith(".jpg") || name.endsWith(".jpeg")) {
+            return "image/jpeg";
+        }
+        if (name.endsWith(".png")) {
+            return "image/png";
+        }
+        if (name.endsWith(".gif")) {
+            return "image/gif";
+        }
+        if (name.endsWith(".bmp")) {
+            return "image/bmp";
+        }
+        return null;
+    }
+
+    /**
+     * 透明通道压平：JPEG 不支持透明度，带 alpha 的图片先绘制到白色背景上
+     */
+    private BufferedImage flattenIfAlpha(BufferedImage src) {
+        if (!src.getColorModel().hasAlpha()) {
+            return src;
+        }
+        BufferedImage rgb = new BufferedImage(src.getWidth(), src.getHeight(), BufferedImage.TYPE_INT_RGB);
+        Graphics2D g = rgb.createGraphics();
+        try {
+            g.setRenderingHint(RenderingHints.KEY_INTERPOLATION, RenderingHints.VALUE_INTERPOLATION_BILINEAR);
+            g.setColor(java.awt.Color.WHITE);
+            g.fillRect(0, 0, src.getWidth(), src.getHeight());
+            g.drawImage(src, 0, 0, null);
+        } finally {
+            g.dispose();
+        }
+        return rgb;
+    }
+
+    /**
+     * 按指定质量将图片编码为 JPEG
+     */
+    private byte[] encodeJpeg(BufferedImage image, float quality) throws IOException {
+        Iterator<ImageWriter> writers = ImageIO.getImageWritersByFormatName("jpg");
+        if (!writers.hasNext()) {
+            throw new IOException("当前JVM缺少JPEG编码器");
+        }
+        ImageWriter writer = writers.next();
+        ByteArrayOutputStream baos = new ByteArrayOutputStream();
+        try (ImageOutputStream ios = new MemoryCacheImageOutputStream(baos)) {
+            ImageWriteParam param = writer.getDefaultWriteParam();
+            param.setCompressionMode(ImageWriteParam.MODE_EXPLICIT);
+            param.setCompressionQuality(quality);
+            writer.setOutput(ios);
+            writer.write(null, new IIOImage(image, null, null), param);
+            ios.flush();
+        } finally {
+            writer.dispose();
+        }
+        return baos.toByteArray();
     }
 
     @ToolSecurityLevel(ToolSecurityLevel.Level.PARAM_REQUIRE_APPROVAL)

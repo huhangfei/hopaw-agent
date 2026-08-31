@@ -39,6 +39,15 @@
         limit 1;
     </select>
 
+    <!-- 会话最后一条记录的时间：作为会话最后活动时间，供处理中任务的中断恢复判断 -->
+    <select id="findLastCreateTimeBySessionId" resultType="java.time.LocalDateTime">
+        SELECT create_time
+        FROM chat_history
+        WHERE session_id = #{sessionId}
+        ORDER BY id DESC
+        LIMIT 1
+    </select>
+
     <select id="findByAgentIdAfterId" resultMap="ChatHistoryResultMap">
         SELECT id, agent_id, session_id, role, message_type, content, tool_call_id, tool_name, tool_arguments, tool_call_status, tool_execution_time, create_time, user_id
         FROM chat_history

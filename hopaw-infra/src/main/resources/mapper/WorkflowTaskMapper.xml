@@ -85,6 +85,14 @@
         ORDER BY id ASC
     </select>
 
+    <!-- 处理中任务：供中断恢复扫描（会话停止超时后重新唤起） -->
+    <select id="findProcessing" resultMap="WorkflowTaskResultMap">
+        SELECT <include refid="allColumns"/>
+        FROM workflow_tasks
+        WHERE status = 'processing'
+        ORDER BY id ASC
+    </select>
+
     <update id="updateStatus">
         UPDATE workflow_tasks
         SET status = #{status},
