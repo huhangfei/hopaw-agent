@@ -37,7 +37,8 @@ public class OpenAiChatModelFactory extends  BaseChatModelFactory {
                 .returnThinking(super.getReturnThinking(aiModel))
                 .logRequests(super.getLogRequests(aiModel))
                 .logResponses(super.getLogResponses(aiModel))
-                .timeout(java.time.Duration.ofSeconds(super.getTimeoutSeconds(aiModel)));
+                .timeout(java.time.Duration.ofSeconds(super.getTimeoutSeconds(aiModel)))
+                .strictTools(true);
         if(enableThinking){
             builder.reasoningEffort(super.getReasoningEffort(aiModel));
         }
@@ -69,7 +70,8 @@ public class OpenAiChatModelFactory extends  BaseChatModelFactory {
                 .returnThinking(super.getReturnThinking(aiModel))
                 .logRequests(super.getLogRequests(aiModel))
                 .logResponses(super.getLogResponses(aiModel))
-                .timeout(java.time.Duration.ofSeconds(super.getTimeoutSeconds(aiModel)));
+                .timeout(java.time.Duration.ofSeconds(super.getTimeoutSeconds(aiModel)))
+                .strictTools(true);
         if(enableThinking){
             builder.reasoningEffort(super.getReasoningEffort(aiModel));
         }

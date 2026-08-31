@@ -27,12 +27,14 @@ public class AnthropicChatModelFactory extends BaseChatModelFactory {
                 .logResponses(super.getLogResponses(aiModel))
                 .timeout(java.time.Duration.ofSeconds(super.getTimeoutSeconds(aiModel)))
                 .returnThinking(super.getSendThinking(aiModel))
-                .sendThinking(super.getSendThinking(aiModel));
+                .sendThinking(super.getSendThinking(aiModel))
+                .strictTools(true)
+                .maxTokens(super.getOutputMaxTokens(aiModel));
         if(enableThinking==null){
             enableThinking=super.getEnableThinking(aiModel);
         }
         if (enableThinking) {
-            builder.thinkingType("enabled");
+            builder.thinkingType("enabled").thinkingBudgetTokens(super.getThinkingBudgetTokens(aiModel));
         }
         if (monitoringService != null) {
             builder.listeners(List.of(monitoringService));
@@ -52,12 +54,14 @@ public class AnthropicChatModelFactory extends BaseChatModelFactory {
                 .logResponses(super.getLogResponses(aiModel))
                 .timeout(java.time.Duration.ofSeconds(super.getTimeoutSeconds(aiModel)))
                 .returnThinking(super.getSendThinking(aiModel))
-                .sendThinking(super.getSendThinking(aiModel));
+                .sendThinking(super.getSendThinking(aiModel))
+                .strictTools(true)
+                .maxTokens(super.getOutputMaxTokens(aiModel));;
         if(enableThinking==null){
             enableThinking=super.getEnableThinking(aiModel);
         }
         if (enableThinking) {
-            builder.thinkingType("enabled");
+            builder.thinkingType("enabled").thinkingBudgetTokens(super.getThinkingBudgetTokens(aiModel));
         }
         if (monitoringService != null) {
             builder.listeners(List.of(monitoringService));

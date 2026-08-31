@@ -73,6 +73,11 @@
             <plugin>
                 <groupId>org.springframework.boot</groupId>
                 <artifactId>spring-boot-maven-plugin</artifactId>
+                <configuration>
+                    <!-- exec 后缀产出可执行 fat jar（本地 run.bat 使用）；
+                         原始普通 jar hopaw-app-1.0.0.jar 保留，供 Docker 分包部署使用 -->
+                    <classifier>exec</classifier>
+                </configuration>
             </plugin>
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>

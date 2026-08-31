@@ -6,10 +6,15 @@
 
 cd "$(dirname "$0")" || exit 1
 
-JAR_FILE="hopaw-app/target/hopaw-app-1.0.0.jar"
 PORT=8080
 PID_FILE="$(pwd)/hopaw-agent.pid"
 TIMEOUT=30
+
+# 分包启动目录（与 Docker 镜像内布局一致）：app.jar + libs
+APP_JAR="hopaw-app/target/hopaw-app-1.0.0.jar"
+LIBS_DIR="hopaw-app/target/docker-libs"
+# 可执行 fat jar（classifier=exec）
+EXEC_JAR="hopaw-app/target/hopaw-app-1.0.0-exec.jar"
 
 # 1. 处理停止命令
 if [ "$1" == "stop" ]; then
@@ -42,16 +47,25 @@ if ! command -v java > /dev/null 2>&1; then
     exit 1
 fi
 
-# 3. 检查 JAR 文件
-if [ ! -f "$JAR_FILE" ]; then
-    echo "[ERROR] ${JAR_FILE} not found"
-    echo "Please run: mvn package -DskipTests"
+# 3. 选择启动方式：优先 exec fat jar；仅有分包产物时以 -cp 分包启动（与容器一致）
+LAUNCH_MODE=""
+if [ -f "$EXEC_JAR" ]; then
+    LAUNCH_MODE="exec"
+elif [ -f "$APP_JAR" ] && [ -d "$LIBS_DIR" ] && ls "$LIBS_DIR"/*.jar > /dev/null 2>&1; then
+    LAUNCH_MODE="split"
+else
+    echo "[ERROR] No runnable build found."
+    echo "Please run: mvn clean package -DskipTests (and maven-package.sh for split mode)"
     exit 1
 fi
 
 # 4. 启动进程（后台，日志重定向）
-echo "Starting background process..."
-nohup java -jar "$JAR_FILE" > hopaw-agent.out 2>&1 &
+echo "Starting background process (mode: ${LAUNCH_MODE})..."
+if [ "$LAUNCH_MODE" == "exec" ]; then
+    nohup java -jar "$EXEC_JAR" > hopaw-agent.out 2>&1 &
+else
+    nohup java -cp "${LIBS_DIR}/*:${APP_JAR}" com.agent.hopaw.AgentApplication > hopaw-agent.out 2>&1 &
+fi
 echo $! > "$PID_FILE"
 
 # 5. 等待端口监听（带超时）

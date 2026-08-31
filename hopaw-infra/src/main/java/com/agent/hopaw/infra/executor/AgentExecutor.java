@@ -382,11 +382,15 @@ public class AgentExecutor implements IAgentExecutor {
                         String toolName = toolExecution.request().name();
                         String arguments = toolExecution.request().arguments();
 
+                        if(toolCallId==null){
+                            return;
+                        }
 
                         ToolInfo toolInfo = toolInfoMap.getOrDefault(toolName, null);
                         ToolSecurityLevel.Level toolLevel = toolInfo==null? ToolSecurityLevel.Level.ALL_REQUIRE_APPROVAL:toolInfo.getSecurityLevel();
 
-                        toolExecution.invocationContext().invocationParameters().put("toolCallId", toolCallId);
+                        InvocationParameters invocationParameters = toolExecution.invocationContext().invocationParameters();
+                        invocationParameters.put("toolCallId", toolCallId);
                         //拦截执行
                         boolean allowed=false;
                         if(toolName.equals(AgentTool.TOOL_SEARCH_TOOL_NAME) || ToolSecurityLevel.Level.SAFE.equals(toolLevel)) {

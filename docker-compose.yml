@@ -22,5 +22,8 @@ services:
       - ./logs:/app/logs
       # 技能目录默认为相对路径 skills（可在系统设置中改为 /app/data/skills），挂载兜底
       - ./data/skills:/app/skills
+      # 单模块热更新：把新构建的模块 jar（如 hopaw-infra-1.0.0.jar）放进 ./data/lib-override，
+      # classpath 中优先于镜像内置 /app/lib，重启容器即生效，无需重建镜像
+      - ./data/lib-override:/app/lib-override
     # 按需调整 JVM 内存
     # mem_limit: 2g

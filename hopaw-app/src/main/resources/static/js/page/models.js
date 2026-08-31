@@ -419,6 +419,8 @@ var EXT_PARAMS_KEYS = [
     { key: 'temperature', type: 'number' },
     { key: 'timeoutSeconds', type: 'number' },
     { key: 'reasoningEffort', type: 'text' },
+    { key: 'thinkingBudgetTokens', type: 'number' },
+    { key: 'outputMaxTokens', type: 'number' },
     { key: 'thinkingContentKey', type: 'text' },
     { key: 'sendThinking', type: 'boolean', defaultTrue: true },
     { key: 'returnThinking', type: 'boolean', defaultTrue: true },

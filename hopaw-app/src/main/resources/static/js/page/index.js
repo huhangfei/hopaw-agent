@@ -170,12 +170,24 @@ function connectWebSocket() {
         var data = JSON.parse(event.data);
         var requestId = data.requestId;
 
+        // 会话隔离：后端按用户广播，非当前会话的运行事件（任务/项目会话后台运行）不更新当前界面；
+        // session-title 仍需更新左侧会话列表标题
+        if (data.sessionId && data.sessionId !== currentSessionId) {
+            if (data.type === 'session-title') {
+                updateSessionTitle(data.sessionId, data.content);
+            }
+            return;
+        }
+
         if (data.type !== 'received' && data.type !== 'session-title'&& data.type !== 'token_usage') {
             removeLoadingMessage();
         }
 
         if (data.type === 'received') {
             showLoadingMessage();
+            // 会话开始运行即禁用输入区（覆盖任务看板/项目迭代/其他标签页触发的运行，
+            // 本地 sendMessage 的禁用是幂等的）
+            disableInput();
         } else if (data.type === 'chunk') {
             handleStreamingChunk(data.content, requestId);
         } else if (data.type === 'tool_call') {

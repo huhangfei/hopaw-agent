@@ -175,6 +175,16 @@
                                     <span class="ext-params-form-hint">思考内容字段名</span>
                                 </div>
                                 <div class="ext-params-form-row">
+                                    <label for="providerForm_thinkingBudgetTokens">thinkingBudgetTokens</label>
+                                    <input type="number" id="providerForm_thinkingBudgetTokens" min="1024" step="512" placeholder="默认: 2048">
+                                    <span class="ext-params-form-hint">思考预算 token 数（Anthropic，最低 1024）</span>
+                                </div>
+                                <div class="ext-params-form-row">
+                                    <label for="providerForm_outputMaxTokens">outputMaxTokens</label>
+                                    <input type="number" id="providerForm_outputMaxTokens" min="1" step="1024" placeholder="默认: 131072">
+                                    <span class="ext-params-form-hint">单次响应最大输出 token 数</span>
+                                </div>
+                                <div class="ext-params-form-row">
                                     <label for="providerForm_sendThinking">sendThinking</label>
                                     <input type="checkbox" id="providerForm_sendThinking">
                                     <span class="ext-params-form-hint">默认: true</span>
@@ -278,6 +288,16 @@
                                     <label for="modelForm_thinkingContentKey">thinkingContentKey</label>
                                     <input type="text" id="modelForm_thinkingContentKey" placeholder="默认: reasoning_content">
                                     <span class="ext-params-form-hint">思考内容字段名</span>
+                                </div>
+                                <div class="ext-params-form-row">
+                                    <label for="modelForm_thinkingBudgetTokens">thinkingBudgetTokens</label>
+                                    <input type="number" id="modelForm_thinkingBudgetTokens" min="1024" step="512" placeholder="默认: 2048">
+                                    <span class="ext-params-form-hint">思考预算 token 数（Anthropic，最低 1024）</span>
+                                </div>
+                                <div class="ext-params-form-row">
+                                    <label for="modelForm_outputMaxTokens">outputMaxTokens</label>
+                                    <input type="number" id="modelForm_outputMaxTokens" min="1" step="1024" placeholder="默认: 131072">
+                                    <span class="ext-params-form-hint">单次响应最大输出 token 数</span>
                                 </div>
                                 <div class="ext-params-form-row">
                                     <label for="modelForm_sendThinking">sendThinking</label>

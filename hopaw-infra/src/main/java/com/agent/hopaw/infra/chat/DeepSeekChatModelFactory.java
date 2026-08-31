@@ -37,6 +37,7 @@ public class DeepSeekChatModelFactory extends  BaseChatModelFactory {
                 .sendThinking(super.getSendThinking(aiModel), super.getThinkingContentKey(aiModel))
                 .returnThinking(super.getReturnThinking(aiModel)).logRequests(super.getLogRequests(aiModel))
                 .logResponses(super.getLogResponses(aiModel))
+                .strictTools(true)
                 .timeout(java.time.Duration.ofSeconds(super.getTimeoutSeconds(aiModel)));
         if(enableThinking){
             builder.reasoningEffort(super.getReasoningEffort(aiModel));
@@ -70,6 +71,7 @@ public class DeepSeekChatModelFactory extends  BaseChatModelFactory {
                 .returnThinking(super.getReturnThinking(aiModel))
                 .logRequests(super.getLogRequests(aiModel))
                 .logResponses(super.getLogResponses(aiModel))
+                .strictTools(true)
                 .timeout(java.time.Duration.ofSeconds(super.getTimeoutSeconds(aiModel)));
         if(enableThinking){
             builder.reasoningEffort(super.getReasoningEffort(aiModel));

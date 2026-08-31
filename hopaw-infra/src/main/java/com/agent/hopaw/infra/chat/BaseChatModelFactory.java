@@ -84,6 +84,31 @@ public abstract class BaseChatModelFactory implements ChatModelFactory {
         return val != null ? (Boolean) val : true;
     }
 
+    /**
+     * 获取思考预算 token 数（模型级 extParams 优先，缺省回退 provider 级，均未配置时默认 2048）
+     * Anthropic 要求最低 1024，低于该值会被接口拒绝，故做下限保护
+     */
+    public Integer getThinkingBudgetTokens(AiModelVO aiModelVO) {
+        Object val = getExtParams(aiModelVO, "thinkingBudgetTokens");
+        if (val instanceof Number) {
+            int tokens = ((Number) val).intValue();
+            return Math.max(tokens, 1024);
+        }
+        return 2048;
+    }
+
+    /**
+     * 获取单次响应最大输出 token 数（模型级 extParams 优先，缺省回退 provider 级，均未配置时默认 128K）
+     */
+    public Integer getOutputMaxTokens(AiModelVO aiModelVO) {
+        Object val = getExtParams(aiModelVO, "outputMaxTokens");
+        if (val instanceof Number) {
+            int tokens = ((Number) val).intValue();
+            return Math.max(tokens, 1);
+        }
+        return 128 * 1024;
+    }
+
     private Object getExtParams(AiModelVO aiModelVO, String paramName) {
         if(aiModelVO.getExtParams()!=null){
             JSONObject jsonObject = JSON.parseObject(aiModelVO.getExtParams());
