@@ -1248,6 +1248,7 @@ function disableInput() {
     if (wrapper) wrapper.classList.add('disabled');
     if (sendBtn) sendBtn.classList.add('hide');
     if (runningBtn) runningBtn.classList.remove('hide');
+    startLockCountdown();
 }
 
 function enableInput() {
@@ -1258,7 +1259,65 @@ function enableInput() {
     if (wrapper) wrapper.classList.remove('disabled');
     if (sendBtn) sendBtn.classList.remove('hide');
     if (runningBtn) runningBtn.classList.add('hide');
+    stopLockCountdown();
     if (input) input.focus();
+}
+
+// ===== 执行器可重置锁（看门狗）剩余时间倒计时 =====
+var lockRemainingSeconds = 0;
+var lockPollTimer = null;
+var lockCountdownTimer = null;
+
+/**
+ * 启动剩余时间倒计时：每5秒查询一次后端剩余时间，前端每秒本地递减展示
+ */
+function startLockCountdown() {
+    if (lockCountdownTimer) return;
+    updateLockRemaining();
+    lockPollTimer = setInterval(updateLockRemaining, 5000);
+    lockCountdownTimer = setInterval(function() {
+        if (lockRemainingSeconds > 0) {
+            lockRemainingSeconds--;
+        }
+        renderLockCountdown();
+    }, 1000);
+}
+
+/**
+ * 停止倒计时并清空显示
+ */
+function stopLockCountdown() {
+    if (lockPollTimer) clearInterval(lockPollTimer);
+    if (lockCountdownTimer) clearInterval(lockCountdownTimer);
+    lockPollTimer = null;
+    lockCountdownTimer = null;
+    lockRemainingSeconds = 0;
+    renderLockCountdown();
+}
+
+/**
+ * 查询后端看门狗剩余时间并刷新本地值
+ */
+function updateLockRemaining() {
+    if (!currentSessionId) return;
+    fetch('/api/session/' + encodeURIComponent(currentSessionId) + '/lock-remaining')
+        .then(function(r) { return r.json(); })
+        .then(function(resp) {
+            if (resp.code === 200 && resp.data) {
+                lockRemainingSeconds = resp.data.remainingSeconds || 0;
+                renderLockCountdown();
+            }
+        })
+        .catch(function() { /* 静默失败，下次轮询重试 */ });
+}
+
+/**
+ * 渲染剩余时间到运行中按钮（无剩余时间则不显示）
+ */
+function renderLockCountdown() {
+    var el = document.getElementById('runningCountdown');
+    if (!el) return;
+    el.textContent = lockRemainingSeconds > 0 ? ('(' + lockRemainingSeconds + 's)') : '';
 }
 
 function selectAgent(selectElement) {
@@ -1312,22 +1371,6 @@ function deleteSession(sessionId) {
             .catch(function(err) {
                 showToast('删除失败: ' + err.message, 'error');
             });
-    });
-}
-
-function forceStopAgent(sessionId) {
-    showConfirm('确定要强停智能体吗？强停后将移除执行器并刷新页面。').then(function(confirmed) {
-        if (!confirmed) return;
-        fetch('/api/session/'+ encodeURIComponent(sessionId)+'/force-stop', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/x-www-form-urlencoded' }
-        }).then(function(r) { return r.json(); }).then(function(res) {
-            if (res.code === 200) {
-                window.location.href = '/?sessionId=' + sessionId;
-            } else {
-                showToast(res.msg || '强停失败', 'warning');
-            }
-        });
     });
 }
 
@@ -1611,6 +1654,12 @@ window.onload = function() {
         connectWebSocket();
         loadTokenUsage();
         loadToolStats();
+    }
+
+    // 页面加载时会话已在运行：启动看门狗剩余时间倒计时
+    var initRunningBtn = document.getElementById('runningBtn');
+    if (initRunningBtn && !initRunningBtn.classList.contains('hide')) {
+        startLockCountdown();
     }
 
     loadChatSkills();

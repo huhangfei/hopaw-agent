@@ -119,13 +119,6 @@ public class ChatSessionController {
         return ResponseBean.success();
     }
 
-    @PostMapping("/{sessionId}/force-stop")
-    @ResponseBody
-    public ResponseBean forceStopAgent(@PathVariable String sessionId) {
-        agentExecutorService.stopAndRemoveAgentExecutor(sessionId);
-        return ResponseBean.success();
-    }
-
     @PostMapping("/create")
     @ResponseBody
     public ResponseBean create(HttpServletRequest request, @RequestBody ChatSession session) {
@@ -185,6 +178,20 @@ public class ChatSessionController {
     public ResponseBean isRunning(@PathVariable String sessionId) {
         boolean running = agentExecutorService.isAgentExecutorRunning(sessionId);
         return ResponseBean.success(running);
+    }
+
+    /**
+     * 查询执行器可重置锁（看门狗）的剩余等待时间（秒）：
+     * 会话运行中时有活动会重置倒计时，用于前端运行中按钮的倒计时展示
+     */
+    @GetMapping("/{sessionId}/lock-remaining")
+    @ResponseBody
+    public ResponseBean lockRemaining(@PathVariable String sessionId) {
+        var executor = agentExecutorService.getAgentExecutor(sessionId);
+        Map<String, Object> result = new HashMap<>(4);
+        result.put("running", executor != null && executor.running());
+        result.put("remainingSeconds", executor != null ? executor.getWatchdogRemainingSeconds() : 0);
+        return ResponseBean.success(result);
     }
 
     /**

@@ -98,6 +98,10 @@ public class AgentExecutor implements IAgentExecutor {
     private final ThreadPoolExecutor toolExecutor;
     private final AiModelService aiModelService;
     private CountDownLatch taskLatch = new CountDownLatch(0);
+    /** 可重置看门狗：当前任务等待的最后活动截止时间戳（毫秒），收到消息/工具调用等活动时重置 */
+    private final java.util.concurrent.atomic.AtomicLong watchdogDeadlineMs = new java.util.concurrent.atomic.AtomicLong(0);
+    /** 看门狗超时时长（毫秒），0 表示未启用 */
+    private volatile long watchdogTimeoutMs = 0;
     private String requestId;
     private final ApplicationEventPublisher eventPublisher;
     private final IChatSessionService chatSessionService;
@@ -187,40 +191,21 @@ public class AgentExecutor implements IAgentExecutor {
             agentMessageHandler.sendMessageToChannel(stopping);
             entry.getValue().accept(callId);
         });
-        toolCancelLatch.values().forEach(countDownLatch -> {
-            try {
-                countDownLatch.await(5, java.util.concurrent.TimeUnit.SECONDS);
-            } catch (InterruptedException e) {
-                logger.error("Tool cancellation latch await interrupted", e);
-            }
-        });
+        //工具取消 latch 立即放行，不再逐个等待工具自然结束（工具已收到取消标记与停止钩子）
+        toolCancelLatch.values().forEach(countDownLatch -> countDownLatch.countDown());
 
         //停止任务
         cancelTask.set(true);
+        //立即唤醒 execute() 的等待循环，使其进入 finally 清理并发送 task-done，
+        //不再等待任务自然结束（模型静默时 taskLatch 可能长时间不 countDown）
+        taskLatch.countDown();
 
-        try {
-            taskLatch.await(60, java.util.concurrent.TimeUnit.SECONDS);
-        } catch (Exception ex) {
-            logger.error("Task latch await interrupted", ex);
-        }
-        if (!running()) {
-            agentMessageHandler.done();
-        }
+        //立即通知前端会话已停止
+        agentMessageHandler.done();
 
-        // 关闭工具执行线程池，释放资源
+        // 关闭工具执行线程池，释放资源（工具已收到取消标记，直接中断）
         if (toolExecutor != null && !toolExecutor.isShutdown()) {
-            toolExecutor.shutdown();
-            try {
-                if (!toolExecutor.awaitTermination(10, TimeUnit.SECONDS)) {
-                    toolExecutor.shutdownNow();
-                    logger.warn("Tool executor force shutdown");
-                } else {
-                    logger.info("Tool executor shutdown gracefully");
-                }
-            } catch (InterruptedException e) {
-                toolExecutor.shutdownNow();
-                Thread.currentThread().interrupt();
-            }
+            toolExecutor.shutdownNow();
         }
 
         // 关闭 MCP 客户端连接
@@ -272,6 +257,7 @@ public class AgentExecutor implements IAgentExecutor {
 
     @Override
     public void sendToolRunningContent(String callId, Object resultPartial) {
+        resetWatchdog();
         String toolName = toolNameByCallIdMap.get(callId);
         List<String> toolDescriptions = toolName == null ? new ArrayList<>() : getToolDescriptions(toolName);
         AiToolCallMessageInfo aiToolCallMessageInfo = AiToolCallMessageInfo.running(sessionId, requestId, callId, resultPartial, toolDescriptions);
@@ -285,6 +271,7 @@ public class AgentExecutor implements IAgentExecutor {
     }
     @Override
     public void toolApprovalComplete(String callId,Boolean allowed){
+        resetWatchdog();
         String approvalId = callId;
         if(toolApprovalLocks.containsKey(approvalId)){
             toolApprovalLocks.get(approvalId).complete(allowed);
@@ -307,6 +294,30 @@ public class AgentExecutor implements IAgentExecutor {
         return taskLatch.getCount() > 0;
     }
 
+    /**
+     * 重置看门狗截止时间：收到消息、流式内容、思考内容、工具调用/执行/过程通知等活动时调用，
+     * 保证只要任务持续有进展就不会因固定超时被误判结束
+     */
+    private void resetWatchdog() {
+        long timeoutMs = watchdogTimeoutMs;
+        if (timeoutMs > 0) {
+            watchdogDeadlineMs.set(System.currentTimeMillis() + timeoutMs);
+        }
+    }
+
+    /**
+     * 查询看门狗剩余等待时间（秒，向上取整）；
+     * 执行器未运行或未启用看门狗时返回 0
+     */
+    @Override
+    public long getWatchdogRemainingSeconds() {
+        if (!running()) {
+            return 0;
+        }
+        long remaining = watchdogDeadlineMs.get() - System.currentTimeMillis();
+        return Math.max(0, (remaining + 999) / 1000);
+    }
+
     @Override
     public int getExecutedToolCount() {
         return executedToolCount.get();
@@ -324,6 +335,9 @@ public class AgentExecutor implements IAgentExecutor {
     @Override
     public void execute(List<Content> contents,long timeout) {
         try {
+            // 启用可重置看门狗：超时时间在有活动（消息/工具调用/过程通知）时会顺延
+            this.watchdogTimeoutMs = timeout * 1000L;
+            resetWatchdog();
             sendFirstState();
             saveChatSession(contents);
             saveChatHistory(contents);
@@ -351,6 +365,7 @@ public class AgentExecutor implements IAgentExecutor {
                         agentMessageHandler.onCompleteResponseHandler(response);
                         taskLatch.countDown();
                     }).onPartialResponseWithContext((r, ctx) -> {
+                        resetWatchdog();
                         if (cancelTask.get()) {
                             agentMessageHandler.partialResponseHandler(r.text());
                             agentMessageHandler.done();
@@ -361,6 +376,7 @@ public class AgentExecutor implements IAgentExecutor {
                         agentMessageHandler.partialResponseHandler(r.text());
                     })
                     .onPartialThinkingWithContext((thinking, ctx) -> {
+                        resetWatchdog();
                         if (cancelTask.get()) {
                             agentMessageHandler.thinkingHandler(thinking);
                             agentMessageHandler.done();
@@ -371,6 +387,7 @@ public class AgentExecutor implements IAgentExecutor {
                         agentMessageHandler.thinkingHandler(thinking);
                     })
                     .onPartialToolCallWithContext((toolCall, ctx) -> {
+                        resetWatchdog();
                         if (!toolCancelInvocations.containsKey(toolCall.id())) {
                             toolCancelInvocations.put(toolCall.id(), new AtomicBoolean(false));
                             toolCancelLatch.put(toolCall.id(), new CountDownLatch(1));
@@ -390,6 +407,7 @@ public class AgentExecutor implements IAgentExecutor {
                         }
                     })
                     .beforeToolExecution(toolExecution -> {
+                        resetWatchdog();
                         String toolCallId = toolExecution.request().id();
                         String toolName = toolExecution.request().name();
                         String arguments = toolExecution.request().arguments();
@@ -442,6 +460,7 @@ public class AgentExecutor implements IAgentExecutor {
                         }
                     })
                     .onToolExecuted(toolExecution -> {
+                        resetWatchdog();
                         ToolExecutionRequest toolExecutionRequest = toolExecution.request();
                         //任务完成
                         if (toolCancelLatch.containsKey(toolExecutionRequest.id())) {
@@ -458,9 +477,19 @@ public class AgentExecutor implements IAgentExecutor {
                         agentMessageHandler.toolCallHandler(AiToolCallMessageInfo.STATUS_EXECUTED, toolExecutionRequest.id(),toolExecutionRequest.name(),toolExecutionRequest.arguments(),toolExecution.result());
                     });
             tokenStream.start();
-            taskLatch.await(timeout, TimeUnit.SECONDS);
+            // 可重置看门狗等待：活动会重置截止时间，仅在持续无活动超过超时时间时结束
+            while (taskLatch.getCount() > 0) {
+                long remainingMs = watchdogDeadlineMs.get() - System.currentTimeMillis();
+                if (remainingMs <= 0) {
+                    logger.warn("执行器等待超时（{}秒内无任何活动），sessionId: {}", timeout, sessionId);
+                    break;
+                }
+                if (taskLatch.await(remainingMs, TimeUnit.MILLISECONDS)) {
+                    break;
+                }
+            }
         } catch (Exception e) {
-            logger.error("\n(注: 流式响应失败: " + e.getMessage() + ")\n可以尝试清理对话或强停试试。", e);
+            logger.error("\n(注: 流式响应失败: " + e.getMessage() + ")\n可以尝试清理对话后重新发送。", e);
             agentMessageHandler.onErrorHandler(e);
         } finally {
             cancelTask.set(true);

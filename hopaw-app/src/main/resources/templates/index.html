@@ -37,12 +37,6 @@
                     <svg viewBox="0 0 24 24" fill="currentColor" width="14" height="14"><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/></svg>
                     新会话
                 </button>
-                <button class="btn-stop-header" th:attr="onclick=|forceStopAgent('${currentSessionId}')|" title="强停">
-                    <svg viewBox="0 0 24 24" fill="currentColor">
-                        <rect x="4" y="4" width="16" height="16" rx="2"/>
-                    </svg>
-                    强停
-                </button>
                 <div class="header-dropdown">
                     <button class="btn-more" title="更多操作">
                         <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor">
@@ -256,7 +250,7 @@
                 <button type="button" id="runningBtn" class="chat-form-running-btn"
                         th:classappend="${agentExecutorState  ? '' : 'hide'}" onclick="stopCurrentSession()">
                     <span class="chat-form-running-btn-dot"></span>
-                    运行中...
+                    运行中 <span id="runningCountdown"></span>
                 </button>
             </form>
         </div>
