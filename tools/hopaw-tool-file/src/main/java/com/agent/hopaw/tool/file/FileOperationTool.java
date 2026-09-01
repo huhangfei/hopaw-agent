@@ -28,14 +28,11 @@ import java.io.File;
 import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
-import java.nio.ByteBuffer;
-import java.nio.channels.FileChannel;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.StandardCopyOption;
-import java.nio.file.StandardOpenOption;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Base64;
@@ -551,15 +548,19 @@ public class FileOperationTool implements AgentTool {
             boolean rec = recursive != null && recursive;
 
             if (rec) {
-                Files.walk(path)
-                        .sorted((a, b) -> b.compareTo(a))
-                        .forEach(p -> {
-                            try {
-                                Files.delete(p);
-                            } catch (IOException e) {
-                                log.error("删除失败: {}", p, e);
-                            }
-                        });
+                // 先在关闭 walk 句柄后收集全部路径再删除：未关闭的 walk 会持有目录句柄导致 Windows 下删除失败
+                List<Path> pathsToDelete;
+                try (java.util.stream.Stream<Path> walk = Files.walk(path)) {
+                    pathsToDelete = walk.sorted((a, b) -> b.compareTo(a))
+                            .collect(java.util.stream.Collectors.toList());
+                }
+                for (Path p : pathsToDelete) {
+                    try {
+                        Files.delete(p);
+                    } catch (IOException e) {
+                        log.error("删除失败: {}", p, e);
+                    }
+                }
                 return "成功递归删除目录: " + dirPath;
             } else {
                 if (isDirectoryEmpty(path)) {
@@ -654,18 +655,20 @@ public class FileOperationTool implements AgentTool {
                 Files.createDirectories(destination);
             }
 
-            Files.walk(source).forEach(sourceFile -> {
-                try {
-                    Path targetFile = destination.resolve(source.relativize(sourceFile));
-                    if (Files.isDirectory(sourceFile)) {
-                        Files.createDirectories(targetFile);
-                    } else {
-                        Files.copy(sourceFile, targetFile, StandardCopyOption.REPLACE_EXISTING);
+            try (java.util.stream.Stream<Path> walk = Files.walk(source)) {
+                walk.forEach(sourceFile -> {
+                    try {
+                        Path targetFile = destination.resolve(source.relativize(sourceFile));
+                        if (Files.isDirectory(sourceFile)) {
+                            Files.createDirectories(targetFile);
+                        } else {
+                            Files.copy(sourceFile, targetFile, StandardCopyOption.REPLACE_EXISTING);
+                        }
+                    } catch (IOException e) {
+                        log.error("复制目录中的文件失败: {}", sourceFile, e);
                     }
-                } catch (IOException e) {
-                    log.error("复制目录中的文件失败: {}", sourceFile, e);
-                }
-            });
+                });
+            }
 
             return "成功复制目录: " + sourcePath + " -> " + destinationPath;
         } catch (IOException e) {
@@ -728,25 +731,27 @@ public class FileOperationTool implements AgentTool {
             boolean rec = recursive != null && recursive;
 
             if (rec) {
-                Files.walk(path).forEach(p -> {
-                    try {
-                        String prefix = "";
-                        int depth = path.relativize(p).getNameCount() - 1;
-                        for (int i = 0; i < depth; i++) {
-                            prefix += "  ";
-                        }
+                try (java.util.stream.Stream<Path> walk = Files.walk(path)) {
+                    walk.forEach(p -> {
+                        try {
+                            String prefix = "";
+                            int depth = path.relativize(p).getNameCount() - 1;
+                            for (int i = 0; i < depth; i++) {
+                                prefix += "  ";
+                            }
 
-                        String name = p.getFileName().toString();
-                        if (Files.isDirectory(p)) {
-                            result.append(prefix).append("[DIR] ").append(name).append("\n");
-                        } else {
-                            result.append(prefix).append("[FILE] ").append(name);
-                            result.append(" (").append(formatFileSize(Files.size(p))).append(")\n");
+                            String name = p.getFileName().toString();
+                            if (Files.isDirectory(p)) {
+                                result.append(prefix).append("[DIR] ").append(name).append("\n");
+                            } else {
+                                result.append(prefix).append("[FILE] ").append(name);
+                                result.append(" (").append(formatFileSize(Files.size(p))).append(")\n");
+                            }
+                        } catch (IOException e) {
+                            log.error("遍历目录失败: {}", p, e);
                         }
-                    } catch (IOException e) {
-                        log.error("遍历目录失败: {}", p, e);
-                    }
-                });
+                    });
+                }
             } else {
                 File dir = path.toFile();
                 File[] files = dir.listFiles();
@@ -824,7 +829,9 @@ public class FileOperationTool implements AgentTool {
 
             List<Path> files = new ArrayList<>();
             if (Files.isDirectory(path)) {
-                Files.walk(path).filter(Files::isRegularFile).forEach(files::add);
+                try (java.util.stream.Stream<Path> walk = Files.walk(path)) {
+                    walk.filter(Files::isRegularFile).forEach(files::add);
+                }
             } else {
                 files.add(path);
             }
@@ -875,7 +882,8 @@ public class FileOperationTool implements AgentTool {
                     }
                 }
             } finally {
-                executor.shutdown();
+                // shutdownNow：中断仍在执行的搜索任务，尽快释放文件句柄
+                executor.shutdownNow();
             }
 
             if (resultsByFile.isEmpty()) {
@@ -1064,53 +1072,58 @@ public class FileOperationTool implements AgentTool {
         public List<LineMatch> call() throws Exception {
             List<LineMatch> results = new ArrayList<>();
             long start = System.currentTimeMillis();
-            try (FileChannel channel = FileChannel.open(file, StandardOpenOption.READ)) {
-                long size = channel.size();
-                if (size == 0) return results;
-                if (size > Integer.MAX_VALUE - 8) {
-                    size = Integer.MAX_VALUE - 8;
-                }
-                ByteBuffer buf = channel.map(FileChannel.MapMode.READ_ONLY, 0, size);
-                byte[] lineBuffer = new byte[8192];
-                int lineLen = 0;
-                long lineNumber = 1;
+            // 使用堆内字节数组读取：内存映射(MappedByteBuffer)在 Windows 下会锁文件直到 GC，
+            // 导致搜索过的文件长时间"未释放"，无法删除/移动
+            byte[] data = Files.readAllBytes(file);
+            int size = data.length;
+            if (size == 0) {
+                recordStats(start, results);
+                return results;
+            }
+            byte[] lineBuffer = new byte[8192];
+            int lineLen = 0;
+            long lineNumber = 1;
 
-                for (int i = 0; i < size; i++) {
-                    byte b = buf.get(i);
-                    if (b == '\n') {
+            for (int i = 0; i < size; i++) {
+                byte b = data[i];
+                if (b == '\n') {
+                    if (pattern.matches(lineBuffer, 0, lineLen)) {
+                        results.add(new LineMatch(lineNumber,
+                                new String(lineBuffer, 0, lineLen, StandardCharsets.UTF_8)));
+                    }
+                    lineLen = 0;
+                    lineNumber++;
+                } else if (b == '\r') {
+                    if (i + 1 < size && data[i + 1] == '\n') {
                         if (pattern.matches(lineBuffer, 0, lineLen)) {
                             results.add(new LineMatch(lineNumber,
                                     new String(lineBuffer, 0, lineLen, StandardCharsets.UTF_8)));
                         }
-                        lineLen = 0;
-                        lineNumber++;
-                    } else if (b == '\r') {
-                        if (i + 1 < size && buf.get(i + 1) == '\n') {
-                            if (pattern.matches(lineBuffer, 0, lineLen)) {
-                                results.add(new LineMatch(lineNumber,
-                                        new String(lineBuffer, 0, lineLen, StandardCharsets.UTF_8)));
-                            }
-                            i++;
-                        } else {
-                            if (pattern.matches(lineBuffer, 0, lineLen)) {
-                                results.add(new LineMatch(lineNumber,
-                                        new String(lineBuffer, 0, lineLen, StandardCharsets.UTF_8)));
-                            }
-                        }
-                        lineLen = 0;
-                        lineNumber++;
+                        i++;
                     } else {
-                        if (lineLen == lineBuffer.length) {
-                            lineBuffer = Arrays.copyOf(lineBuffer, lineBuffer.length * 2);
+                        if (pattern.matches(lineBuffer, 0, lineLen)) {
+                            results.add(new LineMatch(lineNumber,
+                                    new String(lineBuffer, 0, lineLen, StandardCharsets.UTF_8)));
                         }
-                        lineBuffer[lineLen++] = b;
                     }
-                }
-                if (lineLen > 0 && pattern.matches(lineBuffer, 0, lineLen)) {
-                    results.add(new LineMatch(lineNumber,
-                            new String(lineBuffer, 0, lineLen, StandardCharsets.UTF_8)));
+                    lineLen = 0;
+                    lineNumber++;
+                } else {
+                    if (lineLen == lineBuffer.length) {
+                        lineBuffer = Arrays.copyOf(lineBuffer, lineBuffer.length * 2);
+                    }
+                    lineBuffer[lineLen++] = b;
                 }
             }
+            if (lineLen > 0 && pattern.matches(lineBuffer, 0, lineLen)) {
+                results.add(new LineMatch(lineNumber,
+                        new String(lineBuffer, 0, lineLen, StandardCharsets.UTF_8)));
+            }
+            recordStats(start, results);
+            return results;
+        }
+
+        private void recordStats(long start, List<LineMatch> results) {
             long elapsed = System.currentTimeMillis() - start;
             synchronized (stats) {
                 stats.totalLines += results.size();
@@ -1118,7 +1131,6 @@ public class FileOperationTool implements AgentTool {
                     stats.elapsedMs = elapsed;
                 }
             }
-            return results;
         }
     }
 
