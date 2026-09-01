@@ -6,6 +6,7 @@ import org.apache.ibatis.annotations.Param;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Map;
 
 @Mapper
 public interface ChatHistoryMapper {
@@ -15,6 +16,12 @@ public interface ChatHistoryMapper {
 
     /** 会话最后一条记录的时间（无记录返回null），作为会话最后活动时间 */
     LocalDateTime findLastCreateTimeBySessionId(@Param("sessionId") String sessionId);
+
+    /** 统计会话的工具调用总数（message_type='tool_call'） */
+    int countToolCallsBySessionId(@Param("sessionId") String sessionId);
+
+    /** 批量统计多个会话的消息记录数量（返回 session_id / cnt） */
+    List<Map<String, Object>> countMessagesBySessionIds(@Param("sessionIds") List<String> sessionIds);
 
     List<ChatHistory> findByAgentIdAfterId(@Param("agentId") Long agentId, @Param("afterId") Long afterId);
 

@@ -115,6 +115,7 @@ public class AiModelController {
     @PostMapping("/api/models")
     @ResponseBody
     public AiModel createModel(@RequestBody AiModel aiModel) {
+        validateModelAlias(aiModel);
         aiModelService.insert(aiModel);
         return aiModel;
     }
@@ -122,10 +123,18 @@ public class AiModelController {
     @PutMapping("/api/models/{id}")
     @ResponseBody
     public AiModel updateModel(@PathVariable Long id, @RequestBody AiModel aiModel) {
+        validateModelAlias(aiModel);
         aiModel.setId(id);
         aiModelService.update(aiModel);
         agentExecutorService.clearAndStopAgentExecutorByAiModel(aiModel.getId());
         return aiModel;
+    }
+
+    /** 模型别名为必填字段 */
+    private void validateModelAlias(AiModel aiModel) {
+        if (aiModel.getModelAlias() == null || aiModel.getModelAlias().isBlank()) {
+            throw new IllegalArgumentException("模型别名不能为空");
+        }
     }
 
     @PostMapping("/api/models/{id}/test")

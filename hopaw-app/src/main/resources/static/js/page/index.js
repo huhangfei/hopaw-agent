@@ -198,6 +198,10 @@ function connectWebSocket() {
         } else if (data.type === 'chunk') {
             handleStreamingChunk(data.content, requestId);
         } else if (data.type === 'tool_call') {
+            // 工具调用开始：刷新工具执行统计（会话总数/执行器已执行/上限）
+            if (data.status === 'started') {
+                loadToolStats();
+            }
             handleToolCall(data, requestId);
         } else if (data.type === 'thinking') {
             handleThinking(data, requestId);
@@ -1071,6 +1075,27 @@ function loadTokenUsage(minId) {
     });
 }
 
+/**
+ * 工具调用统计：会话累计调用总数 / 执行器已执行 / 执行器上限
+ * 页面加载与工具调用开始（status=started）时刷新
+ */
+function loadToolStats() {
+    if (!currentSessionId) return;
+    fetch('/api/session/' + encodeURIComponent(currentSessionId) + '/tool-stats')
+        .then(function(r) { return r.json(); })
+        .then(function(res) {
+            var el = document.getElementById('toolExecStats');
+            if (!el) return;
+            if (res.code !== 200 || !res.data) { el.textContent = ''; return; }
+            var total = res.data.sessionTotal || 0;
+            var executed = res.data.executedCount || 0;
+            var max = res.data.maxToolInvocations || 0;
+            // 上限为0表示不限制
+            var maxText = max > 0 ? max : '∞';
+            el.textContent = '共' + total + '次 · 本次' + executed + '/' + maxText;
+        });
+}
+
 function renderTokenChart(data) {
     var container = document.getElementById('tokenUsage');
     if (!container) return;
@@ -1238,6 +1263,7 @@ window.onload = function() {
     if (currentAgentId) {
         connectWebSocket();
         loadTokenUsage();
+        loadToolStats();
     }
 
     loadChatSkills();
@@ -1496,11 +1522,11 @@ function loadModelSelector() {
                                 var activeClass = '';
                                 if (defaultModelId && defaultModelId === model.id) {
                                     activeClass = ' active';
-                                    defaultModelName = model.modelName;
+                                    defaultModelName = model.modelAlias || model.modelName;
                                 }
-                                html += '<div class="model-sub-item' + activeClass + '" data-model-id="' + model.id + '" data-model-name="' + escapeHtml(model.modelName) + '">';
+                                html += '<div class="model-sub-item' + activeClass + '" data-model-id="' + model.id + '" data-model-name="' + escapeHtml(model.modelAlias || model.modelName) + '">';
                                 html += '<span class="model-sub-item-check">✓</span>';
-                                html += '<span class="model-sub-item-name">' + escapeHtml(model.modelName) + '</span>';
+                                html += '<span class="model-sub-item-name">' + escapeHtml(model.modelAlias || model.modelName) + '</span>';
                                 html += '</div>';
                             });
                         }
@@ -1583,11 +1609,13 @@ function selectModel(modelId, modelName) {
 }
 
 /**
- * 会话业务类型归一为筛选类型：workflow-task-chat→task / project-chat→project / 其他→chat
+ * 会话业务类型归一为筛选类型：按 AgentExecutorBizTypeEnum 的 value 判断
+ * workflowTaskChat→task / projectChat→project / 其他→chat
+ * 兼容历史数据（旧版写入的 workflow-task-chat / project-chat）
  */
 function sessionFilterTypeOf(bizType) {
-    if (bizType === 'workflow-task-chat') return 'task';
-    if (bizType === 'project-chat') return 'project';
+    if (bizType === 'workflowTaskChat' || bizType === 'workflow-task-chat') return 'task';
+    if (bizType === 'projectChat' || bizType === 'project-chat') return 'project';
     return 'chat';
 }
 
@@ -1656,8 +1684,8 @@ function renderSessionList(sessions) {
             runningSessionIds[s.sessionId] = true;
         }
         var activeClass = (s.sessionId === currentSessionId) ? ' active' : '';
-        var isTask = s.bizType === 'workflow-task-chat';
-        var isProject = s.bizType === 'project-chat';
+        var isTask = s.bizType === 'workflowTaskChat' || s.bizType === 'workflow-task-chat';
+        var isProject = s.bizType === 'projectChat' || s.bizType === 'project-chat';
         var taskClass = isTask ? ' session-list-item-task' : '';
         var projectClass = isProject ? ' session-list-item-project' : '';
         var title = s.title || '未命名会话';

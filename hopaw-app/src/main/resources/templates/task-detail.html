@@ -90,20 +90,19 @@
             <div class="task-session-running" id="taskSessionRunning" style="display: none;">
                 <span class="running-dot"></span>
                 <span class="running-label">执行中</span>
-                <span class="running-ticker" id="taskSessionTicker"></span>
-                <span class="running-cursor"></span>
+                <span class="running-ticker" id="taskSessionTicker"><span id="taskSessionTickerText"></span><span class="running-cursor"></span></span>
             </div>
         </div>
     </div>
 
     <!-- Token 用量统计（默认折叠，仅显示汇总值，点击标题展开图表） -->
     <div class="task-detail-section task-detail-token-section">
-        <h3 class="task-detail-section-title token-section-toggle" id="taskTokenToggle" onclick="toggleTaskTokenSection()" title="点击展开/折叠">
+        <h3 class="task-detail-section-title token-section-toggle token-section-collapsed" id="taskTokenToggle" onclick="toggleTaskTokenSection()" title="点击展开/折叠">
             <span class="token-toggle-label">
                 <span class="token-toggle-arrow" id="taskTokenArrow">▸</span>
                 Token 用量
-                <span class="token-stats-summary" id="taskTokenSummary"></span>
             </span>
+            <span class="token-stats-summary" id="taskTokenSummary"></span>
         </h3>
         <div class="token-chart-wrap" id="taskTokenChart" style="display: none;"></div>
     </div>

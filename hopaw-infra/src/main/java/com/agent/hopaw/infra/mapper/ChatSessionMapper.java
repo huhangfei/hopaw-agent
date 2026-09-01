@@ -12,6 +12,12 @@ public interface ChatSessionMapper {
 
     List<ChatSession> findByUserId(@Param("userId") String userId);
 
+    /** 分页查询用户会话（按最后更新时间倒序） */
+    List<ChatSession> findPageByUserId(@Param("userId") String userId, @Param("offset") int offset, @Param("limit") int limit);
+
+    /** 用户的会话总数 */
+    int countByUserId(@Param("userId") String userId);
+
     List<ChatSession> findByUserIdAndAgentId(@Param("userId") String userId, @Param("agentId") Long agentId);
 
     ChatSession findById(@Param("id") Long id);

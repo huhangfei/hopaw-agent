@@ -58,7 +58,7 @@ function setupCascading() {
                 (models || []).forEach(function(m) {
                     var opt = document.createElement('option');
                     opt.value = m.id;
-                    opt.textContent = m.modelName;
+                    opt.textContent = m.modelAlias || m.modelName;
                     modelSelect.appendChild(opt);
                 });
             });
@@ -85,7 +85,7 @@ function selectModelById(modelId) {
                     (models || []).forEach(function(m) {
                         var opt = document.createElement('option');
                         opt.value = m.id;
-                        opt.textContent = m.modelName;
+                        opt.textContent = m.modelAlias || m.modelName;
                         modelSelect.appendChild(opt);
                     });
                     modelSelect.value = modelId;

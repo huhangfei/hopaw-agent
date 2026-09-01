@@ -2,12 +2,17 @@ package com.agent.hopaw.infra.service;
 
 import com.agent.hopaw.infra.mapper.ChatHistoryMapper;
 import com.agent.hopaw.infra.mapper.ChatSessionMapper;
+import com.agent.hopaw.infra.model.dto.ChatSessionStatsVO;
 import com.agent.hopaw.infra.model.entity.ChatHistory;
 import com.agent.hopaw.infra.model.entity.ChatSession;
 import org.springframework.stereotype.Service;
 
+import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 @Service
 public class ChatSessionService implements IChatSessionService {
@@ -107,5 +112,51 @@ public class ChatSessionService implements IChatSessionService {
     @Override
     public void updateBizType(String sessionId, String bizType) {
         chatSessionMapper.updateBizType(sessionId, bizType);
+    }
+
+    /**
+     * 分页查询用户会话及消息记录数量（会话清理设置页）
+     */
+    @Override
+    public Map<String, Object> getSessionStatsPage(String userId, int page, int pageSize) {
+        int total = chatSessionMapper.countByUserId(userId);
+        int offset = Math.max(0, (page - 1) * pageSize);
+        List<ChatSession> sessions = chatSessionMapper.findPageByUserId(userId, offset, pageSize);
+
+        // 批量统计消息数量，避免逐会话查询
+        Map<String, Long> countMap = new HashMap<>();
+        if (!sessions.isEmpty()) {
+            List<String> sessionIds = sessions.stream().map(ChatSession::getSessionId).collect(Collectors.toList());
+            List<Map<String, Object>> rows = chatHistoryMapper.countMessagesBySessionIds(sessionIds);
+            if (rows != null) {
+                for (Map<String, Object> row : rows) {
+                    Object sid = row.get("session_id");
+                    Object cnt = row.get("cnt");
+                    if (sid != null && cnt != null) {
+                        countMap.put(sid.toString(), ((Number) cnt).longValue());
+                    }
+                }
+            }
+        }
+
+        List<ChatSessionStatsVO> list = new ArrayList<>(sessions.size());
+        for (ChatSession s : sessions) {
+            ChatSessionStatsVO vo = new ChatSessionStatsVO();
+            vo.setId(s.getId());
+            vo.setSessionId(s.getSessionId());
+            vo.setTitle(s.getTitle());
+            vo.setBizType(s.getBizType());
+            vo.setCreateTime(s.getCreateTime());
+            vo.setLastUpdateTime(s.getLastUpdateTime());
+            vo.setMessageCount(countMap.getOrDefault(s.getSessionId(), 0L));
+            list.add(vo);
+        }
+
+        Map<String, Object> result = new HashMap<>(4);
+        result.put("total", total);
+        result.put("page", page);
+        result.put("pageSize", pageSize);
+        result.put("list", list);
+        return result;
     }
 }

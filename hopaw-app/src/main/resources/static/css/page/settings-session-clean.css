@@ -1,0 +1,210 @@
+/* 设置 - 会话清理 tab */
+.session-clean-toolbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 14px;
+    gap: 12px;
+    flex-wrap: wrap;
+}
+
+.session-clean-batch-btns {
+    display: flex;
+    gap: 10px;
+}
+
+.session-clean-btn {
+    padding: 6px 14px !important;
+    font-size: 13px !important;
+}
+
+.session-clean-btn-danger {
+    background: #dc2626 !important;
+}
+
+.session-clean-btn-danger:hover {
+    background: #b91c1c !important;
+}
+
+.session-clean-selected-tip {
+    font-size: 12px;
+    color: #888;
+}
+
+.session-clean-card {
+    background: #fff;
+    border: 1px solid #e5e7eb;
+    border-radius: 8px;
+    padding: 0;
+    overflow: hidden;
+}
+
+.session-clean-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 13px;
+}
+
+.session-clean-table thead th {
+    text-align: left;
+    padding: 10px 12px;
+    background: #f9fafb;
+    color: #666;
+    font-weight: 600;
+    border-bottom: 1px solid #e5e7eb;
+    white-space: nowrap;
+}
+
+.session-clean-table tbody td {
+    padding: 9px 12px;
+    border-bottom: 1px solid #f0f0f0;
+    color: #333;
+    vertical-align: middle;
+}
+
+.session-clean-table tbody tr:hover {
+    background: #f9fafb;
+}
+
+.sc-col-check {
+    width: 36px;
+    text-align: center;
+}
+
+.sc-col-title {
+    max-width: 280px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.sc-col-actions {
+    white-space: nowrap;
+}
+
+.sc-action-btn {
+    border: 1px solid #d1d5db;
+    background: #fff;
+    color: #333;
+    border-radius: 4px;
+    padding: 3px 10px;
+    font-size: 12px;
+    cursor: pointer;
+    margin-right: 6px;
+}
+
+.sc-action-btn:hover {
+    border-color: #3b82f6;
+    color: #3b82f6;
+}
+
+.sc-action-danger {
+    border-color: #fca5a5;
+    color: #dc2626;
+}
+
+.sc-action-danger:hover {
+    border-color: #dc2626;
+    color: #b91c1c;
+    background: rgba(220, 38, 38, 0.05);
+}
+
+.session-clean-empty {
+    padding: 40px;
+    text-align: center;
+    color: #999;
+}
+
+.session-clean-pagination {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 12px;
+    border-top: 1px solid #f0f0f0;
+}
+
+.sc-page-btn {
+    border: 1px solid #d1d5db;
+    background: #fff;
+    color: #333;
+    border-radius: 4px;
+    padding: 4px 12px;
+    font-size: 12px;
+    cursor: pointer;
+}
+
+.sc-page-btn:hover:not(:disabled) {
+    border-color: #3b82f6;
+    color: #3b82f6;
+}
+
+.sc-page-btn:disabled {
+    opacity: 0.45;
+    cursor: not-allowed;
+}
+
+.sc-page-info,
+.sc-total-info {
+    font-size: 12px;
+    color: #666;
+}
+
+/* 暗色主题 */
+body.dark-theme .session-clean-card {
+    background: #16213e;
+    border-color: #2d2d44;
+}
+
+body.dark-theme .session-clean-table thead th {
+    background: #1a1a2e;
+    color: #c0c0c0;
+    border-bottom-color: #2d2d44;
+}
+
+body.dark-theme .session-clean-table tbody td {
+    color: #e0e0e0;
+    border-bottom-color: #2d2d44;
+}
+
+body.dark-theme .session-clean-table tbody tr:hover {
+    background: #1a1a2e;
+}
+
+body.dark-theme .sc-action-btn {
+    background: #16213e;
+    border-color: #2d2d44;
+    color: #c0c0c0;
+}
+
+body.dark-theme .sc-action-btn:hover {
+    border-color: #8ba3ff;
+    color: #8ba3ff;
+}
+
+body.dark-theme .sc-action-danger {
+    border-color: #7f1d1d;
+    color: #f87171;
+}
+
+body.dark-theme .sc-action-danger:hover {
+    border-color: #dc2626;
+    color: #f87171;
+    background: rgba(220, 38, 38, 0.12);
+}
+
+body.dark-theme .sc-page-btn {
+    background: #16213e;
+    border-color: #2d2d44;
+    color: #c0c0c0;
+}
+
+body.dark-theme .sc-page-btn:hover:not(:disabled) {
+    border-color: #8ba3ff;
+    color: #8ba3ff;
+}
+
+body.dark-theme .sc-page-info,
+body.dark-theme .sc-total-info,
+body.dark-theme .session-clean-selected-tip {
+    color: #c0c0c0;
+}

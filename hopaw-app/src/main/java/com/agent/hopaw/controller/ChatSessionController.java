@@ -1,5 +1,6 @@
 package com.agent.hopaw.controller;
 
+import com.agent.hopaw.infra.constant.AgentExecutorBizTypeEnum;
 import com.agent.hopaw.infra.constant.ChatMemoryStatusEnum;
 import com.agent.hopaw.infra.memory.IChatMemoryService;
 import com.agent.hopaw.infra.model.dto.ResponseBean;
@@ -14,7 +15,10 @@ import org.springframework.util.StringUtils;
 import org.springframework.web.bind.annotation.*;
 
 import javax.servlet.http.HttpServletRequest;
+import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/api/session")
@@ -80,8 +84,9 @@ public class ChatSessionController {
     @ResponseBody
     public ResponseBean create(HttpServletRequest request, @RequestBody ChatSession session) {
         if(!StringUtils.hasLength(session.getTitle())){
-            session.setTitle("新任务");
+            session.setTitle("新会话");
         }
+        session.setBizType(AgentExecutorBizTypeEnum.Chat.getValue());
         session.setUserId(CurrentUser.require(request));
         session.setSessionId(UuidUtil.generateSimpleUUID());
         session.setCreateTime(java.time.LocalDateTime.now());
@@ -134,6 +139,98 @@ public class ChatSessionController {
     public ResponseBean isRunning(@PathVariable String sessionId) {
         boolean running = agentExecutorService.isAgentExecutorRunning(sessionId);
         return ResponseBean.success(running);
+    }
+
+    /**
+     * 会话清理设置页：分页查询当前用户的会话列表（含消息记录数量）
+     */
+    @GetMapping("/stats-page")
+    @ResponseBody
+    public ResponseBean statsPage(HttpServletRequest request,
+                                  @RequestParam(defaultValue = "1") int page,
+                                  @RequestParam(defaultValue = "20") int pageSize) {
+        if (pageSize < 1) pageSize = 20;
+        if (pageSize > 100) pageSize = 100;
+        String userId = CurrentUser.require(request);
+        return ResponseBean.success(chatSessionService.getSessionStatsPage(userId, page, pageSize));
+    }
+
+    /**
+     * 批量清理会话历史（聊天记录 + 记忆），会话本身保留
+     */
+    @PostMapping("/batch-clear")
+    @ResponseBody
+    public ResponseBean batchClear(@RequestBody Map<String, List<String>> body) {
+        List<String> sessionIds = body.get("sessionIds");
+        if (sessionIds == null || sessionIds.isEmpty()) {
+            return ResponseBean.fail("请选择要清理的会话");
+        }
+        int success = 0;
+        List<String> failed = new ArrayList<>();
+        for (String sessionId : sessionIds) {
+            try {
+                chatHistoryService.deleteBySessionId(sessionId);
+                chatMemoryService.clear(sessionId);
+                success++;
+            } catch (Exception e) {
+                failed.add(sessionId);
+            }
+        }
+        Map<String, Object> result = new HashMap<>(2);
+        result.put("success", success);
+        result.put("failed", failed);
+        return ResponseBean.success(result);
+    }
+
+    /**
+     * 批量删除会话：先清理历史（聊天记录 + 记忆），再删除会话本身
+     */
+    @PostMapping("/batch-delete")
+    @ResponseBody
+    public ResponseBean batchDelete(@RequestBody Map<String, List<String>> body) {
+        List<String> sessionIds = body.get("sessionIds");
+        if (sessionIds == null || sessionIds.isEmpty()) {
+            return ResponseBean.fail("请选择要删除的会话");
+        }
+        int success = 0;
+        List<String> failed = new ArrayList<>();
+        for (String sessionId : sessionIds) {
+            try {
+                // 先清理历史与记忆
+                chatHistoryService.deleteBySessionId(sessionId);
+                chatMemoryService.clear(sessionId);
+                // 再删除会话
+                chatSessionService.deleteSessionBySessionId(sessionId);
+                success++;
+            } catch (Exception e) {
+                failed.add(sessionId);
+            }
+        }
+        Map<String, Object> result = new HashMap<>(2);
+        result.put("success", success);
+        result.put("failed", failed);
+        return ResponseBean.success(result);
+    }
+
+    /**
+     * 会话工具调用统计：会话累计调用总数、当前执行器已执行数量、执行器最大调用次数
+     */
+    @GetMapping("/{sessionId}/tool-stats")
+    @ResponseBody
+    public ResponseBean toolStats(@PathVariable String sessionId) {
+        Map<String, Object> stats = new HashMap<>(4);
+        // 统计1：该会话所有工具调用总数（含历史）
+        stats.put("sessionTotal", chatHistoryService.countToolCallsBySessionId(sessionId));
+        // 统计2/3：当前执行器的执行数量与上限（执行器不存在时为0/0）
+        var executor = agentExecutorService.getAgentExecutor(sessionId);
+        if (executor != null) {
+            stats.put("executedCount", executor.getExecutedToolCount());
+            stats.put("maxToolInvocations", executor.getMaxToolInvocations());
+        } else {
+            stats.put("executedCount", 0);
+            stats.put("maxToolInvocations", 0);
+        }
+        return ResponseBean.success(stats);
     }
 
     @PostMapping("/{sessionId}/clear")

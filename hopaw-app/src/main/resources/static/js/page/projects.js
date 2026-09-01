@@ -108,7 +108,7 @@ function loadProjectsForTaskModal() {
 
 /** 全局通知处理：项目状态变更刷新详情；任务状态变更仅在影响当前项目时刷新 */
 function handleProjectNotice(data) {
-    if (!data || data.subtype !== 'status_change') return;
+    if (!data) return;
     var c = data.content || {};
     if (data.type === 'project') {
         // 项目列表始终刷新；详情仅刷新当前打开的项目
@@ -427,9 +427,11 @@ function renderDetailTasks(tasks) {
     countEl.textContent = '(' + tasks.length + ')';
     container.innerHTML = tasks.map(function (task) {
         var st = TASK_STATUS[task.status] || { label: task.status || '未知', color: '#999' };
-        return '<a class="detail-task-card" href="/tasks-board/' + task.id + '" target="_blank" ' +
-            'onclick="window.open(\'/tasks-board/' + task.id + '\', \'_blank\', \'width=900,height=700\'); return false;" ' +
-            'style="border-left-color:' + st.color + '">' +
+        var processingClass = task.status === 'processing' ? ' detail-task-card-processing' : '';
+        // 澶勭悊涓崱鐗囦笉璁?inline 鐘舵€佽壊锛坕nline 浼樺厛绾ч珮浼氱洊浣?CSS 鐨勯€忔槑杈规锛屽共鎵版祦鍏夋晥鏋滐級
+        var styleAttr = processingClass ? '' : ' style="border-left-color:' + st.color + '"';
+        return '<a class="detail-task-card' + processingClass + '" href="/tasks-board/' + task.id + '" target="_blank" ' +
+            'onclick="window.open(\'/tasks-board/' + task.id + '\', \'_blank\', \'width=900,height=700\'); return false;"' + styleAttr + '>' +
             '<div class="task-card-head">' +
                 '<span class="task-name" title="' + escapeHtml(task.title || '') + '">' + escapeHtml(task.title || '') + '</span>' +
                 '<span class="task-status-badge" style="background:' + st.color + '">' + st.label + '</span>' +

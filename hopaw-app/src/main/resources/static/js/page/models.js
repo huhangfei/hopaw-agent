@@ -68,6 +68,7 @@ function loadModels() {
                     
                     return '<tr>' +
                         '<td>' + model.modelName + '</td>' +
+                        '<td>' + (model.modelAlias || model.modelName) + '</td>' +
                         '<td>' + capabilities + '</td>' +
                         '<td>' + verified + '</td>' +
                         '<td>' + (model.createTime || '') + '</td>' +
@@ -257,6 +258,7 @@ function showEditModelModal(id) {
             document.getElementById('modelId').value = model.id;
             document.getElementById('modelProviderId').value = model.providerId;
             document.getElementById('modelName').value = model.modelName;
+            document.getElementById('modelAlias').value = model.modelAlias || model.modelName;
 
             // 显示模型能力（只读）
             const capNames = {text: '文本', image: '图片', audio: '音频', video: '视频', document: '文档'};
@@ -316,15 +318,21 @@ function hideModelSavingOverlay() {
 
 function submitModel() {
     const modelName = document.getElementById('modelName').value.trim();
+    const modelAlias = document.getElementById('modelAlias').value.trim();
 
     if (!modelName) {
         showToast('请输入模型名称', 'error');
+        return;
+    }
+    if (!modelAlias) {
+        showToast('请输入模型别名', 'error');
         return;
     }
 
     const data = {
         providerId: parseInt(document.getElementById('modelProviderId').value),
         modelName: modelName,
+        modelAlias: modelAlias,
         extParams: document.getElementById('modelExtParams').value.trim() || null
     };
 

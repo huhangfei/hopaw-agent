@@ -46,4 +46,9 @@ public class ChatHistoryService implements IChatHistoryService{
     public int deleteBySessionId(String sessionId) {
         return chatHistoryMapper.deleteBySessionId(sessionId);
     }
+
+    @Override
+    public int countToolCallsBySessionId(String sessionId) {
+        return chatHistoryMapper.countToolCallsBySessionId(sessionId);
+    }
 }

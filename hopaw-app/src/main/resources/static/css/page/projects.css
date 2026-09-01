@@ -498,55 +498,67 @@ body.dark-theme .detail-tasks-section .btn-add-task-detail:hover {
     box-shadow: 0 4px 12px rgba(102, 126, 234, 0.15);
 }
 
-/* 处理中任务卡片：边框流动效果（渐变高光沿边框流动） */
+/* 处理中任务卡片：流光边框——旋转锥形渐变层实现（transform 旋转，兼容性好不依赖 @property） */
 .detail-task-card.detail-task-card-processing {
     position: relative;
+    overflow: hidden;
     border-color: transparent;
 }
 
+/* 流光层：居中的超大正方形锥形渐变，匀速旋转，高光绕卡片边框流动 */
 .detail-task-card.detail-task-card-processing::before {
     content: '';
     position: absolute;
-    inset: -1px;
-    border-radius: 9px;
-    padding: 1px;
+    left: 50%;
+    top: 50%;
+    width: 300%;
+    aspect-ratio: 1;
+    margin-left: -150%;
+    margin-top: -150%;
     background: conic-gradient(
-        from var(--task-border-angle, 0deg),
-        #3b82f6 0deg,
-        #93c5fd 60deg,
-        rgba(59, 130, 246, 0.1) 150deg,
-        rgba(59, 130, 246, 0.1) 300deg,
-        #3b82f6 360deg
+        rgba(59, 130, 246, 0) 0deg,
+        #3b82f6 25deg,
+        #93c5fd 45deg,
+        rgba(59, 130, 246, 0) 70deg,
+        rgba(59, 130, 246, 0) 360deg
     );
-    -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
-    -webkit-mask-composite: xor;
-    mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
-    mask-composite: exclude;
-    animation: task-border-flow 2.5s linear infinite;
+    animation: task-border-flow 3s linear infinite;
     pointer-events: none;
+}
+
+/* 中心遮挡层：盖住流光中心区域，只露出边框流光；保留左侧状态色条 */
+.detail-task-card.detail-task-card-processing::after {
+    content: '';
+    position: absolute;
+    inset: 2px;
+    border-radius: 7px;
+    background: #fafafa;
+    border-left: 4px solid #3b82f6;
+}
+
+/* 卡片内容置于遮挡层之上 */
+.detail-task-card.detail-task-card-processing > * {
+    position: relative;
     z-index: 1;
 }
 
 body.dark-theme .detail-task-card.detail-task-card-processing::before {
     background: conic-gradient(
-        from var(--task-border-angle, 0deg),
-        #8ba3ff 0deg,
-        #c3d4ff 60deg,
-        rgba(139, 163, 255, 0.1) 150deg,
-        rgba(139, 163, 255, 0.1) 300deg,
-        #8ba3ff 360deg
+        rgba(139, 163, 255, 0) 0deg,
+        #8ba3ff 25deg,
+        #c3d4ff 45deg,
+        rgba(139, 163, 255, 0) 70deg,
+        rgba(139, 163, 255, 0) 360deg
     );
 }
 
-@property --task-border-angle {
-    syntax: '<angle>';
-    inherits: false;
-    initial-value: 0deg;
+body.dark-theme .detail-task-card.detail-task-card-processing::after {
+    background: #1a1a2e;
 }
 
 @keyframes task-border-flow {
     to {
-        --task-border-angle: 360deg;
+        transform: rotate(360deg);
     }
 }
 

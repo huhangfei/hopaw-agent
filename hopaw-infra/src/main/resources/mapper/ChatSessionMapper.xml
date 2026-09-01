@@ -34,6 +34,21 @@
         ORDER BY last_update_time DESC
     </select>
 
+    <!-- 分页查询用户会话（会话清理设置页） -->
+    <select id="findPageByUserId" resultMap="ChatSessionResultMap">
+        SELECT <include refid="allColumns"/>
+        FROM chat_sessions
+        WHERE user_id = #{userId}
+        ORDER BY last_update_time DESC
+        LIMIT #{limit} OFFSET #{offset}
+    </select>
+
+    <select id="countByUserId" resultType="java.lang.Integer">
+        SELECT COUNT(*)
+        FROM chat_sessions
+        WHERE user_id = #{userId}
+    </select>
+
     <select id="findByUserIdAndAgentId" resultMap="ChatSessionResultMap">
         SELECT <include refid="allColumns"/>
         FROM chat_sessions

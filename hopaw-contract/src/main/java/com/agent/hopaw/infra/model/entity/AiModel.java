@@ -4,6 +4,7 @@ public class AiModel {
     private Long id;
     private Long providerId;
     private String modelName;
+    private String modelAlias;
     private String capabilities;
     private Boolean verified;
     private String extParams;
@@ -43,6 +44,14 @@ public class AiModel {
 
     public void setModelName(String modelName) {
         this.modelName = modelName;
+    }
+
+    public String getModelAlias() {
+        return modelAlias;
+    }
+
+    public void setModelAlias(String modelAlias) {
+        this.modelAlias = modelAlias;
     }
 
     public String getCapabilities() {

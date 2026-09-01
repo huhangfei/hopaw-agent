@@ -48,6 +48,24 @@
         LIMIT 1
     </select>
 
+    <!-- 会话的工具调用总数 -->
+    <select id="countToolCallsBySessionId" resultType="java.lang.Integer">
+        SELECT COUNT(*)
+        FROM chat_history
+        WHERE session_id = #{sessionId} AND message_type = 'tool_call'
+    </select>
+
+    <!-- 批量统计多个会话的消息记录数量（会话清理设置页） -->
+    <select id="countMessagesBySessionIds" resultType="java.util.HashMap">
+        SELECT session_id, COUNT(*) AS cnt
+        FROM chat_history
+        WHERE session_id IN
+        <foreach collection="sessionIds" item="sid" open="(" separator="," close=")">
+            #{sid}
+        </foreach>
+        GROUP BY session_id
+    </select>
+
     <select id="findByAgentIdAfterId" resultMap="ChatHistoryResultMap">
         SELECT id, agent_id, session_id, role, message_type, content, tool_call_id, tool_name, tool_arguments, tool_call_status, tool_execution_time, create_time, user_id
         FROM chat_history

@@ -273,7 +273,9 @@
             </div>
         </div>
         <div class="tool-panel-section tool-panel-mid">
-            <div class="tool-panel-title">工具执行列表</div>
+            <div class="tool-panel-title">工具执行列表
+                <span id="toolExecStats" style="font-size:11px;font-weight:400;margin-left:8px;float: right;" title="会话调用总数 / 执行器已执行 / 执行器上限"></span>
+            </div>
             <div class="tool-panel-body" id="toolExecList">
                 <div th:each="chat : ${chatHistory}" th:if="${chat.messageType == 'tool_call'}">
                     <div class="tool-call-container-static">

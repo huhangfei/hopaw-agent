@@ -163,6 +163,8 @@ public class WorkflowTaskService implements IWorkflowTaskService {
         workflowTaskMapper.deleteById(id);
         // 任务删除：发送外部通知（任务已删，项目仍在，通知配置读取不受影响）
         sendTaskNotify(existing, NotifyEventEnum.TASK_DELETED, null, null);
+        // 任务删除：推送全局通知（任务看板/项目详情页刷新任务列表）
+        notifyTaskDeleted(existing);
     }
 
     @Override
@@ -772,6 +774,19 @@ public class WorkflowTaskService implements IWorkflowTaskService {
             globalNoticeService.notify(task.getUserId(), GlobalNoticeTypeEnum.TASK, "status_change", content);
         } catch (Exception e) {
             logger.warn("任务状态变更通知推送失败: taskId={}", task.getId(), e);
+        }
+    }
+
+    /** 任务删除全局通知：子类型 deleted */
+    private void notifyTaskDeleted(WorkflowTask task) {
+        try {
+            java.util.Map<String, Object> content = new java.util.HashMap<>();
+            content.put("taskId", task.getId());
+            content.put("projectId", task.getProjectId());
+            content.put("title", task.getTitle());
+            globalNoticeService.notify(task.getUserId(), GlobalNoticeTypeEnum.TASK, "deleted", content);
+        } catch (Exception e) {
+            logger.warn("任务删除通知推送失败: taskId={}", task.getId(), e);
         }
     }
 

@@ -6,34 +6,39 @@
         <id property="id" column="id"/>
         <result property="providerId" column="provider_id"/>
         <result property="modelName" column="model_name"/>
+        <result property="modelAlias" column="model_alias"/>
         <result property="capabilities" column="capabilities"/>
         <result property="verified" column="verified"/>
         <result property="createTime" column="create_time"/>
         <result property="extParams" column="ext_params"/>
     </resultMap>
 
+    <sql id="allColumns">
+        id, provider_id, model_name, model_alias, capabilities, verified, create_time, ext_params
+    </sql>
+
     <select id="findAll" resultMap="AiModelResultMap">
-        SELECT id, provider_id, model_name, capabilities, verified, create_time, ext_params
+        SELECT <include refid="allColumns"/>
         FROM ai_models
         ORDER BY id DESC
     </select>
 
     <select id="findByProviderId" resultMap="AiModelResultMap">
-        SELECT id, provider_id, model_name, capabilities, verified, create_time, ext_params
+        SELECT <include refid="allColumns"/>
         FROM ai_models
         WHERE provider_id = #{providerId}
         ORDER BY id DESC
     </select>
 
     <select id="findById" resultMap="AiModelResultMap">
-        SELECT id, provider_id, model_name, capabilities, verified, create_time, ext_params
+        SELECT <include refid="allColumns"/>
         FROM ai_models
         WHERE id = #{id}
     </select>
 
     <insert id="insert" parameterType="com.agent.hopaw.infra.model.entity.AiModel">
-        INSERT INTO ai_models (provider_id, model_name, capabilities, verified, ext_params)
-        VALUES (#{providerId}, #{modelName}, #{capabilities}, #{verified}, #{extParams})
+        INSERT INTO ai_models (provider_id, model_name, model_alias, capabilities, verified, ext_params, create_time)
+        VALUES (#{providerId}, #{modelName}, #{modelAlias}, #{capabilities}, #{verified}, #{extParams}, datetime('now','localtime'))
         <selectKey resultType="long" keyProperty="id" order="AFTER">
             SELECT last_insert_rowid()
         </selectKey>
@@ -43,6 +48,7 @@
         UPDATE ai_models
         SET provider_id = #{providerId},
             model_name = #{modelName},
+            model_alias = #{modelAlias},
             capabilities = #{capabilities},
             verified = #{verified},
             ext_params = #{extParams}

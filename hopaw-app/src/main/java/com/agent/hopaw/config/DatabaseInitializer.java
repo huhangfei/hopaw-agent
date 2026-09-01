@@ -153,12 +153,17 @@ public class DatabaseInitializer implements CommandLineRunner {
                     "id INTEGER PRIMARY KEY AUTOINCREMENT, " +
                     "provider_id INTEGER NOT NULL, " +
                     "model_name TEXT NOT NULL, " +
+                    "model_alias TEXT NOT NULL DEFAULT '', " +
                     "capabilities TEXT, " +
                     "verified INTEGER DEFAULT 0, " +
                     "ext_params TEXT, " +
                     "create_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP" +
                     ")");
             stmt.execute("CREATE INDEX IF NOT EXISTS idx_ai_models_provider ON ai_models(provider_id)");
+            // 兼容旧库：ai_models 增量补充模型别名列（必填）
+            ensureColumn(stmt, "ai_models", "model_alias", "TEXT NOT NULL DEFAULT ''");
+            // 旧数据回填：别名默认取模型名称
+            stmt.execute("UPDATE ai_models SET model_alias = model_name WHERE model_alias IS NULL OR model_alias = ''");
 
             stmt.execute("CREATE TABLE IF NOT EXISTS token_usage (" +
                     "id INTEGER PRIMARY KEY AUTOINCREMENT, " +
@@ -489,6 +494,8 @@ public class DatabaseInitializer implements CommandLineRunner {
             // 一次性迁移：历史数据时间由 UTC 转本地时间
             //（旧版 create_time/update_time 依赖 CURRENT_TIMESTAMP 默认值与 UPDATE 写入，SQLite 中均为 UTC）
             migrateUtcTimeToLocal(stmt);
+            // 一次性迁移：ai_models / ai_model_providers 的 create_time 由 UTC 转本地时间
+            migrateAiModelUtcTimeToLocal(stmt);
 
             log.info("Database tables created");
         }
@@ -523,6 +530,24 @@ public class DatabaseInitializer implements CommandLineRunner {
         stmt.execute("UPDATE task_sessions SET create_time = datetime(create_time, 'localtime')");
         stmt.execute("INSERT INTO schema_migrations (name) VALUES ('utc_time_to_local')");
         log.info("Migrated UTC timestamps to local time for workflow tables");
+    }
+    /**
+     * 模型相关表的历史时间数据迁移：UTC → 本地时间。
+     * 旧版 ai_models / ai_model_providers 的 create_time 依赖列默认值 CURRENT_TIMESTAMP（UTC），
+     * 导致模型添加时间页面显示少 8 小时；迁移后新写入已改为 datetime('now','localtime')。
+     * 通过 schema_migrations 标记表保证只执行一次。
+     */
+    private void migrateAiModelUtcTimeToLocal(Statement stmt) throws Exception {
+        try (ResultSet rs = stmt.executeQuery(
+                "SELECT COUNT(*) FROM schema_migrations WHERE name = 'utc_time_to_local_ai_models'")) {
+            if (rs.next() && rs.getInt(1) > 0) {
+                return;
+            }
+        }
+        stmt.execute("UPDATE ai_models SET create_time = datetime(create_time, 'localtime')");
+        stmt.execute("UPDATE ai_model_providers SET create_time = datetime(create_time, 'localtime')");
+        stmt.execute("INSERT INTO schema_migrations (name) VALUES ('utc_time_to_local_ai_models')");
+        log.info("Migrated UTC timestamps to local time for ai_models / ai_model_providers");
     }
 
     private void initializeDefaultData() throws Exception {
@@ -727,10 +752,15 @@ public class DatabaseInitializer implements CommandLineRunner {
     }
 
     private void insertModel(Statement stmt, long providerId, String modelName, String capabilities) throws Exception {
+        insertModel(stmt, providerId, modelName, modelName, capabilities);
+    }
+
+    private void insertModel(Statement stmt, long providerId, String modelName, String modelAlias, String capabilities) throws Exception {
         stmt.execute(String.format(
-                "INSERT INTO ai_models (provider_id, model_name, capabilities, verified) VALUES (%d, '%s', '%s', %d)",
+                "INSERT INTO ai_models (provider_id, model_name, model_alias, capabilities, verified, create_time) VALUES (%d, '%s', '%s', '%s', %d, datetime('now','localtime'))",
                 providerId,
                 escapeSQL(modelName),
+                escapeSQL(modelAlias),
                 escapeSQL(capabilities),
                 0
         ));

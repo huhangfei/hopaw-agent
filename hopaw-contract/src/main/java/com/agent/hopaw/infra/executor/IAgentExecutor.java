@@ -19,6 +19,12 @@ public interface IAgentExecutor {
     void toolApprovalComplete(String callId,Boolean allowed);
     boolean running();
 
+    /** 本执行器生命周期内已开始的工具调用次数 */
+    int getExecutedToolCount();
+
+    /** 本执行器允许的最大工具调用次数（0表示不限制） */
+    int getMaxToolInvocations();
+
     /**
      * 执行
      * 超时时间默认600秒

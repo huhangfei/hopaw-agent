@@ -18,7 +18,7 @@ function loadModelNameMap(callback) {
             for (var providerId in data) {
                 var models = data[providerId];
                 models.forEach(function(model) {
-                    modelNameMap[model.id] = model.modelName;
+                    modelNameMap[model.id] = model.modelAlias || model.modelName;
                 });
             }
             if (callback) callback();

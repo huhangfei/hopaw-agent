@@ -355,7 +355,7 @@ function connectTaskWebSocket() {
             tickerBuffer = '';
             currentToolCallId = null;
             streamSeen = {};
-            var tEl = document.getElementById('taskSessionTicker');
+            var tEl = document.getElementById('taskSessionTickerText');
             if (tEl) tEl.textContent = '';
         } else if (data.type === 'chunk') {
             showSessionRunning();
@@ -461,8 +461,12 @@ function appendTicker(content) {
     if (tickerBuffer.length > TICKER_MAX_LEN) {
         tickerBuffer = tickerBuffer.slice(tickerBuffer.length - TICKER_MAX_LEN);
     }
-    var el = document.getElementById('taskSessionTicker');
+    // 只更新文字span，保留内部的打字机光标元素（光标始终跟随最后文字）
+    var el = document.getElementById('taskSessionTickerText');
     if (el) el.textContent = tickerBuffer;
+    // 滚动到底部，保证两行窗口内始终显示最新文字
+    var tickerEl = document.getElementById('taskSessionTicker');
+    if (tickerEl) tickerEl.scrollTop = tickerEl.scrollHeight;
 }
 
 /* ========== 评论 ========== */
@@ -812,11 +816,16 @@ var taskTokenSectionExpanded = false;
 function toggleTaskTokenSection() {
     var chartEl = document.getElementById('taskTokenChart');
     var arrowEl = document.getElementById('taskTokenArrow');
+    var toggleEl = document.getElementById('taskTokenToggle');
     if (!chartEl) return;
     taskTokenSectionExpanded = !taskTokenSectionExpanded;
     chartEl.style.display = taskTokenSectionExpanded ? '' : 'none';
     if (arrowEl) {
         arrowEl.textContent = taskTokenSectionExpanded ? '▾' : '▸';
+    }
+    // 折叠时去掉标题底部外边距，消除区块下方空隙
+    if (toggleEl) {
+        toggleEl.classList.toggle('token-section-collapsed', !taskTokenSectionExpanded);
     }
     // 展开时基于缓存数据渲染图表（display:none 状态下 canvas 初始化会异常，需展开后再画）
     if (taskTokenSectionExpanded && taskTokenUsageData) {

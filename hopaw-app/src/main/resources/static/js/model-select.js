@@ -41,7 +41,7 @@ function loadAiModel(providerId,modelSelectId,defaultModel){
             models.forEach(function(model) {
                 const option = document.createElement('option');
                 option.value = model.id;
-                option.text = model.modelName;
+                option.text = model.modelAlias || model.modelName;
                 if (model.id === parseInt(defaultModel)) {
                     option.selected = true;
                 }

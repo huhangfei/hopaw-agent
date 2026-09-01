@@ -90,6 +90,8 @@ public class AgentExecutor implements IAgentExecutor {
     private final java.util.concurrent.ConcurrentMap<String, Consumer<String>> toolStopHooks = new ConcurrentHashMap<>();
     private final java.util.concurrent.ConcurrentMap<String, PendingResponse<Boolean>> toolApprovalLocks = new ConcurrentHashMap<>();
     private final java.util.concurrent.ConcurrentMap<String, String> toolNameByCallIdMap = new ConcurrentHashMap<>();
+    /** 本执行器生命周期内已开始的工具调用次数（工具开始执行时递增，供统计展示） */
+    private final java.util.concurrent.atomic.AtomicInteger executedToolCount = new java.util.concurrent.atomic.AtomicInteger(0);
     private final Map<String, ToolInfo> toolInfoMap = new HashMap<>();
     private final ChatMemoryId memoryId;
     private final EmbeddingModel embeddingModel;
@@ -306,6 +308,16 @@ public class AgentExecutor implements IAgentExecutor {
     }
 
     @Override
+    public int getExecutedToolCount() {
+        return executedToolCount.get();
+    }
+
+    @Override
+    public int getMaxToolInvocations() {
+        return agentExecutorParams.getMaxToolInvocations() != null ? agentExecutorParams.getMaxToolInvocations() : 0;
+    }
+
+    @Override
     public void execute(List<Content> contents){
         execute(contents,600L);
     }
@@ -421,6 +433,7 @@ public class AgentExecutor implements IAgentExecutor {
                         }
                         if(allowed){
                             // 任务开始
+                            executedToolCount.incrementAndGet();
                             agentMessageHandler.toolCallHandler(AiToolCallMessageInfo.STATUS_STARTING, toolCallInfo.id(),toolCallInfo.name(),toolCallInfo.arguments(),null);
                         }else{
                             //拒绝执行
@@ -769,7 +782,7 @@ public class AgentExecutor implements IAgentExecutor {
             chatSession.setLastUpdateTime(LocalDateTime.now());
             chatSession.setCreateTime(LocalDateTime.now());
             chatSession.setToolCallPermission(agentExecutorParams.getToolCallPermission());
-            chatSession.setBizType(agentExecutorParams.getBizType().getAiModelCallSourceEnum().getValue());
+            chatSession.setBizType(agentExecutorParams.getBizType().getValue());
             chatSessionService.insertSession(chatSession);
             agentMessageHandler.sendMessageToChannel(AiMessageBaseInfo.sessionTitle(sessionId, requestId, userIntent));
         } else {

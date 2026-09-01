@@ -1,0 +1,37 @@
+<th:block th:fragment="content" xmlns:th="http://www.thymeleaf.org">
+<div class="settings-panel active" id="tab-session-clean">
+    <div class="session-clean-toolbar">
+        <div class="session-clean-batch-btns">
+            <button class="btn-save-settings session-clean-btn" id="scBatchClearBtn" onclick="scBatchClear()">一键清理历史</button>
+            <button class="btn-save-settings session-clean-btn session-clean-btn-danger" id="scBatchDeleteBtn" onclick="scBatchDelete()">一键删除</button>
+        </div>
+        <span class="session-clean-selected-tip" id="scSelectedTip">已选 0 项</span>
+    </div>
+    <div class="session-clean-card">
+        <table class="session-clean-table">
+            <thead>
+                <tr>
+                    <th class="sc-col-check"><input type="checkbox" id="scCheckAll" onchange="scToggleCheckAll(this)"></th>
+                    <th>会话名称</th>
+                    <th>会话类型</th>
+                    <th>创建时间</th>
+                    <th>最后更新时间</th>
+                    <th>消息记录数量</th>
+                    <th>操作</th>
+                </tr>
+            </thead>
+            <tbody id="scTableBody">
+            </tbody>
+        </table>
+        <div class="session-clean-empty" id="scEmptyState" style="display:none;">
+            <p>暂无会话</p>
+        </div>
+        <div class="session-clean-pagination" id="scPagination">
+            <button class="sc-page-btn" id="scPrevBtn" onclick="scPrevPage()">上一页</button>
+            <span class="sc-page-info" id="scPageInfo">1 / 1</span>
+            <button class="sc-page-btn" id="scNextBtn" onclick="scNextPage()">下一页</button>
+            <span class="sc-total-info" id="scTotalInfo">共 0 条</span>
+        </div>
+    </div>
+</div>
+</th:block>
