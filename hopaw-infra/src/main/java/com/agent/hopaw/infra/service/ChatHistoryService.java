@@ -7,6 +7,7 @@ import com.agent.hopaw.infra.model.entity.ChatHistory;
 import org.springframework.beans.BeanUtils;
 import org.springframework.stereotype.Service;
 
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -24,7 +25,16 @@ public class ChatHistoryService implements IChatHistoryService{
 
     @Override
     public List<ChatHistoryVO> findBySessionId(String sessionId, int limit) {
-        List<ChatHistory> list = chatHistoryMapper.findBySessionId(sessionId, limit);
+        return toVoList(chatHistoryMapper.findBySessionId(sessionId, limit));
+    }
+
+    @Override
+    public List<ChatHistoryVO> findBySessionIdBefore(String sessionId, LocalDateTime beforeTime, Long beforeId, int limit) {
+        return toVoList(chatHistoryMapper.findBySessionIdBefore(sessionId, beforeTime, beforeId, limit));
+    }
+
+    /** 实体转 VO，并填充所属 Agent 信息 */
+    private List<ChatHistoryVO> toVoList(List<ChatHistory> list) {
         if(list == null || list.size() == 0){
             return new ArrayList<>(0);
         }

@@ -12,6 +12,12 @@ import java.util.Map;
 public interface ChatHistoryMapper {
     List<ChatHistory> findByAgentId(@Param("agentId") Long agentId, @Param("limit") int limit);
     List<ChatHistory> findBySessionId(@Param("sessionId") String sessionId, @Param("limit") int limit);
+
+    /** 游标向前分页：加载早于 (beforeTime, beforeId) 的会话历史（首页向上滚动加载更早消息） */
+    List<ChatHistory> findBySessionIdBefore(@Param("sessionId") String sessionId,
+                                            @Param("beforeTime") LocalDateTime beforeTime,
+                                            @Param("beforeId") Long beforeId,
+                                            @Param("limit") int limit);
     ChatHistory findBySessionIdAndToolCallId(@Param("sessionId") String sessionId, @Param("toolCallId") String toolCallId);
 
     /** 会话最后一条记录的时间（无记录返回null），作为会话最后活动时间 */

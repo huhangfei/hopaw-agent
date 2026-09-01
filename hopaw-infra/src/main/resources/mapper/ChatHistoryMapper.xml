@@ -32,6 +32,14 @@
         ORDER BY create_time DESC
         LIMIT #{limit}
     </select>
+    <select id="findBySessionIdBefore" resultMap="ChatHistoryResultMap">
+        SELECT id, agent_id, session_id, role, message_type, content, tool_call_id, tool_name, tool_arguments, tool_call_status, tool_execution_time, create_time, user_id
+        FROM chat_history
+        WHERE session_id = #{sessionId}
+          AND (create_time &lt; #{beforeTime} OR (create_time = #{beforeTime} AND id &lt; #{beforeId}))
+        ORDER BY create_time DESC, id DESC
+        LIMIT #{limit}
+    </select>
     <select id="findBySessionIdAndToolCallId" resultMap="ChatHistoryResultMap">
         SELECT id, agent_id, session_id, role, message_type, content, tool_call_id, tool_name, tool_arguments, tool_call_status, tool_execution_time, create_time, user_id
         FROM chat_history

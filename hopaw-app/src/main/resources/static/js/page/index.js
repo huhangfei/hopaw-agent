@@ -144,6 +144,351 @@ function renderAllMessages() {
     });
 }
 
+// ================= 向上滚动加载更早的历史消息 =================
+var historyLoadState = { oldestId: null, oldestTime: null, allLoaded: false, loading: false };
+var HISTORY_PAGE_SIZE = 50;
+var HISTORY_INITIAL_LIMIT = 100; // 与后端首页初始加载条数(ChatController)一致
+
+/** 初始化历史分页游标并监听滚动 */
+function initHistoryScroll() {
+    var messagesDiv = document.getElementById('chatMessages');
+    if (!messagesDiv) return;
+    // 初始加载不满一页说明已是全部历史
+    if (typeof initialHistoryCount === 'number' && initialHistoryCount < HISTORY_INITIAL_LIMIT) {
+        historyLoadState.allLoaded = true;
+    }
+    // 游标取消息区第一个带标记的直接子元素（消息或工具行）
+    var first = firstHistoryAnchor(messagesDiv);
+    if (first) {
+        historyLoadState.oldestId = Number(first.getAttribute('data-msg-id'));
+        historyLoadState.oldestTime = first.getAttribute('data-create-time');
+    } else {
+        historyLoadState.allLoaded = true;
+    }
+    messagesDiv.addEventListener('scroll', onHistoryScroll);
+}
+
+function onHistoryScroll() {
+    var messagesDiv = document.getElementById('chatMessages');
+    if (!messagesDiv) return;
+    if (messagesDiv.scrollTop <= 40 && !historyLoadState.loading && !historyLoadState.allLoaded && historyLoadState.oldestId != null) {
+        loadOlderMessages();
+    }
+}
+
+/** 顶部加载指示器 */
+function showHistoryTopLoader(show) {
+    var messagesDiv = document.getElementById('chatMessages');
+    if (!messagesDiv) return;
+    var loader = document.getElementById('historyTopLoader');
+    if (show) {
+        if (!loader) {
+            loader = document.createElement('div');
+            loader.id = 'historyTopLoader';
+            loader.style.cssText = 'text-align:center;color:#888;font-size:12px;padding:6px 0;';
+            loader.textContent = '正在加载更早的消息...';
+            messagesDiv.insertBefore(loader, messagesDiv.firstChild);
+        }
+    } else if (loader) {
+        loader.remove();
+    }
+}
+
+/** 拉取并前插更早的历史消息 */
+function loadOlderMessages() {
+    var messagesDiv = document.getElementById('chatMessages');
+    if (!messagesDiv || !currentSessionId) return;
+    historyLoadState.loading = true;
+    showHistoryTopLoader(true);
+    var prevHeight = messagesDiv.scrollHeight;
+    var prevScrollTop = messagesDiv.scrollTop;
+    fetch('/api/session/' + encodeURIComponent(currentSessionId) + '/history/before?beforeTime='
+        + encodeURIComponent(historyLoadState.oldestTime) + '&beforeId=' + historyLoadState.oldestId
+        + '&limit=' + HISTORY_PAGE_SIZE)
+        .then(function(r) { return r.json(); })
+        .then(function(res) {
+            if (res.code !== 200) {
+                historyLoadState.allLoaded = true;
+                return;
+            }
+            var data = res.data || {};
+            var list = data.list || [];
+            if (list.length === 0) {
+                historyLoadState.allLoaded = true;
+                return;
+            }
+            // 接口按时间倒序返回：反转为正序后前插
+            list.reverse();
+            prependHistoryMessages(list);
+            // 渲染 markdown（只补新增的 agent 消息）
+            renderAllMessages();
+            // 保持滚动位置：追加高度补偿
+            messagesDiv.scrollTop = messagesDiv.scrollHeight - prevHeight + prevScrollTop;
+            // 更新游标为当前最早一条
+            var oldest = list[0];
+            historyLoadState.oldestId = oldest.id;
+            historyLoadState.oldestTime = formatHistoryIsoTime(oldest.createTime);
+            if (!data.hasMore) {
+                historyLoadState.allLoaded = true;
+            }
+        })
+        .catch(function(e) {
+            // 网络异常时不标记结束，允许用户再次滚动重试
+            console.error('加载更早历史消息失败:', e);
+        })
+        .finally(function() {
+            historyLoadState.loading = false;
+            showHistoryTopLoader(false);
+        });
+}
+
+/** 消息区第一个带游标标记的直接子元素（.message 或 .tool-inline-row） */
+function firstHistoryAnchor(messagesDiv) {
+    var children = messagesDiv.children;
+    for (var i = 0; i < children.length; i++) {
+        if (children[i].hasAttribute && children[i].hasAttribute('data-msg-id')) {
+            return children[i];
+        }
+    }
+    return null;
+}
+
+/** 将正序历史消息前插到消息区，并同步前插工具调用到右侧工具执行列表 */
+function prependHistoryMessages(list) {
+    var messagesDiv = document.getElementById('chatMessages');
+    var toolExecList = document.getElementById('toolExecList');
+    // 插入参照：现有最早的直接子元素（保持不变，每个新节点依次插到它前面即为正序）
+    var insertRef = firstHistoryAnchor(messagesDiv);
+    var toolFragment = document.createDocumentFragment();
+
+    // 与服务端 buildChatFlow 一致：连续 tool_call 合并为一行扳手图标
+    var toolRow = null;
+    list.forEach(function(chat) {
+        if (chat.messageType === 'tool_call') {
+            if (!toolRow) {
+                toolRow = document.createElement('div');
+                toolRow.className = 'tool-inline-row';
+                // 行本身携带首个工具的游标，供下一次分页定位锚点
+                toolRow.setAttribute('data-msg-id', chat.id);
+                toolRow.setAttribute('data-create-time', formatHistoryIsoTime(chat.createTime));
+            }
+            var icon = document.createElement('span');
+            icon.className = 'tool-inline-icon';
+            icon.setAttribute('data-tool-call-id', chat.toolCallId);
+            icon.title = chat.toolName || '';
+            icon.textContent = '🔧';
+            icon.onclick = function() { scrollToToolCall(this); };
+            toolRow.appendChild(icon);
+            if (toolExecList) {
+                toolFragment.appendChild(buildToolCallStaticNode(chat));
+            }
+        } else {
+            // 非工具消息结束当前工具分组：先把整组工具行插到参照前
+            if (toolRow) {
+                if (insertRef) {
+                    messagesDiv.insertBefore(toolRow, insertRef);
+                } else {
+                    messagesDiv.appendChild(toolRow);
+                }
+                toolRow = null;
+            }
+            var node = buildHistoryMessageNode(chat);
+            if (insertRef) {
+                messagesDiv.insertBefore(node, insertRef);
+            } else {
+                messagesDiv.appendChild(node);
+            }
+        }
+    });
+    // 最后一组工具行收尾
+    if (toolRow) {
+        if (insertRef) {
+            messagesDiv.insertBefore(toolRow, insertRef);
+        } else {
+            messagesDiv.appendChild(toolRow);
+        }
+    }
+    // 右侧工具列表：前插更早的工具调用（保持正序）
+    if (toolExecList && toolFragment.childNodes.length > 0) {
+        toolExecList.insertBefore(toolFragment, toolExecList.firstChild);
+    }
+}
+
+/** ISO 时间字符串（LocalDateTime 序列化格式），用于游标传递 */
+function formatHistoryIsoTime(createTime) {
+    if (!createTime) return null;
+    var s = String(createTime).replace(' ', 'T');
+    return s.split('.')[0];
+}
+
+/** 构造单条历史消息 DOM（与服务端 Thymeleaf 渲染结构保持一致） */
+function buildHistoryMessageNode(chat) {
+    var div = document.createElement('div');
+    div.className = 'message ' + (chat.role === 'user' ? 'user' : 'agent');
+    div.setAttribute('data-msg-id', chat.id);
+    div.setAttribute('data-create-time', formatHistoryIsoTime(chat.createTime));
+
+    var agentName = (chat.agent && chat.agent.name) ? chat.agent.name : 'Agent';
+    var label = chat.role === 'user' ? '你' : agentName;
+    var timeText = formatMessageTime(new Date(formatHistoryIsoTime(chat.createTime)));
+
+    var type = chat.messageType;
+    if (type === 'image') {
+        appendLabel(div, label);
+        var img = document.createElement('img');
+        img.className = 'message-content message-image';
+        img.src = chat.content;
+        img.setAttribute('data-is-agent', chat.role === 'agent');
+        img.alt = '图片消息';
+        div.appendChild(img);
+        div.appendChild(buildHistoryFooter(timeText, null));
+    } else if (type === 'thinking') {
+        appendLabel(div, agentName + ' (思考)');
+        var think = document.createElement('div');
+        think.className = 'message-content thinking-content';
+        think.textContent = chat.content;
+        div.appendChild(think);
+        div.appendChild(buildHistoryFooter(timeText, chat.content));
+    } else if (type === 'error' || type === 'warn') {
+        var inner = document.createElement('div');
+        inner.className = type === 'error' ? 'error-message' : 'warn-message';
+        appendLabel(inner, agentName + (type === 'error' ? ' (错误)' : ' (警告)'));
+        var errContent = document.createElement('div');
+        errContent.className = 'message-content error-content';
+        errContent.textContent = chat.content;
+        inner.appendChild(errContent);
+        inner.appendChild(buildHistoryFooter(timeText, chat.content));
+        div.appendChild(inner);
+    } else {
+        // text 及其它类型默认按文本处理
+        appendLabel(div, label);
+        var content = document.createElement('div');
+        content.className = 'message-content';
+        content.setAttribute('data-is-agent', chat.role === 'agent');
+        content.textContent = chat.content;
+        div.appendChild(content);
+        div.appendChild(buildHistoryFooter(timeText, chat.content));
+    }
+    return div;
+}
+
+function appendLabel(parent, text) {
+    var label = document.createElement('div');
+    label.className = 'message-label';
+    label.textContent = text;
+    parent.appendChild(label);
+}
+
+/** 消息底部：时间 + 复制按钮 */
+function buildHistoryFooter(timeText, content) {
+    var footer = document.createElement('div');
+    footer.className = 'message-footer';
+    var timeDiv = document.createElement('div');
+    timeDiv.className = 'message-time';
+    timeDiv.textContent = timeText;
+    footer.appendChild(timeDiv);
+    if (content != null) {
+        var copyBtn = document.createElement('button');
+        copyBtn.className = 'message-copy-btn';
+        copyBtn.title = '复制消息';
+        copyBtn.setAttribute('data-content', content);
+        copyBtn.innerHTML = '<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>';
+        copyBtn.onclick = function() { copyMessageContent(this); };
+        footer.appendChild(copyBtn);
+    }
+    return footer;
+}
+
+/** 构造右侧工具执行列表的静态工具调用项（与服务端渲染结构保持一致） */
+function buildToolCallStaticNode(chat) {
+    var status = chat.toolCallStatus;
+    var finished = status === 'executed' || status === 'rejected' || status === 'failed';
+
+    var container = document.createElement('div');
+    container.className = 'tool-call-container-static';
+    var callDiv = document.createElement('div');
+    callDiv.className = 'tool-call';
+    callDiv.setAttribute('data-tool-call-id', chat.toolCallId);
+    callDiv.setAttribute('data-status', status);
+
+    var header = document.createElement('div');
+    header.className = 'tool-call-header';
+
+    var icon = document.createElement('span');
+    icon.className = 'tool-call-icon' + (finished ? ' completed' : '');
+    var iconMap = { started: '⚙', executed: '✅', failed: '❌', rejected: '🚫', approval: '⏳' };
+    icon.textContent = iconMap[status] || '🔧';
+    header.appendChild(icon);
+
+    var name = document.createElement('span');
+    name.className = 'tool-call-name';
+    name.textContent = chat.toolName || '';
+    header.appendChild(name);
+
+    var statusEl = document.createElement('span');
+    statusEl.className = 'tool-call-status' + (finished ? ' completed' : '');
+    if (status === 'started') {
+        statusEl.textContent = '执行中...';
+    } else if (status === 'executed') {
+        statusEl.textContent = (chat.toolExecutionTime != null)
+            ? '已完成(' + (chat.toolExecutionTime / 1000).toFixed(1) + 's)' : '已完成';
+    } else if (status === 'failed') {
+        statusEl.textContent = '执行失败';
+    } else if (status === 'approval') {
+        statusEl.textContent = '等待审批';
+    } else if (status === 'rejected') {
+        statusEl.textContent = '拒绝执行';
+    } else {
+        statusEl.textContent = status || '未知';
+    }
+    header.appendChild(statusEl);
+
+    if (finished) {
+        var toggle = document.createElement('span');
+        toggle.className = 'tool-call-toggle';
+        toggle.textContent = '▼';
+        header.appendChild(toggle);
+    }
+    callDiv.appendChild(header);
+
+    var body = document.createElement('div');
+    body.className = 'tool-call-body' + (status === 'started' ? '' : ' collapsed');
+    if (chat.toolArguments) {
+        var args = document.createElement('div');
+        args.className = 'tool-call-args';
+        args.innerHTML = '<div class="args-label">参数:</div><pre class="args-content">' + escapeHtml(chat.toolArguments) + '</pre>';
+        body.appendChild(args);
+    }
+    if (chat.content) {
+        var result = document.createElement('div');
+        result.className = 'tool-call-result';
+        result.innerHTML = '<div class="result-label">结果:</div><pre class="result-content">' + escapeHtml(chat.content) + '</pre>';
+        body.appendChild(result);
+    }
+    callDiv.appendChild(body);
+
+    if (status === 'approval') {
+        var footer = document.createElement('div');
+        footer.className = 'tool-call-footer';
+        footer.innerHTML = '<span class="tool-call-footer-text">⚠️ 此工具调用需要审批</span>'
+            + '<div class="tool-call-footer-btns">'
+            + '<button type="button" class="tool-call-approve-btn">通过</button>'
+            + '<button type="button" class="tool-call-reject-btn">拒绝</button>'
+            + '</div>';
+        var approveBtn = footer.querySelector('.tool-call-approve-btn');
+        var rejectBtn = footer.querySelector('.tool-call-reject-btn');
+        approveBtn.setAttribute('data-session-id', chat.sessionId);
+        approveBtn.setAttribute('data-call-id', chat.toolCallId);
+        approveBtn.onclick = function() { handleApprovalClick(this, true); };
+        rejectBtn.setAttribute('data-session-id', chat.sessionId);
+        rejectBtn.setAttribute('data-call-id', chat.toolCallId);
+        rejectBtn.onclick = function() { handleApprovalClick(this, false); };
+        callDiv.appendChild(footer);
+    }
+    container.appendChild(callDiv);
+    return container;
+}
+
 function setCurrentAgentId(agentId) {
     var previousAgentId = currentAgentId;
     currentAgentId = agentId;
@@ -1254,6 +1599,8 @@ window.onload = function() {
         renderAllMessages();
         messagesDiv.scrollTop = messagesDiv.scrollHeight;
         if (toolExecList) toolExecList.scrollTop = toolExecList.scrollHeight;
+        // 初始化向上滚动加载更早历史消息
+        initHistoryScroll();
     }
     var input = document.getElementById('messageInput');
     if (input) {

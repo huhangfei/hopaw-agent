@@ -85,6 +85,7 @@
             <th:block th:each="item : ${chatFlow}" th:with="chat=${item['type'] == 'message' ? item['chat'] : null}">
             <div th:if="${item['type'] == 'message'}"
                  th:switch="${chat.messageType}"
+                 th:attr="data-msg-id=${chat.id}, data-create-time=${#temporals.format(chat.createTime, 'yyyy-MM-dd''T''HH:mm:ss')}"
                  th:classappend="${chat.role == 'user' ? 'user' : 'agent'}" class="message">
                 <div th:case="'text'">
                     <div class="message-label" th:text="${chat.role == 'user' ? '你' : (chat.agent != null ? chat.agent.name : 'Agent')}"></div>
@@ -142,7 +143,8 @@
                 </div>
             </div>
             <!-- 连续的工具调用消息合并渲染为一行扳手图标：悬停显示工具名称，点击定位右侧工具执行列表并展开详情 -->
-            <div th:if="${item['type'] == 'tools'}" class="tool-inline-row">
+            <div th:if="${item['type'] == 'tools'}" class="tool-inline-row"
+                 th:attr="data-msg-id=${item['tools'][0].id}, data-create-time=${#temporals.format(item['tools'][0].createTime, 'yyyy-MM-dd''T''HH:mm:ss')}">
                 <span th:each="t : ${item['tools']}" class="tool-inline-icon"
                       th:attr="data-tool-call-id=${t.toolCallId}, title=${t.toolName}"
                       onclick="scrollToToolCall(this)">🔧</span>
@@ -400,6 +402,8 @@
         var initialSelectedSkills = /*[[${selectedSkills}]]*/ '';
         var initialToolCallPermission = /*[[${toolCallPermission}]]*/ 'smart_call';
         var currentUserId = /*[[${currentUserId != null ? currentUserId : T(com.agent.hopaw.constant.DefaultUser).USER}]]*/ 'user1';
+        // 首页初始加载的历史条数：小于服务端单次上限(100)说明已全部加载，无需向上翻页
+        var initialHistoryCount = /*[[${chatHistory == null ? 0 : chatHistory.size()}]]*/ 0;
     </script>
     <script th:src="@{/js/avatar/live2d.js}" th:if="${!avatarDisabled}"></script>
     <script th:src="@{/js/avatar/main.js(v=20260603a)}" th:if="${!avatarDisabled}"></script>

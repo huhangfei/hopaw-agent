@@ -28,11 +28,13 @@ public class ChatSessionController {
     private final IAgentExecutorService agentExecutorService;
     private final IChatHistoryService chatHistoryService;
     private final IChatMemoryService chatMemoryService;
-    public ChatSessionController(IChatSessionService chatSessionService, IAgentExecutorService agentExecutorService, IChatHistoryService chatHistoryService, IChatMemoryService chatMemoryService) {
+    private final com.agent.hopaw.infra.tool.IAgentToolService agentToolService;
+    public ChatSessionController(IChatSessionService chatSessionService, IAgentExecutorService agentExecutorService, IChatHistoryService chatHistoryService, IChatMemoryService chatMemoryService, com.agent.hopaw.infra.tool.IAgentToolService agentToolService) {
         this.chatSessionService = chatSessionService;
         this.agentExecutorService = agentExecutorService;
         this.chatHistoryService = chatHistoryService;
         this.chatMemoryService = chatMemoryService;
+        this.agentToolService = agentToolService;
     }
 
     @GetMapping("/list")
@@ -64,6 +66,50 @@ public class ChatSessionController {
     public ResponseBean getHistory(@RequestParam String sessionId, @RequestParam(defaultValue = "100") int limit) {
         List<ChatHistory> history = chatSessionService.getChatHistoryBySessionId(sessionId, limit);
         return ResponseBean.success(history);
+    }
+
+    /**
+     * 首页向上滚动加载更早消息：游标 (beforeTime, beforeId) 之前的会话历史（按时间倒序）
+     */
+    @GetMapping("/{sessionId}/history/before")
+    public ResponseBean historyBefore(HttpServletRequest request,
+                                      @PathVariable String sessionId,
+                                      @RequestParam String beforeTime,
+                                      @RequestParam Long beforeId,
+                                      @RequestParam(defaultValue = "50") int limit) {
+        // 会话归属校验：只能查看自己的会话历史
+        ChatSession session = chatSessionService.getSessionBySessionId(sessionId);
+        if (session == null || !CurrentUser.require(request).equals(session.getUserId())) {
+            return ResponseBean.fail("会话不存在");
+        }
+        java.time.LocalDateTime cursorTime;
+        try {
+            cursorTime = java.time.LocalDateTime.parse(beforeTime);
+        } catch (Exception e) {
+            return ResponseBean.fail("时间参数格式错误");
+        }
+        if (limit < 1) limit = 50;
+        if (limit > 100) limit = 100;
+        // 多查一条判断是否还有更早数据
+        List<com.agent.hopaw.infra.model.dto.ChatHistoryVO> list =
+                chatHistoryService.findBySessionIdBefore(sessionId, cursorTime, beforeId, limit + 1);
+        boolean hasMore = list.size() > limit;
+        if (hasMore) {
+            list = list.subList(0, limit);
+        }
+        // 工具名映射为描述（与首页服务端渲染保持一致）
+        if (!list.isEmpty()) {
+            Map<String, String> toolNameAndDescriptionMap = agentToolService.getToolNameAndDescriptionMap();
+            list.forEach(chatHistoryVO -> {
+                if (chatHistoryVO.getToolName() != null) {
+                    chatHistoryVO.setToolName(toolNameAndDescriptionMap.get(chatHistoryVO.getToolName()));
+                }
+            });
+        }
+        Map<String, Object> result = new HashMap<>(2);
+        result.put("list", list);
+        result.put("hasMore", hasMore);
+        return ResponseBean.success(result);
     }
 
     @PostMapping("/{sessionId}/stop")
