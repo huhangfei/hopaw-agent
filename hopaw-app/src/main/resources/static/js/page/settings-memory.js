@@ -2,6 +2,7 @@ function onSettingsLoaded() {
     document.getElementById('memoryPrompt').value = settingsCache['memory_prompt'] || '';
     document.getElementById('taskRecordsArrangeTimeoutHour').value = settingsCache['taskRecordsArrangeTimeoutHour'] || '48';
     document.getElementById('taskRecordsClearTimeoutDay').value = settingsCache['taskRecordsClearTimeoutDay'] || '7';
+    document.getElementById('chatMemoryToolResultMaxLength').value = settingsCache['chat_memory_tool_result_max_length'] || '5120';
     document.getElementById('vectorStorePath').value = settingsCache['vector_store_path'] || '';
     document.getElementById('vectorStoreProfile').value = settingsCache['vector_store_profile'] || 'precision';
     document.getElementById('vectorFlushSchedulerInterval').value = settingsCache['vector_flush_scheduler_interval'] || '10';
@@ -101,6 +102,7 @@ function saveSettings() {
     var prompt = document.getElementById('memoryPrompt').value.trim();
     var arrangeTimeoutHour = document.getElementById('taskRecordsArrangeTimeoutHour').value.trim();
     var clearTimeoutDay = document.getElementById('taskRecordsClearTimeoutDay').value.trim();
+    var toolResultMaxLength = document.getElementById('chatMemoryToolResultMaxLength').value.trim() || '5120';
     var includeUserProfile = document.getElementById('promptIncludeUserProfile').checked;
     var includeTaskRecords = document.getElementById('promptIncludeTaskRecords').checked;
 
@@ -109,6 +111,7 @@ function saveSettings() {
     saves.push(saveConfig('memory_prompt', prompt, '记忆整理提示词'));
     saves.push(saveConfig('taskRecordsArrangeTimeoutHour', arrangeTimeoutHour, '近期任务记忆过期时间（单位：小时，用于整理记忆时限制时限）'));
     saves.push(saveConfig('taskRecordsClearTimeoutDay', clearTimeoutDay, '任务记忆过期归档时间（单位：天，过期后从记忆库中删除）'));
+    saves.push(saveConfig('chat_memory_tool_result_max_length', toolResultMaxLength, '工具调用结果入库截断长度（单位：字符）'));
     saves.push(saveConfig('promptIncludeUserProfile', includeUserProfile ? 'true' : 'false', '提示词带入用户画像'));
     saves.push(saveConfig('promptIncludeTaskRecords', includeTaskRecords ? 'true' : 'false', '提示词带入近期任务记录'));
 

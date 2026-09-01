@@ -4,6 +4,7 @@ import com.agent.hopaw.infra.constant.ChatMemoryStatusEnum;
 import com.agent.hopaw.infra.mapper.ChatMemoryMapper;
 import com.agent.hopaw.infra.model.entity.ChatMemory;
 import com.agent.hopaw.infra.model.entity.ChatMemoryId;
+import com.agent.hopaw.infra.service.ISysConfigService;
 import dev.langchain4j.agent.tool.ToolExecutionRequest;
 import dev.langchain4j.data.message.*;
 import org.slf4j.Logger;
@@ -15,16 +16,51 @@ import java.util.*;
 import java.util.stream.Collectors;
 
 /**
- * 
+ *
  */
 @Service
 public class SQLiteChatMemoryStore implements IChatMemoryService {
+    private static final String CONFIG_KEY_TOOL_RESULT_MAX_LENGTH = "chat_memory_tool_result_max_length";
+    private static final int DEFAULT_TOOL_RESULT_MAX_LENGTH = 5120;
+    private static final String TRUNCATE_SUFFIX = "\n...(内容过长已截断)";
     private final Logger logger = org.slf4j.LoggerFactory.getLogger(SQLiteChatMemoryStore.class);
     private final ChatMemoryMapper chatMemoryMapper;
     private final ILongTermMemoryProvider longTermMemoryProvider;
-    public SQLiteChatMemoryStore(ChatMemoryMapper chatMemoryMapper, ILongTermMemoryProvider longTermMemoryProvider) {
+    private final ISysConfigService sysConfigService;
+    public SQLiteChatMemoryStore(ChatMemoryMapper chatMemoryMapper, ILongTermMemoryProvider longTermMemoryProvider, ISysConfigService sysConfigService) {
         this.chatMemoryMapper = chatMemoryMapper;
         this.longTermMemoryProvider = longTermMemoryProvider;
+        this.sysConfigService = sysConfigService;
+    }
+
+    /**
+     * 工具调用结果超过配置长度时截断，避免超长内容写入 chat_memory
+     */
+    private ChatMessage truncateToolResultIfNeeded(ChatMessage message) {
+        if (!(message instanceof ToolExecutionResultMessage toolResult)) {
+            return message;
+        }
+        String text = toolResult.text();
+        if (text == null) {
+            return message;
+        }
+        int maxLength;
+        try {
+            maxLength = Integer.parseInt(sysConfigService.getValueByKey(CONFIG_KEY_TOOL_RESULT_MAX_LENGTH,
+                    String.valueOf(DEFAULT_TOOL_RESULT_MAX_LENGTH)));
+        } catch (NumberFormatException e) {
+            maxLength = DEFAULT_TOOL_RESULT_MAX_LENGTH;
+        }
+        if (maxLength <= 0 || text.length() <= maxLength) {
+            return message;
+        }
+        logger.info("工具调用结果超长({}字符)，入库前截断为{}字符，工具: {}", text.length(), maxLength, toolResult.toolName());
+        String truncated = text.substring(0, Math.max(0, maxLength - TRUNCATE_SUFFIX.length())) + TRUNCATE_SUFFIX;
+        return new ToolExecutionResultMessage.Builder()
+                .id(toolResult.id())
+                .toolName(toolResult.toolName())
+                .text(truncated)
+                .build();
     }
 
     private List<ChatMemory> getChatMemories(ChatMemoryId memoryId) {
@@ -74,6 +110,7 @@ public class SQLiteChatMemoryStore implements IChatMemoryService {
 
         Set<String> messageIds = new HashSet<>(messages.size());
         for (ChatMessage message : messages) {
+            message = truncateToolResultIfNeeded(message);
             String messageId = generateMessageId(message);
             String messageJson = ChatMessageSerializer.messageToJson(message);
             messageIds.add(messageId);

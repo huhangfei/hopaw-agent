@@ -37,7 +37,7 @@
                     <svg viewBox="0 0 24 24" fill="currentColor" width="14" height="14"><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/></svg>
                     新会话
                 </button>
-                <button class="btn-stop-header" th:attr="onclick=|forceStopAgent(${currentSessionId})|" title="强停">
+                <button class="btn-stop-header" th:attr="onclick=|forceStopAgent('${currentSessionId}')|" title="强停">
                     <svg viewBox="0 0 24 24" fill="currentColor">
                         <rect x="4" y="4" width="16" height="16" rx="2"/>
                     </svg>
