@@ -54,6 +54,8 @@ public class FileOperationTool implements AgentTool {
     private static final String CONFIG_KEY_MAX_RESULTS = "maxResults";
     private static final int DEFAULT_MAX_THREADS = 4;
     private static final int DEFAULT_MAX_RESULTS = 10;
+    private static final int DEFAULT_LIST_MAX_DEPTH = 3;
+    private static final int DEFAULT_LIST_MAX_RESULTS = 1000;
 
     @Autowired
     private ISysConfigService sysConfigService;
@@ -715,7 +717,9 @@ public class FileOperationTool implements AgentTool {
     @Tool(value = {"列出目录", "列出目录内容", "文件列表"})
     public String listDirectory(
             @P(description = "目录路径") String dirPath,
-            @P(description = "是否递归列出子目录", required = false) Boolean recursive) {
+            @P(description = "是否递归列出子目录", required = false) Boolean recursive,
+            @P(description = "最大递归层级，默认3层，达到最大层级不再向下递归", required = false) Integer maxDepth,
+            @P(description = "最大返回条数，默认1000条，达到最大限制即停止", required = false) Integer maxResults) {
         try {
             Path path = Paths.get(dirPath).toAbsolutePath().normalize();
 
@@ -727,12 +731,23 @@ public class FileOperationTool implements AgentTool {
                 return "错误: 路径不是目录: " + dirPath;
             }
 
-            StringBuilder result = new StringBuilder();
+            int depthLimit = maxDepth != null && maxDepth > 0 ? maxDepth : DEFAULT_LIST_MAX_DEPTH;
+            int resultLimit = maxResults != null && maxResults > 0 ? maxResults : DEFAULT_LIST_MAX_RESULTS;
             boolean rec = recursive != null && recursive;
+            int count = 0;
+            boolean stoppedByLimit = false;
+
+            StringBuilder result = new StringBuilder();
 
             if (rec) {
-                try (java.util.stream.Stream<Path> walk = Files.walk(path)) {
-                    walk.forEach(p -> {
+                try (java.util.stream.Stream<Path> walk = Files.walk(path, depthLimit)) {
+                    java.util.Iterator<Path> iterator = walk.iterator();
+                    while (iterator.hasNext() && !stoppedByLimit) {
+                        Path p = iterator.next();
+                        if (count >= resultLimit) {
+                            stoppedByLimit = true;
+                            break;
+                        }
                         try {
                             String prefix = "";
                             int depth = path.relativize(p).getNameCount() - 1;
@@ -747,27 +762,39 @@ public class FileOperationTool implements AgentTool {
                                 result.append(prefix).append("[FILE] ").append(name);
                                 result.append(" (").append(formatFileSize(Files.size(p))).append(")\n");
                             }
+                            count++;
                         } catch (IOException e) {
                             log.error("遍历目录失败: {}", p, e);
                         }
-                    });
+                    }
                 }
             } else {
                 File dir = path.toFile();
                 File[] files = dir.listFiles();
                 if (files != null) {
                     for (File f : files) {
+                        if (count >= resultLimit) {
+                            stoppedByLimit = true;
+                            break;
+                        }
                         if (f.isDirectory()) {
                             result.append("[DIR] ").append(f.getName()).append("\n");
                         } else {
                             result.append("[FILE] ").append(f.getName());
-                            result.append(" (").append(formatFileSize(f.length())).append(")\n");
+                            result.append(" (").append(formatFileSize(f.length())).append("\n");
                         }
+                        count++;
                     }
                 }
             }
 
-            return result.length() == 0 ? "目录为空" : result.toString();
+            if (result.length() == 0) {
+                return "目录为空";
+            }
+            if (stoppedByLimit) {
+                result.append("(已达到最大返回条数限制，已停止)");
+            }
+            return result.toString();
         } catch (IOException e) {
             log.error("列出目录失败: {}", dirPath, e);
             return "错误: 列出目录失败 - " + e.getMessage();
