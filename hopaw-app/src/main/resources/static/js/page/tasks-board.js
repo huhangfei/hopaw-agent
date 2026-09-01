@@ -72,12 +72,14 @@ function doSearch() {
 
 /* 按当前视图加载对应数据 */
 function loadCurrentViewData() {
-    return currentView === 'table' ? loadTaskTable() : loadBoard();
+    if (currentView === 'table') return loadTaskTable();
+    if (currentView === 'graph') return loadGraph();
+    return loadBoard();
 }
 
-/* 切换看板/列表视图（偏好持久化到 localStorage） */
+/* 切换看板/列表/画布视图（偏好持久化到 localStorage） */
 function switchView(view) {
-    if (view !== 'board' && view !== 'table') {
+    if (view !== 'board' && view !== 'table' && view !== 'graph') {
         view = 'board';
     }
     currentView = view;
@@ -87,13 +89,23 @@ function switchView(view) {
 
     var btnBoard = document.getElementById('viewBtnBoard');
     var btnTable = document.getElementById('viewBtnTable');
+    var btnGraph = document.getElementById('viewBtnGraph');
     var boardEl = document.getElementById('tasksBoardColumns');
     var tableEl = document.getElementById('tasksTableView');
+    var graphEl = document.getElementById('tasksGraphView');
     if (btnBoard) btnBoard.classList.toggle('active', view === 'board');
     if (btnTable) btnTable.classList.toggle('active', view === 'table');
+    if (btnGraph) btnGraph.classList.toggle('active', view === 'graph');
     if (boardEl) boardEl.style.display = view === 'board' ? '' : 'none';
     if (tableEl) tableEl.style.display = view === 'table' ? '' : 'none';
+    if (graphEl) graphEl.style.display = view === 'graph' ? '' : 'none';
 
+    if (view === 'graph') {
+        // 画布视图必须选中一个项目：未选中时自动选第一个
+        ensureGraphProjectSelected(0);
+        loadGraph();
+        return;
+    }
     loadCurrentViewData();
 }
 
@@ -423,6 +435,314 @@ function closeBoardTask(id) {
                 showToast('关闭失败', 'error');
             });
     });
+}
+
+/* ========== 画布视图：项目任务依赖关系图（LogicFlow） ========== */
+var graphLf = null;
+var graphLfInited = false;
+/* 任务节点位置缓存：taskId -> {x, y}，自动刷新/数据变更后保留用户拖拽的位置 */
+var graphNodePositions = {};
+/* 上次渲染数据签名（项目+任务ID+状态+依赖），签名不变则跳过重绘，避免打断交互 */
+var graphLastSignature = '';
+/* 上次加载的项目ID：切换项目时清空位置缓存并重置视图变换，避免节点留在视口外找不到 */
+var graphLastProjectId = null;
+
+var GRAPH_NODE_W = 220;
+var GRAPH_NODE_H = 76;
+var GRAPH_LAYER_GAP = 300;
+var GRAPH_ROW_GAP = 110;
+
+/**
+ * 画布视图必须选中项目：未选中时自动选第一个项目。
+ * 项目下拉可能尚未加载完成（重试机制，最多约 5 秒）。
+ */
+function ensureGraphProjectSelected(retryCount) {
+    var select = document.getElementById('boardProjectFilter');
+    if (!select) return;
+    if (select.value) return;
+    if (select.options.length > 1) {
+        select.selectedIndex = 1; // 跳过"全部项目"占位项
+        return;
+    }
+    if (retryCount < 16) {
+        setTimeout(function () {
+            ensureGraphProjectSelected(retryCount + 1);
+            if (currentView === 'graph') loadGraph();
+        }, 300);
+    }
+}
+
+function graphShowEmptyTip(text) {
+    var tip = document.getElementById('graphEmptyTip');
+    var canvas = document.getElementById('graphCanvas');
+    if (tip) {
+        tip.textContent = text;
+        tip.style.display = text ? '' : 'none';
+    }
+    if (canvas) canvas.style.visibility = text ? 'hidden' : 'visible';
+}
+
+function loadGraph() {
+    var filters = getFilters();
+    if (!filters.projectId) {
+        graphShowEmptyTip('画布视图需要选择一个项目，暂无可用项目');
+        return Promise.resolve();
+    }
+    // 切换项目：清空节点位置缓存、失效签名并重置视图变换，重新自动布局定位
+    if (graphLastProjectId !== null && String(graphLastProjectId) !== String(filters.projectId)) {
+        graphNodePositions = {};
+        graphLastSignature = '';
+        if (graphLf) {
+            try {
+                graphLf.resetZoom();
+                graphLf.resetTranslate();
+            } catch (e) { /* 忽略 */ }
+        }
+    }
+    graphLastProjectId = filters.projectId;
+    return fetch('/api/workflow/tasks/graph?projectId=' + encodeURIComponent(filters.projectId))
+        .then(function (r) { return r.json(); })
+        .then(function (res) {
+            if (res.code !== 200) {
+                graphShowEmptyTip(res.msg || '加载画布数据失败');
+                return;
+            }
+            renderGraph(res.data || []);
+        })
+        .catch(function (err) {
+            console.error('加载画布数据失败:', err);
+            graphShowEmptyTip('加载画布数据失败');
+        });
+}
+
+/**
+ * 注册画布任务节点（HtmlNode）：标题 + 状态徽标 + 智能体。
+ * 注意：LogicFlow UMD 包不导出 HtmlNode/HtmlNodeModel 全局静态属性，
+ * 基类只能通过 register 回调参数获取（官方推荐的函数式注册）。
+ */
+function registerGraphTaskNode(lf) {
+    lf.register('graphTask', function (params) {
+        class GraphTaskNodeView extends params.HtmlNode {
+            setHtml(rootNode) {
+                var props = (this.props && this.props.model && this.props.model.properties) || {};
+                rootNode.innerHTML = buildGraphNodeHtml(props);
+            }
+        }
+
+        class GraphTaskModel extends params.HtmlNodeModel {
+            setAttributes() {
+                this.width = GRAPH_NODE_W;
+                this.height = GRAPH_NODE_H;
+                this.anchorsOffset = [];
+            }
+        }
+
+        return { view: GraphTaskNodeView, model: GraphTaskModel };
+    });
+}
+
+/** 任务节点 HTML（状态色带 + 标题 + 状态徽标 + 智能体） */
+function buildGraphNodeHtml(props) {
+    var meta = statusMetaMap[props.status] || { label: props.status || '未知', color: '#9ca3af' };
+    var title = props.title || ('任务#' + props.taskId);
+    var agentName = props.agentName || (props.agentId ? '智能体#' + props.agentId : '未指定');
+    return '<div class="gt-node" data-gt-status="' + escapeHtml(props.status || '') + '">' +
+        '<div class="gt-node-color" style="background:' + meta.color + '"></div>' +
+        '<div class="gt-node-body">' +
+            '<div class="gt-node-title" title="' + escapeHtml(title) + '">' + escapeHtml(title) + '</div>' +
+            '<div class="gt-node-meta">' +
+                '<span class="gt-node-status" style="background:' + meta.color + '">' + escapeHtml(meta.label) + '</span>' +
+                '<span class="gt-node-agent" title="' + escapeHtml(agentName) + '">' + escapeHtml(agentName) + '</span>' +
+            '</div>' +
+        '</div>' +
+    '</div>';
+}
+
+/**
+ * 依赖分层布局：无前置依赖的任务在第 0 层，其余取前置任务最大层级 + 1（带环保护）
+ */
+function computeGraphLayout(tasks, edges) {
+    var byId = {};
+    tasks.forEach(function (t) { byId[t.id] = true; });
+    var deps = {};
+    edges.forEach(function (e) {
+        if (byId[e.from] && byId[e.to]) {
+            (deps[e.to] = deps[e.to] || []).push(e.from);
+        }
+    });
+
+    var depth = {};
+    function getDepth(id, stack) {
+        if (depth[id] !== undefined) return depth[id];
+        var max = 0;
+        (deps[id] || []).forEach(function (p) {
+            if (stack.indexOf(p) >= 0) return; // 环保护
+            stack.push(p);
+            var d = getDepth(p, stack) + 1;
+            stack.pop();
+            if (d > max) max = d;
+        });
+        depth[id] = max;
+        return max;
+    }
+
+    var layers = {};
+    tasks.forEach(function (t) {
+        var d = getDepth(t.id, []);
+        (layers[d] = layers[d] || []).push(t.id);
+    });
+
+    var positions = {};
+    Object.keys(layers).forEach(function (d) {
+        layers[d].sort(function (a, b) { return a - b; }).forEach(function (id, idx) {
+            positions[id] = {
+                x: 60 + Number(d) * GRAPH_LAYER_GAP,
+                y: 60 + idx * GRAPH_ROW_GAP
+            };
+        });
+    });
+    return positions;
+}
+
+/** 数据签名：项目/任务ID/状态/依赖变化才重绘画布 */
+function computeGraphSignature(tasks) {
+    var filters = getFilters();
+    var parts = ['p:' + filters.projectId];
+    tasks.forEach(function (t) {
+        parts.push(t.id + ':' + t.status + ':' + (t.title || ''));
+        (t.preconditions || []).forEach(function (pc) {
+            parts.push('e:' + pc.preTaskId + '-' + t.id);
+        });
+    });
+    return parts.join('|');
+}
+
+/** 渲染画布：签名不变跳过；重绘前保留节点位置 */
+function renderGraph(tasks) {
+    if (!tasks.length) {
+        graphShowEmptyTip('该项目暂无任务，可先新建任务');
+        return;
+    }
+    graphShowEmptyTip('');
+
+    var signature = computeGraphSignature(tasks);
+    if (graphLfInited && signature === graphLastSignature) {
+        return; // 数据无变化，不打断用户交互（拖拽/缩放状态保留）
+    }
+    graphLastSignature = signature;
+
+    var canvasEl = document.getElementById('graphCanvas');
+    if (!canvasEl) return;
+
+    if (!graphLfInited) {
+        graphLf = new LogicFlow({
+            container: canvasEl,
+            grid: { size: 12, visible: true, type: 'dot', config: { color: '#d8dde6', thickness: 1 } },
+            edgeType: 'polyline',
+            keyboard: { enabled: false },
+            adjustEdge: false,        // 禁止拖拽调整连线
+            adjustNodePosition: true, // 任务节点可拖拽
+            hideAnchors: true,        // 隐藏锚点，避免误创建新连线
+            nodeTextEdit: false,
+            edgeTextEdit: false,
+            hoverOutline: false,
+            history: false
+        });
+        graphLf.setTheme({
+            polyline: { stroke: '#94a3b8', strokeWidth: 1.6 },
+            arrow: { offset: 10, verticalLength: 5 },
+            outline: { stroke: 'transparent', hover: 'transparent' }
+        });
+        registerGraphTaskNode(graphLf);
+        graphLf.on('node:click', function (e) {
+            var props = e.data && e.data.properties;
+            if (props && props.taskId) {
+                window.open('/tasks-board/' + props.taskId, '_blank', 'width=900,height=700');
+            }
+        });
+        graphLfInited = true;
+    } else {
+        syncGraphPositions();
+    }
+
+    // 依赖边：前置任务 -> 当前任务（方向即依赖方向），前置任务不在项目内则跳过
+    var byId = {};
+    tasks.forEach(function (t) { byId[t.id] = t; });
+    var edges = [];
+    tasks.forEach(function (t) {
+        (t.preconditions || []).forEach(function (pc) {
+            if (pc.preTaskId && byId[pc.preTaskId]) {
+                edges.push({ from: pc.preTaskId, to: t.id });
+            }
+        });
+    });
+
+    // 布局：优先沿用已保存位置（用户拖拽过），新任务用自动布局
+    var autoPositions = computeGraphLayout(tasks, edges);
+    var nodes = tasks.map(function (t) {
+        var pos = graphNodePositions[t.id] || autoPositions[t.id] || { x: 60, y: 60 };
+        return {
+            id: 'task-' + t.id,
+            type: 'graphTask',
+            x: pos.x,
+            y: pos.y,
+            properties: {
+                taskId: t.id,
+                title: t.title,
+                status: t.status,
+                agentId: t.agentId,
+                agentName: t.agentName
+            }
+        };
+    });
+    var lfEdges = edges.map(function (e) {
+        return {
+            id: 'edge-' + e.from + '-' + e.to,
+            type: 'polyline',
+            sourceNodeId: 'task-' + e.from,
+            targetNodeId: 'task-' + e.to
+        };
+    });
+
+    graphLf.render({ nodes: nodes, edges: lfEdges });
+    if (!Object.keys(graphNodePositions).length) {
+        graphFitView();
+    }
+}
+
+/** 从画布同步节点位置到缓存（刷新重绘前调用） */
+function syncGraphPositions() {
+    if (!graphLf) return;
+    var data = graphLf.getGraphData();
+    (data.nodes || []).forEach(function (n) {
+        if (n.id && n.id.indexOf('task-') === 0 && n.properties && n.properties.taskId) {
+            graphNodePositions[n.properties.taskId] = { x: n.x, y: n.y };
+        }
+    });
+}
+
+/** 视图复位：重置缩放与平移，节点回到初始自动布局位置 */
+function graphFitView() {
+    if (!graphLf) return;
+    try {
+        graphLf.resetZoom();
+        graphLf.resetTranslate();
+    } catch (e) { /* 忽略内部结构差异 */ }
+}
+
+/** 工具栏缩放（LogicFlow zoom 语义：true 放大一档 / false 缩小一档） */
+function graphZoom(delta) {
+    if (!graphLf) return;
+    graphLf.zoom(delta > 0);
+}
+
+/** 重排：清除位置缓存并按依赖层级重新自动布局 */
+function graphResetLayout() {
+    graphNodePositions = {};
+    graphLastSignature = '';
+    if (currentView === 'graph') {
+        loadGraph();
+    }
 }
 
 /* ========== 工具函数 ========== */

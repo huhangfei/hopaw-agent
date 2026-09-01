@@ -686,6 +686,211 @@ body.dark-theme .table-action-btn.warn:hover {
     background: rgba(251, 191, 36, 0.15);
 }
 
+/* ==================== 画布视图（LogicFlow 依赖关系图） ==================== */
+.tasks-graph-view {
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    min-height: 0;
+    border-radius: 12px;
+    background: #f6f8fb;
+    border: 1px solid #e3e8f0;
+    overflow: hidden;
+}
+
+.graph-toolbar {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 12px;
+    border-bottom: 1px solid #e3e8f0;
+    background: #fff;
+    flex-shrink: 0;
+}
+
+.graph-toolbar-label {
+    flex: 1;
+    font-size: 12px;
+    color: #94a3b8;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.graph-tool-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    border: 1px solid #d5dbe5;
+    background: #fff;
+    color: #475569;
+    font-size: 12px;
+    border-radius: 6px;
+    padding: 4px 10px;
+    cursor: pointer;
+    flex-shrink: 0;
+}
+
+.graph-tool-btn:hover {
+    border-color: #667eea;
+    color: #667eea;
+}
+
+.graph-canvas-wrap {
+    position: relative;
+    flex: 1;
+    min-height: 480px;
+    height: calc(100vh - 230px);
+}
+
+#graphCanvas {
+    position: absolute;
+    inset: 0;
+}
+
+.graph-empty-tip {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    color: #94a3b8;
+    font-size: 14px;
+    background: rgba(255, 255, 255, 0.9);
+    padding: 18px 28px;
+    border-radius: 10px;
+    border: 1px dashed #cbd5e1;
+    pointer-events: none;
+}
+
+/* 画布任务节点 */
+.gt-node {
+    display: flex;
+    width: 100%;
+    height: 100%;
+    background: #fff;
+    border: 1px solid #d5dbe5;
+    border-radius: 8px;
+    box-shadow: 0 2px 6px rgba(15, 23, 42, 0.08);
+    overflow: hidden;
+    cursor: pointer;
+    user-select: none;
+}
+
+.gt-node:hover {
+    border-color: #667eea;
+    box-shadow: 0 4px 12px rgba(102, 126, 234, 0.25);
+}
+
+.gt-node[data-gt-status="processing"] {
+    border-color: #3b82f6;
+    box-shadow: 0 0 0 1px rgba(59, 130, 246, 0.35);
+}
+
+.gt-node-color {
+    width: 5px;
+    flex-shrink: 0;
+}
+
+.gt-node-body {
+    flex: 1;
+    min-width: 0;
+    padding: 8px 10px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    gap: 6px;
+}
+
+.gt-node-title {
+    font-size: 13px;
+    font-weight: 600;
+    color: #1e293b;
+    line-height: 1.3;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.gt-node-meta {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    min-width: 0;
+}
+
+.gt-node-status {
+    flex-shrink: 0;
+    font-size: 11px;
+    color: #fff;
+    border-radius: 4px;
+    padding: 1px 6px;
+    line-height: 1.5;
+}
+
+.gt-node-agent {
+    font-size: 11px;
+    color: #94a3b8;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+/* ===== 暗色：画布视图 ===== */
+body.dark-theme .tasks-graph-view {
+    background: #16213e;
+    border-color: #2d2d44;
+}
+
+body.dark-theme .graph-toolbar {
+    background: #16213e;
+    border-bottom-color: #2d2d44;
+}
+
+body.dark-theme .graph-toolbar-label {
+    color: #888;
+}
+
+body.dark-theme .graph-tool-btn {
+    background: #2d2d44;
+    border-color: #2d2d44;
+    color: #c0c0c0;
+}
+
+body.dark-theme .graph-tool-btn:hover {
+    border-color: #8ba3ff;
+    color: #8ba3ff;
+}
+
+body.dark-theme .graph-empty-tip {
+    color: #888;
+    background: rgba(22, 33, 62, 0.9);
+    border-color: #2d2d44;
+}
+
+body.dark-theme .gt-node {
+    background: #1a2440;
+    border-color: #2d2d44;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
+}
+
+body.dark-theme .gt-node:hover {
+    border-color: #8ba3ff;
+    box-shadow: 0 4px 12px rgba(139, 163, 255, 0.25);
+}
+
+body.dark-theme .gt-node[data-gt-status="processing"] {
+    border-color: #3b82f6;
+    box-shadow: 0 0 0 1px rgba(59, 130, 246, 0.4);
+}
+
+body.dark-theme .gt-node-title {
+    color: #e0e0e0;
+}
+
+body.dark-theme .gt-node-agent {
+    color: #888;
+}
+
 body.dark-theme .table-action-btn.danger {
     color: #ef4444;
 }

@@ -37,6 +37,10 @@
                 <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>
                 列表
             </button>
+            <button type="button" class="view-switch-btn" id="viewBtnGraph" onclick="switchView('graph')" title="画布视图：项目任务依赖关系图">
+                <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="5" cy="6" r="2.5"/><circle cx="19" cy="6" r="2.5"/><circle cx="12" cy="18" r="2.5"/><line x1="7.2" y1="7.2" x2="16.8" y2="16.8"/><line x1="7.2" y1="7.2" x2="16.8" y2="7.2"/><line x1="14" y1="15.6" x2="16.8" y2="7.2"/></svg>
+                画布
+            </button>
         </div>
     </div>
 
@@ -64,6 +68,24 @@
         <div class="table-pagination" id="tablePagination"></div>
     </div>
 
+    <!-- 画布视图：项目任务依赖关系图（LogicFlow 无限画布，可拖拽/缩放） -->
+    <div class="tasks-graph-view" id="tasksGraphView" style="display:none;">
+        <div class="graph-toolbar">
+            <span class="graph-toolbar-label">画布视图按依赖层级自动布局，任务节点可拖拽，空白处拖拽平移，Ctrl+滚轮缩放</span>
+            <button type="button" class="graph-tool-btn" onclick="graphZoom(0.2)" title="放大">
+                <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/><line x1="11" y1="8" x2="11" y2="14"/><line x1="8" y1="11" x2="14" y2="11"/></svg>
+            </button>
+            <button type="button" class="graph-tool-btn" onclick="graphZoom(-0.2)" title="缩小">
+                <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/><line x1="8" y1="11" x2="14" y2="11"/></svg>
+            </button>
+            <button type="button" class="graph-tool-btn" onclick="graphResetLayout()" title="重置为自动布局">重排</button>
+        </div>
+        <div class="graph-canvas-wrap" id="graphCanvasWrap">
+            <div id="graphCanvas"></div>
+            <div class="graph-empty-tip" id="graphEmptyTip" style="display:none;"></div>
+        </div>
+    </div>
+
     <!-- 新建/编辑任务模态框（公共组件，与项目详情页共用） -->
     <div th:replace="~{fragment/task-modal :: taskModal}"></div>
 </main>
@@ -71,10 +93,12 @@
 <th:block layout:fragment="extraCss">
     <link rel="stylesheet" th:href="@{/css/task-modal.css}">
     <link rel="stylesheet" th:href="@{/css/page/tasks-board.css}">
+    <link rel="stylesheet" th:href="@{/css/lib/logicflow.css}">
 </th:block>
 
 <th:block layout:fragment="extraScripts">
     <script th:src="@{/js/notice.js}"></script>
+    <script th:src="@{/js/lib/logicflow.min.js}"></script>
     <script th:src="@{/js/page/task-modal.js}"></script>
     <script th:src="@{/js/page/tasks-board.js}"></script>
 </th:block>

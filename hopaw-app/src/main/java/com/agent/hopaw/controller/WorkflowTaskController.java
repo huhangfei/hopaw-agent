@@ -65,6 +65,23 @@ public class WorkflowTaskController {
         return ResponseBean.success(result);
     }
 
+    // 画布视图数据：项目全部任务（含前置依赖关系，供前端构建节点和连线）
+    @GetMapping("/api/workflow/tasks/graph")
+    @ResponseBody
+    public ResponseBean getGraphData(HttpServletRequest request,
+            @RequestParam Long projectId) {
+        String userId = CurrentUser.require(request);
+        if (projectId == null) {
+            return ResponseBean.fail("画布视图必须选择项目");
+        }
+        List<WorkflowTask> tasks = taskService.getTasksPage(userId, null, null, projectId, null, 1, 1000);
+        for (WorkflowTask task : tasks) {
+            fillCreatorInfo(task);
+            task.setPreconditions(taskService.getPreconditions(task.getId()));
+        }
+        return ResponseBean.success(tasks);
+    }
+
     // 任务分页列表（表格视图：所有状态含已关闭，按创建时间倒序）
     @GetMapping("/api/workflow/tasks/page")
     @ResponseBody
