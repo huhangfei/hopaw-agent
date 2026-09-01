@@ -16,6 +16,8 @@ public class ChatSession {
     private String toolCallPermission;
     /** 业务类型：task / null */
     private String bizType;
+    /** 会话执行器是否正在运行（非持久化字段，由接口实时计算） */
+    private Boolean running;
     public ChatSession() {}
 
     public ChatSession(String sessionId, String userId, String title) {
@@ -128,5 +130,13 @@ public class ChatSession {
 
     public void setBizType(String bizType) {
         this.bizType = bizType;
+    }
+
+    public Boolean getRunning() {
+        return running;
+    }
+
+    public void setRunning(Boolean running) {
+        this.running = running;
     }
 }

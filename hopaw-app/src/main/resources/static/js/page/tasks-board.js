@@ -265,7 +265,7 @@ function renderTaskCard(task) {
           '</div>'
         : '';
 
-    return '<div class="task-card" onclick="window.open(\'/tasks-board/' + task.id + '\', \'_blank\', \'width=900,height=700\')">' +
+    return '<div class="task-card' + (task.status === 'processing' ? ' task-card-processing' : '') + '" onclick="window.open(\'/tasks-board/' + task.id + '\', \'_blank\', \'width=900,height=700\')">' +
         actionBtnsHtml +
         '<div class="task-card-title">' + escapeHtml(title) + '</div>' +
         '<div class="task-card-agent">' +

@@ -329,7 +329,7 @@ function clearTaskSessionHistory(sessionId) {
 /* ========== 会话执行状态监听（WebSocket） ========== */
 /* 打字机缓冲区：持续追加内容，超过固定长度时丢弃最左侧旧内容 */
 var tickerBuffer = '';
-var TICKER_MAX_LEN = 150;
+var TICKER_MAX_LEN = 300;
 /* 当前正在输出参数的工具调用ID：同一工具的分片不重复拼接标签 */
 var currentToolCallId = null;
 /* 已收到过流式分片的工具调用集合：全量数据仅在无分片时补充展示 */
@@ -801,6 +801,28 @@ function taskDetailCreatorHtml(task) {
 
 /* ========== 任务 Token 用量统计（参考会话右下角统计样式） ========== */
 var taskTokenChart = null;
+// 最近一次加载的 token 用量数据：折叠状态下仅更新汇总值，展开时再渲染图表
+var taskTokenUsageData = null;
+// token 区域是否展开：默认折叠
+var taskTokenSectionExpanded = false;
+
+/**
+ * 折叠/展开 Token 用量区域：折叠时仅显示标题行汇总值
+ */
+function toggleTaskTokenSection() {
+    var chartEl = document.getElementById('taskTokenChart');
+    var arrowEl = document.getElementById('taskTokenArrow');
+    if (!chartEl) return;
+    taskTokenSectionExpanded = !taskTokenSectionExpanded;
+    chartEl.style.display = taskTokenSectionExpanded ? '' : 'none';
+    if (arrowEl) {
+        arrowEl.textContent = taskTokenSectionExpanded ? '▾' : '▸';
+    }
+    // 展开时基于缓存数据渲染图表（display:none 状态下 canvas 初始化会异常，需展开后再画）
+    if (taskTokenSectionExpanded && taskTokenUsageData) {
+        renderTaskTokenUsage(taskTokenUsageData);
+    }
+}
 
 function loadTaskTokenUsage(taskId) {
     fetch('/api/workflow/tasks/' + taskId + '/token-usage?limit=30')
@@ -820,6 +842,7 @@ function renderTaskTokenUsage(data) {
     var chartEl = document.getElementById('taskTokenChart');
     if (!summaryEl || !chartEl) return;
 
+    taskTokenUsageData = data;
     var summary = data.summary || {};
     var list = data.list || [];
 
@@ -837,6 +860,11 @@ function renderTaskTokenUsage(data) {
         + '<span class="ts-out">↓ ' + formatTokenCount(summary.outputTokens || 0) + '</span>'
         + '<span class="ts-total">总 ' + formatTokenCount(summary.totalTokens || 0) + '</span>'
         + '<span class="ts-count">' + (summary.id || 0) + ' 次</span>';
+
+    // 折叠状态下不渲染图表：canvas 在 display:none 容器中初始化会异常，展开时再画
+    if (!taskTokenSectionExpanded) {
+        return;
+    }
 
     // 按时间正序展示最近 30 条
     var ordered = list.slice().reverse();

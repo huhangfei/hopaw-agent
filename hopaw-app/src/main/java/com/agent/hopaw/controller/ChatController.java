@@ -51,6 +51,8 @@ public class ChatController {
         model.addAttribute("chatFlow", Collections.emptyList());
 
         List<ChatSession> chatSessions = chatSessionService.getSessionsByUserId(currentUserId);
+        // 填充会话执行器实时运行状态，首页会话列表据此显示loading图标
+        chatSessions.forEach(s -> s.setRunning(agentExecutorService.isAgentExecutorRunning(s.getSessionId())));
         model.addAttribute("chatSessions", chatSessions);
         List<Agent> agents = agentService.getAgentsPage(currentUserId, null, 0, 100);
         model.addAttribute("agents", agents);

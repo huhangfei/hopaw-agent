@@ -393,7 +393,7 @@ body {
 /* ========== 执行中指示行（面板底部一行，与列表同容器） ========== */
 .task-session-running {
     display: flex;
-    align-items: center;
+    align-items: flex-start;
     gap: 8px;
     padding: 9px 12px;
     background: rgba(59, 130, 246, 0.07);
@@ -414,6 +414,7 @@ body {
     border-radius: 50%;
     background: #3b82f6;
     flex-shrink: 0;
+    margin-top: 5px;
     animation: dot-blink 1s ease-in-out infinite;
 }
 
@@ -428,26 +429,31 @@ body {
     font-weight: 600;
     white-space: nowrap;
     flex-shrink: 0;
+    line-height: 18px;
 }
 
-/* 打字机文本：持续追加到右侧，超长丢弃左侧旧内容 */
+/* 打字机文本：两行显示，超长丢弃顶部旧内容 */
 .task-session-running .running-ticker {
     flex: 1;
     min-width: 0;
     font-size: 12px;
+    line-height: 1.5;
     color: #888;
-    white-space: nowrap;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
     overflow: hidden;
-    text-overflow: ellipsis;
+    word-break: break-all;
 }
 
-/* 打字机光标：闪烁竖线 */
+/* 打字机光标：闪烁竖线（跟随第一行文字） */
 .task-session-running .running-cursor {
     display: inline-block;
     width: 2px;
     height: 14px;
     background: #3b82f6;
     flex-shrink: 0;
+    margin-top: 2px;
     animation: cursor-blink 0.8s step-end infinite;
 }
 
@@ -943,6 +949,36 @@ body.dark-theme .task-creator-tag.creator-user {
     align-items: center;
     gap: 10px;
     flex-wrap: wrap;
+}
+
+/* 可折叠标题：点击切换图表展开/折叠，折叠时仅显示汇总值 */
+.token-section-toggle {
+    cursor: pointer;
+    user-select: none;
+}
+
+.token-section-toggle:hover {
+    color: #667eea;
+}
+
+.token-toggle-label {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+.token-toggle-arrow {
+    display: inline-block;
+    width: 14px;
+    color: #999;
+    font-size: 12px;
+    transition: transform 0.2s;
+    flex-shrink: 0;
+}
+
+body.dark-theme .token-section-toggle:hover {
+    color: #8ba3ff;
 }
 
 .token-stats-summary {

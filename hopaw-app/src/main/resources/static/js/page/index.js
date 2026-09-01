@@ -12,6 +12,8 @@ var currentToolCallPermission = 'smart_call';
 var attachedFiles = []; // { url, type, name }
 // 会话列表类型筛选：chat=聊天 / project=项目 / task=任务，默认取当前会话的类型
 var sessionTypeFilter = 'chat';
+// 运行中的会话ID集合：初始渲染时取自后端 running 字段，运行期由 WebSocket 事件维护
+var runningSessionIds = {};
 
 if (typeof marked !== 'undefined') {
     marked.setOptions({
@@ -171,10 +173,14 @@ function connectWebSocket() {
         var requestId = data.requestId;
 
         // 会话隔离：后端按用户广播，非当前会话的运行事件（任务/项目会话后台运行）不更新当前界面；
-        // session-title 仍需更新左侧会话列表标题
+        // session-title 仍需更新左侧会话列表标题；received/done/error/task-done 维护会话列表的运行loading图标
         if (data.sessionId && data.sessionId !== currentSessionId) {
             if (data.type === 'session-title') {
                 updateSessionTitle(data.sessionId, data.content);
+            } else if (data.type === 'received') {
+                setSessionRunning(data.sessionId, true);
+            } else if (data.type === 'done' || data.type === 'error' || data.type === 'task-done') {
+                setSessionRunning(data.sessionId, false);
             }
             return;
         }
@@ -185,6 +191,7 @@ function connectWebSocket() {
 
         if (data.type === 'received') {
             showLoadingMessage();
+            setSessionRunning(data.sessionId || currentSessionId, true);
             // 会话开始运行即禁用输入区（覆盖任务看板/项目迭代/其他标签页触发的运行，
             // 本地 sendMessage 的禁用是幂等的）
             disableInput();
@@ -195,10 +202,12 @@ function connectWebSocket() {
         } else if (data.type === 'thinking') {
             handleThinking(data, requestId);
         } else if (data.type === 'done') {
+            setSessionRunning(data.sessionId || currentSessionId, false);
             handleStreamingDone(data.message, data.response, requestId);
         } else if (data.type === 'session-title') {
             updateSessionTitle(data.sessionId, data.content);
         } else if (data.type === 'task-done') {
+            setSessionRunning(data.sessionId || currentSessionId, false);
             var msgState = streamingMessages[requestId];
             if (msgState && msgState.currentStreamingMessage) {
                 msgState.currentStreamingMessage.appendChild(createMessageFooter());
@@ -206,6 +215,7 @@ function connectWebSocket() {
             }
             enableInput();
         } else if (data.type === 'error') {
+            setSessionRunning(data.sessionId || currentSessionId, false);
             handleStreamingError(data.content || data.message, requestId);
         }  else if (data.type === 'warn') {
             handleStreamingWarn(data.content || data.message, requestId);
@@ -1599,6 +1609,31 @@ function filterSessionsByType(type) {
     renderSessionList(initialChatSessions);
 }
 
+/**
+ * 维护会话运行状态：更新 runningSessionIds 并同步会话列表项的loading图标
+ */
+function setSessionRunning(sessionId, running) {
+    if (!sessionId) return;
+    if (running) {
+        runningSessionIds[sessionId] = true;
+    } else {
+        delete runningSessionIds[sessionId];
+    }
+    var container = document.getElementById('sessionList');
+    if (!container) return;
+    var item = container.querySelector('.session-list-item[data-session-id="' + escapeHtml(sessionId) + '"]');
+    if (!item) return;
+    var spinner = item.querySelector('.session-running-spinner');
+    if (running && !spinner) {
+        var el = document.createElement('span');
+        el.className = 'session-running-spinner';
+        el.title = '运行中';
+        item.appendChild(el);
+    } else if (!running && spinner) {
+        spinner.remove();
+    }
+}
+
 function renderSessionList(sessions) {
     var container = document.getElementById('sessionList');
     if (!container) return;
@@ -1616,6 +1651,10 @@ function renderSessionList(sessions) {
 
     var html = '';
     filtered.forEach(function(s) {
+        // 初始渲染时从后端 running 字段播种运行状态
+        if (s.running) {
+            runningSessionIds[s.sessionId] = true;
+        }
         var activeClass = (s.sessionId === currentSessionId) ? ' active' : '';
         var isTask = s.bizType === 'workflow-task-chat';
         var isProject = s.bizType === 'project-chat';
@@ -1627,11 +1666,14 @@ function renderSessionList(sessions) {
         var taskBadge = isTask ? '<span class="session-tag session-tag-task" title="任务会话">任务</span>' : '';
         // 项目会话标识标签
         var projectBadge = isProject ? '<span class="session-tag session-tag-project" title="项目会话">项目</span>' : '';
+        // 运行中loading图标
+        var runningSpinner = runningSessionIds[s.sessionId] ? '<span class="session-running-spinner" title="运行中"></span>' : '';
         html += '<div class="session-list-item' + activeClass + taskClass + projectClass + '" data-session-id="' + escapeHtml(s.sessionId) + '" data-id="' + (s.id || '') + '" data-biz-type="' + (s.bizType || '') + '">';
         html += taskBadge + projectBadge;
         html += '<span class="session-list-item-title">' + escapeHtml(title) + '</span>';
         html += '<span class="session-list-item-time">' + escapeHtml(timeStr) + '</span>';
         html += '<button class="session-edit-btn" onclick="event.stopPropagation();showEditSessionTitle(this,' + (s.id || 0) + ')" title="编辑标题"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg></button>';
+        html += runningSpinner;
         html += '</div>';
     });
     container.innerHTML = html;
@@ -1694,6 +1736,14 @@ function updateSessionTitle(sessionId, newTitle) {
     editBtn.setAttribute('title', '编辑标题');
     editBtn.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>';
     item.appendChild(editBtn);
+
+    // 新会话通常因刚发送消息而创建，运行中则直接带loading图标
+    if (runningSessionIds[sessionId]) {
+        var spinner = document.createElement('span');
+        spinner.className = 'session-running-spinner';
+        spinner.title = '运行中';
+        item.appendChild(spinner);
+    }
 
     item.addEventListener('click', function() {
         if (sessionId !== currentSessionId) {

@@ -368,6 +368,29 @@
     display: flex;
 }
 
+/* 会话运行中loading图标：显示在会话项最右侧 */
+.session-running-spinner {
+    flex-shrink: 0;
+    width: 13px;
+    height: 13px;
+    margin-left: 4px;
+    border: 2px solid rgba(102, 126, 234, 0.25);
+    border-top-color: #667eea;
+    border-radius: 50%;
+    animation: session-spinner-rotate 0.8s linear infinite;
+}
+
+@keyframes session-spinner-rotate {
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+body.dark-theme .session-running-spinner {
+    border-color: rgba(139, 163, 255, 0.25);
+    border-top-color: #8ba3ff;
+}
+
 .session-title-input {
     flex: 1;
     font-size: 13px;

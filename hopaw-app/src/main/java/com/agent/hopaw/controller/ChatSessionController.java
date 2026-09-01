@@ -40,6 +40,10 @@ public class ChatSessionController {
         } else {
             sessions = chatSessionService.getSessionsByUserId(currentUserId);
         }
+        // 填充会话执行器实时运行状态，前端会话列表据此显示loading图标
+        if (sessions != null) {
+            sessions.forEach(s -> s.setRunning(agentExecutorService.isAgentExecutorRunning(s.getSessionId())));
+        }
         return ResponseBean.success(sessions);
     }
 

@@ -96,12 +96,16 @@
         </div>
     </div>
 
-    <!-- Token 用量统计 -->
+    <!-- Token 用量统计（默认折叠，仅显示汇总值，点击标题展开图表） -->
     <div class="task-detail-section task-detail-token-section">
-        <h3 class="task-detail-section-title">Token 用量
-            <span class="token-stats-summary" id="taskTokenSummary"></span>
+        <h3 class="task-detail-section-title token-section-toggle" id="taskTokenToggle" onclick="toggleTaskTokenSection()" title="点击展开/折叠">
+            <span class="token-toggle-label">
+                <span class="token-toggle-arrow" id="taskTokenArrow">▸</span>
+                Token 用量
+                <span class="token-stats-summary" id="taskTokenSummary"></span>
+            </span>
         </h3>
-        <div class="token-chart-wrap" id="taskTokenChart"></div>
+        <div class="token-chart-wrap" id="taskTokenChart" style="display: none;"></div>
     </div>
 
     <div class="task-detail-section">
