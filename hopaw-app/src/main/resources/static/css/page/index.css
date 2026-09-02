@@ -326,7 +326,7 @@
     border-color: #f5c785;
 }
 
-/* 项目会话标识 */
+/** 项目会话标识 */
 .session-tag-project {
     background: #e8f0fe;
     color: #4285f4;
@@ -336,6 +336,18 @@
 .session-list-item.active .session-tag-project {
     background: #eef4ff;
     border-color: #a8c6f8;
+}
+
+/** 聊天会话标识 */
+.session-tag-chat {
+    background: #f1f3f4;
+    color: #5f6368;
+    border: 1px solid #dcdfe3;
+}
+
+.session-list-item.active .session-tag-chat {
+    background: #f8f9fa;
+    border-color: #c3c9ce;
 }
 
 .session-edit-btn {
@@ -1988,6 +2000,18 @@ body.dark-theme .session-tag-project {
     border-color: #2d4370;
 }
 
+
+body.dark-theme .session-tag-chat {
+    background: #2d2d44;
+    color: #c0c0c0;
+    border-color: #3b3b55;
+}
+
+body.dark-theme .session-list-item.active .session-tag-chat {
+    background: #35354f;
+    border-color: #4a4a68;
+}
+
 body.dark-theme .session-list-item.active .session-tag-project {
     background: #243355;
     border-color: #3a4f82;
@@ -2464,4 +2488,29 @@ body.dark-theme .btn-stop-header {
 }
 body.dark-theme .btn-stop-header:hover {
     background: #a63344;
+}
+
+/* 运行中：分类标签流光边框标记 */
+.session-tag.session-tag-running {
+    position: relative;
+    border-color: transparent !important;
+}
+.session-tag.session-tag-running::before {
+    content: '';
+    position: absolute;
+    inset: -1px;
+    border-radius: 5px;
+    padding: 1px;
+    background: linear-gradient(110deg, transparent 0%, #7b93ff 42%, #4de1c1 50%, #7b93ff 58%, transparent 100%);
+    background-size: 300% 100%;
+    -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+    -webkit-mask-composite: xor;
+    mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+    mask-composite: exclude;
+    animation: session-tag-flow 1.4s linear infinite;
+    pointer-events: none;
+}
+@keyframes session-tag-flow {
+    0% { background-position: 200% 0; }
+    100% { background-position: -100% 0; }
 }

@@ -1415,6 +1415,8 @@ function stopCurrentSession() {
 var lastTokenId = 0;
 var tokenChartData = [];
 var tokenChart = null;
+// 今日用量汇总基准（来自 daily-stats 接口），收到 token 消息时在此基准上累加增量
+var tokenDailyStats = { inputTokens: 0, outputTokens: 0, totalTokens: 0 };
 
 function handleTokenUsageMessage(data) {
     if (!currentAgentId) return;
@@ -1432,13 +1434,11 @@ function handleTokenUsageMessage(data) {
 
     renderTokenChart(tokenChartData);
 
-    var inputSum = 0, outputSum = 0, totalSum = 0;
-    for (var i = 0; i < tokenChartData.length; i++) {
-        inputSum += tokenChartData[i].inputTokens || 0;
-        outputSum += tokenChartData[i].outputTokens || 0;
-        totalSum += tokenChartData[i].totalTokens || 0;
-    }
-    updateTokenTitle(inputSum, outputSum, totalSum);
+    // 今日汇总在 daily-stats 基准上累加本次用量（图表数据为最近30条滑动窗口，不能作为全天汇总依据）
+    tokenDailyStats.inputTokens += entry.inputTokens || 0;
+    tokenDailyStats.outputTokens += entry.outputTokens || 0;
+    tokenDailyStats.totalTokens += entry.totalTokens || 0;
+    updateTokenTitle(tokenDailyStats.inputTokens, tokenDailyStats.outputTokens, tokenDailyStats.totalTokens);
 }
 
 function loadTokenUsage(minId) {
@@ -1470,7 +1470,13 @@ function loadTokenUsage(minId) {
     fetch(statsUrl).then(function(r) { return r.json(); }).then(function(sres) {
         if (sres.code === 200 && sres.data && sres.data.length > 0) {
             var today = sres.data[0];
-            updateTokenTitle(today.inputTokens || 0, today.outputTokens || 0, today.totalTokens || 0);
+            // 以接口全天汇总为基准，后续 token 消息在此基础上累加增量
+            tokenDailyStats = {
+                inputTokens: today.inputTokens || 0,
+                outputTokens: today.outputTokens || 0,
+                totalTokens: today.totalTokens || 0
+            };
+            updateTokenTitle(tokenDailyStats.inputTokens, tokenDailyStats.outputTokens, tokenDailyStats.totalTokens);
         }
     });
 }
@@ -2046,7 +2052,7 @@ function filterSessionsByType(type) {
 }
 
 /**
- * 维护会话运行状态：更新 runningSessionIds 并同步会话列表项的loading图标
+ * 维护会话运行状态：更新 runningSessionIds 并通过分类标签的流光边框标记运行状态
  */
 function setSessionRunning(sessionId, running) {
     if (!sessionId) return;
@@ -2059,14 +2065,13 @@ function setSessionRunning(sessionId, running) {
     if (!container) return;
     var item = container.querySelector('.session-list-item[data-session-id="' + escapeHtml(sessionId) + '"]');
     if (!item) return;
-    var spinner = item.querySelector('.session-running-spinner');
-    if (running && !spinner) {
-        var el = document.createElement('span');
-        el.className = 'session-running-spinner';
-        el.title = '运行中';
-        item.appendChild(el);
-    } else if (!running && spinner) {
-        spinner.remove();
+    var tag = item.querySelector('.session-tag');
+    if (tag) {
+        if (running) {
+            tag.classList.add('session-tag-running');
+        } else {
+            tag.classList.remove('session-tag-running');
+        }
     }
 }
 
@@ -2094,22 +2099,24 @@ function renderSessionList(sessions) {
         var activeClass = (s.sessionId === currentSessionId) ? ' active' : '';
         var isTask = s.bizType === 'workflowTaskChat' || s.bizType === 'workflow-task-chat';
         var isProject = s.bizType === 'projectChat' || s.bizType === 'project-chat';
+        var isChat = !isTask && !isProject;
         var taskClass = isTask ? ' session-list-item-task' : '';
         var projectClass = isProject ? ' session-list-item-project' : '';
         var title = s.title || '未命名会话';
         var timeStr = formatSessionTime(s.lastUpdateTime || s.createTime);
+        // 运行中：分类标签附加流光边框类以作标记
+        var runClass = runningSessionIds[s.sessionId] ? ' session-tag-running' : '';
         // 任务会话标识标签
-        var taskBadge = isTask ? '<span class="session-tag session-tag-task" title="任务会话">任务</span>' : '';
+        var taskBadge = isTask ? '<span class="session-tag session-tag-task' + runClass + '" title="任务会话">任务</span>' : '';
         // 项目会话标识标签
-        var projectBadge = isProject ? '<span class="session-tag session-tag-project" title="项目会话">项目</span>' : '';
-        // 运行中loading图标
-        var runningSpinner = runningSessionIds[s.sessionId] ? '<span class="session-running-spinner" title="运行中"></span>' : '';
+        var projectBadge = isProject ? '<span class="session-tag session-tag-project' + runClass + '" title="项目会话">项目</span>' : '';
+        // 聊天会话标识标签
+        var chatBadge = isChat ? '<span class="session-tag session-tag-chat' + runClass + '" title="聊天">聊天</span>' : '';
         html += '<div class="session-list-item' + activeClass + taskClass + projectClass + '" data-session-id="' + escapeHtml(s.sessionId) + '" data-id="' + (s.id || '') + '" data-biz-type="' + (s.bizType || '') + '">';
-        html += taskBadge + projectBadge;
+        html += taskBadge + projectBadge + chatBadge;
         html += '<span class="session-list-item-title">' + escapeHtml(title) + '</span>';
         html += '<span class="session-list-item-time">' + escapeHtml(timeStr) + '</span>';
         html += '<button class="session-edit-btn" onclick="event.stopPropagation();showEditSessionTitle(this,' + (s.id || 0) + ')" title="编辑标题"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg></button>';
-        html += runningSpinner;
         html += '</div>';
     });
     container.innerHTML = html;
@@ -2173,12 +2180,20 @@ function updateSessionTitle(sessionId, newTitle) {
     editBtn.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>';
     item.appendChild(editBtn);
 
-    // 新会话通常因刚发送消息而创建，运行中则直接带loading图标
+    // 补充分类标签：新会话通常为聊天类型，与列表项结构保持一致
+    if (!item.querySelector('.session-tag')) {
+        var chatTag = document.createElement('span');
+        chatTag.className = 'session-tag session-tag-chat';
+        chatTag.setAttribute('title', '聊天');
+        chatTag.textContent = '聊天';
+        item.insertBefore(chatTag, item.firstChild);
+    }
+    // 运行中：给分类标签附加流光边框类
     if (runningSessionIds[sessionId]) {
-        var spinner = document.createElement('span');
-        spinner.className = 'session-running-spinner';
-        spinner.title = '运行中';
-        item.appendChild(spinner);
+        var tag = item.querySelector('.session-tag');
+        if (tag) {
+            tag.classList.add('session-tag-running');
+        }
     }
 
     item.addEventListener('click', function() {

@@ -21,6 +21,7 @@ import java.util.List;
 /**
  * 项目工具集：项目列表查询、项目详情查询、项目保存（新增或更新）、项目删除、项目操作日志与项目记忆查询。
  * 项目数据不做用户归属隔离（跨用户共享协作），仅新增项目时记录归属用户。
+ * @author hhf
  */
 @Component("projectTool")
 public class ProjectTool implements AgentTool {
@@ -292,7 +293,7 @@ public class ProjectTool implements AgentTool {
 
     /** 日志动作转中文描述，未知动作原样返回 */
     private String actionText(String action) {
-        if (action == null) return "操作";
+        if (action == null) {return "操作";}
         switch (action) {
             case "create": return "创建项目";
             case "update": return "更新项目";

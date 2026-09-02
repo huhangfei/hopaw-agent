@@ -3,13 +3,11 @@ package com.agent.hopaw.biz.tool.workflowtask;
 import com.agent.hopaw.infra.constant.TaskCommenterTypeEnum;
 import com.agent.hopaw.infra.constant.TaskCommentTypeEnum;
 import com.agent.hopaw.infra.constant.TaskStatusEnum;
+import com.agent.hopaw.infra.model.entity.Agent;
 import com.agent.hopaw.infra.model.entity.WorkflowTaskComment;
 import com.agent.hopaw.infra.model.entity.WorkflowTask;
 import com.agent.hopaw.infra.model.entity.WorkflowTaskPrecondition;
-import com.agent.hopaw.infra.service.IProjectLogService;
-import com.agent.hopaw.infra.service.IProjectMemoryService;
-import com.agent.hopaw.infra.service.IWorkflowTaskCommentService;
-import com.agent.hopaw.infra.service.IWorkflowTaskService;
+import com.agent.hopaw.infra.service.*;
 import com.agent.hopaw.infra.tool.AgentTool;
 import com.agent.hopaw.infra.tool.ToolSecurityLevel;
 import com.agent.hopaw.infra.util.InvocationParametersWrapper;
@@ -38,13 +36,16 @@ public class WorkflowTaskTool implements AgentTool {
     private final IWorkflowTaskCommentService taskCommentService;
     private final IProjectLogService projectLogService;
     private final IProjectMemoryService projectMemoryService;
+    private final IAgentService agentService;
 
     public WorkflowTaskTool(IWorkflowTaskService workflowTaskService,
                             IWorkflowTaskCommentService taskCommentService,
                             IProjectLogService projectLogService,
+                            IAgentService agentService,
                             IProjectMemoryService projectMemoryService) {
         this.workflowTaskService = workflowTaskService;
         this.taskCommentService = taskCommentService;
+        this.agentService = agentService;
         this.projectLogService = projectLogService;
         this.projectMemoryService = projectMemoryService;
     }
@@ -297,7 +298,10 @@ public class WorkflowTaskTool implements AgentTool {
             // 关联了项目则记录取消关联日志（与页面删除任务行为一致）
             if (existing.getProjectId() != null) {
                 try {
-                    projectLogService.log(existing.getProjectId(), wrapper.getUserId(), "task_unbind",
+                    String agentCommenterId = String.valueOf(wrapper.getAgentId());
+                    Agent agent = agentService.getAgentById(wrapper.getAgentId());
+                    String agentCommenterName=agent==null?"智能体#"+wrapper.getAgentId():agent.getName();
+                    projectLogService.log(existing.getProjectId(), agentCommenterId, agentCommenterName, "task_unbind",
                             "取消关联任务「" + existing.getTitle() + "」(#" + taskId + ")");
                 } catch (Exception ignored) {
                     // 日志失败不影响任务删除
@@ -403,12 +407,16 @@ public class WorkflowTaskTool implements AgentTool {
         if (taskId == null) {
             return "失败：当前会话未关联任何工作流任务";
         }
+        WorkflowTask task = workflowTaskService.getTask(taskId, null);
+        if (task == null) {
+            return "失败：任务不存在";
+        }
         if (content == null || content.trim().isEmpty()) {
             return "失败：评论内容不能为空";
         }
         // 智能体评论：commenterType=agent，commenterId=智能体ID
-        taskCommentService.addComment(taskId, content.trim(), wrapper.getUserId(),
-                TaskCommenterTypeEnum.AGENT.getCode(), String.valueOf(wrapper.getAgentId()), commentType);
+        taskCommentService.addComment(taskId, content.trim(), task.getUserId(),
+                TaskCommenterTypeEnum.AGENT.getCode(), agentCommenterId(wrapper), agentCommenterType(wrapper));
         return "成功：任务评论已添加";
     }
 
@@ -427,7 +435,7 @@ public class WorkflowTaskTool implements AgentTool {
             return "失败：任务不存在";
         }
         try {
-            workflowTaskService.approveTask(taskId, null, agentCommenterType(wrapper), agentCommenterId(wrapper));
+            workflowTaskService.approveTask(taskId, task.getUserId(), agentCommenterType(wrapper), agentCommenterId(wrapper));
             return "成功：任务已审核通过，进入待执行状态，任务ID：" + taskId;
         } catch (RuntimeException e) {
             return "失败：" + e.getMessage();
@@ -449,7 +457,7 @@ public class WorkflowTaskTool implements AgentTool {
             return "失败：任务不存在";
         }
         try {
-            workflowTaskService.acceptTask(taskId, null, agentCommenterType(wrapper), agentCommenterId(wrapper));
+            workflowTaskService.acceptTask(taskId, task.getUserId(), agentCommenterType(wrapper), agentCommenterId(wrapper));
             return "成功：任务已验收通过，任务ID：" + taskId;
         } catch (RuntimeException e) {
             return "失败：" + e.getMessage();
@@ -475,7 +483,7 @@ public class WorkflowTaskTool implements AgentTool {
             return "失败：驳回原因不能为空";
         }
         try {
-            workflowTaskService.rejectTask(taskId, null, reason.trim(), agentCommenterType(wrapper), agentCommenterId(wrapper));
+            workflowTaskService.rejectTask(taskId, task.getUserId(), reason.trim(), agentCommenterType(wrapper), agentCommenterId(wrapper));
             return "成功：任务已驳回，任务ID：" + taskId;
         } catch (RuntimeException e) {
             return "失败：" + e.getMessage();
@@ -497,7 +505,7 @@ public class WorkflowTaskTool implements AgentTool {
             return "失败：任务不存在";
         }
         try {
-            workflowTaskService.closeTask(taskId, null, agentCommenterType(wrapper), agentCommenterId(wrapper));
+            workflowTaskService.closeTask(taskId, task.getUserId(), agentCommenterType(wrapper), agentCommenterId(wrapper));
             return "成功：任务已关闭，任务ID：" + taskId;
         } catch (RuntimeException e) {
             return "失败：" + e.getMessage();
@@ -519,7 +527,7 @@ public class WorkflowTaskTool implements AgentTool {
             return "失败：任务不存在";
         }
         try {
-            workflowTaskService.redoTask(taskId, null, agentCommenterType(wrapper), agentCommenterId(wrapper));
+            workflowTaskService.redoTask(taskId, task.getUserId(), agentCommenterType(wrapper), agentCommenterId(wrapper));
             return "成功：任务已重做，已移回待执行状态，任务ID：" + taskId;
         } catch (RuntimeException e) {
             return "失败：" + e.getMessage();
