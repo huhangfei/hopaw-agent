@@ -400,7 +400,7 @@ public class LongTermMemoryTaskHandler implements TaskHandler {
         String bizType = getSessionBizType(sessionId);
 
         // 任务会话：定位任务与所属项目，写入任务记忆
-        if (AgentExecutorBizTypeEnum.WorkflowTaskChat.getAiModelCallSourceEnum().getValue().equals(bizType)) {
+        if (isWorkflowTaskChatSession(bizType)) {
             try {
                 Long taskId = taskSessionMapper.findTaskIdBySessionId(sessionId);
                 if (taskId == null) {
@@ -421,7 +421,7 @@ public class LongTermMemoryTaskHandler implements TaskHandler {
         }
 
         // 项目会话：写入项目整体记忆
-        if (AgentExecutorBizTypeEnum.ProjectChat.getAiModelCallSourceEnum().getValue().equals(bizType)) {
+        if (isProjectChatSession(bizType)) {
             try {
                 Project project = projectMapper.findBySessionId(sessionId);
                 if (project == null) {
@@ -452,7 +452,7 @@ public class LongTermMemoryTaskHandler implements TaskHandler {
         return handle(sessionId, userId, longTermMemoryContent, content);
     }
 
-    /** 查询会话业务类型值（chat / workflow-task-chat / project-chat），查不到按聊天处理 */
+    /** 查询会话业务类型值（chat / workflowTaskChat / projectChat），查不到按聊天处理 */
     private String getSessionBizType(String sessionId) {
         try {
             ChatSession session = chatSessionMapper.findBySessionId(sessionId);
@@ -463,11 +463,22 @@ public class LongTermMemoryTaskHandler implements TaskHandler {
         }
     }
 
+    /** 是否任务会话：兼容新值 workflowTaskChat 与旧值 workflow-task-chat */
+    private boolean isWorkflowTaskChatSession(String bizType) {
+        return AgentExecutorBizTypeEnum.WorkflowTaskChat.getValue().equals(bizType)
+                || AgentExecutorBizTypeEnum.WorkflowTaskChat.getAiModelCallSourceEnum().getValue().equals(bizType);
+    }
+
+    /** 是否项目会话：兼容新值 projectChat 与旧值 project-chat */
+    private boolean isProjectChatSession(String bizType) {
+        return AgentExecutorBizTypeEnum.ProjectChat.getValue().equals(bizType)
+                || AgentExecutorBizTypeEnum.ProjectChat.getAiModelCallSourceEnum().getValue().equals(bizType);
+    }
+
     /** 是否普通聊天会话（非任务/项目会话） */
     private boolean isChatSession(String sessionId) {
         String bizType = getSessionBizType(sessionId);
-        return !AgentExecutorBizTypeEnum.WorkflowTaskChat.getAiModelCallSourceEnum().getValue().equals(bizType)
-                && !AgentExecutorBizTypeEnum.ProjectChat.getAiModelCallSourceEnum().getValue().equals(bizType);
+        return !isWorkflowTaskChatSession(bizType) && !isProjectChatSession(bizType);
     }
 
     private static long computeMaxId(List<ChatMemory> items) {
