@@ -250,7 +250,10 @@
                 <button type="button" id="runningBtn" class="chat-form-running-btn"
                         th:classappend="${agentExecutorState  ? '' : 'hide'}" onclick="stopCurrentSession()">
                     <span class="chat-form-running-btn-dot"></span>
-                    运行中 <span id="runningCountdown"></span>
+                    <span class="chat-form-running-btn-text">
+                        <span class="chat-form-running-btn-line">运行中 <span id="runningElapsed"></span></span>
+                        <span class="chat-form-running-btn-line chat-form-running-btn-sub" id="runningCountdown"></span>
+                    </span>
                 </button>
             </form>
         </div>

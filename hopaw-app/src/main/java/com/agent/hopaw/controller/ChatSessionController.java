@@ -181,7 +181,7 @@ public class ChatSessionController {
     }
 
     /**
-     * 查询执行器可重置锁（看门狗）的剩余等待时间（秒）：
+     * 查询执行器可重置锁（看门狗）的剩余等待时间（秒）及已运行时长（秒）：
      * 会话运行中时有活动会重置倒计时，用于前端运行中按钮的倒计时展示
      */
     @GetMapping("/{sessionId}/lock-remaining")
@@ -191,6 +191,7 @@ public class ChatSessionController {
         Map<String, Object> result = new HashMap<>(4);
         result.put("running", executor != null && executor.running());
         result.put("remainingSeconds", executor != null ? executor.getWatchdogRemainingSeconds() : 0);
+        result.put("elapsedSeconds", executor != null ? executor.getElapsedSeconds() : 0);
         return ResponseBean.success(result);
     }
 

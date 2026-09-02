@@ -1265,11 +1265,12 @@ function enableInput() {
 
 // ===== 执行器可重置锁（看门狗）剩余时间倒计时 =====
 var lockRemainingSeconds = 0;
+var lockElapsedSeconds = 0;
 var lockPollTimer = null;
 var lockCountdownTimer = null;
 
 /**
- * 启动剩余时间倒计时：每5秒查询一次后端剩余时间，前端每秒本地递减展示
+ * 启动剩余时间倒计时：每5秒查询一次后端剩余时间和已运行时长，前端每秒本地递增/递减展示
  */
 function startLockCountdown() {
     if (lockCountdownTimer) return;
@@ -1278,6 +1279,9 @@ function startLockCountdown() {
     lockCountdownTimer = setInterval(function() {
         if (lockRemainingSeconds > 0) {
             lockRemainingSeconds--;
+        }
+        if (lockElapsedSeconds >= 0) {
+            lockElapsedSeconds++;
         }
         renderLockCountdown();
     }, 1000);
@@ -1292,11 +1296,12 @@ function stopLockCountdown() {
     lockPollTimer = null;
     lockCountdownTimer = null;
     lockRemainingSeconds = 0;
+    lockElapsedSeconds = 0;
     renderLockCountdown();
 }
 
 /**
- * 查询后端看门狗剩余时间并刷新本地值
+ * 查询后端看门狗剩余时间和已运行时长并刷新本地值
  */
 function updateLockRemaining() {
     if (!currentSessionId) return;
@@ -1305,6 +1310,9 @@ function updateLockRemaining() {
         .then(function(resp) {
             if (resp.code === 200 && resp.data) {
                 lockRemainingSeconds = resp.data.remainingSeconds || 0;
+                if (resp.data.elapsedSeconds > 0) {
+                    lockElapsedSeconds = resp.data.elapsedSeconds;
+                }
                 renderLockCountdown();
             }
         })
@@ -1312,12 +1320,16 @@ function updateLockRemaining() {
 }
 
 /**
- * 渲染剩余时间到运行中按钮（无剩余时间则不显示）
+ * 渲染已运行时长（第一行）和剩余时间（第二行）到运行中按钮
  */
 function renderLockCountdown() {
+    var elapsedEl = document.getElementById('runningElapsed');
+    if (elapsedEl) {
+        elapsedEl.textContent = lockElapsedSeconds > 0 ? ('(' + lockElapsedSeconds + 's)') : '';
+    }
     var el = document.getElementById('runningCountdown');
     if (!el) return;
-    el.textContent = lockRemainingSeconds > 0 ? ('(' + lockRemainingSeconds + 's)') : '';
+    el.textContent = lockRemainingSeconds > 0 ? ('超时(' + lockRemainingSeconds + 's)') : '';
 }
 
 function selectAgent(selectElement) {

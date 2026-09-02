@@ -103,6 +103,8 @@ public class AgentExecutor implements IAgentExecutor {
     private final java.util.concurrent.atomic.AtomicLong watchdogDeadlineMs = new java.util.concurrent.atomic.AtomicLong(0);
     /** 看门狗超时时长（毫秒），0 表示未启用 */
     private volatile long watchdogTimeoutMs = 0;
+    /** 本次任务开始时间（毫秒级时间戳），0 表示未开始 */
+    private volatile long startTimeMs = 0;
     private String requestId;
     private final ApplicationEventPublisher eventPublisher;
     private final IChatSessionService chatSessionService;
@@ -319,6 +321,19 @@ public class AgentExecutor implements IAgentExecutor {
         return Math.max(0, (remaining + 999) / 1000);
     }
 
+    /**
+     * 查询本次任务已运行时长（秒，向上取整）；
+     * 执行器未运行或未记录开始时间时返回 0
+     */
+    @Override
+    public long getElapsedSeconds() {
+        if (!running() || startTimeMs <= 0) {
+            return 0;
+        }
+        long elapsed = System.currentTimeMillis() - startTimeMs;
+        return Math.max(0, (elapsed + 999) / 1000);
+    }
+
     @Override
     public int getExecutedToolCount() {
         return executedToolCount.get();
@@ -339,6 +354,8 @@ public class AgentExecutor implements IAgentExecutor {
             // 启用可重置看门狗：超时时间在有活动（消息/工具调用/过程通知）时会顺延
             this.watchdogTimeoutMs = timeout * 1000L;
             resetWatchdog();
+            // 记录本次任务开始时间（毫秒级时间戳），供前端展示已运行时长
+            this.startTimeMs = System.currentTimeMillis();
             sendFirstState();
             saveChatSession(contents);
             saveChatHistory(contents);

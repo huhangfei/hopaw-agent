@@ -22,6 +22,9 @@ public interface IAgentExecutor {
     /** 看门狗剩余等待时间（秒）：执行器运行中且持续无活动超过超时时间才会结束；未运行返回0 */
     long getWatchdogRemainingSeconds();
 
+    /** 本次任务已运行时长（秒）：执行器运行中返回开始至今的秒数；未运行返回0 */
+    long getElapsedSeconds();
+
     /** 本执行器生命周期内已开始的工具调用次数 */
     int getExecutedToolCount();
 
