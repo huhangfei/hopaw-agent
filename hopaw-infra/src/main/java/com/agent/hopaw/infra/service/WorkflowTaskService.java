@@ -430,9 +430,6 @@ public class WorkflowTaskService implements IWorkflowTaskService {
         StringBuilder taskContent = new StringBuilder();
         if (comments != null && !comments.isEmpty()) {
             for (WorkflowTaskComment comment : comments) {
-                if(comment.getCommenterType().equals(TaskCommenterTypeEnum.AGENT.getCode())){
-                    continue;
-                }
                 // 总结评论追加类型标记，便于智能体识别重要节点
                 String typeMark = TaskCommentTypeEnum.fromCode(comment.getCommentType()).isSummary() ? "[总结]" : "";
                 taskContent.append(String.format("[%s]%s %s\n",
