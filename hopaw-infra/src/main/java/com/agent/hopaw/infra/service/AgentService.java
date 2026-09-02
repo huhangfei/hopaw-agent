@@ -55,6 +55,14 @@ public class AgentService implements IAgentService {
 
     @Override
     public void deleteAgent(Long id, String userId) {
+        Agent existing = agentMapper.findById(id);
+        if (existing == null) {
+            throw new RuntimeException("智能体不存在");
+        }
+        // 删除接口需校验创建人：仅智能体创建人可删除
+        if (userId == null || !userId.equals(existing.getUserId())) {
+            throw new RuntimeException("无权删除该智能体：仅创建人可删除");
+        }
         agentMapper.deleteById(id);
     }
 
@@ -91,12 +99,14 @@ public class AgentService implements IAgentService {
 
     @Override
     public List<Agent> getAgentsPage(String userId, String keyword, int page, int size) {
+        // 智能体数据不分用户，查询不过滤用户
         int offset = (page - 1) * size;
-        return agentMapper.findByUserIdWithKeyword(userId, keyword, offset, size);
+        return agentMapper.findByUserIdWithKeyword(null, keyword, offset, size);
     }
 
     @Override
     public int countAgents(String userId, String keyword) {
-        return agentMapper.countByUserIdWithKeyword(userId, keyword);
+        // 智能体数据不分用户，统计不过滤用户
+        return agentMapper.countByUserIdWithKeyword(null, keyword);
     }
 }

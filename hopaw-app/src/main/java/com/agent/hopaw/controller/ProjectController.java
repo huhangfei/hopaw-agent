@@ -379,11 +379,11 @@ public class ProjectController {
         try {
             Project before = projectService.getProject(id, userId);
             if (before == null) {
-                return ResponseBean.fail("项目不存在或无权访问");
+                return ResponseBean.fail("项目不存在");
             }
-            // 删除前记录日志（项目删除后日志仍保留作为审计记录）
-            projectLogService.log(id, userId, "delete", "删除项目「" + (before.getName() != null ? before.getName() : "") + "」");
+            // 删除成功后再记录日志（项目日志表独立保留作为审计记录；无权限等删除失败时不留误审计）
             projectService.deleteProject(id, userId);
+            projectLogService.log(id, userId, "delete", "删除项目「" + (before.getName() != null ? before.getName() : "") + "」");
             return ResponseBean.success();
         } catch (Exception e) {
             return ResponseBean.fail(e.getMessage());

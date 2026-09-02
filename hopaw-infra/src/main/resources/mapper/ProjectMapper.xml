@@ -108,7 +108,12 @@
     <select id="findByUserId" resultMap="ProjectResultMap">
         SELECT <include refid="allColumns"/>
         FROM projects
-        WHERE user_id = #{userId}
+        <where>
+            <!-- userId为空时不按用户过滤（项目数据不分用户） -->
+            <if test="userId != null and userId != ''">
+                user_id = #{userId}
+            </if>
+        </where>
         ORDER BY id DESC
     </select>
 

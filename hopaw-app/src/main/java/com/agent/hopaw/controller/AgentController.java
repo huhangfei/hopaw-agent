@@ -119,11 +119,15 @@ public class AgentController {
     @ResponseBody
     public ResponseBean deleteAgent(HttpServletRequest request, @PathVariable Long id) {
         String currentUserId = CurrentUser.require(request);
-        int total = agentService.countAgents(currentUserId, null);
-        if (total <= 1) {
-            return ResponseBean.fail("必须保留至少一个智能体");
+        try {
+            int total = agentService.countAgents(currentUserId, null);
+            if (total <= 1) {
+                return ResponseBean.fail("必须保留至少一个智能体");
+            }
+            agentService.deleteAgent(id, currentUserId);
+            return ResponseBean.success();
+        } catch (Exception e) {
+            return ResponseBean.fail(e.getMessage());
         }
-        agentService.deleteAgent(id, currentUserId);
-        return ResponseBean.success();
     }
 }

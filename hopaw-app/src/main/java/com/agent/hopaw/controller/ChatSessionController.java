@@ -40,12 +40,8 @@ public class ChatSessionController {
     @GetMapping("/list")
     public ResponseBean list(HttpServletRequest request, @RequestParam(required = false) Long agentId) {
         String currentUserId = CurrentUser.require(request);
-        List<ChatSession> sessions;
-        if (agentId != null) {
-            sessions = chatSessionService.getSessionsByUserIdAndAgentId(currentUserId, agentId);
-        } else {
-            sessions = chatSessionService.getSessionsByUserId(currentUserId);
-        }
+        // 首页可见会话：自己的聊天会话 + 所有人的项目/工作流任务会话
+        List<ChatSession> sessions = chatSessionService.getVisibleSessions(currentUserId, agentId);
         // 填充会话执行器实时运行状态，前端会话列表据此显示loading图标
         if (sessions != null) {
             sessions.forEach(s -> s.setRunning(agentExecutorService.isAgentExecutorRunning(s.getSessionId())));

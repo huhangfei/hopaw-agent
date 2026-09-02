@@ -40,6 +40,11 @@ public class ChatSessionService implements IChatSessionService {
     }
 
     @Override
+    public List<ChatSession> getVisibleSessions(String userId, Long agentId) {
+        return chatSessionMapper.findVisibleSessions(userId, agentId);
+    }
+
+    @Override
     public ChatSession getSessionById(Long id) {
         return chatSessionMapper.findById(id);
     }

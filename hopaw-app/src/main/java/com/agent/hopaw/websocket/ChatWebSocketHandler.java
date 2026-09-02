@@ -1,5 +1,6 @@
 package com.agent.hopaw.websocket;
 
+import com.agent.hopaw.infra.constant.AgentExecutorBizTypeEnum;
 import com.agent.hopaw.infra.event.AgentMessageEvent;
 import com.agent.hopaw.infra.event.TokenUsageEvent;
 import com.agent.hopaw.infra.model.dto.AiMessageBaseInfo;
@@ -135,8 +136,12 @@ public class ChatWebSocketHandler extends TextWebSocketHandler {
 
     @EventListener
     public void onTokenUsageMessage(TokenUsageEvent message) {
+        // 项目/工作流任务会话的 token 用量推送给所有在线用户（前端按当前会话过滤，不影响他人统计）；
+        // source 值与业务类型对应：workflow-task-chat / project-chat
+        String source = message.getSource();
+        boolean broadcast = "workflow-task-chat".equals(source) || "project-chat".equals(source);
         String userId = message.getUserId();
-        if (userId == null) {
+        if (userId == null && !broadcast) {
             return;
         }
         ConcurrentLinkedQueue<String> sessionIds = userSessionMap.get(userId);
@@ -155,6 +160,10 @@ public class ChatWebSocketHandler extends TextWebSocketHandler {
         data.put("source", message.getSource());
         data.put("createTime", message.getCreateTime() != null ? message.getCreateTime().toString() : null);
         String messageJson = JSON.toJSONString(data);
+        if (broadcast) {
+            sendToAllOnlineUsers(messageJson);
+            return;
+        }
         for (String id : sessionIds) {
             WebSocketSession wsSession = sessionMap.get(id);
             if (wsSession != null && wsSession.isOpen()) {
@@ -172,6 +181,14 @@ public class ChatWebSocketHandler extends TextWebSocketHandler {
 
     @EventListener
     public void onAgentMessageEvent(AgentMessageEvent event) {
+        AiMessageBaseInfo message = event.getMessage();
+        // 项目/工作流任务会话：消息推送给所有在线用户（跨用户共享可见）；其余推送给会话归属用户
+        String bizType = message != null ? message.getBizType() : null;
+        if (AgentExecutorBizTypeEnum.WorkflowTaskChat.getValue().equals(bizType)
+                || AgentExecutorBizTypeEnum.ProjectChat.getValue().equals(bizType)) {
+            sendToAllOnlineUsers(JSON.toJSONString(message));
+            return;
+        }
         String userId = event.getUserId();
         if (userId == null) {
             return;
@@ -180,7 +197,6 @@ public class ChatWebSocketHandler extends TextWebSocketHandler {
         if (sessionIds == null || sessionIds.isEmpty()) {
             return;
         }
-        AiMessageBaseInfo message = event.getMessage();
         for (String id : sessionIds) {
             WebSocketSession wsSession = sessionMap.get(id);
             if (wsSession != null && wsSession.isOpen()) {
@@ -192,6 +208,24 @@ public class ChatWebSocketHandler extends TextWebSocketHandler {
                 } catch (IOException e) {
                     logger.error("Failed to send agent message to session {}: {}", id, e.getMessage());
                 }
+            }
+        }
+    }
+
+    /** 广播消息给所有在线用户的 WebSocket 连接 */
+    private void sendToAllOnlineUsers(String messageJson) {
+        for (Map.Entry<String, WebSocketSession> entry : sessionMap.entrySet()) {
+            WebSocketSession wsSession = entry.getValue();
+            if (wsSession == null || !wsSession.isOpen()) {
+                continue;
+            }
+            try {
+                Object lock = SESSION_LOCK_MAP.computeIfAbsent(entry.getKey(), k -> new Object());
+                synchronized (lock) {
+                    wsSession.sendMessage(new TextMessage(messageJson));
+                }
+            } catch (IOException e) {
+                logger.error("Failed to broadcast agent message to session {}: {}", entry.getKey(), e.getMessage());
             }
         }
     }

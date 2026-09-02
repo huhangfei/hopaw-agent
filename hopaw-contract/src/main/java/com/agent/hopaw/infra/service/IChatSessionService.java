@@ -13,6 +13,9 @@ public interface IChatSessionService {
 
     List<ChatSession> getSessionsByUserIdAndAgentId(String userId, Long agentId);
 
+    /** 首页可见会话：用户自己的聊天会话 + 所有人的项目/工作流任务会话 */
+    List<ChatSession> getVisibleSessions(String userId, Long agentId);
+
     ChatSession getSessionById(Long id);
 
     ChatSession getSessionBySessionId(String sessionId);

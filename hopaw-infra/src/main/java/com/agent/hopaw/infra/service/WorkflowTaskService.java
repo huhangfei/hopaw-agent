@@ -118,10 +118,8 @@ public class WorkflowTaskService implements IWorkflowTaskService {
         if (existing == null) {
             throw new RuntimeException("任务不存在");
         }
-        // userId为空时不做归属校验（智能体工具场景，任务跨用户共享协作）
-        if (userId != null && !userId.equals(existing.getUserId())) {
-            throw new RuntimeException("无权修改该任务");
-        }
+        // 任务数据不分用户（跨用户共享协作），不做归属校验
+
         // 处理中的任务不允许编辑，避免执行中的指令被篡改
         if (TaskStatusEnum.PROCESSING.getCode().equals(existing.getStatus())) {
             throw new RuntimeException("处理中的任务不允许编辑");
@@ -154,9 +152,9 @@ public class WorkflowTaskService implements IWorkflowTaskService {
         if (existing == null) {
             throw new RuntimeException("任务不存在");
         }
-        // userId为空时不做归属校验（智能体工具场景）
-        if (userId != null && !userId.equals(existing.getUserId())) {
-            throw new RuntimeException("无权删除该任务");
+        // 删除接口需校验创建人：仅任务创建人可删除
+        if (userId == null || !userId.equals(existing.getUserId())) {
+            throw new RuntimeException("无权删除该任务：仅创建人可删除");
         }
         // 删除前先停止该任务的会话执行器，避免已删除的任务仍在执行
         stopTaskExecutors(id);
@@ -177,10 +175,8 @@ public class WorkflowTaskService implements IWorkflowTaskService {
         if (task == null) {
             return null;
         }
-        // userId为空时不做归属校验（智能体工具场景）
-        if (userId != null && !userId.equals(task.getUserId())) {
-            return null;
-        }
+        // 任务数据不分用户，不做归属校验
+
         task.setPreconditions(getPreconditions(id));
         return task;
     }
@@ -198,12 +194,14 @@ public class WorkflowTaskService implements IWorkflowTaskService {
     @Override
     public List<WorkflowTask> getTasksPage(String userId, String keyword, String status, Long projectId, Long agentId, int page, int size) {
         int offset = (page - 1) * size;
-        return workflowTaskMapper.findByUserIdWithFilters(userId, keyword, status, projectId, agentId, offset, size);
+        // 任务数据不分用户，查询不过滤用户
+        return workflowTaskMapper.findByUserIdWithFilters(null, keyword, status, projectId, agentId, offset, size);
     }
 
     @Override
     public int countTasks(String userId, String keyword, String status, Long projectId, Long agentId) {
-        return workflowTaskMapper.countByUserIdWithFilters(userId, keyword, status, projectId, agentId);
+        // 任务数据不分用户，统计不过滤用户
+        return workflowTaskMapper.countByUserIdWithFilters(null, keyword, status, projectId, agentId);
     }
 
     @Override
@@ -217,10 +215,8 @@ public class WorkflowTaskService implements IWorkflowTaskService {
         if (existing == null) {
             throw new RuntimeException("任务不存在");
         }
-        // userId为空时不做归属校验（智能体工具场景）
-        if (userId != null && !userId.equals(existing.getUserId())) {
-            throw new RuntimeException("无权操作该任务");
-        }
+        // 任务数据不分用户，不做归属校验
+
         if (!TaskStatusEnum.PENDING.getCode().equals(existing.getStatus())) {
             throw new RuntimeException("当前任务状态不允许审批");
         }
@@ -246,10 +242,8 @@ public class WorkflowTaskService implements IWorkflowTaskService {
         if (existing == null) {
             throw new RuntimeException("任务不存在");
         }
-        // userId为空时不做归属校验（智能体工具场景）
-        if (userId != null && !userId.equals(existing.getUserId())) {
-            throw new RuntimeException("无权操作该任务");
-        }
+        // 任务数据不分用户，不做归属校验
+
         if (!TaskStatusEnum.PENDING_ACCEPTANCE.getCode().equals(existing.getStatus())) {
             throw new RuntimeException("当前任务状态不允许验收");
         }
@@ -273,10 +267,8 @@ public class WorkflowTaskService implements IWorkflowTaskService {
         if (existing == null) {
             throw new RuntimeException("任务不存在");
         }
-        // userId为空时不做归属校验（智能体工具场景）
-        if (userId != null && !userId.equals(existing.getUserId())) {
-            throw new RuntimeException("无权操作该任务");
-        }
+        // 任务数据不分用户，不做归属校验
+
         if (!TaskStatusEnum.PENDING_ACCEPTANCE.getCode().equals(existing.getStatus())) {
             throw new RuntimeException("当前任务状态不允许驳回");
         }
@@ -301,10 +293,8 @@ public class WorkflowTaskService implements IWorkflowTaskService {
         if (existing == null) {
             throw new RuntimeException("任务不存在");
         }
-        // userId为空时不做归属校验（智能体工具场景）
-        if (userId != null && !userId.equals(existing.getUserId())) {
-            throw new RuntimeException("无权操作该任务");
-        }
+        // 任务数据不分用户，不做归属校验
+
         // 关闭前先停止该任务的会话执行器，避免已关闭的任务仍在执行
         stopTaskExecutors(id);
         updateTaskStatus(id, TaskStatusEnum.CLOSED.getCode(), null);
@@ -349,10 +339,8 @@ public class WorkflowTaskService implements IWorkflowTaskService {
         if (existing == null) {
             throw new RuntimeException("任务不存在");
         }
-        // userId为空时不做归属校验（智能体工具场景）
-        if (userId != null && !userId.equals(existing.getUserId())) {
-            throw new RuntimeException("无权操作该任务");
-        }
+        // 任务数据不分用户，不做归属校验
+
         TaskStatusEnum current = TaskStatusEnum.fromCode(existing.getStatus());
         if (current == null || !current.canTransitionTo(TaskStatusEnum.PENDING_EXECUTION)) {
             throw new RuntimeException("当前任务状态不允许重做");

@@ -214,9 +214,8 @@ public class ProjectService implements IProjectService {
         if (existing == null) {
             throw new RuntimeException("项目不存在");
         }
-        if (!userId.equals(existing.getUserId())) {
-            throw new RuntimeException("无权修改该项目");
-        }
+        // 项目数据不分用户，不做归属校验
+
         if (newSpaceDir == null || newSpaceDir.trim().isEmpty()) {
             throw new RuntimeException("空间目录不能为空");
         }
@@ -253,10 +252,8 @@ public class ProjectService implements IProjectService {
         if (existing == null) {
             throw new RuntimeException("项目不存在");
         }
-        // userId为空时不做归属校验（智能体工具场景，项目跨用户共享协作）
-        if (userId != null && !userId.equals(existing.getUserId())) {
-            throw new RuntimeException("无权修改该项目");
-        }
+        // 项目数据不分用户（跨用户共享协作），不做归属校验
+
         existing.setName(project.getName());
         existing.setDescription(project.getDescription());
         // 项目管理智能体与自动迭代设置随编辑更新（允许清空）
@@ -290,9 +287,8 @@ public class ProjectService implements IProjectService {
         if (existing == null) {
             throw new RuntimeException("项目不存在");
         }
-        if (!userId.equals(existing.getUserId())) {
-            throw new RuntimeException("无权修改该项目");
-        }
+        // 项目数据不分用户，不做归属校验
+
         if (autoIterate == null && iteratePrompt == null) {
             return existing; // 无变更
         }
@@ -320,9 +316,8 @@ public class ProjectService implements IProjectService {
         if (existing == null) {
             throw new RuntimeException("项目不存在");
         }
-        if (!userId.equals(existing.getUserId())) {
-            throw new RuntimeException("无权修改该项目");
-        }
+        // 项目数据不分用户，不做归属校验
+
         if (status.equals(existing.getStatus())) {
             return; // 状态未变
         }
@@ -407,9 +402,9 @@ public class ProjectService implements IProjectService {
         if (existing == null) {
             throw new RuntimeException("项目不存在");
         }
-        // userId为空时不做归属校验（智能体工具场景）
-        if (userId != null && !userId.equals(existing.getUserId())) {
-            throw new RuntimeException("无权删除该项目");
+        // 删除接口需校验创建人：仅项目创建人可删除
+        if (userId == null || !userId.equals(existing.getUserId())) {
+            throw new RuntimeException("无权删除该项目：仅创建人可删除");
         }
         // 项目删除：发送外部通知。须在 deleteById 前触发——通知服务同步读取项目配置快照，
         // 删除后读不到；@Transactional 内同连接读取可见（读己之提交/未提交），快照数据正确。
@@ -428,10 +423,8 @@ public class ProjectService implements IProjectService {
         if (project == null) {
             return null;
         }
-        // userId为空时不做归属校验（智能体工具场景）
-        if (userId != null && !userId.equals(project.getUserId())) {
-            return null;
-        }
+        // 项目数据不分用户，不做归属校验
+
         fillSpaceDirAbs(project);
         fillNotifyLists(project);
         return project;
@@ -482,23 +475,26 @@ public class ProjectService implements IProjectService {
     @Override
     public List<Project> getProjectsPage(String userId, String keyword, String status, int page, int size) {
         int offset = (page - 1) * size;
-        return projectMapper.findByUserIdWithFilters(userId, keyword, status, offset, size);
+        // 项目数据不分用户，查询不过滤用户
+        return projectMapper.findByUserIdWithFilters(null, keyword, status, offset, size);
     }
 
     @Override
     public int countProjects(String userId, String keyword, String status) {
-        return projectMapper.countByUserIdWithFilters(userId, keyword, status);
+        // 项目数据不分用户，统计不过滤用户
+        return projectMapper.countByUserIdWithFilters(null, keyword, status);
     }
 
     @Override
     public List<Project> getAllProjects(String userId) {
-        return projectMapper.findByUserId(userId);
+        // 项目数据不分用户，查询不过滤用户
+        return projectMapper.findByUserId(null);
     }
 
     @Override
     public List<WorkflowTask> getProjectTasks(Long projectId, String userId) {
         Project existing = projectMapper.findById(projectId);
-        if (existing == null || !userId.equals(existing.getUserId())) {
+        if (existing == null) {
             return new ArrayList<>();
         }
         List<WorkflowTask> list = workflowTaskMapper.findByProjectId(projectId);
@@ -508,8 +504,8 @@ public class ProjectService implements IProjectService {
     @Override
     public List<FileTreeNode> listProjectFiles(Long projectId, String userId) {
         Project project = projectMapper.findById(projectId);
-        if (project == null || !userId.equals(project.getUserId())) {
-            throw new RuntimeException("项目不存在或无权访问");
+        if (project == null) {
+            throw new RuntimeException("项目不存在");
         }
         Path rootPath = resolveProjectSpaceRoot(project, projectId);
         if (rootPath == null || !Files.exists(rootPath)) {
@@ -583,8 +579,8 @@ public class ProjectService implements IProjectService {
      */
     private Path getProjectSpaceRoot(Long projectId, String userId) {
         Project project = projectMapper.findById(projectId);
-        if (project == null || !userId.equals(project.getUserId())) {
-            throw new RuntimeException("项目不存在或无权访问");
+        if (project == null) {
+            throw new RuntimeException("项目不存在");
         }
         Path rootPath = resolveProjectSpaceRoot(project, projectId);
         if (rootPath == null) {

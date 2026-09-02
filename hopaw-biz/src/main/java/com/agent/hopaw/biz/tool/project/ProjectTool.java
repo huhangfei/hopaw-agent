@@ -184,7 +184,7 @@ public class ProjectTool implements AgentTool {
     }
 
     /**
-     * 按项目编号删除项目（危险操作，需用户确认；不做用户归属隔离）。
+     * 按项目编号删除项目（危险操作，需用户确认；仅项目创建人可删除）。
      */
     @ToolSecurityLevel(ToolSecurityLevel.Level.ALL_REQUIRE_APPROVAL)
     @Tool(value = {"删除项目", "按项目编号删除项目，删除后不可恢复"}, searchBehavior = SearchBehavior.ALWAYS_VISIBLE)
@@ -192,8 +192,8 @@ public class ProjectTool implements AgentTool {
                                 InvocationParameters invocationParameters) {
         InvocationParametersWrapper wrapper = InvocationParametersWrapper.create(invocationParameters);
         try {
-            // userId 传空：不做用户归属校验
-            projectService.deleteProject(projectId, null);
+            // 删除需校验创建人：仅项目创建人可删除，非创建人返回无权限
+            projectService.deleteProject(projectId, wrapper.getUserId());
             return "成功：项目已删除，项目ID：" + projectId;
         } catch (RuntimeException e) {
             return "失败：" + e.getMessage();

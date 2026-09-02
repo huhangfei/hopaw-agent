@@ -232,7 +232,6 @@ public class WorkflowTaskTool implements AgentTool {
                                      @P(value = "前置任务配置，格式：任务编号:要求状态[|任务编号:要求状态...]，如 \"3:completed,failed|5:pending_acceptance\"；要求状态为状态码（多个状态逗号分隔），可选值 pending/pending_execution/processing/pending_acceptance/completed/failed/rejected/closed；空表示保持原值；传 \"none\" 清空全部前置任务", required = false) String preconditions,
                                      InvocationParameters invocationParameters) {
         InvocationParametersWrapper wrapper = InvocationParametersWrapper.create(invocationParameters);
-        // userId 传空：不做用户归属校验
         WorkflowTask existing = workflowTaskService.getTask(taskId, null);
         if (existing == null) {
             return "失败：任务不存在";
@@ -288,13 +287,13 @@ public class WorkflowTaskTool implements AgentTool {
     public String deleteWorkflowTask(@P("任务编号") Long taskId,
                                      InvocationParameters invocationParameters) {
         InvocationParametersWrapper wrapper = InvocationParametersWrapper.create(invocationParameters);
-        // userId 传空：不做用户归属校验
         WorkflowTask existing = workflowTaskService.getTask(taskId, null);
         if (existing == null) {
             return "失败：任务不存在";
         }
         try {
-            workflowTaskService.deleteTask(taskId, null);
+            // 删除需校验创建人：仅任务创建人可删除，非创建人返回无权限
+            workflowTaskService.deleteTask(taskId, wrapper.getUserId());
             // 关联了项目则记录取消关联日志（与页面删除任务行为一致）
             if (existing.getProjectId() != null) {
                 try {

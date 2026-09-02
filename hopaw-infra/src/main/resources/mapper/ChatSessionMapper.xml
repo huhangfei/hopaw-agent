@@ -56,6 +56,23 @@
         ORDER BY last_update_time DESC
     </select>
 
+    <!-- 首页可见会话：自己的聊天会话（biz_type 为空或非任务/项目）+ 所有人的项目/工作流任务会话（兼容新旧 biz_type 值） -->
+    <select id="findVisibleSessions" resultMap="ChatSessionResultMap">
+        SELECT <include refid="allColumns"/>
+        FROM chat_sessions
+        <where>
+            (
+                user_id = #{userId}
+                AND (biz_type IS NULL OR biz_type = '' OR biz_type NOT IN ('workflowTaskChat', 'workflow-task-chat', 'projectChat', 'project-chat'))
+            )
+            OR biz_type IN ('workflowTaskChat', 'workflow-task-chat', 'projectChat', 'project-chat')
+            <if test="agentId != null">
+                AND agent_id = #{agentId}
+            </if>
+        </where>
+        ORDER BY last_update_time DESC
+    </select>
+
     <select id="findById" resultMap="ChatSessionResultMap">
         SELECT <include refid="allColumns"/>
         FROM chat_sessions

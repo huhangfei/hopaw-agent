@@ -181,16 +181,19 @@ public class WorkflowTaskController {
     public ResponseBean deleteTask(HttpServletRequest request, @PathVariable Long id) {
         String userId = CurrentUser.require(request);
         try {
-            // 删除前查出任务，若关联了项目则记录取消关联日志
+            // 删除前查出任务，删除成功后若关联了项目再记录取消关联日志（无权限等删除失败时不留误日志）
             WorkflowTask before = taskService.getTask(id, userId);
-            if (before != null && before.getProjectId() != null) {
+            if (before == null) {
+                return ResponseBean.fail("任务不存在");
+            }
+            taskService.deleteTask(id, userId);
+            if (before.getProjectId() != null) {
                 try {
                     projectController.logTaskUnbind(before.getProjectId(), userId, id, before.getTitle());
                 } catch (Exception ex) {
                     logger.warn("记录删除任务取消关联日志失败: taskId={}", id, ex);
                 }
             }
-            taskService.deleteTask(id, userId);
             return ResponseBean.success();
         } catch (Exception e) {
             return ResponseBean.fail(e.getMessage());

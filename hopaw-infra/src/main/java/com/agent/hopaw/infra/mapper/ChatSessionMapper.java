@@ -20,6 +20,9 @@ public interface ChatSessionMapper {
 
     List<ChatSession> findByUserIdAndAgentId(@Param("userId") String userId, @Param("agentId") Long agentId);
 
+    /** 首页可见会话：用户自己的聊天会话 + 所有人的项目/工作流任务会话（兼容新旧 biz_type 值） */
+    List<ChatSession> findVisibleSessions(@Param("userId") String userId, @Param("agentId") Long agentId);
+
     ChatSession findById(@Param("id") Long id);
 
     ChatSession findBySessionId(@Param("sessionId") String sessionId);

@@ -61,6 +61,16 @@ public class AiMessageBaseInfo {
         this.content = content;
     }
 
+    /** 会话业务类型（chat / workflowTaskChat / projectChat），供前端区分会话来源 */
+    private String bizType;
+    public String getBizType() {
+        return bizType;
+    }
+
+    public void setBizType(String bizType) {
+        this.bizType = bizType;
+    }
+
 
     public static AiMessageBaseInfo build(String type, String sessionId, String requestId) {
         AiMessageBaseInfo aiMessageBaseInfo = new AiMessageBaseInfo(type)

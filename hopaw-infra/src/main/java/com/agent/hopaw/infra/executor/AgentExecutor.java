@@ -286,8 +286,7 @@ public class AgentExecutor implements IAgentExecutor {
             message.sessionId(sessionId);
             message.setRequestId(requestId);
             message.setContent("已收到消息，开始处理");
-            AgentMessageEvent event=new AgentMessageEvent(userId, agentId, message);
-            eventPublisher.publishEvent(event);
+            agentMessageHandler.sendMessageToChannel(message);
         } catch (Exception e) {
             logger.error("sendFirstState error", e);
         }
@@ -979,6 +978,10 @@ public class AgentExecutor implements IAgentExecutor {
         }
 
         public void sendMessageToChannel(AiMessageBaseInfo message) {
+            // 消息附带会话业务类型，供推送端区分：项目/任务会话推送给所有在线用户
+            if (message != null && agentExecutorParams.getBizType() != null) {
+                message.setBizType(agentExecutorParams.getBizType().getValue());
+            }
             eventPublisher.publishEvent(new AgentMessageEvent(userId, agentId, message));
         }
 
