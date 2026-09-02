@@ -46,8 +46,6 @@ public class ProjectMemoryService {
     private static final String PROJECT_MEMORY_FILE = "project-memory.md";
     private static final String TASK_MEMORY_FILE_PREFIX = "task-";
     private static final String TASK_MEMORY_FILE_SUFFIX = "-memory.md";
-    /** 记忆文件大小保护上限（字符数），超过则强制走 AI 总结合并压缩 */
-    private static final int MAX_MEMORY_CHARS = 32 * 1024;
 
     private final IProjectService projectService;
     private final ProjectMapper projectMapper;
@@ -103,13 +101,13 @@ public class ProjectMemoryService {
     }
 
     /**
-     * 合并写入：优先 AI 总结压缩；AI 失败或文件未超限时回退为分节追加（带时间戳，永不丢失数据）。
+     * 合并写入：每次都将现有记忆与新纪要一并交给 AI 合并总结（去重、压缩、按主题重组）后写回全文，
+     * 避免追加式存储产生大量重复分节。AI 失败时回退为分节追加（带时间戳，永不丢失数据）。
      */
     private void writeMergedMemory(Path file, String memoryTitle, String newConversation, String userId) {
         try {
             String existing = readFile(file);
-            boolean needCompress = existing != null && existing.length() > MAX_MEMORY_CHARS;
-            String merged = trySummarize(memoryTitle, existing, newConversation, userId, needCompress);
+            String merged = trySummarize(memoryTitle, existing, newConversation, userId);
             if (merged != null && !merged.isBlank()) {
                 Files.createDirectories(file.getParent());
                 Files.write(file, merged.getBytes(StandardCharsets.UTF_8));
@@ -122,37 +120,92 @@ public class ProjectMemoryService {
 
     /**
      * AI 总结合并：现有记忆 + 新纪要 -> 精简记忆全文。
-     * 文件未超限时采用追加分节（保留过程细节）；超限或现有记忆存在时合并压缩。
+     * 每次更新均为全量合并（跨轮次重复内容会被合并去重），保持记忆整洁。
+     * 总结结果经校验模型校验，不通过则重试一次；两次均不通过回退分节追加。
      * 返回 null 表示放弃 AI 结果（调用方按需回退）。
      */
-    private String trySummarize(String memoryTitle, String existing, String newConversation,
-                                String userId, boolean needCompress) {
-        // 无现有记忆且无需压缩：AI 直接从纪要生成首版记忆
+    private String trySummarize(String memoryTitle, String existing, String newConversation, String userId) {
+        // 无现有记忆：AI 直接从纪要生成首版记忆（同样走校验+重试）
         if (existing == null || existing.isBlank()) {
-            return callMemoryModel(memoryTitle, null, newConversation, userId, false);
-        }
-        if (!needCompress) {
-            // 未超限：AI 生成新纪要的小结，追加为一节
-            String section = callMemoryModel(memoryTitle, null, newConversation, userId, true);
-            if (section == null || section.isBlank()) {
-                section = newConversation.length() > 2000 ? newConversation.substring(0, 2000) + "…" : newConversation;
+            String first = callMemoryModel(memoryTitle, null, newConversation, userId);
+            if (first != null && !first.isBlank() && validateMemoryResult(memoryTitle, first, newConversation)) {
+                return first;
             }
-            return existing + "\n\n---- [" + LocalDateTime.now().format(TIME_FMT) + "] ----\n" + section;
+            String retry = callMemoryModel(memoryTitle, null, newConversation, userId);
+            if (retry != null && !retry.isBlank() && validateMemoryResult(memoryTitle, retry, newConversation)) {
+                return retry;
+            }
+            // 校验两次不通过：仍返回可用的总结结果（优于直接丢弃），全部失败返回 null
+            return first != null && !first.isBlank() ? first : retry;
         }
-        // 超限：合并压缩
-        String compressed = callMemoryModel(memoryTitle, existing, newConversation, userId, false);
-        return compressed != null && !compressed.isBlank() ? compressed
-                // AI 失败兜底：粗略截断保留最新内容
-                : (existing + "\n\n---- [" + LocalDateTime.now().format(TIME_FMT) + "] ----\n" + truncate(newConversation));
+        // 有现有记忆：合并压缩去重后写回全文（校验+重试）
+        String merged = callMemoryModel(memoryTitle, existing, newConversation, userId);
+        if (merged != null && !merged.isBlank() && validateMemoryResult(memoryTitle, merged, newConversation)) {
+            return merged;
+        }
+        // 校验不通过：重试一次
+        logger.info("项目空间记忆总结校验未通过，重试一次（{}）", memoryTitle);
+        String retry = callMemoryModel(memoryTitle, existing, newConversation, userId);
+        if (retry != null && !retry.isBlank() && validateMemoryResult(memoryTitle, retry, newConversation)) {
+            return retry;
+        }
+        if (merged != null && !merged.isBlank()) {
+            // 两次校验均未通过但总结内容可用：仍采用总结结果（优于分节追加产生重复）
+            logger.warn("项目空间记忆总结两次校验未通过，采用首次总结结果（{}）", memoryTitle);
+            return merged;
+        }
+        // AI 失败兜底：带时间戳分节追加（粗略截断保留最新内容）
+        return existing + "\n\n---- [" + LocalDateTime.now().format(TIME_FMT) + "] ----\n" + truncate(newConversation);
     }
 
     private String truncate(String text) {
         return text != null && text.length() > 2000 ? text.substring(0, 2000) + "…" : text;
     }
 
-    /** 调用记忆整理模型；appendMode=true 时只总结新纪要本身 */
-    private String callMemoryModel(String memoryTitle, String existing, String newConversation,
-                                   String userId, boolean appendMode) {
+    /**
+     * 校验总结结果是否为有效的记忆内容（防止模型返回寒暄、解释性文字或无效输出）。
+     * 使用独立的大模型调用进行校验；校验模型异常时视为通过（不阻塞主流程）。
+     *
+     * @return true 校验通过；false 校验不通过（触发重试）
+     */
+    private boolean validateMemoryResult(String memoryTitle, String candidate, String newConversation) {
+        try {
+            Long modelId = parseMemoryModelId();
+            LangChain4jChatModelListener listener = new LangChain4jChatModelListener(AiModelCallSourceEnum.MemoryOrganize)
+                    .setUserId(null)
+                    .setEventPublisher(eventPublisher);
+            ChatModel chatModel = aiModelService.createChatModel(modelId, true, listener);
+            StringBuilder prompt = new StringBuilder();
+            prompt.append("你是").append(memoryTitle).append("的质量校验员。请校验以下【待校验记忆】是否为有效的项目/任务记忆内容。\n");
+            prompt.append("校验标准（全部满足才算通过）：\n");
+            prompt.append("1. 内容与【新会话纪要】相关，是对纪要的有效整理或总结（不能答非所问、跑题或输出无关内容）。\n");
+            prompt.append("2. 是正经的记忆正文（Markdown 格式或分节要点），没有寒暄、客套、解释性前后缀（如“好的，以下是...”“希望对您有帮助”等）。\n");
+            prompt.append("3. 内容基本连贯可读，不是乱码、空壳、单字符流或无意义的重复。\n");
+            prompt.append("4. 长度合理（不超过 5000 字，且不是只有标题没有实质内容）。\n");
+            prompt.append("请只输出“通过”或“不通过”，不要输出任何其他内容。\n");
+            prompt.append("\n【新会话纪要】\n").append(truncate(newConversation)).append("\n");
+            prompt.append("\n【待校验记忆】\n").append(candidate).append("\n");
+
+            ChatResponse response = chatModel.chat(UserMessage.from(prompt.toString()));
+            String text = response == null || response.aiMessage() == null ? null : response.aiMessage().text();
+            if (text == null || text.isBlank()) {
+                // 校验模型无输出：视为通过，避免误伤正常结果
+                return true;
+            }
+            boolean pass = text.trim().startsWith("通过") && !text.trim().startsWith("不通过");
+            if (!pass) {
+                logger.warn("项目空间记忆校验未通过（{}）：{}", memoryTitle, text.trim());
+            }
+            return pass;
+        } catch (Exception e) {
+            // 校验模型调用失败：视为通过（校验是增强手段，不阻塞主流程）
+            logger.warn("项目空间记忆校验调用失败（{}）：{}", memoryTitle, e.getMessage());
+            return true;
+        }
+    }
+
+    /** 调用记忆整理模型：将现有记忆与新会话纪要合并为去重、压缩后的记忆全文 */
+    private String callMemoryModel(String memoryTitle, String existing, String newConversation, String userId) {
         try {
             Long modelId = parseMemoryModelId();
             LangChain4jChatModelListener listener = new LangChain4jChatModelListener(AiModelCallSourceEnum.MemoryOrganize)
@@ -160,18 +213,16 @@ public class ProjectMemoryService {
                     .setEventPublisher(eventPublisher);
             ChatModel chatModel = aiModelService.createChatModel(modelId, true, listener);
             StringBuilder prompt = new StringBuilder();
-            prompt.append("你是").append(memoryTitle).append("的管理助手，请整理一段对话纪要为可供后续执行参考的记忆。\n");
+            prompt.append("你是").append(memoryTitle).append("的管理助手，请将【现有记忆】与【新会话纪要】合并整理为一份可供后续执行参考的记忆。\n");
             prompt.append("要求：\n");
-            if (appendMode) {
-                prompt.append("1. 只输出新纪要的精炼小结（目标、结论、关键决策、待办、经验教训），不包含现有记忆。\n");
-            } else {
-                prompt.append("1. 将【现有记忆】与【新会话纪要】合并为一份完整记忆，保留仍然有效的信息，剔除过时与重复内容，按主题分节组织。\n");
-                if (existing != null && !existing.isBlank()) {
-                    prompt.append("\n【现有记忆】\n").append(existing).append("\n");
-                }
+            prompt.append("1. 按主题分节组织（如：目标、当前进展与状态、关键决策、待办事项、经验教训）。\n");
+            prompt.append("2. 严格去重：同一主题或信息在多轮记录中重复出现时，只保留最新、最完整的一版，删除旧版本与重复的状态快照，禁止输出重复内容。\n");
+            prompt.append("3. 剔除过时信息：已完成的临时目标、已变更的旧状态、已解决的问题等被新内容取代后直接删除。\n");
+            if (existing != null && !existing.isBlank()) {
+                prompt.append("\n【现有记忆】\n").append(existing).append("\n");
             }
-            prompt.append("2. 直接输出 Markdown 正文，不要任何寒暄或解释性前后缀。\n");
-            prompt.append("3. 控制在 800 字以内，信息密度优先。\n");
+            prompt.append("4. 直接输出 Markdown 正文，不要任何寒暄或解释性前后缀。\n");
+            prompt.append("5. 控制在 5000 字以内，信息密度优先。\n");
             prompt.append("\n【新会话纪要】\n").append(newConversation).append("\n");
 
             ChatResponse response = chatModel.chat(UserMessage.from(prompt.toString()));
