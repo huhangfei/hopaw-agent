@@ -4,6 +4,7 @@ import com.agent.hopaw.infra.constant.AiModelCallSourceEnum;
 import com.agent.hopaw.infra.mapper.ProjectMapper;
 import com.agent.hopaw.infra.model.entity.Project;
 import com.agent.hopaw.infra.service.IAiModelService;
+import com.agent.hopaw.infra.service.IProjectMemoryService;
 import com.agent.hopaw.infra.service.IProjectService;
 import com.agent.hopaw.infra.service.ISysConfigService;
 import com.agent.hopaw.infra.monitor.LangChain4jChatModelListener;
@@ -38,7 +39,7 @@ import java.time.format.DateTimeFormatter;
  * 避免追加式存储无限膨胀；AI 不可用时回退为带时间戳的分节追加。
  */
 @Service
-public class ProjectMemoryService {
+public class ProjectMemoryService implements IProjectMemoryService {
     private static final Logger logger = LoggerFactory.getLogger(ProjectMemoryService.class);
     private static final DateTimeFormatter TIME_FMT = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm");
 
@@ -83,6 +84,7 @@ public class ProjectMemoryService {
      * @param newConversation 新增会话纪要文本
      * @param userId    触发本次整理的用户（用于定位项目空间与模型调用监听）
      */
+    @Override
     public void updateTaskMemory(Long projectId, Long taskId, String newConversation, String userId) {
         if (projectId == null || taskId == null || newConversation == null || newConversation.isBlank()) {
             return;
@@ -92,6 +94,7 @@ public class ProjectMemoryService {
     }
 
     /** 更新项目整体记忆：新会话纪要与现有记忆 AI 总结合并后写回 */
+    @Override
     public void updateProjectMemory(Long projectId, String newConversation, String userId) {
         if (projectId == null || newConversation == null || newConversation.isBlank()) {
             return;

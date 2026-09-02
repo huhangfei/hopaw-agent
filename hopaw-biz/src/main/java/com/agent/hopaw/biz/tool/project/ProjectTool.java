@@ -1,6 +1,7 @@
 package com.agent.hopaw.biz.tool.project;
 
 import com.agent.hopaw.infra.constant.ProjectStatusEnum;
+import com.agent.hopaw.infra.service.IProjectMemoryService;
 import com.agent.hopaw.infra.model.entity.Project;
 import com.agent.hopaw.infra.model.entity.ProjectLog;
 import com.agent.hopaw.infra.service.IProjectLogService;
@@ -18,20 +19,23 @@ import java.time.format.DateTimeFormatter;
 import java.util.List;
 
 /**
- * 项目工具集：项目列表查询、项目详情查询、项目保存（新增或更新）、项目删除。
+ * 项目工具集：项目列表查询、项目详情查询、项目保存（新增或更新）、项目删除、项目操作日志与项目记忆查询。
  * 项目数据不做用户归属隔离（跨用户共享协作），仅新增项目时记录归属用户。
  */
 @Component("projectTool")
 public class ProjectTool implements AgentTool {
 
     private static final DateTimeFormatter TIME_FMT = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm");
-
     private final IProjectService projectService;
     private final IProjectLogService projectLogService;
+    private final IProjectMemoryService projectMemoryService;
 
-    public ProjectTool(IProjectService projectService, IProjectLogService projectLogService) {
+    public ProjectTool(IProjectService projectService,
+                       IProjectLogService projectLogService,
+                       IProjectMemoryService projectMemoryService) {
         this.projectService = projectService;
         this.projectLogService = projectLogService;
+        this.projectMemoryService = projectMemoryService;
     }
 
     @Override
@@ -41,7 +45,7 @@ public class ProjectTool implements AgentTool {
 
     @Override
     public String getDescription() {
-        return "项目工具：查询项目列表、查询项目详情、保存项目（新增或更新）、删除项目、查询项目操作日志";
+        return "项目工具：查询项目列表、查询项目详情、保存项目（新增或更新）、删除项目、查询项目操作日志、查询项目记忆";
     }
 
     @Override
@@ -234,6 +238,36 @@ public class ProjectTool implements AgentTool {
                     .append("\n");
         }
         return "成功：\n" + sb;
+    }
+
+    /**
+     * 查询项目记忆：读取项目空间 memory/project-memory.md 的记忆内容
+     * （项目目标、进展、关键决策、待办、经验教训，由系统自动从会话纪要总结沉淀）。
+     * 项目编号为空时默认查询当前会话关联的项目（项目管理智能体场景）。
+     */
+    @ToolSecurityLevel(ToolSecurityLevel.Level.SAFE)
+    @Tool(value = {"查询项目记忆", "按项目编号查询项目记忆文件内容（项目目标、进展、关键决策、待办、经验教训），了解项目历史沉淀信息。项目编号为空时查询当前会话关联的项目"}, searchBehavior = SearchBehavior.ALWAYS_VISIBLE)
+    public String getProjectMemory(@P(value = "项目编号，空表示查询当前会话关联的项目", required = false) Long projectId,
+                                  InvocationParameters invocationParameters) {
+        InvocationParametersWrapper wrapper = InvocationParametersWrapper.create(invocationParameters);
+        // 项目编号为空：从当前会话反查关联项目
+        if (projectId == null) {
+            Project current = projectService.getProjectBySessionId(wrapper.getSessionId());
+            if (current == null) {
+                return "失败：当前会话未关联任何项目，请指定项目编号";
+            }
+            projectId = current.getId();
+        }
+        // userId 传空：不做用户归属校验
+        Project project = projectService.getProject(projectId, null);
+        if (project == null) {
+            return "失败：项目不存在";
+        }
+        String memory = projectMemoryService.getProjectMemoryContent(projectId);
+        if (memory == null || memory.isBlank()) {
+            return "成功：项目【" + project.getName() + "】暂无记忆";
+        }
+        return "成功：项目【" + project.getName() + "】记忆内容：\n" + memory;
     }
 
     /** 状态码转中文描述，未知状态原样返回 */

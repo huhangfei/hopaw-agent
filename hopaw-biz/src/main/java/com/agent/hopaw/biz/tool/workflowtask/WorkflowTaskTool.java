@@ -7,6 +7,7 @@ import com.agent.hopaw.infra.model.entity.WorkflowTaskComment;
 import com.agent.hopaw.infra.model.entity.WorkflowTask;
 import com.agent.hopaw.infra.model.entity.WorkflowTaskPrecondition;
 import com.agent.hopaw.infra.service.IProjectLogService;
+import com.agent.hopaw.infra.service.IProjectMemoryService;
 import com.agent.hopaw.infra.service.IWorkflowTaskCommentService;
 import com.agent.hopaw.infra.service.IWorkflowTaskService;
 import com.agent.hopaw.infra.tool.AgentTool;
@@ -36,13 +37,16 @@ public class WorkflowTaskTool implements AgentTool {
     private final IWorkflowTaskService workflowTaskService;
     private final IWorkflowTaskCommentService taskCommentService;
     private final IProjectLogService projectLogService;
+    private final IProjectMemoryService projectMemoryService;
 
     public WorkflowTaskTool(IWorkflowTaskService workflowTaskService,
                             IWorkflowTaskCommentService taskCommentService,
-                            IProjectLogService projectLogService) {
+                            IProjectLogService projectLogService,
+                            IProjectMemoryService projectMemoryService) {
         this.workflowTaskService = workflowTaskService;
         this.taskCommentService = taskCommentService;
         this.projectLogService = projectLogService;
+        this.projectMemoryService = projectMemoryService;
     }
 
     @Override
@@ -52,7 +56,7 @@ public class WorkflowTaskTool implements AgentTool {
 
     @Override
     public String getDescription() {
-        return "工作流任务工具：查询任务列表、查询任务详情、添加任务、更新任务、删除任务、关闭任务、重做任务，以及查询当前任务与添加任务评论";
+        return "工作流任务工具：查询任务列表、查询任务详情、添加任务、更新任务、删除任务、关闭任务、重做任务，以及查询当前任务、查询任务记忆与添加任务评论";
     }
 
     @Override
@@ -351,6 +355,38 @@ public class WorkflowTaskTool implements AgentTool {
             sb.append("\n（暂无评论）\n");
         }
         return "成功：\n" + sb.toString();
+    }
+
+    /**
+     * 查询任务记忆：读取任务关联项目空间 memory/task-{taskId}-memory.md 的记忆内容
+     * （任务历次执行/交互的增量总结，由系统自动沉淀），帮助智能体快速恢复任务上下文。
+     * 任务编号为空时默认查询当前会话关联的任务。
+     */
+    @ToolSecurityLevel(ToolSecurityLevel.Level.SAFE)
+    @Tool(value = {"查询任务记忆", "按任务编号查询任务记忆文件内容（任务历次执行的进展、决策与经验总结）。任务编号为空时查询当前任务"}, searchBehavior = SearchBehavior.ALWAYS_VISIBLE)
+    public String getWorkflowTaskMemory(@P(value = "任务编号，空表示查询当前会话关联的任务", required = false) Long taskId,
+                                        InvocationParameters invocationParameters) {
+        InvocationParametersWrapper wrapper = InvocationParametersWrapper.create(invocationParameters);
+        // 任务编号为空：从当前会话反查关联任务
+        if (taskId == null) {
+            taskId = workflowTaskService.findTaskIdBySessionId(wrapper.getSessionId());
+            if (taskId == null) {
+                return "失败：当前会话未关联任何工作流任务，请指定任务编号";
+            }
+        }
+        // userId 传空：不做用户归属校验（任务数据跨用户共享）
+        WorkflowTask task = workflowTaskService.getTask(taskId, null);
+        if (task == null) {
+            return "失败：任务不存在";
+        }
+        if (task.getProjectId() == null) {
+            return "失败：任务【" + task.getTitle() + "】未关联项目，无任务记忆";
+        }
+        String memory = projectMemoryService.getTaskMemoryContent(task.getProjectId(), taskId);
+        if (memory == null || memory.isBlank()) {
+            return "成功：任务【" + task.getTitle() + "】暂无记忆";
+        }
+        return "成功：任务【" + task.getTitle() + "】记忆内容：\n" + memory;
     }
 
     /**
