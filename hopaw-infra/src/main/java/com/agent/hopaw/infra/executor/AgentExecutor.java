@@ -34,6 +34,7 @@ import dev.langchain4j.model.chat.response.PartialToolCall;
 import dev.langchain4j.model.embedding.EmbeddingModel;
 import dev.langchain4j.service.AiServices;
 import dev.langchain4j.service.tool.ToolProvider;
+import dev.langchain4j.service.tool.ToolErrorHandlerResult;
 import dev.langchain4j.service.TokenStream;
 import dev.langchain4j.service.tool.search.vector.VectorToolSearchStrategy;
 import dev.langchain4j.store.memory.chat.InMemoryChatMemoryStore;
@@ -589,6 +590,29 @@ public class AgentExecutor implements IAgentExecutor {
                             request.name(), requestId, sessionId);
                     return ToolExecutionResultMessage.from(request,
                             "工具 " + request.name() + " 不存在。请勿调用不存在的工具，只能使用本次会话中提供的可用工具列表里的工具。");
+                })
+                // 工具参数错误处理：参数解析/类型转换失败（如布尔参数传成字符串）时，不终止会话，
+                // 把错误信息作为工具执行结果返回给大模型，引导其修正参数后重试
+                .toolArgumentsErrorHandler((throwable, context) -> {
+                    logger.warn("Tool arguments error: tool={}, requestId={}, sessionId={}, error={}",
+                            context.toolExecutionRequest().name(), requestId, sessionId, throwable.getMessage());
+                    agentMessageHandler.toolCallHandler(AiToolCallMessageInfo.STATUS_EXECUTED,
+                            context.toolExecutionRequest().id(), context.toolExecutionRequest().name(),
+                            context.toolExecutionRequest().arguments(),
+                            "工具调用参数错误：" + throwable.getMessage());
+                    return ToolErrorHandlerResult.text(
+                            "工具调用参数错误：" + throwable.getMessage() + "。请检查参数类型（布尔、数字等不要以字符串形式传入），修正参数后重新调用该工具。");
+                })
+                // 工具执行异常处理：工具内部抛出的异常同样不终止会话，作为结果返回给大模型自行处理
+                .toolExecutionErrorHandler((throwable, context) -> {
+                    logger.warn("Tool execution error: tool={}, requestId={}, sessionId={}, error={}",
+                            context.toolExecutionRequest().name(), requestId, sessionId, throwable.getMessage());
+                    agentMessageHandler.toolCallHandler(AiToolCallMessageInfo.STATUS_EXECUTED,
+                            context.toolExecutionRequest().id(), context.toolExecutionRequest().name(),
+                            context.toolExecutionRequest().arguments(),
+                            "工具执行异常：" + throwable.getMessage());
+                    return ToolErrorHandlerResult.text(
+                            "工具执行异常：" + throwable.getMessage() + "。请根据异常信息调整调用方式或修正后重试。");
                 });
         List<AgentTool> selectedTools = agentExecutorParams.getToolSets().stream().map(x->x.getAgentTool()).collect(Collectors.toList());
         if (selectedTools != null && agentExecutorParams.getVectorToolSearch() != null && agentExecutorParams.getVectorToolSearch()) {
