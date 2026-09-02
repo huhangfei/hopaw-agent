@@ -54,6 +54,12 @@ public interface IWorkflowTaskService {
 
     /** 重做任务：已完成/失败的任务重置为待执行，由后台调度器拉起重跑 */
     void redoTask(Long id, String userId);
+
+    /**
+     * 重做任务（带评论者身份）：智能体重做时自动评论以智能体身份写入，
+     * 用户重做时以用户身份写入
+     */
+    void redoTask(Long id, String userId, String commenterType, String commenterId);
     List<WorkflowTask> findPendingExecution();
 
     /** 查询所有处理中状态的任务（按ID正序），供中断恢复扫描使用 */

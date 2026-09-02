@@ -325,6 +325,11 @@ public class WorkflowTaskService implements IWorkflowTaskService {
 
     @Override
     public void redoTask(Long id, String userId) {
+        redoTask(id, userId, TaskCommenterTypeEnum.USER.getCode(), userId);
+    }
+
+    @Override
+    public void redoTask(Long id, String userId, String commenterType, String commenterId) {
         WorkflowTask existing = workflowTaskMapper.findById(id);
         if (existing == null) {
             throw new RuntimeException("任务不存在");
@@ -341,10 +346,10 @@ public class WorkflowTaskService implements IWorkflowTaskService {
         updateTaskStatus(id, TaskStatusEnum.PENDING_EXECUTION.getCode(), null);
         // 任务重做：发送外部通知（按项目通知配置）
         sendTaskNotify(existing, NotifyEventEnum.TASK_REDO, TaskStatusEnum.PENDING_EXECUTION.getCode(), null);
-        // 重做自动写入用户评论，记录原状态便于追溯
+        // 重做自动写入评论（按评论者身份记录），记录原状态便于追溯
         try {
-            String originLabel = current != null ? current.getDescription() : existing.getStatus();
-            taskCommentService.addComment(id, "任务重做（原状态：" + originLabel + "）", userId);
+            String originLabel = current.getDescription();
+            taskCommentService.addComment(id, "任务重做（原状态：" + originLabel + "）", userId, commenterType, commenterId);
         } catch (Exception e) {
             logger.warn("重做评论写入失败: taskId={}", id, e);
         }

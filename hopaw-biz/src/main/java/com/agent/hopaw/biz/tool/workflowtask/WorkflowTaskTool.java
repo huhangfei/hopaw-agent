@@ -23,7 +23,7 @@ import java.time.format.DateTimeFormatter;
 import java.util.List;
 
 /**
- * 工作流任务工具集：任务列表查询、任务详情查询、任务添加/更新/删除/关闭，以及当前任务查询与评论添加。
+ * 工作流任务工具集：任务列表查询、任务详情查询、任务添加/更新/删除/关闭/重做，以及当前任务查询与评论添加。
  * 智能体在执行任务时，可通过本工具查询当前任务详情与评论，并通过评论记录处理关键细节或向用户提问；
  * 也可代用户管理任务全生命周期（新增默认待启动，处理中的任务不允许编辑/删除）。
  * 任务数据不做用户归属隔离（跨用户共享协作）；状态变更类操作以智能体身份记录。
@@ -52,7 +52,7 @@ public class WorkflowTaskTool implements AgentTool {
 
     @Override
     public String getDescription() {
-        return "工作流任务工具：查询任务列表、查询任务详情、添加任务、更新任务、删除任务、关闭任务，以及查询当前任务与添加任务评论";
+        return "工作流任务工具：查询任务列表、查询任务详情、添加任务、更新任务、删除任务、关闭任务、重做任务，以及查询当前任务与添加任务评论";
     }
 
     @Override
@@ -463,6 +463,28 @@ public class WorkflowTaskTool implements AgentTool {
         try {
             workflowTaskService.closeTask(taskId, null, agentCommenterType(wrapper), agentCommenterId(wrapper));
             return "成功：任务已关闭，任务ID：" + taskId;
+        } catch (RuntimeException e) {
+            return "失败：" + e.getMessage();
+        }
+    }
+
+    /**
+     * 重做工作流任务：失败/已完成的任务重新移回待执行，由系统调度重新处理。
+     * 状态变更评论以智能体身份记录。
+     */
+    @ToolSecurityLevel(ToolSecurityLevel.Level.PARAM_REQUIRE_APPROVAL)
+    @Tool(value = {"重做工作流任务", "按任务编号重做工作流任务，将失败或已完成的任务重新移回待执行状态等待系统调度处理（同时清空历史驳回/失败原因）"}, searchBehavior = SearchBehavior.ALWAYS_VISIBLE)
+    public String redoWorkflowTask(@P("任务编号") Long taskId,
+                                   InvocationParameters invocationParameters) {
+        InvocationParametersWrapper wrapper = InvocationParametersWrapper.create(invocationParameters);
+        // userId 传空：不做用户归属校验
+        WorkflowTask task = workflowTaskService.getTask(taskId, null);
+        if (task == null) {
+            return "失败：任务不存在";
+        }
+        try {
+            workflowTaskService.redoTask(taskId, null, agentCommenterType(wrapper), agentCommenterId(wrapper));
+            return "成功：任务已重做，已移回待执行状态，任务ID：" + taskId;
         } catch (RuntimeException e) {
             return "失败：" + e.getMessage();
         }
