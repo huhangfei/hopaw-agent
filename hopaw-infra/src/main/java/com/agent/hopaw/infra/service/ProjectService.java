@@ -4,6 +4,7 @@ import com.agent.hopaw.infra.constant.NotifyEventEnum;
 import com.agent.hopaw.infra.constant.ProjectStatusEnum;
 import com.agent.hopaw.infra.enums.GlobalNoticeTypeEnum;
 import com.agent.hopaw.infra.mapper.ProjectMapper;
+import com.agent.hopaw.infra.mapper.TaskSessionMapper;
 import com.agent.hopaw.infra.mapper.WorkflowTaskMapper;
 import com.agent.hopaw.infra.model.dto.FileTreeNode;
 import com.agent.hopaw.infra.model.dto.FileUploadItem;
@@ -43,6 +44,8 @@ public class ProjectService implements IProjectService {
     private final WorkflowTaskMapper workflowTaskMapper;
     private final IGlobalNoticeService globalNoticeService;
     private final INotificationService notificationService;
+    private final IAgentExecutorService agentExecutorService;
+    private final TaskSessionMapper taskSessionMapper;
 
     /** 项目空间根目录（所有项目的工作空间目录都放置在此目录下） */
     private final String projectSpaceRoot;
@@ -60,11 +63,15 @@ public class ProjectService implements IProjectService {
                           WorkflowTaskMapper workflowTaskMapper,
                           @Value("${hopaw.project.space.dir:./project-spaces}") String projectSpaceDir,
                           IGlobalNoticeService globalNoticeService,
-                          INotificationService notificationService) {
+                          INotificationService notificationService,
+                          IAgentExecutorService agentExecutorService,
+                          TaskSessionMapper taskSessionMapper) {
         this.projectMapper = projectMapper;
         this.workflowTaskMapper = workflowTaskMapper;
         this.globalNoticeService = globalNoticeService;
         this.notificationService = notificationService;
+        this.agentExecutorService = agentExecutorService;
+        this.taskSessionMapper = taskSessionMapper;
         // 保存原始配置值（自动创建项目空间时按此生成存储用的相对路径）
         this.projectSpaceDirConfig = projectSpaceDir;
         // 解析为绝对路径，确保后续文件操作一致
@@ -260,6 +267,8 @@ public class ProjectService implements IProjectService {
         // 状态变更走 updateStatus 接口，这里仅当传入了合法状态且与当前不同时校验流转
         if (project.getStatus() != null && !project.getStatus().equals(existing.getStatus())) {
             validateTransition(existing.getStatus(), project.getStatus());
+            // 更新为已完成/已归档/已暂停时，停止项目及其任务关联的运行中会话执行器
+            stopProjectExecutorsIfNeeded(existing, project.getStatus());
             existing.setStatus(project.getStatus());
         }
         // 通知渠道与通知事项随编辑更新（列表为 null 时保留原值，空列表表示清空）
@@ -318,6 +327,8 @@ public class ProjectService implements IProjectService {
             return; // 状态未变
         }
         validateTransition(existing.getStatus(), status);
+        // 更新为已完成/已归档/已暂停时，停止项目及其任务关联的运行中会话执行器
+        stopProjectExecutorsIfNeeded(existing, status);
         projectMapper.updateStatus(id, status);
         // 状态变更：推送全局通知（子类型 status_change）
         try {
@@ -350,6 +361,42 @@ public class ProjectService implements IProjectService {
         ProjectStatusEnum toEnum = ProjectStatusEnum.fromCode(to);
         if (fromEnum == null || toEnum == null || !fromEnum.canTransitionTo(toEnum)) {
             throw new RuntimeException("不允许从状态[" + from + "]流转到[" + to + "]");
+        }
+    }
+
+    /**
+     * 项目状态变更为已完成/已归档/已暂停时，停止项目自身及项目下任务关联的运行中会话执行器。
+     * 单个会话停止失败仅告警，不影响状态变更主流程。
+     */
+    private void stopProjectExecutorsIfNeeded(Project project, String newStatus) {
+        if (!ProjectStatusEnum.COMPLETED.getCode().equals(newStatus)
+                && !ProjectStatusEnum.ARCHIVED.getCode().equals(newStatus)
+                && !ProjectStatusEnum.PAUSED.getCode().equals(newStatus)) {
+            return;
+        }
+        Long projectId = project.getId();
+        // 项目管理智能体自身的会话执行器
+        if (project.getSessionId() != null && !project.getSessionId().trim().isEmpty()) {
+            stopExecutorQuietly(projectId, project.getSessionId(), "项目会话");
+        }
+        // 项目下所有任务关联的会话执行器
+        List<String> taskSessionIds = taskSessionMapper.findSessionIdsByProjectId(projectId);
+        if (taskSessionIds != null) {
+            for (String sessionId : taskSessionIds) {
+                stopExecutorQuietly(projectId, sessionId, "任务会话");
+            }
+        }
+    }
+
+    /** 判断执行器运行中才停止，失败仅告警 */
+    private void stopExecutorQuietly(Long projectId, String sessionId, String scene) {
+        try {
+            if (agentExecutorService.isAgentExecutorRunning(sessionId)) {
+                agentExecutorService.stopAndRemoveAgentExecutor(sessionId);
+                logger.info("已停止{}执行器: projectId={}, sessionId={}", scene, projectId, sessionId);
+            }
+        } catch (Exception e) {
+            logger.warn("停止{}执行器失败: projectId={}, sessionId={}", scene, projectId, sessionId, e);
         }
     }
 

@@ -158,6 +158,8 @@ public class WorkflowTaskService implements IWorkflowTaskService {
         if (userId != null && !userId.equals(existing.getUserId())) {
             throw new RuntimeException("无权删除该任务");
         }
+        // 删除前先停止该任务的会话执行器，避免已删除的任务仍在执行
+        stopTaskExecutors(id);
         taskSessionMapper.deleteByTaskId(id);
         // 前置条件双向清理：该任务自己的配置 + 以该任务为前置的其他任务关联（避免删除任务导致其他任务永久阻塞）
         preconditionMapper.deleteByTaskId(id);
@@ -304,22 +306,35 @@ public class WorkflowTaskService implements IWorkflowTaskService {
             throw new RuntimeException("无权操作该任务");
         }
         // 关闭前先停止该任务的会话执行器，避免已关闭的任务仍在执行
-        List<TaskSession> sessions = taskSessionMapper.findByTaskId(id);
-        if (sessions != null) {
-            for (TaskSession session : sessions) {
-                try {
-                    agentExecutorService.stopAndRemoveAgentExecutor(session.getSessionId());
-                } catch (Exception e) {
-                    logger.warn("停止任务会话执行器失败: taskId={}, sessionId={}", id, session.getSessionId(), e);
-                }
-            }
-        }
+        stopTaskExecutors(id);
         updateTaskStatus(id, TaskStatusEnum.CLOSED.getCode(), null);
         // 关闭自动写入评论（按评论者身份记录），留下关闭记录
         try {
             taskCommentService.addComment(id, "任务已关闭", userId, commenterType, commenterId);
         } catch (Exception e) {
             logger.warn("关闭评论写入失败: taskId={}", id, e);
+        }
+    }
+
+    /**
+     * 停止任务关联的所有会话执行器（仅在运行中时停止）。
+     * 单个会话停止失败仅告警，不影响其余会话与主流程。
+     */
+    private void stopTaskExecutors(Long taskId) {
+        List<TaskSession> sessions = taskSessionMapper.findByTaskId(taskId);
+        if (sessions == null || sessions.isEmpty()) {
+            return;
+        }
+        for (TaskSession session : sessions) {
+            String sessionId = session.getSessionId();
+            try {
+                if (agentExecutorService.isAgentExecutorRunning(sessionId)) {
+                    agentExecutorService.stopAndRemoveAgentExecutor(sessionId);
+                    logger.info("已停止任务会话执行器: taskId={}, sessionId={}", taskId, sessionId);
+                }
+            } catch (Exception e) {
+                logger.warn("停止任务会话执行器失败: taskId={}, sessionId={}", taskId, sessionId, e);
+            }
         }
     }
 
