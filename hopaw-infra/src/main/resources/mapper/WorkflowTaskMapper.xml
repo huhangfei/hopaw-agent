@@ -111,19 +111,24 @@
         LEFT JOIN agents a ON t.agent_id = a.id
         LEFT JOIN projects p ON t.project_id = p.id
         LEFT JOIN agents ca ON t.creator_agent_id = ca.id
-        WHERE t.user_id = #{userId}
-        <if test="keyword != null and keyword != ''">
-            AND (t.title LIKE CONCAT('%', #{keyword}, '%') OR t.content LIKE CONCAT('%', #{keyword}, '%'))
-        </if>
-        <if test="status != null and status != ''">
-            AND t.status = #{status}
-        </if>
-        <if test="projectId != null">
-            AND t.project_id = #{projectId}
-        </if>
-        <if test="agentId != null">
-            AND t.agent_id = #{agentId}
-        </if>
+        <where>
+            <!-- userId为空时不按用户过滤（智能体工具场景，跨用户共享协作） -->
+            <if test="userId != null and userId != ''">
+                t.user_id = #{userId}
+            </if>
+            <if test="keyword != null and keyword != ''">
+                AND (t.title LIKE CONCAT('%', #{keyword}, '%') OR t.content LIKE CONCAT('%', #{keyword}, '%'))
+            </if>
+            <if test="status != null and status != ''">
+                AND t.status = #{status}
+            </if>
+            <if test="projectId != null">
+                AND t.project_id = #{projectId}
+            </if>
+            <if test="agentId != null">
+                AND t.agent_id = #{agentId}
+            </if>
+        </where>
         ORDER BY t.create_time DESC, t.id DESC
         LIMIT #{size} OFFSET #{offset}
     </select>
@@ -131,19 +136,24 @@
     <select id="countByUserIdWithFilters" resultType="int">
         SELECT COUNT(*)
         FROM workflow_tasks
-        WHERE user_id = #{userId}
-        <if test="keyword != null and keyword != ''">
-            AND (title LIKE CONCAT('%', #{keyword}, '%') OR content LIKE CONCAT('%', #{keyword}, '%'))
-        </if>
-        <if test="status != null and status != ''">
-            AND status = #{status}
-        </if>
-        <if test="projectId != null">
-            AND project_id = #{projectId}
-        </if>
-        <if test="agentId != null">
-            AND agent_id = #{agentId}
-        </if>
+        <where>
+            <!-- userId为空时不按用户过滤（智能体工具场景） -->
+            <if test="userId != null and userId != ''">
+                user_id = #{userId}
+            </if>
+            <if test="keyword != null and keyword != ''">
+                AND (title LIKE CONCAT('%', #{keyword}, '%') OR content LIKE CONCAT('%', #{keyword}, '%'))
+            </if>
+            <if test="status != null and status != ''">
+                AND status = #{status}
+            </if>
+            <if test="projectId != null">
+                AND project_id = #{projectId}
+            </if>
+            <if test="agentId != null">
+                AND agent_id = #{agentId}
+            </if>
+        </where>
     </select>
 
     <select id="findByProjectId" resultMap="WorkflowTaskResultMap">

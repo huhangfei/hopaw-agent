@@ -72,13 +72,18 @@
     <select id="findByUserIdWithFilters" resultMap="ProjectResultMap">
         SELECT p.id, p.name, p.description, p.status, p.user_id, p.space_dir, p.agent_id, p.auto_iterate, p.iterate_prompt, p.session_id, p.create_time, p.update_time
         FROM projects p
-        WHERE p.user_id = #{userId}
-        <if test="keyword != null and keyword != ''">
-            AND (p.name LIKE CONCAT('%', #{keyword}, '%') OR p.description LIKE CONCAT('%', #{keyword}, '%'))
-        </if>
-        <if test="status != null and status != ''">
-            AND p.status = #{status}
-        </if>
+        <where>
+            <!-- userId为空时不按用户过滤（智能体工具场景，跨用户共享协作） -->
+            <if test="userId != null and userId != ''">
+                p.user_id = #{userId}
+            </if>
+            <if test="keyword != null and keyword != ''">
+                AND (p.name LIKE CONCAT('%', #{keyword}, '%') OR p.description LIKE CONCAT('%', #{keyword}, '%'))
+            </if>
+            <if test="status != null and status != ''">
+                AND p.status = #{status}
+            </if>
+        </where>
         ORDER BY p.id DESC
         LIMIT #{size} OFFSET #{offset}
     </select>
@@ -86,13 +91,18 @@
     <select id="countByUserIdWithFilters" resultType="int">
         SELECT COUNT(*)
         FROM projects
-        WHERE user_id = #{userId}
-        <if test="keyword != null and keyword != ''">
-            AND (name LIKE CONCAT('%', #{keyword}, '%') OR description LIKE CONCAT('%', #{keyword}, '%'))
-        </if>
-        <if test="status != null and status != ''">
-            AND status = #{status}
-        </if>
+        <where>
+            <!-- userId为空时不按用户过滤（智能体工具场景） -->
+            <if test="userId != null and userId != ''">
+                user_id = #{userId}
+            </if>
+            <if test="keyword != null and keyword != ''">
+                AND (name LIKE CONCAT('%', #{keyword}, '%') OR description LIKE CONCAT('%', #{keyword}, '%'))
+            </if>
+            <if test="status != null and status != ''">
+                AND status = #{status}
+            </if>
+        </where>
     </select>
 
     <select id="findByUserId" resultMap="ProjectResultMap">

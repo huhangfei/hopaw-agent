@@ -19,7 +19,7 @@ import java.util.List;
 
 /**
  * 项目工具集：项目列表查询、项目详情查询、项目保存（新增或更新）、项目删除。
- * 智能体可通过本工具了解和管理用户的项目，所有操作均限定在当前用户自己的项目范围内。
+ * 项目数据不做用户归属隔离（跨用户共享协作），仅新增项目时记录归属用户。
  */
 @Component("projectTool")
 public class ProjectTool implements AgentTool {
@@ -50,10 +50,10 @@ public class ProjectTool implements AgentTool {
     }
 
     /**
-     * 分页查询当前用户的项目列表，支持名称关键字与状态过滤。
+     * 分页查询项目列表，支持名称关键字与状态过滤（不做用户归属隔离）。
      */
     @ToolSecurityLevel(ToolSecurityLevel.Level.SAFE)
-    @Tool(value = {"查询项目列表", "分页查询当前用户的项目列表，可按名称关键字和状态过滤"}, searchBehavior = SearchBehavior.ALWAYS_VISIBLE)
+    @Tool(value = {"查询项目列表", "分页查询项目列表，可按名称关键字和状态过滤"}, searchBehavior = SearchBehavior.ALWAYS_VISIBLE)
     public String findProjects(@P(value = "名称关键字，空表示不过滤", required = false) String keyword,
                                @P(value = "项目状态：planning=规划中/in_progress=进行中/paused=已暂停/completed=已完成/archived=已归档，空表示不过滤", required = false) String status,
                                @P(value = "页码，从1开始，默认1", required = false) Integer page,
@@ -65,11 +65,12 @@ public class ProjectTool implements AgentTool {
         String kw = keyword == null ? "" : keyword.trim();
         String st = status == null ? "" : status.trim();
 
-        List<Project> projects = projectService.getProjectsPage(wrapper.getUserId(), kw, st, pageNo, pageSize);
+        // userId 传空：项目数据不做用户归属过滤（跨用户共享协作）
+        List<Project> projects = projectService.getProjectsPage(null, kw, st, pageNo, pageSize);
         if (projects == null || projects.isEmpty()) {
             return "成功：当前条件下没有项目";
         }
-        int total = projectService.countProjects(wrapper.getUserId(), kw, st);
+        int total = projectService.countProjects(null, kw, st);
         StringBuilder sb = new StringBuilder();
         sb.append("共 ").append(total).append(" 个项目，当前第 ").append(pageNo).append(" 页（每页 ").append(pageSize).append(" 条）：\n");
         for (Project p : projects) {
@@ -91,9 +92,10 @@ public class ProjectTool implements AgentTool {
     public String getProjectDetail(@P("项目编号") Long projectId,
                                    InvocationParameters invocationParameters) {
         InvocationParametersWrapper wrapper = InvocationParametersWrapper.create(invocationParameters);
-        Project p = projectService.getProject(projectId, wrapper.getUserId());
+        // userId 传空：不做用户归属校验
+        Project p = projectService.getProject(projectId, null);
         if (p == null) {
-            return "失败：项目不存在或无权访问";
+            return "失败：项目不存在";
         }
         StringBuilder sb = new StringBuilder();
         sb.append("项目ID：").append(p.getId()).append("\n");
@@ -156,9 +158,10 @@ public class ProjectTool implements AgentTool {
                 return "成功：项目已创建，项目ID：" + created.getId() + "，状态：" + statusText(created.getStatus());
             }
             // 更新：先读取现有项目，保留智能体与自动迭代配置（工具未提供这些参数，避免误清空）
-            Project existing = projectService.getProject(projectId, wrapper.getUserId());
+            // userId 传空：不做用户归属校验
+            Project existing = projectService.getProject(projectId, null);
             if (existing == null) {
-                return "失败：项目不存在或无权访问";
+                return "失败：项目不存在";
             }
             Project project = new Project();
             project.setId(projectId);
@@ -168,7 +171,7 @@ public class ProjectTool implements AgentTool {
             project.setAgentId(existing.getAgentId());
             project.setAutoIterate(existing.getAutoIterate());
             project.setIteratePrompt(existing.getIteratePrompt());
-            Project updated = projectService.updateProject(project, wrapper.getUserId());
+            Project updated = projectService.updateProject(project, null);
             return "成功：项目已更新，项目ID：" + updated.getId() + "，状态：" + statusText(updated.getStatus());
         } catch (RuntimeException e) {
             return "失败：" + e.getMessage();
@@ -176,7 +179,7 @@ public class ProjectTool implements AgentTool {
     }
 
     /**
-     * 按项目编号删除项目（危险操作，需用户确认）。
+     * 按项目编号删除项目（危险操作，需用户确认；不做用户归属隔离）。
      */
     @ToolSecurityLevel(ToolSecurityLevel.Level.ALL_REQUIRE_APPROVAL)
     @Tool(value = {"删除项目", "按项目编号删除项目，删除后不可恢复"}, searchBehavior = SearchBehavior.ALWAYS_VISIBLE)
@@ -184,7 +187,8 @@ public class ProjectTool implements AgentTool {
                                 InvocationParameters invocationParameters) {
         InvocationParametersWrapper wrapper = InvocationParametersWrapper.create(invocationParameters);
         try {
-            projectService.deleteProject(projectId, wrapper.getUserId());
+            // userId 传空：不做用户归属校验
+            projectService.deleteProject(projectId, null);
             return "成功：项目已删除，项目ID：" + projectId;
         } catch (RuntimeException e) {
             return "失败：" + e.getMessage();
@@ -201,10 +205,10 @@ public class ProjectTool implements AgentTool {
                                   @P(value = "每页数量，默认20，最大100", required = false) Integer size,
                                   InvocationParameters invocationParameters) {
         InvocationParametersWrapper wrapper = InvocationParametersWrapper.create(invocationParameters);
-        // 校验项目归属，避免越权查询他人项目日志
-        Project project = projectService.getProject(projectId, wrapper.getUserId());
+        // userId 传空：不做用户归属校验
+        Project project = projectService.getProject(projectId, null);
         if (project == null) {
-            return "失败：项目不存在或无权访问";
+            return "失败：项目不存在";
         }
         int pageNo = (page == null || page < 1) ? 1 : page;
         int pageSize = (size == null || size < 1) ? 20 : Math.min(size, 100);

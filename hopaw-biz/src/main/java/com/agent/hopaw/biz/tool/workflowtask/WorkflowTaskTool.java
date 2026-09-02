@@ -23,9 +23,10 @@ import java.time.format.DateTimeFormatter;
 import java.util.List;
 
 /**
- * 工作流任务工具集：任务列表查询、任务详情查询、任务添加/更新/删除，以及当前任务查询与评论添加。
+ * 工作流任务工具集：任务列表查询、任务详情查询、任务添加/更新/删除/关闭，以及当前任务查询与评论添加。
  * 智能体在执行任务时，可通过本工具查询当前任务详情与评论，并通过评论记录处理关键细节或向用户提问；
  * 也可代用户管理任务全生命周期（新增默认待启动，处理中的任务不允许编辑/删除）。
+ * 任务数据不做用户归属隔离（跨用户共享协作）；状态变更类操作以智能体身份记录。
  */
 @Component("workflowTaskTool")
 public class WorkflowTaskTool implements AgentTool {
@@ -51,7 +52,7 @@ public class WorkflowTaskTool implements AgentTool {
 
     @Override
     public String getDescription() {
-        return "工作流任务工具：查询任务列表、查询任务详情、添加任务、更新任务、删除任务，以及查询当前任务与添加任务评论";
+        return "工作流任务工具：查询任务列表、查询任务详情、添加任务、更新任务、删除任务、关闭任务，以及查询当前任务与添加任务评论";
     }
 
     @Override
@@ -65,10 +66,10 @@ public class WorkflowTaskTool implements AgentTool {
     }
 
     /**
-     * 分页查询当前用户的工作流任务列表，支持标题关键字与状态过滤。
+     * 分页查询工作流任务列表，支持标题关键字与状态过滤（不做用户归属隔离）。
      */
     @ToolSecurityLevel(ToolSecurityLevel.Level.SAFE)
-    @Tool(value = {"查询任务列表", "分页查询当前用户的工作流任务列表，可按标题关键字和状态过滤"}, searchBehavior = SearchBehavior.ALWAYS_VISIBLE)
+    @Tool(value = {"查询任务列表", "分页查询工作流任务列表，可按标题关键字和状态过滤"}, searchBehavior = SearchBehavior.ALWAYS_VISIBLE)
     public String findWorkflowTasks(@P(value = "标题关键字，空表示不过滤", required = false) String keyword,
                                     @P(value = "任务状态：pending=待启动/pending_execution=待执行/processing=处理中/pending_acceptance=待验收/completed=已完成/failed=失败/rejected=已驳回/closed=已关闭，空表示不过滤", required = false) String status,
                                     @P(value = "页码，从1开始，默认1", required = false) Integer page,
@@ -80,11 +81,12 @@ public class WorkflowTaskTool implements AgentTool {
         String kw = keyword == null ? "" : keyword.trim();
         String st = status == null ? "" : status.trim();
 
-        List<WorkflowTask> tasks = workflowTaskService.getTasksPage(wrapper.getUserId(), kw, st, null, null, pageNo, pageSize);
+        // userId 传空：任务数据不做用户归属过滤（跨用户共享协作）
+        List<WorkflowTask> tasks = workflowTaskService.getTasksPage(null, kw, st, null, null, pageNo, pageSize);
         if (tasks == null || tasks.isEmpty()) {
             return "成功：当前条件下没有任务";
         }
-        int total = workflowTaskService.countTasks(wrapper.getUserId(), kw, st, null, null);
+        int total = workflowTaskService.countTasks(null, kw, st, null, null);
         StringBuilder sb = new StringBuilder();
         sb.append("共 ").append(total).append(" 个任务，当前第 ").append(pageNo).append(" 页（每页 ").append(pageSize).append(" 条）：\n");
         for (WorkflowTask t : tasks) {
@@ -107,9 +109,10 @@ public class WorkflowTaskTool implements AgentTool {
     public String getWorkflowTaskDetail(@P("任务编号") Long taskId,
                                         InvocationParameters invocationParameters) {
         InvocationParametersWrapper wrapper = InvocationParametersWrapper.create(invocationParameters);
-        WorkflowTask task = workflowTaskService.getTask(taskId, wrapper.getUserId());
+        // userId 传空：不做用户归属校验
+        WorkflowTask task = workflowTaskService.getTask(taskId, null);
         if (task == null) {
-            return "失败：任务不存在或无权访问";
+            return "失败：任务不存在";
         }
 
         StringBuilder sb = new StringBuilder();
@@ -224,9 +227,10 @@ public class WorkflowTaskTool implements AgentTool {
                                      @P(value = "前置任务配置，格式：任务编号:要求状态[|任务编号:要求状态...]，如 \"3:completed,failed|5:pending_acceptance\"；要求状态为状态码（多个状态逗号分隔），可选值 pending/pending_execution/processing/pending_acceptance/completed/failed/rejected/closed；空表示保持原值；传 \"none\" 清空全部前置任务", required = false) String preconditions,
                                      InvocationParameters invocationParameters) {
         InvocationParametersWrapper wrapper = InvocationParametersWrapper.create(invocationParameters);
-        WorkflowTask existing = workflowTaskService.getTask(taskId, wrapper.getUserId());
+        // userId 传空：不做用户归属校验
+        WorkflowTask existing = workflowTaskService.getTask(taskId, null);
         if (existing == null) {
-            return "失败：任务不存在或无权访问";
+            return "失败：任务不存在";
         }
 
         LocalDateTime start = null;
@@ -247,7 +251,7 @@ public class WorkflowTaskTool implements AgentTool {
             task.setProjectId(projectId != null ? projectId : existing.getProjectId());
             task.setStartTime(start != null ? start : existing.getStartTime());
             task.setExecutionPeriod(executionPeriod != null ? executionPeriod : existing.getExecutionPeriod());
-            WorkflowTask updated = workflowTaskService.updateTask(task, wrapper.getUserId());
+            WorkflowTask updated = workflowTaskService.updateTask(task, null);
 
             // 关联项目变化时记录项目操作日志（与页面更新任务行为一致）
             if (!java.util.Objects.equals(existing.getProjectId(), updated.getProjectId())) {
@@ -272,18 +276,20 @@ public class WorkflowTaskTool implements AgentTool {
 
     /**
      * 按任务编号删除工作流任务（危险操作，需用户确认；处理中的任务不允许删除）。
+     * 请勿随便删除任务，不再需要执行的任务应使用关闭工作流任务代替删除。
      */
     @ToolSecurityLevel(ToolSecurityLevel.Level.ALL_REQUIRE_APPROVAL)
-    @Tool(value = {"删除工作流任务", "按任务编号删除工作流任务，删除后不可恢复"}, searchBehavior = SearchBehavior.ALWAYS_VISIBLE)
+    @Tool(value = {"删除工作流任务", "按任务编号删除工作流任务，删除后不可恢复。请勿随便删除任务：不再需要执行的任务应优先使用「关闭工作流任务」"}, searchBehavior = SearchBehavior.ALWAYS_VISIBLE)
     public String deleteWorkflowTask(@P("任务编号") Long taskId,
                                      InvocationParameters invocationParameters) {
         InvocationParametersWrapper wrapper = InvocationParametersWrapper.create(invocationParameters);
-        WorkflowTask existing = workflowTaskService.getTask(taskId, wrapper.getUserId());
+        // userId 传空：不做用户归属校验
+        WorkflowTask existing = workflowTaskService.getTask(taskId, null);
         if (existing == null) {
-            return "失败：任务不存在或无权访问";
+            return "失败：任务不存在";
         }
         try {
-            workflowTaskService.deleteTask(taskId, wrapper.getUserId());
+            workflowTaskService.deleteTask(taskId, null);
             // 关联了项目则记录取消关联日志（与页面删除任务行为一致）
             if (existing.getProjectId() != null) {
                 try {
@@ -311,9 +317,10 @@ public class WorkflowTaskTool implements AgentTool {
         if (taskId == null) {
             return "失败：当前会话未关联任何工作流任务";
         }
-        WorkflowTask task = workflowTaskService.getTask(taskId, wrapper.getUserId());
+        // userId 传空：不做用户归属校验
+        WorkflowTask task = workflowTaskService.getTask(taskId, null);
         if (task == null) {
-            return "失败：任务不存在或无权访问";
+            return "失败：任务不存在";
         }
 
         StringBuilder sb = new StringBuilder();
@@ -371,18 +378,20 @@ public class WorkflowTaskTool implements AgentTool {
 
     /**
      * 审核工作流任务：待启动任务审核通过后进入待执行，由系统调度执行。
+     * 状态变更评论以智能体身份记录（commenterType=agent，commenterId=智能体编号）。
      */
     @ToolSecurityLevel(ToolSecurityLevel.Level.PARAM_REQUIRE_APPROVAL)
     @Tool(value = {"审核工作流任务", "审核待启动的工作流任务，审核通过后进入待执行状态，由系统自动调度执行智能体处理"}, searchBehavior = SearchBehavior.ALWAYS_VISIBLE)
     public String approveWorkflowTask(@P("任务编号") Long taskId,
                                       InvocationParameters invocationParameters) {
         InvocationParametersWrapper wrapper = InvocationParametersWrapper.create(invocationParameters);
-        WorkflowTask task = workflowTaskService.getTask(taskId, wrapper.getUserId());
+        // userId 传空：不做用户归属校验
+        WorkflowTask task = workflowTaskService.getTask(taskId, null);
         if (task == null) {
-            return "失败：任务不存在或无权访问";
+            return "失败：任务不存在";
         }
         try {
-            workflowTaskService.approveTask(taskId, wrapper.getUserId());
+            workflowTaskService.approveTask(taskId, null, agentCommenterType(wrapper), agentCommenterId(wrapper));
             return "成功：任务已审核通过，进入待执行状态，任务ID：" + taskId;
         } catch (RuntimeException e) {
             return "失败：" + e.getMessage();
@@ -391,18 +400,20 @@ public class WorkflowTaskTool implements AgentTool {
 
     /**
      * 验收工作流任务：待验收任务验收通过后标记为已完成。
+     * 状态变更评论以智能体身份记录。
      */
     @ToolSecurityLevel(ToolSecurityLevel.Level.PARAM_REQUIRE_APPROVAL)
     @Tool(value = {"验收工作流任务", "验收待验收的工作流任务，确认执行结果符合要求后任务标记为已完成"}, searchBehavior = SearchBehavior.ALWAYS_VISIBLE)
     public String acceptWorkflowTask(@P("任务编号") Long taskId,
                                      InvocationParameters invocationParameters) {
         InvocationParametersWrapper wrapper = InvocationParametersWrapper.create(invocationParameters);
-        WorkflowTask task = workflowTaskService.getTask(taskId, wrapper.getUserId());
+        // userId 传空：不做用户归属校验
+        WorkflowTask task = workflowTaskService.getTask(taskId, null);
         if (task == null) {
-            return "失败：任务不存在或无权访问";
+            return "失败：任务不存在";
         }
         try {
-            workflowTaskService.acceptTask(taskId, wrapper.getUserId());
+            workflowTaskService.acceptTask(taskId, null, agentCommenterType(wrapper), agentCommenterId(wrapper));
             return "成功：任务已验收通过，任务ID：" + taskId;
         } catch (RuntimeException e) {
             return "失败：" + e.getMessage();
@@ -411,6 +422,7 @@ public class WorkflowTaskTool implements AgentTool {
 
     /**
      * 驳回工作流任务：待验收任务验收不通过时驳回（注明原因），由系统安排重做。
+     * 状态变更评论以智能体身份记录。
      */
     @ToolSecurityLevel(ToolSecurityLevel.Level.PARAM_REQUIRE_APPROVAL)
     @Tool(value = {"驳回工作流任务", "驳回待验收的工作流任务并注明驳回原因，驳回后任务转为失败状态等待处理"}, searchBehavior = SearchBehavior.ALWAYS_VISIBLE)
@@ -418,19 +430,52 @@ public class WorkflowTaskTool implements AgentTool {
                                      @P("驳回原因：说明执行结果不符合要求的具体原因") String reason,
                                      InvocationParameters invocationParameters) {
         InvocationParametersWrapper wrapper = InvocationParametersWrapper.create(invocationParameters);
-        WorkflowTask task = workflowTaskService.getTask(taskId, wrapper.getUserId());
+        // userId 传空：不做用户归属校验
+        WorkflowTask task = workflowTaskService.getTask(taskId, null);
         if (task == null) {
-            return "失败：任务不存在或无权访问";
+            return "失败：任务不存在";
         }
         if (reason == null || reason.trim().isEmpty()) {
             return "失败：驳回原因不能为空";
         }
         try {
-            workflowTaskService.rejectTask(taskId, wrapper.getUserId(), reason.trim());
+            workflowTaskService.rejectTask(taskId, null, reason.trim(), agentCommenterType(wrapper), agentCommenterId(wrapper));
             return "成功：任务已驳回，任务ID：" + taskId;
         } catch (RuntimeException e) {
             return "失败：" + e.getMessage();
         }
+    }
+
+    /**
+     * 关闭工作流任务：不再需要执行的任务可关闭，关闭前系统会先停止该任务的会话执行器。
+     * 状态变更评论以智能体身份记录。
+     */
+    @ToolSecurityLevel(ToolSecurityLevel.Level.PARAM_REQUIRE_APPROVAL)
+    @Tool(value = {"关闭工作流任务", "按任务编号关闭工作流任务，不需要再执行的任务可关闭（关闭前系统自动停止该任务的会话执行器），关闭后任务不再被调度执行"}, searchBehavior = SearchBehavior.ALWAYS_VISIBLE)
+    public String closeWorkflowTask(@P("任务编号") Long taskId,
+                                    InvocationParameters invocationParameters) {
+        InvocationParametersWrapper wrapper = InvocationParametersWrapper.create(invocationParameters);
+        // userId 传空：不做用户归属校验
+        WorkflowTask task = workflowTaskService.getTask(taskId, null);
+        if (task == null) {
+            return "失败：任务不存在";
+        }
+        try {
+            workflowTaskService.closeTask(taskId, null, agentCommenterType(wrapper), agentCommenterId(wrapper));
+            return "成功：任务已关闭，任务ID：" + taskId;
+        } catch (RuntimeException e) {
+            return "失败：" + e.getMessage();
+        }
+    }
+
+    /** 状态变更评论者类型：智能体调用时为 agent，否则按用户 */
+    private String agentCommenterType(InvocationParametersWrapper wrapper) {
+        return wrapper.getAgentId() != null ? TaskCommenterTypeEnum.AGENT.getCode() : TaskCommenterTypeEnum.USER.getCode();
+    }
+
+    /** 状态变更评论者编号：智能体调用时为智能体编号，否则为当前用户 */
+    private String agentCommenterId(InvocationParametersWrapper wrapper) {
+        return wrapper.getAgentId() != null ? String.valueOf(wrapper.getAgentId()) : wrapper.getUserId();
     }
 
     /** 状态码转中文描述，未知状态原样返回 */

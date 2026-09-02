@@ -99,23 +99,58 @@ public class ProjectIterateService implements IProjectIterateService {
             return ProjectIterateResult.fail("项目不存在");
         }
         // 前置条件校验：进行中 + 已配置智能体 + 启用自动迭代（状态可能在等待期间被修改）
+        String error = checkIteratePreconditions(project);
+        if (error == null && !Boolean.TRUE.equals(project.getAutoIterate())) {
+            error = "项目未启用自动迭代";
+        }
+        if (error != null) {
+            return ProjectIterateResult.fail(error);
+        }
+        return doExecuteProjectIterate(project, userMessage);
+    }
+
+    @Override
+    public ProjectIterateResult executeProjectIterateManual(Long projectId, String userMessage) {
+        // 未填写指令时回退默认迭代指令（与定时任务一致）
+        if (userMessage == null || userMessage.trim().isEmpty()) {
+            userMessage = EXECUTE_USER_MESSAGE;
+        }
+        Project project = projectMapper.findById(projectId);
+        if (project == null) {
+            logger.warn("手动下发项目指令：项目不存在 id={}", projectId);
+            return ProjectIterateResult.fail("项目不存在");
+        }
+        // 手动下发指令不校验自动迭代开关，仅做基础校验 + 执行器并发检查
+        String error = checkIteratePreconditions(project);
+        if (error != null) {
+            return ProjectIterateResult.fail(error);
+        }
+        return doExecuteProjectIterate(project, userMessage);
+    }
+
+    /** 迭代前置基础校验：进行中 + 已配置智能体 + 智能体可用。不满足返回失败原因，通过返回 null */
+    private String checkIteratePreconditions(Project project) {
         if (!ProjectStatusEnum.IN_PROGRESS.getCode().equals(project.getStatus())) {
-            return ProjectIterateResult.fail("项目当前状态为「" + resolveStatusLabel(project.getStatus()) + "」，仅进行中的项目可执行迭代");
+            return "项目当前状态为「" + resolveStatusLabel(project.getStatus()) + "」，仅进行中的项目可执行迭代";
         }
         if (project.getAgentId() == null) {
-            return ProjectIterateResult.fail("项目未配置项目管理智能体");
-        }
-        if (!Boolean.TRUE.equals(project.getAutoIterate())) {
-            return ProjectIterateResult.fail("项目未启用自动迭代");
+            return "项目未配置项目管理智能体";
         }
         Agent agent = agentService.getAgentById(project.getAgentId());
         if (agent == null) {
-            logger.warn("项目自动迭代：项目管理智能体不存在 projectId={}, agentId={}", projectId, project.getAgentId());
-            return ProjectIterateResult.fail("项目管理智能体不存在（编号：" + project.getAgentId() + "）");
+            logger.warn("项目迭代：项目管理智能体不存在 projectId={}, agentId={}", project.getId(), project.getAgentId());
+            return "项目管理智能体不存在（编号：" + project.getAgentId() + "）";
         }
         if (agent.getAiModelId() == null) {
-            return ProjectIterateResult.fail("项目管理智能体未配置AI模型");
+            return "项目管理智能体未配置AI模型";
         }
+        return null;
+    }
+
+    /** 迭代公共执行流程：执行器并发检查 + 创建执行器执行 + 项目日志与外部通知 */
+    private ProjectIterateResult doExecuteProjectIterate(Project project, String userMessage) {
+        Long projectId = project.getId();
+        Agent agent = agentService.getAgentById(project.getAgentId());
 
         // 会话：复用项目会话编号保留上下文；首次执行时生成并落库
         String sessionId = project.getSessionId();
@@ -126,7 +161,7 @@ public class ProjectIterateService implements IProjectIterateService {
 
         // 执行器运行中：跳过本轮，等待下一轮调度
         if (agentExecutorService.isAgentExecutorRunning(sessionId)) {
-            logger.debug("项目自动迭代：项目管理智能体正在执行，跳过 id={} session={}", projectId, sessionId);
+            logger.debug("项目迭代：项目管理智能体正在执行，跳过 id={} session={}", projectId, sessionId);
             return ProjectIterateResult.fail("项目管理智能体正在执行中，请等待本轮完成后重试");
         }
 
@@ -137,13 +172,13 @@ public class ProjectIterateService implements IProjectIterateService {
         boolean success = true;
         String failReason = null;
         try {
-            logger.info("项目自动迭代开始: projectId={}, session={}", projectId, sessionId);
+            logger.info("项目迭代开始: projectId={}, session={}", projectId, sessionId);
             executor.execute(contents, EXECUTE_TIMEOUT_SECONDS);
-            logger.info("项目自动迭代完成: projectId={}", projectId);
+            logger.info("项目迭代完成: projectId={}", projectId);
         } catch (Exception e) {
             success = false;
             failReason = e.getMessage() != null ? e.getMessage() : e.getClass().getSimpleName();
-            logger.error("项目自动迭代失败: projectId={}", projectId, e);
+            logger.error("项目迭代失败: projectId={}", projectId, e);
         } finally {
             // 记录项目操作日志（智能体身份），便于用户在操作日志中追踪迭代节奏
             try {
@@ -281,7 +316,7 @@ public class ProjectIterateService implements IProjectIterateService {
      */
     private String buildProjectSystemMessage(Project project, Agent agent) {
         StringBuilder sb = new StringBuilder();
-        sb.append("你是一个项目管理智能体，负责项目的整体规划与推进。\n");
+        sb.append("你是一个项目管理智能体，负责项目的整体规划与推进，通过创建任务、控制任务来实现项目目标。\n");
         sb.append("智能体名称：").append(agent.getName()).append("\n");
         sb.append("智能体描述：").append(agent.getDescription()).append("\n");
         sb.append("\n--- 项目信息 ---\n");
@@ -339,15 +374,16 @@ public class ProjectIterateService implements IProjectIterateService {
         sb.append("3. 添加工作流任务：为项目创建缺失的任务；创建的任务必须关联本项目（项目编号 ").append(project.getId()).append("），并指定合适的执行智能体。\n");
         sb.append("4. 审核工作流任务：将待启动的任务审核为待执行，由系统自动调度执行智能体处理。\n");
         sb.append("5. 验收工作流任务：检查待验收任务的执行结果，结果符合要求则验收为已完成；不符合要求则驳回（注明驳回原因），由系统安排重做。\n");
-        sb.append("6. 保存项目：更新项目信息或项目状态（需传入项目名称与项目编号 ").append(project.getId()).append("）。\n");
-        sb.append("7. 记忆工具是你的核心工具，需要回忆什么信息时，先去调用记忆工具看看有没相关可用信息。\n");
+        sb.append("6. 关闭工作流任务：确认不再需要执行的任务可关闭（关闭前系统会自动停止该任务的会话执行器）。请不要随便删除任务，无用的任务一律使用关闭代替删除，保留任务历史记录。\n");
+        sb.append("7. 保存项目：更新项目信息或项目状态（需传入项目名称与项目编号 ").append(project.getId()).append("）。\n");
+        sb.append("8. 记忆工具是你的核心工具，需要回忆什么信息时，先去调用记忆工具看看有没相关可用信息。\n");
         sb.append("你只能使用用户提供的工具，绝对不能调用不存在的工具，遇到危险操作立刻停止。\n");
 
         sb.append("\n--- 常规项目迭代工作流程 ---\n");
         sb.append("1. 分析项目目标与当前任务进度，判断项目目标是否需要拆解为更多任务；\n");
         sb.append("2. 对待启动的任务进行审核：确认任务内容合理后审核通过，使其进入执行；\n");
         sb.append("3. 对待验收的任务进行检查：验收合格则通过，不合格则驳回并说明原因；\n");
-        sb.append("4. 对失败的任务视情况驳回重做或调整任务内容；\n");
+        sb.append("4. 对失败的任务视情况驳回重做或调整任务内容；对确认不再需要执行的任务及时关闭（不要删除任务）；\n");
         sb.append("5. 如果项目所有目标都已达成（任务全部完成且无待处理事项），调用保存项目工具将项目状态更新为 completed（已完成）；\n");
         sb.append("6. 每轮处理后给出简明的本轮迭代总结。\n");
 

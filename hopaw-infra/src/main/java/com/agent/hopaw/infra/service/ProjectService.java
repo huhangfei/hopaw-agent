@@ -246,7 +246,8 @@ public class ProjectService implements IProjectService {
         if (existing == null) {
             throw new RuntimeException("项目不存在");
         }
-        if (!userId.equals(existing.getUserId())) {
+        // userId为空时不做归属校验（智能体工具场景，项目跨用户共享协作）
+        if (userId != null && !userId.equals(existing.getUserId())) {
             throw new RuntimeException("无权修改该项目");
         }
         existing.setName(project.getName());
@@ -359,7 +360,8 @@ public class ProjectService implements IProjectService {
         if (existing == null) {
             throw new RuntimeException("项目不存在");
         }
-        if (!userId.equals(existing.getUserId())) {
+        // userId为空时不做归属校验（智能体工具场景）
+        if (userId != null && !userId.equals(existing.getUserId())) {
             throw new RuntimeException("无权删除该项目");
         }
         // 项目删除：发送外部通知。须在 deleteById 前触发——通知服务同步读取项目配置快照，
@@ -379,7 +381,8 @@ public class ProjectService implements IProjectService {
         if (project == null) {
             return null;
         }
-        if (!userId.equals(project.getUserId())) {
+        // userId为空时不做归属校验（智能体工具场景）
+        if (userId != null && !userId.equals(project.getUserId())) {
             return null;
         }
         fillSpaceDirAbs(project);

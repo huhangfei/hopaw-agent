@@ -263,7 +263,8 @@ public class ProjectController {
             }
             String userMessage = (body != null && body.get("userMessage") != null && !body.get("userMessage").trim().isEmpty())
                     ? body.get("userMessage").trim() : null;
-            return ResponseBean.success(projectIterateService.executeProjectIterate(id, userMessage));
+            // 手动下发指令：不校验自动迭代开关，仅由服务层做执行器并发检查
+            return ResponseBean.success(projectIterateService.executeProjectIterateManual(id, userMessage));
         } catch (Exception e) {
             logger.error("手动执行项目迭代失败: projectId={}", id, e);
             return ResponseBean.fail(e.getMessage() != null ? e.getMessage() : "执行失败（未知异常）");

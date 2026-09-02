@@ -24,6 +24,12 @@ public interface IWorkflowTaskService {
     void closeTask(Long id, String userId);
 
     /**
+     * 关闭任务（带评论者身份）：智能体关闭时自动评论以智能体身份写入，
+     * 用户关闭时以用户身份写入；处理中的任务不允许关闭
+     */
+    void closeTask(Long id, String userId, String commenterType, String commenterId);
+
+    /**
      * 审核任务（带评论者身份）：智能体审核时自动评论以智能体身份写入，
      * 用户审核时以用户身份写入
      *
