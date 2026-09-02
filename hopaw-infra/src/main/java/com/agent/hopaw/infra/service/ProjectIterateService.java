@@ -45,7 +45,7 @@ public class ProjectIterateService implements IProjectIterateService {
     private static final DateTimeFormatter TIME_FMT = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm");
 
     /** 执行超时时间（秒），与定时拉起的工作流任务保持一致 */
-    private static final long EXECUTE_TIMEOUT_SECONDS = 1800;
+    private static final long EXECUTE_TIMEOUT_SECONDS = 300;
     private static final String EXECUTE_USER_MESSAGE = "【项目自动迭代】请执行本轮项目迭代检查。\n请严格按照本次自动迭代要求执行。\n";
     /** 项目系统提示词注入的项目重点日志条数上限（更早历史通过项目工具查询） */
     private static final int IMPORTANT_LOGS_INJECT_LIMIT = 10;

@@ -354,7 +354,7 @@ public class WorkflowTaskService implements IWorkflowTaskService {
 
         // 创建任务执行器（复用或新建会话）
         IAgentExecutor executor = createTaskExecutor(task, agent, userChatRequest);
-        executeTask(task,executor,600);
+        executeTask(task,executor,300);
     }
     /** 校验执行时段格式：HH:mm-HH:mm 且结束时间必须大于开始时间（空表示不限制） */
     private void validateExecutionPeriod(String executionPeriod) {
@@ -432,7 +432,7 @@ public class WorkflowTaskService implements IWorkflowTaskService {
         userChatRequest.setToolCallPermission("auto");
         // 创建任务执行器（复用或新建会话）
         IAgentExecutor executor = createTaskExecutor(task, agent, userChatRequest);
-        executeTask(task,executor,1800);
+        executeTask(task,executor,300);
     }
 
     /**

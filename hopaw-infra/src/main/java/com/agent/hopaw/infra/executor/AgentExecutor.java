@@ -346,7 +346,7 @@ public class AgentExecutor implements IAgentExecutor {
 
     @Override
     public void execute(List<Content> contents){
-        execute(contents,600L);
+        execute(contents,300L);
     }
     @Override
     public void execute(List<Content> contents,long timeout) {
