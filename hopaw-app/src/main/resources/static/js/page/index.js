@@ -333,14 +333,29 @@ function buildHistoryMessageNode(chat) {
     var timeText = formatMessageTime(new Date(formatHistoryIsoTime(chat.createTime)));
 
     var type = chat.messageType;
-    if (type === 'image') {
+    if (type === 'attachment') {
         appendLabel(div, label);
-        var img = document.createElement('img');
-        img.className = 'message-content message-image';
-        img.src = chat.content;
-        img.setAttribute('data-is-agent', chat.role === 'agent');
-        img.alt = '图片消息';
-        div.appendChild(img);
+        var arr= chat.content.split(',');
+        var fileType=arr[0];
+        var id=arr[1];
+        var originalName=arr[2];
+        var url=arr[3];
+        if(fileType === 'image'){
+            var img = document.createElement('img');
+            img.className = 'message-content message-image';
+            img.src = url;
+            img.setAttribute('data-is-agent', chat.role === 'agent');
+            img.alt = originalName;
+            div.appendChild(img);
+        }else{
+            var a = document.createElement('a');
+            a.className = 'message-content message-'+fileType;
+            a.href = url;
+            a.setAttribute('data-is-agent', chat.role === 'agent');
+            a.title = originalName;
+            a.text = originalName;
+            div.appendChild(a);
+        }
         div.appendChild(buildHistoryFooter(timeText, null));
     } else if (type === 'thinking') {
         appendLabel(div, agentName + ' (思考)');
@@ -942,7 +957,7 @@ function handleUserMessageEcho(data) {
     // 图片附件：每张图片作为独立的消息记录
     var files = data.files || [];
     files.forEach(function(f) {
-        if (!f || f.type !== 'image' || !f.url) return;
+        if (!f || !f.url) return;
         var imageMessageDiv = document.createElement('div');
         imageMessageDiv.className = 'message user';
 
@@ -951,10 +966,24 @@ function handleUserMessageEcho(data) {
         imageLabel.textContent = '你';
         imageMessageDiv.appendChild(imageLabel);
 
-        var img = document.createElement('img');
-        img.src = f.url;
-        img.className = 'message-content message-image';
-        imageMessageDiv.appendChild(img);
+        if(f.type == 'image'){
+            var img = document.createElement('img');
+            img.src = f.url;
+            img.setAttribute('data-is-agent', 'false');
+            img.setAttribute('data-attachment-id', f.id);
+            img.className = 'message-content message-image';
+            img.alt = f.originalName;
+            imageMessageDiv.appendChild(img);
+        }else{
+            var a = document.createElement('a');
+            a.className = 'message-content message-'+f.type;
+            a.href = f.url;
+            a.setAttribute('data-is-agent', 'false');
+            a.setAttribute('data-attachment-id', f.id);
+            a.title = f.originalName;
+            a.text=f.originalName;
+            imageMessageDiv.appendChild(a);
+        }
 
         imageMessageDiv.appendChild(createMessageFooter(''));
 
@@ -1230,7 +1259,7 @@ function sendMessage() {
 
             var deepBtn = document.getElementById('deepThinkBtn');
             var filesPayload = attachedFiles.map(function(f) {
-                return { url: f.url, type: f.type };
+                return { url: f.url, type: f.type,id:f.id,originalName:f.name };
             });
             var payload = {
                 sessionId: currentSessionId,
@@ -2420,7 +2449,8 @@ function uploadFile(file) {
             var fileInfo = {
                 url: att.url,
                 type: att.fileType,
-                name: att.originalName
+                name: att.originalName,
+                id: att.id
             };
             attachedFiles.push(fileInfo);
             renderFilePreview(fileInfo);

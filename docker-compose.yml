@@ -15,11 +15,12 @@ services:
       SPRING_DATASOURCE_URL: jdbc:sqlite:/app/data/agent.db
       HOPAW_ATTACHMENT_DIR: /app/data/attachments
       HOPAW_PROJECT_SPACE_DIR: /app/data/project-spaces
-      HOPAW_UPLOAD_DIR: /app/data/uploads
+      HOPAW_EXPORT_DIR: /app/data/exports
       AGENT_PLUGIN_DIR: /app/data/plugins
     volumes:
       - ./data:/app/data
       - ./logs:/app/logs
+      - ./data/exports:/app/exports
       # 技能目录默认为相对路径 skills（可在系统设置中改为 /app/data/skills），挂载兜底
       - ./data/skills:/app/skills
       # 单模块热更新：把新构建的模块 jar（如 hopaw-infra-1.0.0.jar）放进 ./data/lib-override，

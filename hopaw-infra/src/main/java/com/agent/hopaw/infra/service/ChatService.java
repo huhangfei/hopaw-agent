@@ -1,7 +1,6 @@
 package com.agent.hopaw.infra.service;
 
 import com.agent.hopaw.infra.constant.AgentExecutorBizTypeEnum;
-import com.agent.hopaw.infra.constant.AiModelCallSourceEnum;
 import com.agent.hopaw.infra.executor.IAgentExecutor;
 import com.agent.hopaw.infra.memory.ILongTermMemoryService;
 import com.agent.hopaw.infra.model.dto.AgentExecutorParams;
@@ -51,8 +50,9 @@ public class ChatService implements IChatService {
     private final IChatSessionService chatSessionService;
     private final IProjectIterateService projectIterateService;
     private final IChatUserMessageService chatUserMessageService;
+    private final IAttachmentService attachmentService;
 
-    public ChatService(IAgentService agentService, IAgentToolService agentToolService, IAvatarSettingsService avatarSettingsService, ISkillService skillService, ILongTermMemoryService longTermMemoryService, ISysConfigService sysConfigService, IMcpServerConfigService mcpServerConfigService, IAgentExecutorService agentExecutorService, IWorkflowTaskService workflowTaskService, IChatSessionService chatSessionService, IProjectIterateService projectIterateService, IChatUserMessageService chatUserMessageService) {
+    public ChatService(IAgentService agentService, IAgentToolService agentToolService, IAvatarSettingsService avatarSettingsService, ISkillService skillService, ILongTermMemoryService longTermMemoryService, ISysConfigService sysConfigService, IMcpServerConfigService mcpServerConfigService, IAgentExecutorService agentExecutorService, IWorkflowTaskService workflowTaskService, IChatSessionService chatSessionService, IProjectIterateService projectIterateService, IChatUserMessageService chatUserMessageService, IAttachmentService attachmentService) {
         this.agentService = agentService;
         this.agentToolService = agentToolService;
         this.avatarSettingsService = avatarSettingsService;
@@ -65,6 +65,7 @@ public class ChatService implements IChatService {
         this.chatSessionService = chatSessionService;
         this.projectIterateService = projectIterateService;
         this.chatUserMessageService = chatUserMessageService;
+        this.attachmentService = attachmentService;
     }
 
     @Override
@@ -158,25 +159,24 @@ public class ChatService implements IChatService {
         List<AttachmentFile> files = userChatRequest.getFiles();
         if (files != null && !files.isEmpty()) {
             for (AttachmentFile file : files) {
-                if (!"image".equals(file.getType())) {
-                    continue;
-                }
-                try {
-                    String url = file.getUrl();
-                    if (url == null || url.isEmpty()) continue;
-                    // url 格式: /uploads/2025-01-01/xxx.png
-                    String relativePath = url.startsWith("/") ? url.substring(1) : url;
-                    Path filePath = Paths.get(System.getProperty("user.dir"), relativePath);
-                    if (!Files.exists(filePath)) {
-                        logger.warn("图片文件不存在: {}", filePath);
-                        continue;
+                if (file.getId() == null) {continue;}
+                Path filePath = attachmentService.getAbsolutePath(file.getId());
+                if ("image".equals(file.getType())) {
+                    try {
+
+                        if (!Files.exists(filePath)) {
+                            logger.warn("图片文件不存在: {}", filePath);
+                            continue;
+                        }
+                        byte[] bytes = Files.readAllBytes(filePath);
+                        String base64 = Base64.getEncoder().encodeToString(bytes);
+                        String mimeType = getMimeType(filePath.toString());
+                        contents.add(ImageContent.from(base64, mimeType));
+                    } catch (Exception e) {
+                        logger.error("图片转 Base64 失败: {} -> {}", file.getUrl(), e.getMessage());
                     }
-                    byte[] bytes = Files.readAllBytes(filePath);
-                    String base64 = Base64.getEncoder().encodeToString(bytes);
-                    String mimeType = getMimeType(filePath.toString());
-                    contents.add(ImageContent.from(base64, mimeType));
-                } catch (Exception e) {
-                    logger.error("图片转 Base64 失败: {} -> {}", file.getUrl(), e.getMessage());
+                }else{
+                    contents.add(new TextContent("附件：" + filePath.toString()));
                 }
             }
         }

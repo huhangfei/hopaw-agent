@@ -28,6 +28,7 @@ public class ChatUserMessageService implements IChatUserMessageService {
 
     /**
      * 发送消息
+     *
      * @param sessionBizType
      * @param userId
      * @param sessionId
@@ -37,7 +38,7 @@ public class ChatUserMessageService implements IChatUserMessageService {
      * @param files
      */
     @Override
-    public void sendMessage(AgentExecutorBizTypeEnum sessionBizType,String userId, String sessionId, String requestId, Long agentId, String message, List<AttachmentFile> files){
+    public void sendMessage(AgentExecutorBizTypeEnum sessionBizType, String userId, String sessionId, String requestId, Long agentId, String message, List<AttachmentFile> files) {
         AiUserMessageInfo userMessageInfo = AiUserMessageInfo.of(sessionId, requestId, message, files);
         userMessageInfo.setBizType(sessionBizType);
         //通知前端显示
@@ -48,6 +49,7 @@ public class ChatUserMessageService implements IChatUserMessageService {
 
     /**
      * 发送消息
+     *
      * @param userChatRequest
      */
     @Override
@@ -70,20 +72,21 @@ public class ChatUserMessageService implements IChatUserMessageService {
 
     private List<ChatHistory> convertToChatHistory(String userId, String sessionId, Long agentId, String message, List<AttachmentFile> files) {
         List<ChatHistory> chatHistoryList = new ArrayList<ChatHistory>();
-        if(StringUtils.hasLength(message)){
-            ChatHistory chatHistory = new ChatHistory(agentId, "user", "text", message);
-            chatHistory.setUserId(userId);
-            chatHistory.setSessionId(sessionId);
-            chatHistoryList.add(chatHistory);
-        }
-        if(files!=null && files.size()>0){
+        if (files != null && files.size() > 0) {
             //todo:等支持多种消息类型后完善存储
             for (AttachmentFile file : files) {
-                ChatHistory chatHistory = new ChatHistory(agentId, "user",  file.getType(), file.getUrl());
+                String content = file.getType() + "," + file.getId() + "," + file.getOriginalName() + "," + file.getUrl();
+                ChatHistory chatHistory = new ChatHistory(agentId, "user", "attachment", content);
                 chatHistory.setUserId(userId);
                 chatHistory.setSessionId(sessionId);
                 chatHistoryList.add(chatHistory);
             }
+        }
+        if (StringUtils.hasLength(message)) {
+            ChatHistory chatHistory = new ChatHistory(agentId, "user", "text", message);
+            chatHistory.setUserId(userId);
+            chatHistory.setSessionId(sessionId);
+            chatHistoryList.add(chatHistory);
         }
         return chatHistoryList;
     }

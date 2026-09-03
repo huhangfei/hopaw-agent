@@ -7,7 +7,15 @@ public class ChatHistory {
     private Long agentId;
     private String sessionId;
     private String role;
+    /**
+     * 消息类型：text、attachment
+     */
     private String messageType;
+    /**
+     * 消息内容：
+     * 文本类型格式：内容
+     * 附件类型格式：file.getType() + "," + file.getId() + "," + file.getOriginalName() + "," + file.getUrl();
+     */
     private String content;
     private String toolCallId;
     private String toolName;

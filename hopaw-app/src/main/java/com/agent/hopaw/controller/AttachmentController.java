@@ -6,27 +6,16 @@ import com.agent.hopaw.infra.service.IAttachmentService;
 import com.agent.hopaw.util.CurrentUser;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
-import javax.annotation.PostConstruct;
 import javax.servlet.http.HttpServletRequest;
-import java.io.File;
-import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
-import java.time.LocalDate;
-import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
-import java.util.Locale;
 import java.util.Map;
-import java.util.UUID;
 
 @Controller
 public class AttachmentController {
@@ -35,29 +24,8 @@ public class AttachmentController {
 
     private final IAttachmentService attachmentService;
 
-    @Value("${hopaw.attachment.dir:./attachments}")
-    private String attachmentDir;
-
-    @Value("${hopaw.attachment.url-prefix:/attachments}")
-    private String urlPrefix;
-
-    private String attachmentRoot;
-
     public AttachmentController(IAttachmentService attachmentService) {
         this.attachmentService = attachmentService;
-    }
-
-    @PostConstruct
-    public void init() {
-        File dir = new File(attachmentDir);
-        if (!dir.isAbsolute()) {
-            dir = new File(System.getProperty("user.dir"), attachmentDir);
-        }
-        this.attachmentRoot = dir.getAbsolutePath();
-        if (!dir.exists()) {
-            dir.mkdirs();
-        }
-        logger.info("附件存储目录: {}", attachmentRoot);
     }
 
     @GetMapping("/attachments")
@@ -109,7 +77,14 @@ public class AttachmentController {
                 if (file == null || file.isEmpty()) {
                     continue;
                 }
-                Attachment attachment = doUpload(userId, file, source, bizId);
+                // 文件落盘、类型识别与记录创建在 service 层执行（契约层不引入 Spring Web 依赖）
+                Attachment attachment = attachmentService.uploadAttachment(
+                        userId,
+                        file.getOriginalFilename(),
+                        file.getContentType(),
+                        file.getBytes(),
+                        source,
+                        bizId);
                 result.add(attachment);
             }
             return ResponseBean.success(result);
@@ -117,43 +92,6 @@ public class AttachmentController {
             logger.error("批量上传附件失败", e);
             return ResponseBean.fail(e.getMessage());
         }
-    }
-
-    private Attachment doUpload(String userId, MultipartFile file, String source, Long bizId) throws IOException {
-        String originalName = file.getOriginalFilename();
-        String ext = "";
-        if (originalName != null && originalName.contains(".")) {
-            ext = originalName.substring(originalName.lastIndexOf("."));
-        }
-        String extLower = ext.toLowerCase(Locale.ROOT);
-
-        String dateDir = LocalDate.now().format(DateTimeFormatter.ISO_LOCAL_DATE);
-        Path dirPath = Paths.get(attachmentRoot, dateDir);
-        Files.createDirectories(dirPath);
-
-        String newName = UUID.randomUUID().toString().replace("-", "") + extLower;
-        Path filePath = dirPath.resolve(newName);
-        file.transferTo(filePath.toFile());
-
-        String storagePath = dateDir + "/" + newName;
-        String url = urlPrefix + "/" + storagePath;
-        String fileType = getFileType(extLower);
-        String mimeType = file.getContentType();
-
-        Attachment attachment = new Attachment();
-        attachment.setOriginalName(originalName);
-        attachment.setStorageName(newName);
-        attachment.setUrl(url);
-        attachment.setFileType(fileType);
-        attachment.setFileExtension(extLower);
-        attachment.setFileSize(file.getSize());
-        attachment.setMimeType(mimeType);
-        attachment.setSource(source != null ? source : "upload");
-        attachment.setBizId(bizId);
-        attachment.setUserId(userId);
-        attachment.setStoragePath(storagePath);
-
-        return attachmentService.createAttachment(attachment);
     }
 
     @GetMapping("/api/attachments/page")
@@ -207,83 +145,11 @@ public class AttachmentController {
     public ResponseBean deleteAttachment(HttpServletRequest request, @PathVariable Long id) {
         String userId = CurrentUser.require(request);
         try {
-            // 先查出附件信息，用于删除物理文件
-            Attachment attachment = attachmentService.getAttachment(id, userId);
-            if (attachment == null) {
-                return ResponseBean.fail("附件不存在");
-            }
+            // 存在性校验与物理文件清理由 service.deleteAttachment 处理
             attachmentService.deleteAttachment(id, userId);
-            // 删除物理文件（仅当没有其他记录引用同一文件时）
-            if (attachment.getStoragePath() != null && attachmentService.countByStoragePath(attachment.getStoragePath()) <= 0) {
-                try {
-                    Path filePath = Paths.get(attachmentRoot, attachment.getStoragePath());
-                    Files.deleteIfExists(filePath);
-                    logger.info("已删除附件文件: {}", filePath);
-                } catch (IOException e) {
-                    logger.warn("删除附件文件失败: {}", e.getMessage());
-                }
-            }
             return ResponseBean.success();
         } catch (Exception e) {
             return ResponseBean.fail(e.getMessage());
-        }
-    }
-
-    /**
-     * 根据扩展名判断文件类型
-     */
-    private String getFileType(String ext) {
-        if (ext == null || ext.isEmpty()) {
-            return "file";
-        }
-        switch (ext) {
-            case ".png":
-            case ".jpg":
-            case ".jpeg":
-            case ".gif":
-            case ".bmp":
-            case ".webp":
-            case ".svg":
-                return "image";
-            case ".mp4":
-            case ".webm":
-            case ".ogg":
-            case ".mov":
-            case ".avi":
-            case ".mkv":
-                return "video";
-            case ".mp3":
-            case ".wav":
-            case ".flac":
-            case ".aac":
-            case ".m4a":
-                return "audio";
-            case ".pdf":
-                return "pdf";
-            case ".md":
-            case ".markdown":
-                return "markdown";
-            case ".txt":
-            case ".log":
-            case ".csv":
-            case ".json":
-            case ".xml":
-            case ".yml":
-            case ".yaml":
-            case ".html":
-            case ".css":
-            case ".js":
-            case ".java":
-            case ".py":
-            case ".sql":
-            case ".sh":
-            case ".bat":
-            case ".properties":
-            case ".ini":
-            case ".conf":
-                return "text";
-            default:
-                return "file";
         }
     }
 }

@@ -22,10 +22,6 @@ public class WebMvcConfig implements WebMvcConfigurer {
         String exportPath = "file:" + System.getProperty("user.dir") + "/exports/";
         registry.addResourceHandler("/exports/**")
                 .addResourceLocations(exportPath);
-        // 上传文件访问：将 /uploads/** 映射到项目根目录下的 uploads/ 文件夹
-        String uploadPath = "file:" + System.getProperty("user.dir") + "/uploads/";
-        registry.addResourceHandler("/uploads/**")
-                .addResourceLocations(uploadPath);
         // 附件文件访问：将 /attachments/** 映射到配置的附件目录
         String attachmentPath = "file:" + System.getProperty("user.dir") + "/attachments/";
         registry.addResourceHandler("/attachments/**")
