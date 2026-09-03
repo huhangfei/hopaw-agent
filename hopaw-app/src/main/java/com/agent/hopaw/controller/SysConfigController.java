@@ -17,12 +17,6 @@ public class SysConfigController {
         this.sysConfigService = sysConfigService;
     }
 
-    @GetMapping
-    public ResponseBean getAll() {
-        List<SysConfig> list = sysConfigService.getAll();
-        return ResponseBean.success(list);
-    }
-
     @GetMapping("/{key}")
     public ResponseBean getByKey(@PathVariable String key) {
         SysConfig config = sysConfigService.getByKey(key);
