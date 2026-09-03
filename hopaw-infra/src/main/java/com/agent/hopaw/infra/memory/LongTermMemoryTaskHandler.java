@@ -400,7 +400,7 @@ public class LongTermMemoryTaskHandler implements TaskHandler {
         String bizType = getSessionBizType(sessionId);
 
         // 任务会话：定位任务与所属项目，写入任务记忆
-        if (isWorkflowTaskChatSession(bizType)) {
+        if (AgentExecutorBizTypeEnum.WorkflowTaskChat.getValue().equals(bizType)) {
             try {
                 Long taskId = taskSessionMapper.findTaskIdBySessionId(sessionId);
                 if (taskId == null) {
@@ -421,7 +421,7 @@ public class LongTermMemoryTaskHandler implements TaskHandler {
         }
 
         // 项目会话：写入项目整体记忆
-        if (isProjectChatSession(bizType)) {
+        if (AgentExecutorBizTypeEnum.ProjectChat.getValue().equals(bizType)) {
             try {
                 Project project = projectMapper.findBySessionId(sessionId);
                 if (project == null) {
@@ -435,21 +435,24 @@ public class LongTermMemoryTaskHandler implements TaskHandler {
                 return false;
             }
         }
+        if (AgentExecutorBizTypeEnum.Chat.getValue().equals(bizType)) {
+            // 聊天会话（默认）：原有用户维度记忆整理
+            List<LongTermMemory> longTermMemories = longTermMemoryService.queryUserAllMemories(sessionId, userId);
+            //扩展知识往往较大，不输入详情
+            String longTermMemoryContent = longTermMemoryService.buildMemoryContent(longTermMemories, longTermMemory -> {
+                if (UserMemoryTypeEnum.USER_PROFILE.getCode().equals(longTermMemory.getMemoryType()) || UserMemoryTypeEnum.TASK_RECORDS.getCode().equals(longTermMemory.getMemoryType())) {
+                    return true;
+                }
+                return false;
+            });
 
-        // 聊天会话（默认）：原有用户维度记忆整理
-        List<LongTermMemory> longTermMemories = longTermMemoryService.queryUserAllMemories(sessionId, userId);
-        //扩展知识往往较大，不输入详情
-        String longTermMemoryContent = longTermMemoryService.buildMemoryContent(longTermMemories, longTermMemory -> {
-            if (UserMemoryTypeEnum.USER_PROFILE.getCode().equals(longTermMemory.getMemoryType()) || UserMemoryTypeEnum.TASK_RECORDS.getCode().equals(longTermMemory.getMemoryType())) {
-                return true;
-            }
-            return false;
-        });
-
-        String content = "以下是需要分析的新会话内容\n";
-        content += newConversation;
-        content +=("\n===========================");
-        return handle(sessionId, userId, longTermMemoryContent, content);
+            String content = "以下是需要分析的新会话内容\n";
+            content += newConversation;
+            content += ("\n===========================");
+            return handle(sessionId, userId, longTermMemoryContent, content);
+        }
+        logger.error("未知会话业务类型：{}", bizType);
+        return true;
     }
 
     /** 查询会话业务类型值（chat / workflowTaskChat / projectChat），查不到按聊天处理 */
