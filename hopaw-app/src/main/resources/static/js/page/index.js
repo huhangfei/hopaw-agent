@@ -530,7 +530,7 @@ function connectWebSocket() {
             return;
         }
 
-        if (data.type !== 'received' && data.type !== 'session-title'&& data.type !== 'token_usage') {
+        if (data.type !== 'received' && data.type !== 'session-title' && data.type !== 'user_message' && data.type !== 'token_usage') {
             removeLoadingMessage();
         }
 
@@ -540,6 +540,9 @@ function connectWebSocket() {
             // 会话开始运行即禁用输入区（覆盖任务看板/项目迭代/其他标签页触发的运行，
             // 本地 sendMessage 的禁用是幂等的）
             disableInput();
+        } else if (data.type === 'user_message') {
+            // 用户消息回显：后端入库后推送（含任务/项目会话广播），统一渲染到消息列表
+            handleUserMessageEcho(data);
         } else if (data.type === 'chunk') {
             handleStreamingChunk(data.content, requestId);
         } else if (data.type === 'tool_call') {
@@ -932,6 +935,59 @@ function scrollToToolCall(el) {
     toolCall.classList.add('flash');
 }
 
+/** 用户消息回显：后端入库后推送的用户消息通知（含图片附件），按原直发结构渲染到消息列表 */
+function handleUserMessageEcho(data) {
+    var messagesDiv = document.getElementById('chatMessages');
+
+    // 图片附件：每张图片作为独立的消息记录
+    var files = data.files || [];
+    files.forEach(function(f) {
+        if (!f || f.type !== 'image' || !f.url) return;
+        var imageMessageDiv = document.createElement('div');
+        imageMessageDiv.className = 'message user';
+
+        var imageLabel = document.createElement('div');
+        imageLabel.className = 'message-label';
+        imageLabel.textContent = '你';
+        imageMessageDiv.appendChild(imageLabel);
+
+        var img = document.createElement('img');
+        img.src = f.url;
+        img.className = 'message-content message-image';
+        imageMessageDiv.appendChild(img);
+
+        imageMessageDiv.appendChild(createMessageFooter(''));
+
+        messagesDiv.appendChild(imageMessageDiv);
+    });
+
+    // 文本消息作为独立的消息记录
+    if (data.content && String(data.content).trim() !== '') {
+        var textMessageDiv = document.createElement('div');
+        textMessageDiv.className = 'message user';
+
+        var textLabel = document.createElement('div');
+        textLabel.className = 'message-label';
+        textLabel.textContent = '你';
+        textMessageDiv.appendChild(textLabel);
+
+        var textContent = document.createElement('div');
+        textContent.className = 'message-content';
+        textContent.textContent = data.content;
+        textMessageDiv.appendChild(textContent);
+
+        textMessageDiv.appendChild(createMessageFooter(data.content));
+
+        messagesDiv.appendChild(textMessageDiv);
+    }
+
+    var emptyState = document.getElementById('chatHistoryEmptyState');
+    if (emptyState) {
+        emptyState.classList.add('hide');
+    }
+    messagesDiv.scrollTop = messagesDiv.scrollHeight;
+}
+
 function showLoadingMessage() {
     if (loadingMessageDiv) return;
     var agentName = (function(){ var s = document.querySelector('.agent-select-toolbar'); return s ? s.options[s.selectedIndex].text : 'Agent'; })();
@@ -1170,50 +1226,7 @@ function sendMessage() {
 
             input.value = '';
             disableInput();
-            var messagesDiv = document.getElementById('chatMessages');
-
-            // 显示图片附件 - 每张图片作为独立的消息记录
-            var imageFiles = attachedFiles.filter(function(f) { return f.type === 'image'; });
-            imageFiles.forEach(function(f) {
-                var imageMessageDiv = document.createElement('div');
-                imageMessageDiv.className = 'message user';
-
-                var imageLabel = document.createElement('div');
-                imageLabel.className = 'message-label';
-                imageLabel.textContent = '你';
-                imageMessageDiv.appendChild(imageLabel);
-
-                var img = document.createElement('img');
-                img.src = f.url;
-                img.className = 'message-content message-image';
-                imageMessageDiv.appendChild(img);
-
-                imageMessageDiv.appendChild(createMessageFooter(''));
-
-                messagesDiv.appendChild(imageMessageDiv);
-            });
-
-            // 文本消息作为独立的消息记录
-            if (message && message.trim() !== '') {
-                var textMessageDiv = document.createElement('div');
-                textMessageDiv.className = 'message user';
-
-                var textLabel = document.createElement('div');
-                textLabel.className = 'message-label';
-                textLabel.textContent = '你';
-                textMessageDiv.appendChild(textLabel);
-
-                var textContent = document.createElement('div');
-                textContent.className = 'message-content';
-                textContent.textContent = message;
-                textMessageDiv.appendChild(textContent);
-
-                textMessageDiv.appendChild(createMessageFooter(message));
-
-                messagesDiv.appendChild(textMessageDiv);
-            }
-
-            messagesDiv.scrollTop = messagesDiv.scrollHeight;
+            // 用户消息不再本地直渲染：后端入库后通过 user_message 通知统一渲染（多端实时可见，含图片附件）
 
             var deepBtn = document.getElementById('deepThinkBtn');
             var filesPayload = attachedFiles.map(function(f) {

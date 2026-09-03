@@ -15,6 +15,7 @@ public class AgentExecutorParams {
     private Long agentId;
     private String userId;
     private String sessionId;
+    private String requestId;
     private Long aiModelId;
     private Integer maxMemoryRecords;
     private Integer maxToolInvocations;
@@ -50,6 +51,7 @@ public class AgentExecutorParams {
     public void setSessionTitle(String sessionTitle) {
         this.sessionTitle = sessionTitle;
     }
+
     public Long getAgentId() {
         return agentId;
     }
@@ -154,7 +156,13 @@ public class AgentExecutorParams {
         this.toolSets = toolSets;
     }
 
+    public String getRequestId() {
+        return requestId;
+    }
 
+    public void setRequestId(String requestId) {
+        this.requestId = requestId;
+    }
     public List<McpServerConfig> getMcpServerConfigs() {
         return mcpServerConfigs;
     }

@@ -14,6 +14,7 @@ import com.agent.hopaw.infra.model.entity.Agent;
 import com.agent.hopaw.infra.model.entity.ChatSession;
 import com.agent.hopaw.infra.tool.AgentTool;
 import com.agent.hopaw.infra.tool.IAgentToolService;
+import com.agent.hopaw.infra.util.UuidUtil;
 import dev.langchain4j.data.message.Content;
 import dev.langchain4j.data.message.ImageContent;
 import dev.langchain4j.data.message.TextContent;
@@ -49,8 +50,9 @@ public class ChatService implements IChatService {
     private final IWorkflowTaskService workflowTaskService;
     private final IChatSessionService chatSessionService;
     private final IProjectIterateService projectIterateService;
+    private final IChatUserMessageService chatUserMessageService;
 
-    public ChatService(IAgentService agentService, IAgentToolService agentToolService, IAvatarSettingsService avatarSettingsService, ISkillService skillService, ILongTermMemoryService longTermMemoryService, ISysConfigService sysConfigService, IMcpServerConfigService mcpServerConfigService, IAgentExecutorService agentExecutorService, IWorkflowTaskService workflowTaskService, IChatSessionService chatSessionService, IProjectIterateService projectIterateService) {
+    public ChatService(IAgentService agentService, IAgentToolService agentToolService, IAvatarSettingsService avatarSettingsService, ISkillService skillService, ILongTermMemoryService longTermMemoryService, ISysConfigService sysConfigService, IMcpServerConfigService mcpServerConfigService, IAgentExecutorService agentExecutorService, IWorkflowTaskService workflowTaskService, IChatSessionService chatSessionService, IProjectIterateService projectIterateService, IChatUserMessageService chatUserMessageService) {
         this.agentService = agentService;
         this.agentToolService = agentToolService;
         this.avatarSettingsService = avatarSettingsService;
@@ -62,21 +64,26 @@ public class ChatService implements IChatService {
         this.workflowTaskService = workflowTaskService;
         this.chatSessionService = chatSessionService;
         this.projectIterateService = projectIterateService;
+        this.chatUserMessageService = chatUserMessageService;
     }
 
     @Override
     public void handle(UserChatRequest userChatRequest) {
-        String sessionBizType = resolveSessionBizType(userChatRequest);
+        userChatRequest.setRequestId(UuidUtil.generateSimpleUUID());
+        AgentExecutorBizTypeEnum sessionBizType = resolveSessionBizType(userChatRequest);
+        userChatRequest.setSessionBizType(sessionBizType);
+        chatUserMessageService.sendMessage(userChatRequest);
         // 任务会话：走工作流任务执行（复用任务会话上下文）
-        if (AiModelCallSourceEnum.WorkflowTaskChat.getValue().equals(sessionBizType)) {
+        if (AgentExecutorBizTypeEnum.WorkflowTaskChat.getValue().equals(sessionBizType)) {
             workflowTaskService.executeTask(userChatRequest);
             return;
         }
         // 项目会话：重新唤起历史项目会话，由项目管理智能体处理用户消息
-        if (AiModelCallSourceEnum.ProjectChat.getValue().equals(sessionBizType)) {
+        if (AgentExecutorBizTypeEnum.ProjectChat.getValue().equals(sessionBizType)) {
             projectIterateService.executeProjectChat(userChatRequest);
             return;
         }
+
         Agent agent = userChatRequest.getAgentId() != null ? agentService.getAgentById(userChatRequest.getAgentId()) : null;
         if (agent == null) {
             throw new RuntimeException("智能体不存在");
@@ -90,10 +97,10 @@ public class ChatService implements IChatService {
         if (Boolean.TRUE.equals(agent.getEnableAllTools())) {
             selectedTools = agentToolService.getToolSets();
         } else {
-            if(!avatarSettings.isDisabled() && avatarSettings.getPersonaSetting() != null && !avatarSettings.getPersonaSetting().isEmpty()){
-               if(!selectedToolNames.contains(IAvatarSettingsService.TOOL_NAME)){
-                   selectedToolNames.add(IAvatarSettingsService.TOOL_NAME);
-               }
+            if (!avatarSettings.isDisabled() && avatarSettings.getPersonaSetting() != null && !avatarSettings.getPersonaSetting().isEmpty()) {
+                if (!selectedToolNames.contains(IAvatarSettingsService.TOOL_NAME)) {
+                    selectedToolNames.add(IAvatarSettingsService.TOOL_NAME);
+                }
             }
             selectedTools = agentToolService.getToolSets().stream()
                     .filter(t -> selectedToolNames.contains(t.getName()))
@@ -102,6 +109,7 @@ public class ChatService implements IChatService {
         }
         AgentExecutorParams agentExecutorParams = new AgentExecutorParams();
         agentExecutorParams.setSessionId(userChatRequest.getSessionId());
+        agentExecutorParams.setRequestId(userChatRequest.getRequestId());
         agentExecutorParams.setUserId(userChatRequest.getUserId());
         agentExecutorParams.setAiModelId(userChatRequest.getAiModelId());
         agentExecutorParams.setEnableThinking(userChatRequest.getEnableThinking());
@@ -116,8 +124,6 @@ public class ChatService implements IChatService {
         // 加载已启用的 MCP 服务器配置
         agentExecutorParams.setMcpServerConfigs(mcpServerConfigService.findEnabled());
         agentExecutorParams.setBizType(AgentExecutorBizTypeEnum.Chat);
-
-
         Function<Long, String> systemMessageProvider = aId -> {
             return getChatSystemMessage(userChatRequest.getSessionId(), agent, userChatRequest.getUserId(), selectedTools, userChatRequest.getSkillNames(), avatarSettings);
         };
@@ -128,17 +134,18 @@ public class ChatService implements IChatService {
     /**
      * 解析会话业务类型：优先取请求显式传入的类型，否则按会话编号从会话表读取（来源在首次插入时确定）
      */
-    private String resolveSessionBizType(UserChatRequest userChatRequest) {
+    private AgentExecutorBizTypeEnum resolveSessionBizType(UserChatRequest userChatRequest) {
         if (userChatRequest.getSessionBizType() != null) {
             return userChatRequest.getSessionBizType();
         }
         if (userChatRequest.getSessionId() != null) {
             ChatSession session = chatSessionService.getSessionBySessionId(userChatRequest.getSessionId());
-            if (session != null) {
-                return session.getBizType();
+            if (session != null && session.getBizType() != null) {
+                AgentExecutorBizTypeEnum value = AgentExecutorBizTypeEnum.getByValue(session.getBizType());
+                return value == null ? AgentExecutorBizTypeEnum.Chat : value;
             }
         }
-        return null;
+        return AgentExecutorBizTypeEnum.Chat;
     }
 
     /**
@@ -188,6 +195,7 @@ public class ChatService implements IChatService {
 
     /**
      * 聊天系统提示词
+     *
      * @param sessionId
      * @param agent
      * @param userId
@@ -221,11 +229,11 @@ public class ChatService implements IChatService {
             }
         }
 
-        if(!avatarSettings.isDisabled() && avatarSettings.getPersonaSetting() != null && !avatarSettings.getPersonaSetting().isEmpty()){
+        if (!avatarSettings.isDisabled() && avatarSettings.getPersonaSetting() != null && !avatarSettings.getPersonaSetting().isEmpty()) {
             systemMessage += "你可以控制一个虚拟人和用户交互，人物的设定是：" + avatarSettings.getPersonaSetting() + "\n";
         }
         if (agent.getVectorToolSearch() != null && agent.getVectorToolSearch() && selectedTools != null && !selectedTools.isEmpty()) {
-            systemMessage += "当需要[" + getToolKeywords(selectedTools) + "]这些能力时，先使用"+ AgentTool.TOOL_SEARCH_TOOL_NAME +"搜一下对应关键词，拿到工具详情再做决定使用。\n";
+            systemMessage += "当需要[" + getToolKeywords(selectedTools) + "]这些能力时，先使用" + AgentTool.TOOL_SEARCH_TOOL_NAME + "搜一下对应关键词，拿到工具详情再做决定使用。\n";
         }
         if (skillNames != null && !skillNames.isEmpty()) {
             String skillContext = buildSkillContext(skillNames);

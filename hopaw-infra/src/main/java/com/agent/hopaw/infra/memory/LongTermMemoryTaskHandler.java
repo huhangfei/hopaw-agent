@@ -465,14 +465,12 @@ public class LongTermMemoryTaskHandler implements TaskHandler {
 
     /** 是否任务会话：兼容新值 workflowTaskChat 与旧值 workflow-task-chat */
     private boolean isWorkflowTaskChatSession(String bizType) {
-        return AgentExecutorBizTypeEnum.WorkflowTaskChat.getValue().equals(bizType)
-                || AgentExecutorBizTypeEnum.WorkflowTaskChat.getAiModelCallSourceEnum().getValue().equals(bizType);
+        return AgentExecutorBizTypeEnum.WorkflowTaskChat.getValue().equals(bizType);
     }
 
     /** 是否项目会话：兼容新值 projectChat 与旧值 project-chat */
     private boolean isProjectChatSession(String bizType) {
-        return AgentExecutorBizTypeEnum.ProjectChat.getValue().equals(bizType)
-                || AgentExecutorBizTypeEnum.ProjectChat.getAiModelCallSourceEnum().getValue().equals(bizType);
+        return AgentExecutorBizTypeEnum.ProjectChat.getValue().equals(bizType);
     }
 
     /** 是否普通聊天会话（非任务/项目会话） */

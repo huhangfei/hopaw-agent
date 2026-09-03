@@ -7,6 +7,7 @@ import com.agent.hopaw.infra.constant.TaskStatusEnum;
 import com.agent.hopaw.infra.executor.IAgentExecutor;
 import com.agent.hopaw.infra.mapper.ProjectMapper;
 import com.agent.hopaw.infra.mapper.WorkflowTaskMapper;
+import com.agent.hopaw.infra.memory.ProjectMemoryService;
 import com.agent.hopaw.infra.model.dto.AgentExecutorParams;
 import com.agent.hopaw.infra.model.dto.ProjectIterateResult;
 import com.agent.hopaw.infra.model.dto.ToolSetInfo;
@@ -14,7 +15,6 @@ import com.agent.hopaw.infra.model.dto.UserChatRequest;
 import com.agent.hopaw.infra.model.entity.Agent;
 import com.agent.hopaw.infra.model.entity.Project;
 import com.agent.hopaw.infra.model.entity.ProjectLog;
-import com.agent.hopaw.infra.model.entity.WorkflowTask;
 import com.agent.hopaw.infra.tool.IAgentToolService;
 import com.agent.hopaw.infra.util.UuidUtil;
 import dev.langchain4j.data.message.Content;
@@ -47,8 +47,6 @@ public class ProjectIterateService implements IProjectIterateService {
     /** 执行超时时间（秒），与定时拉起的工作流任务保持一致 */
     private static final long EXECUTE_TIMEOUT_SECONDS = 300;
     private static final String EXECUTE_USER_MESSAGE = "【项目自动迭代】请执行本轮项目迭代检查。\n请严格按照本次自动迭代要求执行。\n";
-    /** 项目系统提示词注入的项目重点日志条数上限（更早历史通过项目工具查询） */
-    private static final int IMPORTANT_LOGS_INJECT_LIMIT = 10;
 
     private final ProjectMapper projectMapper;
     private final WorkflowTaskMapper workflowTaskMapper;
@@ -60,6 +58,7 @@ public class ProjectIterateService implements IProjectIterateService {
     private final IProjectLogService projectLogService;
     private final INotificationService notificationService;
     private final com.agent.hopaw.infra.memory.ProjectMemoryService projectMemoryService;
+    private final IChatUserMessageService chatUserMessageService;
 
     public ProjectIterateService(ProjectMapper projectMapper,
                                  WorkflowTaskMapper workflowTaskMapper,
@@ -70,7 +69,7 @@ public class ProjectIterateService implements IProjectIterateService {
                                  IProjectService projectService,
                                  IProjectLogService projectLogService,
                                  INotificationService notificationService,
-                                 com.agent.hopaw.infra.memory.ProjectMemoryService projectMemoryService) {
+                                 ProjectMemoryService projectMemoryService, IChatUserMessageService chatUserMessageService) {
         this.projectMapper = projectMapper;
         this.workflowTaskMapper = workflowTaskMapper;
         this.agentService = agentService;
@@ -81,6 +80,7 @@ public class ProjectIterateService implements IProjectIterateService {
         this.projectLogService = projectLogService;
         this.notificationService = notificationService;
         this.projectMemoryService = projectMemoryService;
+        this.chatUserMessageService = chatUserMessageService;
     }
 
     @Override
@@ -147,6 +147,32 @@ public class ProjectIterateService implements IProjectIterateService {
         return null;
     }
 
+    /**
+     * @param projectId
+     */
+    private String getProjectLog(Long projectId){
+        int maxCount = 20;
+        StringBuilder sb=new StringBuilder();
+        // 注入项目日志，提供历史信息
+        List<ProjectLog> logs =projectLogService.getLogsPage(projectId, 1, maxCount);
+        if (logs != null && !logs.isEmpty()) {
+            sb.append("\n--- 项目日志---\n");
+            if (logs.size()==20) {
+                sb.append("\n（以下仅展示最近日志，如需了解更早的历史关键结论，请使用项目工具查询项目日志。\n");
+            }
+            sb.append("\n--- 本次").append(logs.size()).append("条 ---\n");
+            for (ProjectLog log : logs) {
+                sb.append("操作者：["+(log.getOperatorName())+"]("+log.getOperatorId()+")\n");
+                sb.append("日志类型：["+(log.getLogType())+"]\n");
+                sb.append("时间：[").append(log.getCreateTime() != null ? log.getCreateTime().format(TIME_FMT) : "").append("] ");
+                sb.append("内容："+(log.getDetail() != null ? log.getDetail() : ""));
+                sb.append("\n");
+            }
+            return sb.toString();
+        }
+        return "";
+    }
+
     /** 迭代公共执行流程：执行器并发检查 + 创建执行器执行 + 项目日志与外部通知 */
     private ProjectIterateResult doExecuteProjectIterate(Project project, String userMessage) {
         Long projectId = project.getId();
@@ -164,16 +190,15 @@ public class ProjectIterateService implements IProjectIterateService {
             logger.debug("项目迭代：项目管理智能体正在执行，跳过 id={} session={}", projectId, sessionId);
             return ProjectIterateResult.fail("项目管理智能体正在执行中，请等待本轮完成后重试");
         }
-
-        IAgentExecutor executor = createProjectExecutor(project, agent, sessionId);
-        List<WorkflowTask> tasks = workflowTaskMapper.findByProjectId(projectId);
-        List<Content> contents = new ArrayList<>();
-        contents.add(new TextContent(userMessage));
+        String requestId = UuidUtil.generateSimpleUUID();
+        userMessage+=getProjectLog(projectId);
+        chatUserMessageService.sendMessage(AgentExecutorBizTypeEnum.ProjectChat, project.getUserId(), sessionId, requestId, project.getAgentId(), userMessage, null);
+        IAgentExecutor executor = createProjectExecutor(requestId,project, agent, sessionId);
         boolean success = true;
         String failReason = null;
         try {
             logger.info("项目迭代开始: projectId={}, session={}", projectId, sessionId);
-            executor.execute(contents, EXECUTE_TIMEOUT_SECONDS);
+            executor.execute(Arrays.asList(new TextContent(userMessage)), EXECUTE_TIMEOUT_SECONDS);
             logger.info("项目迭代完成: projectId={}", projectId);
         } catch (Exception e) {
             success = false;
@@ -237,11 +262,7 @@ public class ProjectIterateService implements IProjectIterateService {
             throw new RuntimeException("项目管理智能体未配置AI模型");
         }
         // 用户消息驱动：复用项目会话编号保留上下文，重新唤起历史会话
-        IAgentExecutor executor = createProjectExecutor(project, agent, sessionId,
-                userChatRequest.getAiModelId(),
-                userChatRequest.getEnableThinking(),
-                userChatRequest.getSkillNames(),
-                userChatRequest.getToolCallPermission());
+        IAgentExecutor executor = createProjectExecutor(userChatRequest.getRequestId(),project, agent, sessionId, userChatRequest);
         List<Content> contents = new ArrayList<>();
         contents.add(new TextContent(userChatRequest.getMessage()));
         logger.info("项目会话唤起开始: projectId={}, session={}", project.getId(), sessionId);
@@ -254,17 +275,16 @@ public class ProjectIterateService implements IProjectIterateService {
      * 构建项目管理专用系统提示词与工具集（强制注入 projectTool 与 workflowTaskTool）。
      * 自动迭代场景：模型/思考模式等参数取智能体配置。
      */
-    private IAgentExecutor createProjectExecutor(Project project, Agent agent, String sessionId) {
-        return createProjectExecutor(project, agent, sessionId, null, null, null, null);
+    private IAgentExecutor createProjectExecutor(String requestId,Project project, Agent agent, String sessionId) {
+        return createProjectExecutor(requestId,project, agent, sessionId, null);
     }
 
     /**
      * 创建项目管理智能体执行器（完整参数版）：
-     * 自动迭代与用户会话唤起共用，用户会话唤起时优先使用请求中的模型/思考模式/技能/工具权限。
+     * 自动迭代与用户会话唤起共用，用户会话唤起时优先使用请求中的模型/思考模式/技能/工具权限/用户消息回显。
      */
-    private IAgentExecutor createProjectExecutor(Project project, Agent agent, String sessionId,
-                                                 Long aiModelId, Boolean enableThinking,
-                                                 List<String> skillNames, String toolCallPermission) {
+    private IAgentExecutor createProjectExecutor(String requestId,Project project, Agent agent, String sessionId,
+                                                 UserChatRequest userChatRequest) {
         String systemMessage = buildProjectSystemMessage(project, agent);
 
         // 构建工具集：智能体已配置工具 + 项目管理必需工具（projectTool / workflowTaskTool）
@@ -288,10 +308,12 @@ public class ProjectIterateService implements IProjectIterateService {
         params.setSessionId(sessionId);
         params.setUserId(project.getUserId());
         // 用户会话唤起时优先使用请求参数，自动迭代时回退智能体配置
-        params.setAiModelId(aiModelId != null ? aiModelId : agent.getAiModelId());
-        params.setEnableThinking(enableThinking != null ? enableThinking : agent.getEnableThinking());
-        params.setSkillNames(skillNames != null ? skillNames : new ArrayList<>());
-        params.setToolCallPermission(toolCallPermission != null ? toolCallPermission : "auto");
+        params.setRequestId(requestId);
+        params.setAiModelId(userChatRequest != null && userChatRequest.getAiModelId() != null ? userChatRequest.getAiModelId() : agent.getAiModelId());
+        params.setEnableThinking(userChatRequest != null && userChatRequest.getEnableThinking() != null ? userChatRequest.getEnableThinking() : agent.getEnableThinking());
+        params.setSkillNames(userChatRequest != null && userChatRequest.getSkillNames() != null ? userChatRequest.getSkillNames() : new ArrayList<>());
+        params.setToolCallPermission(userChatRequest != null && userChatRequest.getToolCallPermission() != null ? userChatRequest.getToolCallPermission() : "auto");
+
         params.setAgentId(agent.getId());
         params.setMaxMemoryRecords(agent.getMaxMemoryRecords() != null ? agent.getMaxMemoryRecords() : 10);
         params.setMaxToolInvocations(agent.getMaxToolInvocations() != null ? agent.getMaxToolInvocations() : 3);
@@ -302,7 +324,7 @@ public class ProjectIterateService implements IProjectIterateService {
         params.setMcpServerConfigs(mcpServerConfigService.findEnabled());
         // 会话标题直接使用项目名称
         params.setSessionTitle(project.getName());
-        params.setExtParams(new HashMap<>() {{
+        params.setExtParams(new HashMap<>(1) {{
             put("projectId", project.getId());
         }});
 
@@ -324,38 +346,6 @@ public class ProjectIterateService implements IProjectIterateService {
         sb.append("项目名称：").append(project.getName()).append("\n");
         sb.append("项目状态：").append(statusText(project.getStatus())).append("\n");
         sb.append("项目描述：").append(project.getDescription() != null ? project.getDescription() : "无").append("\n");
-
-        // 注入项目空间记忆：项目维度沉淀的整体记忆（目标、进展、关键决策、经验教训）
-        try {
-            String projectMemory = projectMemoryService.getProjectMemoryContent(project.getId());
-            if (projectMemory != null && !projectMemory.isBlank()) {
-                sb.append("\n--- 项目记忆 ---\n");
-                sb.append("以下是项目沉淀的整体记忆，规划任务与推进项目时请充分参考：\n");
-                sb.append(projectMemory).append("\n");
-            }
-        } catch (Exception e) {
-            logger.warn("注入项目记忆失败，项目[{}]: {}", project.getId(), e.getMessage());
-        }
-
-        // 注入项目重点日志，提供历史关键结论（含各任务总结评论）——仅最近10条，避免提示词过长
-        List<ProjectLog> importantLogs = projectLogService.getImportantLogsByProjectId(project.getId());
-        if (importantLogs != null && !importantLogs.isEmpty()) {
-            int logTotal = importantLogs.size();
-            int logFrom = Math.max(logTotal - IMPORTANT_LOGS_INJECT_LIMIT, 0);
-            List<ProjectLog> recentLogs = importantLogs.subList(logFrom, logTotal);
-            sb.append("\n--- 项目重点日志（最近").append(recentLogs.size()).append("条） ---\n");
-            for (ProjectLog log : recentLogs) {
-                sb.append("[").append(log.getCreateTime() != null ? log.getCreateTime().format(TIME_FMT) : "").append("] ")
-                        .append(log.getDetail() != null ? log.getDetail() : "")
-                        .append("\n");
-            }
-            if (logTotal > recentLogs.size()) {
-                sb.append("（以上仅展示最近").append(recentLogs.size())
-                        .append("条，项目共有").append(logTotal)
-                        .append("条重点日志，如需了解更早的历史关键结论，请使用项目工具查询项目日志。）\n");
-            }
-        }
-
         // 项目空间目录限制（与任务执行智能体一致）
         try {
             String absSpacePath = projectService.getProjectSpaceAbsolutePath(project.getId(), project.getUserId());
@@ -389,8 +379,20 @@ public class ProjectIterateService implements IProjectIterateService {
 
         // 迭代要求提示词：用户配置的额外迭代要求（自动迭代与手动下发指令均生效）
         if (project.getIteratePrompt() != null && !project.getIteratePrompt().trim().isEmpty()) {
-            sb.append("\n--- 本次迭代要求 ---\n");
+            sb.append("\n--- 必须遵守的迭代要求 ---\n");
             sb.append(project.getIteratePrompt().trim()).append("\n");
+        }
+
+        // 注入项目空间记忆：项目维度沉淀的整体记忆（目标、进展、关键决策、经验教训）
+        try {
+            String projectMemory = projectMemoryService.getProjectMemoryContent(project.getId());
+            if (projectMemory != null && !projectMemory.isBlank()) {
+                sb.append("\n--- 项目记忆 ---\n");
+                sb.append("以下是项目沉淀的整体记忆，规划任务与推进项目时请充分参考：\n");
+                sb.append(projectMemory).append("\n");
+            }
+        } catch (Exception e) {
+            logger.warn("注入项目记忆失败，项目[{}]: {}", project.getId(), e.getMessage());
         }
 
         return sb.toString();

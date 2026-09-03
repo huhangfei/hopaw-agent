@@ -10,6 +10,7 @@ import com.agent.hopaw.infra.executor.IAgentExecutor;
 import com.agent.hopaw.infra.mapper.TaskSessionMapper;
 import com.agent.hopaw.infra.mapper.WorkflowTaskMapper;
 import com.agent.hopaw.infra.mapper.WorkflowTaskPreconditionMapper;
+import com.agent.hopaw.infra.memory.ProjectMemoryService;
 import com.agent.hopaw.infra.model.dto.AgentExecutorParams;
 import com.agent.hopaw.infra.model.dto.ToolSetInfo;
 import com.agent.hopaw.infra.model.dto.UserChatRequest;
@@ -63,6 +64,7 @@ public class WorkflowTaskService implements IWorkflowTaskService {
     private final IGlobalNoticeService globalNoticeService;
     private final INotificationService notificationService;
     private final com.agent.hopaw.infra.memory.ProjectMemoryService projectMemoryService;
+    private final IChatUserMessageService chatUserMessageService;
 
     public WorkflowTaskService(WorkflowTaskMapper workflowTaskMapper,
                                WorkflowTaskPreconditionMapper preconditionMapper,
@@ -77,7 +79,7 @@ public class WorkflowTaskService implements IWorkflowTaskService {
                                IProjectLogService projectLogService,
                                IGlobalNoticeService globalNoticeService,
                                INotificationService notificationService,
-                               com.agent.hopaw.infra.memory.ProjectMemoryService projectMemoryService) {
+                               ProjectMemoryService projectMemoryService, IChatUserMessageService chatUserMessageService) {
         this.workflowTaskMapper = workflowTaskMapper;
         this.preconditionMapper = preconditionMapper;
         this.taskSessionMapper = taskSessionMapper;
@@ -92,6 +94,7 @@ public class WorkflowTaskService implements IWorkflowTaskService {
         this.globalNoticeService = globalNoticeService;
         this.notificationService = notificationService;
         this.projectMemoryService = projectMemoryService;
+        this.chatUserMessageService = chatUserMessageService;
     }
 
     @Override
@@ -388,7 +391,8 @@ public class WorkflowTaskService implements IWorkflowTaskService {
 
         // 创建任务执行器（复用或新建会话）
         IAgentExecutor executor = createTaskExecutor(task, agent, userChatRequest);
-        executeTask(task,executor,300);
+
+        executeTask(taskId,executor,300,userChatRequest.getMessage());
     }
     /** 校验执行时段格式：HH:mm-HH:mm 且结束时间必须大于开始时间（空表示不限制） */
     private void validateExecutionPeriod(String executionPeriod) {
@@ -407,32 +411,11 @@ public class WorkflowTaskService implements IWorkflowTaskService {
         }
     }
 
-    private void executeTask(WorkflowTask task,IAgentExecutor executor,long timeout){
-        Long taskId=task.getId();
+    private void executeTask(Long taskId,IAgentExecutor executor,long timeout,String message){
         // 更新状态为 processing
         updateTaskStatus(taskId, TaskStatusEnum.PROCESSING.getCode(), null);
-        // 仅查询待处理评论：避免重复处理已处理过的评论
-        List<WorkflowTaskComment> comments = taskCommentService.getPendingCommentsByTaskId(taskId);
-        // 4. 构建内容（包含评论历史，区分评论者身份）
-        List<Content> contents = new ArrayList<>();
-        StringBuilder taskContent = new StringBuilder();
-        if (comments != null && !comments.isEmpty()) {
-            for (WorkflowTaskComment comment : comments) {
-                // 总结评论追加类型标记，便于智能体识别重要节点
-                String typeMark = TaskCommentTypeEnum.fromCode(comment.getCommentType()).isSummary() ? "[总结]" : "";
-                taskContent.append(String.format("[%s]%s %s\n",
-                        comment.getCreateTime() != null ? comment.getCreateTime() : "",
-                        typeMark,
-                        comment.getContent() != null ? comment.getContent() : ""));
-            }
-        }
-        contents.add(new TextContent(taskContent.toString()));
         // 执行
-        executor.execute(contents,timeout);
-        // 执行完成后将本次预取的待处理评论标记为已处理（执行期间新增的评论不受影响，将在下次执行时处理）
-        List<Long> processedCommentIds = comments.stream().map(WorkflowTaskComment::getId).collect(Collectors.toList());
-        taskCommentService.markCommentsAsProcessed(processedCommentIds);
-
+        executor.execute(Arrays.asList(new TextContent(message)),timeout);
     }
 
     @Override
@@ -456,14 +439,37 @@ public class WorkflowTaskService implements IWorkflowTaskService {
             taskSessionMapper.insert(taskId, existingSessionId);
         }
         UserChatRequest userChatRequest = new UserChatRequest();
+        userChatRequest.setSessionBizType(AgentExecutorBizTypeEnum.WorkflowTaskChat);
+        userChatRequest.setRequestId(UuidUtil.generateSimpleUUID());
         userChatRequest.setSessionId(existingSessionId);
         userChatRequest.setUserId(task.getUserId());
         userChatRequest.setAiModelId(agent.getAiModelId());
         userChatRequest.setEnableThinking(agent.getEnableThinking());
         userChatRequest.setToolCallPermission("auto");
+
         // 创建任务执行器（复用或新建会话）
         IAgentExecutor executor = createTaskExecutor(task, agent, userChatRequest);
-        executeTask(task,executor,300);
+
+        // 仅查询待处理评论：避免重复处理已处理过的评论
+        List<WorkflowTaskComment> comments = taskCommentService.getPendingCommentsByTaskId(taskId);
+        // 4. 构建内容（包含评论历史，区分评论者身份）
+        StringBuilder taskContent = new StringBuilder();
+        if (comments != null && !comments.isEmpty()) {
+            for (WorkflowTaskComment comment : comments) {
+                // 总结评论追加类型标记，便于智能体识别重要节点
+                String typeMark = TaskCommentTypeEnum.fromCode(comment.getCommentType()).isSummary() ? "[总结]" : "";
+                taskContent.append(String.format("[%s] [%s]%s %s\n",
+                        comment.getCommenterName(),
+                        comment.getCreateTime() != null ? comment.getCreateTime() : "",
+                        typeMark,
+                        comment.getContent() != null ? comment.getContent() : ""));
+            }
+        }
+        userChatRequest.setMessage(taskContent.toString());
+        executeTask(taskId,executor,300,userChatRequest.getMessage());
+        // 执行完成后将本次预取的待处理评论标记为已处理（执行期间新增的评论不受影响，将在下次执行时处理）
+        List<Long> processedCommentIds = comments.stream().map(WorkflowTaskComment::getId).collect(Collectors.toList());
+        taskCommentService.markCommentsAsProcessed(processedCommentIds);
     }
 
     /**
@@ -513,7 +519,7 @@ public class WorkflowTaskService implements IWorkflowTaskService {
         // 会话标题直接使用任务名称
         agentExecutorParams.setSessionTitle(task.getTitle());
 
-        agentExecutorParams.setExtParams(new HashMap<>(){{
+        agentExecutorParams.setExtParams(new HashMap<>(1){{
             put("workflowTaskId",task.getId());
             put("workflowTaskProjectId",task.getProjectId());
         }});
@@ -558,8 +564,8 @@ public class WorkflowTaskService implements IWorkflowTaskService {
                     systemMsgBuilder.append(project.getDescription()).append("\n");
                     // 注入项目空间记忆：项目整体记忆 + 本任务历史执行记忆（跨用户共享，任务重做/续接时提供上下文）
                     appendProjectSpaceMemories(systemMsgBuilder, task);
-                    // 注入项目重点日志，为智能体提供项目历史关键结论（含各任务总结评论）
-                    appendImportantProjectLogs(systemMsgBuilder, task.getProjectId());
+                    // 注入项目重点日志，为智能体提供项目历史关键结论（含各任务总结评论）--2026年9月3日09:42:44 暂不注入
+                    //appendImportantProjectLogs(systemMsgBuilder, task.getProjectId());
                     // 存储层只保留相对路径，任务提示词需要注入真实绝对路径
                     String absSpacePath = projectService.getProjectSpaceAbsolutePath(task.getProjectId(), task.getUserId());
                     if (absSpacePath != null && !absSpacePath.isEmpty()) {

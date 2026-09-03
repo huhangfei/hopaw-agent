@@ -25,5 +25,13 @@ public enum AgentExecutorBizTypeEnum {
     public AiModelCallSourceEnum getAiModelCallSourceEnum() {
         return aiModelCallSourceEnum;
     }
+    public static AgentExecutorBizTypeEnum getByValue(String value) {
+        for (AgentExecutorBizTypeEnum agentExecutorBizTypeEnum : AgentExecutorBizTypeEnum.values()) {
+            if (agentExecutorBizTypeEnum.value.equals(value)) {
+                return agentExecutorBizTypeEnum;
+            }
+        }
+        return null;
+    }
 
 }

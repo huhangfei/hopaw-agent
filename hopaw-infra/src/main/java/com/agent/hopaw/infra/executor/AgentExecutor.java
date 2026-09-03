@@ -125,7 +125,7 @@ public class AgentExecutor implements IAgentExecutor {
         this.userId = agentExecutorParams.getUserId();
         this.aiModelId = agentExecutorParams.getAiModelId();
         this.sessionId = agentExecutorParams.getSessionId();
-        this.requestId = UuidUtil.generateSimpleUUID();
+        this.requestId = agentExecutorParams.getRequestId();
 
         this.chatSessionService = chatSessionService;
         this.chatModelListenerProvider = chatModelListenerProvider;
@@ -280,6 +280,7 @@ public class AgentExecutor implements IAgentExecutor {
             toolApprovalLocks.get(approvalId).complete(allowed);
         }
     }
+
     private void sendFirstState() {
         try {
             AiMessageBaseInfo message=new AiMessageBaseInfo("received");
@@ -357,10 +358,7 @@ public class AgentExecutor implements IAgentExecutor {
             this.startTimeMs = System.currentTimeMillis();
             sendFirstState();
             saveChatSession(contents);
-            saveChatHistory(contents);
-
             this.memoryStore.orphanCleanup(memoryId);
-
             this.cancelTask.set(false);
             this.taskLatch = new CountDownLatch(1);
 
@@ -824,8 +822,6 @@ public class AgentExecutor implements IAgentExecutor {
     }
 
     private void saveChatSession(List<Content> contents) {
-
-
         boolean sendSessionTitle = false;
         ChatSession chatSession=chatSessionService.getSessionBySessionId(sessionId);
         if (chatSession == null) {
@@ -837,7 +833,7 @@ public class AgentExecutor implements IAgentExecutor {
                 userIntent = analyzeUserIntent(contents);
             }
             if (userIntent == null) {
-                userIntent = "新任务";
+                userIntent = "新聊天";
             }else{
                 sendSessionTitle=true;
             }
@@ -855,7 +851,7 @@ public class AgentExecutor implements IAgentExecutor {
             chatSessionService.insertSession(chatSession);
             agentMessageHandler.sendMessageToChannel(AiMessageBaseInfo.sessionTitle(sessionId, requestId, userIntent));
         } else {
-            if(chatSession.getTitle().equals("新任务")){
+            if(chatSession.getTitle().equals("新聊天")){
                 // 优先使用外部传入的会话标题（任务/项目场景传任务名称、项目名称），否则从用户输入分析
                 String paramTitle = agentExecutorParams.getSessionTitle();
                 if (paramTitle != null && !paramTitle.isBlank()) {
@@ -884,46 +880,6 @@ public class AgentExecutor implements IAgentExecutor {
             agentMessageHandler.sendMessageToChannel(AiMessageBaseInfo.sessionTitle(sessionId, requestId, chatSession.getTitle()));
         }
 
-    }
-
-    private void saveChatHistory(List<Content> contents) {
-        List<ChatHistory> chatHistoryList = convertToChatHistory(contents);
-        for (ChatHistory chatHistory : chatHistoryList) {
-            chatHistory.setUserId(userId);
-            eventPublisher.publishEvent(new ChatHistoryEvent(chatHistory));
-        }
-    }
-
-    private List<ChatHistory> convertToChatHistory(List<Content> contents) {
-        List<ChatHistory> chatHistoryList = new ArrayList<ChatHistory>();
-        //todo:等支持多种消息类型后完善存储
-        for (Content content : contents) {
-            if (content instanceof TextContent) {
-                ChatHistory userChat = new ChatHistory(agentId, "user", "text", ((TextContent) content).text());
-                userChat.setSessionId(sessionId);
-                chatHistoryList.add(userChat);
-            } else if (content instanceof ImageContent) {
-                ImageContent image=(ImageContent)content;
-                ChatHistory userChat = new ChatHistory(agentId, "user", "image", "data:"+image.image().mimeType()+";base64,"+image.image().base64Data());
-                userChat.setSessionId(sessionId);
-                chatHistoryList.add(userChat);
-            } else if (content instanceof VideoContent) {
-                ChatHistory userChat = new ChatHistory(agentId, "user", "video", "[一段视频]");
-                userChat.setSessionId(sessionId);
-                chatHistoryList.add(userChat);
-            } else if (content instanceof AudioContent) {
-                ChatHistory userChat = new ChatHistory(agentId, "user", "audio", "[一段音频]");
-                userChat.setSessionId(sessionId);
-                chatHistoryList.add(userChat);
-            } else if (content instanceof PdfFileContent) {
-                ChatHistory userChat = new ChatHistory(agentId, "user", "pdf", "[一个PDF文件]");
-                userChat.setSessionId(sessionId);
-                chatHistoryList.add(userChat);
-            } else {
-                logger.info("用户消息 user[{}] agent[{}]: {}", userId, agentId, "未知");
-            }
-        }
-        return chatHistoryList;
     }
 
     /**
@@ -980,7 +936,7 @@ public class AgentExecutor implements IAgentExecutor {
         public void sendMessageToChannel(AiMessageBaseInfo message) {
             // 消息附带会话业务类型，供推送端区分：项目/任务会话推送给所有在线用户
             if (message != null && agentExecutorParams.getBizType() != null) {
-                message.setBizType(agentExecutorParams.getBizType().getValue());
+                message.setBizType(agentExecutorParams.getBizType());
             }
             eventPublisher.publishEvent(new AgentMessageEvent(userId, agentId, message));
         }

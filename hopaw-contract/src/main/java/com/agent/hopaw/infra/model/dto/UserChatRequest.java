@@ -1,5 +1,7 @@
 package com.agent.hopaw.infra.model.dto;
 
+import com.agent.hopaw.infra.constant.AgentExecutorBizTypeEnum;
+
 import java.util.List;
 
 /**
@@ -8,6 +10,7 @@ import java.util.List;
  */
 public class UserChatRequest {
     private String sessionId;
+    private String requestId;
     private String userId;
     private Long agentId;
     private String message;
@@ -25,7 +28,13 @@ public class UserChatRequest {
     /**
      * 会话类型
      */
-    private String sessionBizType;
+    private AgentExecutorBizTypeEnum sessionBizType;
+    public String getRequestId() {
+        return requestId;
+    }
+    public void setRequestId(String requestId) {
+        this.requestId = requestId;
+    }
     public String getUserId() {
         return userId;
     }
@@ -98,11 +107,11 @@ public class UserChatRequest {
         this.files = files;
     }
 
-    public String getSessionBizType() {
+    public AgentExecutorBizTypeEnum getSessionBizType() {
         return sessionBizType;
     }
 
-    public void setSessionBizType(String sessionBizType) {
+    public void setSessionBizType(AgentExecutorBizTypeEnum sessionBizType) {
         this.sessionBizType = sessionBizType;
     }
 }

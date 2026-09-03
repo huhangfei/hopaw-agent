@@ -183,9 +183,9 @@ public class ChatWebSocketHandler extends TextWebSocketHandler {
     public void onAgentMessageEvent(AgentMessageEvent event) {
         AiMessageBaseInfo message = event.getMessage();
         // 项目/工作流任务会话：消息推送给所有在线用户（跨用户共享可见）；其余推送给会话归属用户
-        String bizType = message != null ? message.getBizType() : null;
-        if (AgentExecutorBizTypeEnum.WorkflowTaskChat.getValue().equals(bizType)
-                || AgentExecutorBizTypeEnum.ProjectChat.getValue().equals(bizType)) {
+        AgentExecutorBizTypeEnum bizType = message != null ? message.getBizType() : AgentExecutorBizTypeEnum.Chat;
+        if (AgentExecutorBizTypeEnum.WorkflowTaskChat.equals(bizType)
+                || AgentExecutorBizTypeEnum.ProjectChat.equals(bizType)) {
             sendToAllOnlineUsers(JSON.toJSONString(message));
             return;
         }

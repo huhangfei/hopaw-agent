@@ -1,7 +1,7 @@
 package com.agent.hopaw.infra.model.dto;
 
 
-
+import com.agent.hopaw.infra.constant.AgentExecutorBizTypeEnum;
 
 public class AiMessageBaseInfo {
     private String type;
@@ -62,12 +62,12 @@ public class AiMessageBaseInfo {
     }
 
     /** 会话业务类型（chat / workflowTaskChat / projectChat），供前端区分会话来源 */
-    private String bizType;
-    public String getBizType() {
+    private AgentExecutorBizTypeEnum bizType;
+    public AgentExecutorBizTypeEnum getBizType() {
         return bizType;
     }
 
-    public void setBizType(String bizType) {
+    public void setBizType(AgentExecutorBizTypeEnum bizType) {
         this.bizType = bizType;
     }
 
