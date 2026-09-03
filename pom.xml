@@ -31,6 +31,7 @@
         <module>tools/hopaw-tool-file</module>
         <module>tools/hopaw-tool-command</module>
         <module>tools/hopaw-tool-database</module>
+        <module>tools/hopaw-tool-wechat</module>
     </modules>
 
     <properties>

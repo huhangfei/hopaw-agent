@@ -1,3 +1,8 @@
+var SETTINGS_KEYS = [
+    'workflow_pool_core_size', 'workflow_pool_max_size', 'workflow_pool_queue_capacity',
+    'project_pool_core_size', 'project_pool_max_size', 'project_pool_queue_capacity'
+];
+
 // 工作流任务线程池设置：保存配置并重建线程池，轮询展示运行状态
 var poolStatsTimer = null;
 

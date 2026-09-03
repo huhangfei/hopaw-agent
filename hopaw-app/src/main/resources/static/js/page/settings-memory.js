@@ -1,3 +1,11 @@
+var SETTINGS_KEYS = [
+    'memory_prompt', 'taskRecordsArrangeTimeoutHour', 'taskRecordsClearTimeoutDay',
+    'chat_memory_tool_result_max_length', 'memory_ai_model_id',
+    'vector_store_path', 'vector_store_profile', 'vector_flush_scheduler_interval',
+    'vector_flush_threshold', 'vector_flush_interval_ms',
+    'promptIncludeUserProfile', 'promptIncludeTaskRecords'
+];
+
 function onSettingsLoaded() {
     document.getElementById('memoryPrompt').value = settingsCache['memory_prompt'] || '';
     document.getElementById('taskRecordsArrangeTimeoutHour').value = settingsCache['taskRecordsArrangeTimeoutHour'] || '48';

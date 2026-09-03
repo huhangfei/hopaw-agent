@@ -5,9 +5,19 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 
 function loadAllSettings() {
-    fetch('/api/config')
-        .then(function(r) { return r.json(); })
-        .then(function(resp) {
+    // 按 tab 页声明的 SETTINGS_KEYS 按需查询，未声明 key 的页面不发起请求
+    var keys = (typeof SETTINGS_KEYS !== 'undefined' && SETTINGS_KEYS.length) ? SETTINGS_KEYS : null;
+    var req;
+    if (keys) {
+        req = fetch('/api/config/batch', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(keys)
+        }).then(function(r) { return r.json(); });
+    } else {
+        req = Promise.resolve({ msg: 'success', data: [] });
+    }
+    req.then(function(resp) {
             if (resp.msg !== 'success') return;
             (resp.data || []).forEach(function(c) {
                 settingsCache[c.configKey] = c.configValue;
@@ -21,15 +31,17 @@ function loadAllSettings() {
         });
 }
 
-function saveConfig(key, value, description) {
+function saveConfig(key, value, description, isEncrypted) {
+    var body = {
+        configKey: key,
+        configValue: value,
+        description: description,
+        isEncrypted: isEncrypted ? 1 : 0
+    };
     return fetch('/api/config/' + key, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-            configKey: key,
-            configValue: value,
-            description: description
-        })
+        body: JSON.stringify(body)
     })
     .then(function(r) { return r.json(); })
     .then(function(resp) {
@@ -37,11 +49,7 @@ function saveConfig(key, value, description) {
             return fetch('/api/config', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    configKey: key,
-                    configValue: value,
-                    description: description
-                })
+                body: JSON.stringify(body)
             }).then(function(r) { return r.json(); });
         }
         return resp;

@@ -11,12 +11,12 @@
     </parent>
 
     <groupId>com.hopaw.agent</groupId>
-    <artifactId>hopaw-tool-demo</artifactId>
+    <artifactId>hopaw-tool-wechat</artifactId>
     <version>1.0.0</version>
     <packaging>jar</packaging>
 
-    <name>hopaw-tool-demo</name>
-    <description>独立插件式工具示例，仅依赖契约层，模拟外部工具项目</description>
+    <name>hopaw-tool-wechat</name>
+    <description>微信公众号文章管理工具插件，支持多公众号草稿、素材与发布管理</description>
     <properties>
         <maven.install.skip>true</maven.install.skip>
     </properties>
@@ -57,7 +57,6 @@
                 <artifactId>maven-compiler-plugin</artifactId>
                 <version>3.11.0</version>
             </plugin>
-            <!-- 使用 shade 插件打包所有依赖 -->
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-shade-plugin</artifactId>
@@ -69,10 +68,8 @@
                             <goal>shade</goal>
                         </goals>
                         <configuration>
-                            <!-- 不要排除 com.hopaw.agent 自己的类 -->
                             <artifactSet>
                                 <excludes>
-                                    <!-- 只排除外部依赖,不排除本项目的类 -->
                                     <exclude>dev.langchain4j:*</exclude>
                                     <exclude>org.slf4j:*</exclude>
                                 </excludes>

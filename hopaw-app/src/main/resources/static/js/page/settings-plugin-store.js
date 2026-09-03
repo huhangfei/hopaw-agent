@@ -1,3 +1,5 @@
+var SETTINGS_KEYS = ['tool.pluginSourceUrls'];
+
 function onSettingsLoaded() {
     var sourceUrls = settingsCache['tool.pluginSourceUrls'] || '';
     var list = document.getElementById('pluginSourceList');

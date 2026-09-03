@@ -1,6 +1,7 @@
 package com.agent.hopaw.controller;
 
 import com.agent.hopaw.infra.model.dto.*;
+import com.agent.hopaw.infra.model.entity.SysConfig;
 import com.agent.hopaw.infra.service.ISysConfigService;
 import com.agent.hopaw.infra.tool.IAgentToolService;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -60,6 +61,14 @@ public class AgentToolController {
                 for (ToolConfigItem configItem : tool.getAgentTool().getConfigItems()) {
                     String key = prefix + configItem.getKey();
                     sysConfigService.deleteByKey(key);
+                    // MAP 结构：同步删除各组散键（主体键:mapKey:子配置key）
+                    if (configItem.getStructure() == ToolConfigItem.ConfigStructure.MAP) {
+                        for (SysConfig config : sysConfigService.getAll()) {
+                            if (config.getConfigKey().startsWith(key + ":")) {
+                                sysConfigService.deleteByKey(config.getConfigKey());
+                            }
+                        }
+                    }
                 }
             }
             return ResponseBean.success("插件卸载成功");

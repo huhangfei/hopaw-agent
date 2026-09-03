@@ -201,9 +201,15 @@ public class DatabaseInitializer implements CommandLineRunner {
                     "config_key TEXT NOT NULL UNIQUE, " +
                     "config_value TEXT, " +
                     "description TEXT, " +
+                    "is_encrypted INTEGER DEFAULT 0, " +
                     "create_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP, " +
                     "update_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP" +
                     ")");
+            // 兼容旧库：增量补充 is_encrypted 列
+            ensureColumn(stmt, "sys_config", "is_encrypted", "INTEGER DEFAULT 0");
+            // 老数据迁移：历史敏感键注册机制加密的密文（{AES} 前缀）标记为加密存储
+            stmt.execute("UPDATE sys_config SET is_encrypted = 1 " +
+                    "WHERE config_value LIKE '{AES}%' AND (is_encrypted IS NULL OR is_encrypted = 0)");
             stmt.execute("CREATE INDEX IF NOT EXISTS idx_sys_config_key ON sys_config(config_key)");
 
             stmt.execute("CREATE TABLE IF NOT EXISTS user_config (" +

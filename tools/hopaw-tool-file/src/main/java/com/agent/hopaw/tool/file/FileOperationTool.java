@@ -992,8 +992,10 @@ public class FileOperationTool implements AgentTool {
     public List<ToolConfigItem> getConfigItems() {
         return List.of(
                 new ToolConfigItem("maxThreads", "最大线程数", "文件搜索时的最大并行线程数（1-32），控制同时搜索多个文件的并发度", ToolConfigItem.ConfigType.TEXT_SINGLE)
+                        .sensitive(false)
                         .validation(new ValidationRule().required().value(1L, 32L)),
                 new ToolConfigItem("maxResults", "最大搜索条数", "单次搜索返回的最大匹配行数，0表示不限制（0-1000）", ToolConfigItem.ConfigType.TEXT_SINGLE)
+                        .sensitive(false)
                         .validation(new ValidationRule().required().value(0L, 1000L))
         );
     }

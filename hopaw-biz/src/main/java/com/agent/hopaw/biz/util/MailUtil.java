@@ -32,7 +32,6 @@ public class MailUtil {
 
     public MailUtil(ISysConfigService sysConfigService) {
         this.sysConfigService = sysConfigService;
-        this.sysConfigService.setSensitiveKeys( KEY_PASSWORD);
     }
 
     /**

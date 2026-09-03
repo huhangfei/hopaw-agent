@@ -84,8 +84,6 @@ public class DingTalkTool implements AgentTool {
 
     @Override
     public void asyncInit() {
-        String prefix = getConfigPrefix();
-        sysConfigService.setSensitiveKeys(prefix + CONFIG_KEY_WEBHOOK, prefix + CONFIG_KEY_SECRET);
         loadConfig();
     }
 

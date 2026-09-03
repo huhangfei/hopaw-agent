@@ -13,6 +13,28 @@ public class ToolConfigItem {
     private List<OptionItem> options;
     private String defaultValue;
     private ValidationRule validation;
+    /** 配置结构类型，默认单值结构 */
+    private ConfigStructure structure = ConfigStructure.SINGLE;
+    /** 是否加密存储：默认 true（新建配置项默认加密），非敏感配置项请显式设置为 false */
+    private boolean sensitive = true;
+
+    /**
+     * 配置结构类型：单值结构（一条配置一个值）或映射组结构（多个 mapKey，每个对应一组子配置）
+     */
+    public enum ConfigStructure {
+        SINGLE("单值结构"),
+        MAP("映射组结构");
+
+        private final String description;
+
+        ConfigStructure(String description) {
+            this.description = description;
+        }
+
+        public String getDescription() {
+            return description;
+        }
+    }
 
     public enum ConfigType {
         TEXT_SINGLE("单文本"),
@@ -74,6 +96,14 @@ public class ToolConfigItem {
 
     public ToolConfigItem validation(ValidationRule rule) {
         this.validation = rule;
+        return this;
+    }
+
+    /**
+     * 链式设置是否加密存储
+     */
+    public ToolConfigItem sensitive(boolean sensitive) {
+        this.sensitive = sensitive;
         return this;
     }
 
@@ -193,5 +223,21 @@ public class ToolConfigItem {
 
     public void setValidation(ValidationRule validation) {
         this.validation = validation;
+    }
+
+    public ConfigStructure getStructure() {
+        return structure;
+    }
+
+    public void setStructure(ConfigStructure structure) {
+        this.structure = structure;
+    }
+
+    public boolean isSensitive() {
+        return sensitive;
+    }
+
+    public void setSensitive(boolean sensitive) {
+        this.sensitive = sensitive;
     }
 }

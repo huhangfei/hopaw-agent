@@ -1,3 +1,5 @@
+var SETTINGS_KEYS = ['system_prompt'];
+
 function onSettingsLoaded() {
     document.getElementById('systemPrompt').value = settingsCache['system_prompt'] || '';
 }

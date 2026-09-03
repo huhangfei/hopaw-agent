@@ -95,14 +95,13 @@ public class BaiduSearchTool implements AgentTool {
                 new ToolConfigItem("edition", "搜索版本", "选择搜索版本", ToolConfigItem.ConfigType.SELECT,
                         new OptionItem("standard", "完整版"),
                         new OptionItem("lite", "轻量版"))
+                        .sensitive(false)
                         .validation(new ValidationRule().required())
         );
     }
 
     @Override
     public void asyncInit() {
-        String prefix = getConfigPrefix();
-        sysConfigService.setSensitiveKeys(prefix + CONFIG_KEY_API_KEYS);
         reloadConfig();
     }
 

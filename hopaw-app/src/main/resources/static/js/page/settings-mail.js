@@ -1,3 +1,5 @@
+var SETTINGS_KEYS = ['mail_host', 'mail_port', 'mail_username', 'mail_password', 'mail_from'];
+
 function onSettingsLoaded() {
     document.getElementById('mailHost').value = settingsCache['mail_host'] || '';
     document.getElementById('mailPort').value = settingsCache['mail_port'] || '';
@@ -11,7 +13,7 @@ function saveMailSettings() {
     saves.push(saveConfig('mail_host', document.getElementById('mailHost').value.trim(), 'SMTP 服务器'));
     saves.push(saveConfig('mail_port', document.getElementById('mailPort').value.trim(), 'SMTP 端口'));
     saves.push(saveConfig('mail_username', document.getElementById('mailUsername').value.trim(), 'SMTP 用户名'));
-    saves.push(saveConfig('mail_password', document.getElementById('mailPassword').value.trim(), 'SMTP 密码'));
+    saves.push(saveConfig('mail_password', document.getElementById('mailPassword').value.trim(), 'SMTP 密码', true));
     saves.push(saveConfig('mail_from', document.getElementById('mailFrom').value.trim(), '发件人地址'));
 
     Promise.all(saves).then(function(results) {

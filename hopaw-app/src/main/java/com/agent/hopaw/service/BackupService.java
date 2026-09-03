@@ -303,6 +303,8 @@ public class BackupService {
         for (SysConfig config : configs) {
             // 备份保留原密文：先用备份包内旧密钥解密，再用本机密钥重新加密写入
             config.setConfigValue(reEncryptIfNeeded(config.getConfigValue(), oldKeyUtil, stats));
+            // 值级判断加密标记：以值是否为 {AES} 密文为准（兼容旧备份未携带 isEncrypted 字段的情况）
+            config.setIsEncrypted(AesEncryptionUtil.isEncrypted(config.getConfigValue()) ? 1 : 0);
             SysConfig existing = config.getId() != null ? findSysConfigById(config.getId()) : null;
             if (existing == null && config.getConfigKey() != null) {
                 existing = sysConfigMapper.findByKey(config.getConfigKey());

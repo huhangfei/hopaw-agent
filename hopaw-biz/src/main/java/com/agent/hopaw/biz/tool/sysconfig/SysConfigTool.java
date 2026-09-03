@@ -43,20 +43,29 @@ public class SysConfigTool implements AgentTool {
     @Override
     public List<ToolConfigItem> getConfigItems() {
         return List.of(
-                new ToolConfigItem("exampleText", "示例文本", "这是一个单文本配置示例", ToolConfigItem.ConfigType.TEXT_SINGLE),
-                new ToolConfigItem("exampleSelect", "示例下拉", "从预设选项中选择一个", ToolConfigItem.ConfigType.SELECT, List.of("选项1", "选项2", "选项3")),
-                new ToolConfigItem("exampleRadio", "示例单选", "选择一个选项", ToolConfigItem.ConfigType.RADIO, List.of("苹果", "香蕉", "橙子")),
-                new ToolConfigItem("exampleCheck", "示例多选", "可以选择多个", ToolConfigItem.ConfigType.CHECKBOX, List.of("A", "B", "C", "D")),
+                new ToolConfigItem("exampleText", "示例文本", "这是一个单文本配置示例", ToolConfigItem.ConfigType.TEXT_SINGLE)
+                        .sensitive(false),
+                new ToolConfigItem("exampleSelect", "示例下拉", "从预设选项中选择一个", ToolConfigItem.ConfigType.SELECT, List.of("选项1", "选项2", "选项3"))
+                        .sensitive(false),
+                new ToolConfigItem("exampleRadio", "示例单选", "选择一个选项", ToolConfigItem.ConfigType.RADIO, List.of("苹果", "香蕉", "橙子"))
+                        .sensitive(false),
+                new ToolConfigItem("exampleCheck", "示例多选", "可以选择多个", ToolConfigItem.ConfigType.CHECKBOX, List.of("A", "B", "C", "D"))
+                        .sensitive(false),
                 new ToolConfigItem("exampleMultiText", "示例多文本", "支持多行输入", ToolConfigItem.ConfigType.TEXT_MULTI)
+                        .sensitive(false)
         );
     }
 
     @ToolSecurityLevel(ToolSecurityLevel.Level.SAFE)
-    @Tool(value = {"查询系统配置值", "根据 Key 查询系统配置项的值"})
+    @Tool(value = {"查询系统配置值", "根据 Key 查询系统配置项的值（加密存储的配置项不返回明文）"})
     public String querySystemConfigValue(@P(description = "配置项的 Key") String key) {
         SysConfig config = sysConfigService.getByKey(key);
         if (config == null) {
             return "未找到配置项：" + key;
+        }
+        // 加密存储的配置项不向智能体返回明文，仅告知已加密
+        if (config.getIsEncrypted() != null && config.getIsEncrypted() == 1) {
+            return "配置项 " + key + " 的内容已加密存储，无法查看明文";
         }
         return config.getConfigValue();
     }
@@ -70,7 +79,9 @@ public class SysConfigTool implements AgentTool {
         }
         StringBuilder sb = new StringBuilder("系统配置项列表：\n\n");
         for (SysConfig config : configs) {
-            sb.append("Key: ").append(config.getConfigKey()).append("\n");
+            sb.append("Key: ").append(config.getConfigKey())
+                    .append(config.getIsEncrypted() != null && config.getIsEncrypted() == 1 ? "（已加密）" : "")
+                    .append("\n");
             sb.append("描述: ").append(config.getDescription() != null ? config.getDescription() : "").append("\n");
             sb.append("---\n");
         }
@@ -88,7 +99,9 @@ public class SysConfigTool implements AgentTool {
             if (description != null) {
                 existing.setDescription(description);
             }
-            sysConfigService.update(existing);
+            // 保持原配置的加密存储状态：原为加密则新值同样加密入库
+            boolean encrypt = existing.getIsEncrypted() != null && existing.getIsEncrypted() == 1;
+            sysConfigService.update(existing, encrypt);
             return "已更新配置项：" + key;
         } else {
             SysConfig newConfig = new SysConfig(key, value, description != null ? description : "");

@@ -32,7 +32,6 @@ public class EmailSender implements NotifySender {
 
     public EmailSender(ISysConfigService sysConfigService) {
         this.sysConfigService = sysConfigService;
-        this.sysConfigService.setSensitiveKeys(KEY_PASSWORD);
     }
 
     @Override
