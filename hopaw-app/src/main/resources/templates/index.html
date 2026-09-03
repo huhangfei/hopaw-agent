@@ -93,10 +93,15 @@
                         </button>
                     </div>
                 </div>
-                <div th:case="'image'">
+                <!-- 附件消息：content 格式为 fileType,fileId,originalName,url，图片渲染缩略图、其他渲染文件链接 -->
+                <div th:case="'attachment'" th:with="parts=${#strings.arraySplit(chat.content, ',')}, fileType=${parts[0]}, fileId=${parts[1]}, originalName=${parts[2]}, fileUrl=${parts[3]}">
                     <div class="message-label" th:text="${chat.role == 'user' ? '你' : (chat.agent != null ? chat.agent.name : 'Agent')}"></div>
-                    <img th:src="${chat.content}" class="message-content message-image"
-                         th:attr="data-is-agent=${chat.role == 'agent'}" alt="图片消息"/>
+                    <img th:if="${fileType == 'image'}" th:src="${fileUrl}" class="message-content message-image"
+                         th:attr="data-is-agent=${chat.role == 'agent'}, data-attachment-id=${fileId}" th:alt="${originalName}"/>
+                    <a th:unless="${fileType == 'image'}" th:href="${fileUrl}"
+                       th:class="'message-content message-' + ${fileType}"
+                       th:attr="data-is-agent=${chat.role == 'agent'}, data-attachment-id=${fileId}"
+                       th:title="${originalName}" th:text="${originalName}"></a>
                     <div class="message-footer">
                         <div class="message-time"
                              th:text="${chat.createTime.toLocalDate().equals(T(java.time.LocalDate).now()) ? #temporals.format(chat.createTime, 'HH:mm:ss') : #temporals.format(chat.createTime, 'yyyy-MM-dd HH:mm:ss')}"></div>
