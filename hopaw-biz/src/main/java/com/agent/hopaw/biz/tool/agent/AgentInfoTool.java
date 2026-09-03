@@ -45,7 +45,7 @@ public class AgentInfoTool implements AgentTool {
 
     @Override
     public String getIcon() {
-        return "agent-tool-set-tool.svg";
+        return "agent-info-tool.svg";
     }
 
     @Override

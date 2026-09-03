@@ -48,6 +48,10 @@ public class ProjectTool implements AgentTool {
     public String getDescription() {
         return "项目工具：查询项目列表、查询项目详情、保存项目（新增或更新）、删除项目、查询项目操作日志、查询项目记忆";
     }
+    @Override
+    public String getIcon() {
+        return "project-tool.svg";
+    }
 
     @Override
     public String getKeyword() {

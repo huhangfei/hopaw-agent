@@ -59,7 +59,10 @@ public class AttachmentTool implements AgentTool {
     public String getDescription() {
         return "附件工具集，支持将指定文件添加到附件系统并返回预览地址与下载地址";
     }
-
+    @Override
+    public String getIcon() {
+        return "attachment-tool.svg";
+    }
     @Override
     public String getKeyword() {
         return "附件";

@@ -32,6 +32,10 @@ public class SkillTool implements AgentTool {
     public String getDescription() {
         return "技能查询工具，支持查询技能列表和技能详情";
     }
+    @Override
+    public String getIcon() {
+        return "skill-tool.svg";
+    }
 
     @Override
     public String getKeyword() {
