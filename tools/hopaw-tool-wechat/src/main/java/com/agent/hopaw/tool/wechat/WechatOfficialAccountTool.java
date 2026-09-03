@@ -1,31 +1,55 @@
 package com.agent.hopaw.tool.wechat;
 
+import com.agent.hopaw.infra.model.dto.ToolConfigItem;
+import com.agent.hopaw.infra.model.dto.ToolMapConfigItem;
+import com.agent.hopaw.infra.model.dto.ValidationRule;
+import com.agent.hopaw.infra.model.entity.SysConfig;
+import com.agent.hopaw.infra.service.ISysConfigService;
 import com.agent.hopaw.infra.tool.ToolSecurityLevel;
 import com.agent.hopaw.infra.tool.AgentTool;
+import com.alibaba.fastjson2.JSON;
 import com.alibaba.fastjson2.JSONArray;
 import com.alibaba.fastjson2.JSONObject;
+import com.alibaba.fastjson2.TypeReference;
 import dev.langchain4j.agent.tool.P;
 import dev.langchain4j.agent.tool.Tool;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
 
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.Instant;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
+import java.util.Collections;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 
 /**
  * 微信公众号文章管理工具。
- * <p>支持传入不同公众号的 appId/appSecret 对多个公众号进行管理，能力覆盖：
+ * <p>支持多公众号管理：在系统配置中添加多组公众号账号（账号名称 + AppID + AppSecret），
+ * 各方法只需传入公众号账号名称即可操作对应公众号。能力覆盖：
  * 草稿箱（新增/查询/修改/删除）、素材（封面图片、正文图片、素材列表）、发布（发布草稿/状态/列表/删除）。</p>
  * <p>使用前提：已认证的非个人主体公众号；服务器 IP 需加入公众号 IP 白名单。</p>
  */
 public class WechatOfficialAccountTool implements AgentTool {
 
     private static final Logger log = LoggerFactory.getLogger(WechatOfficialAccountTool.class);
+
+    /** 映射组配置键：账号名称 → {appId, appSecret} */
+    private static final String CONFIG_KEY_ACCOUNTS = "accounts";
+
+    @Autowired
+    private ISysConfigService sysConfigService;
+
+    /** 公众号账号配置缓存：账号名称 → 凭证 */
+    private volatile Map<String, WxAccount> cachedAccounts = Collections.emptyMap();
+
+    /** 公众号凭证 */
+    private record WxAccount(String appId, String appSecret) {}
 
     private final WeChatMpApiClient client = new WeChatMpApiClient();
 
@@ -52,7 +76,7 @@ public class WechatOfficialAccountTool implements AgentTool {
 
     @Override
     public String getDescription() {
-        return "微信公众号文章管理工具，支持多公众号（每次调用传入对应号的 appId/appSecret），"
+        return "微信公众号文章管理工具，支持多公众号（公众号账号在系统配置中维护，各方法传入公众号账号名称即可），"
                 + "提供文章草稿的新增/查询/修改/删除、封面与正文图片素材上传、文章发布与发布状态查询。"
                 + "要求：已认证的非个人主体公众号，服务器 IP 需加入公众号后台 IP 白名单。";
     }
@@ -67,20 +91,107 @@ public class WechatOfficialAccountTool implements AgentTool {
         return "wechat-official-account-tool.svg";
     }
 
+    // ========== 配置定义与账号解析 ==========
+
+    /**
+     * 映射组结构配置：主体 key = 组名（公众号账号名称），values = 每组内的字段。
+     * 存储为一条 JSON：{"账号名称1":{"appId":"...","appSecret":"..."},"账号名称2":{...}}
+     */
+    @Override
+    public List<ToolConfigItem> getConfigItems() {
+        ToolMapConfigItem accounts = new ToolMapConfigItem(CONFIG_KEY_ACCOUNTS, "公众号账号",
+                "配置多个公众号：每组填写公众号账号名称，组内配置该公众号的 AppID 与 AppSecret，工具方法通过账号名称引用",
+                ToolConfigItem.ConfigType.TEXT_SINGLE);
+        accounts.setValues(List.of(
+                new ToolConfigItem("appId", "AppID", "开发者ID", ToolConfigItem.ConfigType.TEXT_SINGLE)
+                        .validation(new ValidationRule().required()),
+                new ToolConfigItem("appSecret", "AppSecret", "开发者密码", ToolConfigItem.ConfigType.TEXT_PASSWORD)
+                        .validation(new ValidationRule().required())
+        ));
+        return List.of(accounts);
+    }
+
+    @Override
+    public void asyncInit() {
+        reloadAccounts();
+    }
+
+    @Override
+    public void onConfigChanged() {
+        reloadAccounts();
+    }
+
+    /**
+     * 从 sys_config 加载 accounts 映射组配置，解析为 账号名称 → 公众号凭证。
+     */
+    private void reloadAccounts() {
+        Map<String, WxAccount> accounts = new LinkedHashMap<>();
+        if (sysConfigService != null) {
+            SysConfig config = sysConfigService.getByKey(getConfigPrefix() + CONFIG_KEY_ACCOUNTS);
+            String json = config != null ? config.getConfigValue() : null;
+            if (notBlank(json)) {
+                try {
+                    LinkedHashMap<String, LinkedHashMap<String, String>> groups = JSON.parseObject(json,
+                            new TypeReference<LinkedHashMap<String, LinkedHashMap<String, String>>>() {});
+                    for (Map.Entry<String, LinkedHashMap<String, String>> e : groups.entrySet()) {
+                        String appId = e.getValue() != null ? e.getValue().get("appId") : null;
+                        String appSecret = e.getValue() != null ? e.getValue().get("appSecret") : null;
+                        if (notBlank(appId) && notBlank(appSecret)) {
+                            accounts.put(e.getKey(), new WxAccount(appId, appSecret));
+                        } else {
+                            log.warn("公众号账号[{}]配置不完整（缺少 appId 或 appSecret），已跳过", e.getKey());
+                        }
+                    }
+                } catch (Exception ex) {
+                    log.error("公众号账号配置解析失败：{}", ex.getMessage());
+                }
+            }
+        }
+        this.cachedAccounts = accounts;
+        log.info("公众号账号配置已加载，共{}个：{}", accounts.size(), accounts.keySet());
+    }
+
+    /**
+     * 按公众号账号名称解析凭证；缓存为空时先尝试加载一次。
+     */
+    private WxAccount resolveAccount(String account) {
+        if (isBlank(account)) {
+            return null;
+        }
+        if (cachedAccounts.isEmpty()) {
+            reloadAccounts();
+        }
+        return cachedAccounts.get(account.trim());
+    }
+
+    /**
+     * 生成账号解析失败的提示信息（含可用账号列表，便于模型自我修正）。
+     */
+    private String accountError(String account) {
+        if (isBlank(account)) {
+            return "失败：公众号账号不能为空，请传入系统配置中添加的公众号账号名称";
+        }
+        if (cachedAccounts.isEmpty()) {
+            return "失败：尚未配置任何公众号账号，请先在系统配置的公众号工具中添加（每组包含账号名称、AppID、AppSecret）";
+        }
+        return "失败：未找到公众号账号 [" + account + "]，当前已配置的账号：" + String.join("、", cachedAccounts.keySet());
+    }
+
     // ========== 连接测试 ==========
 
     @ToolSecurityLevel(ToolSecurityLevel.Level.SAFE)
     @Tool(value = {
             "测试公众号连接",
-            "验证公众号 appId/appSecret 配置是否正确并检查接口连通性。操作公众号前可先调用本方法确认配置。",
+            "验证公众号账号配置（AppID/AppSecret）是否正确并检查接口连通性。操作公众号前可先调用本方法确认配置。",
             "公众号,测试,连接,验证"
     })
     public String testConnection(
-            @P(description = "公众号 appId（开发者ID，可在公众号后台-设置与开发-基本配置中查看）") String appId,
-            @P(description = "公众号 appSecret（开发者密码）") String appSecret) {
+            @P(description = "公众号账号名称（需先在系统配置中添加）") String account) {
+        WxAccount wx = resolveAccount(account);
+        if (wx == null) return accountError(account);
         try {
-            JSONObject resp = client.post(appId, appSecret, "draft/count", new JSONObject());
-            return "连接成功，公众号配置有效。\n当前草稿总数：" + resp.getIntValue("total_count");
+            JSONObject resp = client.post(wx.appId(), wx.appSecret(), "draft/count", new JSONObject());
+            return "连接成功，公众号[" + account + "]配置有效。\n当前草稿总数：" + resp.getIntValue("total_count");
         } catch (WeChatMpApiClient.WxApiException e) {
             return formatError("连接测试", e);
         } catch (Exception e) {
@@ -97,8 +208,7 @@ public class WechatOfficialAccountTool implements AgentTool {
             "公众号,文章,草稿,新增,创建,写作"
     })
     public String addDraft(
-            @P(description = "公众号 appId") String appId,
-            @P(description = "公众号 appSecret") String appSecret,
+            @P(description = "公众号账号名称（需先在系统配置中添加）") String account,
             @P(description = "文章标题，不超过32个字") String title,
             @P(description = "文章正文内容，支持HTML标签，图片 src 必须使用上传文章内图片接口返回的微信 URL（外链图片会被过滤）") String content,
             @P(description = "封面图片的素材 mediaId（永久素材），需先调用上传封面图片素材接口获取") String thumbMediaId,
@@ -107,6 +217,8 @@ public class WechatOfficialAccountTool implements AgentTool {
             @P(description = "原文链接，即点击阅读原文后的URL", required = false) String contentSourceUrl,
             @P(description = "是否打开评论：1打开，0不打开（默认）", required = false) Integer needOpenComment) {
 
+        WxAccount wx = resolveAccount(account);
+        if (wx == null) return accountError(account);
         if (isBlank(title)) return "失败：文章标题不能为空";
         if (isBlank(content)) return "失败：文章正文不能为空";
         if (isBlank(thumbMediaId)) return "失败：封面图片素材 mediaId 不能为空，请先调用上传封面图片素材接口";
@@ -126,7 +238,7 @@ public class WechatOfficialAccountTool implements AgentTool {
         body.put("articles", articles);
 
         try {
-            JSONObject resp = client.post(appId, appSecret, "draft/add", body);
+            JSONObject resp = client.post(wx.appId(), wx.appSecret(), "draft/add", body);
             return "草稿新增成功。\nmediaId: " + resp.getString("media_id")
                     + "\n后续可用该 mediaId 修改、删除草稿或发布文章。";
         } catch (WeChatMpApiClient.WxApiException e) {
@@ -143,11 +255,12 @@ public class WechatOfficialAccountTool implements AgentTool {
             "公众号,草稿,列表,查询,文章"
     })
     public String listDrafts(
-            @P(description = "公众号 appId") String appId,
-            @P(description = "公众号 appSecret") String appSecret,
+            @P(description = "公众号账号名称（需先在系统配置中添加）") String account,
             @P(description = "分页起始位置，从0开始，默认0", required = false) Integer offset,
             @P(description = "每页数量，默认20，最大20", required = false) Integer count) {
 
+        WxAccount wx = resolveAccount(account);
+        if (wx == null) return accountError(account);
         int off = offset != null && offset >= 0 ? offset : 0;
         int cnt = count != null && count > 0 ? Math.min(count, 20) : 20;
 
@@ -156,7 +269,7 @@ public class WechatOfficialAccountTool implements AgentTool {
             body.put("offset", off);
             body.put("count", cnt);
             body.put("no_content", 1); // 不返回正文，避免超长
-            JSONObject resp = client.post(appId, appSecret, "draft/batchget", body);
+            JSONObject resp = client.post(wx.appId(), wx.appSecret(), "draft/batchget", body);
 
             StringBuilder sb = new StringBuilder();
             sb.append("草稿总数：").append(resp.getIntValue("total_count"))
@@ -191,16 +304,17 @@ public class WechatOfficialAccountTool implements AgentTool {
             "公众号,草稿,详情,内容,正文"
     })
     public String getDraft(
-            @P(description = "公众号 appId") String appId,
-            @P(description = "公众号 appSecret") String appSecret,
+            @P(description = "公众号账号名称（需先在系统配置中添加）") String account,
             @P(description = "草稿的 mediaId，可从查询草稿列表接口获取") String mediaId,
             @P(description = "正文内容最大返回长度（字符），超长截断，默认8000", required = false) Integer maxContentLength) {
 
+        WxAccount wx = resolveAccount(account);
+        if (wx == null) return accountError(account);
         if (isBlank(mediaId)) return "失败：mediaId 不能为空";
         int maxLen = maxContentLength != null && maxContentLength > 0 ? maxContentLength : 8000;
 
         try {
-            JSONObject resp = client.post(appId, appSecret, "draft/get",
+            JSONObject resp = client.post(wx.appId(), wx.appSecret(), "draft/get",
                     new JSONObject(Map.of("media_id", mediaId)));
 
             JSONArray news = WeChatMpApiClient.getArray(resp, "news_item");
@@ -239,8 +353,7 @@ public class WechatOfficialAccountTool implements AgentTool {
             "公众号,草稿,修改,编辑,更新"
     })
     public String updateDraft(
-            @P(description = "公众号 appId") String appId,
-            @P(description = "公众号 appSecret") String appSecret,
+            @P(description = "公众号账号名称（需先在系统配置中添加）") String account,
             @P(description = "草稿的 mediaId") String mediaId,
             @P(description = "要修改的篇目序号（多图文从0开始，单图文传0）") Integer index,
             @P(description = "新标题，不超过32个字", required = false) String title,
@@ -249,6 +362,8 @@ public class WechatOfficialAccountTool implements AgentTool {
             @P(description = "新作者", required = false) String author,
             @P(description = "新摘要，不超过120个字", required = false) String digest) {
 
+        WxAccount wx = resolveAccount(account);
+        if (wx == null) return accountError(account);
         if (isBlank(mediaId)) return "失败：mediaId 不能为空";
         if (index == null || index < 0) return "失败：index 不能为空（多图文从0开始）";
         if (isBlank(title) && isBlank(content) && isBlank(thumbMediaId) && isBlank(author) && isBlank(digest)) {
@@ -268,7 +383,7 @@ public class WechatOfficialAccountTool implements AgentTool {
         body.put("articles", article);
 
         try {
-            client.post(appId, appSecret, "draft/update", body);
+            client.post(wx.appId(), wx.appSecret(), "draft/update", body);
             return "草稿修改成功。mediaId: " + mediaId + "，篇目: " + index;
         } catch (WeChatMpApiClient.WxApiException e) {
             return formatError("修改草稿", e);
@@ -284,13 +399,14 @@ public class WechatOfficialAccountTool implements AgentTool {
             "公众号,草稿,删除"
     })
     public String deleteDraft(
-            @P(description = "公众号 appId") String appId,
-            @P(description = "公众号 appSecret") String appSecret,
+            @P(description = "公众号账号名称（需先在系统配置中添加）") String account,
             @P(description = "要删除的草稿 mediaId") String mediaId) {
 
+        WxAccount wx = resolveAccount(account);
+        if (wx == null) return accountError(account);
         if (isBlank(mediaId)) return "失败：mediaId 不能为空";
         try {
-            client.post(appId, appSecret, "draft/delete", new JSONObject(Map.of("media_id", mediaId)));
+            client.post(wx.appId(), wx.appSecret(), "draft/delete", new JSONObject(Map.of("media_id", mediaId)));
             return "草稿删除成功。mediaId: " + mediaId;
         } catch (WeChatMpApiClient.WxApiException e) {
             return formatError("删除草稿", e);
@@ -308,14 +424,15 @@ public class WechatOfficialAccountTool implements AgentTool {
             "公众号,封面,素材,上传,图片"
     })
     public String uploadCoverImage(
-            @P(description = "公众号 appId") String appId,
-            @P(description = "公众号 appSecret") String appSecret,
+            @P(description = "公众号账号名称（需先在系统配置中添加）") String account,
             @P(description = "本地图片文件的绝对路径（jpg/png/gif/bmp）") String filePath) {
 
+        WxAccount wx = resolveAccount(account);
+        if (wx == null) return accountError(account);
         Path file = validateImageFile(filePath);
         if (file == null) return "失败：图片文件不存在或格式不支持（支持 jpg/png/gif/bmp）: " + filePath;
         try {
-            JSONObject resp = client.uploadMedia(appId, appSecret, "material/add_material", "type=image", file);
+            JSONObject resp = client.uploadMedia(wx.appId(), wx.appSecret(), "material/add_material", "type=image", file);
             return "封面上传成功。\nmediaId: " + resp.getString("media_id")
                     + "\n图片URL: " + safe(resp.getString("url"))
                     + "\n请将 mediaId 作为新增/修改草稿的封面素材ID（thumbMediaId）使用。";
@@ -333,14 +450,15 @@ public class WechatOfficialAccountTool implements AgentTool {
             "公众号,正文,图片,上传,素材"
     })
     public String uploadContentImage(
-            @P(description = "公众号 appId") String appId,
-            @P(description = "公众号 appSecret") String appSecret,
+            @P(description = "公众号账号名称（需先在系统配置中添加）") String account,
             @P(description = "本地图片文件的绝对路径（jpg/png/gif/bmp）") String filePath) {
 
+        WxAccount wx = resolveAccount(account);
+        if (wx == null) return accountError(account);
         Path file = validateImageFile(filePath);
         if (file == null) return "失败：图片文件不存在或格式不支持（支持 jpg/png/gif/bmp）: " + filePath;
         try {
-            JSONObject resp = client.uploadMedia(appId, appSecret, "media/uploadimg", null, file);
+            JSONObject resp = client.uploadMedia(wx.appId(), wx.appSecret(), "media/uploadimg", null, file);
             return "正文图片上传成功。\n微信图片URL: " + safe(resp.getString("url"))
                     + "\n请在文章正文HTML中使用该URL作为 img 标签的 src。";
         } catch (WeChatMpApiClient.WxApiException e) {
@@ -357,12 +475,13 @@ public class WechatOfficialAccountTool implements AgentTool {
             "公众号,素材,列表,查询,图片"
     })
     public String listMaterials(
-            @P(description = "公众号 appId") String appId,
-            @P(description = "公众号 appSecret") String appSecret,
+            @P(description = "公众号账号名称（需先在系统配置中添加）") String account,
             @P(description = "素材类型：image（默认）/ video / news", required = false) String type,
             @P(description = "分页起始位置，从0开始，默认0", required = false) Integer offset,
             @P(description = "每页数量，默认20，最大20", required = false) Integer count) {
 
+        WxAccount wx = resolveAccount(account);
+        if (wx == null) return accountError(account);
         String t = notBlank(type) ? type : "image";
         int off = offset != null && offset >= 0 ? offset : 0;
         int cnt = count != null && count > 0 ? Math.min(count, 20) : 20;
@@ -372,7 +491,7 @@ public class WechatOfficialAccountTool implements AgentTool {
             body.put("type", t);
             body.put("offset", off);
             body.put("count", cnt);
-            JSONObject resp = client.post(appId, appSecret, "material/batchget", body);
+            JSONObject resp = client.post(wx.appId(), wx.appSecret(), "material/batchget", body);
 
             StringBuilder sb = new StringBuilder();
             sb.append("素材类型: ").append(t)
@@ -406,13 +525,14 @@ public class WechatOfficialAccountTool implements AgentTool {
             "公众号,发布,发表,群发,上线"
     })
     public String publishDraft(
-            @P(description = "公众号 appId") String appId,
-            @P(description = "公众号 appSecret") String appSecret,
+            @P(description = "公众号账号名称（需先在系统配置中添加）") String account,
             @P(description = "要发布的草稿 mediaId") String mediaId) {
 
+        WxAccount wx = resolveAccount(account);
+        if (wx == null) return accountError(account);
         if (isBlank(mediaId)) return "失败：mediaId 不能为空";
         try {
-            JSONObject resp = client.post(appId, appSecret, "freepublish/submit",
+            JSONObject resp = client.post(wx.appId(), wx.appSecret(), "freepublish/submit",
                     new JSONObject(Map.of("media_id", mediaId)));
             return "发布任务提交成功。\npublishId: " + resp.getString("publish_id")
                     + "\n发布为异步任务，请稍后调用查询发布状态接口（传入 publishId）确认发布结果。";
@@ -430,13 +550,14 @@ public class WechatOfficialAccountTool implements AgentTool {
             "公众号,发布,状态,查询,进度"
     })
     public String getPublishStatus(
-            @P(description = "公众号 appId") String appId,
-            @P(description = "公众号 appSecret") String appSecret,
+            @P(description = "公众号账号名称（需先在系统配置中添加）") String account,
             @P(description = "发布任务ID（publishId），来自发布文章接口的返回") String publishId) {
 
+        WxAccount wx = resolveAccount(account);
+        if (wx == null) return accountError(account);
         if (isBlank(publishId)) return "失败：publishId 不能为空";
         try {
-            JSONObject resp = client.post(appId, appSecret, "freepublish/get",
+            JSONObject resp = client.post(wx.appId(), wx.appSecret(), "freepublish/get",
                     new JSONObject(Map.of("publish_id", publishId)));
             return formatPublishResult(publishId, resp);
         } catch (WeChatMpApiClient.WxApiException e) {
@@ -453,11 +574,12 @@ public class WechatOfficialAccountTool implements AgentTool {
             "公众号,发布,文章,列表,历史消息"
     })
     public String listPublishedArticles(
-            @P(description = "公众号 appId") String appId,
-            @P(description = "公众号 appSecret") String appSecret,
+            @P(description = "公众号账号名称（需先在系统配置中添加）") String account,
             @P(description = "分页起始位置，从0开始，默认0", required = false) Integer offset,
             @P(description = "每页数量，默认20，最大20", required = false) Integer count) {
 
+        WxAccount wx = resolveAccount(account);
+        if (wx == null) return accountError(account);
         int off = offset != null && offset >= 0 ? offset : 0;
         int cnt = count != null && count > 0 ? Math.min(count, 20) : 20;
 
@@ -466,7 +588,7 @@ public class WechatOfficialAccountTool implements AgentTool {
             body.put("offset", off);
             body.put("count", cnt);
             body.put("no_content", 1); // 不返回正文，避免超长
-            JSONObject resp = client.post(appId, appSecret, "freepublish/batchget", body);
+            JSONObject resp = client.post(wx.appId(), wx.appSecret(), "freepublish/batchget", body);
 
             StringBuilder sb = new StringBuilder();
             sb.append("已发布总数：").append(resp.getIntValue("total_count"))
@@ -501,18 +623,19 @@ public class WechatOfficialAccountTool implements AgentTool {
             "公众号,删除,下架,已发布"
     })
     public String deletePublishedArticle(
-            @P(description = "公众号 appId") String appId,
-            @P(description = "公众号 appSecret") String appSecret,
+            @P(description = "公众号账号名称（需先在系统配置中添加）") String account,
             @P(description = "要删除的已发布文章 articleId（可从查询已发布文章列表接口获取）") String articleId,
             @P(description = "要删除的篇目序号（多图文从0开始，单图文传0）") Integer index) {
 
+        WxAccount wx = resolveAccount(account);
+        if (wx == null) return accountError(account);
         if (isBlank(articleId)) return "失败：articleId 不能为空";
         if (index == null || index < 0) return "失败：index 不能为空（多图文从0开始）";
         try {
             JSONObject body = new JSONObject();
             body.put("article_id", articleId);
             body.put("index", index);
-            client.post(appId, appSecret, "freepublish/delete", body);
+            client.post(wx.appId(), wx.appSecret(), "freepublish/delete", body);
             return "已发布文章删除成功。articleId: " + articleId + "，篇目: " + index;
         } catch (WeChatMpApiClient.WxApiException e) {
             return formatError("删除已发布文章", e);

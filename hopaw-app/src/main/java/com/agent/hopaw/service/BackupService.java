@@ -111,8 +111,8 @@ public class BackupService {
         }
 
         if (exportTtsConfig) {
-            // TTS configJson 字段以明文 JSON 形式存储于数据库（含厂商 apiKey 等凭证），
-            // 备份原样导出；导入时也原样写回。密钥包内的 encryption.key 仍用于其他加密字段。
+            // TTS configJson 字段在数据库中以 {AES} 密文存储（含厂商 apiKey 等凭证），
+            // 备份保留原密文导出；导入时使用备份包内旧密钥解密后以本机密钥重加密
             List<TtsConfig> ttsConfigs = ttsConfigMapper.findAll();
             files.put("tts_config.json", toJsonBytes(ttsConfigs));
         }
@@ -270,7 +270,7 @@ public class BackupService {
             // tts_config.json
             Path ttsFile = tempDir.resolve("tts_config.json");
             if (Files.exists(ttsFile)) {
-                int n = importTtsConfigs(ttsFile);
+                int n = importTtsConfigs(ttsFile, oldKeyUtil, reStats);
                 total += n;
                 summary.append("tts_config: ").append(n).append(" 条\n");
             }
@@ -380,12 +380,14 @@ public class BackupService {
         return count;
     }
 
-    private int importTtsConfigs(Path file) throws Exception {
+    private int importTtsConfigs(Path file, AesEncryptionUtil oldKeyUtil, ReEncryptStats stats) throws Exception {
         String json = Files.readString(file, StandardCharsets.UTF_8);
         List<TtsConfig> configs = JSON.parseArray(json, TtsConfig.class);
         int count = 0;
         for (TtsConfig config : configs) {
-            // configJson 数据库里以明文存储，备份导出时未做转换，导入也原样写回
+            // configJson 在数据库中以 {AES} 密文存储：先用备份包内旧密钥解密，再用本机密钥重新加密写入；
+            // 兼容旧备份中的明文 configJson（reEncryptIfNeeded 对非密文原样返回，写入后由下次保存加密）
+            config.setConfigJson(reEncryptIfNeeded(config.getConfigJson(), oldKeyUtil, stats));
             TtsConfig existing = config.getId() != null ? ttsConfigMapper.findById(config.getId()) : null;
             if (existing != null) {
                 ttsConfigMapper.update(config);

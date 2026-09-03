@@ -2,9 +2,9 @@ package com.agent.hopaw.avatar.service;
 
 import com.agent.hopaw.avatar.entity.AgentAvatarConfig;
 import com.agent.hopaw.avatar.mapper.AvatarConfigMapper;
-import com.agent.hopaw.infra.mapper.TtsConfigMapper;
 import com.agent.hopaw.infra.model.entity.TtsConfig;
 import com.agent.hopaw.infra.service.ITtsService;
+import com.agent.hopaw.infra.service.TtsConfigService;
 import com.agent.hopaw.infra.service.TtsServiceFactory;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -20,14 +20,14 @@ public class TtsService {
 
     private static final Logger logger = LoggerFactory.getLogger(TtsService.class);
 
-    private final TtsConfigMapper ttsConfigMapper;
+    private final TtsConfigService ttsConfigService;
     private final AvatarConfigMapper avatarConfigMapper;
     private final TtsServiceFactory ttsServiceFactory;
 
-    public TtsService(TtsConfigMapper ttsConfigMapper,
+    public TtsService(TtsConfigService ttsConfigService,
                       AvatarConfigMapper avatarConfigMapper,
                       TtsServiceFactory ttsServiceFactory) {
-        this.ttsConfigMapper = ttsConfigMapper;
+        this.ttsConfigService = ttsConfigService;
         this.avatarConfigMapper = avatarConfigMapper;
         this.ttsServiceFactory = ttsServiceFactory;
     }
@@ -57,8 +57,8 @@ public class TtsService {
                 return null;
             }
 
-            // 2. 查询全局 TTS 厂商配置
-            TtsConfig ttsConfig = ttsConfigMapper.findById(ttsConfigId);
+            // 2. 查询全局 TTS 厂商配置（TtsConfigService 返回已解密的 configJson）
+            TtsConfig ttsConfig = ttsConfigService.findById(ttsConfigId);
             if (ttsConfig == null || ttsConfig.getEnabled() == null || ttsConfig.getEnabled() != 1) {
                 logger.warn("TTS: 配置 id={} 未启用或不存在", ttsConfigId);
                 return null;
