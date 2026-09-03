@@ -97,11 +97,12 @@
                 <div th:case="'attachment'" th:with="parts=${#strings.arraySplit(chat.content, ',')}, fileType=${parts[0]}, fileId=${parts[1]}, originalName=${parts[2]}, fileUrl=${parts[3]}">
                     <div class="message-label" th:text="${chat.role == 'user' ? '你' : (chat.agent != null ? chat.agent.name : 'Agent')}"></div>
                     <img th:if="${fileType == 'image'}" th:src="${fileUrl}" class="message-content message-image"
-                         th:attr="data-is-agent=${chat.role == 'agent'}, data-attachment-id=${fileId}" th:alt="${originalName}"/>
-                    <a th:unless="${fileType == 'image'}" th:href="${fileUrl}"
+                         th:attr="data-is-agent=${chat.role == 'agent'}, data-attachment-id=${fileId}" th:alt="${originalName}"
+                         onclick="openAttachmentPreview(this.getAttribute('data-attachment-id'))" style="cursor:pointer"/>
+                    <a th:unless="${fileType == 'image'}" href="javascript:void(0)"
                        th:class="'message-content message-' + ${fileType}"
-                       th:attr="data-is-agent=${chat.role == 'agent'}, data-attachment-id=${fileId}"
-                       th:title="${originalName}" th:text="${originalName}"></a>
+                       th:attr="data-is-agent=${chat.role == 'agent'}, data-attachment-id=${fileId}, onclick='openAttachmentPreview(this.getAttribute(&quot;data-attachment-id&quot;))'"
+                       th:title="${originalName}" th:text="${originalName}" style="cursor:pointer"></a>
                     <div class="message-footer">
                         <div class="message-time"
                              th:text="${chat.createTime.toLocalDate().equals(T(java.time.LocalDate).now()) ? #temporals.format(chat.createTime, 'HH:mm:ss') : #temporals.format(chat.createTime, 'yyyy-MM-dd HH:mm:ss')}"></div>
@@ -204,7 +205,7 @@
                                 <path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"/>
                             </svg>
                         </button>
-                        <input type="file" id="fileInput" accept="image/*" style="display:none" multiple>
+                        <input type="file" id="fileInput" style="display:none" multiple>
                         <button type="button" class="chat-btn-deep" id="deepThinkBtn"
                                 th:attr="data-agent-id=${selectedAgent.id}, data-enabled=${selectedAgent.enableThinking}"
                                 th:classappend="${selectedAgent.enableThinking ? 'active' : ''}">

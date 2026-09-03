@@ -10,6 +10,28 @@ var currentModelId = null;
 var currentSessionId = null;
 var currentToolCallPermission = 'smart_call';
 var attachedFiles = []; // { url, type, name }
+
+function openAttachmentPreview(id) {
+    var overlay = document.createElement('div');
+    overlay.className = 'attachment-preview-overlay';
+    overlay.onclick = function(e) { if (e.target === overlay) overlay.remove(); };
+
+    var wrapper = document.createElement('div');
+    wrapper.className = 'attachment-preview-wrapper';
+
+    var closeBtn = document.createElement('button');
+    closeBtn.className = 'attachment-preview-close';
+    closeBtn.textContent = '×';
+    closeBtn.onclick = function() { overlay.remove(); };
+    wrapper.appendChild(closeBtn);
+
+    var iframe = document.createElement('iframe');
+    iframe.src = '/attachment-preview/' + id;
+    wrapper.appendChild(iframe);
+
+    overlay.appendChild(wrapper);
+    document.body.appendChild(overlay);
+}
 // 会话列表类型筛选：chat=聊天 / project=项目 / task=任务，默认取当前会话的类型
 var sessionTypeFilter = 'chat';
 // 运行中的会话ID集合：初始渲染时取自后端 running 字段，运行期由 WebSocket 事件维护
@@ -345,15 +367,20 @@ function buildHistoryMessageNode(chat) {
             img.className = 'message-content message-image';
             img.src = url;
             img.setAttribute('data-is-agent', chat.role === 'agent');
+            img.setAttribute('data-attachment-id', id);
             img.alt = originalName;
+            img.style.cursor = 'pointer';
+            img.onclick = function() { openAttachmentPreview(id); };
             div.appendChild(img);
         }else{
             var a = document.createElement('a');
             a.className = 'message-content message-'+fileType;
-            a.href = url;
+            a.href = 'javascript:void(0)';
             a.setAttribute('data-is-agent', chat.role === 'agent');
+            a.setAttribute('data-attachment-id', id);
             a.title = originalName;
             a.text = originalName;
+            a.onclick = function() { openAttachmentPreview(id); };
             div.appendChild(a);
         }
         div.appendChild(buildHistoryFooter(timeText, null));
@@ -973,15 +1000,18 @@ function handleUserMessageEcho(data) {
             img.setAttribute('data-attachment-id', f.id);
             img.className = 'message-content message-image';
             img.alt = f.originalName;
+            img.style.cursor = 'pointer';
+            img.onclick = function() { openAttachmentPreview(f.id); };
             imageMessageDiv.appendChild(img);
         }else{
             var a = document.createElement('a');
             a.className = 'message-content message-'+f.type;
-            a.href = f.url;
+            a.href = 'javascript:void(0)';
             a.setAttribute('data-is-agent', 'false');
             a.setAttribute('data-attachment-id', f.id);
             a.title = f.originalName;
             a.text=f.originalName;
+            a.onclick = function() { openAttachmentPreview(f.id); };
             imageMessageDiv.appendChild(a);
         }
 
@@ -2464,7 +2494,7 @@ function uploadFile(file) {
     });
 }
 
-function createPreviewItem(id, url, uploading) {
+function createPreviewItem(id, url, uploading, fileInfo) {
     var item = document.createElement('div');
     item.className = 'file-preview-item';
     item.setAttribute('data-file-id', id);
@@ -2476,6 +2506,28 @@ function createPreviewItem(id, url, uploading) {
         spinner.className = 'preview-spinner';
         overlay.appendChild(spinner);
         item.appendChild(overlay);
+    } else if (fileInfo && fileInfo.type !== 'image') {
+        item.classList.add('file-preview-non-image');
+        var icon = document.createElement('div');
+        icon.className = 'preview-file-icon';
+        var icons = { video: '🎬', audio: '🎵', file: '📄' };
+        icon.textContent = icons[fileInfo.type] || '📄';
+        item.appendChild(icon);
+
+        var name = document.createElement('div');
+        name.className = 'preview-file-name';
+        name.textContent = fileInfo.name;
+        name.title = fileInfo.name;
+        item.appendChild(name);
+
+        var removeBtn = document.createElement('button');
+        removeBtn.className = 'preview-remove';
+        removeBtn.textContent = 'X';
+        removeBtn.onclick = function(e) {
+            e.stopPropagation();
+            removeFileById(id);
+        };
+        item.appendChild(removeBtn);
     } else {
         var img = document.createElement('img');
         img.src = url;
@@ -2486,7 +2538,7 @@ function createPreviewItem(id, url, uploading) {
         removeBtn.textContent = 'X';
         removeBtn.onclick = function(e) {
             e.stopPropagation();
-            removeFileByUrl(url);
+            removeFileById(id);
         };
         item.appendChild(removeBtn);
     }
@@ -2496,9 +2548,10 @@ function createPreviewItem(id, url, uploading) {
 
 function renderFilePreview(fileInfo) {
     var id = 'file_' + fileInfo.url.replace(/[^a-zA-Z0-9]/g, '_');
-    var item = createPreviewItem(id, fileInfo.url, false);
+    var item = createPreviewItem(id, fileInfo.url, false, fileInfo);
+    item.setAttribute('data-file-id', id);
+    item.setAttribute('data-file-url', fileInfo.url);
     document.getElementById('filePreviewArea').appendChild(item);
-    // 更新预览区域可见性
     updatePreviewAreaVisibility();
 }
 
@@ -2508,9 +2561,20 @@ function removePreviewItem(id) {
     updatePreviewAreaVisibility();
 }
 
+function removeFileById(id) {
+    var item = document.querySelector('.file-preview-item[data-file-id="' + id + '"]');
+    if (item) {
+        var url = item.getAttribute('data-file-url');
+        if (url) {
+            attachedFiles = attachedFiles.filter(function(f) { return f.url !== url; });
+        }
+        item.remove();
+    }
+    updatePreviewAreaVisibility();
+}
+
 function removeFileByUrl(url) {
     attachedFiles = attachedFiles.filter(function(f) { return f.url !== url; });
-    // 移除预览元素
     var items = document.querySelectorAll('.file-preview-item');
     items.forEach(function(item) {
         var img = item.querySelector('img');

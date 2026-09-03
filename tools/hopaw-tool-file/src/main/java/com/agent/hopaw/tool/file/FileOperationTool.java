@@ -25,7 +25,6 @@ import java.io.BufferedReader;
 import java.io.BufferedWriter;
 import java.io.ByteArrayOutputStream;
 import java.io.File;
-import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
@@ -103,7 +102,10 @@ public class FileOperationTool implements AgentTool {
 
     @ToolSecurityLevel(ToolSecurityLevel.Level.SAFE)
     @Tool(value = {"读取文件", "读取文本文件内容", "文件读取"})
-    public String readFile(@P(description = "文件路径") String filePath) {
+    public String readFile(
+            @P(description = "文件路径") String filePath,
+            @P(description = "编码格式，如 UTF-8、GBK、ISO-8859-1 等，默认 UTF-8", required = false) String encoding,
+            @P(description = "最大返回行数，默认 2000 行，超出部分截断并提示", required = false) Integer maxLines) {
         try {
             Path path = Paths.get(filePath).toAbsolutePath().normalize();
             if (!Files.exists(path)) {
@@ -113,16 +115,36 @@ public class FileOperationTool implements AgentTool {
                 return "错误: 路径不是文件: " + filePath;
             }
 
+            String charset = (encoding != null && !encoding.isBlank()) ? encoding.trim() : "UTF-8";
+            int lineLimit = (maxLines != null && maxLines > 0) ? maxLines : 2000;
+
             StringBuilder content = new StringBuilder();
-            try (BufferedReader reader = new BufferedReader(new FileReader(path.toFile()))) {
+            int lineCount = 0;
+            boolean truncated = false;
+
+            try (BufferedReader reader = Files.newBufferedReader(path, java.nio.charset.Charset.forName(charset))) {
                 String line;
                 while ((line = reader.readLine()) != null) {
-                    content.append(line).append("\n");
+                    lineCount++;
+                    if (lineCount <= lineLimit) {
+                        content.append(line).append("\n");
+                    } else {
+                        truncated = true;
+                        break;
+                    }
                 }
             }
 
             String result = content.toString();
-            return result.isEmpty() ? "(空文件)" : result;
+            if (result.isEmpty()) {
+                return "(空文件)";
+            }
+            if (truncated) {
+                result += "\n...(已截断，共读取前 " + lineLimit + " 行)";
+            }
+            return result;
+        } catch (java.nio.charset.UnsupportedCharsetException e) {
+            return "错误: 不支持的编码格式: " + encoding;
         } catch (IOException e) {
             log.error("读取文件失败: {}", filePath, e);
             return "错误: 读取文件失败 - " + e.getMessage();
@@ -134,7 +156,8 @@ public class FileOperationTool implements AgentTool {
     public String readFileByLine(
             @P(description = "文件路径") String filePath,
             @P(description = "起始行号(从1开始)，为空表示从头开始", required = false) Integer startLine,
-            @P(description = "结束行号，为空表示读到最后", required = false) Integer endLine) {
+            @P(description = "结束行号，为空表示读到最后", required = false) Integer endLine,
+            @P(description = "编码格式，如 UTF-8、GBK、ISO-8859-1 等，默认 UTF-8", required = false) String encoding) {
         try {
             Path path = Paths.get(filePath).toAbsolutePath().normalize();
             if (!Files.exists(path)) {
@@ -151,10 +174,12 @@ public class FileOperationTool implements AgentTool {
                 return "错误: 起始行号不能大于结束行号";
             }
 
+            String charset = (encoding != null && !encoding.isBlank()) ? encoding.trim() : "UTF-8";
+
             StringBuilder result = new StringBuilder();
             int currentLine = 0;
 
-            try (BufferedReader reader = new BufferedReader(new FileReader(path.toFile()))) {
+            try (BufferedReader reader = Files.newBufferedReader(path, java.nio.charset.Charset.forName(charset))) {
                 String line;
                 while ((line = reader.readLine()) != null) {
                     currentLine++;
@@ -172,6 +197,8 @@ public class FileOperationTool implements AgentTool {
             }
 
             return result.toString();
+        } catch (java.nio.charset.UnsupportedCharsetException e) {
+            return "错误: 不支持的编码格式: " + encoding;
         } catch (IOException e) {
             log.error("按行读取文件失败: {}", filePath, e);
             return "错误: 读取文件失败 - " + e.getMessage();
