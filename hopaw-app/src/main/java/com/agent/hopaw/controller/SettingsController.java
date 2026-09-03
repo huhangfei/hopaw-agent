@@ -41,6 +41,7 @@ public class SettingsController {
         put("workflow-pool", new String[] {"/js/page/settings-workflow-pool.js", null});
         put("notify",       new String[] {"/js/page/settings-notify.js", "/css/page/settings-notify.css"});
         put("session-clean", new String[] {"/js/page/settings-session-clean.js", "/css/page/settings-session-clean.css"});
+        put("prompt",        new String[] {"/js/page/settings-prompt.js", null});
     }};
 
     private final MailUtil mailUtil;

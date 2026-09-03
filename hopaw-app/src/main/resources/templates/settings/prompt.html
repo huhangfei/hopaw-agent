@@ -1,0 +1,17 @@
+<th:block th:fragment="content" xmlns:th="http://www.thymeleaf.org">
+<div class="settings-panel active" id="tab-prompt">
+    <div class="settings-row">
+        <div class="settings-form">
+            <div class="form-group">
+                <label for="systemPrompt">系统提示词</label>
+                <textarea id="systemPrompt" class="memory-prompt-input" rows="12" placeholder="自定义系统提示词，留空则使用默认提示词"></textarea>
+                <p class="form-hint">自定义注入到每次对话的系统提示词。留空时使用内置默认提示词。可用变量：<code>{agentName}</code>、<code>{agentDescription}</code>、<code>{agentId}</code></p>
+            </div>
+
+            <div class="settings-actions">
+                <button class="btn-save-settings" onclick="savePromptSettings()">保存设置</button>
+            </div>
+        </div>
+    </div>
+</div>
+</th:block>

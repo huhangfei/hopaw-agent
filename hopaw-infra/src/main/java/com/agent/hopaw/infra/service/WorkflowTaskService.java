@@ -541,19 +541,20 @@ public class WorkflowTaskService implements IWorkflowTaskService {
         systemMsgBuilder.append("你是一个任务执行智能体。\n");
         systemMsgBuilder.append("智能体名称：").append(agent.getName()).append("\n");
         systemMsgBuilder.append("智能体描述：").append(agent.getDescription()).append("\n");
-        systemMsgBuilder.append("\n请根据任务内容执行，完成后给出执行结果摘要，如有产出结果，请放到文件系统中。\n");
-        systemMsgBuilder.append("记忆工具是你的核心工具，需要回忆什么信息时，先去调用记忆工具看看有没相关可用信息。\n");
-        systemMsgBuilder.append("在判断有需要调用工具就去调用，遇到危险操作，立刻停止操作。\n");
-        systemMsgBuilder.append("你只能使用用户提供的工具，绝对不能调用不存在的工具。\n");
+        systemMsgBuilder.append("-----当前任务信息-----").append("\n");
         systemMsgBuilder.append("任务编号：").append(task.getId()).append("\n");
         systemMsgBuilder.append("任务名称：").append(task.getTitle()).append("\n");
         systemMsgBuilder.append("任务内容：").append(task.getContent()).append("\n");
+        systemMsgBuilder.append("请根据任务内容执行，完成后给出执行结果摘要，如有产出结果，请放到文件系统中。\n");
+        systemMsgBuilder.append("记忆工具是你的核心工具，需要回忆什么信息时，先去调用记忆工具看看有没相关可用信息。\n");
+        systemMsgBuilder.append("在判断有需要调用工具就去调用，遇到危险操作，立刻停止操作。\n");
+        systemMsgBuilder.append("你只能使用用户提供的工具，绝对不能调用不存在的工具。\n");
         systemMsgBuilder.append("任务评论工具使用指引：\n");
-        systemMsgBuilder.append("1. 添加任务评论：用于记录任务处理的关键细节、阶段性进展、重要决策，便于用户追踪处理过程；当你需要向用户确认信息或遇到需要用户决策的问题时，也可以通过添加评论的方式提出问题，用户会在任务评论中回复你。\n");
-        systemMsgBuilder.append("2. 查询当前任务：当需要回顾任务内容、查看用户是否有新的评论回复时调用。\n");
+        systemMsgBuilder.append("1.添加任务评论：用于记录任务处理的关键细节、阶段性进展、重要决策，便于用户追踪处理过程；当你需要向用户确认信息或遇到需要用户决策的问题时，也可以通过添加评论的方式提出问题，用户会在任务评论中回复你。\n");
+        systemMsgBuilder.append("2.查询当前任务：当需要回顾任务内容、查看用户是否有新的评论回复时调用。\n");
         systemMsgBuilder.append("任务处理要求：\n");
-        systemMsgBuilder.append("在执行关键步骤后通过评论记录处理细节，遇到不确定的问题时通过评论向用户提问而非自行猜测。\n");
-        systemMsgBuilder.append("每次处理完成后必须调用任务评论工具写入最终执行的结果总结。\n");
+        systemMsgBuilder.append("1.在执行关键步骤后通过评论记录处理细节，遇到不确定的问题时通过评论向用户提问而非自行猜测。\n");
+        systemMsgBuilder.append("2.每次处理完成后必须调用任务评论工具写入最终执行的结果总结。\n");
         // 若任务关联了项目，注入项目空间目录限制
         if (task.getProjectId() != null) {
             try {

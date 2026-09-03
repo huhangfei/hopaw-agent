@@ -205,15 +205,21 @@ public class ChatService implements IChatService {
      * @return
      */
     private String getChatSystemMessage(String sessionId, Agent agent, String userId, List<ToolSetInfo> selectedTools, List<String> skillNames, AvatarSettings avatarSettings) {
-        String systemMessage = "你是一个智能助手，名字叫" + agent.getName() + "," +
-                "主要工作是" + agent.getDescription() + "," +
-                "你的agentId是" + agent.getId() + "。\n" +
-                "记忆工具是你的核心工具，需要回忆什么信息时，先去调用记忆工具看看有没相关可用信息。用户画像记忆、任务记录记忆、过往的经验或总结都可以通过搜索用户记忆尝试查找。\n" +
-                "在遇到需要用户提供信息的时候，不要猜，记忆中没有就问用户。\n" +
-                "在判断有需要调用工具就去调用，遇到危险操作，立刻停止操作，询问用户。\n" +
-                "你只能使用用户提供的工具，绝对不能调用不存在的工具。更不能编造工具。\n" +
-                "如果需要写临时性的文件尽量写到系统临时目录，不要写到用户目录。\n";
-
+        String systemMessage = "";
+        String customPrompt = sysConfigService.getValueByKey("system_prompt", null);
+        if (customPrompt != null && !customPrompt.isBlank()) {
+            systemMessage += customPrompt + "\n";
+        } else {
+            systemMessage += "你是一个智能助手，名字叫{agentName},主要能力{agentDescription},agentId是{agentId}。\n" +
+                    "记忆工具是你的核心工具，需要回忆什么信息时，先去调用记忆工具看看有没相关可用信息。用户画像记忆、任务记录记忆、过往的经验或总结都可以通过搜索用户记忆尝试查找。\n" +
+                    "在遇到需要用户提供信息的时候，不要猜，记忆中没有就问用户。\n" +
+                    "在判断有需要调用工具就去调用，遇到危险操作，立刻停止操作，询问用户。\n" +
+                    "你只能使用用户提供的工具，绝对不能调用不存在的工具。更不能编造工具。\n" +
+                    "如果需要写临时性的文件尽量写到系统临时目录，不要写到用户目录。\n";
+        }
+        systemMessage=systemMessage.replace("{agentName}", agent.getName())
+                .replace("{agentDescription}", agent.getDescription())
+                .replace("{agentId}", agent.getId().toString());
         // 根据设置决定是否注入用户画像 / 任务记录作为系统提示词上下文
         if (isPromptIncludeUserProfile() && userId != null && !userId.isEmpty()) {
             String profile = longTermMemoryService.queryUserProfileMemoryContent(userId);
