@@ -851,7 +851,8 @@ public class AgentExecutor implements IAgentExecutor {
             chatSessionService.insertSession(chatSession);
             agentMessageHandler.sendMessageToChannel(AiMessageBaseInfo.sessionTitle(sessionId, requestId, userIntent));
         } else {
-            if(chatSession.getTitle().equals("新聊天")){
+            // 占位标题（旧默认“新聊天”或前端预创建会话的默认“新会话”）时分析用户意图/使用外部标题
+            if("新聊天".equals(chatSession.getTitle()) || "新会话".equals(chatSession.getTitle())){
                 // 优先使用外部传入的会话标题（任务/项目场景传任务名称、项目名称），否则从用户输入分析
                 String paramTitle = agentExecutorParams.getSessionTitle();
                 if (paramTitle != null && !paramTitle.isBlank()) {

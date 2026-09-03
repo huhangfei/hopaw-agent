@@ -65,6 +65,56 @@ public class ChatSessionController {
     }
 
     /**
+     * 首页首次进入会话：加载最新一段会话历史（按时间倒序），供前端 JS 渲染
+     */
+    @GetMapping("/{sessionId}/history/latest")
+    public ResponseBean historyLatest(HttpServletRequest request,
+                                      @PathVariable String sessionId,
+                                      @RequestParam(defaultValue = "100") int limit) {
+        ChatSession session = chatSessionService.getSessionBySessionId(sessionId);
+        // 会话可见性：自己的会话，或所有人的项目/工作流任务会话
+        if (session == null || !isSessionVisibleToUser(session, CurrentUser.require(request))) {
+            return ResponseBean.fail("会话不存在");
+        }
+        if (limit < 1) limit = 100;
+        if (limit > 100) limit = 100;
+        // 多查一条判断是否还有更早数据
+        List<com.agent.hopaw.infra.model.dto.ChatHistoryVO> list =
+                chatHistoryService.findBySessionId(sessionId, limit + 1);
+        boolean hasMore = list.size() > limit;
+        if (hasMore) {
+            list = list.subList(0, limit);
+        }
+        // 工具名映射为描述（与向上翻页接口保持一致）
+        if (!list.isEmpty()) {
+            Map<String, String> toolNameAndDescriptionMap = agentToolService.getToolNameAndDescriptionMap();
+            list.forEach(chatHistoryVO -> {
+                if (chatHistoryVO.getToolName() != null) {
+                    chatHistoryVO.setToolName(toolNameAndDescriptionMap.get(chatHistoryVO.getToolName()));
+                }
+            });
+        }
+        Map<String, Object> result = new HashMap<>(2);
+        result.put("list", list);
+        result.put("hasMore", hasMore);
+        return ResponseBean.success(result);
+    }
+
+    /**
+     * 会话对用户是否可见：自己的会话，或所有人的项目/工作流任务会话（兼容历史数据的旧版 biz_type 写法）
+     */
+    private boolean isSessionVisibleToUser(ChatSession session, String userId) {
+        if (userId.equals(session.getUserId())) {
+            return true;
+        }
+        String bizType = session.getBizType();
+        return AgentExecutorBizTypeEnum.WorkflowTaskChat.getValue().equals(bizType)
+                || "workflow-task-chat".equals(bizType)
+                || AgentExecutorBizTypeEnum.ProjectChat.getValue().equals(bizType)
+                || "project-chat".equals(bizType);
+    }
+
+    /**
      * 首页向上滚动加载更早消息：游标 (beforeTime, beforeId) 之前的会话历史（按时间倒序）
      */
     @GetMapping("/{sessionId}/history/before")

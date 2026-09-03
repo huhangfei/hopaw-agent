@@ -30,7 +30,7 @@
         </div>
         <div th:if="${selectedAgent != null}" class="chat-header">
             <div class="chat-header-title">
-                <span class="chat-header-desc" id="chat-header-desc" th:text="${selectedAgent.description}"></span>
+                <span class="chat-header-desc" id="chat-header-desc" th:text="${currentSessionTitle}"></span>
             </div>
             <div class="chat-header-actions">
                 <button class="btn-add-header" onclick="createNewSession()" title="新会话">
@@ -75,87 +75,18 @@
                 </div>
             </div>
         </div>
-        <div th:if="${selectedAgent != null}" class="chat-messages" id="chatMessages">
-            <th:block th:each="item : ${chatFlow}" th:with="chat=${item['type'] == 'message' ? item['chat'] : null}">
-            <div th:if="${item['type'] == 'message'}"
-                 th:switch="${chat.messageType}"
-                 th:attr="data-msg-id=${chat.id}, data-create-time=${#temporals.format(chat.createTime, 'yyyy-MM-dd''T''HH:mm:ss')}"
-                 th:classappend="${chat.role == 'user' ? 'user' : 'agent'}" class="message">
-                <div th:case="'text'">
-                    <div class="message-label" th:text="${chat.role == 'user' ? '你' : (chat.agent != null ? chat.agent.name : 'Agent')}"></div>
-                    <div th:text="${chat.content}" class="message-content"
-                         th:attr="data-is-agent=${chat.role == 'agent'}"></div>
-                    <div class="message-footer">
-                        <div class="message-time"
-                             th:text="${chat.createTime.toLocalDate().equals(T(java.time.LocalDate).now()) ? #temporals.format(chat.createTime, 'HH:mm:ss') : #temporals.format(chat.createTime, 'yyyy-MM-dd HH:mm:ss')}"></div>
-                        <button class="message-copy-btn" th:attr="data-content=${chat.content}" onclick="copyMessageContent(this)" title="复制消息">
-                            <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
-                        </button>
-                    </div>
-                </div>
-                <!-- 附件消息：content 格式为 fileType,fileId,originalName,url，图片渲染缩略图、其他渲染文件链接 -->
-                <div th:case="'attachment'" th:with="parts=${#strings.arraySplit(chat.content, ',')}, fileType=${parts[0]}, fileId=${parts[1]}, originalName=${parts[2]}, fileUrl=${parts[3]}">
-                    <div class="message-label" th:text="${chat.role == 'user' ? '你' : (chat.agent != null ? chat.agent.name : 'Agent')}"></div>
-                    <img th:if="${fileType == 'image'}" th:src="${fileUrl}" class="message-content message-image"
-                         th:attr="data-is-agent=${chat.role == 'agent'}, data-attachment-id=${fileId}" th:alt="${originalName}"
-                         onclick="openAttachmentPreview(this.getAttribute('data-attachment-id'))" style="cursor:pointer"/>
-                    <a th:unless="${fileType == 'image'}" href="javascript:void(0)"
-                       th:class="'message-content message-' + ${fileType}"
-                       th:attr="data-is-agent=${chat.role == 'agent'}, data-attachment-id=${fileId}, onclick='openAttachmentPreview(this.getAttribute(&quot;data-attachment-id&quot;))'"
-                       th:title="${originalName}" th:text="${originalName}" style="cursor:pointer"></a>
-                    <div class="message-footer">
-                        <div class="message-time"
-                             th:text="${chat.createTime.toLocalDate().equals(T(java.time.LocalDate).now()) ? #temporals.format(chat.createTime, 'HH:mm:ss') : #temporals.format(chat.createTime, 'yyyy-MM-dd HH:mm:ss')}"></div>
-                    </div>
-                </div>
-                <div th:case="'thinking'">
-                    <div class="message-label" th:text="${chat.agent != null ? chat.agent.name : 'Agent'} + ' (思考)'"></div>
-                    <div th:text="${chat.content}" class="message-content thinking-content"></div>
-                    <div class="message-footer">
-                        <div class="message-time"
-                             th:text="${chat.createTime.toLocalDate().equals(T(java.time.LocalDate).now()) ? #temporals.format(chat.createTime, 'HH:mm:ss') : #temporals.format(chat.createTime, 'yyyy-MM-dd HH:mm:ss')}"></div>
-                        <button class="message-copy-btn" th:attr="data-content=${chat.content}" onclick="copyMessageContent(this)" title="复制消息">
-                            <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
-                        </button>
-                    </div>
-                </div>
-                <div th:case="'error'" th:classappend="'error-message'">
-                    <div class="message-label" th:text="${chat.agent != null ? chat.agent.name : 'Agent'} + ' (错误)'"></div>
-                    <div th:text="${chat.content}" class="message-content error-content"></div>
-                    <div class="message-footer">
-                        <div class="message-time"
-                             th:text="${chat.createTime.toLocalDate().equals(T(java.time.LocalDate).now()) ? #temporals.format(chat.createTime, 'HH:mm:ss') : #temporals.format(chat.createTime, 'yyyy-MM-dd HH:mm:ss')}"></div>
-                        <button class="message-copy-btn" th:attr="data-content=${chat.content}" onclick="copyMessageContent(this)" title="复制消息">
-                            <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
-                        </button>
-                    </div>
-                </div>
-                <div th:case="'warn'" th:classappend="'warn-message'">
-                    <div class="message-label" th:text="${chat.agent != null ? chat.agent.name : 'Agent'} + ' (警告)'"></div>
-                    <div th:text="${chat.content}" class="message-content error-content"></div>
-                    <div class="message-footer">
-                        <div class="message-time"
-                             th:text="${chat.createTime.toLocalDate().equals(T(java.time.LocalDate).now()) ? #temporals.format(chat.createTime, 'HH:mm:ss') : #temporals.format(chat.createTime, 'yyyy-MM-dd HH:mm:ss')}"></div>
-                        <button class="message-copy-btn" th:attr="data-content=${chat.content}" onclick="copyMessageContent(this)" title="复制消息">
-                            <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
-                        </button>
-                    </div>
-                </div>
-            </div>
-            <!-- 连续的工具调用消息合并渲染为一行扳手图标：悬停显示工具名称，点击定位右侧工具执行列表并展开详情 -->
-            <div th:if="${item['type'] == 'tools'}" class="tool-inline-row"
-                 th:attr="data-msg-id=${item['tools'][0].id}, data-create-time=${#temporals.format(item['tools'][0].createTime, 'yyyy-MM-dd''T''HH:mm:ss')}">
-                <span th:each="t : ${item['tools']}" class="tool-inline-icon"
-                      th:attr="data-tool-call-id=${t.toolCallId}, title=${t.toolName}"
-                      onclick="scrollToToolCall(this)">🔧</span>
-            </div>
-            </th:block>
-            <div th:if="${chatHistory.size()==0}" class="empty-state" id="chatHistoryEmptyState">
+        <div th:if="${selectedAgent != null}" class="chat-messages-wrap">
+            <div class="chat-messages" id="chatMessages">
+            <!-- 消息区首次加载与向上翻页均由前端 JS 渲染（/api/session/{sessionId}/history/latest） -->
+            <div class="empty-state" id="chatHistoryEmptyState">
             <svg viewBox="0 0 24 24" fill="currentColor">
                 <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/>
             </svg>
             <p>有什么问题尽管问。</p>
         </div>
+        </div>
+        <!-- 用户消息导航：每个圆点对应一组连续的用户消息，悬停预览、点击定位 -->
+        <div class="user-msg-nav" id="userMsgNav"></div>
         </div>
         <div th:if="${selectedAgent != null}" class="chat-input-area">
             <form th:action="@{/chat}" method="post" class="chat-form" id="chatForm">
@@ -281,56 +212,8 @@
             <div class="tool-panel-title">工具执行列表
                 <span id="toolExecStats" style="font-size:11px;font-weight:400;margin-left:8px;float: right;" title="会话调用总数 / 执行器已执行 / 执行器上限"></span>
             </div>
+            <!-- 工具执行列表由前端 JS 随消息历史一并渲染 -->
             <div class="tool-panel-body" id="toolExecList">
-                <div th:each="chat : ${chatHistory}" th:if="${chat.messageType == 'tool_call'}">
-                    <div class="tool-call-container-static">
-                        <div class="tool-call"
-                             th:attr="data-tool-call-id=${chat.toolCallId}, data-status=${chat.toolCallStatus}">
-                            <div class="tool-call-header">
-                                    <span class="tool-call-icon" th:switch="${chat.toolCallStatus}"
-                                          th:classappend="${chat.toolCallStatus == 'executed' or chat.toolCallStatus == 'rejected' or chat.toolCallStatus == 'failed' ? 'completed' : ''}">
-                                        <span th:case="'started'">⚙</span>
-                                        <span th:case="'executed'">✅</span>
-                                        <span th:case="'failed'">❌</span>
-                                        <span th:case="'rejected'">🚫</span>
-                                        <span th:case="'approval'">⏳</span>
-                                        <span th:case="*">🔧</span>
-                                    </span>
-                                <span class="tool-call-name" th:text="${chat.toolName}"></span>
-                                <span class="tool-call-status" th:switch="${chat.toolCallStatus}"
-                                      th:classappend="${chat.toolCallStatus == 'executed' or chat.toolCallStatus == 'rejected' or chat.toolCallStatus == 'failed' ? 'completed' : ''}">
-                                        <span th:case="'started'">执行中...</span>
-                                        <span th:case="'executed'"
-                                              th:text="${chat.toolExecutionTime != null ? '已完成(' + #numbers.formatDecimal(chat.toolExecutionTime / 1000.0, 1, 1) + 's)' : '已完成'}">已完成</span>
-                                        <span th:case="'failed'">执行失败</span>
-                                        <span th:case="'approval'">等待审批</span>
-                                        <span th:case="'rejected'">拒绝执行</span>
-                                        <span th:case="*" th:text="${chat.toolCallStatus}">未知</span>
-                                    </span>
-                                <span th:if="${chat.toolCallStatus == 'executed' or chat.toolCallStatus == 'rejected' or chat.toolCallStatus == 'failed'}"
-                                      class="tool-call-toggle">▼</span>
-                            </div>
-                            <div class="tool-call-body"
-                                 th:classappend="${chat.toolCallStatus == 'started' ? '' : 'collapsed'}">
-                                <div class="tool-call-args" th:if="${chat.toolArguments}">
-                                    <div class="args-label">参数:</div>
-                                    <pre class="args-content" th:text="${chat.toolArguments}"></pre>
-                                </div>
-                                <div class="tool-call-result" th:if="${chat.content}">
-                                    <div class="result-label">结果:</div>
-                                    <pre class="result-content" th:text="${chat.content}"></pre>
-                                </div>
-                            </div>
-                            <div th:if="${chat.toolCallStatus == 'approval'}" class="tool-call-footer">
-                                <span class="tool-call-footer-text">⚠️ 此工具调用需要审批</span>
-                                <div class="tool-call-footer-btns">
-                                    <button type="button" class="tool-call-approve-btn" th:attr="data-session-id=${chat.sessionId}, data-call-id=${chat.toolCallId}" onclick="handleApprovalClick(this, true)">通过</button>
-                                    <button type="button" class="tool-call-reject-btn" th:attr="data-session-id=${chat.sessionId}, data-call-id=${chat.toolCallId}" onclick="handleApprovalClick(this, false)">拒绝</button>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
             </div>
         </div>
         <div class="tool-panel-section tool-panel-bottom">
@@ -405,8 +288,6 @@
         var initialSelectedSkills = /*[[${selectedSkills}]]*/ '';
         var initialToolCallPermission = /*[[${toolCallPermission}]]*/ 'smart_call';
         var currentUserId = /*[[${currentUserId != null ? currentUserId : T(com.agent.hopaw.constant.DefaultUser).USER}]]*/ 'user1';
-        // 首页初始加载的历史条数：小于服务端单次上限(100)说明已全部加载，无需向上翻页
-        var initialHistoryCount = /*[[${chatHistory == null ? 0 : chatHistory.size()}]]*/ 0;
     </script>
     <script th:src="@{/js/avatar/live2d.js}" th:if="${!avatarDisabled}"></script>
     <script th:src="@{/js/avatar/main.js(v=20260603a)}" th:if="${!avatarDisabled}"></script>

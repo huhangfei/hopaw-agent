@@ -166,28 +166,60 @@ function renderAllMessages() {
     });
 }
 
-// ================= 向上滚动加载更早的历史消息 =================
+// ================= 会话历史加载（首次进入 + 向上滚动翻页） =================
 var historyLoadState = { oldestId: null, oldestTime: null, allLoaded: false, loading: false };
 var HISTORY_PAGE_SIZE = 50;
-var HISTORY_INITIAL_LIMIT = 100; // 与后端首页初始加载条数(ChatController)一致
+var HISTORY_INITIAL_LIMIT = 100; // 与后端首次加载接口单次上限一致
 
-/** 初始化历史分页游标并监听滚动 */
+/** 初始化历史分页游标并监听滚动（游标在首次历史加载完成后设置） */
 function initHistoryScroll() {
     var messagesDiv = document.getElementById('chatMessages');
     if (!messagesDiv) return;
-    // 初始加载不满一页说明已是全部历史
-    if (typeof initialHistoryCount === 'number' && initialHistoryCount < HISTORY_INITIAL_LIMIT) {
-        historyLoadState.allLoaded = true;
-    }
-    // 游标取消息区第一个带标记的直接子元素（消息或工具行）
-    var first = firstHistoryAnchor(messagesDiv);
-    if (first) {
-        historyLoadState.oldestId = Number(first.getAttribute('data-msg-id'));
-        historyLoadState.oldestTime = first.getAttribute('data-create-time');
-    } else {
-        historyLoadState.allLoaded = true;
-    }
     messagesDiv.addEventListener('scroll', onHistoryScroll);
+}
+
+/**
+ * 页面首次进入会话：拉取最新一段历史并渲染。
+ * 与向上翻页共用 prependHistoryMessages/buildHistoryMessageNode/buildToolCallStaticNode 渲染逻辑。
+ */
+function loadInitialHistory() {
+    var messagesDiv = document.getElementById('chatMessages');
+    if (!messagesDiv || !currentSessionId) return;
+    fetch('/api/session/' + encodeURIComponent(currentSessionId) + '/history/latest?limit=' + HISTORY_INITIAL_LIMIT)
+        .then(function(r) { return r.json(); })
+        .then(function(res) {
+            if (res.code !== 200) {
+                // 会话不存在（如新建未落库的会话）：视为无历史
+                historyLoadState.allLoaded = true;
+                return;
+            }
+            var data = res.data || {};
+            var list = data.list || [];
+            // 接口按时间倒序返回：反转为正序后渲染
+            list.reverse();
+            if (list.length > 0) {
+                prependHistoryMessages(list);
+                // 渲染 markdown（agent 消息）
+                renderAllMessages();
+                // 隐藏空状态提示
+                var emptyState = document.getElementById('chatHistoryEmptyState');
+                if (emptyState) emptyState.classList.add('hide');
+                // 初始化向上翻页游标为当前最早一条
+                var oldest = list[0];
+                historyLoadState.oldestId = oldest.id;
+                historyLoadState.oldestTime = formatHistoryIsoTime(oldest.createTime);
+            }
+            if (!data.hasMore) {
+                historyLoadState.allLoaded = true;
+            }
+            // 首次加载滚动到底部
+            messagesDiv.scrollTop = messagesDiv.scrollHeight;
+            var toolExecList = document.getElementById('toolExecList');
+            if (toolExecList) toolExecList.scrollTop = toolExecList.scrollHeight;
+        })
+        .catch(function(e) {
+            console.error('加载会话历史失败:', e);
+        });
 }
 
 function onHistoryScroll() {
@@ -298,7 +330,7 @@ function prependHistoryMessages(list) {
             icon.className = 'tool-inline-icon';
             icon.setAttribute('data-tool-call-id', chat.toolCallId);
             icon.title = chat.toolName || '';
-            icon.textContent = '🔧';
+            renderToolInlineIconContent(icon, chat.toolName);
             icon.onclick = function() { scrollToToolCall(this); };
             toolRow.appendChild(icon);
             if (toolExecList) {
@@ -529,6 +561,253 @@ function buildToolCallStaticNode(chat) {
     }
     container.appendChild(callDiv);
     return container;
+}
+
+/* ================= 用户消息导航圆点 ================= */
+
+/** 导航状态：分组数据 + 滚动校准 rAF 句柄 */
+var userMsgNavState = { groups: [], rafId: null };
+
+/**
+ * 收集用户消息分组：DOM 中连续的 .message.user 元素（一次发言的文本+附件）归为一组，对应一个圆点
+ */
+function collectUserMsgGroups(messagesDiv) {
+    var groups = [];
+    var current = null;
+    var children = messagesDiv.children;
+    for (var i = 0; i < children.length; i++) {
+        var el = children[i];
+        if (el.classList.contains('message') && el.classList.contains('user')) {
+            if (!current) {
+                current = [];
+                groups.push(current);
+            }
+            current.push(el);
+        } else {
+            current = null;
+        }
+    }
+    return groups;
+}
+
+/**
+ * 构建圆点悬停弹层内容：图片显示缩略图、附件显示名称、文本截断展示
+ */
+function buildUserMsgPopupContent(group, popup) {
+    var hasContent = false;
+    group.forEach(function(el) {
+        var contents = el.querySelectorAll('.message-content');
+        Array.prototype.forEach.call(contents, function(c) {
+            if (c.tagName === 'IMG') {
+                // 图片附件：缩略图预览，点击复用附件预览弹窗
+                var img = document.createElement('img');
+                img.className = 'user-nav-popup-image';
+                img.src = c.src;
+                img.alt = c.alt || '图片';
+                var attachId = c.getAttribute('data-attachment-id');
+                if (attachId) {
+                    img.onclick = function(e) {
+                        e.stopPropagation();
+                        openAttachmentPreview(attachId);
+                    };
+                }
+                popup.appendChild(img);
+                hasContent = true;
+            } else if (c.tagName === 'A') {
+                // 其他附件：显示附件名称，点击复用附件预览弹窗
+                var name = c.getAttribute('title') || c.textContent || '附件';
+                var attach = document.createElement('div');
+                attach.className = 'user-nav-popup-attach';
+                attach.textContent = '📎 ' + name;
+                var id = c.getAttribute('data-attachment-id');
+                if (id) {
+                    attach.onclick = function(e) {
+                        e.stopPropagation();
+                        openAttachmentPreview(id);
+                    };
+                }
+                popup.appendChild(attach);
+                hasContent = true;
+            } else {
+                // 文本消息：最多展示 4 行
+                var text = (c.getAttribute('data-raw-content') || c.textContent || '').trim();
+                if (text !== '') {
+                    var textDiv = document.createElement('div');
+                    textDiv.className = 'user-nav-popup-text';
+                    textDiv.textContent = text;
+                    popup.appendChild(textDiv);
+                    hasContent = true;
+                }
+            }
+        });
+    });
+    if (!hasContent) {
+        var empty = document.createElement('div');
+        empty.className = 'user-nav-popup-text';
+        empty.textContent = '(无内容)';
+        popup.appendChild(empty);
+    }
+}
+
+/**
+ * 点击圆点：平滑滚动到对应用户消息并高亮闪烁
+ */
+function scrollToUserMsgGroup(group) {
+    if (!group || group.length === 0) return;
+    group[0].scrollIntoView({ behavior: 'smooth', block: 'center' });
+    group.forEach(function(el) {
+        el.classList.remove('user-msg-flash');
+        void el.offsetWidth; // 重新触发动画
+        el.classList.add('user-msg-flash');
+        if (el._userMsgFlashTimer) {
+            clearTimeout(el._userMsgFlashTimer);
+        }
+        el._userMsgFlashTimer = setTimeout(function() {
+            el.classList.remove('user-msg-flash');
+        }, 1300);
+    });
+}
+
+/**
+ * 重建导航圆点（消息增删后调用）
+ */
+function refreshUserMsgNav() {
+    var messagesDiv = document.getElementById('chatMessages');
+    var nav = document.getElementById('userMsgNav');
+    if (!messagesDiv || !nav) return;
+    userMsgNavState.groups = collectUserMsgGroups(messagesDiv);
+    nav.innerHTML = '';
+    if (userMsgNavState.groups.length === 0) {
+        nav.classList.add('hide');
+        return;
+    }
+    nav.classList.remove('hide');
+    userMsgNavState.groups.forEach(function(group) {
+        var dot = document.createElement('div');
+        dot.className = 'user-msg-nav-dot';
+
+        var popup = document.createElement('div');
+        popup.className = 'user-msg-nav-popup';
+        buildUserMsgPopupContent(group, popup);
+        var arrow = document.createElement('span');
+        arrow.className = 'user-msg-nav-popup-arrow';
+        popup.appendChild(arrow);
+        dot.appendChild(popup);
+
+        dot.addEventListener('click', function() {
+            scrollToUserMsgGroup(group);
+        });
+        nav.appendChild(dot);
+    });
+    updateUserMsgNavPositions();
+}
+
+/**
+ * 重算圆点位置：按消息在内容中的比例定位（minimap 效果），过密时保证最小间距，过多时退化为均匀分布
+ */
+function updateUserMsgNavPositions() {
+    var messagesDiv = document.getElementById('chatMessages');
+    var nav = document.getElementById('userMsgNav');
+    if (!messagesDiv || !nav) return;
+    var groups = userMsgNavState.groups;
+    var dots = nav.querySelectorAll('.user-msg-nav-dot');
+    if (groups.length === 0 || dots.length !== groups.length) return;
+    var railH = nav.clientHeight;
+    if (railH <= 0) return;
+
+    var n = groups.length;
+    var topPad = 8;
+    var usable = Math.max(railH - topPad * 2, 1);
+    var minGap = 12;
+    var positions = [];
+    var i;
+
+    if (n === 1) {
+        positions[0] = topPad + usable / 2;
+    } else if ((n - 1) * minGap > usable) {
+        // 圆点过多：均匀分布
+        for (i = 0; i < n; i++) {
+            positions[i] = topPad + (usable / (n - 1)) * i;
+        }
+    } else {
+        // 比例定位 + 前向最小间距约束（保持顺序不重叠）
+        var scrollH = Math.max(messagesDiv.scrollHeight, 1);
+        for (i = 0; i < n; i++) {
+            var el = groups[i][0];
+            var center = el.offsetTop + el.offsetHeight / 2;
+            var pos = topPad + (center / scrollH) * usable;
+            var lb = topPad + minGap * i;
+            var rb = topPad + usable - minGap * (n - 1 - i);
+            positions[i] = Math.min(Math.max(pos, lb), rb);
+        }
+    }
+
+    for (i = 0; i < n; i++) {
+        var dot = dots[i];
+        dot.style.top = positions[i] + 'px';
+        // 弹层相对圆点定位（transform 已含 translateY(-50%)，top 即弹层中心的圆点局部坐标）：
+        // 默认对齐圆点中心(8px)，超出轨道范围时上下夹紧；箭头跟随圆点在弹层内的位置
+        var popup = dot.querySelector('.user-msg-nav-popup');
+        if (!popup) continue;
+        var arrow = popup.querySelector('.user-msg-nav-popup-arrow');
+        var popupH = popup.offsetHeight;
+        if (popupH <= 0) continue;
+        var dotTop = positions[i] - 8; // 圆点顶边在轨道内的位置（圆点高16、translateY(-50%)）
+        var center = 8;
+        var minC = popupH / 2 - dotTop;          // 弹层顶边不越出轨道顶部
+        var maxC = railH - dotTop - popupH / 2;  // 弹层底边不越出轨道底部
+        if (minC <= maxC) {
+            center = Math.min(Math.max(center, minC), maxC);
+        }
+        popup.style.top = center + 'px';
+        if (arrow) {
+            var arrowCenter = 8 - center + popupH / 2;
+            arrowCenter = Math.min(Math.max(arrowCenter, 8), Math.max(popupH - 8, 8));
+            arrow.style.top = (arrowCenter - 4) + 'px';
+        }
+    }
+}
+
+/**
+ * 初始化用户消息导航：消息增删重建圆点；滚动/尺寸变化/图片加载时校准位置
+ */
+function initUserMsgNav() {
+    var messagesDiv = document.getElementById('chatMessages');
+    var nav = document.getElementById('userMsgNav');
+    if (!messagesDiv || !nav || typeof MutationObserver === 'undefined') return;
+
+    // 消息直接子节点增删（历史加载、新消息、工具行）：重建圆点
+    new MutationObserver(function() {
+        refreshUserMsgNav();
+    }).observe(messagesDiv, { childList: true });
+
+    // 容器尺寸变化（窗口缩放等）：重算圆点位置
+    if (typeof ResizeObserver !== 'undefined') {
+        new ResizeObserver(function() {
+            updateUserMsgNavPositions();
+        }).observe(messagesDiv);
+    }
+
+    // 消息图片/弹层图片加载后高度变化：校准位置
+    var handleImgLoad = function(e) {
+        if (e.target && e.target.tagName === 'IMG') {
+            updateUserMsgNavPositions();
+        }
+    };
+    messagesDiv.addEventListener('load', handleImgLoad, true);
+    nav.addEventListener('load', handleImgLoad, true);
+
+    // 滚动时校准（流式输出、markdown 渲染等引起的高度漂移在此自校正）
+    messagesDiv.addEventListener('scroll', function() {
+        if (!userMsgNavState.rafId) {
+            userMsgNavState.rafId = requestAnimationFrame(function() {
+                userMsgNavState.rafId = null;
+                updateUserMsgNavPositions();
+            });
+        }
+    });
+
+    refreshUserMsgNav();
 }
 
 function setCurrentAgentId(agentId) {
@@ -913,7 +1192,70 @@ function handleToolCall(data, requestId) {
 }
 
 /**
- * 在消息流中渲染工具调用扳手图标。
+ * 工具名 → 工具集图标映射（/tools/api/list 加载）。
+ * 图标两种形式："<svg" 开头的 SVG 代码；否则为文件名/地址（拼 /icons/tools/ 前缀）。
+ */
+var toolIconMap = {};
+var toolIconMapLoaded = false;
+
+/** 加载工具集列表并建立 工具名→图标 映射 */
+function loadToolIconMap() {
+    return fetch('/tools/api/list')
+        .then(function(r) { return r.json(); })
+        .then(function(res) {
+            if (res.code === 200 && res.data) {
+                res.data.forEach(function(toolSet) {
+                    var icon = toolSet.icon;
+                    if (!icon) return;
+                    (toolSet.tools || []).forEach(function(tool) {
+                        if (!tool || !tool.name) return;
+                        toolIconMap[tool.name] = icon;
+                        // 历史接口的 toolName 已被后端替换为首个工具描述，描述同样注册（与 getToolNameAndDescriptionMap 同源）
+                        if (tool.descriptions && tool.descriptions.length > 0 && tool.descriptions[0]) {
+                            toolIconMap[tool.descriptions[0]] = icon;
+                        }
+                    });
+                });
+            }
+            toolIconMapLoaded = true;
+        })
+        .catch(function(e) {
+            console.error('加载工具集图标映射失败:', e);
+            toolIconMapLoaded = true;
+        });
+}
+
+/** 默认通用图标（所有工具的兜底），视为"无专属图标" */
+var TOOL_DEFAULT_ICON = 'agent-tool.svg';
+
+/**
+ * 按工具名渲染内联图标内容：工具集 SVG 图标（代码或地址），无专属图标时显示扳手
+ */
+function renderToolInlineIconContent(iconEl, toolName) {
+    var icon = toolName ? toolIconMap[toolName] : null;
+    if (!icon || icon === TOOL_DEFAULT_ICON) {
+        iconEl.textContent = '🔧';
+        return;
+    }
+    if (icon.indexOf('<svg') === 0) {
+        // SVG 代码形式：直接内联
+        iconEl.innerHTML = icon;
+        return;
+    }
+    // 地址形式：文件名拼静态资源前缀；完整 URL/路径则原样使用
+    var src = (icon.indexOf('http') === 0 || icon.indexOf('/') === 0) ? icon : ('/icons/tools/' + icon);
+    var img = document.createElement('img');
+    img.src = src;
+    img.alt = '';
+    img.onerror = function() {
+        // 图标资源加载失败：回退扳手
+        iconEl.textContent = '🔧';
+    };
+    iconEl.appendChild(img);
+}
+
+/**
+ * 在消息流中渲染工具调用图标。
  * 与历史渲染保持一致：若消息流最后一个元素已是图标行（连续工具调用），复用同一行；否则新建一行。
  */
 function appendToolInlineIcon(messagesDiv, data) {
@@ -936,7 +1278,7 @@ function appendToolInlineIcon(messagesDiv, data) {
     icon.className = 'tool-inline-icon';
     icon.setAttribute('data-tool-call-id', data.toolCallId);
     icon.title = inlineName; // 鼠标移上显示工具名称
-    icon.textContent = '🔧';
+    renderToolInlineIconContent(icon, data.toolName);
     icon.onclick = function() {
         scrollToToolCall(icon);
     };
@@ -1729,11 +2071,15 @@ window.onload = function() {
 
     var messagesDiv = document.getElementById('chatMessages');
     if (messagesDiv) {
-        renderAllMessages();
-        messagesDiv.scrollTop = messagesDiv.scrollHeight;
-        if (toolExecList) toolExecList.scrollTop = toolExecList.scrollHeight;
         // 初始化向上滚动加载更早历史消息
         initHistoryScroll();
+        // 先加载工具集图标映射，再渲染历史（内联工具图标需按工具名取工具集图标）
+        loadToolIconMap().finally(function() {
+            // 首次进入会话：JS 拉取并渲染历史消息（与向上翻页复用同一套渲染逻辑）
+            loadInitialHistory();
+            // 初始化用户消息导航圆点
+            initUserMsgNav();
+        });
     }
     var input = document.getElementById('messageInput');
     if (input) {
@@ -2210,6 +2556,14 @@ function renderSessionList(sessions) {
 }
 
 function updateSessionTitle(sessionId, newTitle) {
+    // 当前会话：同步更新消息区头部标题
+    if (sessionId === currentSessionId) {
+        var headerDesc = document.getElementById('chat-header-desc');
+        if (headerDesc) {
+            headerDesc.textContent = newTitle || '未命名会话';
+        }
+    }
+
     var container = document.getElementById('sessionList');
     if (!container) return;
 
@@ -2281,6 +2635,7 @@ function showEditSessionTitle(btn, id) {
     var item = btn.closest('.session-list-item');
     var titleSpan = item.querySelector('.session-list-item-title');
     var oldTitle = titleSpan.textContent;
+    var editSessionId = item.getAttribute('data-session-id');
 
     var input = document.createElement('input');
     input.type = 'text';
@@ -2310,6 +2665,13 @@ function showEditSessionTitle(btn, id) {
             if (data.code === 200) {
                 titleSpan.textContent = newTitle;
                 input.replaceWith(titleSpan);
+                // 当前会话：同步更新消息区头部标题
+                if (editSessionId === currentSessionId) {
+                    var headerDesc = document.getElementById('chat-header-desc');
+                    if (headerDesc) {
+                        headerDesc.textContent = newTitle;
+                    }
+                }
             } else {
                 showToast('保存失败', 'error');
                 input.replaceWith(titleSpan);
