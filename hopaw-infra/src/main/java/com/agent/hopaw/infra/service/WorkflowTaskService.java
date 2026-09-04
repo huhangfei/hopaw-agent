@@ -414,6 +414,11 @@ public class WorkflowTaskService implements IWorkflowTaskService {
     private void executeTask(Long taskId,IAgentExecutor executor,long timeout,String message){
         // 更新状态为 processing
         updateTaskStatus(taskId, TaskStatusEnum.PROCESSING.getCode(), null);
+        if(message==null){
+            message="";
+        }
+        message="开始处理，当前时间："+LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"));
+        message="\n"+message;
         // 执行
         executor.execute(Arrays.asList(new TextContent(message)),timeout);
     }

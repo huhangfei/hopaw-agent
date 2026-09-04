@@ -415,7 +415,7 @@ public class WorkflowTaskTool implements AgentTool {
         }
         // 智能体评论：commenterType=agent，commenterId=智能体ID
         taskCommentService.addComment(taskId, content.trim(), task.getUserId(),
-                TaskCommenterTypeEnum.AGENT.getCode(), agentCommenterId(wrapper), agentCommenterType(wrapper));
+                TaskCommenterTypeEnum.AGENT.getCode(), agentCommenterId(wrapper), commentType);
         return "成功：任务评论已添加";
     }
 

@@ -23,6 +23,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 
+import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -191,6 +192,7 @@ public class ProjectIterateService implements IProjectIterateService {
             return ProjectIterateResult.fail("项目管理智能体正在执行中，请等待本轮完成后重试");
         }
         String requestId = UuidUtil.generateSimpleUUID();
+        userMessage+="\n当前时间："+ LocalDateTime.now().format(TIME_FMT);
         userMessage+=getProjectLog(projectId);
         chatUserMessageService.sendMessage(AgentExecutorBizTypeEnum.ProjectChat, project.getUserId(), sessionId, requestId, project.getAgentId(), userMessage, null);
         IAgentExecutor executor = createProjectExecutor(requestId,project, agent, sessionId);
