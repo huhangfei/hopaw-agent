@@ -84,7 +84,9 @@
                     pendingUserId = userId;
                     slideToPwdPanel(userId, userId, userId.charAt(0).toUpperCase());
                 } else if (resp && resp.msg === '密码错误') {
-                    showPwdError('密码错误，请重新输入');
+                    showToast('密码错误，请重新输入', 'error');
+                    document.getElementById('loginPwdInput').value = '';
+                    document.getElementById('loginPwdInput').focus();
                     if (captchaEnabled) refreshCaptcha();
                 } else if (resp && (resp.msg === '验证码错误' || resp.msg === '验证码已过期，请刷新' || resp.msg === '请输入验证码')) {
                     showToast(resp.msg, 'error');
@@ -110,7 +112,6 @@
         document.getElementById('loginPwdAvatar').textContent = avatarText;
         document.getElementById('loginPwdName').textContent = displayName;
         document.getElementById('loginPwdInput').value = '';
-        document.getElementById('loginPwdError').style.display = 'none';
 
         // 验证码：根据开关决定是否显示
         var captchaField = document.getElementById('loginCaptchaField');
@@ -158,25 +159,20 @@
         }, 320);
     };
 
-    function showPwdError(msg) {
-        showToast(msg, 'error');
-        var input = document.getElementById('loginPwdInput');
-        input.value = '';
-        input.focus();
-    }
-
     window.submitLoginPwd = function () {
         if (!pendingUserId) return;
         var password = document.getElementById('loginPwdInput').value;
         if (!password || password.trim() === '') {
-            showPwdError('请输入密码');
+            showToast('请输入密码', 'error');
+            document.getElementById('loginPwdInput').focus();
             return;
         }
         var captcha = null;
         if (captchaEnabled) {
             captcha = document.getElementById('loginCaptchaInput').value;
             if (!captcha || captcha.trim() === '') {
-                showPwdError('请输入验证码');
+                showToast('请输入验证码', 'error');
+                document.getElementById('loginCaptchaInput').focus();
                 return;
             }
         }

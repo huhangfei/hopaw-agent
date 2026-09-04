@@ -485,13 +485,6 @@ body.dark-theme .login-pwd-field input[type="password"] {
     color: var(--login-text-faint);
 }
 
-.login-pwd-error {
-    margin-top: 8px;
-    font-size: 12px;
-    color: #ef4444;
-    text-align: center;
-}
-
 .login-panel-pwd .login-pwd-submit {
     width: 100%;
     padding: 12px;
