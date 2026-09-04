@@ -157,8 +157,8 @@ function initHistoryScroll() {
  */
 function loadInitialHistory() {
     var messagesDiv = document.getElementById('chatMessages');
-    if (!messagesDiv || !currentSessionId) return;
-    fetch('/api/session/' + encodeURIComponent(currentSessionId) + '/history/latest?limit=' + HISTORY_INITIAL_LIMIT)
+    if (!messagesDiv || !currentSessionId) return Promise.resolve();
+    return fetch('/api/session/' + encodeURIComponent(currentSessionId) + '/history/latest?limit=' + HISTORY_INITIAL_LIMIT)
         .then(function(r) { return r.json(); })
         .then(function(res) {
             if (res.code !== 200) {
@@ -1440,11 +1440,13 @@ function handleThinking(data, requestId) {
             messagesDiv.appendChild(msgState.currentStreamingMessage);
         }
         
-        msgState.thinkingContent += data.content;
+        msgState.thinkingContent = data.content;
         msgState.thinkingDiv.innerHTML = renderMarkdown(msgState.thinkingContent);
         messagesDiv.scrollTop = messagesDiv.scrollHeight;
     } else if (data.status === 'done') {
-        msgState.thinkingContent += data.content;
+        if (data.content) {
+            msgState.thinkingContent = data.content;
+        }
         msgState.thinkingDiv.innerHTML = renderMarkdown(msgState.thinkingContent);
         messagesDiv.scrollTop = messagesDiv.scrollHeight;
         if (msgState.currentStreamingMessage && msgState.lastMessageType === 'thinking') {
@@ -1494,7 +1496,7 @@ function handleStreamingChunk(content, requestId) {
         msgState.currentStreamingMessage.appendChild(contentDiv);
     }
     
-    msgState.streamingMarkdownContent += content;
+    msgState.streamingMarkdownContent = content;
     
     try {
         if (typeof marked !== 'undefined') {
@@ -1646,12 +1648,14 @@ function sendMessage() {
 
 function disableInput() {
     var wrapper = document.querySelector('.chat-input-wrapper');
+    var input = document.getElementById('messageInput');
     var sendBtn = document.getElementById('sendBtn');
     var runningBtn = document.getElementById('runningBtn');
     if (wrapper) wrapper.classList.add('disabled');
+    if (input) input.disabled = true;
     if (sendBtn) sendBtn.classList.add('hide');
     if (runningBtn) runningBtn.classList.remove('hide');
-    startLockCountdown();
+    startLockCountdown(false);
 }
 
 function enableInput() {
@@ -1660,6 +1664,7 @@ function enableInput() {
     var sendBtn = document.getElementById('sendBtn');
     var runningBtn = document.getElementById('runningBtn');
     if (wrapper) wrapper.classList.remove('disabled');
+    if (input) input.disabled = false;
     if (sendBtn) sendBtn.classList.remove('hide');
     if (runningBtn) runningBtn.classList.add('hide');
     stopLockCountdown();
@@ -1671,12 +1676,16 @@ var lockRemainingSeconds = 0;
 var lockElapsedSeconds = 0;
 var lockPollTimer = null;
 var lockCountdownTimer = null;
+// 是否已观测到后端会话处于运行中：避免 sendMessage 禁用输入后、后端执行器尚未创建时误恢复输入
+var lockObservedRunning = false;
 
 /**
  * 启动剩余时间倒计时：每5秒查询一次后端剩余时间和已运行时长，前端每秒本地递增/递减展示
+ * @param {boolean} initiallyRunning 启动时后端会话是否已在运行（页面加载时按后端渲染状态传入 true）
  */
-function startLockCountdown() {
+function startLockCountdown(initiallyRunning) {
     if (lockCountdownTimer) return;
+    lockObservedRunning = !!initiallyRunning;
     updateLockRemaining();
     lockPollTimer = setInterval(updateLockRemaining, 5000);
     lockCountdownTimer = setInterval(function() {
@@ -1700,6 +1709,7 @@ function stopLockCountdown() {
     lockCountdownTimer = null;
     lockRemainingSeconds = 0;
     lockElapsedSeconds = 0;
+    lockObservedRunning = false;
     renderLockCountdown();
 }
 
@@ -1712,11 +1722,18 @@ function updateLockRemaining() {
         .then(function(r) { return r.json(); })
         .then(function(resp) {
             if (resp.code === 200 && resp.data) {
-                lockRemainingSeconds = resp.data.remainingSeconds || 0;
-                if (resp.data.elapsedSeconds > 0) {
-                    lockElapsedSeconds = resp.data.elapsedSeconds;
+                if (resp.data.running === true) {
+                    lockObservedRunning = true;
+                    lockRemainingSeconds = resp.data.remainingSeconds || 0;
+                    if (resp.data.elapsedSeconds > 0) {
+                        lockElapsedSeconds = resp.data.elapsedSeconds;
+                    }
+                    renderLockCountdown();
+                } else if (lockObservedRunning) {
+                    // 会话已由运行转为结束，但未收到终止事件（如刷新/重连窗口错过 done/task-done）：恢复输入区
+                    enableInput();
                 }
-                renderLockCountdown();
+                // running=false 且从未观测到运行时：保持现状，等待执行器真正启动
             }
         })
         .catch(function() { /* 静默失败，下次轮询重试 */ });
@@ -2065,15 +2082,16 @@ window.onload = function() {
         // 先加载工具集图标映射，再渲染历史（内联工具图标需按工具名取工具集图标）
         loadToolIconMap().finally(function() {
             // 首次进入会话：JS 拉取并渲染历史消息（与向上翻页复用同一套渲染逻辑）
-            loadInitialHistory();
-            // 初始化用户消息导航圆点
-            initUserMsgNav();
-            // 历史加载完成后再订阅实时数据，确保 chunks 到达时历史已渲染
-            if (currentAgentId) {
-                connectWebSocket();
-                loadTokenUsage();
-                loadToolStats();
-            }
+            loadInitialHistory().finally(function() {
+                // 初始化用户消息导航圆点
+                initUserMsgNav();
+                // 历史加载完成后再订阅实时数据，确保 chunks 到达时历史已渲染
+                if (currentAgentId) {
+                    connectWebSocket();
+                    loadTokenUsage();
+                    loadToolStats();
+                }
+            });
         });
     }
     var input = document.getElementById('messageInput');
@@ -2084,7 +2102,7 @@ window.onload = function() {
     // 页面加载时会话已在运行：启动看门狗剩余时间倒计时
     var initRunningBtn = document.getElementById('runningBtn');
     if (initRunningBtn && !initRunningBtn.classList.contains('hide')) {
-        startLockCountdown();
+        startLockCountdown(true);
     }
 
     loadChatSkills();

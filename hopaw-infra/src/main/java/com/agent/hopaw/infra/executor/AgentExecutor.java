@@ -1027,8 +1027,8 @@ public class AgentExecutor implements IAgentExecutor {
         private void thinkingHandler(PartialThinking thinking) {
             messageTypeChangedChatHistoryHandler("thinking");
             thinkingBuilder.append(thinking.text());
-            //发送
-            AiThinkingMessageInfo aiThinkingMessageInfo = AiThinkingMessageInfo.partial(sessionId, requestId, thinking.text());
+            //发送：携带本段累计全文，前端按覆盖渲染，刷新页面后重连也能拿到完整思考内容
+            AiThinkingMessageInfo aiThinkingMessageInfo = AiThinkingMessageInfo.partial(sessionId, requestId, thinkingBuilder.toString());
             sendMessageToChannel(aiThinkingMessageInfo);
 
         }
@@ -1036,8 +1036,8 @@ public class AgentExecutor implements IAgentExecutor {
         private void partialResponseHandler(String partialResponse) {
             messageTypeChangedChatHistoryHandler("message");
             messageBuilder.append(partialResponse);
-            //发送
-            AiMessageBaseInfo chunk = AiMessageBaseInfo.chunk(sessionId, requestId, partialResponse);
+            //发送：携带本段累计全文，前端按覆盖渲染，刷新页面后重连也能拿到完整内容
+            AiMessageBaseInfo chunk = AiMessageBaseInfo.chunk(sessionId, requestId, messageBuilder.toString());
             sendMessageToChannel(chunk);
         }
 
