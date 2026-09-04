@@ -6,6 +6,12 @@
     var card = document.querySelector('.login-card');
     var pendingUserId = null;
     var sliding = false;
+    var captchaEnabled = false;
+
+    // 查询验证码开关状态
+    fetch('/api/auth/captcha-enabled').then(function (r) { return r.json(); })
+        .then(function (resp) { captchaEnabled = resp && resp.enabled === true; })
+        .catch(function () {});
 
     if (!accountList || !card) return;
 
@@ -55,10 +61,13 @@
         doLogin(userId);
     });
 
-    function doLogin(userId, password) {
+    function doLogin(userId, password, captcha) {
         var body = { userId: userId };
         if (password) {
             body.password = password;
+        }
+        if (captcha) {
+            body.captcha = captcha;
         }
         fetch('/api/auth/login', {
             method: 'POST',
@@ -76,12 +85,19 @@
                     slideToPwdPanel(userId, userId, userId.charAt(0).toUpperCase());
                 } else if (resp && resp.msg === '密码错误') {
                     showPwdError('密码错误，请重新输入');
+                    if (captchaEnabled) refreshCaptcha();
+                } else if (resp && (resp.msg === '验证码错误' || resp.msg === '验证码已过期，请刷新' || resp.msg === '请输入验证码')) {
+                    showToast(resp.msg, 'error');
+                    if (captchaEnabled) refreshCaptcha();
+                    document.getElementById('loginCaptchaInput').value = '';
+                    document.getElementById('loginCaptchaInput').focus();
                 } else {
                     showToast((resp && resp.msg) || '登录失败', 'error');
                 }
             })
             .catch(function (err) {
                 showToast('登录失败：' + (err && err.message ? err.message : '网络异常'), 'error');
+                if (captchaEnabled) refreshCaptcha();
             });
     }
 
@@ -95,6 +111,16 @@
         document.getElementById('loginPwdName').textContent = displayName;
         document.getElementById('loginPwdInput').value = '';
         document.getElementById('loginPwdError').style.display = 'none';
+
+        // 验证码：根据开关决定是否显示
+        var captchaField = document.getElementById('loginCaptchaField');
+        if (captchaEnabled) {
+            captchaField.style.display = 'flex';
+            document.getElementById('loginCaptchaInput').value = '';
+            refreshCaptcha();
+        } else {
+            captchaField.style.display = 'none';
+        }
 
         // 固定 card 当前高度，防止动画期间高度跳变
         card.style.height = card.offsetHeight + 'px';
@@ -133,9 +159,7 @@
     };
 
     function showPwdError(msg) {
-        var error = document.getElementById('loginPwdError');
-        error.textContent = msg;
-        error.style.display = '';
+        showToast(msg, 'error');
         var input = document.getElementById('loginPwdInput');
         input.value = '';
         input.focus();
@@ -148,9 +172,17 @@
             showPwdError('请输入密码');
             return;
         }
+        var captcha = null;
+        if (captchaEnabled) {
+            captcha = document.getElementById('loginCaptchaInput').value;
+            if (!captcha || captcha.trim() === '') {
+                showPwdError('请输入验证码');
+                return;
+            }
+        }
         var btn = document.getElementById('loginPwdSubmit');
         btn.disabled = true;
-        doLogin(pendingUserId, password);
+        doLogin(pendingUserId, password, captcha);
         setTimeout(function () { btn.disabled = false; }, 1500);
     };
 
@@ -161,6 +193,25 @@
             window.submitLoginPwd();
         }
     });
+
+    // 回车提交验证码
+    var captchaInput = document.getElementById('loginCaptchaInput');
+    if (captchaInput) {
+        captchaInput.addEventListener('keydown', function (e) {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                window.submitLoginPwd();
+            }
+        });
+    }
+
+    // 刷新验证码
+    window.refreshCaptcha = function () {
+        var img = document.getElementById('loginCaptchaImg');
+        if (img) {
+            img.src = '/api/auth/captcha?t=' + Date.now();
+        }
+    };
 
     function showLoading() {
         var overlay = document.createElement('div');

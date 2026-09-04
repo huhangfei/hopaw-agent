@@ -508,3 +508,35 @@ body.dark-theme .login-pwd-field input[type="password"] {
 .login-panel-pwd .login-pwd-submit:hover { background: var(--login-primary-dark); }
 .login-panel-pwd .login-pwd-submit:active { transform: scale(0.98); }
 .login-panel-pwd .login-pwd-submit:disabled { opacity: 0.6; cursor: not-allowed; }
+
+/* ===== 验证码 ===== */
+.login-captcha-field {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 16px;
+}
+.login-captcha-field input {
+    flex: 1;
+    height: 44px;
+    padding: 0 14px;
+    border: 1.5px solid #e0e0e0;
+    border-radius: 10px;
+    font-size: 15px;
+    background: #fafafa;
+    outline: none;
+    transition: border-color 0.2s;
+}
+.login-captcha-field input:focus { border-color: var(--login-primary, #667eea); background: #fff; }
+.login-captcha-img {
+    height: 44px;
+    width: 130px;
+    border-radius: 10px;
+    cursor: pointer;
+    border: 1.5px solid #e0e0e0;
+    user-select: none;
+    object-fit: cover;
+}
+.login-captcha-img:hover { border-color: var(--login-primary, #667eea); }
+body.dark-theme .login-captcha-field input { background: #2a2a4a; border-color: #3d3d6b; color: #e0e0e0; }
+body.dark-theme .login-captcha-img { border-color: #3d3d6b; }

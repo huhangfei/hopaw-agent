@@ -26,7 +26,10 @@ public class AuthInterceptor implements HandlerInterceptor {
     private static final Set<String> API_WHITELIST = Set.of(
             "/api/auth/accounts",
             "/api/auth/login",
-            "/api/auth/logout"
+            "/api/auth/logout",
+            "/api/auth/captcha",
+            "/api/auth/captcha-enabled",
+            "/api/auth/check-password"
     );
 
     @Override

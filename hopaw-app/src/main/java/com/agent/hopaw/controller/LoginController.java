@@ -5,6 +5,7 @@ import com.agent.hopaw.infra.model.entity.Account;
 import com.agent.hopaw.infra.service.AccountService;
 import com.agent.hopaw.util.CurrentUser;
 import com.agent.hopaw.util.PasswordUtil;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -14,9 +15,11 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseBody;
 
 import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpSession;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * 登录 / 切换用户相关接口。
@@ -25,6 +28,16 @@ import java.util.Map;
 public class LoginController {
 
     private final AccountService accountService;
+
+    @Value("${hopaw.captcha.enabled:false}")
+    private boolean captchaEnabled;
+
+    /** 登录失败次数缓存（防暴力破解）：key=IP，value=次数 */
+    private final ConcurrentHashMap<String, int[]> loginFailCache = new ConcurrentHashMap<>();
+    /** 超过阈值后锁定时间（毫秒） */
+    private static final long LOCKOUT_MS = 15 * 60 * 1000L;
+    /** 触发锁定的失败次数 */
+    private static final int FAIL_THRESHOLD = 5;
 
     public LoginController(AccountService accountService) {
         this.accountService = accountService;
@@ -79,9 +92,23 @@ public class LoginController {
     public ResponseBean login(@RequestBody Map<String, String> body, HttpServletRequest request) {
         String userId = body == null ? null : body.get("userId");
         String password = body == null ? null : body.get("password");
+        String captchaCode = body == null ? null : body.get("captcha");
         if (userId == null || userId.isBlank()) {
             return ResponseBean.fail("用户编号不能为空");
         }
+
+        // 频率限制：同一 IP 短时间内失败过多则拒绝
+        String clientIp = getClientIp(request);
+        int[] failInfo = loginFailCache.get(clientIp);
+        if (failInfo != null && failInfo[0] >= FAIL_THRESHOLD) {
+            long elapsed = System.currentTimeMillis() - failInfo[1];
+            if (elapsed < LOCKOUT_MS) {
+                long remainSec = (LOCKOUT_MS - elapsed) / 1000;
+                return ResponseBean.fail("登录尝试过于频繁，请" + remainSec + "秒后重试");
+            }
+            loginFailCache.remove(clientIp);
+        }
+
         Account account = accountService.getByUserId(userId);
         if (account == null) {
             return ResponseBean.fail("账户不存在");
@@ -94,16 +121,58 @@ public class LoginController {
             if (password == null || password.isBlank()) {
                 return ResponseBean.fail("password_required");
             }
+            // 验证码校验（开启时）
+            if (captchaEnabled) {
+                if (captchaCode == null || captchaCode.isBlank()) {
+                    return ResponseBean.fail("请输入验证码");
+                }
+                HttpSession session = request.getSession(false);
+                if (session == null) {
+                    return ResponseBean.fail("验证码已过期，请刷新");
+                }
+                String answer = (String) session.getAttribute(CaptchaController.SESSION_CAPTCHA_KEY);
+                Long expireTime = (Long) session.getAttribute(CaptchaController.SESSION_CAPTCHA_KEY + "_expire");
+                if (answer == null || expireTime == null || System.currentTimeMillis() > expireTime) {
+                    return ResponseBean.fail("验证码已过期，请刷新");
+                }
+                session.removeAttribute(CaptchaController.SESSION_CAPTCHA_KEY);
+                session.removeAttribute(CaptchaController.SESSION_CAPTCHA_KEY + "_expire");
+                if (!answer.equals(captchaCode.trim().toLowerCase())) {
+                    recordLoginFail(clientIp);
+                    return ResponseBean.fail("验证码错误");
+                }
+            }
             if (!PasswordUtil.verify(password, account.getPassword())) {
+                recordLoginFail(clientIp);
                 return ResponseBean.fail("密码错误");
             }
         }
+        // 登录成功：清除失败记录
+        loginFailCache.remove(clientIp);
         CurrentUser.set(request, userId, account);
         Map<String, Object> data = new HashMap<>();
         data.put("userId", account.getUserId());
         data.put("username", account.getUsername());
         data.put("nickname", account.getNickname());
         return ResponseBean.success(data);
+    }
+
+    private void recordLoginFail(String clientIp) {
+        int[] info = loginFailCache.computeIfAbsent(clientIp, k -> new int[]{0, 0});
+        info[0]++;
+        info[1] = (int) System.currentTimeMillis();
+    }
+
+    private String getClientIp(HttpServletRequest request) {
+        String xff = request.getHeader("X-Forwarded-For");
+        if (xff != null && !xff.isEmpty()) {
+            return xff.split(",")[0].trim();
+        }
+        String realIp = request.getHeader("X-Real-IP");
+        if (realIp != null && !realIp.isEmpty()) {
+            return realIp;
+        }
+        return request.getRemoteAddr();
     }
 
     /**

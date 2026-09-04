@@ -94,6 +94,10 @@
                 <input type="password" id="loginPwdInput" placeholder="请输入登录密码" maxlength="64" autocomplete="off">
                 <div class="login-pwd-error" id="loginPwdError" style="display:none;"></div>
             </div>
+            <div class="login-captcha-field" id="loginCaptchaField" style="display:none;">
+                <input type="text" id="loginCaptchaInput" placeholder="请输入验证码" maxlength="10" autocomplete="off">
+                <img id="loginCaptchaImg" class="login-captcha-img" alt="验证码" title="点击刷新" onclick="refreshCaptcha()">
+            </div>
             <button class="login-pwd-submit" id="loginPwdSubmit" onclick="submitLoginPwd()">确认登录</button>
         </div>
     </div>
