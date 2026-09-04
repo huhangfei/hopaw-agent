@@ -502,6 +502,7 @@ public class WorkflowTaskService implements IWorkflowTaskService {
         // 构建 AgentExecutorParams
         AgentExecutorParams agentExecutorParams = new AgentExecutorParams();
         agentExecutorParams.setSessionId(userChatRequest.getSessionId());
+        agentExecutorParams.setRequestId(userChatRequest.getRequestId());
         agentExecutorParams.setUserId(userChatRequest.getUserId());
         agentExecutorParams.setAiModelId(userChatRequest.getAiModelId());
         agentExecutorParams.setEnableThinking(userChatRequest.getEnableThinking());
