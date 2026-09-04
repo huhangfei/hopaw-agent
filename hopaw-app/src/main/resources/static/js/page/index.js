@@ -625,6 +625,16 @@ function buildUserMsgPopupContent(group, popup) {
         empty.textContent = '(无内容)';
         popup.appendChild(empty);
     }
+
+    // 右下角显示消息时间
+    var lastEl = group[group.length - 1];
+    var timeEl = lastEl ? lastEl.querySelector('.message-time') : null;
+    if (timeEl) {
+        var timeDiv = document.createElement('div');
+        timeDiv.className = 'user-nav-popup-time';
+        timeDiv.textContent = timeEl.textContent;
+        popup.appendChild(timeDiv);
+    }
 }
 
 /**
@@ -2058,17 +2068,17 @@ window.onload = function() {
             loadInitialHistory();
             // 初始化用户消息导航圆点
             initUserMsgNav();
+            // 历史加载完成后再订阅实时数据，确保 chunks 到达时历史已渲染
+            if (currentAgentId) {
+                connectWebSocket();
+                loadTokenUsage();
+                loadToolStats();
+            }
         });
     }
     var input = document.getElementById('messageInput');
     if (input) {
         input.focus();
-    }
-
-    if (currentAgentId) {
-        connectWebSocket();
-        loadTokenUsage();
-        loadToolStats();
     }
 
     // 页面加载时会话已在运行：启动看门狗剩余时间倒计时

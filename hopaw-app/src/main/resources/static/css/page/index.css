@@ -544,6 +544,7 @@ body.dark-theme .session-running-spinner {
     max-width: 40vw;
     max-height: 180px;
     overflow-y: auto;
+    overflow-x: hidden;
     background: #fff;
     border: 1px solid #e0e0e0;
     border-radius: 8px;
@@ -600,6 +601,14 @@ body.dark-theme .session-running-spinner {
     word-break: break-all;
     margin: 3px 0;
     cursor: pointer;
+}
+.user-nav-popup-time {
+    text-align: right;
+    color: #999;
+    font-size: 11px;
+    margin-top: 4px;
+    padding-top: 4px;
+    border-top: 1px solid #f0f0f0;
 }
 @keyframes userMsgFlash {
     0% { box-shadow: 0 0 0 4px rgba(102, 126, 234, 0.45); }
@@ -2255,6 +2264,11 @@ body.dark-theme .user-msg-nav-popup-arrow {
 
 body.dark-theme .user-nav-popup-attach {
     color: #8ba3ff;
+}
+
+body.dark-theme .user-nav-popup-time {
+    color: #777;
+    border-top-color: #333;
 }
 
 body.dark-theme .chat-input-area {
