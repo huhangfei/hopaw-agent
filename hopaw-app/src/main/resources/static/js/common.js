@@ -25,3 +25,17 @@ function escapeHtml(text) {
     div.textContent = text;
     return div.innerHTML;
 }
+
+// marked v15 全局配置：注册 hooks.preprocess 统一转义单波浪线，防止 ~text~ 被误判为删除线
+document.addEventListener('DOMContentLoaded', function() {
+    if (typeof marked !== 'undefined') {
+        marked.setOptions({ breaks: true, gfm: true });
+        marked.use({
+            hooks: {
+                preprocess: function(md) {
+                    return md.replace(/(?<!~)~(?!~)/g, '&tilde;');
+                }
+            }
+        });
+    }
+});

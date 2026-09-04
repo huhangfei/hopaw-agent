@@ -37,35 +37,6 @@ var sessionTypeFilter = 'chat';
 // 运行中的会话ID集合：初始渲染时取自后端 running 字段，运行期由 WebSocket 事件维护
 var runningSessionIds = {};
 
-if (typeof marked !== 'undefined') {
-    marked.setOptions({
-        breaks: true,
-        gfm: true
-    });
-
-    // 重写 del 规则：只匹配 ~~text~~（双波浪线），防止单个 ~ 被误解析为删除线
-    marked.use({
-        extensions: [{
-            name: 'del',
-            level: 'inline',
-            start: function(src) { return src.indexOf('~~'); },
-            tokenizer: function(src) {
-                var match = src.match(/^~~([^\s~])((?:[^\\]|\\.)*?[^\s~])?~~(?=[^~]|$)/);
-                if (match) {
-                    return {
-                        type: 'del',
-                        raw: match[0],
-                        tokens: this.lexer.inlineTokens(match[1] + (match[2] || ''))
-                    };
-                }
-            },
-            renderer: function(token) {
-                return '<del>' + this.parser.parseInline(token.tokens) + '</del>';
-            }
-        }]
-    });
-}
-
 function formatMessageTime(date) {
     var now = new Date();
     var isToday = date.getFullYear() === now.getFullYear() &&
@@ -159,10 +130,12 @@ function fallbackCopy(btn, content) {
 }
 
 function renderAllMessages() {
-    var messageContents = document.querySelectorAll('.message-content[data-is-agent="true"], .thinking-content');
+    var messageContents = document.querySelectorAll('.message-content[data-raw-content], .thinking-content');
     messageContents.forEach(function(el) {
-        var textContent = el.getAttribute('data-raw-content') || el.textContent;
-        el.innerHTML = renderMarkdown(textContent);
+        var rawContent = el.getAttribute('data-raw-content');
+        if (rawContent) {
+            el.innerHTML = renderMarkdown(rawContent);
+        }
     });
 }
 
@@ -439,7 +412,12 @@ function buildHistoryMessageNode(chat) {
         var content = document.createElement('div');
         content.className = 'message-content';
         content.setAttribute('data-is-agent', chat.role === 'agent');
-        content.textContent = chat.content;
+        content.setAttribute('data-raw-content', chat.content);
+        if (chat.role === 'user') {
+            content.innerHTML = renderMarkdown(chat.content);
+        } else {
+            content.textContent = chat.content;
+        }
         div.appendChild(content);
         div.appendChild(buildHistoryFooter(timeText, chat.content));
     }
@@ -1374,7 +1352,8 @@ function handleUserMessageEcho(data) {
 
         var textContent = document.createElement('div');
         textContent.className = 'message-content';
-        textContent.textContent = data.content;
+        textContent.setAttribute('data-raw-content', data.content);
+        textContent.innerHTML = renderMarkdown(data.content);
         textMessageDiv.appendChild(textContent);
 
         textMessageDiv.appendChild(createMessageFooter(data.content));
