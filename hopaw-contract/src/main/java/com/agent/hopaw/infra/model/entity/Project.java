@@ -23,6 +23,10 @@ public class Project {
     private Boolean autoIterate;
     /** 自动迭代要求提示词：启用自动迭代时带入项目管理智能体的额外迭代要求 */
     private String iteratePrompt;
+    /** 最小检测频率（分钟），自动迭代时判断距上次执行是否满足间隔，小于1视为不限制 */
+    private Integer minFrequency;
+    /** 上次自动迭代执行时间（自动更新，供最小频率间隔判断） */
+    private LocalDateTime lastIterateTime;
     /** 项目管理智能体会话编号（自动迭代执行器复用该会话保留上下文） */
     private String sessionId;
     /** 创建人昵称（非持久字段，由 Controller 层填充） */
@@ -116,6 +120,22 @@ public class Project {
 
     public void setIteratePrompt(String iteratePrompt) {
         this.iteratePrompt = iteratePrompt;
+    }
+
+    public Integer getMinFrequency() {
+        return minFrequency;
+    }
+
+    public void setMinFrequency(Integer minFrequency) {
+        this.minFrequency = minFrequency;
+    }
+
+    public LocalDateTime getLastIterateTime() {
+        return lastIterateTime;
+    }
+
+    public void setLastIterateTime(LocalDateTime lastIterateTime) {
+        this.lastIterateTime = lastIterateTime;
     }
 
     public String getSessionId() {

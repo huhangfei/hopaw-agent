@@ -95,6 +95,9 @@ public interface IProjectService {
     /** 更新项目管理智能体会话编号 */
     void updateSessionId(Long projectId, String sessionId);
 
+    /** 更新项目上次自动迭代执行时间 */
+    void updateLastIterateTime(Long projectId);
+
     /** 按会话编号反查项目（项目管理智能体工具场景） */
     Project getProjectBySessionId(String sessionId);
 }

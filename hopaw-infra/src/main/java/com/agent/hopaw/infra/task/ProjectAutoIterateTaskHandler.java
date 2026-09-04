@@ -8,6 +8,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
 
+import java.time.LocalDateTime;
+import java.time.temporal.ChronoUnit;
 import java.util.List;
 
 /**
@@ -50,6 +52,15 @@ public class ProjectAutoIterateTaskHandler implements TaskHandler {
         }
         for (Project project : projects) {
             try {
+                // 最小频率检查：设置了 minFrequency（>=1）时，距上次执行不足间隔则跳过
+                Integer minFreq = project.getMinFrequency();
+                if (minFreq != null && minFreq >= 1 && project.getLastIterateTime() != null) {
+                    long minutesSinceLast = ChronoUnit.MINUTES.between(project.getLastIterateTime(), LocalDateTime.now());
+                    if (minutesSinceLast < minFreq) {
+                        logger.debug("项目自动迭代：距上次执行不足{}分钟（已过{}分钟），跳过 id={}", minFreq, minutesSinceLast, project.getId());
+                        continue;
+                    }
+                }
                 // 重复提交由线程池内置 in-flight 集合去重：上一轮迭代未结束时跳过本轮
                 boolean accepted = projectThreadPool.submitProject(project.getId(), () -> {
                     try {

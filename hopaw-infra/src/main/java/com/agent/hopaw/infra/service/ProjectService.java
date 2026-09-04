@@ -105,6 +105,11 @@ public class ProjectService implements IProjectService {
     }
 
     @Override
+    public void updateLastIterateTime(Long projectId) {
+        projectMapper.updateLastIterateTime(projectId);
+    }
+
+    @Override
     public Project getProjectBySessionId(String sessionId) {
         if (sessionId == null || sessionId.trim().isEmpty()) {
             return null;
@@ -261,6 +266,8 @@ public class ProjectService implements IProjectService {
         existing.setAutoIterate(project.getAutoIterate());
         // 自动迭代要求提示词随编辑更新（允许清空）
         existing.setIteratePrompt(project.getIteratePrompt());
+        // 最小检测频率随编辑更新
+        existing.setMinFrequency(project.getMinFrequency());
         // 状态变更走 updateStatus 接口，这里仅当传入了合法状态且与当前不同时校验流转
         if (project.getStatus() != null && !project.getStatus().equals(existing.getStatus())) {
             validateTransition(existing.getStatus(), project.getStatus());

@@ -183,6 +183,11 @@
                                     启用自动迭代（定时驱动项目管理智能体推进项目）
                                 </label>
                             </div>
+                            <div class="form-group" id="projectMinFrequencyGroup" style="display:none;">
+                                <label for="projectMinFrequency">最小检测频率（分钟）</label>
+                                <input type="number" id="projectMinFrequency" min="1" step="1" placeholder="1" style="width:120px;">
+                                <small class="form-hint">自动迭代距上次执行的最小间隔，不填或小于1表示不限制</small>
+                            </div>
                             <div class="form-group" id="projectIteratePromptGroup" style="display:none;">
                                 <label for="projectIteratePrompt">迭代要求提示词</label>
                                 <textarea id="projectIteratePrompt" rows="3" placeholder="追加给项目管理智能体的额外迭代要求，如：每轮迭代优先处理待验收任务、产出物写入 docs 目录等"></textarea>

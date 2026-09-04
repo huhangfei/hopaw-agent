@@ -15,17 +15,19 @@
         <result property="sessionId" column="session_id"/>
         <result property="notifyChannels" column="notify_channels"/>
         <result property="notifyEvents" column="notify_events"/>
+        <result property="minFrequency" column="min_frequency"/>
+        <result property="lastIterateTime" column="last_iterate_time"/>
         <result property="createTime" column="create_time"/>
         <result property="updateTime" column="update_time"/>
     </resultMap>
 
     <sql id="allColumns">
-        id, name, description, status, user_id, space_dir, agent_id, auto_iterate, iterate_prompt, session_id, notify_channels, notify_events, create_time, update_time
+        id, name, description, status, user_id, space_dir, agent_id, auto_iterate, iterate_prompt, session_id, notify_channels, notify_events, min_frequency, last_iterate_time, create_time, update_time
     </sql>
 
     <insert id="insert" parameterType="com.agent.hopaw.infra.model.entity.Project">
-        INSERT INTO projects (name, description, status, user_id, agent_id, auto_iterate, iterate_prompt, notify_channels, notify_events, create_time, update_time)
-        VALUES (#{name}, #{description}, #{status}, #{userId}, #{agentId}, #{autoIterate}, #{iteratePrompt}, #{notifyChannels}, #{notifyEvents}, datetime('now','localtime'), datetime('now','localtime'))
+        INSERT INTO projects (name, description, status, user_id, agent_id, auto_iterate, iterate_prompt, notify_channels, notify_events, min_frequency, create_time, update_time)
+        VALUES (#{name}, #{description}, #{status}, #{userId}, #{agentId}, #{autoIterate}, #{iteratePrompt}, #{notifyChannels}, #{notifyEvents}, #{minFrequency}, datetime('now','localtime'), datetime('now','localtime'))
         <selectKey resultType="long" keyProperty="id" order="AFTER">
             SELECT last_insert_rowid()
         </selectKey>
@@ -41,6 +43,7 @@
             iterate_prompt = #{iteratePrompt},
             notify_channels = #{notifyChannels},
             notify_events = #{notifyEvents},
+            min_frequency = #{minFrequency},
             update_time = datetime('now','localtime')
         WHERE id = #{id}
     </update>
@@ -120,6 +123,13 @@
     <update id="updateSessionId">
         UPDATE projects
         SET session_id = #{sessionId},
+            update_time = datetime('now','localtime')
+        WHERE id = #{id}
+    </update>
+
+    <update id="updateLastIterateTime">
+        UPDATE projects
+        SET last_iterate_time = datetime('now','localtime'),
             update_time = datetime('now','localtime')
         WHERE id = #{id}
     </update>

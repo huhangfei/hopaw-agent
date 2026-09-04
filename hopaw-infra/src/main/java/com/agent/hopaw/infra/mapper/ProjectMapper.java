@@ -40,6 +40,9 @@ public interface ProjectMapper {
     /** 更新项目管理智能体会话编号 */
     int updateSessionId(@Param("id") Long id, @Param("sessionId") String sessionId);
 
+    /** 更新项目上次自动迭代执行时间 */
+    int updateLastIterateTime(@Param("id") Long id);
+
     /** 按会话编号反查项目 */
     Project findBySessionId(@Param("sessionId") String sessionId);
 }

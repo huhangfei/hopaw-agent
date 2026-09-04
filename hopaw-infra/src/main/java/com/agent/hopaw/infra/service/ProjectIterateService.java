@@ -192,6 +192,8 @@ public class ProjectIterateService implements IProjectIterateService {
             return ProjectIterateResult.fail("项目管理智能体正在执行中，请等待本轮完成后重试");
         }
         String requestId = UuidUtil.generateSimpleUUID();
+        // 记录本次执行开始时间（供最小频率间隔判断）
+        projectService.updateLastIterateTime(projectId);
         userMessage+="\n当前时间："+ LocalDateTime.now().format(TIME_FMT);
         userMessage+=getProjectLog(projectId);
         chatUserMessageService.sendMessage(AgentExecutorBizTypeEnum.ProjectChat, project.getUserId(), sessionId, requestId, project.getAgentId(), userMessage, null);

@@ -1112,6 +1112,7 @@ function showAddModal() {
     populateProjectAgentSelect('');
     document.getElementById('projectAutoIterate').checked = false;
     document.getElementById('projectIteratePrompt').value = '';
+    document.getElementById('projectMinFrequency').value = '';
     onProjectAgentChange();
     // 新建时显示项目空间选项，默认自动创建
     document.getElementById('spaceModeGroup').style.display = '';
@@ -1142,6 +1143,7 @@ function editCurrentProject() {
     populateProjectAgentSelect(project.agentId || '');
     document.getElementById('projectAutoIterate').checked = !!project.autoIterate;
     document.getElementById('projectIteratePrompt').value = project.iteratePrompt || '';
+    document.getElementById('projectMinFrequency').value = project.minFrequency || '';
     onProjectAgentChange();
     // 编辑时不允许修改项目空间
     document.getElementById('spaceModeGroup').style.display = 'none';
@@ -1166,6 +1168,10 @@ function onProjectAgentChange() {
     var promptGroup = document.getElementById('projectIteratePromptGroup');
     if (promptGroup) {
         promptGroup.style.display = hasAgent ? 'block' : 'none';
+    }
+    var minFreqGroup = document.getElementById('projectMinFrequencyGroup');
+    if (minFreqGroup) {
+        minFreqGroup.style.display = hasAgent ? 'block' : 'none';
     }
     if (!hasAgent) {
         // 未选智能体：强制关闭自动迭代（提示词保留输入内容，仅隐藏）
@@ -1292,6 +1298,7 @@ function submitProject() {
         // 未选智能体时强制关闭自动迭代；迭代要求提示词独立提交（手动下发指令时同样生效，不随勾选清空）
         autoIterate: !!(agentSel && agentSel.value) && document.getElementById('projectAutoIterate').checked,
         iteratePrompt: (document.getElementById('projectIteratePrompt').value || '').trim(),
+        minFrequency: parseInt(document.getElementById('projectMinFrequency').value, 10) || null,
         // 通知渠道与事项多选（空数组表示清空通知配置）
         notifyChannelIds: getCheckedNotifyValues('projectNotifyChannelGroup'),
         notifyEventCodes: getCheckedNotifyValues('projectNotifyEventGroup')

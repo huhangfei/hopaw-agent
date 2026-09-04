@@ -396,6 +396,10 @@ public class DatabaseInitializer implements CommandLineRunner {
             // 项目通知配置（增量加列）：通知渠道编号 JSON 数组 + 通知事项编码 JSON 数组
             ensureColumn(stmt, "projects", "notify_channels", "TEXT");
             ensureColumn(stmt, "projects", "notify_events", "TEXT");
+            // 最小检测频率（分钟）：自动迭代时判断距上次执行的间隔
+            ensureColumn(stmt, "projects", "min_frequency", "INTEGER");
+            // 上次自动迭代执行时间
+            ensureColumn(stmt, "projects", "last_iterate_time", "TIMESTAMP");
 
             // 通知系统 - 通知渠道表（每种通知方式可配置多个渠道）
             stmt.execute("CREATE TABLE IF NOT EXISTS notify_channels (" +
