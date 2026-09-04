@@ -47,3 +47,5 @@ vector_store.metadata
 /uploads/
 /attachments/
 /project-spaces/
+/.mimocode/
+/.trae/
