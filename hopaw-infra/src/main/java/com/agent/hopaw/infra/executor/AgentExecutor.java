@@ -24,7 +24,7 @@ import org.springframework.context.ApplicationEventPublisher;
 import dev.langchain4j.agent.tool.ToolExecutionRequest;
 import dev.langchain4j.data.message.*;
 import dev.langchain4j.invocation.InvocationParameters;
-import dev.langchain4j.memory.chat.MessageWindowChatMemory;
+import dev.langchain4j.memory.chat.TokenWindowChatMemory;
 import dev.langchain4j.model.chat.ChatModel;
 import dev.langchain4j.model.chat.StreamingChatModel;
 import dev.langchain4j.model.chat.listener.ChatModelListener;
@@ -33,6 +33,7 @@ import dev.langchain4j.model.chat.response.ChatResponse;
 import dev.langchain4j.model.chat.response.PartialThinking;
 import dev.langchain4j.model.chat.response.PartialToolCall;
 import dev.langchain4j.model.embedding.EmbeddingModel;
+import dev.langchain4j.model.openai.OpenAiTokenCountEstimator;
 import dev.langchain4j.service.AiServices;
 import dev.langchain4j.service.tool.ToolProvider;
 import dev.langchain4j.service.tool.ToolErrorHandlerResult;
@@ -590,9 +591,11 @@ public class AgentExecutor implements IAgentExecutor {
     }
 
     private ChatAgentAssistant createChatAgentAssistant() {
-        MessageWindowChatMemory.Builder memoryBuilder = MessageWindowChatMemory.builder()
+        // 窗口记忆按 Token 限制：超预算时从最早消息开始淘汰，淘汰数据由存储层转入长时记忆整理
+        TokenWindowChatMemory.Builder memoryBuilder = TokenWindowChatMemory.builder()
                 .id(memoryId)
-                .maxMessages(agentExecutorParams.getMaxMemoryRecords() != null ? agentExecutorParams.getMaxMemoryRecords() : 20)
+                .maxTokens(agentExecutorParams.getMaxMemoryTokens() != null ? agentExecutorParams.getMaxMemoryTokens() : Agent.DEFAULT_MAX_MEMORY_TOKENS,
+                        new OpenAiTokenCountEstimator("gpt-4o"))
                 .chatMemoryStore(memoryStore != null ? memoryStore : new InMemoryChatMemoryStore());
         var aiBuilder = AiServices
                 .builder(ChatAgentAssistant.class)
@@ -996,7 +999,7 @@ public class AgentExecutor implements IAgentExecutor {
                     toolDescriptions
             );
             messageTypeChangedChatHistoryHandler(AiToolCallMessageInfo.TYPE_TOOL_CALL+"_"+toolCallMessageInfo.getStatus());
-            sendToolCallHistoryEventAndToChannel(toolCallMessageInfo);
+            sendToolCallHistoryEventAndToChannel(toolCallMessageInfo,messageTypeChanged());
         }
 
         public void toolCallHandler(String status,String id, String toolName, String arguments, Object result) {
@@ -1009,7 +1012,7 @@ public class AgentExecutor implements IAgentExecutor {
                     toolDescriptions
             );
             messageTypeChangedChatHistoryHandler(AiToolCallMessageInfo.TYPE_TOOL_CALL+"_"+status);
-            sendToolCallHistoryEventAndToChannel(toolCallMessageInfo);
+            sendToolCallHistoryEventAndToChannel(toolCallMessageInfo,true);
         }
 
         /**
@@ -1094,20 +1097,23 @@ public class AgentExecutor implements IAgentExecutor {
 
         }
 
-        private void sendToolCallHistoryEventAndToChannel(AiToolCallMessageInfo callMessageInfo){
+        private void sendToolCallHistoryEventAndToChannel(AiToolCallMessageInfo callMessageInfo,boolean addHistory){
             sendMessageToChannel(callMessageInfo);
+            if(addHistory){
+                ChatHistory toolChat = new ChatHistory(
+                        agentId, "agent", AiToolCallMessageInfo.TYPE_TOOL_CALL,
+                        callMessageInfo.getToolCallId(),
+                        callMessageInfo.getToolName(),
+                        (callMessageInfo.getArguments() != null ? callMessageInfo.getArguments().toString() : null),
+                        callMessageInfo.getResult() != null ? (String) callMessageInfo.getResult() : null
+                );
+                toolChat.setToolCallStatus(callMessageInfo.getStatus());
+                toolChat.setSessionId(callMessageInfo.getSessionId());
+                toolChat.setMessageNo(Md5Util.md5(callMessageInfo.getSessionId() + callMessageInfo.getToolCallId()));
+                chatHistoryConsumer.accept(toolChat);
+            }
             //入库
-            ChatHistory toolChat = new ChatHistory(
-                    agentId, "agent", AiToolCallMessageInfo.TYPE_TOOL_CALL,
-                    callMessageInfo.getToolCallId(),
-                    callMessageInfo.getToolName(),
-                    (callMessageInfo.getArguments() != null ? callMessageInfo.getArguments().toString() : null),
-                    callMessageInfo.getResult() != null ? (String) callMessageInfo.getResult() : null
-            );
-            toolChat.setToolCallStatus(callMessageInfo.getStatus());
-            toolChat.setSessionId(callMessageInfo.getSessionId());
-            toolChat.setMessageNo(Md5Util.md5(callMessageInfo.getSessionId() + callMessageInfo.getToolCallId()));
-            chatHistoryConsumer.accept(toolChat);
+
         }
     }
 

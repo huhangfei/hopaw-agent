@@ -31,9 +31,9 @@
                     </div>
                     <div class="form-row">
                         <div class="form-group">
-                            <label>最大记忆</label>
-                            <input type="number" name="maxMemoryRecords" value="20" min="1" max="100"
-                                   placeholder="20">
+                            <label>最大记忆（Token）</label>
+                            <input type="number" name="maxMemoryTokens" value="20000" min="1000" max="1000000"
+                                   placeholder="20000">
                         </div>
                         <div class="form-group">
                             <label>最大工具调用</label>
@@ -165,10 +165,10 @@
                     </div>
                     <div class="form-row">
                         <div class="form-group">
-                            <label>最大记忆</label>
-                            <input type="number" name="maxMemoryRecords" id="editMaxMemoryRecordsFragment"
-                                   th:value="${agent.maxMemoryRecords != null ? agent.maxMemoryRecords : 20}"
-                                   min="1" max="50000000" placeholder="20">
+                            <label>最大记忆（Token）</label>
+                            <input type="number" name="maxMemoryTokens" id="editMaxMemoryTokensFragment"
+                                   th:value="${agent.maxMemoryTokens != null ? agent.maxMemoryTokens : 20000}"
+                                   min="1000" max="1000000" placeholder="20000">
                         </div>
                         <div class="form-group">
                             <label>最大工具调用</label>

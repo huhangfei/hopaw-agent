@@ -319,7 +319,7 @@ public class ProjectIterateService implements IProjectIterateService {
         params.setToolCallPermission(userChatRequest != null && userChatRequest.getToolCallPermission() != null ? userChatRequest.getToolCallPermission() : "auto");
 
         params.setAgentId(agent.getId());
-        params.setMaxMemoryRecords(agent.getMaxMemoryRecords() != null ? agent.getMaxMemoryRecords() : 10);
+        params.setMaxMemoryTokens(agent.getMaxMemoryTokens() != null ? agent.getMaxMemoryTokens() : Agent.DEFAULT_MAX_MEMORY_TOKENS);
         params.setMaxToolInvocations(agent.getMaxToolInvocations() != null ? agent.getMaxToolInvocations() : 3);
         params.setVectorToolSearch(agent.getVectorToolSearch() != null ? agent.getVectorToolSearch() : false);
         params.setVectorToolSearchMaxResults(agent.getVectorToolSearchMaxResults() != null ? agent.getVectorToolSearchMaxResults() : 5);

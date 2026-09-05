@@ -17,7 +17,10 @@ public class AgentExecutorParams {
     private String sessionId;
     private String requestId;
     private Long aiModelId;
-    private Integer maxMemoryRecords;
+    /**
+     * 窗口记忆 Token 上限：超出后从最早消息开始淘汰
+     */
+    private Integer maxMemoryTokens;
     private Integer maxToolInvocations;
     private Boolean enableThinking;
     private Boolean vectorToolSearch;
@@ -84,12 +87,12 @@ public class AgentExecutorParams {
         this.aiModelId = aiModelId;
     }
 
-    public Integer getMaxMemoryRecords() {
-        return maxMemoryRecords;
+    public Integer getMaxMemoryTokens() {
+        return maxMemoryTokens;
     }
 
-    public void setMaxMemoryRecords(Integer maxMemoryRecords) {
-        this.maxMemoryRecords = maxMemoryRecords;
+    public void setMaxMemoryTokens(Integer maxMemoryTokens) {
+        this.maxMemoryTokens = maxMemoryTokens;
     }
 
     public Integer getMaxToolInvocations() {

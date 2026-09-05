@@ -55,6 +55,11 @@ import java.util.UUID;
 public class LongTermMemoryTaskHandler implements TaskHandler {
     private static final Logger logger = LoggerFactory.getLogger(LongTermMemoryTaskHandler.class);
 
+    /**
+     * 窗口记忆改为 Token 限制后，整理触发依赖的消息条数暂固定为 20 条，后续再按 Token 预算调整
+     */
+    private static final int ORGANIZE_BATCH_SIZE = 20;
+
     private final IAiModelService aiModelService;
     private final ILongTermMemoryService longTermMemoryService;
     private final ISysConfigService sysConfigService;
@@ -329,8 +334,8 @@ public class LongTermMemoryTaskHandler implements TaskHandler {
         if (cleanedMessages.isEmpty()) {
             return;
         }
-        String memoryMaxBatchSize = getConfig("memory_max_batch_size", "10");
-        int batchSize = Integer.parseInt(memoryMaxBatchSize);
+        // 窗口记忆已改为 Token 限制，整理触发条数暂固定为 20 条
+        int batchSize = ORGANIZE_BATCH_SIZE;
         //获取时间配置
         String memoryTimeConfig = getConfig("memory_time_config", "5");
         int timeConfig = Integer.parseInt(memoryTimeConfig);

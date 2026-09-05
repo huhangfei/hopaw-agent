@@ -47,7 +47,7 @@ public class DatabaseInitializer implements CommandLineRunner {
                     "name TEXT NOT NULL, " +
                     "description TEXT, " +
                     "tools TEXT, " +
-                    "max_memory_records INTEGER DEFAULT 20, " +
+                    "max_memory_tokens INTEGER DEFAULT 20000, " +
                     "max_tool_invocations INTEGER DEFAULT 20, " +
                     "vector_tool_search INTEGER DEFAULT 1, " +
                     "vector_tool_search_max_results INTEGER DEFAULT 5, " +
@@ -59,6 +59,18 @@ public class DatabaseInitializer implements CommandLineRunner {
                     "user_id TEXT DEFAULT 'admin'" +
                     ")");
             stmt.execute("CREATE INDEX IF NOT EXISTS idx_agents_user ON agents(user_id)");
+            // 旧库迁移：窗口记忆从数量限制改为 Token 限制，列 max_memory_records 重命名为 max_memory_tokens
+            if (!tableColumnExists(stmt, "agents", "max_memory_tokens")) {
+                if (tableColumnExists(stmt, "agents", "max_memory_records")) {
+                    stmt.execute("ALTER TABLE agents RENAME COLUMN max_memory_records TO max_memory_tokens");
+                    log.info("[DatabaseInitializer] agents.max_memory_records 已重命名为 max_memory_tokens");
+                } else {
+                    stmt.execute("ALTER TABLE agents ADD COLUMN max_memory_tokens INTEGER DEFAULT 20000");
+                    log.info("[DatabaseInitializer] 已为表 agents 补齐列 max_memory_tokens");
+                }
+                // 旧列存的是消息条数（如 20），直接作为 Token 上限会过小，统一重置为默认 Token 上限
+                stmt.execute("UPDATE agents SET max_memory_tokens = 20000");
+            }
 
             stmt.execute("CREATE TABLE IF NOT EXISTS chat_history (" +
                     "id INTEGER PRIMARY KEY AUTOINCREMENT, " +
@@ -649,11 +661,11 @@ public class DatabaseInitializer implements CommandLineRunner {
                 log.info("Initializing default agent...");
                 String tools = "agentTaskTool,getCurrentTime,memoryTool,sysConfigTool,skillTool,mailTool,commandExecutor,baiduSearch,webPage,sshTool,fileOperation,dingtalkNotify";
                 stmt.execute(String.format(
-                        "INSERT INTO agents (name, description, tools, max_memory_records, max_tool_invocations, vector_tool_search, vector_tool_search_max_results, user_id, enable_thinking) VALUES ('%s', '%s', '%s', %d, %d, %d, %d, '%s', %d)",
+                        "INSERT INTO agents (name, description, tools, max_memory_tokens, max_tool_invocations, vector_tool_search, vector_tool_search_max_results, user_id, enable_thinking) VALUES ('%s', '%s', '%s', %d, %d, %d, %d, '%s', %d)",
                         escapeSQL("大虾\uD83E\uDD90"),
                         escapeSQL("善于使用多种工具解决用户问题"),
                         escapeSQL(tools),
-                        20, 20, 1, 15,
+                        20000, 20, 1, 15,
                         DefaultUser.USER,
                         1
                 ));

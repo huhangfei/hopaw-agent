@@ -1487,8 +1487,8 @@ body.dark-theme .session-running-spinner {
 /* 工具集 SVG 图标（代码内联或 img 地址形式）在图标容器内的尺寸约束 */
 .tool-inline-icon svg,
 .tool-inline-icon img {
-    width: 16px;
-    height: 16px;
+    width: 26px;
+    height: 26px;
     display: block;
 }
 /* 消息流扳手图标点击后，右侧对应工具调用项的高亮闪烁 */
@@ -1740,8 +1740,25 @@ body.dark-theme .session-running-spinner {
     color: #999;
     font-style: italic;
     font-size: 12px;
+    line-height: 1.5;
     word-break: break-word;
     overflow-wrap: anywhere;
+}
+/* 思考小节：默认收起仅显示两行（3em = 12px * 1.5 * 2），完成后自动收起 */
+.thinking-section:not(.expanded) .thinking-content {
+    max-height: 3em;
+    overflow: hidden;
+}
+.thinking-toggle {
+    display: inline-block;
+    margin-top: 2px;
+    font-size: 12px;
+    color: #999;
+    cursor: pointer;
+    user-select: none;
+}
+.thinking-toggle:hover {
+    text-decoration: underline;
 }
 .error-message {
     border-color: rgba(255, 71, 87, 0.3) !important;
@@ -2559,6 +2576,10 @@ body.dark-theme .message-content a {
 }
 
 body.dark-theme .thinking-content {
+    color: #888;
+}
+
+body.dark-theme .thinking-toggle {
     color: #888;
 }
 

@@ -117,7 +117,7 @@ public class ChatService implements IChatService {
         agentExecutorParams.setSkillNames(userChatRequest.getSkillNames());
         agentExecutorParams.setToolCallPermission(userChatRequest.getToolCallPermission());
         agentExecutorParams.setAgentId(agent.getId());
-        agentExecutorParams.setMaxMemoryRecords(agent.getMaxMemoryRecords() != null ? agent.getMaxMemoryRecords() : 10);
+        agentExecutorParams.setMaxMemoryTokens(agent.getMaxMemoryTokens() != null ? agent.getMaxMemoryTokens() : Agent.DEFAULT_MAX_MEMORY_TOKENS);
         agentExecutorParams.setMaxToolInvocations(agent.getMaxToolInvocations() != null ? agent.getMaxToolInvocations() : 3);
         agentExecutorParams.setVectorToolSearch(agent.getVectorToolSearch() != null ? agent.getVectorToolSearch() : false);
         agentExecutorParams.setVectorToolSearchMaxResults(agent.getVectorToolSearchMaxResults() != null ? agent.getVectorToolSearchMaxResults() : 5);

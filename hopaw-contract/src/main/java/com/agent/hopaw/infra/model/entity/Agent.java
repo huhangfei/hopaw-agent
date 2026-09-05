@@ -1,11 +1,17 @@
 package com.agent.hopaw.infra.model.entity;
 
 public class Agent {
+    /** 窗口记忆 Token 上限默认值（20k） */
+    public static final int DEFAULT_MAX_MEMORY_TOKENS = 20000;
+
     private Long id;
     private String name;
     private String description;
     private String tools;
-    private Integer maxMemoryRecords;
+    /**
+     * 窗口记忆 Token 上限：超出后从最早消息开始淘汰
+     */
+    private Integer maxMemoryTokens;
     private Integer maxToolInvocations;
     private Long aiModelId;
     private Boolean enableThinking;
@@ -22,27 +28,27 @@ public class Agent {
         this.name = name;
         this.description = description;
         this.tools = tools;
-        this.maxMemoryRecords = 20;
+        this.maxMemoryTokens = DEFAULT_MAX_MEMORY_TOKENS;
         this.maxToolInvocations = 10;
         this.vectorToolSearch = true;
         this.vectorToolSearchMaxResults = 5;
     }
 
-    public Agent(String name, String description, String tools, Integer maxMemoryRecords) {
+    public Agent(String name, String description, String tools, Integer maxMemoryTokens) {
         this.name = name;
         this.description = description;
         this.tools = tools;
-        this.maxMemoryRecords = maxMemoryRecords != null ? maxMemoryRecords : 20;
+        this.maxMemoryTokens = maxMemoryTokens != null ? maxMemoryTokens : DEFAULT_MAX_MEMORY_TOKENS;
         this.maxToolInvocations = 10;
         this.vectorToolSearch = true;
         this.vectorToolSearchMaxResults = 5;
     }
 
-    public Agent(String name, String description, String tools, Integer maxMemoryRecords, Integer maxToolInvocations,Boolean enableThinking) {
+    public Agent(String name, String description, String tools, Integer maxMemoryTokens, Integer maxToolInvocations,Boolean enableThinking) {
         this.name = name;
         this.description = description;
         this.tools = tools;
-        this.maxMemoryRecords = maxMemoryRecords != null ? maxMemoryRecords : 20;
+        this.maxMemoryTokens = maxMemoryTokens != null ? maxMemoryTokens : DEFAULT_MAX_MEMORY_TOKENS;
         this.maxToolInvocations = maxToolInvocations != null ? maxToolInvocations : 10;
         this.enableThinking = enableThinking != null ? enableThinking : false;
         this.vectorToolSearch = true;
@@ -88,12 +94,12 @@ public class Agent {
         return tools.split(",");
     }
 
-    public Integer getMaxMemoryRecords() {
-        return maxMemoryRecords;
+    public Integer getMaxMemoryTokens() {
+        return maxMemoryTokens;
     }
 
-    public void setMaxMemoryRecords(Integer maxMemoryRecords) {
-        this.maxMemoryRecords = maxMemoryRecords;
+    public void setMaxMemoryTokens(Integer maxMemoryTokens) {
+        this.maxMemoryTokens = maxMemoryTokens;
     }
 
     public Integer getMaxToolInvocations() {

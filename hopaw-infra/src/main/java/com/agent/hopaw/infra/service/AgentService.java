@@ -36,8 +36,8 @@ public class AgentService implements IAgentService {
 
     @Override
     public Agent createAgent(Agent agent) {
-        if (agent.getMaxMemoryRecords() == null) {
-            agent.setMaxMemoryRecords(20);
+        if (agent.getMaxMemoryTokens() == null) {
+            agent.setMaxMemoryTokens(Agent.DEFAULT_MAX_MEMORY_TOKENS);
         }
         if (agent.getMaxToolInvocations() == null) {
             agent.setMaxToolInvocations(10);
@@ -73,7 +73,7 @@ public class AgentService implements IAgentService {
             existing.setName(agent.getName());
             existing.setDescription(agent.getDescription());
             existing.setTools(agent.getTools());
-            existing.setMaxMemoryRecords(agent.getMaxMemoryRecords());
+            existing.setMaxMemoryTokens(agent.getMaxMemoryTokens() != null ? agent.getMaxMemoryTokens() : Agent.DEFAULT_MAX_MEMORY_TOKENS);
             existing.setMaxToolInvocations(agent.getMaxToolInvocations());
             existing.setAiModelId(agent.getAiModelId());
             if (agent.getEnableThinking() != null) {

@@ -270,6 +270,61 @@ function copyAgentTurnContent(btn) {
     copyTextToClipboard(btn, parts.join('\n\n'));
 }
 
+// ================= 思考消息收缩/展开 =================
+
+/**
+ * 构建思考小节（内容 + 展开/收起开关）：
+ * 历史消息默认收起仅显示两行；实时输出时展开，完成后自动收起
+ */
+function buildThinkingSection(content, expanded) {
+    var section = document.createElement('div');
+    section.className = 'thinking-section' + (expanded ? ' expanded' : '');
+
+    var think = document.createElement('div');
+    think.className = 'message-content thinking-content';
+    think.textContent = content;
+    think.setAttribute('data-raw-content', content);
+    section.appendChild(think);
+
+    var toggle = document.createElement('span');
+    toggle.className = 'thinking-toggle';
+    toggle.textContent = expanded ? '收起' : '展开';
+    toggle.onclick = function () {
+        setThinkingExpanded(section, !section.classList.contains('expanded'));
+    };
+    section.appendChild(toggle);
+
+    updateThinkingToggle(section);
+    return section;
+}
+
+/** 设置思考小节展开/收起状态 */
+function setThinkingExpanded(section, expanded) {
+    if (!section) return;
+    section.classList.toggle('expanded', expanded);
+    updateThinkingToggle(section);
+}
+
+/** 同步开关文案；收起状态下内容不足两行时隐藏开关 */
+function updateThinkingToggle(section) {
+    var toggle = section.querySelector('.thinking-toggle');
+    var content = section.querySelector('.thinking-content');
+    if (!toggle || !content) return;
+    if (section.classList.contains('expanded')) {
+        toggle.textContent = '收起';
+        toggle.style.display = '';
+        return;
+    }
+    toggle.textContent = '展开';
+    if (!section.isConnected) {
+        // 尚未插入文档时高度不可测，插入后再判定
+        requestAnimationFrame(function () { updateThinkingToggle(section); });
+        return;
+    }
+    // 容差覆盖单段 margin-bottom（10px）：恰好两行的内容不显示展开按钮
+    toggle.style.display = content.scrollHeight > content.clientHeight + 10 ? '' : 'none';
+}
+
 
 // ================= 会话历史加载（首次进入 + 向上滚动翻页） =================
 var historyLoadState = { oldestId: null, oldestTime: null, allLoaded: false, loading: false };
@@ -556,11 +611,8 @@ function buildHistoryMessageNode(chat) {
         if (!isAgent) { div.appendChild(buildHistoryFooter(timeText, null)); }
     } else if (type === 'thinking') {
         appendLabel(div, '(思考)');
-        var think = document.createElement('div');
-        think.className = 'message-content thinking-content';
-        think.textContent = chat.content;
-        think.setAttribute('data-raw-content', chat.content);
-        div.appendChild(think);
+        // 历史思考消息默认收起，仅显示两行，点击展开
+        div.appendChild(buildThinkingSection(chat.content, false));
     } else if (type === 'error' || type === 'warn') {
         var inner = document.createElement('div');
         inner.className = type === 'error' ? 'error-message' : 'warn-message';
@@ -1599,6 +1651,7 @@ function handleThinking(data, requestId) {
         var thinkDiv = data.messageNo
             ? messagesDiv.querySelector('.message.thinking-message[data-message-no="' + data.messageNo + '"]')
             : null;
+        var thinkingSection;
         if (!thinkDiv) {
             msgState.thinkingContent = '';
             msgState.lastMessageType = 'thinking';
@@ -1616,16 +1669,17 @@ function handleThinking(data, requestId) {
             label.textContent = '(思考)';
             msgState.currentStreamingMessage.appendChild(label);
 
-            var contentDiv = document.createElement('div');
-            contentDiv.className = 'message-content thinking-content';
-            msgState.currentStreamingMessage.appendChild(contentDiv);
-            msgState.thinkingDiv = contentDiv;
+            // 实时输出期间保持展开，思考完成后自动收起
+            thinkingSection = buildThinkingSection('', true);
+            msgState.currentStreamingMessage.appendChild(thinkingSection);
+            msgState.thinkingDiv = thinkingSection.querySelector('.thinking-content');
 
             // 思考小节归入当前回合大盒子
             appendToAgentTurn(getAgentTurnContainer(messagesDiv), msgState.currentStreamingMessage);
         } else {
             msgState.currentStreamingMessage = thinkDiv;
             msgState.thinkingDiv = thinkDiv.querySelector('.message-content.thinking-content');
+            thinkingSection = msgState.thinkingDiv ? msgState.thinkingDiv.closest('.thinking-section') : null;
             msgState.lastMessageType = 'thinking';
         }
 
@@ -1638,8 +1692,14 @@ function handleThinking(data, requestId) {
         }
         msgState.thinkingDiv.innerHTML = renderMarkdown(msgState.thinkingContent);
         msgState.thinkingDiv.setAttribute('data-raw-content', msgState.thinkingContent);
+        if (data.status === 'partial') {
+            // 实时追加时保持展开，便于观察当前思考进度
+            setThinkingExpanded(thinkingSection, true);
+        }
         messagesDiv.scrollTop = messagesDiv.scrollHeight;
         if (data.status === 'done' && msgState.currentStreamingMessage && msgState.lastMessageType === 'thinking') {
+            // 思考完成：自动收起为两行
+            setThinkingExpanded(thinkingSection, false);
             // 小节完成：刷新整盒 footer（唯一时间 + 整盒复制），小节自身不再有独立 footer
             touchAgentTurnFooter(msgState.currentStreamingMessage.closest('.agent-turn'), formatMessageTime(new Date()));
             msgState.currentStreamingMessage = null;
