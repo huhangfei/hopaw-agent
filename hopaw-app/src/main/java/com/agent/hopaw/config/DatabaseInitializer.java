@@ -73,11 +73,14 @@ public class DatabaseInitializer implements CommandLineRunner {
                     "tool_call_status TEXT, " +
                     "tool_execution_time INTEGER, " +
                     "user_id TEXT, " +
+                    "message_no TEXT, " +
                     "create_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP" +
                     ")");
             stmt.execute("CREATE INDEX IF NOT EXISTS idx_chat_history_agent ON chat_history(agent_id)");
             stmt.execute("CREATE INDEX IF NOT EXISTS idx_chat_history_session ON chat_history(session_id)");
             stmt.execute("CREATE INDEX IF NOT EXISTS idx_chat_history_user ON chat_history(user_id)");
+            // 旧库补齐 message_no 列（流式消息编号，前端按编号续接追加片段）
+            ensureColumn(stmt, "chat_history", "message_no", "TEXT");
 
             stmt.execute("CREATE TABLE IF NOT EXISTS chat_memory (" +
                     "id INTEGER PRIMARY KEY AUTOINCREMENT, " +

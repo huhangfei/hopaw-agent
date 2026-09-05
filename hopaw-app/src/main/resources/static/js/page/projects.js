@@ -1527,13 +1527,18 @@ function connectProjectWebSocket() {
             resetProjectSessionTicker();
         } else if (data.type === 'chunk') {
             showProjectSessionRunning();
-            appendProjectSessionTicker(data.content);
+            // status=done 为消息结束的全量补发（供聊天页补全），ticker 已按片段追加，跳过避免重复
+            if (data.status !== 'done') {
+                appendProjectSessionTicker(data.content);
+            }
         } else if (data.type === 'tool_call') {
             showProjectSessionRunning();
             handleProjectToolCallTicker(data);
         } else if (data.type === 'thinking') {
             showProjectSessionRunning();
-            appendProjectSessionTicker(data.content);
+            if (data.status !== 'done') {
+                appendProjectSessionTicker(data.content);
+            }
         } else if (data.type === 'task-done' || data.type === 'done' || data.type === 'error') {
             // 项目智能体一轮迭代结束：隐藏执行中指示并刷新项目详情（任务/状态可能已更新）
             if (projectWsRunning) {

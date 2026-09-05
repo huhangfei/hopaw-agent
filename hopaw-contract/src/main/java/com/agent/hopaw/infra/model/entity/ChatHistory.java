@@ -23,6 +23,8 @@ public class ChatHistory {
     private String toolCallStatus;
     private Long toolExecutionTime;
     private String userId;
+    /** 消息编号：流式消息（text/thinking）开始时生成，前端按编号定位消息元素并续接追加片段 */
+    private String messageNo;
     private LocalDateTime createTime;
 
     public ChatHistory() {}
@@ -147,6 +149,14 @@ public class ChatHistory {
 
     public void setUserId(String userId) {
         this.userId = userId;
+    }
+
+    public String getMessageNo() {
+        return messageNo;
+    }
+
+    public void setMessageNo(String messageNo) {
+        this.messageNo = messageNo;
     }
 
     public LocalDateTime getCreateTime() {

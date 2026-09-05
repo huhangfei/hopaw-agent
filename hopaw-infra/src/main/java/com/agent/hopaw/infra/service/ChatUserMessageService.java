@@ -7,6 +7,7 @@ import com.agent.hopaw.infra.model.dto.AiUserMessageInfo;
 import com.agent.hopaw.infra.model.dto.AttachmentFile;
 import com.agent.hopaw.infra.model.dto.UserChatRequest;
 import com.agent.hopaw.infra.model.entity.ChatHistory;
+import com.agent.hopaw.infra.util.UuidUtil;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
@@ -79,6 +80,7 @@ public class ChatUserMessageService implements IChatUserMessageService {
                 ChatHistory chatHistory = new ChatHistory(agentId, "user", "attachment", content);
                 chatHistory.setUserId(userId);
                 chatHistory.setSessionId(sessionId);
+                chatHistory.setMessageNo(UuidUtil.generateSimpleUUID());
                 chatHistoryList.add(chatHistory);
             }
         }
@@ -86,6 +88,7 @@ public class ChatUserMessageService implements IChatUserMessageService {
             ChatHistory chatHistory = new ChatHistory(agentId, "user", "text", message);
             chatHistory.setUserId(userId);
             chatHistory.setSessionId(sessionId);
+            chatHistory.setMessageNo(UuidUtil.generateSimpleUUID());
             chatHistoryList.add(chatHistory);
         }
         return chatHistoryList;

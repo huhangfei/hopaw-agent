@@ -16,6 +16,7 @@ import com.agent.hopaw.infra.storage.ChatHistoryStore;
 import com.agent.hopaw.infra.tool.AgentTool;
 import com.agent.hopaw.infra.tool.ToolSecurityLevel;
 import com.agent.hopaw.infra.util.InvocationParametersWrapper;
+import com.agent.hopaw.infra.util.Md5Util;
 import com.agent.hopaw.infra.util.PendingResponse;
 import com.agent.hopaw.infra.util.UuidUtil;
 import com.alibaba.fastjson2.JSON;
@@ -915,6 +916,8 @@ public class AgentExecutor implements IAgentExecutor {
         private final String requestId;
         private String lastMessageType = "";
         private String currentMessageType = "";
+        /** 当前流式消息编号：消息类型切换时生成，随片段推送并在消息结束时入库，前端按编号定位元素追加片段 */
+        private String currentMessageNo = "";
         private StringBuilder messageBuilder = new StringBuilder();
         private StringBuilder thinkingBuilder = new StringBuilder();
         private final ApplicationEventPublisher eventPublisher;
@@ -943,15 +946,17 @@ public class AgentExecutor implements IAgentExecutor {
         }
 
         public void done() {
+            //先结算流式消息（全量补发+入库），再发结束信号，保证前端先收到全量内容再做收尾清理
+            messageTypeChangedChatHistoryHandler("done");
             AiMessageBaseInfo aiMessageBaseInfo = AiMessageBaseInfo.done(sessionId, requestId);
             sendMessageToChannel(aiMessageBaseInfo);
-            messageTypeChangedChatHistoryHandler("done");
         }
 
         public void taskDone() {
+            //先结算流式消息（全量补发+入库），再发结束信号，保证前端先收到全量内容再做收尾清理
+            messageTypeChangedChatHistoryHandler("task-done");
             AiMessageBaseInfo aiMessageBaseInfo = AiMessageBaseInfo.taskDone(sessionId, requestId);
             sendMessageToChannel(aiMessageBaseInfo);
-            messageTypeChangedChatHistoryHandler("task-done");
         }
 
         private void onErrorHandler(Throwable ex) {
@@ -970,6 +975,7 @@ public class AgentExecutor implements IAgentExecutor {
             ChatHistory errorChat = new ChatHistory(agentId, "agent", type, message);
             errorChat.setSessionId(sessionId);
             errorChat.setUserId(userId);
+            errorChat.setMessageNo(UuidUtil.generateSimpleUUID());
             chatHistoryConsumer.accept(errorChat);
             taskDone();
         }
@@ -1002,8 +1008,8 @@ public class AgentExecutor implements IAgentExecutor {
                     result,
                     toolDescriptions
             );
-            sendToolCallHistoryEventAndToChannel(toolCallMessageInfo);
             messageTypeChangedChatHistoryHandler(AiToolCallMessageInfo.TYPE_TOOL_CALL+"_"+status);
+            sendToolCallHistoryEventAndToChannel(toolCallMessageInfo);
         }
 
         /**
@@ -1027,8 +1033,9 @@ public class AgentExecutor implements IAgentExecutor {
         private void thinkingHandler(PartialThinking thinking) {
             messageTypeChangedChatHistoryHandler("thinking");
             thinkingBuilder.append(thinking.text());
-            //发送：携带本段累计全文，前端按覆盖渲染，刷新页面后重连也能拿到完整思考内容
-            AiThinkingMessageInfo aiThinkingMessageInfo = AiThinkingMessageInfo.partial(sessionId, requestId, thinkingBuilder.toString());
+            //发送增量片段：前端按消息编号追加渲染，降低传输量；消息结束时统一补发全量
+            AiThinkingMessageInfo aiThinkingMessageInfo = AiThinkingMessageInfo.partial(sessionId, requestId, thinking.text());
+            aiThinkingMessageInfo.setMessageNo(currentMessageNo);
             sendMessageToChannel(aiThinkingMessageInfo);
 
         }
@@ -1036,8 +1043,9 @@ public class AgentExecutor implements IAgentExecutor {
         private void partialResponseHandler(String partialResponse) {
             messageTypeChangedChatHistoryHandler("message");
             messageBuilder.append(partialResponse);
-            //发送：携带本段累计全文，前端按覆盖渲染，刷新页面后重连也能拿到完整内容
-            AiMessageBaseInfo chunk = AiMessageBaseInfo.chunk(sessionId, requestId, messageBuilder.toString());
+            //发送增量片段：前端按消息编号追加渲染，降低传输量；消息结束时统一补发全量
+            AiMessageBaseInfo chunk = AiMessageBaseInfo.chunkPartial(sessionId, requestId, partialResponse);
+            chunk.setMessageNo(currentMessageNo);
             sendMessageToChannel(chunk);
         }
 
@@ -1047,7 +1055,9 @@ public class AgentExecutor implements IAgentExecutor {
         }
 
         /**
-         * 处理历史消息
+         * 处理消息类型切换：
+         * 1. 结算上一段流式消息：补发一条全量内容（status=done，中途进入页面/刷新可凭此补全），并携带消息编号入库；
+         * 2. 为新一段流式消息生成新的消息编号。
          *
          * @param currentMessageType
          */
@@ -1056,20 +1066,29 @@ public class AgentExecutor implements IAgentExecutor {
             if (messageTypeChanged()) {
                 //需要处理上个类型的消息
                 if (lastMessageType.equals("message")) {
+                    //全量补发：前端按消息编号覆盖渲染该条消息，保证中途进入/刷新场景内容完整
+                    AiMessageBaseInfo chunkDone = AiMessageBaseInfo.chunkDone(sessionId, requestId, messageBuilder.toString());
+                    chunkDone.setMessageNo(currentMessageNo);
+                    sendMessageToChannel(chunkDone);
                     ChatHistory textChat = new ChatHistory(agentId, "agent", "text", messageBuilder.toString());
                     textChat.setSessionId(sessionId);
+                    textChat.setMessageNo(currentMessageNo);
                     chatHistoryConsumer.accept(textChat);
                     messageBuilder = new StringBuilder(100);
                 } else if (lastMessageType.equals("thinking")) {
-                    //发送
-                    AiThinkingMessageInfo aiThinkingMessageInfo = AiThinkingMessageInfo.done(sessionId, requestId, "");
+                    //全量补发：done 状态携带完整思考内容（历史版本 content 为空串，前端只能靠累计片段）
+                    AiThinkingMessageInfo aiThinkingMessageInfo = AiThinkingMessageInfo.done(sessionId, requestId, thinkingBuilder.toString());
                     aiThinkingMessageInfo.setSessionId(sessionId);
+                    aiThinkingMessageInfo.setMessageNo(currentMessageNo);
                     sendMessageToChannel(aiThinkingMessageInfo);
                     ChatHistory textChat = new ChatHistory(agentId, "agent", "thinking", thinkingBuilder.toString());
                     textChat.setSessionId(sessionId);
+                    textChat.setMessageNo(currentMessageNo);
                     chatHistoryConsumer.accept(textChat);
                     thinkingBuilder = new StringBuilder(100);
                 }
+                //为新一段流式消息生成新编号（每次切换消息类型时重新编号）
+                currentMessageNo = UuidUtil.generateSimpleUUID();
                 lastMessageType = currentMessageType;
             }
 
@@ -1087,6 +1106,7 @@ public class AgentExecutor implements IAgentExecutor {
             );
             toolChat.setToolCallStatus(callMessageInfo.getStatus());
             toolChat.setSessionId(callMessageInfo.getSessionId());
+            toolChat.setMessageNo(Md5Util.md5(callMessageInfo.getSessionId() + callMessageInfo.getToolCallId()));
             chatHistoryConsumer.accept(toolChat);
         }
     }

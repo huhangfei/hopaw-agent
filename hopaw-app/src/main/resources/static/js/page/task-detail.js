@@ -359,13 +359,18 @@ function connectTaskWebSocket() {
             if (tEl) tEl.textContent = '';
         } else if (data.type === 'chunk') {
             showSessionRunning();
-            appendTicker(data.content);
+            // status=done 为消息结束的全量补发（供聊天页补全），ticker 已按片段追加，跳过避免重复
+            if (data.status !== 'done') {
+                appendTicker(data.content);
+            }
         } else if (data.type === 'tool_call') {
             showSessionRunning();
             handleToolCallTicker(data);
         } else if (data.type === 'thinking') {
             showSessionRunning();
-            appendTicker(data.content);
+            if (data.status !== 'done') {
+                appendTicker(data.content);
+            }
         } else if (data.type === 'token_usage') {
             // 本任务会话产生了 token 消耗：刷新柱状统计图
             loadTaskTokenUsage(currentTaskId);

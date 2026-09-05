@@ -638,6 +638,44 @@ body.dark-theme .session-running-spinner {
     color: #333;
     border-bottom-left-radius: 5px;
 }
+/* Agent 回合大盒子：连续的思考/文本/工具/错误等 agent 消息视觉上合为一个整体 */
+.agent-turn {
+    align-self: flex-start;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    max-width: 100%;
+    min-width: 0;
+    padding: 8px 12px;
+    background: #f0f2f5;
+    color: #333;
+    border-radius: 15px;
+    border-bottom-left-radius: 5px;
+    line-height: 1.5;
+    font-size: 14px;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+}
+/* 盒子内的小节消息：去掉自身底色与内边距，融入大盒子 */
+.agent-turn .message.agent {
+    background: transparent;
+    color: inherit;
+    padding: 0;
+    border-radius: 0;
+}
+.agent-turn .tool-inline-row {
+    padding: 0;
+}
+.agent-turn .agent-turn-label {
+    margin-bottom: 0;
+}
+/* 盒子内工具图标用白底，与盒子底色区分 */
+.agent-turn .tool-inline-icon {
+    background: #fff;
+}
+/* 整盒底部唯一 footer：仅展示最后一条消息的时间 + 整盒复制按钮 */
+.agent-turn .agent-turn-footer {
+    margin-top: 2px;
+}
 .message-label {
     font-weight: 600;
     font-size: 12px;
@@ -2234,6 +2272,15 @@ body.dark-theme .chat-header-desc {
 body.dark-theme .message.agent {
     background: #2d2d44;
     color: #e0e0e0;
+}
+
+body.dark-theme .agent-turn {
+    background: #2d2d44;
+    color: #e0e0e0;
+}
+
+body.dark-theme .agent-turn .tool-inline-icon {
+    background: #1f1f33;
 }
 
 body.dark-theme .message.user {

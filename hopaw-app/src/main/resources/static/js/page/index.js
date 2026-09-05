@@ -98,6 +98,11 @@ function copyMessageContent(btn) {
             }
         }
     }
+    copyTextToClipboard(btn, content);
+}
+
+/** 写入剪贴板并给出复制成功反馈（单条消息复制与回合整盒复制共用） */
+function copyTextToClipboard(btn, content) {
     if (!content) return;
 
     if (navigator.clipboard && navigator.clipboard.writeText) {
@@ -138,6 +143,133 @@ function renderAllMessages() {
         }
     });
 }
+
+/* ================= Agent 回合大盒子：连续的 agent 消息（思考/文本/工具/错误/警告）归入同一容器，视觉上为一个整体 ================= */
+var currentAgentTurn = null;
+
+/** 当前选中的智能体名称（回合盒子头部标签用） */
+function getCurrentAgentName() {
+    var s = document.querySelector('.agent-select-toolbar');
+    return s ? s.options[s.selectedIndex].text : 'Agent';
+}
+
+/**
+ * 获取当前回合容器：
+ * 1. 已有连接中的容器直接复用（同一轮输出持续追加）；
+ * 2. 页面刷新后引用丢失时，若消息列表最后一个元素仍是回合盒子则复用（续接同一轮输出）；
+ * 3. 否则新建（含智能体名称头部标签）并追加到消息列表末尾。
+ */
+function getAgentTurnContainer(messagesDiv) {
+    if (currentAgentTurn && currentAgentTurn.isConnected && currentAgentTurn.parentNode === messagesDiv) {
+        return currentAgentTurn;
+    }
+    var last = messagesDiv.lastElementChild;
+    if (last && last.classList && last.classList.contains('agent-turn')) {
+        currentAgentTurn = last;
+        return currentAgentTurn;
+    }
+    currentAgentTurn = buildAgentTurnBox(getCurrentAgentName());
+    messagesDiv.appendChild(currentAgentTurn);
+    return currentAgentTurn;
+}
+
+/** 关闭当前回合：用户消息等非 agent 内容出现时调用，后续 agent 消息将开新盒子 */
+function closeAgentTurn() {
+    currentAgentTurn = null;
+}
+
+/** 构造 agent 回合大盒子（含头部智能体名称标签） */
+function buildAgentTurnBox(agentName) {
+    var box = document.createElement('div');
+    box.className = 'agent-turn';
+    var header = document.createElement('div');
+    header.className = 'message-label agent-turn-label';
+    header.textContent = agentName || 'Agent';
+    box.appendChild(header);
+    return box;
+}
+
+/** 把新拉取的回合盒子并入页面上已有的相邻回合盒子：保留已有头部标签，内容按原顺序插到最前，游标前移 */
+function mergeAgentTurnIntoExisting(incoming, existing) {
+    var frag = document.createDocumentFragment();
+    while (incoming.firstChild) {
+        var child = incoming.firstChild;
+        if (child.classList && (child.classList.contains('agent-turn-label') || child.classList.contains('agent-turn-footer'))) {
+            child.remove();
+            continue;
+        }
+        frag.appendChild(child);
+    }
+    var label = existing.querySelector('.agent-turn-label');
+    if (label && label.nextSibling) {
+        existing.insertBefore(frag, label.nextSibling);
+    } else {
+        existing.appendChild(frag);
+    }
+    // 游标前移到新拉取的最早一条
+    var id = incoming.getAttribute('data-msg-id');
+    var time = incoming.getAttribute('data-create-time');
+    if (id != null) { existing.setAttribute('data-msg-id', id); }
+    if (time != null) { existing.setAttribute('data-create-time', time); }
+}
+
+/**
+ * 回合盒子底部 footer：整个盒子仅一个时间（最后一条消息的时间）+ 一个复制按钮（复制整盒全部内容）。
+ * 每有小节消息完成时调用：footer 始终保持在盒子末尾并刷新时间。
+ */
+function touchAgentTurnFooter(turnBox, timeText) {
+    if (!turnBox) return;
+    var footer = turnBox.querySelector('.agent-turn-footer');
+    if (!footer) {
+        footer = document.createElement('div');
+        footer.className = 'message-footer agent-turn-footer';
+
+        var timeDiv = document.createElement('div');
+        timeDiv.className = 'message-time';
+        footer.appendChild(timeDiv);
+
+        var copyBtn = document.createElement('button');
+        copyBtn.className = 'message-copy-btn';
+        copyBtn.title = '复制全部内容';
+        copyBtn.innerHTML = '<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>';
+        copyBtn.onclick = function() { copyAgentTurnContent(this); };
+        footer.appendChild(copyBtn);
+    }
+    if (timeText) {
+        var t = footer.querySelector('.message-time');
+        if (t) { t.textContent = timeText; }
+    }
+    turnBox.appendChild(footer);
+}
+
+/** 小节消息追加进回合盒子：追加后保持盒子 footer 始终位于末尾 */
+function appendToAgentTurn(box, node) {
+    if (!box) return;
+    box.appendChild(node);
+    var footer = box.querySelector('.agent-turn-footer');
+    if (footer) {
+        box.appendChild(footer);
+    }
+}
+
+/** 复制回合盒子内全部内容：按顺序拼接思考/文本/错误/警告等各小节 */
+function copyAgentTurnContent(btn) {
+    var box = btn.closest('.agent-turn');
+    if (!box) return;
+    var parts = [];
+    box.querySelectorAll('.message').forEach(function(msg) {
+        var contentEl = msg.querySelector('.message-content');
+        if (!contentEl) return;
+        var text = contentEl.getAttribute('data-raw-content');
+        if (text == null || String(text).trim() === '') {
+            text = contentEl.textContent;
+        }
+        text = (text || '').trim();
+        if (text) { parts.push(text); }
+    });
+    copyTextToClipboard(btn, parts.join('\n\n'));
+}
+
 
 // ================= 会话历史加载（首次进入 + 向上滚动翻页） =================
 var historyLoadState = { oldestId: null, oldestTime: null, allLoaded: false, loading: false };
@@ -288,16 +420,60 @@ function prependHistoryMessages(list) {
     var insertRef = firstHistoryAnchor(messagesDiv);
     var toolFragment = document.createDocumentFragment();
 
-    // 与服务端 buildChatFlow 一致：连续 tool_call 合并为一行扳手图标
+    // 构建中的 agent 回合盒子与组内工具图标行：连续 agent 消息（含工具调用）合为一个视觉整体
+    var turnBox = null;
     var toolRow = null;
+    // 盒内最后一条消息的时间：整个盒子只在底部展示这一个时间
+    var lastTurnTime = null;
+
+    /** 把节点插到参照前（无参照则追加），保持正序 */
+    function placeBeforeRef(node) {
+        if (insertRef) {
+            messagesDiv.insertBefore(node, insertRef);
+        } else {
+            messagesDiv.appendChild(node);
+        }
+    }
+
+    /** 结束当前回合：工具行收尾进盒子，盒子落位（必要时与页面上相邻的回合盒子合并） */
+    function closeTurn() {
+        if (toolRow && turnBox) {
+            turnBox.appendChild(toolRow);
+            toolRow = null;
+        }
+        if (turnBox) {
+            // 整盒唯一 footer：最后一条消息的时间 + 整盒复制按钮
+            touchAgentTurnFooter(turnBox, lastTurnTime);
+            // 分页边界合并：本次拉取的最早回合与页面现有最早回合相邻（同一轮输出被分页截断）时并成一个盒子
+            if (insertRef && insertRef.classList && insertRef.classList.contains('agent-turn')) {
+                mergeAgentTurnIntoExisting(turnBox, insertRef);
+            } else {
+                placeBeforeRef(turnBox);
+            }
+            turnBox = null;
+            lastTurnTime = null;
+        }
+    }
+
     list.forEach(function(chat) {
+        // 工具调用与 agent 消息同属一个回合；用户消息（文本/附件）结束当前回合
+        var isAgentContent = chat.messageType === 'tool_call' || chat.role === 'agent';
+        if (!isAgentContent) {
+            closeTurn();
+            placeBeforeRef(buildHistoryMessageNode(chat));
+            return;
+        }
+        if (!turnBox) {
+            turnBox = buildAgentTurnBox(chat.agent && chat.agent.name ? chat.agent.name : 'Agent');
+            // 回合盒子游标 = 组内最早一条消息（供下一次分页定位锚点/边界合并）
+            turnBox.setAttribute('data-msg-id', chat.id);
+            turnBox.setAttribute('data-create-time', formatHistoryIsoTime(chat.createTime));
+        }
+        lastTurnTime = formatMessageTime(new Date(formatHistoryIsoTime(chat.createTime)));
         if (chat.messageType === 'tool_call') {
             if (!toolRow) {
                 toolRow = document.createElement('div');
                 toolRow.className = 'tool-inline-row';
-                // 行本身携带首个工具的游标，供下一次分页定位锚点
-                toolRow.setAttribute('data-msg-id', chat.id);
-                toolRow.setAttribute('data-create-time', formatHistoryIsoTime(chat.createTime));
             }
             var icon = document.createElement('span');
             icon.className = 'tool-inline-icon';
@@ -310,31 +486,14 @@ function prependHistoryMessages(list) {
                 toolFragment.appendChild(buildToolCallStaticNode(chat));
             }
         } else {
-            // 非工具消息结束当前工具分组：先把整组工具行插到参照前
             if (toolRow) {
-                if (insertRef) {
-                    messagesDiv.insertBefore(toolRow, insertRef);
-                } else {
-                    messagesDiv.appendChild(toolRow);
-                }
+                turnBox.appendChild(toolRow);
                 toolRow = null;
             }
-            var node = buildHistoryMessageNode(chat);
-            if (insertRef) {
-                messagesDiv.insertBefore(node, insertRef);
-            } else {
-                messagesDiv.appendChild(node);
-            }
+            turnBox.appendChild(buildHistoryMessageNode(chat));
         }
     });
-    // 最后一组工具行收尾
-    if (toolRow) {
-        if (insertRef) {
-            messagesDiv.insertBefore(toolRow, insertRef);
-        } else {
-            messagesDiv.appendChild(toolRow);
-        }
-    }
+    closeTurn();
     // 右侧工具列表：前插更早的工具调用（保持正序）
     if (toolExecList && toolFragment.childNodes.length > 0) {
         toolExecList.insertBefore(toolFragment, toolExecList.firstChild);
@@ -354,14 +513,19 @@ function buildHistoryMessageNode(chat) {
     div.className = 'message ' + (chat.role === 'user' ? 'user' : 'agent');
     div.setAttribute('data-msg-id', chat.id);
     div.setAttribute('data-create-time', formatHistoryIsoTime(chat.createTime));
+    // 流式消息编号：与实时推送的 messageNo 对应，页面刷新后可凭编号续接追加片段
+    if (chat.messageNo) {
+        div.setAttribute('data-message-no', chat.messageNo);
+    }
 
-    var agentName = (chat.agent && chat.agent.name) ? chat.agent.name : 'Agent';
-    var label = chat.role === 'user' ? '你' : agentName;
+    var isAgent = chat.role === 'user' ? false : true;
+    // agent 消息归入回合大盒子：名称由盒子头部标签展示，小节仅保留类型标签或无标签
+    var label = isAgent ? null : '你';
     var timeText = formatMessageTime(new Date(formatHistoryIsoTime(chat.createTime)));
 
     var type = chat.messageType;
     if (type === 'attachment') {
-        appendLabel(div, label);
+        if (label) { appendLabel(div, label); }
         var arr= chat.content.split(',');
         var fileType=arr[0];
         var id=arr[1];
@@ -388,27 +552,28 @@ function buildHistoryMessageNode(chat) {
             a.onclick = function() { openAttachmentPreview(id); };
             div.appendChild(a);
         }
-        div.appendChild(buildHistoryFooter(timeText, null));
+        // agent 小节无独立 footer（整盒底部统一展示时间与复制）
+        if (!isAgent) { div.appendChild(buildHistoryFooter(timeText, null)); }
     } else if (type === 'thinking') {
-        appendLabel(div, agentName + ' (思考)');
+        appendLabel(div, '(思考)');
         var think = document.createElement('div');
         think.className = 'message-content thinking-content';
         think.textContent = chat.content;
+        think.setAttribute('data-raw-content', chat.content);
         div.appendChild(think);
-        div.appendChild(buildHistoryFooter(timeText, chat.content));
     } else if (type === 'error' || type === 'warn') {
         var inner = document.createElement('div');
         inner.className = type === 'error' ? 'error-message' : 'warn-message';
-        appendLabel(inner, agentName + (type === 'error' ? ' (错误)' : ' (警告)'));
+        appendLabel(inner, type === 'error' ? '(错误)' : '(警告)');
         var errContent = document.createElement('div');
         errContent.className = 'message-content error-content';
         errContent.textContent = chat.content;
+        errContent.setAttribute('data-raw-content', chat.content);
         inner.appendChild(errContent);
-        inner.appendChild(buildHistoryFooter(timeText, chat.content));
         div.appendChild(inner);
     } else {
         // text 及其它类型默认按文本处理
-        appendLabel(div, label);
+        if (label) { appendLabel(div, label); }
         var content = document.createElement('div');
         content.className = 'message-content';
         content.setAttribute('data-is-agent', chat.role === 'agent');
@@ -419,7 +584,8 @@ function buildHistoryMessageNode(chat) {
             content.textContent = chat.content;
         }
         div.appendChild(content);
-        div.appendChild(buildHistoryFooter(timeText, chat.content));
+        // agent 小节无独立 footer（整盒底部统一展示时间与复制）
+        if (!isAgent) { div.appendChild(buildHistoryFooter(timeText, chat.content)); }
     }
     return div;
 }
@@ -853,7 +1019,7 @@ function connectWebSocket() {
             // 用户消息回显：后端入库后推送（含任务/项目会话广播），统一渲染到消息列表
             handleUserMessageEcho(data);
         } else if (data.type === 'chunk') {
-            handleStreamingChunk(data.content, requestId);
+            handleStreamingChunk(data, requestId);
         } else if (data.type === 'tool_call') {
             // 工具调用开始：刷新工具执行统计（会话总数/执行器已执行/上限）
             if (data.status === 'started') {
@@ -871,7 +1037,8 @@ function connectWebSocket() {
             setSessionRunning(data.sessionId || currentSessionId, false);
             var msgState = streamingMessages[requestId];
             if (msgState && msgState.currentStreamingMessage) {
-                msgState.currentStreamingMessage.appendChild(createMessageFooter());
+                // 小节收尾：刷新整盒 footer（唯一时间 + 整盒复制）
+                touchAgentTurnFooter(msgState.currentStreamingMessage.closest('.agent-turn'), formatMessageTime(new Date()));
                 msgState.currentStreamingMessage = null;
             }
             enableInput();
@@ -921,8 +1088,8 @@ function handleToolCall(data, requestId) {
         msgState.streamingMarkdownContent = '';
         msgState.lastMessageType = 'tool_call';
 
-        // 消息流中同步渲染扳手图标：连续工具调用合并同一行
-        appendToolInlineIcon(messagesDiv, data);
+        // 消息流中同步渲染扳手图标：连续工具调用合并同一行，图标行归入当前回合大盒子
+        appendToolInlineIcon(getAgentTurnContainer(messagesDiv), data);
 
         var toolCallContainer = document.createElement('div');
         toolCallContainer.className = 'tool-call-container';
@@ -1168,7 +1335,8 @@ function handleToolCall(data, requestId) {
 
         // Finalize message
         if (msgState.currentStreamingMessage) {
-            msgState.currentStreamingMessage.appendChild(createMessageFooter());
+            // 小节收尾：刷新整盒 footer（唯一时间 + 整盒复制）
+            touchAgentTurnFooter(msgState.currentStreamingMessage.closest('.agent-turn'), formatMessageTime(new Date()));
             msgState.currentStreamingMessage = null;
         }
     }
@@ -1246,17 +1414,26 @@ function renderToolInlineIconContent(iconEl, toolName) {
  * 在消息流中渲染工具调用图标。
  * 与历史渲染保持一致：若消息流最后一个元素已是图标行（连续工具调用），复用同一行；否则新建一行。
  */
-function appendToolInlineIcon(messagesDiv, data) {
-    if (!messagesDiv) return;
+function appendToolInlineIcon(container, data) {
+    if (!container) return;
     // 已渲染过该工具调用的图标则跳过（同一工具调用会有多个状态事件）
-    if (messagesDiv.querySelector('.tool-inline-icon[data-tool-call-id="' + data.toolCallId + '"]')) {
+    if (container.querySelector('.tool-inline-icon[data-tool-call-id="' + data.toolCallId + '"]')) {
         return;
     }
-    var row = messagesDiv.lastElementChild;
-    if (!row || !row.classList || !row.classList.contains('tool-inline-row')) {
+    // footer 之前的最后一个内容元素：连续工具调用合并同一行
+    var footer = container.querySelector('.agent-turn-footer');
+    var last = footer ? footer.previousElementSibling : container.lastElementChild;
+    var row;
+    if (last && last.classList && last.classList.contains('tool-inline-row')) {
+        row = last;
+    } else {
         row = document.createElement('div');
         row.className = 'tool-inline-row';
-        messagesDiv.appendChild(row);
+        if (footer) {
+            container.insertBefore(row, footer);
+        } else {
+            container.appendChild(row);
+        }
     }
     var inlineName = data.toolName || 'Unknown Tool';
     if (data.toolDescriptions && data.toolDescriptions.length > 0) {
@@ -1310,6 +1487,9 @@ function scrollToToolCall(el) {
 /** 用户消息回显：后端入库后推送的用户消息通知（含图片附件），按原直发结构渲染到消息列表 */
 function handleUserMessageEcho(data) {
     var messagesDiv = document.getElementById('chatMessages');
+
+    // 用户消息出现：关闭当前 agent 回合，后续 agent 消息开新盒子
+    closeAgentTurn();
 
     // 图片附件：每张图片作为独立的消息记录
     var files = data.files || [];
@@ -1380,23 +1560,20 @@ function handleUserMessageEcho(data) {
 
 function showLoadingMessage() {
     if (loadingMessageDiv) return;
-    var agentName = (function(){ var s = document.querySelector('.agent-select-toolbar'); return s ? s.options[s.selectedIndex].text : 'Agent'; })();
     var messagesDiv = document.getElementById('chatMessages');
+
+    // 加载指示放入回合盒子（回合随 received 开启，后续思考/文本/工具追加进同一盒子）
+    var turn = getAgentTurnContainer(messagesDiv);
 
     loadingMessageDiv = document.createElement('div');
     loadingMessageDiv.className = 'message agent loading-message';
-
-    var label = document.createElement('div');
-    label.className = 'message-label';
-    label.textContent = agentName;
-    loadingMessageDiv.appendChild(label);
 
     var loadingContent = document.createElement('div');
     loadingContent.className = 'message-content loading-content';
     loadingContent.innerHTML = '<span class="loading-dot"></span><span class="loading-dot"></span><span class="loading-dot"></span>';
     loadingMessageDiv.appendChild(loadingContent);
 
-    messagesDiv.appendChild(loadingMessageDiv);
+    appendToAgentTurn(turn, loadingMessageDiv);
     messagesDiv.scrollTop = messagesDiv.scrollHeight;
 }
 
@@ -1410,47 +1587,61 @@ function removeLoadingMessage() {
 
 function handleThinking(data, requestId) {
     var messagesDiv = document.getElementById('chatMessages');
-    var agentName = (function(){ var s = document.querySelector('.agent-select-toolbar'); return s ? s.options[s.selectedIndex].text : 'Agent'; })();
-    
+
     var msgState = streamingMessages[requestId];
     if (!msgState) {
         msgState = { currentStreamingMessage: null, streamingMarkdownContent: '', lastMessageType: null, thinkingContent: '', thinkingDiv: null };
         streamingMessages[requestId] = msgState;
     }
-    
-    if (data.status === 'partial') {
-        if (!msgState.currentStreamingMessage || msgState.lastMessageType !== 'thinking') {
+
+    if (data.status === 'partial' || data.status === 'done') {
+        // 按消息编号定位思考消息 DOM：不存在则新建（页面刷新后正在输出的消息可凭编号续接）
+        var thinkDiv = data.messageNo
+            ? messagesDiv.querySelector('.message.thinking-message[data-message-no="' + data.messageNo + '"]')
+            : null;
+        if (!thinkDiv) {
             msgState.thinkingContent = '';
             msgState.lastMessageType = 'thinking';
-            
+
             msgState.currentStreamingMessage = document.createElement('div');
             msgState.currentStreamingMessage.className = 'message agent thinking-message';
             msgState.currentStreamingMessage.setAttribute('data-request-id', requestId);
-            
+            if (data.messageNo) {
+                msgState.currentStreamingMessage.setAttribute('data-message-no', data.messageNo);
+            }
+
+            // 回合盒子头部已展示智能体名称，小节仅保留类型标签
             var label = document.createElement('div');
             label.className = 'message-label';
-            label.textContent = agentName + ' (思考)';
+            label.textContent = '(思考)';
             msgState.currentStreamingMessage.appendChild(label);
-            
+
             var contentDiv = document.createElement('div');
             contentDiv.className = 'message-content thinking-content';
             msgState.currentStreamingMessage.appendChild(contentDiv);
             msgState.thinkingDiv = contentDiv;
-            
-            messagesDiv.appendChild(msgState.currentStreamingMessage);
+
+            // 思考小节归入当前回合大盒子
+            appendToAgentTurn(getAgentTurnContainer(messagesDiv), msgState.currentStreamingMessage);
+        } else {
+            msgState.currentStreamingMessage = thinkDiv;
+            msgState.thinkingDiv = thinkDiv.querySelector('.message-content.thinking-content');
+            msgState.lastMessageType = 'thinking';
         }
-        
-        msgState.thinkingContent = data.content;
-        msgState.thinkingDiv.innerHTML = renderMarkdown(msgState.thinkingContent);
-        messagesDiv.scrollTop = messagesDiv.scrollHeight;
-    } else if (data.status === 'done') {
-        if (data.content) {
+
+        if (data.status === 'done' && data.content) {
+            // 消息结束：全量补全（中途进入页面/刷新缺少的片段在此补齐）
             msgState.thinkingContent = data.content;
+        } else {
+            // 增量片段：追加
+            msgState.thinkingContent += (data.content || '');
         }
         msgState.thinkingDiv.innerHTML = renderMarkdown(msgState.thinkingContent);
+        msgState.thinkingDiv.setAttribute('data-raw-content', msgState.thinkingContent);
         messagesDiv.scrollTop = messagesDiv.scrollHeight;
-        if (msgState.currentStreamingMessage && msgState.lastMessageType === 'thinking') {
-            msgState.currentStreamingMessage.appendChild(createMessageFooter());
+        if (data.status === 'done' && msgState.currentStreamingMessage && msgState.lastMessageType === 'thinking') {
+            // 小节完成：刷新整盒 footer（唯一时间 + 整盒复制），小节自身不再有独立 footer
+            touchAgentTurnFooter(msgState.currentStreamingMessage.closest('.agent-turn'), formatMessageTime(new Date()));
             msgState.currentStreamingMessage = null;
             msgState.thinkingContent = '';
             msgState.thinkingDiv = null;
@@ -1459,45 +1650,57 @@ function handleThinking(data, requestId) {
     }
 }
 
-function handleStreamingChunk(content, requestId) {
+function handleStreamingChunk(data, requestId) {
     var messagesDiv = document.getElementById('chatMessages');
-    var agentName = (function(){ var s = document.querySelector('.agent-select-toolbar'); return s ? s.options[s.selectedIndex].text : 'Agent'; })();
-    
+
     var msgState = streamingMessages[requestId];
     if (!msgState) {
         msgState = { currentStreamingMessage: null, streamingMarkdownContent: '', lastMessageType: null };
         streamingMessages[requestId] = msgState;
     }
-    
-    if (!msgState.currentStreamingMessage || msgState.lastMessageType !== 'text') {
+
+    // 按消息编号定位文本消息 DOM：不存在则新建（页面刷新后正在输出的消息可凭编号续接）
+    var messageDiv = data.messageNo
+        ? messagesDiv.querySelector('.message.agent:not(.thinking-message)[data-message-no="' + data.messageNo + '"]')
+        : null;
+    if (!messageDiv) {
         msgState.streamingMarkdownContent = '';
         msgState.lastMessageType = 'text';
-        
-        msgState.currentStreamingMessage = document.createElement('div');
-        msgState.currentStreamingMessage.className = 'message agent';
-        msgState.currentStreamingMessage.setAttribute('data-request-id', requestId);
-        
-        var label = document.createElement('div');
-        label.className = 'message-label';
-        label.textContent = agentName;
-        msgState.currentStreamingMessage.appendChild(label);
-        
-        var contentDiv = document.createElement('div');
-        contentDiv.className = 'message-content';
-        msgState.currentStreamingMessage.appendChild(contentDiv);
-        
-        messagesDiv.appendChild(msgState.currentStreamingMessage);
+
+        messageDiv = document.createElement('div');
+        messageDiv.className = 'message agent';
+        messageDiv.setAttribute('data-request-id', requestId);
+        if (data.messageNo) {
+            messageDiv.setAttribute('data-message-no', data.messageNo);
+        }
+
+        // 回合盒子头部已展示智能体名称，文本小节不再重复标签
+        var newContentDiv = document.createElement('div');
+        newContentDiv.className = 'message-content';
+        messageDiv.appendChild(newContentDiv);
+
+        // 文本小节归入当前回合大盒子
+        appendToAgentTurn(getAgentTurnContainer(messagesDiv), messageDiv);
     }
-    
-    var contentDiv = msgState.currentStreamingMessage.querySelector('.message-content:last-of-type');
+    msgState.currentStreamingMessage = messageDiv;
+    msgState.lastMessageType = 'text';
+
+    // 消息节点内只维护一个内容容器（label/footer 均为 div，避免 :last-of-type 失配）
+    var contentDiv = messageDiv.querySelector('.message-content');
     if (!contentDiv) {
         contentDiv = document.createElement('div');
         contentDiv.className = 'message-content';
-        msgState.currentStreamingMessage.appendChild(contentDiv);
+        messageDiv.appendChild(contentDiv);
     }
-    
-    msgState.streamingMarkdownContent = content;
-    
+
+    if (data.status === 'done' && data.content != null) {
+        // 消息结束：全量补全（中途进入页面/刷新缺少的片段在此补齐）
+        msgState.streamingMarkdownContent = data.content;
+    } else {
+        // 增量片段：追加
+        msgState.streamingMarkdownContent += (data.content || '');
+    }
+
     try {
         if (typeof marked !== 'undefined') {
             var html = marked.parse(msgState.streamingMarkdownContent);
@@ -1508,7 +1711,9 @@ function handleStreamingChunk(content, requestId) {
     } catch (e) {
         contentDiv.textContent = msgState.streamingMarkdownContent;
     }
-    
+    // 记录原始内容：整盒复制时使用原始 Markdown 而非渲染后的文本
+    contentDiv.setAttribute('data-raw-content', msgState.streamingMarkdownContent);
+
     messagesDiv.scrollTop = messagesDiv.scrollHeight;
 }
 
@@ -1535,15 +1740,15 @@ function handleStreamingDone(userMessage, response, requestId) {
     //     }
     // }
     
-    msgState.currentStreamingMessage.appendChild(createMessageFooter());
-    
+    // 小节完成：刷新整盒 footer（唯一时间 + 整盒复制），小节自身不再有独立 footer
+    touchAgentTurnFooter(msgState.currentStreamingMessage.closest('.agent-turn'), formatMessageTime(new Date()));
+
     delete streamingMessages[requestId];
     enableInput();
 }
 
 function handleStreamingError(errorMessage, requestId) {
     var messagesDiv = document.getElementById('chatMessages');
-    var agentName = (function(){ var s = document.querySelector('.agent-select-toolbar'); return s ? s.options[s.selectedIndex].text : 'Agent'; })();
 
     var errorDiv = document.createElement('div');
     errorDiv.className = 'message agent error-message';
@@ -1551,25 +1756,27 @@ function handleStreamingError(errorMessage, requestId) {
         errorDiv.setAttribute('data-request-id', requestId);
     }
 
+    // 回合盒子头部已展示智能体名称，小节仅保留类型标签
     var label = document.createElement('div');
     label.className = 'message-label';
-    label.textContent = agentName + ' (错误)';
+    label.textContent = '(错误)';
     errorDiv.appendChild(label);
 
     var contentDiv = document.createElement('div');
     contentDiv.className = 'message-content error-content';
     contentDiv.textContent = errorMessage;
+    contentDiv.setAttribute('data-raw-content', errorMessage);
     errorDiv.appendChild(contentDiv);
 
-    errorDiv.appendChild(createMessageFooter(errorMessage));
-
-    messagesDiv.appendChild(errorDiv);
+    // 错误小节归入当前回合大盒子，并刷新整盒 footer
+    var turn = getAgentTurnContainer(messagesDiv);
+    appendToAgentTurn(turn, errorDiv);
+    touchAgentTurnFooter(turn, formatMessageTime(new Date()));
     messagesDiv.scrollTop = messagesDiv.scrollHeight;
     enableInput();
 }
 function handleStreamingWarn(warnMessage, requestId) {
     var messagesDiv = document.getElementById('chatMessages');
-    var agentName = (function(){ var s = document.querySelector('.agent-select-toolbar'); return s ? s.options[s.selectedIndex].text : 'Agent'; })();
 
     var warnDiv = document.createElement('div');
     warnDiv.className = 'message agent warn-message';
@@ -1577,19 +1784,22 @@ function handleStreamingWarn(warnMessage, requestId) {
         warnDiv.setAttribute('data-request-id', requestId);
     }
 
+    // 回合盒子头部已展示智能体名称，小节仅保留类型标签
     var label = document.createElement('div');
     label.className = 'message-label';
-    label.textContent = agentName + ' (警告)';
+    label.textContent = '(警告)';
     warnDiv.appendChild(label);
 
     var contentDiv = document.createElement('div');
     contentDiv.className = 'message-content warn-content';
     contentDiv.textContent = warnMessage;
+    contentDiv.setAttribute('data-raw-content', warnMessage);
     warnDiv.appendChild(contentDiv);
 
-    warnDiv.appendChild(createMessageFooter(warnMessage));
-
-    messagesDiv.appendChild(warnDiv);
+    // 警告小节归入当前回合大盒子，并刷新整盒 footer
+    var turn = getAgentTurnContainer(messagesDiv);
+    appendToAgentTurn(turn, warnDiv);
+    touchAgentTurnFooter(turn, formatMessageTime(new Date()));
     messagesDiv.scrollTop = messagesDiv.scrollHeight;
     enableInput();
 }

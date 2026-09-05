@@ -16,24 +16,25 @@
         <result property="toolExecutionTime" column="tool_execution_time"/>
         <result property="createTime" column="create_time"/>
         <result property="userId" column="user_id"/>
+        <result property="messageNo" column="message_no"/>
     </resultMap>
 
     <select id="findByAgentId" resultMap="ChatHistoryResultMap">
-        SELECT id, agent_id, session_id, role, message_type, content, tool_call_id, tool_name, tool_arguments, tool_call_status, tool_execution_time, create_time, user_id
+        SELECT id, agent_id, session_id, role, message_type, content, tool_call_id, tool_name, tool_arguments, tool_call_status, tool_execution_time, create_time, user_id, message_no
         FROM chat_history
         WHERE agent_id = #{agentId}
         ORDER BY create_time DESC
         LIMIT #{limit}
     </select>
     <select id="findBySessionId" resultMap="ChatHistoryResultMap">
-        SELECT id, agent_id, session_id, role, message_type, content, tool_call_id, tool_name, tool_arguments, tool_call_status, tool_execution_time, create_time, user_id
+        SELECT id, agent_id, session_id, role, message_type, content, tool_call_id, tool_name, tool_arguments, tool_call_status, tool_execution_time, create_time, user_id, message_no
         FROM chat_history
         WHERE session_id = #{sessionId}
         ORDER BY create_time DESC
         LIMIT #{limit}
     </select>
     <select id="findBySessionIdBefore" resultMap="ChatHistoryResultMap">
-        SELECT id, agent_id, session_id, role, message_type, content, tool_call_id, tool_name, tool_arguments, tool_call_status, tool_execution_time, create_time, user_id
+        SELECT id, agent_id, session_id, role, message_type, content, tool_call_id, tool_name, tool_arguments, tool_call_status, tool_execution_time, create_time, user_id, message_no
         FROM chat_history
         WHERE session_id = #{sessionId}
           AND (create_time &lt; #{beforeTime} OR (create_time = #{beforeTime} AND id &lt; #{beforeId}))
@@ -41,7 +42,7 @@
         LIMIT #{limit}
     </select>
     <select id="findBySessionIdAndToolCallId" resultMap="ChatHistoryResultMap">
-        SELECT id, agent_id, session_id, role, message_type, content, tool_call_id, tool_name, tool_arguments, tool_call_status, tool_execution_time, create_time, user_id
+        SELECT id, agent_id, session_id, role, message_type, content, tool_call_id, tool_name, tool_arguments, tool_call_status, tool_execution_time, create_time, user_id, message_no
         FROM chat_history
         WHERE session_id = #{sessionId} and tool_call_id = #{toolCallId}
         limit 1;
@@ -75,7 +76,7 @@
     </select>
 
     <select id="findByAgentIdAfterId" resultMap="ChatHistoryResultMap">
-        SELECT id, agent_id, session_id, role, message_type, content, tool_call_id, tool_name, tool_arguments, tool_call_status, tool_execution_time, create_time, user_id
+        SELECT id, agent_id, session_id, role, message_type, content, tool_call_id, tool_name, tool_arguments, tool_call_status, tool_execution_time, create_time, user_id, message_no
         FROM chat_history
         WHERE agent_id = #{agentId} AND id > #{afterId}
         ORDER BY id ASC
@@ -83,7 +84,7 @@
     </select>
 
     <select id="findAllAfterId" resultMap="ChatHistoryResultMap">
-        SELECT id, agent_id, session_id, role, message_type, content, tool_call_id, tool_name, tool_arguments, tool_call_status, tool_execution_time, create_time, user_id
+        SELECT id, agent_id, session_id, role, message_type, content, tool_call_id, tool_name, tool_arguments, tool_call_status, tool_execution_time, create_time, user_id, message_no
         FROM chat_history
         WHERE id > #{afterId}
         ORDER BY id ASC
@@ -96,7 +97,7 @@
 
 
     <select id="findRecentByUserIdAndAagentIdAndAfterId" resultMap="ChatHistoryResultMap">
-        SELECT id, agent_id, session_id, role, message_type, content, tool_call_id, tool_name, tool_arguments, tool_call_status, tool_execution_time, create_time, user_id
+        SELECT id, agent_id, session_id, role, message_type, content, tool_call_id, tool_name, tool_arguments, tool_call_status, tool_execution_time, create_time, user_id, message_no
         FROM chat_history
         WHERE user_id = #{userId}
           AND agent_id = #{agentId}
@@ -105,18 +106,18 @@
         LIMIT #{limit}
     </select>
     <insert id="insert" parameterType="com.agent.hopaw.infra.model.entity.ChatHistory">
-        INSERT INTO chat_history (agent_id, session_id, role, message_type, content, tool_call_id, tool_name, tool_arguments, tool_call_status, tool_execution_time, create_time, user_id)
-        VALUES (#{agentId}, #{sessionId}, #{role}, #{messageType}, #{content}, #{toolCallId}, #{toolName}, #{toolArguments}, #{toolCallStatus}, #{toolExecutionTime}, #{createTime}, #{userId})
+        INSERT INTO chat_history (agent_id, session_id, role, message_type, content, tool_call_id, tool_name, tool_arguments, tool_call_status, tool_execution_time, create_time, user_id, message_no)
+        VALUES (#{agentId}, #{sessionId}, #{role}, #{messageType}, #{content}, #{toolCallId}, #{toolName}, #{toolArguments}, #{toolCallStatus}, #{toolExecutionTime}, #{createTime}, #{userId}, #{messageNo})
         <selectKey resultType="long" keyProperty="id" order="AFTER">
             SELECT last_insert_rowid()
         </selectKey>
     </insert>
 
     <insert id="insertBatch" parameterType="java.util.List">
-        INSERT INTO chat_history (agent_id, session_id, role, message_type, content, tool_call_id, tool_name, tool_arguments, tool_call_status, tool_execution_time, create_time, user_id)
+        INSERT INTO chat_history (agent_id, session_id, role, message_type, content, tool_call_id, tool_name, tool_arguments, tool_call_status, tool_execution_time, create_time, user_id, message_no)
         VALUES
         <foreach collection="list" item="item" separator=",">
-            (#{item.agentId}, #{item.sessionId}, #{item.role}, #{item.messageType}, #{item.content}, #{item.toolCallId}, #{item.toolName}, #{item.toolArguments}, #{item.toolCallStatus}, #{item.toolExecutionTime}, #{item.createTime}, #{item.userId})
+            (#{item.agentId}, #{item.sessionId}, #{item.role}, #{item.messageType}, #{item.content}, #{item.toolCallId}, #{item.toolName}, #{item.toolArguments}, #{item.toolCallStatus}, #{item.toolExecutionTime}, #{item.createTime}, #{item.userId}, #{item.messageNo})
         </foreach>
     </insert>
 
