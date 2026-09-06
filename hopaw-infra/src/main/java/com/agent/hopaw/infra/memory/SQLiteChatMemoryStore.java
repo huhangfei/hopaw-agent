@@ -74,18 +74,14 @@ public class SQLiteChatMemoryStore implements IChatMemoryService {
         ChatMemoryId memoryId = (ChatMemoryId) memoryIdObj;
         List<ChatMemory> records = getChatMemories(memoryId);
         LinkedHashMap<String, ChatMessage> messages = new LinkedHashMap<>(records.size());
-        HashSet<String> toolExecutionResultToolIds = new HashSet<>();
         for (ChatMemory record : records) {
             String messageJson = record.getMessageJson();
             if (messageJson != null) {
                 try {
                     ChatMessage message = ChatMessageDeserializer.messageFromJson(messageJson);
-                    if (record.getStatus().equals(1) && message instanceof SystemMessage) {
-                        continue;
-                    }
-                    if(message instanceof ToolExecutionResultMessage){
-                        toolExecutionResultToolIds.add(((ToolExecutionResultMessage) message).id());
-                    }
+//                    if (record.getStatus().equals(1) && message instanceof SystemMessage) {
+//                        continue;
+//                    }
                     String messageId = record.getMessageId();
                     if(messages.containsKey(messageId)){
                         messages.remove(messageId);
