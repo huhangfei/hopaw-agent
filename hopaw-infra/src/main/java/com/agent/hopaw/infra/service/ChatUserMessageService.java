@@ -45,7 +45,7 @@ public class ChatUserMessageService implements IChatUserMessageService {
         //通知前端显示
         eventPublisher.publishEvent(new AgentMessageEvent(userId, agentId, userMessageInfo));
         //聊天消息入库通知
-        sendChatHistoryMessage(userId, sessionId, agentId, message, files);
+        sendChatHistoryMessage(userId, sessionId, requestId, agentId, message, files);
     }
 
     /**
@@ -64,14 +64,14 @@ public class ChatUserMessageService implements IChatUserMessageService {
         sendMessage(userChatRequest.getSessionBizType(), userId, sessionId, requestId, agentId, message, files);
     }
 
-    private void sendChatHistoryMessage(String userId, String sessionId, Long agentId, String message, List<AttachmentFile> files) {
-        List<ChatHistory> chatHistoryList = convertToChatHistory(userId, sessionId, agentId, message, files);
+    private void sendChatHistoryMessage(String userId, String sessionId, String requestId, Long agentId, String message, List<AttachmentFile> files) {
+        List<ChatHistory> chatHistoryList = convertToChatHistory(userId, sessionId, requestId, agentId, message, files);
         for (ChatHistory chatHistory : chatHistoryList) {
             eventPublisher.publishEvent(new ChatHistoryEvent(chatHistory));
         }
     }
 
-    private List<ChatHistory> convertToChatHistory(String userId, String sessionId, Long agentId, String message, List<AttachmentFile> files) {
+    private List<ChatHistory> convertToChatHistory(String userId, String sessionId, String requestId, Long agentId, String message, List<AttachmentFile> files) {
         List<ChatHistory> chatHistoryList = new ArrayList<ChatHistory>();
         if (files != null && files.size() > 0) {
             //todo:等支持多种消息类型后完善存储
@@ -81,6 +81,7 @@ public class ChatUserMessageService implements IChatUserMessageService {
                 chatHistory.setUserId(userId);
                 chatHistory.setSessionId(sessionId);
                 chatHistory.setMessageNo(UuidUtil.generateSimpleUUID());
+                chatHistory.setRequestId(requestId);
                 chatHistoryList.add(chatHistory);
             }
         }
@@ -89,6 +90,7 @@ public class ChatUserMessageService implements IChatUserMessageService {
             chatHistory.setUserId(userId);
             chatHistory.setSessionId(sessionId);
             chatHistory.setMessageNo(UuidUtil.generateSimpleUUID());
+            chatHistory.setRequestId(requestId);
             chatHistoryList.add(chatHistory);
         }
         return chatHistoryList;

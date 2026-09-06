@@ -25,6 +25,8 @@ public class ChatHistory {
     private String userId;
     /** 消息编号：流式消息（text/thinking）开始时生成，前端按编号定位消息元素并续接追加片段 */
     private String messageNo;
+    /** 请求编号：用户消息关联的请求，前端 bug 图标按编号查询请求响应日志 */
+    private String requestId;
     private LocalDateTime createTime;
 
     public ChatHistory() {}
@@ -157,6 +159,14 @@ public class ChatHistory {
 
     public void setMessageNo(String messageNo) {
         this.messageNo = messageNo;
+    }
+
+    public String getRequestId() {
+        return requestId;
+    }
+
+    public void setRequestId(String requestId) {
+        this.requestId = requestId;
     }
 
     public LocalDateTime getCreateTime() {

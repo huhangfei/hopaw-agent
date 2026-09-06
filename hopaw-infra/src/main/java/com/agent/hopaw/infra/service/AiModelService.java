@@ -87,7 +87,7 @@ public class AiModelService implements IAiModelService {
             org.springframework.beans.BeanUtils.copyProperties(aiModel, aiModelVO);
             aiModelVO.setAiModelProvider(provider);
             ChatModelFactory factory = factories.get(aiModelVO.getAiModelProvider().getSdkName().toLowerCase());
-            ChatModelListener chatModelListener = chatModelListenerProvider.getChatModelListener(AiModelCallSourceEnum.ModelTest, null, null, null);
+            ChatModelListener chatModelListener = chatModelListenerProvider.getChatModelListener(AiModelCallSourceEnum.ModelTest, null, null, null, null);
             ChatModel chatModel = factory.createChatModel(aiModelVO, null, chatModelListener);
             ModelCapabilityTestResult result = factory.testModelCapability(chatModel);
 

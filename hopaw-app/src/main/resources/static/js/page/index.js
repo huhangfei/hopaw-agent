@@ -64,7 +64,7 @@ function renderMarkdown(content) {
     return content.replace(/\n/g, '<br>');
 }
 
-function createMessageFooter(messageText) {
+function createMessageFooter(messageText, requestId) {
     var footer = document.createElement('div');
     footer.className = 'message-footer';
 
@@ -82,6 +82,16 @@ function createMessageFooter(messageText) {
     copyBtn.innerHTML = '<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>';
     copyBtn.onclick = function() { copyMessageContent(this); };
     footer.appendChild(copyBtn);
+
+    // 用户消息关联请求编号时展示 bug 图标：点击查看该次请求的完整请求/响应日志
+    if (requestId) {
+        var bugBtn = document.createElement('button');
+        bugBtn.className = 'message-bug-btn';
+        bugBtn.title = '查看该请求的请求/响应日志';
+        bugBtn.innerHTML = '<svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor"><path d="M20 8h-2.81c-.45-.78-1.07-1.45-1.82-1.96L17 4.41 15.59 3l-2.17 2.17C12.96 5.06 12.49 5 12 5c-.49 0-.96.06-1.41.15L8.41 3 7 4.41l1.62 1.63C7.88 6.55 7.26 7.22 6.81 8H4v2h2.09c-.05.33-.09.66-.09 1v1H4v2h2v1c0 .34.04.67.09 1H4v2h2.81c1.04 1.79 2.97 3 5.19 3s4.15-1.21 5.19-3H20v-2h-2.09c.05-.33.09-.66.09-1v-1h2v-2h-2v-1c0-.34-.04-.67-.09-1H20V8zm-6 8h-4v-2h4v2zm0-4h-4v-2h4v2z"/></svg>';
+        bugBtn.onclick = function() { showRequestLogModal(requestId); };
+        footer.appendChild(bugBtn);
+    }
 
     return footer;
 }
@@ -637,7 +647,7 @@ function buildHistoryMessageNode(chat) {
         }
         div.appendChild(content);
         // agent 小节无独立 footer（整盒底部统一展示时间与复制）
-        if (!isAgent) { div.appendChild(buildHistoryFooter(timeText, chat.content)); }
+        if (!isAgent) { div.appendChild(buildHistoryFooter(timeText, chat.content, chat.requestId)); }
     }
     return div;
 }
@@ -650,7 +660,7 @@ function appendLabel(parent, text) {
 }
 
 /** 消息底部：时间 + 复制按钮 */
-function buildHistoryFooter(timeText, content) {
+function buildHistoryFooter(timeText, content, requestId) {
     var footer = document.createElement('div');
     footer.className = 'message-footer';
     var timeDiv = document.createElement('div');
@@ -665,6 +675,15 @@ function buildHistoryFooter(timeText, content) {
         copyBtn.innerHTML = '<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>';
         copyBtn.onclick = function() { copyMessageContent(this); };
         footer.appendChild(copyBtn);
+    }
+    // 用户消息关联请求编号时展示 bug 图标：点击查看该次请求的完整请求/响应日志
+    if (requestId) {
+        var bugBtn = document.createElement('button');
+        bugBtn.className = 'message-bug-btn';
+        bugBtn.title = '查看该请求的请求/响应日志';
+        bugBtn.innerHTML = '<svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor"><path d="M20 8h-2.81c-.45-.78-1.07-1.45-1.82-1.96L17 4.41 15.59 3l-2.17 2.17C12.96 5.06 12.49 5 12 5c-.49 0-.96.06-1.41.15L8.41 3 7 4.41l1.62 1.63C7.88 6.55 7.26 7.22 6.81 8H4v2h2.09c-.05.33-.09.66-.09 1v1H4v2h2v1c0 .34.04.67.09 1H4v2h2.81c1.04 1.79 2.97 3 5.19 3s4.15-1.21 5.19-3H20v-2h-2.09c.05-.33.09-.66.09-1v-1h2v-2h-2v-1c0-.34-.04-.67-.09-1H20V8zm-6 8h-4v-2h4v2zm0-4h-4v-2h4v2z"/></svg>';
+        bugBtn.onclick = function() { showRequestLogModal(requestId); };
+        footer.appendChild(bugBtn);
     }
     return footer;
 }
@@ -1598,7 +1617,7 @@ function handleUserMessageEcho(data) {
         textContent.innerHTML = renderMarkdown(data.content);
         textMessageDiv.appendChild(textContent);
 
-        textMessageDiv.appendChild(createMessageFooter(data.content));
+        textMessageDiv.appendChild(createMessageFooter(data.content, data.requestId));
 
         messagesDiv.appendChild(textMessageDiv);
     }
@@ -2074,6 +2093,336 @@ function deleteSession(sessionId) {
                 showToast('删除失败: ' + err.message, 'error');
             });
     });
+}
+
+// ================= 会话记忆查看 =================
+
+/** 会话记忆列表缓存（详情弹框按 id 复用，避免二次请求） */
+var sessionMemoryCache = [];
+
+/** 记忆类型徽标文案 */
+var SESSION_MEMORY_TYPE_NAMES = { system: '系统', user: '用户', ai: 'AI', toolResult: '工具结果', other: '其他' };
+/** 记忆状态文案 */
+var SESSION_MEMORY_STATUS_NAMES = { 0: '默认', 1: '任务结束', 2: '自动清理', 3: '手动清理' };
+
+/** 打开会话记忆列表弹框：按当前会话编号拉取 chat_memory 解析后的各类型数据 */
+function showSessionMemoryModal() {
+    if (!currentSessionId) {
+        showToast('当前无会话', 'error');
+        return;
+    }
+    var listEl = document.getElementById('sessionMemoryList');
+    if (!listEl) return;
+    listEl.innerHTML = '<div class="session-memory-empty">加载中...</div>';
+    document.getElementById('sessionMemoryModal').classList.add('active');
+
+    fetch('/api/session/' + encodeURIComponent(currentSessionId) + '/memories')
+        .then(function(r) { return r.json(); })
+        .then(function(resp) {
+            if (resp.code !== 200) {
+                listEl.innerHTML = '<div class="session-memory-empty">' + (resp.msg || '加载失败') + '</div>';
+                return;
+            }
+            sessionMemoryCache = resp.data || [];
+            renderSessionMemoryList(listEl, sessionMemoryCache);
+        })
+        .catch(function(err) {
+            listEl.innerHTML = '<div class="session-memory-empty">加载失败: ' + err.message + '</div>';
+        });
+}
+
+/** 渲染记忆列表：每行展示类型/前20字符预览/时间，长文本点击详情查看全文 */
+function renderSessionMemoryList(listEl, list) {
+    listEl.innerHTML = '';
+    if (!list.length) {
+        listEl.innerHTML = '<div class="session-memory-empty">暂无记忆数据</div>';
+        return;
+    }
+    list.forEach(function(item) {
+        var row = document.createElement('div');
+        row.className = 'session-memory-row';
+
+        var badge = document.createElement('span');
+        badge.className = 'session-memory-type type-' + (item.type || 'other');
+        badge.textContent = SESSION_MEMORY_TYPE_NAMES[item.type] || item.type || '其他';
+        row.appendChild(badge);
+
+        var previewWrap = document.createElement('div');
+        previewWrap.className = 'session-memory-preview-wrap';
+
+        var preview = document.createElement('div');
+        preview.className = 'session-memory-preview';
+        // 单行完整展示，超出宽度省略号截断，全文点击详情查看
+        preview.textContent = sessionMemoryPreviewText(item);
+        previewWrap.appendChild(preview);
+
+        // 记录中存在思考内容时，追加一行思考预览（单行超出省略）
+        if (item.thinking) {
+            var thinkLine = document.createElement('div');
+            thinkLine.className = 'session-memory-thinking';
+            thinkLine.textContent = '思考: ' + item.thinking;
+            previewWrap.appendChild(thinkLine);
+        }
+        row.appendChild(previewWrap);
+
+        var time = document.createElement('span');
+        time.className = 'session-memory-time';
+        time.textContent = item.createTime ? formatMessageTime(new Date(formatHistoryIsoTime(item.createTime))) : '';
+        row.appendChild(time);
+
+        var statusEl = document.createElement('span');
+        statusEl.className = 'session-memory-status';
+        statusEl.textContent = SESSION_MEMORY_STATUS_NAMES[item.status] || (item.status == null ? '' : item.status);
+        row.appendChild(statusEl);
+
+        var detailBtn = document.createElement('button');
+        detailBtn.type = 'button';
+        detailBtn.className = 'session-memory-detail-btn';
+        detailBtn.textContent = '详情';
+        detailBtn.onclick = function() { showSessionMemoryDetail(item.id); };
+        row.appendChild(detailBtn);
+
+        listEl.appendChild(row);
+    });
+}
+
+/** 预览文本：按类型选取最有代表性的内容（思考内容单独成行展示） */
+function sessionMemoryPreviewText(item) {
+    var type = item.type || 'other';
+    if (type === 'ai') {
+        if (item.content) return item.content;
+        if (item.toolName) return '[工具调用] ' + item.toolName;
+        return '(空)';
+    }
+    if (type === 'toolResult') {
+        return '[工具结果] ' + (item.toolName || '') + ' ' + (item.content || '');
+    }
+    return item.content || '(空)';
+}
+
+/** 打开记忆详情弹框：展示全文字段 */
+function showSessionMemoryDetail(id) {
+    var item = sessionMemoryCache.find(function(m) { return m.id === id; });
+    if (!item) return;
+    var body = document.getElementById('sessionMemoryDetailBody');
+    body.innerHTML = '';
+
+    function addField(label, text, cls) {
+        if (text == null || String(text).trim() === '') return;
+        var wrap = document.createElement('div');
+        wrap.className = 'session-memory-detail-field' + (cls ? ' ' + cls : '');
+        var labelEl = document.createElement('div');
+        labelEl.className = 'session-memory-detail-label';
+        labelEl.textContent = label;
+        var valueEl = document.createElement('div');
+        valueEl.className = 'session-memory-detail-value';
+        valueEl.textContent = text;
+        wrap.appendChild(labelEl);
+        wrap.appendChild(valueEl);
+        body.appendChild(wrap);
+    }
+
+    addField('类型', SESSION_MEMORY_TYPE_NAMES[item.type] || item.type);
+    addField('时间', item.createTime ? formatMessageTime(new Date(formatHistoryIsoTime(item.createTime))) : '');
+    addField('状态', SESSION_MEMORY_STATUS_NAMES[item.status] || item.status);
+    if (item.type === 'toolResult') {
+        addField('工具', item.toolName, item.error ? 'session-memory-detail-error' : '');
+    }
+    if (item.type === 'ai' && item.toolName) {
+        addField('工具调用', item.toolName);
+        addField('调用参数', item.toolArguments);
+    }
+    if (item.thinking) { addField('思考', item.thinking); }
+    addField('内容', item.content, item.error ? 'session-memory-detail-error' : '');
+    document.getElementById('sessionMemoryDetailModal').classList.add('active');
+}
+
+function hideSessionMemoryModal() {
+    document.getElementById('sessionMemoryModal').classList.remove('active');
+}
+
+function hideSessionMemoryDetailModal() {
+    document.getElementById('sessionMemoryDetailModal').classList.remove('active');
+}
+
+// ================= 请求日志（模型请求响应明细排查） =================
+
+/** 当前列表弹框的过滤请求编号：bug 图标进入时按单次请求过滤 */
+var requestLogFilterRequestId = null;
+
+/**
+ * 打开请求日志列表弹框
+ * @param requestId 可选：按单次请求过滤（用户消息 bug 图标进入）
+ */
+function showRequestLogModal(requestId) {
+    if (!currentSessionId) {
+        showToast('当前无会话', 'error');
+        return;
+    }
+    requestLogFilterRequestId = requestId || null;
+    document.getElementById('requestLogTitle').textContent = requestId ? '请求日志（单次请求）' : '请求日志';
+    // 按请求过滤时隐藏一键清理按钮（避免误解为只清理该请求）
+    document.getElementById('requestLogClearBtn').style.display = requestId ? 'none' : '';
+    var listEl = document.getElementById('requestLogList');
+    listEl.innerHTML = '<div class="session-memory-empty">加载中...</div>';
+    document.getElementById('requestLogModal').classList.add('active');
+    loadRequestLogs();
+}
+
+function loadRequestLogs() {
+    var listEl = document.getElementById('requestLogList');
+    var url = '/api/session/' + encodeURIComponent(currentSessionId) + '/request-logs';
+    if (requestLogFilterRequestId) {
+        url += '?requestId=' + encodeURIComponent(requestLogFilterRequestId);
+    }
+    fetch(url)
+        .then(function(r) { return r.json(); })
+        .then(function(resp) {
+            if (resp.code !== 200) {
+                listEl.innerHTML = '<div class="session-memory-empty">' + (resp.msg || '加载失败') + '</div>';
+                return;
+            }
+            renderRequestLogList(listEl, resp.data || []);
+        })
+        .catch(function(err) {
+            listEl.innerHTML = '<div class="session-memory-empty">加载失败: ' + err.message + '</div>';
+        });
+}
+
+/** 渲染请求日志列表：状态/时间/来源/模型/Token/耗时，点击行查看完整请求响应 JSON */
+function renderRequestLogList(listEl, list) {
+    listEl.innerHTML = '';
+    if (!list.length) {
+        listEl.innerHTML = '<div class="session-memory-empty">暂无请求日志</div>';
+        return;
+    }
+    list.forEach(function(item) {
+        var row = document.createElement('div');
+        row.className = 'request-log-row' + (item.status === 'error' ? ' request-log-row-error' : '');
+        row.title = '点击查看请求/响应详情';
+
+        var statusEl = document.createElement('span');
+        statusEl.className = 'request-log-status ' + (item.status === 'error' ? 'status-error' : 'status-success');
+        statusEl.textContent = item.status === 'error' ? '失败' : '成功';
+        row.appendChild(statusEl);
+
+        var main = document.createElement('div');
+        main.className = 'request-log-main';
+        var line1 = document.createElement('div');
+        line1.className = 'request-log-line';
+        line1.textContent = (item.modelName || '未知模型') + (item.source ? ' · ' + item.source : '');
+        main.appendChild(line1);
+        var line2 = document.createElement('div');
+        line2.className = 'request-log-sub';
+        var meta = [];
+        if (item.totalTokens != null) { meta.push('tokens ' + item.totalTokens + '（进 ' + (item.inputTokens || 0) + ' / 出 ' + (item.outputTokens || 0) + '）'); }
+        if (item.costMs != null) { meta.push((item.costMs / 1000).toFixed(2) + 's'); }
+        if (item.requestId) { meta.push('请求 ' + item.requestId); }
+        line2.textContent = meta.join(' · ');
+        main.appendChild(line2);
+        row.appendChild(main);
+
+        var time = document.createElement('span');
+        time.className = 'request-log-time';
+        time.textContent = item.createTime ? formatMessageTime(new Date(formatHistoryIsoTime(item.createTime))) : '';
+        row.appendChild(time);
+
+        row.onclick = function() { showRequestLogDetail(item.id); };
+        listEl.appendChild(row);
+    });
+}
+
+/** 打开请求日志详情：完整请求/响应 JSON 格式化展示 */
+function showRequestLogDetail(id) {
+    fetch('/api/session/' + encodeURIComponent(currentSessionId) + '/request-logs/' + id)
+        .then(function(r) { return r.json(); })
+        .then(function(resp) {
+            if (resp.code !== 200 || !resp.data) {
+                showToast(resp.msg || '日志不存在', 'error');
+                return;
+            }
+            renderRequestLogDetail(resp.data);
+        })
+        .catch(function(err) {
+            showToast('加载失败: ' + err.message, 'error');
+        });
+}
+
+function renderRequestLogDetail(item) {
+    var body = document.getElementById('requestLogDetailBody');
+    body.innerHTML = '';
+
+    function addMeta(label, text) {
+        if (text == null || String(text).trim() === '') return;
+        var el = document.createElement('div');
+        el.className = 'request-log-detail-meta';
+        el.textContent = label + '：' + text;
+        body.appendChild(el);
+    }
+    function addJsonBlock(title, jsonText) {
+        if (!jsonText) return;
+        var titleEl = document.createElement('div');
+        titleEl.className = 'request-log-detail-title';
+        titleEl.textContent = title;
+        body.appendChild(titleEl);
+        var pre = document.createElement('pre');
+        pre.className = 'request-log-json';
+        try {
+            pre.textContent = JSON.stringify(JSON.parse(jsonText), null, 2);
+        } catch (e) {
+            // 非 JSON 内容直接原文展示
+            pre.textContent = jsonText;
+        }
+        body.appendChild(pre);
+    }
+
+    addMeta('状态', item.status === 'error' ? '失败' : '成功');
+    addMeta('模型', item.modelName);
+    addMeta('来源', item.source);
+    addMeta('请求编号', item.requestId);
+    addMeta('耗时', item.costMs != null ? (item.costMs / 1000).toFixed(2) + 's' : '');
+    addMeta('Token', item.totalTokens != null
+        ? '总 ' + item.totalTokens + '（输入 ' + (item.inputTokens || 0) + ' / 输出 ' + (item.outputTokens || 0) + '）' : '');
+    addMeta('时间', item.createTime ? formatMessageTime(new Date(formatHistoryIsoTime(item.createTime))) : '');
+
+    if (item.errorText) {
+        var errEl = document.createElement('div');
+        errEl.className = 'request-log-detail-error';
+        errEl.textContent = '错误：' + item.errorText;
+        body.appendChild(errEl);
+    }
+
+    addJsonBlock('请求', item.requestJson);
+    addJsonBlock('响应', item.responseJson);
+    document.getElementById('requestLogDetailModal').classList.add('active');
+}
+
+/** 一键清理本会话全部请求日志 */
+function clearRequestLogs() {
+    showConfirm('确定要清理本会话的全部请求日志吗？').then(function(confirmed) {
+        if (!confirmed) return;
+        fetch('/api/session/' + encodeURIComponent(currentSessionId) + '/request-logs', { method: 'DELETE' })
+            .then(function(r) { return r.json(); })
+            .then(function(resp) {
+                if (resp.code === 200) {
+                    showToast('已清理', 'info');
+                    loadRequestLogs();
+                } else {
+                    showToast(resp.msg || '清理失败', 'error');
+                }
+            })
+            .catch(function(err) {
+                showToast('清理失败: ' + err.message, 'error');
+            });
+    });
+}
+
+function hideRequestLogModal() {
+    document.getElementById('requestLogModal').classList.remove('active');
+}
+
+function hideRequestLogDetailModal() {
+    document.getElementById('requestLogDetailModal').classList.remove('active');
 }
 
 function stopCurrentSession() {

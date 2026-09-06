@@ -68,7 +68,7 @@ public class AgentTaskHandler implements TaskHandler {
         if(agentIdStr != null && !agentIdStr.isEmpty() && task.getDescription() != null && !task.getDescription().isEmpty()){
             Long agentId = Long.parseLong(agentIdStr);
             Agent agent = agentService.getAgentById(agentId);
-            ChatModelListener chatModelListener = chatModelListenerProvider.getChatModelListener(AiModelCallSourceEnum.AgentTask, task.getSessionId(), task.getUserId(), agentId);
+            ChatModelListener chatModelListener = chatModelListenerProvider.getChatModelListener(AiModelCallSourceEnum.AgentTask, task.getSessionId(), task.getUserId(), agentId, String.valueOf(task.getId()));
             ChatModel chatModel = aiModelService.createChatModel(agent.getAiModelId(), agent.getEnableThinking(),chatModelListener);
             List<String> selectTools = parseToolNames(agent.getTools());
 

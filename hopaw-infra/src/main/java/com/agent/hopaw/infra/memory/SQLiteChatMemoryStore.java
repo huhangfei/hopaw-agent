@@ -2,6 +2,7 @@ package com.agent.hopaw.infra.memory;
 
 import com.agent.hopaw.infra.constant.ChatMemoryStatusEnum;
 import com.agent.hopaw.infra.mapper.ChatMemoryMapper;
+import com.agent.hopaw.infra.model.dto.ChatMemoryVO;
 import com.agent.hopaw.infra.model.entity.ChatMemory;
 import com.agent.hopaw.infra.model.entity.ChatMemoryId;
 import com.agent.hopaw.infra.service.ISysConfigService;
@@ -216,5 +217,82 @@ public class SQLiteChatMemoryStore implements IChatMemoryService {
     @Override
     public int deleteByIds(List<Long> ids) {
         return chatMemoryMapper.deleteByIds(ids);
+    }
+
+    /**
+     * 按会话编号查询记忆列表并解析 messageJson 为各类型结构化数据：
+     * SystemMessage → system；UserMessage → user（拼接文本内容）；
+     * AiMessage → ai（正文/思考/工具调用请求）；ToolExecutionResultMessage → toolResult
+     */
+    @Override
+    public List<ChatMemoryVO> getChatMemoryVosBySessionId(String sessionId) {
+        List<ChatMemory> records = chatMemoryMapper.findBySessionId(sessionId);
+        List<ChatMemoryVO> result = new ArrayList<>(records.size());
+        for (ChatMemory record : records) {
+            if (record == null || record.getMessageJson() == null) {
+                continue;
+            }
+            ChatMessage message;
+            try {
+                message = ChatMessageDeserializer.messageFromJson(record.getMessageJson());
+            } catch (Exception e) {
+                logger.warn("解析记忆消息失败，跳过 id={}", record.getId(), e);
+                continue;
+            }
+            if (message == null) {
+                continue;
+            }
+            ChatMemoryVO vo = new ChatMemoryVO();
+            vo.setId(record.getId());
+            vo.setSessionId(record.getSessionId());
+            vo.setStatus(record.getStatus());
+            vo.setCreateTime(record.getCreateTime());
+
+            if (message instanceof SystemMessage sysMessage) {
+                vo.setType("system");
+                vo.setContent(sysMessage.text());
+            } else if (message instanceof UserMessage userMessage) {
+                vo.setType("user");
+                StringBuilder text = new StringBuilder();
+                for (Content content : userMessage.contents()) {
+                    if (content instanceof TextContent textContent) {
+                        text.append(textContent.text()).append("\n");
+                    } else {
+                        // 非文本内容（图片/音视频等）以占位符展示
+                        text.append("[").append(content.getClass().getSimpleName()).append("]\n");
+                    }
+                }
+                vo.setContent(text.toString().trim());
+            } else if (message instanceof AiMessage aiMessage) {
+                vo.setType("ai");
+                vo.setContent(aiMessage.text());
+                vo.setThinking(aiMessage.thinking());
+                if (aiMessage.toolExecutionRequests() != null && !aiMessage.toolExecutionRequests().isEmpty()) {
+                    // 一条 AiMessage 可能携带多个工具调用，全部展示
+                    StringBuilder toolNames = new StringBuilder();
+                    StringBuilder toolArgs = new StringBuilder();
+                    for (ToolExecutionRequest request : aiMessage.toolExecutionRequests()) {
+                        if (toolNames.length() > 0) {
+                            toolNames.append("\n");
+                            toolArgs.append("\n");
+                        }
+                        toolNames.append(request.name());
+                        toolArgs.append(request.arguments());
+                    }
+                    vo.setToolName(toolNames.toString());
+                    vo.setToolArguments(toolArgs.toString());
+                }
+            } else if (message instanceof ToolExecutionResultMessage toolResult) {
+                vo.setType("toolResult");
+                vo.setToolName(toolResult.toolName());
+                vo.setContent(toolResult.text());
+                vo.setError(toolResult.isError());
+            } else {
+                vo.setType("other");
+                vo.setContent(message.toString());
+            }
+            result.add(vo);
+        }
+        return result;
     }
 }

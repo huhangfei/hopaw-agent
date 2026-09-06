@@ -1,6 +1,7 @@
 package com.agent.hopaw.infra.memory;
 
 import com.agent.hopaw.infra.constant.ChatMemoryStatusEnum;
+import com.agent.hopaw.infra.model.dto.ChatMemoryVO;
 import com.agent.hopaw.infra.model.entity.ChatMemory;
 import com.agent.hopaw.infra.model.entity.ChatMemoryId;
 import dev.langchain4j.store.memory.chat.ChatMemoryStore;
@@ -41,4 +42,12 @@ public interface IChatMemoryService extends ChatMemoryStore {
      * @return
      */
     int updateStatusBySessionIdAndRequestId(String sessionId, String requestId, ChatMemoryStatusEnum status, ChatMemoryStatusEnum newStatus);
+
+    /**
+     * 按会话编号查询记忆列表，解析 messageJson 为各类型结构化数据（system/user/ai/toolResult）
+     *
+     * @param sessionId 会话编号
+     * @return 按创建时间升序的记忆列表
+     */
+    List<ChatMemoryVO> getChatMemoryVosBySessionId(String sessionId);
 }

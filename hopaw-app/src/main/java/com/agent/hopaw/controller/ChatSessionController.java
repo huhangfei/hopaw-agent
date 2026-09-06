@@ -6,9 +6,11 @@ import com.agent.hopaw.infra.memory.IChatMemoryService;
 import com.agent.hopaw.infra.model.dto.ResponseBean;
 import com.agent.hopaw.infra.model.entity.ChatHistory;
 import com.agent.hopaw.infra.model.entity.ChatSession;
+import com.agent.hopaw.infra.model.entity.RequestResponseLog;
 import com.agent.hopaw.infra.service.IAgentExecutorService;
 import com.agent.hopaw.infra.service.IChatHistoryService;
 import com.agent.hopaw.infra.service.IChatSessionService;
+import com.agent.hopaw.infra.service.IRequestResponseLogService;
 import com.agent.hopaw.infra.util.UuidUtil;
 import com.agent.hopaw.util.CurrentUser;
 import org.springframework.util.StringUtils;
@@ -28,12 +30,14 @@ public class ChatSessionController {
     private final IAgentExecutorService agentExecutorService;
     private final IChatHistoryService chatHistoryService;
     private final IChatMemoryService chatMemoryService;
+    private final IRequestResponseLogService requestResponseLogService;
     private final com.agent.hopaw.infra.tool.IAgentToolService agentToolService;
-    public ChatSessionController(IChatSessionService chatSessionService, IAgentExecutorService agentExecutorService, IChatHistoryService chatHistoryService, IChatMemoryService chatMemoryService, com.agent.hopaw.infra.tool.IAgentToolService agentToolService) {
+    public ChatSessionController(IChatSessionService chatSessionService, IAgentExecutorService agentExecutorService, IChatHistoryService chatHistoryService, IChatMemoryService chatMemoryService, IRequestResponseLogService requestResponseLogService, com.agent.hopaw.infra.tool.IAgentToolService agentToolService) {
         this.chatSessionService = chatSessionService;
         this.agentExecutorService = agentExecutorService;
         this.chatHistoryService = chatHistoryService;
         this.chatMemoryService = chatMemoryService;
+        this.requestResponseLogService = requestResponseLogService;
         this.agentToolService = agentToolService;
     }
 
@@ -339,5 +343,74 @@ public class ChatSessionController {
         chatHistoryService.deleteBySessionId(sessionId);
         chatMemoryService.clear(sessionId);
         return ResponseBean.success();
+    }
+
+    /**
+     * 会话记忆列表：按会话编号查询 chat_memory，解析出各类型数据（system/user/ai/toolResult）
+     */
+    @GetMapping("/{sessionId}/memories")
+    @ResponseBody
+    public ResponseBean memories(HttpServletRequest request, @PathVariable String sessionId) {
+        ChatSession session = chatSessionService.getSessionBySessionId(sessionId);
+        // 会话可见性：自己的会话，或所有人的项目/工作流任务会话
+        if (session == null || !isSessionVisibleToUser(session, CurrentUser.require(request))) {
+            return ResponseBean.fail("会话不存在");
+        }
+        return ResponseBean.success(chatMemoryService.getChatMemoryVosBySessionId(sessionId));
+    }
+
+    /**
+     * 请求日志列表：按会话编号（可选叠加请求编号）查询模型请求响应日志，
+     * 列表仅返回摘要信息，完整请求/响应 JSON 通过详情接口获取
+     */
+    @GetMapping("/{sessionId}/request-logs")
+    @ResponseBody
+    public ResponseBean requestLogs(HttpServletRequest request,
+                                    @PathVariable String sessionId,
+                                    @RequestParam(required = false) String requestId) {
+        ChatSession session = chatSessionService.getSessionBySessionId(sessionId);
+        if (session == null || !isSessionVisibleToUser(session, CurrentUser.require(request))) {
+            return ResponseBean.fail("会话不存在");
+        }
+        List<RequestResponseLog> logs = requestResponseLogService.findBySessionId(sessionId, requestId);
+        // 摘要列表不返回大字段（完整 JSON 走详情接口），减少传输量
+        for (RequestResponseLog log : logs) {
+            log.setRequestJson(null);
+            log.setResponseJson(null);
+            log.setErrorText(null);
+        }
+        return ResponseBean.success(logs);
+    }
+
+    /**
+     * 请求日志详情：返回完整请求/响应 JSON，用于排查单次模型调用细节
+     */
+    @GetMapping("/{sessionId}/request-logs/{id}")
+    @ResponseBody
+    public ResponseBean requestLogDetail(HttpServletRequest request,
+                                         @PathVariable String sessionId,
+                                         @PathVariable Long id) {
+        ChatSession session = chatSessionService.getSessionBySessionId(sessionId);
+        if (session == null || !isSessionVisibleToUser(session, CurrentUser.require(request))) {
+            return ResponseBean.fail("会话不存在");
+        }
+        RequestResponseLog log = requestResponseLogService.findById(id);
+        if (log == null || !sessionId.equals(log.getSessionId())) {
+            return ResponseBean.fail("日志不存在");
+        }
+        return ResponseBean.success(log);
+    }
+
+    /**
+     * 清理本会话全部请求日志
+     */
+    @DeleteMapping("/{sessionId}/request-logs")
+    @ResponseBody
+    public ResponseBean clearRequestLogs(HttpServletRequest request, @PathVariable String sessionId) {
+        ChatSession session = chatSessionService.getSessionBySessionId(sessionId);
+        if (session == null || !isSessionVisibleToUser(session, CurrentUser.require(request))) {
+            return ResponseBean.fail("会话不存在");
+        }
+        return ResponseBean.success(requestResponseLogService.deleteBySessionId(sessionId));
     }
 }

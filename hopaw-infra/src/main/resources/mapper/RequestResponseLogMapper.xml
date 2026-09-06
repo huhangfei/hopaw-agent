@@ -1,0 +1,55 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.agent.hopaw.infra.mapper.RequestResponseLogMapper">
+
+    <resultMap id="RequestResponseLogResultMap" type="com.agent.hopaw.infra.model.entity.RequestResponseLog">
+        <id property="id" column="id"/>
+        <result property="sessionId" column="session_id"/>
+        <result property="requestId" column="request_id"/>
+        <result property="userId" column="user_id"/>
+        <result property="agentId" column="agent_id"/>
+        <result property="modelName" column="model_name"/>
+        <result property="source" column="source"/>
+        <result property="requestJson" column="request_json"/>
+        <result property="responseJson" column="response_json"/>
+        <result property="errorText" column="error_text"/>
+        <result property="status" column="status"/>
+        <result property="inputTokens" column="input_tokens"/>
+        <result property="outputTokens" column="output_tokens"/>
+        <result property="totalTokens" column="total_tokens"/>
+        <result property="costMs" column="cost_ms"/>
+        <result property="createTime" column="create_time"/>
+    </resultMap>
+
+    <select id="findBySessionId" resultMap="RequestResponseLogResultMap">
+        SELECT id, session_id, request_id, user_id, agent_id, model_name, source,
+               request_json, response_json, error_text, status, input_tokens, output_tokens, total_tokens, cost_ms, create_time
+        FROM request_response_log
+        WHERE session_id = #{sessionId}
+        <if test="requestId != null and requestId != ''">
+            AND request_id = #{requestId}
+        </if>
+        ORDER BY id DESC
+    </select>
+
+    <select id="findById" resultMap="RequestResponseLogResultMap">
+        SELECT id, session_id, request_id, user_id, agent_id, model_name, source,
+               request_json, response_json, error_text, status, input_tokens, output_tokens, total_tokens, cost_ms, create_time
+        FROM request_response_log
+        WHERE id = #{id}
+    </select>
+
+    <insert id="insert" parameterType="com.agent.hopaw.infra.model.entity.RequestResponseLog">
+        INSERT INTO request_response_log (session_id, request_id, user_id, agent_id, model_name, source,
+                                          request_json, response_json, error_text, status, input_tokens, output_tokens, total_tokens, cost_ms, create_time)
+        VALUES (#{sessionId}, #{requestId}, #{userId}, #{agentId}, #{modelName}, #{source},
+                #{requestJson}, #{responseJson}, #{errorText}, #{status}, #{inputTokens}, #{outputTokens}, #{totalTokens}, #{costMs}, #{createTime})
+        <selectKey resultType="long" keyProperty="id" order="AFTER">
+            SELECT last_insert_rowid()
+        </selectKey>
+    </insert>
+
+    <delete id="deleteBySessionId">
+        DELETE FROM request_response_log WHERE session_id = #{sessionId}
+    </delete>
+</mapper>

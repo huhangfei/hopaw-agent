@@ -11,27 +11,34 @@ import java.util.Map;
 @Component
 public class ChatModelListenerProvider implements IChatModelListenerProvider{
     private final ApplicationEventPublisher eventPublisher;
+    private final IRequestResponseLogService requestResponseLogService;
 
-    public ChatModelListenerProvider(ApplicationEventPublisher eventPublisher) {
+    public ChatModelListenerProvider(ApplicationEventPublisher eventPublisher,
+                                     IRequestResponseLogService requestResponseLogService) {
         this.eventPublisher = eventPublisher;
+        this.requestResponseLogService = requestResponseLogService;
     }
 
     @Override
-    public ChatModelListener getChatModelListener(AiModelCallSourceEnum source,String sessionId, String userId, Long agentId) {
+    public ChatModelListener getChatModelListener(AiModelCallSourceEnum source,String sessionId, String userId, Long agentId, String requestId) {
         return new LangChain4jChatModelListener(source)
                 .setAgentId(agentId)
                 .setUserId(userId)
                 .setSessionId(sessionId)
+                .setRequestId(requestId)
+                .setRequestResponseLogService(requestResponseLogService)
                 .setEventPublisher(eventPublisher);
     }
 
     @Override
-    public ChatModelListener getChatModelListener(AiModelCallSourceEnum source, String sessionId, String userId, Long agentId, Map<String, Object> exData) {
+    public ChatModelListener getChatModelListener(AiModelCallSourceEnum source, String sessionId, String userId, Long agentId, String requestId, Map<String, Object> exData) {
         return new LangChain4jChatModelListener(source)
                 .setAgentId(agentId)
                 .setUserId(userId)
                 .setSessionId(sessionId)
+                .setRequestId(requestId)
                 .setExData(exData)
+                .setRequestResponseLogService(requestResponseLogService)
                 .setEventPublisher(eventPublisher);
     }
 }

@@ -93,6 +93,32 @@ public class DatabaseInitializer implements CommandLineRunner {
             stmt.execute("CREATE INDEX IF NOT EXISTS idx_chat_history_user ON chat_history(user_id)");
             // 旧库补齐 message_no 列（流式消息编号，前端按编号续接追加片段）
             ensureColumn(stmt, "chat_history", "message_no", "TEXT");
+            // 旧库补齐 request_id 列（用户消息关联请求日志，前端 bug 图标按编号查询请求响应细节）
+            ensureColumn(stmt, "chat_history", "request_id", "TEXT");
+            stmt.execute("CREATE INDEX IF NOT EXISTS idx_chat_history_request ON chat_history(request_id)");
+
+            // 请求响应日志：记录每次模型调用的完整请求/响应细节，用于问题排查
+            stmt.execute("CREATE TABLE IF NOT EXISTS request_response_log (" +
+                    "id INTEGER PRIMARY KEY AUTOINCREMENT, " +
+                    "session_id TEXT, " +
+                    "request_id TEXT, " +
+                    "user_id TEXT, " +
+                    "agent_id INTEGER, " +
+                    "model_name TEXT, " +
+                    "source TEXT, " +
+                    "request_json TEXT, " +
+                    "response_json TEXT, " +
+                    "error_text TEXT, " +
+                    "status TEXT DEFAULT 'success', " +
+                    "input_tokens INTEGER, " +
+                    "output_tokens INTEGER, " +
+                    "total_tokens INTEGER, " +
+                    "cost_ms INTEGER, " +
+                    "create_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP" +
+                    ")");
+            stmt.execute("CREATE INDEX IF NOT EXISTS idx_request_response_log_session ON request_response_log(session_id)");
+            stmt.execute("CREATE INDEX IF NOT EXISTS idx_request_response_log_request ON request_response_log(request_id)");
+
 
             stmt.execute("CREATE TABLE IF NOT EXISTS chat_memory (" +
                     "id INTEGER PRIMARY KEY AUTOINCREMENT, " +

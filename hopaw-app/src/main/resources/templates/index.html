@@ -58,6 +58,18 @@
                                 </svg>
                                 编辑 Agent
                             </button>
+                            <button class="dropdown-item" onclick="showSessionMemoryModal()">
+                                <svg viewBox="0 0 24 24" width="14" height="14" fill="#f5a623">
+                                    <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 17.93c-3.95-.49-7-3.85-7-7.93 0-.62.08-1.21.21-1.79L9 15v1c0 1.1.9 2 2 2v1.93zm6.9-2.54c-.26-.81-1-1.39-1.9-1.39h-1v-3c0-.55-.45-1-1-1H8v-2h2c.55 0 1-.45 1-1V7h2c1.1 0 2-.9 2-2v-.41c2.93 1.19 5 4.06 5 7.41 0 2.08-.8 3.97-2.1 5.39z"/>
+                                </svg>
+                                会话记忆
+                            </button>
+                            <button class="dropdown-item" onclick="showRequestLogModal()">
+                                <svg viewBox="0 0 24 24" width="14" height="14" fill="#e53935">
+                                    <path d="M20 8h-2.81c-.45-.78-1.07-1.45-1.82-1.96L17 4.41 15.59 3l-2.17 2.17C12.96 5.06 12.49 5 12 5c-.49 0-.96.06-1.41.15L8.41 3 7 4.41l1.62 1.63C7.88 6.55 7.26 7.22 6.81 8H4v2h2.09c-.05.33-.09.66-.09 1v1H4v2h2v1c0 .34.04.67.09 1H4v2h2.81c1.04 1.79 2.97 3 5.19 3s4.15-1.21 5.19-3H20v-2h-2.09c.05-.33.09-.66.09-1v-1h2v-2h-2v-1c0-.34-.04-.67-.09-1H20V8zm-6 8h-4v-2h4v2zm0-4h-4v-2h4v2z"/>
+                                </svg>
+                                请求日志
+                            </button>
                             <button class="dropdown-item" th:attr="onclick=|clearHistory('${currentSessionId}')|">
                                 <svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor">
                                     <path d="M19.36 2.72l1.42 1.42-5.72 5.71c1.07 1.54 1.22 3.39.32 4.59L9.06 8.12c1.2-.9 3.05-.75 4.59.32l5.71-5.72zM5.93 17.57c-2.01-2.01-3.24-4.41-3.58-6.65l4.88-2.09 7.44 7.44-2.09 4.88c-2.24-.34-4.64-1.57-6.65-3.58z"/>
@@ -264,6 +276,72 @@
                 <path d="M20.38 3.46 16 2a4 4 0 0 1-8 0L3.62 3.46a2 2 0 0 0-1.34 2.23l.58 3.47a1 1 0 0 0 .99.84H6v10c0 1.1.9 2 2 2h8a2 2 0 0 0 2-2V10h2.15a1 1 0 0 0 .99-.84l.58-3.47a2 2 0 0 0-1.34-2.23z"/>
             </svg>
         </button>
+    </div>
+
+    <!-- 会话记忆列表弹框：长文本仅展示前20字符，点击详情查看全文 -->
+    <div class="modal-overlay" id="sessionMemoryModal">
+        <div class="modal modal-wide">
+            <div class="modal-header">
+                <h3>会话记忆</h3>
+                <button class="modal-close" onclick="hideSessionMemoryModal()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="session-memory-list" id="sessionMemoryList"></div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn-cancel" onclick="hideSessionMemoryModal()">关闭</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 会话记忆详情弹框 -->
+    <div class="modal-overlay" id="sessionMemoryDetailModal">
+        <div class="modal modal-wide">
+            <div class="modal-header">
+                <h3>记忆详情</h3>
+                <button class="modal-close" onclick="hideSessionMemoryDetailModal()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div id="sessionMemoryDetailBody"></div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn-cancel" onclick="hideSessionMemoryDetailModal()">关闭</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 请求日志列表弹框：展示会话内所有模型请求/响应，可点击详情查看完整 JSON -->
+    <div class="modal-overlay" id="requestLogModal">
+        <div class="modal modal-wide">
+            <div class="modal-header">
+                <h3 id="requestLogTitle">请求日志</h3>
+                <button class="modal-close" onclick="hideRequestLogModal()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="request-log-list" id="requestLogList"></div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn-danger request-log-clear-btn" id="requestLogClearBtn"
+                        onclick="clearRequestLogs()">清理本会话日志</button>
+                <button type="button" class="btn-cancel" onclick="hideRequestLogModal()">关闭</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 请求日志详情弹框：完整请求/响应 JSON -->
+    <div class="modal-overlay" id="requestLogDetailModal">
+        <div class="modal modal-wide">
+            <div class="modal-header">
+                <h3>请求详情</h3>
+                <button class="modal-close" onclick="hideRequestLogDetailModal()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div id="requestLogDetailBody"></div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn-cancel" onclick="hideRequestLogDetailModal()">关闭</button>
+            </div>
+        </div>
     </div>
 </div>
 

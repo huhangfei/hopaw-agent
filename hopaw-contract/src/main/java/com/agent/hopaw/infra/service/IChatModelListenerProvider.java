@@ -7,6 +7,6 @@ import java.util.Map;
 
 public interface IChatModelListenerProvider {
 
-    ChatModelListener getChatModelListener(AiModelCallSourceEnum source, String sessionId, String userId, Long agentId);
-    ChatModelListener getChatModelListener(AiModelCallSourceEnum source, String sessionId, String userId, Long agentId, Map<String,Object> exData);
+    ChatModelListener getChatModelListener(AiModelCallSourceEnum source, String sessionId, String userId, Long agentId, String requestId);
+    ChatModelListener getChatModelListener(AiModelCallSourceEnum source, String sessionId, String userId, Long agentId, String requestId, Map<String,Object> exData);
 }
