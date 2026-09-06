@@ -3118,17 +3118,21 @@ body.dark-theme .request-log-detail-error {
 
 /* ==================== 用户消息 bug 图标（查看请求日志） ==================== */
 .message-bug-btn {
-    background: none;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 22px;
+    height: 22px;
     border: none;
-    padding: 2px;
-    color: #e53935;
-    opacity: 0.55;
+    background: none;
     cursor: pointer;
-    transition: opacity 0.15s;
+    opacity: 0.35;
+    border-radius: 4px;
+    padding: 0;
+    color: inherit;
+    transition: opacity 0.15s, background 0.15s;
 }
 .message-bug-btn:hover {
-    opacity: 1;
-}
-body.dark-theme .message-bug-btn {
-    color: #ff7043;
+    opacity: 0.8;
+    background: rgba(128, 128, 128, 0.15);
 }

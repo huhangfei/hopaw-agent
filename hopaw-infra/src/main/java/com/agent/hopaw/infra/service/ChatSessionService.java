@@ -2,6 +2,7 @@ package com.agent.hopaw.infra.service;
 
 import com.agent.hopaw.infra.mapper.ChatHistoryMapper;
 import com.agent.hopaw.infra.mapper.ChatSessionMapper;
+import com.agent.hopaw.infra.mapper.RequestResponseLogMapper;
 import com.agent.hopaw.infra.model.dto.ChatSessionStatsVO;
 import com.agent.hopaw.infra.model.entity.ChatHistory;
 import com.agent.hopaw.infra.model.entity.ChatSession;
@@ -18,10 +19,12 @@ import java.util.stream.Collectors;
 public class ChatSessionService implements IChatSessionService {
     private final ChatSessionMapper chatSessionMapper;
     private final ChatHistoryMapper chatHistoryMapper;
+    private final RequestResponseLogMapper requestResponseLogMapper;
 
-    public ChatSessionService(ChatSessionMapper chatSessionMapper, ChatHistoryMapper chatHistoryMapper) {
+    public ChatSessionService(ChatSessionMapper chatSessionMapper, ChatHistoryMapper chatHistoryMapper, RequestResponseLogMapper requestResponseLogMapper) {
         this.chatSessionMapper = chatSessionMapper;
         this.chatHistoryMapper = chatHistoryMapper;
+        this.requestResponseLogMapper = requestResponseLogMapper;
     }
 
     @Override
@@ -89,6 +92,7 @@ public class ChatSessionService implements IChatSessionService {
         ChatSession session = chatSessionMapper.findById(id);
         if (session != null) {
             chatHistoryMapper.deleteBySessionId(session.getSessionId());
+            requestResponseLogMapper.deleteBySessionId(session.getSessionId());
             chatSessionMapper.deleteById(id);
         }
     }
@@ -96,6 +100,7 @@ public class ChatSessionService implements IChatSessionService {
     @Override
     public void deleteSessionBySessionId(String sessionId) {
         chatHistoryMapper.deleteBySessionId(sessionId);
+        requestResponseLogMapper.deleteBySessionId(sessionId);
         chatSessionMapper.deleteBySessionId(sessionId);
     }
 
@@ -104,6 +109,7 @@ public class ChatSessionService implements IChatSessionService {
         List<ChatSession> sessions = chatSessionMapper.findByUserIdAndAgentId(null, agentId);
         for (ChatSession session : sessions) {
             chatHistoryMapper.deleteBySessionId(session.getSessionId());
+            requestResponseLogMapper.deleteBySessionId(session.getSessionId());
         }
         chatSessionMapper.deleteByAgentId(agentId);
     }

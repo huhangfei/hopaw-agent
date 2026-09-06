@@ -275,6 +275,7 @@ public class ChatSessionController {
             try {
                 chatHistoryService.deleteBySessionId(sessionId);
                 chatMemoryService.clear(sessionId);
+                requestResponseLogService.deleteBySessionId(sessionId);
                 success++;
             } catch (Exception e) {
                 failed.add(sessionId);
@@ -287,7 +288,7 @@ public class ChatSessionController {
     }
 
     /**
-     * 批量删除会话：先清理历史（聊天记录 + 记忆），再删除会话本身
+     * 批量删除会话：先清理历史（聊天记录 + 记忆 + 请求日志），再删除会话本身
      */
     @PostMapping("/batch-delete")
     @ResponseBody

@@ -24,6 +24,8 @@ import org.springframework.stereotype.Service;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.time.LocalDate;
+import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Base64;
@@ -246,6 +248,7 @@ public class ChatService implements IChatService {
             String skillContext = buildSkillContext(skillNames);
             systemMessage += skillContext;
         }
+        systemMessage=systemMessage+"\n今日日期："+ LocalDate.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd"));
         return systemMessage;
     }
 
