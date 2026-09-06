@@ -5,6 +5,10 @@ public class AiModel {
     private Long providerId;
     private String modelName;
     private String modelAlias;
+    /**
+     * 最大上下文（字节），必填
+     */
+    private Long maxContextTokens;
     private String capabilities;
     private Boolean verified;
     private String extParams;
@@ -52,6 +56,14 @@ public class AiModel {
 
     public void setModelAlias(String modelAlias) {
         this.modelAlias = modelAlias;
+    }
+
+    public Long getMaxContextTokens() {
+        return maxContextTokens;
+    }
+
+    public void setMaxContextTokens(Long maxContextTokens) {
+        this.maxContextTokens = maxContextTokens;
     }
 
     public String getCapabilities() {

@@ -343,6 +343,7 @@ public class ChatSessionController {
     public ResponseBean clearChat(@PathVariable String sessionId) {
         chatHistoryService.deleteBySessionId(sessionId);
         chatMemoryService.clear(sessionId);
+        requestResponseLogService.deleteBySessionId(sessionId);
         return ResponseBean.success();
     }
 

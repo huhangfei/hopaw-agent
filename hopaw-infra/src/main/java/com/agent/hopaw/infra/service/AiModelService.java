@@ -146,6 +146,8 @@ public class AiModelService implements IAiModelService {
     public String getDefaultAiModelExtParamsJson(){
         AiModelExtParams aiModelExtParams = new AiModelExtParams("reasoning_content", true, true, "high", 0.5, 30L, false, false,false);
         aiModelExtParams.setEnableThinking(true);
+        aiModelExtParams.setStrictTools(true);
+        aiModelExtParams.setParallelToolCalls(true);
         return JSON.toJSONString(aiModelExtParams);
     }
 

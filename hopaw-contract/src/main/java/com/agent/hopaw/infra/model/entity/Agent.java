@@ -1,8 +1,8 @@
 package com.agent.hopaw.infra.model.entity;
 
 public class Agent {
-    /** 窗口记忆 Token 上限默认值（20k） */
-    public static final int DEFAULT_MAX_MEMORY_TOKENS = 20000;
+    /** 窗口记忆 Token 上限默认值（20K，1024 进制） */
+    public static final int DEFAULT_MAX_MEMORY_TOKENS = 20 * 1024;
 
     private Long id;
     private String name;

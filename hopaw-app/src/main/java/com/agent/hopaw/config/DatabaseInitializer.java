@@ -47,7 +47,7 @@ public class DatabaseInitializer implements CommandLineRunner {
                     "name TEXT NOT NULL, " +
                     "description TEXT, " +
                     "tools TEXT, " +
-                    "max_memory_tokens INTEGER DEFAULT 20000, " +
+                    "max_memory_tokens INTEGER DEFAULT 20480, " +
                     "max_tool_invocations INTEGER DEFAULT 20, " +
                     "vector_tool_search INTEGER DEFAULT 1, " +
                     "vector_tool_search_max_results INTEGER DEFAULT 5, " +
@@ -65,11 +65,11 @@ public class DatabaseInitializer implements CommandLineRunner {
                     stmt.execute("ALTER TABLE agents RENAME COLUMN max_memory_records TO max_memory_tokens");
                     log.info("[DatabaseInitializer] agents.max_memory_records 已重命名为 max_memory_tokens");
                 } else {
-                    stmt.execute("ALTER TABLE agents ADD COLUMN max_memory_tokens INTEGER DEFAULT 20000");
+                    stmt.execute("ALTER TABLE agents ADD COLUMN max_memory_tokens INTEGER DEFAULT 20480");
                     log.info("[DatabaseInitializer] 已为表 agents 补齐列 max_memory_tokens");
                 }
                 // 旧列存的是消息条数（如 20），直接作为 Token 上限会过小，统一重置为默认 Token 上限
-                stmt.execute("UPDATE agents SET max_memory_tokens = 20000");
+                stmt.execute("UPDATE agents SET max_memory_tokens = 20480");
             }
 
             stmt.execute("CREATE TABLE IF NOT EXISTS chat_history (" +
@@ -195,6 +195,7 @@ public class DatabaseInitializer implements CommandLineRunner {
                     "provider_id INTEGER NOT NULL, " +
                     "model_name TEXT NOT NULL, " +
                     "model_alias TEXT NOT NULL DEFAULT '', " +
+                    "max_context_tokens INTEGER NOT NULL DEFAULT 0, " +
                     "capabilities TEXT, " +
                     "verified INTEGER DEFAULT 0, " +
                     "ext_params TEXT, " +
@@ -203,6 +204,8 @@ public class DatabaseInitializer implements CommandLineRunner {
             stmt.execute("CREATE INDEX IF NOT EXISTS idx_ai_models_provider ON ai_models(provider_id)");
             // 兼容旧库：ai_models 增量补充模型别名列（必填）
             ensureColumn(stmt, "ai_models", "model_alias", "TEXT NOT NULL DEFAULT ''");
+            // 兼容旧库：ai_models 增量补充最大上下文列（必填，旧数据回填 0 由编辑时补填）
+            ensureColumn(stmt, "ai_models", "max_context_tokens", "INTEGER NOT NULL DEFAULT 0");
             // 旧数据回填：别名默认取模型名称
             stmt.execute("UPDATE ai_models SET model_alias = model_name WHERE model_alias IS NULL OR model_alias = ''");
 
@@ -691,7 +694,7 @@ public class DatabaseInitializer implements CommandLineRunner {
                         escapeSQL("大虾\uD83E\uDD90"),
                         escapeSQL("善于使用多种工具解决用户问题"),
                         escapeSQL(tools),
-                        20000, 20, 1, 15,
+                        20480, 20, 1, 15,
                         DefaultUser.USER,
                         1
                 ));

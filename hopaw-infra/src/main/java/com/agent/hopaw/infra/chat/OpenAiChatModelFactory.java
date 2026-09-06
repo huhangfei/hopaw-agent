@@ -38,7 +38,13 @@ public class OpenAiChatModelFactory extends  BaseChatModelFactory {
                 .logRequests(super.getLogRequests(aiModel))
                 .logResponses(super.getLogResponses(aiModel))
                 .timeout(java.time.Duration.ofSeconds(super.getTimeoutSeconds(aiModel)))
-                .strictTools(true);
+                .strictTools(super.getStrictTools(aiModel))
+                .parallelToolCalls(super.getParallelToolCalls(aiModel));
+        if (getUseMaxCompletionTokens(aiModel)) {
+            builder.maxCompletionTokens(super.getOutputMaxTokens(aiModel));
+        } else {
+            builder.maxTokens(super.getOutputMaxTokens(aiModel));
+        }
         if(enableThinking){
             builder.reasoningEffort(super.getReasoningEffort(aiModel));
         }
@@ -60,7 +66,7 @@ public class OpenAiChatModelFactory extends  BaseChatModelFactory {
             put("type", finalEnableThinking ? "enabled" : "disabled");
         }});
         var builder = OpenAiStreamingChatModel.builder()
-                .accumulateToolCallId(true)
+                .accumulateToolCallId(super.getAccumulateToolCallId(aiModel))
                 .apiKey(aiModelProvider.getApiKey())
                 .modelName(aiModel.getModelName())
                 .baseUrl(aiModelProvider.getUrl())
@@ -71,7 +77,13 @@ public class OpenAiChatModelFactory extends  BaseChatModelFactory {
                 .logRequests(super.getLogRequests(aiModel))
                 .logResponses(super.getLogResponses(aiModel))
                 .timeout(java.time.Duration.ofSeconds(super.getTimeoutSeconds(aiModel)))
-                .strictTools(true);
+                .strictTools(super.getStrictTools(aiModel))
+                .parallelToolCalls(super.getParallelToolCalls(aiModel));
+        if (getUseMaxCompletionTokens(aiModel)) {
+            builder.maxCompletionTokens(super.getOutputMaxTokens(aiModel));
+        } else {
+            builder.maxTokens(super.getOutputMaxTokens(aiModel));
+        }
         if(enableThinking){
             builder.reasoningEffort(super.getReasoningEffort(aiModel));
         }

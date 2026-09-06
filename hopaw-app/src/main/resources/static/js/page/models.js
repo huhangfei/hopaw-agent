@@ -316,9 +316,15 @@ function hideModelSavingOverlay() {
     }
 }
 
+/** 快捷填充最大上下文（单位：字节） */
+function fillContextSize(value) {
+    document.getElementById('modelMaxContextTokens').value = value;
+}
+
 function submitModel() {
     const modelName = document.getElementById('modelName').value.trim();
     const modelAlias = document.getElementById('modelAlias').value.trim();
+    const maxContextTokens = document.getElementById('modelMaxContextTokens').value.trim();
 
     if (!modelName) {
         showToast('请输入模型名称', 'error');
@@ -328,11 +334,16 @@ function submitModel() {
         showToast('请输入模型别名', 'error');
         return;
     }
+    if (!maxContextTokens || parseInt(maxContextTokens) <= 0) {
+        showToast('请输入最大上下文（字节）', 'error');
+        return;
+    }
 
     const data = {
         providerId: parseInt(document.getElementById('modelProviderId').value),
         modelName: modelName,
         modelAlias: modelAlias,
+        maxContextTokens: parseInt(maxContextTokens),
         extParams: document.getElementById('modelExtParams').value.trim() || null
     };
 
@@ -434,7 +445,10 @@ var EXT_PARAMS_KEYS = [
     { key: 'returnThinking', type: 'boolean', defaultTrue: true },
     { key: 'logRequests', type: 'boolean' },
     { key: 'logResponses', type: 'boolean' },
-    { key: 'accumulateToolCallId', type: 'boolean' }
+    { key: 'accumulateToolCallId', type: 'boolean', defaultTrue: true },
+    { key: 'strictTools', type: 'boolean', defaultTrue: true },
+    { key: 'useMaxCompletionTokens', type: 'boolean' },
+    { key: 'parallelToolCalls', type: 'boolean', defaultTrue: true }
 ];
 
 function resetExtParamsView(target) {

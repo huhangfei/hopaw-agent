@@ -14,6 +14,20 @@ public class AiModelExtParams {
     private Boolean logResponses;
     private Boolean accumulateToolCallId;
     /**
+     * 是否启用严格工具 Schema（默认 true）
+     */
+    private Boolean strictTools;
+    /**
+     * 输出上限是否使用 max_completion_tokens 参数（默认 false 使用 max_tokens）。
+     * OpenAI o 系列推理模型/gpt-5 要求 max_completion_tokens；DeepSeek 等端点仅支持 max_tokens
+     */
+    private Boolean useMaxCompletionTokens;
+    /**
+     * 是否允许并行工具调用（默认 true）。
+     * OpenAI 系列为 parallelToolCalls；Anthropic 为反向语义 disableParallelToolUse
+     */
+    private Boolean parallelToolCalls;
+    /**
      * 是否启用思考模式（默认 true）
      */
     private Boolean enableThinking;
@@ -102,6 +116,30 @@ public class AiModelExtParams {
 
     public void setAccumulateToolCallId(Boolean accumulateToolCallId) {
         this.accumulateToolCallId = accumulateToolCallId;
+    }
+
+    public Boolean getStrictTools() {
+        return strictTools;
+    }
+
+    public void setStrictTools(Boolean strictTools) {
+        this.strictTools = strictTools;
+    }
+
+    public Boolean getUseMaxCompletionTokens() {
+        return useMaxCompletionTokens;
+    }
+
+    public void setUseMaxCompletionTokens(Boolean useMaxCompletionTokens) {
+        this.useMaxCompletionTokens = useMaxCompletionTokens;
+    }
+
+    public Boolean getParallelToolCalls() {
+        return parallelToolCalls;
+    }
+
+    public void setParallelToolCalls(Boolean parallelToolCalls) {
+        this.parallelToolCalls = parallelToolCalls;
     }
 
     public Boolean getEnableThinking() {

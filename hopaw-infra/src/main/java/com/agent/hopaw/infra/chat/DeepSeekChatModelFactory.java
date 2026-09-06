@@ -1,86 +1,14 @@
 package com.agent.hopaw.infra.chat;
 
 import com.agent.hopaw.infra.constant.ModelProviderEnum;
-import com.agent.hopaw.infra.model.entity.AiModelProvider;
-import com.agent.hopaw.infra.model.dto.AiModelVO;
-import dev.langchain4j.model.chat.ChatModel;
-import dev.langchain4j.model.chat.StreamingChatModel;
-import dev.langchain4j.model.chat.listener.ChatModelListener;
-import dev.langchain4j.model.openai.OpenAiChatModel;
-import dev.langchain4j.model.openai.OpenAiStreamingChatModel;
 import org.springframework.stereotype.Service;
 
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-
+/**
+ * DeepSeek 工厂：接口兼容 OpenAI 协议，行为差异全部由扩展参数（extParams）控制，
+ * 直接复用 OpenAI 实现，仅覆写提供商名称
+ */
 @Service
-public class DeepSeekChatModelFactory extends  BaseChatModelFactory {
-
-    @Override
-    public ChatModel createChatModel(AiModelVO aiModel, Boolean enableThinking, ChatModelListener monitoringService) {
-        AiModelProvider aiModelProvider=aiModel.getAiModelProvider();
-        Map<String, Object> extraParams = new HashMap<>(0);
-        if(enableThinking==null){
-            enableThinking=super.getEnableThinking(aiModel);
-        }
-        Boolean finalEnableThinking = enableThinking;
-        extraParams.put("thinking",new HashMap(1){{
-            put("type", finalEnableThinking ? "enabled" : "disabled");
-        }});
-        var builder = OpenAiChatModel.builder()
-                .apiKey(aiModelProvider.getApiKey())
-                .modelName(aiModel.getModelName())
-                .baseUrl(aiModelProvider.getUrl())
-                .temperature(super.getTemperature(aiModel))
-                .customParameters(extraParams)
-                .sendThinking(super.getSendThinking(aiModel), super.getThinkingContentKey(aiModel))
-                .returnThinking(super.getReturnThinking(aiModel)).logRequests(super.getLogRequests(aiModel))
-                .logResponses(super.getLogResponses(aiModel))
-                .strictTools(true)
-                .timeout(java.time.Duration.ofSeconds(super.getTimeoutSeconds(aiModel)));
-        if(enableThinking){
-            builder.reasoningEffort(super.getReasoningEffort(aiModel));
-        }
-        if (monitoringService != null) {
-            builder.listeners(List.of(monitoringService));
-        }
-        return builder.build();
-    }
-
-    @Override
-    public StreamingChatModel createStreamingChatModel(AiModelVO aiModel, Boolean enableThinking, ChatModelListener monitoringService) {
-        AiModelProvider aiModelProvider=aiModel.getAiModelProvider();
-        Map<String, Object> extraParams = new HashMap<>(0);
-        if(enableThinking==null){
-            enableThinking=super.getEnableThinking(aiModel);
-        }
-        Boolean finalEnableThinking = enableThinking;
-        extraParams.put("thinking",new HashMap(1){{
-            put("type", finalEnableThinking ? "enabled" : "disabled");
-        }});
-
-        var builder = OpenAiStreamingChatModel.builder()
-                .accumulateToolCallId(super.getAccumulateToolCallId(aiModel))
-                .apiKey(aiModelProvider.getApiKey())
-                .modelName(aiModel.getModelName())
-                .baseUrl(aiModelProvider.getUrl())
-                .temperature(super.getTemperature(aiModel))
-                .customParameters(extraParams)
-                .sendThinking(super.getSendThinking(aiModel), super.getThinkingContentKey(aiModel))
-                .returnThinking(super.getReturnThinking(aiModel))
-                .logRequests(super.getLogRequests(aiModel))
-                .logResponses(super.getLogResponses(aiModel))
-                .strictTools(true)
-                .timeout(java.time.Duration.ofSeconds(super.getTimeoutSeconds(aiModel)));
-        if(enableThinking){
-            builder.reasoningEffort(super.getReasoningEffort(aiModel));
-        }
-        if (monitoringService != null) {
-            builder.listeners(List.of(monitoringService));
-        }
-        return builder.build();
-    }
+public class DeepSeekChatModelFactory extends OpenAiChatModelFactory {
 
     @Override
     public String getProviderName() {

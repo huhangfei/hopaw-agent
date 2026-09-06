@@ -116,6 +116,7 @@ public class AiModelController {
     @ResponseBody
     public AiModel createModel(@RequestBody AiModel aiModel) {
         validateModelAlias(aiModel);
+        validateMaxContextTokens(aiModel);
         aiModelService.insert(aiModel);
         return aiModel;
     }
@@ -124,6 +125,7 @@ public class AiModelController {
     @ResponseBody
     public AiModel updateModel(@PathVariable Long id, @RequestBody AiModel aiModel) {
         validateModelAlias(aiModel);
+        validateMaxContextTokens(aiModel);
         aiModel.setId(id);
         aiModelService.update(aiModel);
         agentExecutorService.clearAndStopAgentExecutorByAiModel(aiModel.getId());
@@ -134,6 +136,13 @@ public class AiModelController {
     private void validateModelAlias(AiModel aiModel) {
         if (aiModel.getModelAlias() == null || aiModel.getModelAlias().isBlank()) {
             throw new IllegalArgumentException("模型别名不能为空");
+        }
+    }
+
+    /** 最大上下文为必填字段（字节） */
+    private void validateMaxContextTokens(AiModel aiModel) {
+        if (aiModel.getMaxContextTokens() == null || aiModel.getMaxContextTokens() <= 0) {
+            throw new IllegalArgumentException("最大上下文不能为空");
         }
     }
 

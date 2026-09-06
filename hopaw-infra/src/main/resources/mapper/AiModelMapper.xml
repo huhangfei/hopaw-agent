@@ -37,8 +37,8 @@
     </select>
 
     <insert id="insert" parameterType="com.agent.hopaw.infra.model.entity.AiModel">
-        INSERT INTO ai_models (provider_id, model_name, model_alias, capabilities, verified, ext_params, create_time)
-        VALUES (#{providerId}, #{modelName}, #{modelAlias}, #{capabilities}, #{verified}, #{extParams}, datetime('now','localtime'))
+        INSERT INTO ai_models (provider_id, model_name, model_alias, max_context_tokens, capabilities, verified, ext_params, create_time)
+        VALUES (#{providerId}, #{modelName}, #{modelAlias}, #{maxContextTokens}, #{capabilities}, #{verified}, #{extParams}, datetime('now','localtime'))
         <selectKey resultType="long" keyProperty="id" order="AFTER">
             SELECT last_insert_rowid()
         </selectKey>
@@ -49,6 +49,7 @@
         SET provider_id = #{providerId},
             model_name = #{modelName},
             model_alias = #{modelAlias},
+            max_context_tokens = #{maxContextTokens},
             capabilities = #{capabilities},
             verified = #{verified},
             ext_params = #{extParams}

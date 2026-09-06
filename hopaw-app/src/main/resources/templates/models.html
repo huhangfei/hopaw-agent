@@ -12,7 +12,9 @@
     <div class="models-header">
         <h2>AI 模型管理</h2>
         <button class="btn-add-provider" onclick="showAddProviderModal()">
-            <svg viewBox="0 0 24 24" fill="currentColor"><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/></svg>
+            <svg viewBox="0 0 24 24" fill="currentColor">
+                <path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/>
+            </svg>
             添加提供商
         </button>
     </div>
@@ -36,16 +38,25 @@
             <div class="provider-card-footer">
                 <div class="provider-actions-left">
                     <button class="btn-config" th:attr="onclick=|selectProvider(this)|" title="模型配置">
-                        <svg viewBox="0 0 24 24" fill="currentColor"><path d="M19.14 12.94c.04-.31.06-.63.06-.94 0-.31-.02-.63-.06-.94l2.03-1.58c.18-.14.23-.41.12-.61l-1.92-3.32c-.12-.22-.37-.29-.59-.22l-2.39.96c-.5-.38-1.03-.7-1.62-.94l-.36-2.54c-.04-.24-.24-.41-.48-.41h-3.84c-.24 0-.43.17-.47.41l-.36 2.54c-.59.24-1.13.57-1.62.94l-2.39-.96c-.22-.08-.47 0-.59.22L2.74 8.87c-.12.21-.08.47.12.61l2.03 1.58c-.04.31-.06.63-.06.94s.02.63.06.94l-2.03 1.58c-.18.14-.23.41-.12.61l1.92 3.32c.12.22.37.29.59.22l2.39-.96c.5.38 1.03.7 1.62.94l.36 2.54c.05.24.24.41.48.41h3.84c.24 0 .44-.17.47-.41l.36-2.54c.59-.24 1.13-.56 1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32c.12-.22.07-.47-.12-.61l-2.01-1.58zM12 15.6c-1.98 0-3.6-1.62-3.6-3.6s1.62-3.6 3.6-3.6 3.6 1.62 3.6 3.6-1.62 3.6-3.6 3.6z"/></svg>
+                        <svg viewBox="0 0 24 24" fill="currentColor">
+                            <path d="M19.14 12.94c.04-.31.06-.63.06-.94 0-.31-.02-.63-.06-.94l2.03-1.58c.18-.14.23-.41.12-.61l-1.92-3.32c-.12-.22-.37-.29-.59-.22l-2.39.96c-.5-.38-1.03-.7-1.62-.94l-.36-2.54c-.04-.24-.24-.41-.48-.41h-3.84c-.24 0-.43.17-.47.41l-.36 2.54c-.59.24-1.13.57-1.62.94l-2.39-.96c-.22-.08-.47 0-.59.22L2.74 8.87c-.12.21-.08.47.12.61l2.03 1.58c-.04.31-.06.63-.06.94s.02.63.06.94l-2.03 1.58c-.18.14-.23.41-.12.61l1.92 3.32c.12.22.37.29.59.22l2.39-.96c.5.38 1.03.7 1.62.94l.36 2.54c.05.24.24.41.48.41h3.84c.24 0 .44-.17.47-.41l.36-2.54c.59-.24 1.13-.56 1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32c.12-.22.07-.47-.12-.61l-2.01-1.58zM12 15.6c-1.98 0-3.6-1.62-3.6-3.6s1.62-3.6 3.6-3.6 3.6 1.62 3.6 3.6-1.62 3.6-3.6 3.6z"/>
+                        </svg>
                         模型配置
                     </button>
                 </div>
                 <div class="provider-actions">
-                    <button class="btn-icon btn-edit-provider" th:attr="onclick=|event.stopPropagation();showEditProviderModal(${provider.id})|" title="编辑">
-                        <svg viewBox="0 0 24 24" fill="currentColor"><path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/></svg>
+                    <button class="btn-icon btn-edit-provider"
+                            th:attr="onclick=|event.stopPropagation();showEditProviderModal(${provider.id})|"
+                            title="编辑">
+                        <svg viewBox="0 0 24 24" fill="currentColor">
+                            <path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/>
+                        </svg>
                     </button>
-                    <button class="btn-icon btn-delete-provider" th:if="${provider.type != 'builtin'}" th:attr="onclick=|event.stopPropagation();deleteProvider(${provider.id})|" title="删除">
-                        <svg viewBox="0 0 24 24" fill="currentColor"><path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/></svg>
+                    <button class="btn-icon btn-delete-provider" th:if="${provider.type != 'builtin'}"
+                            th:attr="onclick=|event.stopPropagation();deleteProvider(${provider.id})|" title="删除">
+                        <svg viewBox="0 0 24 24" fill="currentColor">
+                            <path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/>
+                        </svg>
                     </button>
                 </div>
             </div>
@@ -63,21 +74,23 @@
             </div>
             <div class="models-modal-toolbar">
                 <button class="btn-add-model" onclick="showAddModelModal()">
-                    <svg viewBox="0 0 24 24" fill="currentColor"><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/></svg>
+                    <svg viewBox="0 0 24 24" fill="currentColor">
+                        <path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/>
+                    </svg>
                     添加模型
                 </button>
             </div>
             <div class="models-table-scroll">
                 <table class="models-table" id="modelsTable">
                     <thead>
-                        <tr>
-                            <th>模型名称</th>
-                            <th>别名</th>
-                            <th>能力</th>
-                            <th>已验证</th>
-                            <th>创建时间</th>
-                            <th>操作</th>
-                        </tr>
+                    <tr>
+                        <th>模型名称</th>
+                        <th>别名</th>
+                        <th>能力</th>
+                        <th>已验证</th>
+                        <th>创建时间</th>
+                        <th>操作</th>
+                    </tr>
                     </thead>
                     <tbody id="modelsTableBody">
                     </tbody>
@@ -116,7 +129,7 @@
                     </div>
                     <div class="form-group">
                         <label for="providerUrl">API 地址</label>
-                        <input type="url" id="providerUrl"  placeholder="例如：https://api.openai.com/v1">
+                        <input type="url" id="providerUrl" placeholder="例如：https://api.openai.com/v1">
                     </div>
                     <div class="form-group">
                         <label for="providerApiKey">API 密钥</label>
@@ -131,27 +144,37 @@
                         <label for="providerExtParams">扩展参数</label>
                         <div class="ext-params-wrapper">
                             <div class="ext-params-toggle">
-                                <button type="button" class="ext-params-toggle-btn active" onclick="toggleExtParamsView('provider', 'json')">
-                                    <svg viewBox="0 0 24 24" fill="currentColor"><path d="M14 2H6c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V8l-6-6zm-1 1.5L18.5 9H13V3.5zM6 20V4h5v7h7v9H6z"/></svg>
+                                <button type="button" class="ext-params-toggle-btn active"
+                                        onclick="toggleExtParamsView('provider', 'json')">
+                                    <svg viewBox="0 0 24 24" fill="currentColor">
+                                        <path d="M14 2H6c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V8l-6-6zm-1 1.5L18.5 9H13V3.5zM6 20V4h5v7h7v9H6z"/>
+                                    </svg>
                                     JSON
                                 </button>
-                                <button type="button" class="ext-params-toggle-btn" onclick="toggleExtParamsView('provider', 'form')">
-                                    <svg viewBox="0 0 24 24" fill="currentColor"><path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/></svg>
+                                <button type="button" class="ext-params-toggle-btn"
+                                        onclick="toggleExtParamsView('provider', 'form')">
+                                    <svg viewBox="0 0 24 24" fill="currentColor">
+                                        <path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/>
+                                    </svg>
                                     表单
                                 </button>
                             </div>
                             <div class="ext-params-json-view" id="providerExtParamsJsonView">
-                                <textarea id="providerExtParams" rows="4" th:placeholder='${defaultAiModelExtParamsJson}' oninput="syncExtParamsToJson('provider')"></textarea>
+                                <textarea id="providerExtParams" rows="4"
+                                          th:placeholder='${defaultAiModelExtParamsJson}'
+                                          oninput="syncExtParamsToJson('provider')"></textarea>
                             </div>
                             <div class="ext-params-form-view" id="providerExtParamsFormView">
                                 <div class="ext-params-form-row">
                                     <label for="providerForm_temperature">temperature</label>
-                                    <input type="number" id="providerForm_temperature" step="0.1" min="0" max="2" placeholder="默认: 无">
+                                    <input type="number" id="providerForm_temperature" step="0.1" min="0" max="2"
+                                           placeholder="默认: 无">
                                     <span class="ext-params-form-hint">0~2，控制随机性</span>
                                 </div>
                                 <div class="ext-params-form-row">
                                     <label for="providerForm_timeoutSeconds">timeoutSeconds</label>
-                                    <input type="number" id="providerForm_timeoutSeconds" min="1" placeholder="默认: 120">
+                                    <input type="number" id="providerForm_timeoutSeconds" min="1"
+                                           placeholder="默认: 120">
                                     <span class="ext-params-form-hint">超时秒数</span>
                                 </div>
                                 <div class="ext-params-form-row">
@@ -160,8 +183,15 @@
                                     <span class="ext-params-form-hint">默认: true</span>
                                 </div>
                                 <div class="ext-params-form-row">
+                                    <label for="providerForm_thinkingContentKey">thinkingContentKey</label>
+                                    <input type="text" id="providerForm_thinkingContentKey"
+                                           placeholder="默认: reasoning_content">
+                                    <span class="ext-params-form-hint">思考内容字段名</span>
+                                </div>
+                                <div class="ext-params-form-row">
                                     <label for="providerForm_reasoningEffort">reasoningEffort</label>
-                                    <input type="text" id="providerForm_reasoningEffort" list="reasoningEffortOptions" placeholder="默认: high">
+                                    <input type="text" id="providerForm_reasoningEffort" list="reasoningEffortOptions"
+                                           placeholder="默认: high">
                                     <datalist id="reasoningEffortOptions">
                                         <option value="low">low - 低</option>
                                         <option value="medium">medium - 中</option>
@@ -171,19 +201,10 @@
                                     <span class="ext-params-form-hint">可输入自定义值</span>
                                 </div>
                                 <div class="ext-params-form-row">
-                                    <label for="providerForm_thinkingContentKey">thinkingContentKey</label>
-                                    <input type="text" id="providerForm_thinkingContentKey" placeholder="默认: reasoning_content">
-                                    <span class="ext-params-form-hint">思考内容字段名</span>
-                                </div>
-                                <div class="ext-params-form-row">
                                     <label for="providerForm_thinkingBudgetTokens">thinkingBudgetTokens</label>
-                                    <input type="number" id="providerForm_thinkingBudgetTokens" min="1024" step="512" placeholder="默认: 2048">
+                                    <input type="number" id="providerForm_thinkingBudgetTokens" min="1024" step="512"
+                                           placeholder="默认: 2048">
                                     <span class="ext-params-form-hint">思考预算 token 数（Anthropic，最低 1024）</span>
-                                </div>
-                                <div class="ext-params-form-row">
-                                    <label for="providerForm_outputMaxTokens">outputMaxTokens</label>
-                                    <input type="number" id="providerForm_outputMaxTokens" min="1" step="1024" placeholder="默认: 131072">
-                                    <span class="ext-params-form-hint">单次响应最大输出 token 数</span>
                                 </div>
                                 <div class="ext-params-form-row">
                                     <label for="providerForm_sendThinking">sendThinking</label>
@@ -196,6 +217,32 @@
                                     <span class="ext-params-form-hint">默认: true</span>
                                 </div>
                                 <div class="ext-params-form-row">
+                                    <label for="providerForm_outputMaxTokens">outputMaxTokens</label>
+                                    <input type="number" id="providerForm_outputMaxTokens" min="1" step="1024"
+                                           placeholder="默认: 131072">
+                                    <span class="ext-params-form-hint">单次响应最大输出 token 数</span>
+                                </div>
+                                <div class="ext-params-form-row">
+                                    <label for="providerForm_useMaxCompletionTokens">useMaxCompletionTokens</label>
+                                    <input type="checkbox" id="providerForm_useMaxCompletionTokens">
+                                    <span class="ext-params-form-hint">输出上限用max_completion_tokens（o系列/gpt-5），默认: false</span>
+                                </div>
+                                <div class="ext-params-form-row">
+                                    <label for="providerForm_accumulateToolCallId">accumulateToolCallId</label>
+                                    <input type="checkbox" id="providerForm_accumulateToolCallId">
+                                    <span class="ext-params-form-hint">默认: true</span>
+                                </div>
+                                <div class="ext-params-form-row">
+                                    <label for="providerForm_strictTools">strictTools</label>
+                                    <input type="checkbox" id="providerForm_strictTools">
+                                    <span class="ext-params-form-hint">严格工具Schema，默认: true</span>
+                                </div>
+                                <div class="ext-params-form-row">
+                                    <label for="providerForm_parallelToolCalls">parallelToolCalls</label>
+                                    <input type="checkbox" id="providerForm_parallelToolCalls">
+                                    <span class="ext-params-form-hint">允许并行工具调用，默认: true</span>
+                                </div>
+                                <div class="ext-params-form-row">
                                     <label for="providerForm_logRequests">logRequests</label>
                                     <input type="checkbox" id="providerForm_logRequests">
                                     <span class="ext-params-form-hint">默认: false</span>
@@ -203,11 +250,6 @@
                                 <div class="ext-params-form-row">
                                     <label for="providerForm_logResponses">logResponses</label>
                                     <input type="checkbox" id="providerForm_logResponses">
-                                    <span class="ext-params-form-hint">默认: false</span>
-                                </div>
-                                <div class="ext-params-form-row">
-                                    <label for="providerForm_accumulateToolCallId">accumulateToolCallId</label>
-                                    <input type="checkbox" id="providerForm_accumulateToolCallId">
                                     <span class="ext-params-form-hint">默认: false</span>
                                 </div>
                             </div>
@@ -241,6 +283,25 @@
                         <input type="text" id="modelAlias" required placeholder="例如：GPT-4o 对话模型">
                     </div>
                     <div class="form-group">
+                        <label for="modelMaxContextTokens">最大上下文 *</label>
+                        <input type="number" id="modelMaxContextTokens" min="1" step="1" required
+                               placeholder="例如：131072">
+                        <div class="context-quick-buttons">
+                            <button type="button" class="context-quick-btn" onclick="fillContextSize(8192)">8K</button>
+                            <button type="button" class="context-quick-btn" onclick="fillContextSize(32768)">32K
+                            </button>
+                            <button type="button" class="context-quick-btn" onclick="fillContextSize(65536)">64K
+                            </button>
+                            <button type="button" class="context-quick-btn" onclick="fillContextSize(131072)">128K
+                            </button>
+                            <button type="button" class="context-quick-btn" onclick="fillContextSize(204800)">200K
+                            </button>
+                            <button type="button" class="context-quick-btn" onclick="fillContextSize(1048576)">1M
+                            </button>
+                        </div>
+                        <span class="context-unit-hint">单位：字节</span>
+                    </div>
+                    <div class="form-group">
                         <label>模型能力</label>
                         <div id="modelCapabilitiesDisplay" class="capabilities-display">
                             <span class="capability-hint">保存后将自动检测</span>
@@ -256,27 +317,30 @@
                         <label for="modelExtParams">扩展参数</label>
                         <div class="ext-params-wrapper">
                             <div class="ext-params-toggle">
-                                <button type="button" class="ext-params-toggle-btn active" onclick="toggleExtParamsView('model', 'json')">
-                                    <svg viewBox="0 0 24 24" fill="currentColor"><path d="M14 2H6c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V8l-6-6zm-1 1.5L18.5 9H13V3.5zM6 20V4h5v7h7v9H6z"/></svg>
+                                <button type="button" class="ext-params-toggle-btn active"
+                                        onclick="toggleExtParamsView('model', 'json')">
+                                    <svg viewBox="0 0 24 24" fill="currentColor">
+                                        <path d="M14 2H6c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V8l-6-6zm-1 1.5L18.5 9H13V3.5zM6 20V4h5v7h7v9H6z"/>
+                                    </svg>
                                     JSON
                                 </button>
-                                <button type="button" class="ext-params-toggle-btn" onclick="toggleExtParamsView('model', 'form')">
-                                    <svg viewBox="0 0 24 24" fill="currentColor"><path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/></svg>
+                                <button type="button" class="ext-params-toggle-btn"
+                                        onclick="toggleExtParamsView('model', 'form')">
+                                    <svg viewBox="0 0 24 24" fill="currentColor">
+                                        <path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/>
+                                    </svg>
                                     表单
                                 </button>
                             </div>
                             <div class="ext-params-json-view" id="modelExtParamsJsonView">
-                                <textarea id="modelExtParams" rows="4" th:placeholder='${defaultAiModelExtParamsJson}' oninput="syncExtParamsToJson('model')"></textarea>
+                                <textarea id="modelExtParams" rows="4" th:placeholder='${defaultAiModelExtParamsJson}'
+                                          oninput="syncExtParamsToJson('model')"></textarea>
                             </div>
                             <div class="ext-params-form-view" id="modelExtParamsFormView">
                                 <div class="ext-params-form-row">
-                                    <label for="modelForm_enableThinking">enableThinking</label>
-                                    <input type="checkbox" id="modelForm_enableThinking" checked>
-                                    <span class="ext-params-form-hint">启用思考模式，默认: true</span>
-                                </div>
-                                <div class="ext-params-form-row">
                                     <label for="modelForm_temperature">temperature</label>
-                                    <input type="number" id="modelForm_temperature" step="0.1" min="0" max="2" placeholder="默认: 无">
+                                    <input type="number" id="modelForm_temperature" step="0.1" min="0" max="2"
+                                           placeholder="默认: 无">
                                     <span class="ext-params-form-hint">0~2，控制随机性</span>
                                 </div>
                                 <div class="ext-params-form-row">
@@ -285,24 +349,21 @@
                                     <span class="ext-params-form-hint">超时秒数</span>
                                 </div>
                                 <div class="ext-params-form-row">
-                                    <label for="modelForm_reasoningEffort">reasoningEffort</label>
-                                    <input type="text" id="modelForm_reasoningEffort" list="reasoningEffortOptions" placeholder="默认: high">
-                                    <span class="ext-params-form-hint">可输入自定义值</span>
+                                    <label for="modelForm_enableThinking">enableThinking</label>
+                                    <input type="checkbox" id="modelForm_enableThinking" checked>
+                                    <span class="ext-params-form-hint">启用思考模式，默认: true</span>
                                 </div>
                                 <div class="ext-params-form-row">
                                     <label for="modelForm_thinkingContentKey">thinkingContentKey</label>
-                                    <input type="text" id="modelForm_thinkingContentKey" placeholder="默认: reasoning_content">
+                                    <input type="text" id="modelForm_thinkingContentKey"
+                                           placeholder="默认: reasoning_content">
                                     <span class="ext-params-form-hint">思考内容字段名</span>
                                 </div>
                                 <div class="ext-params-form-row">
-                                    <label for="modelForm_thinkingBudgetTokens">thinkingBudgetTokens</label>
-                                    <input type="number" id="modelForm_thinkingBudgetTokens" min="1024" step="512" placeholder="默认: 2048">
-                                    <span class="ext-params-form-hint">思考预算 token 数（Anthropic，最低 1024）</span>
-                                </div>
-                                <div class="ext-params-form-row">
-                                    <label for="modelForm_outputMaxTokens">outputMaxTokens</label>
-                                    <input type="number" id="modelForm_outputMaxTokens" min="1" step="1024" placeholder="默认: 131072">
-                                    <span class="ext-params-form-hint">单次响应最大输出 token 数</span>
+                                    <label for="modelForm_reasoningEffort">reasoningEffort</label>
+                                    <input type="text" id="modelForm_reasoningEffort" list="reasoningEffortOptions"
+                                           placeholder="默认: high">
+                                    <span class="ext-params-form-hint">可输入自定义值</span>
                                 </div>
                                 <div class="ext-params-form-row">
                                     <label for="modelForm_sendThinking">sendThinking</label>
@@ -315,6 +376,38 @@
                                     <span class="ext-params-form-hint">默认: true</span>
                                 </div>
                                 <div class="ext-params-form-row">
+                                    <label for="modelForm_thinkingBudgetTokens">thinkingBudgetTokens</label>
+                                    <input type="number" id="modelForm_thinkingBudgetTokens" min="1024" step="512"
+                                           placeholder="默认: 2048">
+                                    <span class="ext-params-form-hint">思考预算 token 数（Anthropic，最低 1024）</span>
+                                </div>
+                                <div class="ext-params-form-row">
+                                    <label for="modelForm_outputMaxTokens">outputMaxTokens</label>
+                                    <input type="number" id="modelForm_outputMaxTokens" min="1" step="1024"
+                                           placeholder="默认: 131072">
+                                    <span class="ext-params-form-hint">单次响应最大输出 token 数</span>
+                                </div>
+                                <div class="ext-params-form-row">
+                                    <label for="modelForm_accumulateToolCallId">accumulateToolCallId</label>
+                                    <input type="checkbox" id="modelForm_accumulateToolCallId">
+                                    <span class="ext-params-form-hint">默认: true</span>
+                                </div>
+                                <div class="ext-params-form-row">
+                                    <label for="modelForm_strictTools">strictTools</label>
+                                    <input type="checkbox" id="modelForm_strictTools">
+                                    <span class="ext-params-form-hint">严格工具Schema，默认: true</span>
+                                </div>
+                                <div class="ext-params-form-row">
+                                    <label for="modelForm_useMaxCompletionTokens">useMaxCompletionTokens</label>
+                                    <input type="checkbox" id="modelForm_useMaxCompletionTokens">
+                                    <span class="ext-params-form-hint">输出上限用max_completion_tokens（o系列/gpt-5），默认: false</span>
+                                </div>
+                                <div class="ext-params-form-row">
+                                    <label for="modelForm_parallelToolCalls">parallelToolCalls</label>
+                                    <input type="checkbox" id="modelForm_parallelToolCalls">
+                                    <span class="ext-params-form-hint">允许并行工具调用，默认: true</span>
+                                </div>
+                                <div class="ext-params-form-row">
                                     <label for="modelForm_logRequests">logRequests</label>
                                     <input type="checkbox" id="modelForm_logRequests">
                                     <span class="ext-params-form-hint">默认: false</span>
@@ -322,11 +415,6 @@
                                 <div class="ext-params-form-row">
                                     <label for="modelForm_logResponses">logResponses</label>
                                     <input type="checkbox" id="modelForm_logResponses">
-                                    <span class="ext-params-form-hint">默认: false</span>
-                                </div>
-                                <div class="ext-params-form-row">
-                                    <label for="modelForm_accumulateToolCallId">accumulateToolCallId</label>
-                                    <input type="checkbox" id="modelForm_accumulateToolCallId">
                                     <span class="ext-params-form-hint">默认: false</span>
                                 </div>
                             </div>

@@ -28,8 +28,9 @@ public class AnthropicChatModelFactory extends BaseChatModelFactory {
                 .timeout(java.time.Duration.ofSeconds(super.getTimeoutSeconds(aiModel)))
                 .returnThinking(super.getSendThinking(aiModel))
                 .sendThinking(super.getSendThinking(aiModel))
-                .strictTools(true)
-                .maxTokens(super.getOutputMaxTokens(aiModel));
+                .strictTools(super.getStrictTools(aiModel))
+                .maxTokens(super.getOutputMaxTokens(aiModel))
+                .disableParallelToolUse(!super.getParallelToolCalls(aiModel));
         if(enableThinking==null){
             enableThinking=super.getEnableThinking(aiModel);
         }
@@ -55,8 +56,10 @@ public class AnthropicChatModelFactory extends BaseChatModelFactory {
                 .timeout(java.time.Duration.ofSeconds(super.getTimeoutSeconds(aiModel)))
                 .returnThinking(super.getSendThinking(aiModel))
                 .sendThinking(super.getSendThinking(aiModel))
-                .strictTools(true)
-                .maxTokens(super.getOutputMaxTokens(aiModel));;
+                .strictTools(super.getStrictTools(aiModel))
+                .maxTokens(super.getOutputMaxTokens(aiModel))
+                .disableParallelToolUse(!super.getParallelToolCalls(aiModel))
+                ;
         if(enableThinking==null){
             enableThinking=super.getEnableThinking(aiModel);
         }

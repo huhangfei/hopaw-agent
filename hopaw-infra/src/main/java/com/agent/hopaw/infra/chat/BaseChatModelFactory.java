@@ -73,7 +73,33 @@ public abstract class BaseChatModelFactory implements ChatModelFactory {
     }
     public Boolean getAccumulateToolCallId(AiModelVO aiModelVO) {
         Object val = getExtParams(aiModelVO, "accumulateToolCallId");
+        return val != null ? (Boolean) val : true;
+    }
+
+    /**
+     * 获取是否启用严格工具 Schema（模型级 extParams 优先，缺省回退 provider 级，均未配置时默认启用）
+     */
+    public Boolean getStrictTools(AiModelVO aiModelVO) {
+        Object val = getExtParams(aiModelVO, "strictTools");
+        return val != null ? (Boolean) val : true;
+    }
+
+    /**
+     * 输出上限是否使用 max_completion_tokens 参数（模型级 extParams 优先，缺省回退 provider 级，默认 false 使用 max_tokens）。
+     * OpenAI o 系列推理模型/gpt-5 要求 max_completion_tokens；DeepSeek 等端点仅支持 max_tokens
+     */
+    public Boolean getUseMaxCompletionTokens(AiModelVO aiModelVO) {
+        Object val = getExtParams(aiModelVO, "useMaxCompletionTokens");
         return val != null ? (Boolean) val : false;
+    }
+
+    /**
+     * 是否允许并行工具调用（模型级 extParams 优先，缺省回退 provider 级，均未配置时默认允许）。
+     * OpenAI 系列映射为 parallelToolCalls；Anthropic 映射为反向语义 disableParallelToolUse
+     */
+    public Boolean getParallelToolCalls(AiModelVO aiModelVO) {
+        Object val = getExtParams(aiModelVO, "parallelToolCalls");
+        return val != null ? (Boolean) val : true;
     }
 
     /**
