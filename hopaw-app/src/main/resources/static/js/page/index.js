@@ -2985,6 +2985,19 @@ function loadModelSelector() {
                                 html += '<div class="model-sub-item' + activeClass + '" data-model-id="' + model.id + '" data-model-name="' + escapeHtml(model.modelAlias || model.modelName) + '">';
                                 html += '<span class="model-sub-item-check">✓</span>';
                                 html += '<span class="model-sub-item-name">' + escapeHtml(model.modelAlias || model.modelName) + '</span>';
+                                // 标签：支持思考 + 能力类型
+                                var capNames = {text: '文本', image: '图片', audio: '音频', video: '视频', document: '文档'};
+                                if (model.supportThinking) {
+                                    html += '<span class="model-tag model-tag-thinking">思考</span>';
+                                }
+                                if (model.capabilities) {
+                                    model.capabilities.split(',').forEach(function(cap) {
+                                        cap = cap.trim();
+                                        if (cap && capNames[cap]) {
+                                            html += '<span class="model-tag model-tag-cap">' + capNames[cap] + '</span>';
+                                        }
+                                    });
+                                }
                                 html += '</div>';
                             });
                         }
