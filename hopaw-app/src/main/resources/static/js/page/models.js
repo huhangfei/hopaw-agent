@@ -244,6 +244,14 @@ function showAddModelModal() {
     document.getElementById('modelCapabilitiesDisplay').innerHTML = '<span class="capability-hint">保存后将自动检测</span>';
     document.getElementById('modelVerifiedDisplay').innerHTML = '<span class="capability-hint">保存后将自动验证</span>';
     document.getElementById('modelExtParams').value = '';
+    document.getElementById('modelSupportThinking').checked = true;
+    document.querySelectorAll('input[name="modelSupportedThinkingLevels"]').forEach(function(cb) {
+        cb.checked = (cb.value === 'low' || cb.value === 'high' || cb.value === 'max');
+    });
+    document.getElementById('modelThinkingLevelsGroup').style.display = '';
+    // 初始化 reasoningEffort 下拉选项并设默认值
+    updateModelReasoningEffortOptions();
+    document.getElementById('modelForm_reasoningEffort').value = 'high';
     resetExtParamsView('model');
     Modal.open('modelModal');
 }
@@ -277,6 +285,21 @@ function showEditModelModal(id) {
             document.getElementById('modelVerifiedDisplay').innerHTML = verifiedHtml;
 
             document.getElementById('modelExtParams').value = model.extParams || '';
+            // 思考能力支持字段
+            var supportThinking = model.supportThinking === true || model.supportThinking === 1;
+            document.getElementById('modelSupportThinking').checked = supportThinking;
+            document.getElementById('modelThinkingLevelsGroup').style.display = supportThinking ? '' : 'none';
+            // 勾选已保存的思考等级
+            document.querySelectorAll('input[name="modelSupportedThinkingLevels"]').forEach(function(cb) { cb.checked = false; });
+            if (model.supportedThinkingLevels) {
+                var levels = model.supportedThinkingLevels.split(',');
+                levels.forEach(function(level) {
+                    var cb = document.querySelector('input[name="modelSupportedThinkingLevels"][value="' + level.trim() + '"]');
+                    if (cb) cb.checked = true;
+                });
+            }
+            // 初始化 reasoningEffort 下拉选项
+            updateModelReasoningEffortOptions();
             resetExtParamsView('model');
             Modal.open('modelModal');
         })
@@ -344,7 +367,9 @@ function submitModel() {
         modelName: modelName,
         modelAlias: modelAlias,
         maxContextTokens: parseInt(maxContextTokens),
-        extParams: document.getElementById('modelExtParams').value.trim() || null
+        extParams: document.getElementById('modelExtParams').value.trim() || null,
+        supportThinking: document.getElementById('modelSupportThinking').checked,
+        supportedThinkingLevels: getSelectedThinkingLevels()
     };
 
     let url, method;
@@ -456,10 +481,19 @@ function resetExtParamsView(target) {
     var formView = document.getElementById(target + 'ExtParamsFormView');
     var toggleBtns = jsonView.parentElement.querySelectorAll('.ext-params-toggle-btn');
 
-    jsonView.classList.remove('hidden');
-    formView.classList.remove('active');
     toggleBtns.forEach(function(btn) { btn.classList.remove('active'); });
-    toggleBtns[0].classList.add('active');
+
+    if (target === 'model') {
+        // 模型弹框默认显示表单视图
+        jsonView.classList.add('hidden');
+        formView.classList.add('active');
+        toggleBtns[1].classList.add('active');
+    } else {
+        // 提供商弹框默认显示表单视图
+        jsonView.classList.add('hidden');
+        formView.classList.add('active');
+        toggleBtns[1].classList.add('active');
+    }
 }
 
 function toggleExtParamsView(target, view) {
@@ -479,6 +513,10 @@ function toggleExtParamsView(target, view) {
         jsonView.classList.add('hidden');
         formView.classList.add('active');
         toggleBtns[1].classList.add('active');
+        // 切换到表单视图时，根据模型思考能力约束 extParams 字段
+        if (target === 'model') {
+            applyModelThinkingConstraint();
+        }
     }
 }
 
@@ -575,4 +613,67 @@ document.addEventListener('DOMContentLoaded', function() {
     initExtParamsListeners('provider');
     initExtParamsListeners('model');
 });
+
+// ==================== Thinking Support Fields ====================
+
+function getSelectedThinkingLevels() {
+    var levels = [];
+    document.querySelectorAll('input[name="modelSupportedThinkingLevels"]:checked').forEach(function(cb) {
+        levels.push(cb.value);
+    });
+    return levels.join(',');
+}
+
+function onModelSupportThinkingChange() {
+    var supported = document.getElementById('modelSupportThinking').checked;
+    document.getElementById('modelThinkingLevelsGroup').style.display = supported ? '' : 'none';
+
+    // 约束 extParams 表单：不支持思考时禁用 enableThinking 和 reasoningEffort
+    applyModelThinkingConstraint();
+
+    // 同步到 JSON
+    syncFormToExtParams('model');
+}
+
+function applyModelThinkingConstraint() {
+    var supported = document.getElementById('modelSupportThinking').checked;
+    var enableThinkingEl = document.getElementById('modelForm_enableThinking');
+    var reasoningEffortEl = document.getElementById('modelForm_reasoningEffort');
+    if (enableThinkingEl) {
+        enableThinkingEl.disabled = !supported;
+        if (!supported) {
+            enableThinkingEl.checked = false;
+        }
+    }
+    if (reasoningEffortEl) {
+        reasoningEffortEl.disabled = !supported;
+        if (!supported) {
+            reasoningEffortEl.value = '';
+        }
+    }
+    // 联动更新 reasoningEffort 下拉选项
+    updateModelReasoningEffortOptions();
+}
+
+var THINKING_LEVEL_LABELS = {
+    none: 'none（无）',
+    minimal: 'minimal（极轻）',
+    low: 'low（低）',
+    medium: 'medium（中）',
+    high: 'high（高）',
+    xhigh: 'xhigh（极高）',
+    max: 'max（最大）'
+};
+
+function updateModelReasoningEffortOptions() {
+    var datalist = document.getElementById('modelReasoningEffortOptions');
+    if (!datalist) return;
+    datalist.innerHTML = '';
+    document.querySelectorAll('input[name="modelSupportedThinkingLevels"]:checked').forEach(function(cb) {
+        var opt = document.createElement('option');
+        opt.value = cb.value;
+        opt.textContent = THINKING_LEVEL_LABELS[cb.value] || cb.value;
+        datalist.appendChild(opt);
+    });
+}
 

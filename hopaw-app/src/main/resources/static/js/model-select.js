@@ -42,10 +42,14 @@ function loadAiModel(providerId,modelSelectId,defaultModel){
                 const option = document.createElement('option');
                 option.value = model.id;
                 option.text = model.modelAlias || model.modelName;
+                option.dataset.supportThinking = model.supportThinking ? 'true' : 'false';
+                option.dataset.supportedThinkingLevels = model.supportedThinkingLevels || '';
                 if (model.id === parseInt(defaultModel)) {
                     option.selected = true;
                 }
                 modelSelect.appendChild(option);
             });
+            // 触发模型选择变更，联动约束思考字段
+            modelSelect.dispatchEvent(new Event('change'));
         });
 }

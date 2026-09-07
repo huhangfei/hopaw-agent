@@ -18,5 +18,7 @@ public interface AiModelMapper {
 
     int update(AiModel aiModel);
 
+    int updateTestResult(@Param("id") Long id, @Param("capabilities") String capabilities, @Param("verified") Boolean verified);
+
     int deleteById(@Param("id") Long id);
 }

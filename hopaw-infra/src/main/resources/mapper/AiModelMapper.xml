@@ -11,10 +11,13 @@
         <result property="verified" column="verified"/>
         <result property="createTime" column="create_time"/>
         <result property="extParams" column="ext_params"/>
+        <result property="supportThinking" column="support_thinking"/>
+        <result property="supportedThinkingLevels" column="supported_thinking_levels"/>
     </resultMap>
 
     <sql id="allColumns">
-        id, provider_id, model_name, model_alias, capabilities, verified, create_time, ext_params
+        id, provider_id, model_name, model_alias, capabilities, verified, create_time, ext_params,
+        support_thinking, supported_thinking_levels
     </sql>
 
     <select id="findAll" resultMap="AiModelResultMap">
@@ -37,8 +40,10 @@
     </select>
 
     <insert id="insert" parameterType="com.agent.hopaw.infra.model.entity.AiModel">
-        INSERT INTO ai_models (provider_id, model_name, model_alias, max_context_tokens, capabilities, verified, ext_params, create_time)
-        VALUES (#{providerId}, #{modelName}, #{modelAlias}, #{maxContextTokens}, #{capabilities}, #{verified}, #{extParams}, datetime('now','localtime'))
+        INSERT INTO ai_models (provider_id, model_name, model_alias, max_context_tokens, capabilities, verified, ext_params,
+                               support_thinking, supported_thinking_levels, create_time)
+        VALUES (#{providerId}, #{modelName}, #{modelAlias}, #{maxContextTokens}, #{capabilities}, #{verified}, #{extParams},
+                #{supportThinking}, #{supportedThinkingLevels}, datetime('now','localtime'))
         <selectKey resultType="long" keyProperty="id" order="AFTER">
             SELECT last_insert_rowid()
         </selectKey>
@@ -52,7 +57,16 @@
             max_context_tokens = #{maxContextTokens},
             capabilities = #{capabilities},
             verified = #{verified},
-            ext_params = #{extParams}
+            ext_params = #{extParams},
+            support_thinking = #{supportThinking},
+            supported_thinking_levels = #{supportedThinkingLevels}
+        WHERE id = #{id}
+    </update>
+
+    <update id="updateTestResult">
+        UPDATE ai_models
+        SET capabilities = #{capabilities},
+            verified = #{verified}
         WHERE id = #{id}
     </update>
 

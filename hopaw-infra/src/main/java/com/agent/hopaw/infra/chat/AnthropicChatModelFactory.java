@@ -44,6 +44,8 @@ public class AnthropicChatModelFactory extends BaseChatModelFactory {
         if(enableThinking==null){
             enableThinking=super.getEnableThinking(aiModel);
         }
+        // 模型级硬约束：supportThinking=false 时强制关闭思考
+        enableThinking = super.constrainEnableThinking(aiModel, enableThinking);
         if (enableThinking) {
             builder.thinkingType("enabled").thinkingBudgetTokens(super.getThinkingBudgetTokens(aiModel));
         }
@@ -83,6 +85,8 @@ public class AnthropicChatModelFactory extends BaseChatModelFactory {
         if(enableThinking==null){
             enableThinking=super.getEnableThinking(aiModel);
         }
+        // 模型级硬约束：supportThinking=false 时强制关闭思考
+        enableThinking = super.constrainEnableThinking(aiModel, enableThinking);
         if (enableThinking) {
             builder.thinkingType("enabled").thinkingBudgetTokens(super.getThinkingBudgetTokens(aiModel));
         }

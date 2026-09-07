@@ -57,6 +57,76 @@ function closeAndRemoveModal(modalEl) {
     }
 }
 
+// ==================== Agent Model Thinking Constraint ====================
+
+var AGENT_THINKING_LEVEL_NAMES = {
+    none: '无', minimal: '极轻', low: '低', medium: '中', high: '高', xhigh: '极高', max: '最大'
+};
+
+function onAgentModelSelectChange(mode) {
+    var modelSelectId = mode === 'add' ? 'addModelSelectFragment' : 'editModelSelectFragment';
+    var modelSelect = document.getElementById(modelSelectId);
+    if (!modelSelect || !modelSelect.value) return;
+
+    var selectedOption = modelSelect.options[modelSelect.selectedIndex];
+    var supportThinking = selectedOption.dataset.supportThinking === 'true';
+    var supportedLevels = selectedOption.dataset.supportedThinkingLevels || '';
+
+    // 启用思考开关
+    var checkboxId = mode === 'add' ? 'addEnableThinkingFragment' : 'editEnableThinkingFragment';
+    var hiddenInput = document.getElementById(checkboxId);
+    var checkbox = hiddenInput ? hiddenInput.parentElement.querySelector('input[type="checkbox"]') : null;
+    if (hiddenInput) {
+        if (!supportThinking) {
+            hiddenInput.value = 'false';
+            if (checkbox) checkbox.checked = false;
+            if (checkbox) checkbox.disabled = true;
+        } else {
+            hiddenInput.value = 'true';
+            if (checkbox) checkbox.checked = true;
+            if (checkbox) checkbox.disabled = false;
+        }
+    }
+
+    // 思考强度下拉
+    var selectId = mode === 'add' ? 'addReasoningEffortFragment' : 'editReasoningEffortFragment';
+    var effortSelect = document.getElementById(selectId);
+    if (effortSelect) {
+        effortSelect.innerHTML = '';
+        if (!supportThinking) {
+            effortSelect.disabled = true;
+            var opt = document.createElement('option');
+            opt.value = '';
+            opt.textContent = '模型不支持思考';
+            effortSelect.appendChild(opt);
+        } else {
+            effortSelect.disabled = false;
+            var levels = supportedLevels ? supportedLevels.split(',') : [];
+            if (levels.length === 0) {
+                // 无限制，填充全部等级
+                levels = ['none', 'minimal', 'low', 'medium', 'high', 'xhigh', 'max'];
+            }
+            var defaultSet = false;
+            levels.forEach(function(level) {
+                level = level.trim();
+                if (!level) return;
+                var opt = document.createElement('option');
+                opt.value = level;
+                opt.textContent = level + '（' + (AGENT_THINKING_LEVEL_NAMES[level] || level) + '）';
+                if (!defaultSet && level === 'high') {
+                    opt.selected = true;
+                    defaultSet = true;
+                }
+                effortSelect.appendChild(opt);
+            });
+            // 如果 high 不在列表中，默认选第一个
+            if (!defaultSet && effortSelect.options.length > 0) {
+                effortSelect.options[0].selected = true;
+            }
+        }
+    }
+}
+
 function selectAllTools(containerSelector) {
     document.querySelectorAll(containerSelector + ' input[type="checkbox"]').forEach(function(cb) {
         cb.checked = true;

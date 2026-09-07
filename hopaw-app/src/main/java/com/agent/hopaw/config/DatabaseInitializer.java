@@ -215,6 +215,9 @@ public class DatabaseInitializer implements CommandLineRunner {
             ensureColumn(stmt, "ai_models", "max_context_tokens", "INTEGER NOT NULL DEFAULT 0");
             // 旧数据回填：别名默认取模型名称
             stmt.execute("UPDATE ai_models SET model_alias = model_name WHERE model_alias IS NULL OR model_alias = ''");
+            // 兼容旧库：ai_models 增加思考能力支持字段
+            ensureColumn(stmt, "ai_models", "support_thinking", "INTEGER DEFAULT 0");
+            ensureColumn(stmt, "ai_models", "supported_thinking_levels", "TEXT DEFAULT ''");
 
             stmt.execute("CREATE TABLE IF NOT EXISTS token_usage (" +
                     "id INTEGER PRIMARY KEY AUTOINCREMENT, " +

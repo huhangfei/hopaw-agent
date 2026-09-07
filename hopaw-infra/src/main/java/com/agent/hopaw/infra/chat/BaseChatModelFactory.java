@@ -41,9 +41,32 @@ public abstract class BaseChatModelFactory implements ChatModelFactory {
         return val != null ? (Boolean) val : true;
     }
 
+    /**
+     * 获取思考努力程度。
+     * 约束逻辑：若模型配置了 supportedThinkingLevels 且非空，则检查当前值是否在支持列表中，
+     * 不在列表中时回退到列表中的第一个值；未配置 supportedThinkingLevels 时不限制。
+     */
     public String getReasoningEffort(AiModelVO aiModelVO) {
         Object val = getExtParams(aiModelVO, "reasoningEffort");
-        return val != null ? (String) val : "high";
+        String effort = val != null ? (String) val : "high";
+
+        // 模型级约束：检查 reasoningEffort 是否在支持的等级列表中
+        String supportedLevels = aiModelVO.getSupportedThinkingLevels();
+        if (supportedLevels != null && !supportedLevels.isEmpty()) {
+            String[] levels = supportedLevels.split(",");
+            boolean found = false;
+            for (String level : levels) {
+                if (level.trim().equals(effort)) {
+                    found = true;
+                    break;
+                }
+            }
+            if (!found && levels.length > 0) {
+                // 回退到支持列表中的第一个等级
+                effort = levels[0].trim();
+            }
+        }
+        return effort;
     }
 
     public Double getTemperature(AiModelVO aiModelVO) {
@@ -103,11 +126,27 @@ public abstract class BaseChatModelFactory implements ChatModelFactory {
     }
 
     /**
-     * 获取是否启用思考模式（模型级 extParams 优先，缺省回退 provider 级，均未配置时默认启用）
+     * 获取是否启用思考模式。
+     * 约束逻辑：若模型 supportThinking=false，则强制返回 false，忽略 extParams 和调用方参数。
      */
     public Boolean getEnableThinking(AiModelVO aiModelVO) {
+        // 模型级硬约束：不支持思考则直接关闭
+        if (aiModelVO.getSupportThinking() != null && !aiModelVO.getSupportThinking()) {
+            return false;
+        }
         Object val = getExtParams(aiModelVO, "enableThinking");
         return val != null ? (Boolean) val : true;
+    }
+
+    /**
+     * 强制应用模型思考能力约束：若模型 supportThinking=false，将 enableThinking 强制置为 false。
+     * 供子类在 resolve 参数后调用，确保无论调用方传何值都遵守模型级约束。
+     */
+    public Boolean constrainEnableThinking(AiModelVO aiModelVO, Boolean enableThinking) {
+        if (aiModelVO.getSupportThinking() != null && !aiModelVO.getSupportThinking()) {
+            return false;
+        }
+        return enableThinking;
     }
 
     /**

@@ -65,7 +65,8 @@ public class AiModelService implements IAiModelService {
             throw new IllegalArgumentException("模型不存在: " + id);
         }
         ModelCapabilityTestResult result = testAndSetCapabilities(aiModel);
-        aiModelMapper.update(aiModel);
+        // 仅更新 capabilities 和 verified，避免其他字段为 null 触发约束
+        aiModelMapper.updateTestResult(id, aiModel.getCapabilities(), aiModel.getVerified());
         return result;
     }
 

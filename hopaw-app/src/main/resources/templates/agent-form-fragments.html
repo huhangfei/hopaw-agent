@@ -24,7 +24,8 @@
                             <select id="addProviderSelectFragment" class="model-select" required>
                                 <option value="">选择提供商</option>
                             </select>
-                            <select name="aiModelId" id="addModelSelectFragment" class="model-select" required>
+                            <select name="aiModelId" id="addModelSelectFragment" class="model-select" required
+                                    onchange="onAgentModelSelectChange('add')">
                                 <option value="">先选提供商</option>
                             </select>
                         </div>
@@ -180,7 +181,8 @@
                             <select id="editProviderSelectFragment" class="model-select" required>
                                 <option value="">选择提供商</option>
                             </select>
-                            <select name="aiModelId" id="editModelSelectFragment" class="model-select" required>
+                            <select name="aiModelId" id="editModelSelectFragment" class="model-select" required
+                                    onchange="onAgentModelSelectChange('edit')">
                                 <option value="">先选提供商</option>
                             </select>
                         </div>

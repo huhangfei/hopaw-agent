@@ -36,6 +36,8 @@ public class OpenAiChatModelFactory extends  BaseChatModelFactory {
         if(reasoningEffort==null){
             reasoningEffort=super.getReasoningEffort(aiModel);
         }
+        // 模型级硬约束：supportThinking=false 时强制关闭思考
+        enableThinking = super.constrainEnableThinking(aiModel, enableThinking);
         Boolean finalEnableThinking = enableThinking;
         extraParams.put("thinking",new HashMap(1){{
             put("type", finalEnableThinking ? "enabled" : "disabled");
@@ -87,6 +89,8 @@ public class OpenAiChatModelFactory extends  BaseChatModelFactory {
         if(reasoningEffort==null){
             reasoningEffort=super.getReasoningEffort(aiModel);
         }
+        // 模型级硬约束：supportThinking=false 时强制关闭思考
+        enableThinking = super.constrainEnableThinking(aiModel, enableThinking);
         Boolean finalEnableThinking = enableThinking;
         extraParams.put("thinking",new HashMap(1){{
             put("type", finalEnableThinking ? "enabled" : "disabled");
