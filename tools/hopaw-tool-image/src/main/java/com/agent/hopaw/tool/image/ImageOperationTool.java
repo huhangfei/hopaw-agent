@@ -3,6 +3,9 @@ package com.agent.hopaw.tool.image;
 import com.agent.hopaw.infra.tool.ToolSecurityLevel;
 import dev.langchain4j.agent.tool.P;
 import dev.langchain4j.agent.tool.Tool;
+import dev.langchain4j.data.message.Content;
+import dev.langchain4j.data.message.ImageContent;
+import dev.langchain4j.data.message.TextContent;
 import com.agent.hopaw.infra.tool.AgentTool;
 import org.apache.batik.transcoder.TranscoderInput;
 import org.apache.batik.transcoder.TranscoderOutput;
@@ -31,6 +34,7 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.Base64;
 import java.util.Iterator;
+import java.util.List;
 import java.util.Locale;
 
 /**
@@ -42,45 +46,44 @@ public class ImageOperationTool implements AgentTool {
     private static final Logger log = LoggerFactory.getLogger(ImageOperationTool.class);
 
     @ToolSecurityLevel(ToolSecurityLevel.Level.SAFE)
-    @Tool(value = {"读取图片", "读取指定路径的图片文件并返回base64编码，可通过质量参数压缩图片以减少数据量", "图片读取"})
-    public String readImage(
+    @Tool(value = {"读取图片", "读取指定路径的图片文件并以图片内容返回给大模型，可通过质量参数压缩图片以减少数据量", "图片读取"})
+    public List<Content> readImage(
             @P(description = "图片文件路径，支持 jpg/jpeg/png/bmp/gif") String filePath,
-            @P(description = "图片压缩质量(0.1-1.0)，传入时按JPEG重新编码压缩，值越小体积越小；为空则直接返回原始文件的base64", required = false) Double quality) {
+            @P(description = "图片压缩质量(0.1-1.0)，传入时按JPEG重新编码压缩，值越小体积越小；为空则返回原始图片", required = false) Double quality) {
         try {
             Path path = Paths.get(filePath).toAbsolutePath().normalize();
             if (!Files.exists(path)) {
-                return "错误: 文件不存在: " + filePath;
+                return errorResult("文件不存在: " + filePath);
             }
             if (!Files.isRegularFile(path)) {
-                return "错误: 路径不是文件: " + filePath;
+                return errorResult("路径不是文件: " + filePath);
             }
 
             long originalSize = Files.size(path);
             String mime = detectImageMime(path);
             if (mime == null) {
-                return "错误: 不是支持的图片文件(支持 jpg/jpeg/png/bmp/gif): " + filePath;
+                return errorResult("不是支持的图片文件(支持 jpg/jpeg/png/bmp/gif): " + filePath);
             }
 
-            // 不压缩：直接返回原始文件内容的 base64
+            // 不压缩：图片内容直接作为 ImageContent 返回给大模型
             if (quality == null) {
                 byte[] bytes = Files.readAllBytes(path);
                 StringBuilder sb = new StringBuilder();
-                sb.append("图片读取成功\n");
+                sb.append("图片读取成功，图片已作为图片内容提供\n");
                 sb.append("格式: ").append(mime).append("\n");
                 BufferedImage probe = ImageIO.read(path.toFile());
                 if (probe != null) {
                     sb.append("尺寸: ").append(probe.getWidth()).append("x").append(probe.getHeight()).append("\n");
                 }
-                sb.append("原始大小: ").append(formatFileSize(originalSize)).append("\n");
-                sb.append("base64:\n").append(Base64.getEncoder().encodeToString(bytes));
-                return sb.toString();
+                sb.append("原始大小: ").append(formatFileSize(originalSize));
+                return imageResult(sb.toString(), bytes, mime);
             }
 
             // 压缩：按质量参数重新编码为 JPEG
             float q = (float) Math.max(0.1, Math.min(1.0, quality));
             BufferedImage img = ImageIO.read(path.toFile());
             if (img == null) {
-                return "错误: 无法解码图片(格式可能不受支持): " + filePath;
+                return errorResult("无法解码图片(格式可能不受支持): " + filePath);
             }
             byte[] compressed = encodeJpeg(flattenIfAlpha(img), q);
 
@@ -88,27 +91,42 @@ public class ImageOperationTool implements AgentTool {
             if (compressed.length >= originalSize) {
                 byte[] bytes = Files.readAllBytes(path);
                 StringBuilder sb = new StringBuilder();
-                sb.append("图片读取成功(质量 ").append(q).append(" 压缩未减小体积，已返回原始数据)\n");
+                sb.append("图片读取成功(质量 ").append(q).append(" 压缩未减小体积，已返回原始数据)，图片已作为图片内容提供\n");
                 sb.append("格式: ").append(mime).append("\n");
                 sb.append("尺寸: ").append(img.getWidth()).append("x").append(img.getHeight()).append("\n");
-                sb.append("大小: ").append(formatFileSize(originalSize)).append("\n");
-                sb.append("base64:\n").append(Base64.getEncoder().encodeToString(bytes));
-                return sb.toString();
+                sb.append("大小: ").append(formatFileSize(originalSize));
+                return imageResult(sb.toString(), bytes, mime);
             }
 
             StringBuilder sb = new StringBuilder();
-            sb.append("图片读取成功\n");
+            sb.append("图片读取成功，图片已作为图片内容提供\n");
             sb.append("格式: image/jpeg\n");
             sb.append("尺寸: ").append(img.getWidth()).append("x").append(img.getHeight()).append("\n");
             sb.append("原始大小: ").append(formatFileSize(originalSize)).append("\n");
             sb.append("压缩后大小: ").append(formatFileSize(compressed.length))
-                    .append("(质量 ").append(q).append(")\n");
-            sb.append("base64:\n").append(Base64.getEncoder().encodeToString(compressed));
-            return sb.toString();
+                    .append("(质量 ").append(q).append(")");
+            return imageResult(sb.toString(), compressed, "image/jpeg");
         } catch (Exception e) {
             log.error("读取图片失败: {}", filePath, e);
-            return "错误: 读取图片失败 - " + e.getMessage();
+            return errorResult("读取图片失败 - " + e.getMessage());
         }
+    }
+
+    /**
+     * 构建携带图片内容的工具返回值：文本摘要 + ImageContent。
+     * 返回 List&lt;Content&gt; 而非 ToolExecutionResult——后者会被 DefaultToolExecutor 整体 JSON 序列化为文本，
+     * 模型无法收到图片；List&lt;Content&gt; 由框架直接转为多模态工具结果消息。
+     */
+    private List<Content> imageResult(String summary, byte[] imageBytes, String mimeType) {
+        String base64 = Base64.getEncoder().encodeToString(imageBytes);
+        return List.of(new TextContent(summary), ImageContent.from(base64, mimeType));
+    }
+
+    /**
+     * 构建错误结果：单条文本，模型可直接读取错误信息
+     */
+    private List<Content> errorResult(String message) {
+        return List.of(new TextContent("错误: " + message));
     }
 
     @ToolSecurityLevel(ToolSecurityLevel.Level.PARAM_REQUIRE_APPROVAL)

@@ -4,6 +4,7 @@ import com.agent.hopaw.infra.constant.AgentExecutorBizTypeEnum;
 import com.agent.hopaw.infra.constant.AiModelCallSourceEnum;
 import com.agent.hopaw.infra.constant.ChatMemoryStatusEnum;
 import com.agent.hopaw.infra.constant.UserMemoryTypeEnum;
+import com.agent.hopaw.infra.util.MultimodalMessageUtils;
 import com.agent.hopaw.infra.mapper.ChatMemoryMapper;
 import com.agent.hopaw.infra.mapper.ChatMemoryObsoleteMapper;
 import com.agent.hopaw.infra.mapper.ChatMemoryProcessedCursorMapper;
@@ -255,7 +256,8 @@ public class LongTermMemoryTaskHandler implements TaskHandler {
                 ToolExecutionResultMessage toolExecutionResultMessage = (ToolExecutionResultMessage) message;
                 String toolName = toolExecutionResultMessage.toolName();
                 String toolId = toolExecutionResultMessage.id();
-                String toolText = toolExecutionResultMessage.text();
+                // 多模态结果（含图片等）调用 text() 会抛异常，使用安全提取
+                String toolText = MultimodalMessageUtils.toolResultText(toolExecutionResultMessage);
                 Boolean error = toolExecutionResultMessage.isError();
 
                 conversationBuilder.append("Ai tool call:").append("\n");

@@ -4,6 +4,7 @@ import com.agent.hopaw.infra.constant.AiModelCallSourceEnum;
 import com.agent.hopaw.infra.event.TokenUsageEvent;
 import com.agent.hopaw.infra.model.entity.RequestResponseLog;
 import com.agent.hopaw.infra.service.IRequestResponseLogService;
+import com.agent.hopaw.infra.util.MultimodalMessageUtils;
 import com.alibaba.fastjson2.JSONArray;
 import com.alibaba.fastjson2.JSONObject;
 import dev.langchain4j.agent.tool.ToolExecutionRequest;
@@ -139,7 +140,8 @@ public class LangChain4jChatModelListener implements ChatModelListener {
                     logger.debug("系统消息 [System]: {}", ((SystemMessage) message).text());
                 } else if (message instanceof ToolExecutionResultMessage) {
                     ToolExecutionResultMessage toolExecutionResultMessage = (ToolExecutionResultMessage) message;
-                    logger.debug("工具执行结果 [Tool][{}][{}]: {}",toolExecutionResultMessage.toolName(),toolExecutionResultMessage.id(), toolExecutionResultMessage.text());
+                    // 多模态结果（含图片等）调用 text() 会抛异常，使用安全提取
+                    logger.debug("工具执行结果 [Tool][{}][{}]: {}",toolExecutionResultMessage.toolName(),toolExecutionResultMessage.id(), MultimodalMessageUtils.toolResultText(toolExecutionResultMessage));
                 } else {
                     logger.debug("其他消息 [{}]: {}", message.getClass().getSimpleName(), message);
                 }

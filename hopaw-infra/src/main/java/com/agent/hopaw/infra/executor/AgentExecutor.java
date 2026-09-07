@@ -7,6 +7,7 @@ import com.agent.hopaw.infra.event.AgentMessageEvent;
 import com.agent.hopaw.infra.event.ChatHistoryEvent;
 import com.agent.hopaw.infra.exception.ToolCallRejectedException;
 import com.agent.hopaw.infra.memory.IChatMemoryService;
+import com.agent.hopaw.infra.memory.MultimodalTokenCountEstimator;
 import com.agent.hopaw.infra.model.entity.*;
 import com.agent.hopaw.infra.model.dto.*;
 import com.agent.hopaw.infra.service.AiModelService;
@@ -17,6 +18,7 @@ import com.agent.hopaw.infra.tool.AgentTool;
 import com.agent.hopaw.infra.tool.ToolSecurityLevel;
 import com.agent.hopaw.infra.util.InvocationParametersWrapper;
 import com.agent.hopaw.infra.util.Md5Util;
+import com.agent.hopaw.infra.util.MultimodalMessageUtils;
 import com.agent.hopaw.infra.util.PendingResponse;
 import com.agent.hopaw.infra.util.UuidUtil;
 import com.alibaba.fastjson2.JSON;
@@ -389,7 +391,7 @@ public class AgentExecutor implements IAgentExecutor {
             }
             ChatRequestParameters chatRequestParameters =builder.build();
 
-            TokenStream tokenStream = chatAgentAssistant.streamingChat(contents, chatRequestParameters, invocationParametersWrapper.getParameters())
+            TokenStream tokenStream = chatAgentAssistant.streamingChat(contents,chatRequestParameters ,invocationParametersWrapper.getParameters())
                     .onError(e -> {
                         logger.error("Streaming chat error: {}", e.getMessage(), e);
                         agentMessageHandler.onErrorHandler(e);
@@ -506,8 +508,8 @@ public class AgentExecutor implements IAgentExecutor {
                             toolCancelInvocations.remove(toolExecutionRequest.id());
                         }
                         toolNameByCallIdMap.remove(toolExecutionRequest.id());
-                        //工具执行完成
-                        agentMessageHandler.toolCallHandler(AiToolCallMessageInfo.STATUS_EXECUTED, toolExecutionRequest.id(), toolExecutionRequest.name(), toolExecutionRequest.arguments(), toolExecution.result());
+                        //工具执行完成：多模态结果（含图片等）调用 result() 会抛异常，使用安全提取
+                        agentMessageHandler.toolCallHandler(AiToolCallMessageInfo.STATUS_EXECUTED, toolExecutionRequest.id(), toolExecutionRequest.name(), toolExecutionRequest.arguments(), MultimodalMessageUtils.toolResultText(toolExecution));
                     });
             tokenStream.start();
             // 可重置看门狗等待：活动会重置截止时间，仅在持续无活动超过超时时间时结束
@@ -608,10 +610,11 @@ public class AgentExecutor implements IAgentExecutor {
 
     private ChatAgentAssistant createChatAgentAssistant() {
         // 窗口记忆按 Token 限制：超预算时从最早消息开始淘汰，淘汰数据由存储层转入长时记忆整理
+        // 使用多模态估算器：OpenAiTokenCountEstimator 遇到图片消息会抛 Unknown content type 异常
         TokenWindowChatMemory.Builder memoryBuilder = TokenWindowChatMemory.builder()
                 .id(memoryId)
                 .maxTokens(agentExecutorParams.getMaxMemoryTokens() != null ? agentExecutorParams.getMaxMemoryTokens() : Agent.DEFAULT_MAX_MEMORY_TOKENS,
-                        new OpenAiTokenCountEstimator("gpt-4o"))
+                        new MultimodalTokenCountEstimator("gpt-4o"))
                 .chatMemoryStore(memoryStore != null ? memoryStore : new InMemoryChatMemoryStore());
         var aiBuilder = AiServices
                 .builder(ChatAgentAssistant.class)
@@ -1139,8 +1142,7 @@ public class AgentExecutor implements IAgentExecutor {
         String analyze(@dev.langchain4j.service.UserMessage List<Content> contents,
                        ChatRequestParameters chatRequestParameters, InvocationParameters invocationParameters);
 
-        TokenStream streamingChat(@dev.langchain4j.service.UserMessage List<Content> contents,
-                                  ChatRequestParameters requestParameters, // 模型参数
+        TokenStream streamingChat(@dev.langchain4j.service.UserMessage List<Content> contents,ChatRequestParameters requestParameters, // 模型参数
                                   InvocationParameters invocationParameters);
     }
 }

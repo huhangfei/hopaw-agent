@@ -4,6 +4,7 @@ import com.agent.hopaw.infra.constant.ChatMemoryStatusEnum;
 import com.agent.hopaw.infra.mapper.ChatMemoryMapper;
 import com.agent.hopaw.infra.model.dto.ChatMemoryVO;
 import com.agent.hopaw.infra.model.entity.ChatMemory;
+import com.agent.hopaw.infra.util.MultimodalMessageUtils;
 import com.agent.hopaw.infra.model.entity.ChatMemoryId;
 import com.agent.hopaw.infra.service.ISysConfigService;
 import dev.langchain4j.agent.tool.ToolExecutionRequest;
@@ -41,7 +42,8 @@ public class SQLiteChatMemoryStore implements IChatMemoryService {
         if (!(message instanceof ToolExecutionResultMessage toolResult)) {
             return message;
         }
-        String text = toolResult.text();
+        // 多模态结果（含图片等）调用 text() 会抛异常，使用安全提取
+        String text = MultimodalMessageUtils.toolResultText(toolResult);
         if (text == null) {
             return message;
         }
@@ -281,7 +283,8 @@ public class SQLiteChatMemoryStore implements IChatMemoryService {
             } else if (message instanceof ToolExecutionResultMessage toolResult) {
                 vo.setType("toolResult");
                 vo.setToolName(toolResult.toolName());
-                vo.setContent(toolResult.text());
+                // 多模态结果（含图片等）调用 text() 会抛异常，使用安全提取
+                vo.setContent(MultimodalMessageUtils.toolResultText(toolResult));
                 vo.setError(toolResult.isError());
             } else {
                 vo.setType("other");
