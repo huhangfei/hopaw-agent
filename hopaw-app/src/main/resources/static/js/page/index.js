@@ -1940,10 +1940,12 @@ function disableInput() {
     var input = document.getElementById('messageInput');
     var sendBtn = document.getElementById('sendBtn');
     var runningBtn = document.getElementById('runningBtn');
+    var headerTimer = document.getElementById('chatHeaderTimer');
     if (wrapper) wrapper.classList.add('disabled');
     if (input) input.disabled = true;
     if (sendBtn) sendBtn.classList.add('hide');
     if (runningBtn) runningBtn.classList.remove('hide');
+    if (headerTimer) headerTimer.classList.remove('hide');
     startLockCountdown(false);
 }
 
@@ -1952,10 +1954,12 @@ function enableInput() {
     var input = document.getElementById('messageInput');
     var sendBtn = document.getElementById('sendBtn');
     var runningBtn = document.getElementById('runningBtn');
+    var headerTimer = document.getElementById('chatHeaderTimer');
     if (wrapper) wrapper.classList.remove('disabled');
     if (input) input.disabled = false;
     if (sendBtn) sendBtn.classList.remove('hide');
     if (runningBtn) runningBtn.classList.add('hide');
+    if (headerTimer) headerTimer.classList.add('hide');
     stopLockCountdown();
     if (input) input.focus();
 }
@@ -2029,7 +2033,7 @@ function updateLockRemaining() {
 }
 
 /**
- * 渲染已运行时长（第一行）和剩余时间（第二行）到运行中按钮
+ * 渲染已运行时长和剩余超时时间到 chat-header 的运行状态计时器
  */
 function renderLockCountdown() {
     var elapsedEl = document.getElementById('runningElapsed');
@@ -2038,7 +2042,13 @@ function renderLockCountdown() {
     }
     var el = document.getElementById('runningCountdown');
     if (!el) return;
-    el.textContent = lockRemainingSeconds > 0 ? ('超时(' + lockRemainingSeconds + 's)') : '';
+    if (lockRemainingSeconds > 0) {
+        el.textContent = '超时(' + lockRemainingSeconds + 's)';
+        el.style.display = '';
+    } else {
+        el.textContent = '';
+        el.style.display = 'none';
+    }
 }
 
 function selectAgent(selectElement) {

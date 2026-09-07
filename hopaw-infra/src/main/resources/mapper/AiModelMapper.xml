@@ -7,6 +7,7 @@
         <result property="providerId" column="provider_id"/>
         <result property="modelName" column="model_name"/>
         <result property="modelAlias" column="model_alias"/>
+        <result property="maxContextTokens" column="max_context_tokens"/>
         <result property="capabilities" column="capabilities"/>
         <result property="verified" column="verified"/>
         <result property="createTime" column="create_time"/>
@@ -16,7 +17,7 @@
     </resultMap>
 
     <sql id="allColumns">
-        id, provider_id, model_name, model_alias, capabilities, verified, create_time, ext_params,
+        id, provider_id, model_name, model_alias, max_context_tokens, capabilities, verified, create_time, ext_params,
         support_thinking, supported_thinking_levels
     </sql>
 

@@ -267,6 +267,10 @@ function showEditModelModal(id) {
             document.getElementById('modelProviderId').value = model.providerId;
             document.getElementById('modelName').value = model.modelName;
             document.getElementById('modelAlias').value = model.modelAlias || model.modelName;
+            // 回填最大上下文（字节）；存量数据可能为 null 或 0，回退为空由必填校验兜底
+            document.getElementById('modelMaxContextTokens').value =
+                (model.maxContextTokens !== null && model.maxContextTokens !== undefined && model.maxContextTokens > 0)
+                    ? model.maxContextTokens : '';
 
             // 显示模型能力（只读）
             const capNames = {text: '文本', image: '图片', audio: '音频', video: '视频', document: '文档'};

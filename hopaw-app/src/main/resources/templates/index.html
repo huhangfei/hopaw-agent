@@ -33,6 +33,13 @@
                 <span class="chat-header-desc" id="chat-header-desc" th:text="${currentSessionTitle}"></span>
             </div>
             <div class="chat-header-actions">
+                <!-- 运行状态计时器：已运行时长 + 看门狗剩余时间（运行中显示） -->
+                <div class="chat-header-timer" id="chatHeaderTimer"
+                     th:classappend="${agentExecutorState ? '' : 'hide'}">
+                    <span class="chat-header-timer-dot"></span>
+                    <span class="chat-header-timer-text">运行中 <span id="runningElapsed"></span></span>
+                    <span class="chat-header-timer-countdown" id="runningCountdown"></span>
+                </div>
                 <button class="btn-add-header" onclick="createNewSession()" title="新会话">
                     <svg viewBox="0 0 24 24" fill="currentColor" width="14" height="14"><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/></svg>
                     新会话
@@ -191,19 +198,21 @@
                                 </div>
                             </div>
                         </div>
+                        <!-- 发送 / 停止按钮合并到输入框右下角：运行中显示停止按钮，空闲显示发送按钮 -->
+                        <button type="submit" id="sendBtn" class="chat-form-send-button" title="发送"
+                                th:classappend="${agentExecutorState ? 'hide' : ''}">
+                            <svg viewBox="0 0 24 24" fill="currentColor" width="15" height="15">
+                                <path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/>
+                            </svg>
+                        </button>
+                        <button type="button" id="runningBtn" class="chat-form-running-btn" title="停止运行"
+                                th:classappend="${agentExecutorState ? '' : 'hide'}" onclick="stopCurrentSession()">
+                            <svg viewBox="0 0 24 24" fill="currentColor" width="13" height="13">
+                                <rect x="6" y="6" width="12" height="12" rx="2"/>
+                            </svg>
+                        </button>
                     </div>
                 </div>
-                <button type="submit" id="sendBtn" class="chat-form-send-button"
-                        th:classappend="${agentExecutorState  ? 'hide' : ''}">发送
-                </button>
-                <button type="button" id="runningBtn" class="chat-form-running-btn"
-                        th:classappend="${agentExecutorState  ? '' : 'hide'}" onclick="stopCurrentSession()">
-                    <span class="chat-form-running-btn-dot"></span>
-                    <span class="chat-form-running-btn-text">
-                        <span class="chat-form-running-btn-line">运行中 <span id="runningElapsed"></span></span>
-                        <span class="chat-form-running-btn-line chat-form-running-btn-sub" id="runningCountdown"></span>
-                    </span>
-                </button>
             </form>
         </div>
     </main>
