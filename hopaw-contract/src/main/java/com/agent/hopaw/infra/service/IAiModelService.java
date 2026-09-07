@@ -19,8 +19,8 @@ public interface IAiModelService {
     int deleteById(Long id);
     ModelCapabilityTestResult testModel(Long id);
     AiModelVO findAiModelVOById(Long id);
-    ChatModel createChatModel(Long aiModelId, boolean enableThinking, ChatModelListener chatModelListener);
-    StreamingChatModel createStreamingChatModel(Long aiModelId, boolean enableThinking, ChatModelListener chatModelListener);
+    ChatModel createChatModel(Long aiModelId, boolean enableThinking, String reasoningEffort, ChatModelListener chatModelListener);
+    StreamingChatModel createStreamingChatModel(Long aiModelId, boolean enableThinking, String reasoningEffort, ChatModelListener chatModelListener);
     Map<String, ChatModelFactory> getAllFactories();
     String getDefaultAiModelExtParamsJson();
 }

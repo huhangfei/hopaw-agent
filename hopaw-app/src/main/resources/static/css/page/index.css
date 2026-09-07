@@ -40,7 +40,7 @@
 .agent-select-toolbar {
     font-size: 16px;
     font-weight: 500;
-    padding: 4px 28px 4px 10px;
+    padding: 4px 18px 4px 10px;
     min-width: auto;
     max-width: 160px;
     border-radius: 14px;
@@ -275,7 +275,7 @@
     display: flex;
     align-items: center;
     gap: 8px;
-    padding: 7px 10px;
+    padding: 5px 5px;
     border-radius: 6px;
     cursor: pointer;
     transition: background 0.15s;
@@ -355,8 +355,8 @@
 .session-edit-btn {
     display: none;
     flex-shrink: 0;
-    width: 22px;
-    height: 22px;
+    width: 14px;
+    height: 14px;
     padding: 0;
     border: none;
     background: transparent;

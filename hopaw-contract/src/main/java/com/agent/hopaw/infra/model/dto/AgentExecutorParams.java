@@ -23,6 +23,7 @@ public class AgentExecutorParams {
     private Integer maxMemoryTokens;
     private Integer maxToolInvocations;
     private Boolean enableThinking;
+    private String reasoningEffort;
     private Boolean vectorToolSearch;
     private Integer vectorToolSearchMaxResults;
     private Map<String,Object> extParams;
@@ -46,6 +47,11 @@ public class AgentExecutorParams {
      * 任务/项目场景分别传任务名称、项目名称；为空时回退到用户意图分析
      */
     private String sessionTitle;
+
+    /**
+     * 模型创造力参数
+     */
+    private Double temperature;
 
     public String getSessionTitle() {
         return sessionTitle;
@@ -180,5 +186,21 @@ public class AgentExecutorParams {
 
     public void setBizType(AgentExecutorBizTypeEnum bizType) {
         this.bizType = bizType;
+    }
+
+    public Double getTemperature() {
+        return temperature;
+    }
+
+    public void setTemperature(Double temperature) {
+        this.temperature = temperature;
+    }
+
+    public String getReasoningEffort() {
+        return reasoningEffort;
+    }
+
+    public void setReasoningEffort(String reasoningEffort) {
+        this.reasoningEffort = reasoningEffort;
     }
 }

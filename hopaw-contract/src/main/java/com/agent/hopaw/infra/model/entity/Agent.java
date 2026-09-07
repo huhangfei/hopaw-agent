@@ -15,6 +15,14 @@ public class Agent {
     private Integer maxToolInvocations;
     private Long aiModelId;
     private Boolean enableThinking;
+    /**
+     * 模型创造力参数
+     */
+    private Double temperature;
+    /**
+     * 思考努力程度参数
+     */
+    private String reasoningEffort;
     private Boolean vectorToolSearch;
     private Integer vectorToolSearchMaxResults;
     private Boolean enableAllTools;
@@ -124,6 +132,22 @@ public class Agent {
 
     public void setEnableThinking(Boolean enableThinking) {
         this.enableThinking = enableThinking;
+    }
+
+    public Double getTemperature() {
+        return temperature;
+    }
+
+    public void setTemperature(Double temperature) {
+        this.temperature = temperature;
+    }
+
+    public String getReasoningEffort() {
+        return reasoningEffort;
+    }
+
+    public void setReasoningEffort(String reasoningEffort) {
+        this.reasoningEffort = reasoningEffort;
     }
 
     public Boolean getVectorToolSearch() {

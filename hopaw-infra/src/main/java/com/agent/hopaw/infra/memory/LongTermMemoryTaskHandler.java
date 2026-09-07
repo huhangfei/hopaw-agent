@@ -515,7 +515,7 @@ public class LongTermMemoryTaskHandler implements TaskHandler {
                     .setUserId(userId)
                     .setEventPublisher(eventPublisher);
 
-            ChatModel chatModel = aiModelService.createChatModel(modelId, true, langChain4JChatModelListener);
+            ChatModel chatModel = aiModelService.createChatModel(modelId, true,null, langChain4JChatModelListener);
 
             String systemMessage = buildSystemMessage();
             if (!StringUtils.hasLength(systemMessage)) {

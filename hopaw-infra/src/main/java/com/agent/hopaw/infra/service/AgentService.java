@@ -79,6 +79,9 @@ public class AgentService implements IAgentService {
             if (agent.getEnableThinking() != null) {
                 existing.setEnableThinking(agent.getEnableThinking());
             }
+            existing.setTemperature(agent.getTemperature());
+            existing.setReasoningEffort(agent.getReasoningEffort() != null && !agent.getReasoningEffort().isEmpty()
+                    ? agent.getReasoningEffort() : existing.getReasoningEffort());
             existing.setVectorToolSearch(agent.getVectorToolSearch() != null ? agent.getVectorToolSearch() : true);
             existing.setVectorToolSearchMaxResults(agent.getVectorToolSearchMaxResults() != null ? agent.getVectorToolSearchMaxResults() : 5);
             existing.setEnableAllTools(agent.getEnableAllTools());

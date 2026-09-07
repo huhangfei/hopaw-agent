@@ -34,30 +34,31 @@ public class AiModelService implements IAiModelService {
             factories.put(factory.getProviderName().toLowerCase(), factory);
         }
     }
+    @Override
     public AiModel findById(Long id) {
         AiModel aiModel = aiModelMapper.findById(id);
         return aiModel;
     }
 
-
+    @Override
     public List<AiModel> findByProviderId(Long providerId) {
         return aiModelMapper.findByProviderId(providerId);
     }
-
+    @Override
     public int insert(AiModel aiModel) {
         testAndSetCapabilities(aiModel);
         return aiModelMapper.insert(aiModel);
     }
-
+    @Override
     public int update(AiModel aiModel) {
         testAndSetCapabilities(aiModel);
         return aiModelMapper.update(aiModel);
     }
-
+    @Override
     public int deleteById(Long id) {
         return aiModelMapper.deleteById(id);
     }
-
+    @Override
     public ModelCapabilityTestResult testModel(Long id) {
         AiModel aiModel = aiModelMapper.findById(id);
         if (aiModel == null) {
@@ -88,7 +89,7 @@ public class AiModelService implements IAiModelService {
             aiModelVO.setAiModelProvider(provider);
             ChatModelFactory factory = factories.get(aiModelVO.getAiModelProvider().getSdkName().toLowerCase());
             ChatModelListener chatModelListener = chatModelListenerProvider.getChatModelListener(AiModelCallSourceEnum.ModelTest, null, null, null, null);
-            ChatModel chatModel = factory.createChatModel(aiModelVO, null, chatModelListener);
+            ChatModel chatModel = factory.createChatModel(aiModelVO, false,null, chatModelListener);
             ModelCapabilityTestResult result = factory.testModelCapability(chatModel);
 
             log.info("模型能力测试结果 [{}]: {}", aiModel.getModelName(), result.getMessage());
@@ -108,7 +109,7 @@ public class AiModelService implements IAiModelService {
             return new ModelCapabilityTestResult(false, java.util.Collections.emptyList(), "测试异常：" + e.getMessage());
         }
     }
-
+    @Override
     public AiModelVO findAiModelVOById(Long id) {
         AiModel aiModel = aiModelMapper.findById(id);
         if (aiModel == null) {
@@ -125,24 +126,27 @@ public class AiModelService implements IAiModelService {
         return aiModelVO;
     }
 
-    public ChatModel createChatModel(Long aiModelId,boolean enableThinking, ChatModelListener chatModelListener) {
+    @Override
+    public ChatModel createChatModel(Long aiModelId,boolean enableThinking, String reasoningEffort, ChatModelListener chatModelListener) {
         AiModelVO aiModelVO = findAiModelVOById(aiModelId);
         ChatModelFactory chatModelFactory = factories.get(aiModelVO.getAiModelProvider().getSdkName().toLowerCase());
-        return chatModelFactory.createChatModel(aiModelVO, enableThinking, chatModelListener);
+        return chatModelFactory.createChatModel(aiModelVO, enableThinking, reasoningEffort, chatModelListener);
     }
 
-    public StreamingChatModel createStreamingChatModel(Long aiModelId,boolean enableThinking, ChatModelListener chatModelListener) {
+    @Override
+    public StreamingChatModel createStreamingChatModel(Long aiModelId,boolean enableThinking, String reasoningEffort, ChatModelListener chatModelListener) {
         AiModelVO aiModelVO = findAiModelVOById(aiModelId);
         ChatModelFactory chatModelFactory = factories.get(aiModelVO.getAiModelProvider().getSdkName().toLowerCase());
-        return chatModelFactory.createStreamingChatModel(aiModelVO, enableThinking, chatModelListener);
+        return chatModelFactory.createStreamingChatModel(aiModelVO, enableThinking, reasoningEffort, chatModelListener);
     }
 
+    @Override
     public Map<String, ChatModelFactory> getAllFactories() {
         return new HashMap<>(factories);
     }
 
 
-
+    @Override
     public String getDefaultAiModelExtParamsJson(){
         AiModelExtParams aiModelExtParams = new AiModelExtParams("reasoning_content", true, true, "high", 0.5, 30L, false, false,false);
         aiModelExtParams.setEnableThinking(true);

@@ -177,7 +177,7 @@ public class ProjectMemoryService implements IProjectMemoryService {
             LangChain4jChatModelListener listener = new LangChain4jChatModelListener(AiModelCallSourceEnum.MemoryOrganize)
                     .setUserId(null)
                     .setEventPublisher(eventPublisher);
-            ChatModel chatModel = aiModelService.createChatModel(modelId, true, listener);
+            ChatModel chatModel = aiModelService.createChatModel(modelId, true, null, listener);
             StringBuilder prompt = new StringBuilder();
             prompt.append("你是").append(memoryTitle).append("的质量校验员。请校验以下【待校验记忆】是否为有效的项目/任务记忆内容。\n");
             prompt.append("校验标准（全部满足才算通过）：\n");
@@ -214,7 +214,7 @@ public class ProjectMemoryService implements IProjectMemoryService {
             LangChain4jChatModelListener listener = new LangChain4jChatModelListener(AiModelCallSourceEnum.MemoryOrganize)
                     .setUserId(userId)
                     .setEventPublisher(eventPublisher);
-            ChatModel chatModel = aiModelService.createChatModel(modelId, true, listener);
+            ChatModel chatModel = aiModelService.createChatModel(modelId, true, null, listener);
             StringBuilder prompt = new StringBuilder();
             prompt.append("你是").append(memoryTitle).append("的管理助手，请将【现有记忆】与【新会话纪要】合并整理为一份可供后续执行参考的记忆。\n");
             prompt.append("要求：\n");

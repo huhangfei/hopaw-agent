@@ -1,6 +1,6 @@
 /* ========== Form Styles ========== */
 .form-group {
-    margin-bottom: 10px;
+    margin-bottom: 6px;
 }
 
 .form-group label {
@@ -21,10 +21,10 @@
 .form-group textarea,
 .form-group select {
     width: 100%;
-    padding: 10px 14px;
+    padding: 8px 10px;
     border: 1px solid #d1d5db;
     border-radius: 8px;
-    font-size: 14px;
+    font-size: 12px;
     color: #1f2937;
     background-color: #fff;
     outline: none;
@@ -49,7 +49,7 @@
 
 .form-group textarea {
     resize: vertical;
-    min-height: 80px;
+    min-height: 60px;
     font-family: inherit;
     background-image: none;
     padding-right: 14px;
@@ -251,6 +251,78 @@
     min-width: 0;
 }
 
+/* 内联下拉（思考努力程度）：label 在左，select 占满剩余宽度 */
+.form-group.form-inline > select {
+    flex: 1;
+    min-width: 0;
+}
+
+/* ========== Temperature 滑块 ========== */
+.temp-slider-header {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    margin-bottom: 6px;
+}
+
+.temp-slider-header label {
+    margin-bottom: 0;
+}
+
+.temp-slider-value {
+    font-size: 13px;
+    font-weight: 600;
+    color: #6366f1;
+}
+
+.temp-slider {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.temp-slider-bound {
+    font-size: 12px;
+    color: #9ca3af;
+    flex-shrink: 0;
+    white-space: nowrap;
+}
+
+.temp-slider input[type="range"] {
+    flex: 1;
+    min-width: 0;
+    -webkit-appearance: none;
+    appearance: none;
+    height: 6px;
+    border-radius: 3px;
+    background: linear-gradient(to right, #c7d2fe, #818cf8);
+    outline: none;
+    cursor: pointer;
+    margin: 0;
+}
+
+.temp-slider input[type="range"]::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    background: #6366f1;
+    border: 2px solid #fff;
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.2);
+    cursor: pointer;
+}
+
+.temp-slider input[type="range"]::-moz-range-thumb {
+    width: 14px;
+    height: 14px;
+    border-radius: 50%;
+    background: #6366f1;
+    border: 2px solid #fff;
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.2);
+    cursor: pointer;
+}
+
 /* ==================== Dark Theme ==================== */
 body.dark-theme .form-group label {
     color: #b0b0b0;
@@ -317,6 +389,29 @@ body.dark-theme .form-group textarea:disabled {
 
 body.dark-theme .form-group.form-inline > label {
     color: #b0b0b0;
+}
+
+/* Dark theme for temp slider */
+body.dark-theme .temp-slider-value {
+    color: #8ba3ff;
+}
+
+body.dark-theme .temp-slider-bound {
+    color: #888;
+}
+
+body.dark-theme .temp-slider input[type="range"] {
+    background: linear-gradient(to right, #3d3d6b, #8ba3ff);
+}
+
+body.dark-theme .temp-slider input[type="range"]::-webkit-slider-thumb {
+    background: #8ba3ff;
+    border-color: #16213e;
+}
+
+body.dark-theme .temp-slider input[type="range"]::-moz-range-thumb {
+    background: #8ba3ff;
+    border-color: #16213e;
 }
 
 /* Dark theme for .model-select */

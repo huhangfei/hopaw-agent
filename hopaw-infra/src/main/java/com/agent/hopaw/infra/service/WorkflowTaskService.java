@@ -511,6 +511,9 @@ public class WorkflowTaskService implements IWorkflowTaskService {
         agentExecutorParams.setUserId(userChatRequest.getUserId());
         agentExecutorParams.setAiModelId(userChatRequest.getAiModelId());
         agentExecutorParams.setEnableThinking(userChatRequest.getEnableThinking());
+        // 创造力/思考努力程度：取智能体配置，为空时由模型扩展参数兜底
+        agentExecutorParams.setTemperature(agent.getTemperature());
+        agentExecutorParams.setReasoningEffort(agent.getReasoningEffort());
         agentExecutorParams.setSkillNames(userChatRequest.getSkillNames());
         agentExecutorParams.setToolCallPermission(userChatRequest.getToolCallPermission());
 

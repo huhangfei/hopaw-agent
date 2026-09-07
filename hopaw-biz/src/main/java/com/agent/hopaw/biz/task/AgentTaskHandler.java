@@ -69,7 +69,7 @@ public class AgentTaskHandler implements TaskHandler {
             Long agentId = Long.parseLong(agentIdStr);
             Agent agent = agentService.getAgentById(agentId);
             ChatModelListener chatModelListener = chatModelListenerProvider.getChatModelListener(AiModelCallSourceEnum.AgentTask, task.getSessionId(), task.getUserId(), agentId, String.valueOf(task.getId()));
-            ChatModel chatModel = aiModelService.createChatModel(agent.getAiModelId(), agent.getEnableThinking(),chatModelListener);
+            ChatModel chatModel = aiModelService.createChatModel(agent.getAiModelId(), agent.getEnableThinking(),null,chatModelListener);
             List<String> selectTools = parseToolNames(agent.getTools());
 
             List<AgentTool> selectedTools;
@@ -98,7 +98,7 @@ public class AgentTaskHandler implements TaskHandler {
                     .chatModel(chatModel)
                     .systemMessageProvider(systemMessageProvider)
                     .tools(selectedTools.toArray())
-                    .maxSequentialToolsInvocations(agent.getMaxToolInvocations())
+                    .maxToolCallingRoundTrips(agent.getMaxToolInvocations())
                     .build();
             ChatRequestParameters chatRequestParameters=ChatRequestParameters.builder()
                     .temperature(0.1)

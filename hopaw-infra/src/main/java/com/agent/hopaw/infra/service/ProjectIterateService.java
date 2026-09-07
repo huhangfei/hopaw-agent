@@ -315,6 +315,9 @@ public class ProjectIterateService implements IProjectIterateService {
         params.setRequestId(requestId);
         params.setAiModelId(userChatRequest != null && userChatRequest.getAiModelId() != null ? userChatRequest.getAiModelId() : agent.getAiModelId());
         params.setEnableThinking(userChatRequest != null && userChatRequest.getEnableThinking() != null ? userChatRequest.getEnableThinking() : agent.getEnableThinking());
+        // 创造力/思考努力程度：用户会话唤起时优先请求参数，自动迭代时回退智能体配置，再为空由模型扩展参数兜底
+        params.setTemperature(userChatRequest != null && userChatRequest.getTemperature() != null ? userChatRequest.getTemperature() : agent.getTemperature());
+        params.setReasoningEffort(userChatRequest != null && userChatRequest.getReasoningEffort() != null && !userChatRequest.getReasoningEffort().isEmpty() ? userChatRequest.getReasoningEffort() : agent.getReasoningEffort());
         params.setSkillNames(userChatRequest != null && userChatRequest.getSkillNames() != null ? userChatRequest.getSkillNames() : new ArrayList<>());
         params.setToolCallPermission(userChatRequest != null && userChatRequest.getToolCallPermission() != null ? userChatRequest.getToolCallPermission() : "auto");
 

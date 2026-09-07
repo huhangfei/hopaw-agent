@@ -1,5 +1,6 @@
 package com.agent.hopaw.controller;
 
+import com.agent.hopaw.infra.constant.ReasoningEffortEnum;
 import com.agent.hopaw.infra.model.dto.ResponseBean;
 import com.agent.hopaw.infra.model.dto.ToolSetInfo;
 import com.agent.hopaw.infra.model.entity.Agent;
@@ -72,6 +73,7 @@ public class AgentController {
     public String addAgentModal(Model model) {
         List<ToolSetInfo> toolSets = agentToolService.getToolSets();
         model.addAttribute("toolSets", toolSets);
+        model.addAttribute("reasoningEfforts", ReasoningEffortEnum.values());
         return "agent-form-fragments :: addAgentModal";
     }
 
@@ -88,6 +90,7 @@ public class AgentController {
         }
         model.addAttribute("agent", agent);
         model.addAttribute("toolSets", toolSets);
+        model.addAttribute("reasoningEfforts", ReasoningEffortEnum.values());
         return "agent-form-fragments :: editAgentModal";
     }
 

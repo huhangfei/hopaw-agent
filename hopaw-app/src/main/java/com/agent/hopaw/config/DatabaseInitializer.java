@@ -3,6 +3,7 @@ package com.agent.hopaw.config;
 import com.agent.hopaw.constant.DefaultUser;
 import com.agent.hopaw.infra.constant.ModelCapabilityEnum;
 import com.agent.hopaw.infra.constant.ModelProviderEnum;
+import com.agent.hopaw.infra.constant.ReasoningEffortEnum;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.boot.CommandLineRunner;
@@ -54,6 +55,8 @@ public class DatabaseInitializer implements CommandLineRunner {
                     "ai_model_id INTEGER, " +
                     "model_name TEXT, " +
                     "enable_thinking INTEGER DEFAULT 1," +
+                    "temperature REAL, " +
+                    "reasoning_effort TEXT, " +
                     "ext_params TEXT," +
                     "enable_all_tools INTEGER DEFAULT 0," +
                     "user_id TEXT DEFAULT 'admin'" +
@@ -71,6 +74,10 @@ public class DatabaseInitializer implements CommandLineRunner {
                 // 旧列存的是消息条数（如 20），直接作为 Token 上限会过小，统一重置为默认 Token 上限
                 stmt.execute("UPDATE agents SET max_memory_tokens = 20480");
             }
+            // 兼容旧库：agents 增量补充模型创造力参数列（空值由智能体编辑时补填，执行时回退模型扩展参数）
+            ensureColumn(stmt, "agents", "temperature", "REAL");
+            // 兼容旧库：agents 增量补充思考努力程度列
+            ensureColumn(stmt, "agents", "reasoning_effort", "TEXT");
 
             stmt.execute("CREATE TABLE IF NOT EXISTS chat_history (" +
                     "id INTEGER PRIMARY KEY AUTOINCREMENT, " +
@@ -632,53 +639,76 @@ public class DatabaseInitializer implements CommandLineRunner {
                 for (ModelProviderEnum providerEnum : ModelProviderEnum.values()) {
                     switch (providerEnum.getCode()) {
                         case "openai":
-                            insertModel(stmt, providerId, "gpt-4o", joinCapabilities(ModelCapabilityEnum.TEXT, ModelCapabilityEnum.IMAGE));
-                            insertModel(stmt, providerId, "gpt-4o-mini", joinCapabilities(ModelCapabilityEnum.TEXT, ModelCapabilityEnum.IMAGE));
-                            insertModel(stmt, providerId, "gpt-4-turbo", ModelCapabilityEnum.TEXT.getCode());
-                            insertModel(stmt, providerId, "gpt-3.5-turbo", ModelCapabilityEnum.TEXT.getCode());
+                            insertModel(stmt, providerId, "gpt-4o", joinCapabilities(ModelCapabilityEnum.TEXT, ModelCapabilityEnum.IMAGE), 128000);
+                            insertModel(stmt, providerId, "gpt-4o-mini", joinCapabilities(ModelCapabilityEnum.TEXT, ModelCapabilityEnum.IMAGE), 128000);
+                            insertModel(stmt, providerId, "gpt-4-turbo", ModelCapabilityEnum.TEXT.getCode(), 128000);
+                            insertModel(stmt, providerId, "gpt-3.5-turbo", ModelCapabilityEnum.TEXT.getCode(), 16385);
+                            insertModel(stmt, providerId, "gpt-4.1", joinCapabilities(ModelCapabilityEnum.TEXT, ModelCapabilityEnum.IMAGE), 1047576);
+                            insertModel(stmt, providerId, "gpt-4.1-mini", joinCapabilities(ModelCapabilityEnum.TEXT, ModelCapabilityEnum.IMAGE), 1047576);
+                            insertModel(stmt, providerId, "gpt-5", joinCapabilities(ModelCapabilityEnum.TEXT, ModelCapabilityEnum.IMAGE), 400000);
+                            insertModel(stmt, providerId, "gpt-5-mini", joinCapabilities(ModelCapabilityEnum.TEXT, ModelCapabilityEnum.IMAGE), 400000);
+                            insertModel(stmt, providerId, "gpt-5.1", joinCapabilities(ModelCapabilityEnum.TEXT, ModelCapabilityEnum.IMAGE), 400000);
                             break;
                         case "anthropic":
-                            insertModel(stmt, providerId, "claude-sonnet-4-20250514", ModelCapabilityEnum.TEXT.getCode());
-                            insertModel(stmt, providerId, "claude-opus-4-20250514", ModelCapabilityEnum.TEXT.getCode());
-                            insertModel(stmt, providerId, "claude-3-5-sonnet-20241022", ModelCapabilityEnum.TEXT.getCode());
-                            insertModel(stmt, providerId, "claude-3-haiku-20240307", ModelCapabilityEnum.TEXT.getCode());
+                            insertModel(stmt, providerId, "claude-sonnet-4-20250514", ModelCapabilityEnum.TEXT.getCode(), 200000);
+                            insertModel(stmt, providerId, "claude-opus-4-20250514", ModelCapabilityEnum.TEXT.getCode(), 200000);
+                            insertModel(stmt, providerId, "claude-3-5-sonnet-20241022", ModelCapabilityEnum.TEXT.getCode(), 200000);
+                            insertModel(stmt, providerId, "claude-3-haiku-20240307", ModelCapabilityEnum.TEXT.getCode(), 200000);
+                            insertModel(stmt, providerId, "claude-opus-4-1", ModelCapabilityEnum.TEXT.getCode(), 200000);
+                            insertModel(stmt, providerId, "claude-sonnet-4-5", ModelCapabilityEnum.TEXT.getCode(), 200000);
+                            insertModel(stmt, providerId, "claude-haiku-4-5", ModelCapabilityEnum.TEXT.getCode(), 200000);
+                            insertModel(stmt, providerId, "claude-opus-4-5", ModelCapabilityEnum.TEXT.getCode(), 200000);
+                            insertModel(stmt, providerId, "claude-sonnet-4-6", ModelCapabilityEnum.TEXT.getCode(), 1000000);
+                            insertModel(stmt, providerId, "claude-opus-4-6", ModelCapabilityEnum.TEXT.getCode(), 1000000);
                             break;
                         case "google":
-                            insertModel(stmt, providerId, "gemini-2.5-pro", joinCapabilities(ModelCapabilityEnum.TEXT, ModelCapabilityEnum.IMAGE, ModelCapabilityEnum.AUDIO, ModelCapabilityEnum.VIDEO));
-                            insertModel(stmt, providerId, "gemini-2.5-flash", joinCapabilities(ModelCapabilityEnum.TEXT, ModelCapabilityEnum.IMAGE, ModelCapabilityEnum.AUDIO, ModelCapabilityEnum.VIDEO));
-                            insertModel(stmt, providerId, "gemini-2.0-flash", joinCapabilities(ModelCapabilityEnum.TEXT, ModelCapabilityEnum.IMAGE));
+                            insertModel(stmt, providerId, "gemini-2.5-pro", joinCapabilities(ModelCapabilityEnum.TEXT, ModelCapabilityEnum.IMAGE, ModelCapabilityEnum.AUDIO, ModelCapabilityEnum.VIDEO), 1048576);
+                            insertModel(stmt, providerId, "gemini-2.5-flash", joinCapabilities(ModelCapabilityEnum.TEXT, ModelCapabilityEnum.IMAGE, ModelCapabilityEnum.AUDIO, ModelCapabilityEnum.VIDEO), 1048576);
+                            insertModel(stmt, providerId, "gemini-2.0-flash", joinCapabilities(ModelCapabilityEnum.TEXT, ModelCapabilityEnum.IMAGE), 1048576);
+                            insertModel(stmt, providerId, "gemini-3-pro-preview", joinCapabilities(ModelCapabilityEnum.TEXT, ModelCapabilityEnum.IMAGE, ModelCapabilityEnum.AUDIO, ModelCapabilityEnum.VIDEO), 1048576);
                             break;
                         case "deepseek":
-                            insertModel(stmt, providerId, "deepseek-chat", ModelCapabilityEnum.TEXT.getCode());
-                            insertModel(stmt, providerId, "deepseek-reasoner", ModelCapabilityEnum.TEXT.getCode());
-                            insertModel(stmt, providerId, "deepseek-v4-flash", ModelCapabilityEnum.TEXT.getCode());
-                            insertModel(stmt, providerId, "deepseek-v4-pro", ModelCapabilityEnum.TEXT.getCode());
+                            insertModel(stmt, providerId, "deepseek-chat", ModelCapabilityEnum.TEXT.getCode(), 128000);
+                            insertModel(stmt, providerId, "deepseek-reasoner", ModelCapabilityEnum.TEXT.getCode(), 128000);
+                            insertModel(stmt, providerId, "deepseek-v4-flash", ModelCapabilityEnum.TEXT.getCode(), 1000000);
+                            insertModel(stmt, providerId, "deepseek-v4-pro", ModelCapabilityEnum.TEXT.getCode(), 1000000);
                             break;
                         case "qwen":
-                            insertModel(stmt, providerId, "qwen-max", ModelCapabilityEnum.TEXT.getCode());
-                            insertModel(stmt, providerId, "qwen-plus", ModelCapabilityEnum.TEXT.getCode());
-                            insertModel(stmt, providerId, "qwen-turbo", ModelCapabilityEnum.TEXT.getCode());
-                            insertModel(stmt, providerId, "qwen-vl-max", joinCapabilities(ModelCapabilityEnum.TEXT, ModelCapabilityEnum.IMAGE));
-                            insertModel(stmt, providerId, "qwen-long", joinCapabilities(ModelCapabilityEnum.TEXT, ModelCapabilityEnum.DOCUMENT));
+                            insertModel(stmt, providerId, "qwen-max", ModelCapabilityEnum.TEXT.getCode(), 262144);
+                            insertModel(stmt, providerId, "qwen-plus", ModelCapabilityEnum.TEXT.getCode(), 1048576);
+                            insertModel(stmt, providerId, "qwen-turbo", ModelCapabilityEnum.TEXT.getCode(), 1048576);
+                            insertModel(stmt, providerId, "qwen-vl-max", joinCapabilities(ModelCapabilityEnum.TEXT, ModelCapabilityEnum.IMAGE), 131072);
+                            insertModel(stmt, providerId, "qwen-long", joinCapabilities(ModelCapabilityEnum.TEXT, ModelCapabilityEnum.DOCUMENT), 10000000);
+                            insertModel(stmt, providerId, "qwen3-max", ModelCapabilityEnum.TEXT.getCode(), 262144);
+                            insertModel(stmt, providerId, "qwen3-coder-plus", ModelCapabilityEnum.TEXT.getCode(), 1048576);
+                            insertModel(stmt, providerId, "qwen3-vl-plus", joinCapabilities(ModelCapabilityEnum.TEXT, ModelCapabilityEnum.IMAGE), 262144);
                             break;
                         case "zhipu":
-                            insertModel(stmt, providerId, "glm-4-plus", ModelCapabilityEnum.TEXT.getCode());
-                            insertModel(stmt, providerId, "glm-4", ModelCapabilityEnum.TEXT.getCode());
-                            insertModel(stmt, providerId, "glm-4v", joinCapabilities(ModelCapabilityEnum.TEXT, ModelCapabilityEnum.IMAGE));
-                            insertModel(stmt, providerId, "glm-4-flash", ModelCapabilityEnum.TEXT.getCode());
+                            insertModel(stmt, providerId, "glm-4-plus", ModelCapabilityEnum.TEXT.getCode(), 128000);
+                            insertModel(stmt, providerId, "glm-4", ModelCapabilityEnum.TEXT.getCode(), 128000);
+                            insertModel(stmt, providerId, "glm-4v", joinCapabilities(ModelCapabilityEnum.TEXT, ModelCapabilityEnum.IMAGE), 8192);
+                            insertModel(stmt, providerId, "glm-4-flash", ModelCapabilityEnum.TEXT.getCode(), 128000);
+                            insertModel(stmt, providerId, "glm-4.5", ModelCapabilityEnum.TEXT.getCode(), 131072);
+                            insertModel(stmt, providerId, "glm-4.6", ModelCapabilityEnum.TEXT.getCode(), 202752);
+                            insertModel(stmt, providerId, "glm-5", ModelCapabilityEnum.TEXT.getCode(), 202752);
+                            insertModel(stmt, providerId, "glm-5.1", ModelCapabilityEnum.TEXT.getCode(), 202752);
                             break;
                         case "moonshot":
-                            insertModel(stmt, providerId, "moonshot-v1-8k", ModelCapabilityEnum.TEXT.getCode());
-                            insertModel(stmt, providerId, "moonshot-v1-32k", ModelCapabilityEnum.TEXT.getCode());
-                            insertModel(stmt, providerId, "moonshot-v1-128k", ModelCapabilityEnum.TEXT.getCode());
+                            insertModel(stmt, providerId, "moonshot-v1-8k", ModelCapabilityEnum.TEXT.getCode(), 8192);
+                            insertModel(stmt, providerId, "moonshot-v1-32k", ModelCapabilityEnum.TEXT.getCode(), 32768);
+                            insertModel(stmt, providerId, "moonshot-v1-128k", ModelCapabilityEnum.TEXT.getCode(), 131072);
+                            insertModel(stmt, providerId, "kimi-k2", ModelCapabilityEnum.TEXT.getCode(), 262144);
+                            insertModel(stmt, providerId, "kimi-k2-thinking", ModelCapabilityEnum.TEXT.getCode(), 262144);
                             break;
                         case "minimax":
-                            insertModel(stmt, providerId, "MiniMax-M1", ModelCapabilityEnum.TEXT.getCode());
-                            insertModel(stmt, providerId, "MiniMax-Text-01", ModelCapabilityEnum.TEXT.getCode());
+                            insertModel(stmt, providerId, "MiniMax-M1", ModelCapabilityEnum.TEXT.getCode(), 1000000);
+                            insertModel(stmt, providerId, "MiniMax-Text-01", ModelCapabilityEnum.TEXT.getCode(), 1000000);
+                            insertModel(stmt, providerId, "MiniMax-M2", ModelCapabilityEnum.TEXT.getCode(), 204800);
+                            insertModel(stmt, providerId, "MiniMax-M2.5", ModelCapabilityEnum.TEXT.getCode(), 204800);
                             break;
 
                         case "hy":
-                            insertModel(stmt, providerId, "hy3", ModelCapabilityEnum.TEXT.getCode());
+                            insertModel(stmt, providerId, "hy3", ModelCapabilityEnum.TEXT.getCode(), 262144);
                             break;
                     }
                     providerId++;
@@ -690,13 +720,15 @@ public class DatabaseInitializer implements CommandLineRunner {
                 log.info("Initializing default agent...");
                 String tools = "agentTaskTool,getCurrentTime,memoryTool,sysConfigTool,skillTool,mailTool,commandExecutor,baiduSearch,webPage,sshTool,fileOperation,dingtalkNotify";
                 stmt.execute(String.format(
-                        "INSERT INTO agents (name, description, tools, max_memory_tokens, max_tool_invocations, vector_tool_search, vector_tool_search_max_results, user_id, enable_thinking) VALUES ('%s', '%s', '%s', %d, %d, %d, %d, '%s', %d)",
+                        "INSERT INTO agents (name, description, tools, max_memory_tokens, max_tool_invocations, vector_tool_search, vector_tool_search_max_results, user_id, enable_thinking, temperature, reasoning_effort) VALUES ('%s', '%s', '%s', %d, %d, %d, %d, '%s', %d, %s, '%s')",
                         escapeSQL("大虾\uD83E\uDD90"),
                         escapeSQL("善于使用多种工具解决用户问题"),
                         escapeSQL(tools),
                         20480, 20, 1, 15,
                         DefaultUser.USER,
-                        1
+                        1,
+                        0.5,
+                        ReasoningEffortEnum.DEFAULT_CODE
                 ));
             }
 
@@ -805,16 +837,17 @@ public class DatabaseInitializer implements CommandLineRunner {
         return false;
     }
 
-    private void insertModel(Statement stmt, long providerId, String modelName, String capabilities) throws Exception {
-        insertModel(stmt, providerId, modelName, modelName, capabilities);
+    private void insertModel(Statement stmt, long providerId, String modelName, String capabilities, long maxContextTokens) throws Exception {
+        insertModel(stmt, providerId, modelName, modelName, capabilities, maxContextTokens);
     }
 
-    private void insertModel(Statement stmt, long providerId, String modelName, String modelAlias, String capabilities) throws Exception {
+    private void insertModel(Statement stmt, long providerId, String modelName, String modelAlias, String capabilities, long maxContextTokens) throws Exception {
         stmt.execute(String.format(
-                "INSERT INTO ai_models (provider_id, model_name, model_alias, capabilities, verified, create_time) VALUES (%d, '%s', '%s', '%s', %d, datetime('now','localtime'))",
+                "INSERT INTO ai_models (provider_id, model_name, model_alias, max_context_tokens, capabilities, verified, create_time) VALUES (%d, '%s', '%s', %d, '%s', %d, datetime('now','localtime'))",
                 providerId,
                 escapeSQL(modelName),
                 escapeSQL(modelAlias),
+                maxContextTokens,
                 escapeSQL(capabilities),
                 0
         ));

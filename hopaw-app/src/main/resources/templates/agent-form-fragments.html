@@ -36,7 +36,7 @@
                                    placeholder="20480">
                         </div>
                         <div class="form-group">
-                            <label>最大工具调用</label>
+                            <label>工具调用最大轮次</label>
                             <input type="number" name="maxToolInvocations" value="10" min="1" max="50"
                                    placeholder="10">
                         </div>
@@ -50,7 +50,29 @@
                                            onchange="document.getElementById('addEnableThinkingFragment').value=this.checked?'true':'false'">
                                     <span class="slider"></span>
                                 </label>
-                                <span class="toggle-label">启用思考（Thinking）</span>
+                                <span class="toggle-label">启用思考</span>
+                            </div>
+                        </div>
+                        <div class="form-group form-inline reasoning-effort-group">
+                            <label>思考强度</label>
+                            <select name="reasoningEffort" id="addReasoningEffortFragment">
+                                <option th:each="e : ${reasoningEfforts}" th:value="${e.code}" th:text="${e.name}"
+                                        th:selected="${e.code == 'high'}"></option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <div class="temp-slider-header">
+                                <label>创造力</label>
+                                <span class="temp-slider-value" id="addTemperatureValueFragment">0.5</span>
+                            </div>
+                            <div class="temp-slider">
+                                <span class="temp-slider-bound">严谨 0.0</span>
+                                <input type="range" name="temperature" id="addTemperatureFragment" min="0" max="1"
+                                       step="0.1" value="0.5"
+                                       oninput="document.getElementById('addTemperatureValueFragment').textContent=this.value">
+                                <span class="temp-slider-bound">创造性 1.0</span>
                             </div>
                         </div>
                     </div>
@@ -63,7 +85,7 @@
                                            onchange="document.getElementById('addVectorToolSearchFragment').value=this.checked?'true':'false';document.getElementById('addVectorToolSearchResultsGroupFragment').style.display=this.checked?'':'none'">
                                     <span class="slider"></span>
                                 </label>
-                                <span class="toggle-label">启用搜索工具</span>
+                                <span class="toggle-label">启用工具搜索</span>
                             </div>
                         </div>
                         <div class="form-group form-inline" id="addVectorToolSearchResultsGroupFragment">
@@ -171,7 +193,7 @@
                                    min="1024" max="1048576" placeholder="20480">
                         </div>
                         <div class="form-group">
-                            <label>最大工具调用</label>
+                            <label>工具调用最大轮次</label>
                             <input type="number" name="maxToolInvocations" id="editMaxToolInvocationsFragment"
                                    th:value="${agent.maxToolInvocations != null ? agent.maxToolInvocations : 10}"
                                    min="1" max="50000000" placeholder="10">
@@ -188,7 +210,30 @@
                                            onchange="document.getElementById('editEnableThinkingFragment').value=this.checked?'true':'false'">
                                     <span class="slider"></span>
                                 </label>
-                                <span class="toggle-label">启用思考（Thinking）</span>
+                                <span class="toggle-label">启用思考</span>
+                            </div>
+                        </div>
+                        <div class="form-group form-inline reasoning-effort-group">
+                            <label>思考强度</label>
+                            <select name="reasoningEffort" id="editReasoningEffortFragment">
+                                <option th:each="e : ${reasoningEfforts}" th:value="${e.code}" th:text="${e.name}"
+                                        th:selected="${e.code == (agent.reasoningEffort != null and !#strings.isEmpty(agent.reasoningEffort) ? agent.reasoningEffort : 'high')}"></option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <div class="temp-slider-header">
+                                <label>创造力</label>
+                                <span class="temp-slider-value" id="editTemperatureValueFragment"
+                                      th:text="${agent.temperature != null ? agent.temperature : 0.5}">0.5</span>
+                            </div>
+                            <div class="temp-slider">
+                                <span class="temp-slider-bound">严谨 0.0</span>
+                                <input type="range" name="temperature" id="editTemperatureFragment" min="0" max="1"
+                                       step="0.1" th:value="${agent.temperature != null ? agent.temperature : 0.5}"
+                                       oninput="document.getElementById('editTemperatureValueFragment').textContent=this.value">
+                                <span class="temp-slider-bound">创造性 1.0</span>
                             </div>
                         </div>
                     </div>
@@ -203,7 +248,7 @@
                                            onchange="document.getElementById('editVectorToolSearchFragment').value=this.checked?'true':'false';document.getElementById('editVectorToolSearchResultsGroupFragment').style.display=this.checked?'':'none'">
                                     <span class="slider"></span>
                                 </label>
-                                <span class="toggle-label">启用搜索工具</span>
+                                <span class="toggle-label">启用工具搜索</span>
                             </div>
                         </div>
                         <div class="form-group form-inline" id="editVectorToolSearchResultsGroupFragment">

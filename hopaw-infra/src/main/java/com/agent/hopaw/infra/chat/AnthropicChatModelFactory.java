@@ -16,7 +16,17 @@ import java.util.List;
 public class AnthropicChatModelFactory extends BaseChatModelFactory {
 
     @Override
-    public ChatModel createChatModel(AiModelVO aiModel, Boolean enableThinking, ChatModelListener monitoringService) {
+    public ChatModel createChatModel(AiModelVO aiModel) {
+        return createChatModel(aiModel, null, null, null);
+    }
+
+    @Override
+    public ChatModel createChatModel(AiModelVO aiModel, ChatModelListener langChain4JMonitor) {
+        return createChatModel(aiModel, null, null, langChain4JMonitor);
+    }
+
+    @Override
+    public ChatModel createChatModel(AiModelVO aiModel, Boolean enableThinking, String reasoningEffort, ChatModelListener monitoringService) {
         AiModelProvider aiModelProvider = aiModel.getAiModelProvider();
         var builder = AnthropicChatModel.builder()
                 .apiKey(aiModelProvider.getApiKey())
@@ -44,7 +54,17 @@ public class AnthropicChatModelFactory extends BaseChatModelFactory {
     }
 
     @Override
-    public StreamingChatModel createStreamingChatModel(AiModelVO aiModel, Boolean enableThinking, ChatModelListener monitoringService) {
+    public StreamingChatModel createStreamingChatModel(AiModelVO aiModel) {
+        return createStreamingChatModel(aiModel, null, null, null);
+    }
+
+    @Override
+    public StreamingChatModel createStreamingChatModel(AiModelVO aiModel, ChatModelListener langChain4JMonitor) {
+        return createStreamingChatModel(aiModel, null, null, langChain4JMonitor);
+    }
+
+    @Override
+    public StreamingChatModel createStreamingChatModel(AiModelVO aiModel, Boolean enableThinking, String reasoningEffort, ChatModelListener monitoringService) {
         AiModelProvider aiModelProvider = aiModel.getAiModelProvider();
         var builder = AnthropicStreamingChatModel.builder()
                 .apiKey(aiModelProvider.getApiKey())

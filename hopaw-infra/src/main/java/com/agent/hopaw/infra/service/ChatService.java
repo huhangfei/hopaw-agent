@@ -116,6 +116,9 @@ public class ChatService implements IChatService {
         agentExecutorParams.setUserId(userChatRequest.getUserId());
         agentExecutorParams.setAiModelId(userChatRequest.getAiModelId());
         agentExecutorParams.setEnableThinking(userChatRequest.getEnableThinking());
+        // 创造力/思考努力程度：请求未指定时回退智能体配置，再为空则由模型扩展参数兜底
+        agentExecutorParams.setTemperature(userChatRequest.getTemperature() != null ? userChatRequest.getTemperature() : agent.getTemperature());
+        agentExecutorParams.setReasoningEffort(userChatRequest.getReasoningEffort() != null && !userChatRequest.getReasoningEffort().isEmpty() ? userChatRequest.getReasoningEffort() : agent.getReasoningEffort());
         agentExecutorParams.setSkillNames(userChatRequest.getSkillNames());
         agentExecutorParams.setToolCallPermission(userChatRequest.getToolCallPermission());
         agentExecutorParams.setAgentId(agent.getId());

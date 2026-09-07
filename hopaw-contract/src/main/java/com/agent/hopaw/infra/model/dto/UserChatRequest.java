@@ -29,6 +29,14 @@ public class UserChatRequest {
      * 会话类型
      */
     private AgentExecutorBizTypeEnum sessionBizType;
+    /**
+     * 模型创造力参数
+     */
+    private Double temperature;
+    /**
+     * 思考努力程度参数
+     */
+    private String reasoningEffort;
     public String getRequestId() {
         return requestId;
     }
@@ -113,5 +121,21 @@ public class UserChatRequest {
 
     public void setSessionBizType(AgentExecutorBizTypeEnum sessionBizType) {
         this.sessionBizType = sessionBizType;
+    }
+
+    public Double getTemperature() {
+        return temperature;
+    }
+
+    public void setTemperature(Double temperature) {
+        this.temperature = temperature;
+    }
+
+    public String getReasoningEffort() {
+        return reasoningEffort;
+    }
+
+    public void setReasoningEffort(String reasoningEffort) {
+        this.reasoningEffort = reasoningEffort;
     }
 }

@@ -17,11 +17,24 @@ import java.util.Map;
 public class OpenAiChatModelFactory extends  BaseChatModelFactory {
 
     @Override
-    public ChatModel createChatModel(AiModelVO aiModel, Boolean enableThinking, ChatModelListener monitoringService) {
+    public ChatModel createChatModel(AiModelVO aiModel) {
+        return createChatModel(aiModel, null, null, null);
+    }
+
+    @Override
+    public ChatModel createChatModel(AiModelVO aiModel, ChatModelListener langChain4JMonitor) {
+        return createChatModel(aiModel, null, null,langChain4JMonitor);
+    }
+
+    @Override
+    public ChatModel createChatModel(AiModelVO aiModel, Boolean enableThinking, String reasoningEffort, ChatModelListener monitoringService) {
         AiModelProvider aiModelProvider=aiModel.getAiModelProvider();
         Map<String, Object> extraParams = new HashMap<>(0);
         if(enableThinking==null){
             enableThinking=super.getEnableThinking(aiModel);
+        }
+        if(reasoningEffort==null){
+            reasoningEffort=super.getReasoningEffort(aiModel);
         }
         Boolean finalEnableThinking = enableThinking;
         extraParams.put("thinking",new HashMap(1){{
@@ -46,7 +59,7 @@ public class OpenAiChatModelFactory extends  BaseChatModelFactory {
             builder.maxTokens(super.getOutputMaxTokens(aiModel));
         }
         if(enableThinking){
-            builder.reasoningEffort(super.getReasoningEffort(aiModel));
+            builder.reasoningEffort(reasoningEffort);
         }
         if (monitoringService != null) {
             builder.listeners(List.of(monitoringService));
@@ -55,11 +68,24 @@ public class OpenAiChatModelFactory extends  BaseChatModelFactory {
     }
 
     @Override
-    public StreamingChatModel createStreamingChatModel(AiModelVO aiModel,Boolean enableThinking, ChatModelListener monitoringService) {
+    public StreamingChatModel createStreamingChatModel(AiModelVO aiModel) {
+        return createStreamingChatModel(aiModel, null, null, null);
+    }
+
+    @Override
+    public StreamingChatModel createStreamingChatModel(AiModelVO aiModel, ChatModelListener langChain4JMonitor) {
+        return createStreamingChatModel(aiModel, null, null, langChain4JMonitor);
+    }
+
+    @Override
+    public StreamingChatModel createStreamingChatModel(AiModelVO aiModel,Boolean enableThinking, String reasoningEffort, ChatModelListener monitoringService) {
         AiModelProvider aiModelProvider=aiModel.getAiModelProvider();
         Map<String, Object> extraParams = new HashMap<>(0);
         if(enableThinking==null){
             enableThinking=super.getEnableThinking(aiModel);
+        }
+        if(reasoningEffort==null){
+            reasoningEffort=super.getReasoningEffort(aiModel);
         }
         Boolean finalEnableThinking = enableThinking;
         extraParams.put("thinking",new HashMap(1){{
@@ -85,7 +111,7 @@ public class OpenAiChatModelFactory extends  BaseChatModelFactory {
             builder.maxTokens(super.getOutputMaxTokens(aiModel));
         }
         if(enableThinking){
-            builder.reasoningEffort(super.getReasoningEffort(aiModel));
+            builder.reasoningEffort(reasoningEffort);
         }
         if (monitoringService != null) {
             builder.listeners(List.of(monitoringService));
