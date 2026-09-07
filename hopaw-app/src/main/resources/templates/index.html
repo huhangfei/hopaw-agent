@@ -29,6 +29,10 @@
             </a>
         </div>
         <div th:if="${selectedAgent != null}" class="chat-header">
+            <!-- 运行状态双色光晕背景层：左(已用时间)与右(超时时间)光晕在分界线相遇，分界线 = 已用/(已用+超时) -->
+            <div class="chat-header-glow" id="chatHeaderGlow" aria-hidden="true">
+                <div class="chat-header-glow-line"></div>
+            </div>
             <div class="chat-header-title">
                 <span class="chat-header-desc" id="chat-header-desc" th:text="${currentSessionTitle}"></span>
             </div>

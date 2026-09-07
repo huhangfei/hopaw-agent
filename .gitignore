@@ -49,3 +49,5 @@ vector_store.metadata
 /project-spaces/
 /.mimocode/
 /.trae/
+
+.cookies.tmp

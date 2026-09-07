@@ -2034,11 +2034,23 @@ function updateLockRemaining() {
 
 /**
  * 渲染已运行时长和剩余超时时间到 chat-header 的运行状态计时器
+ * 同时驱动头部双色光晕：分界线 = 已用时间 / (已用时间 + 超时时间)
  */
 function renderLockCountdown() {
     var elapsedEl = document.getElementById('runningElapsed');
     if (elapsedEl) {
         elapsedEl.textContent = lockElapsedSeconds > 0 ? ('(' + lockElapsedSeconds + 's)') : '';
+    }
+    var glow = document.getElementById('chatHeaderGlow');
+    if (glow) {
+        var total = lockElapsedSeconds + lockRemainingSeconds;
+        if (lockRemainingSeconds > 0 && total > 0) {
+            var pct = Math.min(100, lockElapsedSeconds / total * 100);
+            glow.style.setProperty('--boundary', pct.toFixed(2) + '%');
+            glow.classList.add('active');
+        } else {
+            glow.classList.remove('active');
+        }
     }
     var el = document.getElementById('runningCountdown');
     if (!el) return;

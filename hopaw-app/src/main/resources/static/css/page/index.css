@@ -438,6 +438,9 @@ body.dark-theme .session-running-spinner {
     justify-content: space-between;
     align-items: center;
     height: 46px;
+    /* 定位锚点 + 层级提升：光晕层(负z-index)夹在背景与内容之间，下拉菜单仍覆盖于消息区之上 */
+    position: relative;
+    z-index: 10;
 }
 .chat-header h2 {
     font-size: 20px;
@@ -504,6 +507,90 @@ body.dark-theme .session-running-spinner {
 }
 .chat-header-timer-countdown {
     color: #999;
+}
+/* 运行状态双色光晕：左侧青色代表已用时间，右侧橙色代表超时时间，两股光在分界线相遇 */
+.chat-header-glow {
+    position: absolute;
+    inset: 0;
+    overflow: hidden;
+    pointer-events: none;
+    /* 位于 header 背景之上、文字内容之下 */
+    z-index: -1;
+    opacity: 0;
+    transition: opacity .6s ease;
+    /* 分界线位置：已用时间 / (已用时间 + 超时时间)，由 JS 动态更新 */
+    --boundary: 0%;
+}
+.chat-header-glow.active {
+    opacity: 1;
+}
+.chat-header-glow::before {
+    /* 已用时间：青色光晕，从左边缘向分界线逐渐增强 */
+    content: '';
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    left: 0;
+    width: var(--boundary);
+    background: linear-gradient(90deg,
+        rgba(0, 195, 255, 0) 0%,
+        rgba(0, 195, 255, 0.08) 45%,
+        rgba(0, 195, 255, 0.35) 100%);
+    transition: width 1s linear;
+}
+.chat-header-glow::after {
+    /* 超时时间：橙色光晕，从右边缘向分界线逐渐增强 */
+    content: '';
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    right: 0;
+    width: calc(100% - var(--boundary));
+    background: linear-gradient(270deg,
+        rgba(255, 110, 60, 0) 0%,
+        rgba(255, 110, 60, 0.08) 45%,
+        rgba(255, 110, 60, 0.35) 100%);
+    transition: width 1s linear;
+}
+/* 分界线光柱：双色光晕交汇处，白色光核 + 双色光晕呼吸动效 */
+.chat-header-glow-line {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    left: var(--boundary);
+    width: 2px;
+    margin-left: -1px;
+    background: linear-gradient(180deg,
+        rgba(255, 255, 255, 0) 0%,
+        rgba(255, 255, 255, 0.95) 20%,
+        rgba(255, 255, 255, 0.95) 80%,
+        rgba(255, 255, 255, 0) 100%);
+    box-shadow:
+        0 0 12px 1px rgba(0, 195, 255, 0.5),
+        0 0 12px 1px rgba(255, 110, 60, 0.5);
+    transition: left 1s linear;
+    animation: header-glow-line-pulse 2s ease-in-out infinite;
+}
+@keyframes header-glow-line-pulse {
+    0%, 100% {
+        opacity: 0.55;
+    }
+    50% {
+        opacity: 1;
+    }
+}
+/* 暗色主题下光晕增强，白色光核更突出 */
+body.dark-theme .chat-header-glow::before {
+    background: linear-gradient(90deg,
+        rgba(0, 195, 255, 0) 0%,
+        rgba(0, 195, 255, 0.12) 45%,
+        rgba(0, 195, 255, 0.48) 100%);
+}
+body.dark-theme .chat-header-glow::after {
+    background: linear-gradient(270deg,
+        rgba(255, 110, 60, 0) 0%,
+        rgba(255, 110, 60, 0.12) 45%,
+        rgba(255, 110, 60, 0.48) 100%);
 }
 .chat-messages-wrap {
     position: relative;
