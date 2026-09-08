@@ -234,7 +234,7 @@ public class ChatService implements IChatService {
             }
         }
         if (isPromptIncludeTaskRecords() && userId != null && !userId.isEmpty()) {
-            String taskRecords = longTermMemoryService.queryUserTaskRecordsMemoryContent(sessionId, userId, false);
+            String taskRecords = longTermMemoryService.queryUserTaskRecordsMemoryContent(sessionId, userId, true);
             if (taskRecords != null && !taskRecords.isEmpty()) {
                 systemMessage += "\n----近期任务记录----\n" + taskRecords;
                 logger.debug("系统提示词已注入近期任务记录（userId={}）", userId);
