@@ -43,29 +43,29 @@ function closeModelsModal() {
 
 function loadModels() {
     if (!currentProviderId) return;
-    
+
     fetch('/api/providers/' + currentProviderId + '/models')
         .then(response => response.json())
         .then(models => {
             const tbody = document.getElementById('modelsTableBody');
             const emptyState = document.getElementById('modelsEmptyState');
             const table = document.getElementById('modelsTable');
-            
+
             if (models.length === 0) {
                 table.style.display = 'none';
                 emptyState.style.display = 'block';
             } else {
                 table.style.display = 'table';
                 emptyState.style.display = 'none';
-                
+
                 tbody.innerHTML = models.map(model => {
                     const capabilities = model.capabilities ? model.capabilities.split(',').map(cap => {
                         const capNames = {text: '文本', image: '图片', audio: '音频', video: '视频', document: '文档'};
                         return '<span class="capability-tag">' + (capNames[cap] || cap) + '</span>';
                     }).join('') : '';
-                    
+
                     const verified = model.verified ? '<span class="verified-yes">已验证</span>' : '<span class="verified-no">未验证</span>';
-                    
+
                     return '<tr>' +
                         '<td>' + model.modelName + '</td>' +
                         '<td>' + (model.modelAlias || model.modelName) + '</td>' +
@@ -102,13 +102,16 @@ function showAddProviderModal() {
     document.getElementById('providerSdkName').required = true;
     document.getElementById('providerSdkName').disabled = false;
     document.getElementById('providerSdkName').value = '';
-    resetExtParamsView('provider');
+    resetExtParams('provider');
     Modal.open('providerModal');
 }
 
 function showEditProviderModal(id) {
     currentProviderId = id;
     document.getElementById('providerModalTitle').textContent = '编辑提供商';
+
+    // 清理上一次弹框的临时状态，待接口数据返回后重新装配
+    resetExtParams('provider');
 
     fetch('/api/providers/' + id)
         .then(response => response.json())
@@ -119,7 +122,6 @@ function showEditProviderModal(id) {
             document.getElementById('providerUrl').value = provider.url || '';
             document.getElementById('providerApiKey').value = provider.apiKey || '';
             document.getElementById('providerIcon').value = provider.icon || '';
-            document.getElementById('providerExtParams').value = provider.extParams || '';
 
             // 内置提供商隐藏 sdkName 选项（值不可变）
             currentProviderType = provider.type;
@@ -132,7 +134,9 @@ function showEditProviderModal(id) {
                 document.getElementById('providerSdkName').value = provider.sdkName || '';
             }
 
-            resetExtParamsView('provider');
+            // 扩展参数：按接口数据装配表单与 JSON 视图，回到表单视图
+            loadExtParams('provider', provider.extParams);
+            showExtParamsView('provider', 'form');
             Modal.open('providerModal');
         })
         .catch(error => {
@@ -143,6 +147,9 @@ function showEditProviderModal(id) {
 
 function closeProviderModal() {
     Modal.close('providerModal');
+    currentProviderType = null;
+    // 关闭时清理扩展参数临时状态
+    resetExtParams('provider');
 }
 
 function submitProvider() {
@@ -166,12 +173,12 @@ function submitProvider() {
         url: providerUrl,
         apiKey: document.getElementById('providerApiKey').value.trim(),
         icon: document.getElementById('providerIcon').value.trim(),
-        extParams: document.getElementById('providerExtParams').value.trim()
+        extParams: getExtParamsJson('provider')
     };
     if (!isBuiltin) {
         data.sdkName = document.getElementById('providerSdkName').value;
     }
-    
+
     let url, method;
     if (currentProviderId) {
         url = '/api/providers/' + currentProviderId;
@@ -181,7 +188,7 @@ function submitProvider() {
         url = '/api/providers';
         method = 'POST';
     }
-    
+
     fetch(url, {
         method: method,
         headers: {
@@ -243,22 +250,25 @@ function showAddModelModal() {
     document.getElementById('modelProviderId').value = currentProviderId;
     document.getElementById('modelCapabilitiesDisplay').innerHTML = '<span class="capability-hint">保存后将自动检测</span>';
     document.getElementById('modelVerifiedDisplay').innerHTML = '<span class="capability-hint">保存后将自动验证</span>';
-    document.getElementById('modelExtParams').value = '';
+    // 扩展参数：清理临时状态，表单恢复默认并回到表单视图
+    resetExtParams('model');
     document.getElementById('modelSupportThinking').checked = true;
     document.querySelectorAll('input[name="modelSupportedThinkingLevels"]').forEach(function(cb) {
         cb.checked = (cb.value === 'low' || cb.value === 'high' || cb.value === 'max');
     });
     document.getElementById('modelThinkingLevelsGroup').style.display = '';
-    // 初始化 reasoningEffort 下拉选项并设默认值
     updateModelReasoningEffortOptions();
+    applyModelThinkingConstraint();
     document.getElementById('modelForm_reasoningEffort').value = 'high';
-    resetExtParamsView('model');
     Modal.open('modelModal');
 }
 
 function showEditModelModal(id) {
     currentModelId = id;
     document.getElementById('modelModalTitle').textContent = '编辑模型';
+
+    // 清理上一次弹框的临时状态，待接口数据返回后重新装配
+    resetExtParams('model');
 
     fetch('/api/models/' + id)
         .then(response => response.json())
@@ -288,7 +298,6 @@ function showEditModelModal(id) {
                 : '<span class="verified-no">未验证</span>';
             document.getElementById('modelVerifiedDisplay').innerHTML = verifiedHtml;
 
-            document.getElementById('modelExtParams').value = model.extParams || '';
             // 思考能力支持字段
             var supportThinking = model.supportThinking === true || model.supportThinking === 1;
             document.getElementById('modelSupportThinking').checked = supportThinking;
@@ -302,9 +311,12 @@ function showEditModelModal(id) {
                     if (cb) cb.checked = true;
                 });
             }
-            // 初始化 reasoningEffort 下拉选项
             updateModelReasoningEffortOptions();
-            resetExtParamsView('model');
+            // 扩展参数：按接口数据装配表单与 JSON 视图，回到表单视图
+            loadExtParams('model', model.extParams);
+            showExtParamsView('model', 'form');
+            // 根据思考能力约束（不支持时禁用相关字段并从参数中剔除）
+            applyModelThinkingConstraint();
             Modal.open('modelModal');
         })
         .catch(error => {
@@ -315,6 +327,9 @@ function showEditModelModal(id) {
 
 function closeModelModal() {
     Modal.close('modelModal');
+    currentModelId = null;
+    // 关闭时清理扩展参数临时状态
+    resetExtParams('model');
 }
 
 /* ========== 保存模型 loading 遮罩 ========== */
@@ -371,7 +386,7 @@ function submitModel() {
         modelName: modelName,
         modelAlias: modelAlias,
         maxContextTokens: parseInt(maxContextTokens),
-        extParams: document.getElementById('modelExtParams').value.trim() || null,
+        extParams: getExtParamsJson('model'),
         supportThinking: document.getElementById('modelSupportThinking').checked,
         supportedThinkingLevels: getSelectedThinkingLevels()
     };
@@ -460,7 +475,7 @@ function deleteModel(id) {
     });
 }
 
-// ==================== ExtParams View Toggle ====================
+// ==================== 扩展参数（JSON/表单双视图，单一数据源） ====================
 
 var EXT_PARAMS_KEYS = [
     { key: 'enableThinking', type: 'boolean', defaultTrue: true },
@@ -480,142 +495,139 @@ var EXT_PARAMS_KEYS = [
     { key: 'parallelToolCalls', type: 'boolean', defaultTrue: true }
 ];
 
-function resetExtParamsView(target) {
-    var jsonView = document.getElementById(target + 'ExtParamsJsonView');
-    var formView = document.getElementById(target + 'ExtParamsFormView');
-    var toggleBtns = jsonView.parentElement.querySelectorAll('.ext-params-toggle-btn');
+// 单一数据源：JSON 视图与表单视图都是它的渲染结果
+var extParamsState = { provider: {}, model: {} };
 
-    toggleBtns.forEach(function(btn) { btn.classList.remove('active'); });
-
-    if (target === 'model') {
-        // 模型弹框默认显示表单视图
-        jsonView.classList.add('hidden');
-        formView.classList.add('active');
-        toggleBtns[1].classList.add('active');
-    } else {
-        // 提供商弹框默认显示表单视图
-        jsonView.classList.add('hidden');
-        formView.classList.add('active');
-        toggleBtns[1].classList.add('active');
-    }
-}
-
-function toggleExtParamsView(target, view) {
-    var jsonView = document.getElementById(target + 'ExtParamsJsonView');
-    var formView = document.getElementById(target + 'ExtParamsFormView');
-    var toggleBtns = jsonView.parentElement.querySelectorAll('.ext-params-toggle-btn');
-
-    toggleBtns.forEach(function(btn) { btn.classList.remove('active'); });
-
-    if (view === 'json') {
-        syncFormToExtParams(target);
-        jsonView.classList.remove('hidden');
-        formView.classList.remove('active');
-        toggleBtns[0].classList.add('active');
-    } else {
-        syncExtParamsToForm(target);
-        jsonView.classList.add('hidden');
-        formView.classList.add('active');
-        toggleBtns[1].classList.add('active');
-        // 切换到表单视图时，根据模型思考能力约束 extParams 字段
-        if (target === 'model') {
-            applyModelThinkingConstraint();
-        }
-    }
-}
-
-function syncExtParamsToForm(target) {
-    var textarea = document.getElementById(target + 'ExtParams');
-    var jsonStr = textarea.value.trim();
+/** 编辑打开：接口返回的 extParams JSON 字符串 → state → 渲染表单与 JSON 视图 */
+function loadExtParams(target, jsonStr) {
     var obj = {};
-
-    if (jsonStr) {
+    if (jsonStr && jsonStr.trim()) {
         try {
             obj = JSON.parse(jsonStr);
         } catch (e) {
-            console.warn('JSON 解析失败，无法同步到表单');
-            return;
+            console.warn('扩展参数 JSON 解析失败，按空数据处理', e);
         }
     }
+    extParamsState[target] = obj;
+    renderExtParamsForm(target);
+    renderExtParamsJson(target);
+}
 
+/** 新增打开/关闭弹框：清理临时状态，恢复默认并回到表单视图 */
+function resetExtParams(target) {
+    extParamsState[target] = {};
+    renderExtParamsForm(target);
+    renderExtParamsJson(target);
+    showExtParamsView(target, 'form');
+}
+
+/** 渲染表单视图：state → 表单字段 */
+function renderExtParamsForm(target) {
+    var obj = extParamsState[target] || {};
     EXT_PARAMS_KEYS.forEach(function(def) {
         var el = document.getElementById(target + 'Form_' + def.key);
         if (!el) return;
-
         var val = obj[def.key];
         if (def.type === 'boolean') {
-            // 默认启用的开关：缺省视为 true
+            // 默认启用的开关缺省视为 true
             el.checked = def.defaultTrue ? val !== false : val === true;
-        } else if (def.type === 'number') {
-            el.value = (val !== undefined && val !== null) ? val : '';
         } else {
             el.value = (val !== undefined && val !== null) ? val : '';
         }
     });
 }
 
-function syncFormToExtParams(target) {
-    var textarea = document.getElementById(target + 'ExtParams');
-    var jsonStr = textarea.value.trim();
-    var obj = {};
+/** 渲染 JSON 视图：state → textarea */
+function renderExtParamsJson(target) {
+    var obj = extParamsState[target] || {};
+    var keys = Object.keys(obj);
+    document.getElementById(target + 'ExtParams').value = keys.length ? JSON.stringify(obj, null, 2) : '';
+}
 
-    if (jsonStr) {
-        try {
-            obj = JSON.parse(jsonStr);
-        } catch (e) {
-            return;
-        }
+/** 视图切换（数据实时双向同步，仅切换显示） */
+function showExtParamsView(target, view) {
+    var jsonView = document.getElementById(target + 'ExtParamsJsonView');
+    var formView = document.getElementById(target + 'ExtParamsFormView');
+    var btns = jsonView.parentElement.querySelectorAll('.ext-params-toggle-btn');
+    btns.forEach(function(b) { b.classList.remove('active'); });
+    if (view === 'json') {
+        jsonView.classList.remove('hidden');
+        formView.classList.remove('active');
+        btns[0].classList.add('active');
+    } else {
+        jsonView.classList.add('hidden');
+        formView.classList.add('active');
+        btns[1].classList.add('active');
     }
+}
 
+/** 采集表单 → state，并刷新 JSON 视图（表单输入时调用） */
+function collectExtParamsForm(target) {
+    var obj = {};
+    // 保留表单未覆盖的自定义参数
+    var prev = extParamsState[target] || {};
+    Object.keys(prev).forEach(function(k) {
+        var known = EXT_PARAMS_KEYS.some(function(def) { return def.key === k; });
+        if (!known) {
+            obj[k] = prev[k];
+        }
+    });
     EXT_PARAMS_KEYS.forEach(function(def) {
         var el = document.getElementById(target + 'Form_' + def.key);
-        if (!el) return;
-
+        if (!el || el.disabled) return; // 被禁用字段（如不支持思考时）不采集
         if (def.type === 'boolean') {
-            // 默认启用的开关：不勾选时显式写 false，保证关闭语义可持久化
+            // 默认启用的开关显式写 true/false；默认关闭的仅勾选时写 true
             if (def.defaultTrue) {
                 obj[def.key] = el.checked;
             } else if (el.checked) {
                 obj[def.key] = true;
-            } else {
-                delete obj[def.key];
-            }
-        } else if (def.type === 'number') {
-            var numVal = el.value.trim();
-            if (numVal !== '') {
-                obj[def.key] = parseFloat(numVal);
-            } else {
-                delete obj[def.key];
             }
         } else {
-            var strVal = el.value.trim();
-            if (strVal !== '') {
-                obj[def.key] = strVal;
-            } else {
-                delete obj[def.key];
+            var v = el.value.trim();
+            if (v !== '') {
+                obj[def.key] = def.type === 'number' ? parseFloat(v) : v;
             }
         }
     });
-
-    var hasKeys = Object.keys(obj).length > 0;
-    textarea.value = hasKeys ? JSON.stringify(obj, null, 2) : '';
+    extParamsState[target] = obj;
+    renderExtParamsJson(target);
 }
 
-function initExtParamsListeners(target) {
-    var formView = document.getElementById(target + 'ExtParamsFormView');
-    if (!formView) return;
-
-    formView.addEventListener('input', function() {
-        syncFormToExtParams(target);
-    });
-    formView.addEventListener('change', function() {
-        syncFormToExtParams(target);
-    });
+/** JSON 视图输入 → state，并刷新表单（JSON 非法时表单保持最后合法状态） */
+function onExtParamsJsonInput(target) {
+    var jsonStr = document.getElementById(target + 'ExtParams').value.trim();
+    if (!jsonStr) {
+        extParamsState[target] = {};
+        renderExtParamsForm(target);
+        return;
+    }
+    try {
+        extParamsState[target] = JSON.parse(jsonStr);
+        renderExtParamsForm(target);
+    } catch (e) {
+        // JSON 尚未输入完整，暂不同步表单
+    }
 }
 
+/** 保存时从 state 序列化；无有效参数返回 null */
+function getExtParamsJson(target) {
+    var obj = Object.assign({}, extParamsState[target] || {});
+    // 不支持思考的模型强制剔除思考相关参数
+    if (target === 'model' && !document.getElementById('modelSupportThinking').checked) {
+        delete obj.enableThinking;
+        delete obj.reasoningEffort;
+    }
+    return Object.keys(obj).length ? JSON.stringify(obj) : null;
+}
+
+// 表单视图输入监听（事件委托）：任何输入即时采集进 state 并同步 JSON 视图
 document.addEventListener('DOMContentLoaded', function() {
-    initExtParamsListeners('provider');
-    initExtParamsListeners('model');
+    ['provider', 'model'].forEach(function(target) {
+        var formView = document.getElementById(target + 'ExtParamsFormView');
+        if (!formView) return;
+        formView.addEventListener('input', function() { collectExtParamsForm(target); });
+        formView.addEventListener('change', function() { collectExtParamsForm(target); });
+    });
 });
 
 // ==================== Thinking Support Fields ====================
@@ -632,11 +644,8 @@ function onModelSupportThinkingChange() {
     var supported = document.getElementById('modelSupportThinking').checked;
     document.getElementById('modelThinkingLevelsGroup').style.display = supported ? '' : 'none';
 
-    // 约束 extParams 表单：不支持思考时禁用 enableThinking 和 reasoningEffort
+    // 联动约束扩展参数字段（不支持思考时禁用并从参数中剔除）
     applyModelThinkingConstraint();
-
-    // 同步到 JSON
-    syncFormToExtParams('model');
 }
 
 function applyModelThinkingConstraint() {
@@ -654,6 +663,12 @@ function applyModelThinkingConstraint() {
         if (!supported) {
             reasoningEffortEl.value = '';
         }
+    }
+    // 不支持思考时，从扩展参数中剔除思考相关字段并刷新 JSON 视图
+    if (!supported && extParamsState.model) {
+        delete extParamsState.model.enableThinking;
+        delete extParamsState.model.reasoningEffort;
+        renderExtParamsJson('model');
     }
     // 联动更新 reasoningEffort 下拉选项
     updateModelReasoningEffortOptions();
@@ -680,4 +695,3 @@ function updateModelReasoningEffortOptions() {
         datalist.appendChild(opt);
     });
 }
-

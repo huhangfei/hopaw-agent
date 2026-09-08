@@ -150,14 +150,14 @@
                                 <div class="ext-params-wrapper">
                                     <div class="ext-params-toggle">
                                         <button type="button" class="ext-params-toggle-btn"
-                                                onclick="toggleExtParamsView('provider', 'json')">
+                                                onclick="showExtParamsView('provider', 'json')">
                                             <svg viewBox="0 0 24 24" fill="currentColor">
                                                 <path d="M14 2H6c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V8l-6-6zm-1 1.5L18.5 9H13V3.5zM6 20V4h5v7h7v9H6z"/>
                                             </svg>
                                             JSON
                                         </button>
                                         <button type="button" class="ext-params-toggle-btn active"
-                                                onclick="toggleExtParamsView('provider', 'form')">
+                                                onclick="showExtParamsView('provider', 'form')">
                                             <svg viewBox="0 0 24 24" fill="currentColor">
                                                 <path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/>
                                             </svg>
@@ -167,7 +167,7 @@
                                     <div class="ext-params-json-view" id="providerExtParamsJsonView">
                                         <textarea id="providerExtParams" rows="12"
                                                   th:placeholder='${defaultAiModelExtParamsJson}'
-                                                  oninput="syncExtParamsToJson('provider')"></textarea>
+                                                  oninput="onExtParamsJsonInput('provider')"></textarea>
                                     </div>
                                     <div class="ext-params-form-view active" id="providerExtParamsFormView">
                                         <div class="ext-params-form-row">
@@ -390,14 +390,14 @@
                                      style="flex:1; display:flex; flex-direction:column; min-height:0;">
                                     <div class="ext-params-toggle">
                                         <button type="button" class="ext-params-toggle-btn"
-                                                onclick="toggleExtParamsView('model', 'json')">
+                                                onclick="showExtParamsView('model', 'json')">
                                             <svg viewBox="0 0 24 24" fill="currentColor">
                                                 <path d="M14 2H6c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V8l-6-6zm-1 1.5L18.5 9H13V3.5zM6 20V4h5v7h7v9H6z"/>
                                             </svg>
                                             JSON
                                         </button>
                                         <button type="button" class="ext-params-toggle-btn active"
-                                                onclick="toggleExtParamsView('model', 'form')">
+                                                onclick="showExtParamsView('model', 'form')">
                                             <svg viewBox="0 0 24 24" fill="currentColor">
                                                 <path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/>
                                             </svg>
@@ -407,7 +407,7 @@
                                     <div class="ext-params-json-view hidden" id="modelExtParamsJsonView">
                                     <textarea id="modelExtParams" rows="12"
                                               th:placeholder='${defaultAiModelExtParamsJson}'
-                                              oninput="syncExtParamsToJson('model')"></textarea>
+                                              oninput="onExtParamsJsonInput('model')"></textarea>
                                     </div>
                                     <div class="ext-params-form-view active" id="modelExtParamsFormView">
                                         <div class="ext-params-form-row">
