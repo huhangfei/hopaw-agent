@@ -16,8 +16,6 @@
             </div>
             <select id="attachmentSourceFilter" class="filter-select">
                 <option value="">全部来源</option>
-                <option value="upload">附件上传</option>
-                <option value="chat">会话文件</option>
             </select>
             <select id="attachmentTypeFilter" class="filter-select">
                 <option value="">全部类型</option>
@@ -71,8 +69,6 @@
                 <div class="form-group">
                     <label>来源</label>
                     <select id="editSource" class="form-input">
-                        <option value="upload">附件上传</option>
-                        <option value="chat">会话文件</option>
                     </select>
                 </div>
                 <div class="form-group">
@@ -97,6 +93,7 @@
 </th:block>
 
 <th:block layout:fragment="extraScripts">
+    <script th:src="@{/js/page/attachment-source.js}"></script>
     <script th:src="@{/js/page/attachment-preview.js}"></script>
     <script th:src="@{/js/page/attachments.js}"></script>
 </th:block>

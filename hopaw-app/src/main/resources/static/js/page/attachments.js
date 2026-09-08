@@ -16,13 +16,13 @@
         file: '📦'
     };
 
-    var sourceLabels = {
-        upload: '附件上传',
-        chat: '会话文件'
-    };
+    var sourceLabels = ATTACHMENT_SOURCE_LABELS;
 
     // 初始化
     function init() {
+        // 来源下拉选项由统一模块生成（含 agentTool 智能体工具）
+        AttachmentSource.renderFilterOptions(document.getElementById('attachmentSourceFilter'));
+        AttachmentSource.renderValueOptions(document.getElementById('editSource'));
         loadAttachments();
         bindEvents();
     }
@@ -178,7 +178,7 @@
         for (var i = 0; i < files.length; i++) {
             formData.append('files', files[i]);
         }
-        formData.append('source', 'upload');
+        formData.append('source', AttachmentsSourceCode.UPLOAD);
 
         var progressEl = document.getElementById('attachmentUploadProgress');
         progressEl.style.display = 'flex';

@@ -21,7 +21,7 @@ public class Attachment {
     private Long fileSize;
     /** MIME类型 */
     private String mimeType;
-    /** 附件来源：upload(附件上传), task(任务附件), project(项目附件) 等 */
+    /** 附件来源，取值见 {@link com.agent.hopaw.infra.constant.AttachmentSourceEnum}：upload(附件上传), chat(会话文件), agentTool(智能体工具) */
     private String source;
     /** 关联业务ID（可选，如任务ID、项目ID） */
     private Long bizId;

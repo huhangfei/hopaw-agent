@@ -16,14 +16,6 @@ var AttachmentPreview = (function () {
         pdf: '📄', markdown: '📝', text: '📃', file: '📦'
     };
 
-    /** 来源 → 中文标签 */
-    var SOURCE_LABELS = {
-        upload: '附件上传',
-        chat: '会话文件',
-        task: '任务附件',
-        project: '项目附件'
-    };
-
     /**
      * 在新标签页打开独立预览页
      * @param {number} id 附件ID
@@ -40,7 +32,7 @@ var AttachmentPreview = (function () {
         var html = '<div class="preview-info">' +
             '<span class="info-item">大小: ' + escapeHtml(formatFileSize(item.fileSize)) + '</span>' +
             '<span class="info-item">类型: ' + escapeHtml(item.fileExtension || '') + '</span>' +
-            '<span class="info-item">来源: ' + escapeHtml(SOURCE_LABELS[item.source] || item.source || '') + '</span>' +
+            '<span class="info-item">来源: ' + escapeHtml(AttachmentSource.label(item.source) || '') + '</span>' +
             '<span class="info-item">创建时间: ' + escapeHtml(formatTime(item.createTime)) + '</span>' +
             '<span class="info-item">更新时间: ' + escapeHtml(formatTime(item.updateTime)) + '</span>' +
             '</div>';
@@ -77,6 +69,6 @@ var AttachmentPreview = (function () {
         open: open,
         renderInfo: renderInfo,
         FILE_TYPE_ICONS: FILE_TYPE_ICONS,
-        SOURCE_LABELS: SOURCE_LABELS
+        SOURCE_LABELS: ATTACHMENT_SOURCE_LABELS
     };
 })();

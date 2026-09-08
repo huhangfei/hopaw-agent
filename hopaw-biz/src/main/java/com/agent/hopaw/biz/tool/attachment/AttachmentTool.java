@@ -1,5 +1,6 @@
 package com.agent.hopaw.biz.tool.attachment;
 
+import com.agent.hopaw.infra.constant.AttachmentSourceEnum;
 import com.agent.hopaw.infra.model.entity.Attachment;
 import com.agent.hopaw.infra.service.IAttachmentService;
 import com.agent.hopaw.infra.tool.ToolSecurityLevel;
@@ -35,8 +36,8 @@ public class AttachmentTool implements AgentTool {
 
     private static final Logger log = LoggerFactory.getLogger(AttachmentTool.class);
 
-    /** 附件来源标识：工具添加 */
-    private static final String SOURCE = "agentTool";
+    /** 附件来源标识：智能体工具添加 */
+    private static final String SOURCE = AttachmentSourceEnum.AGENT_TOOL.getCode();
 
     private final IAttachmentService attachmentService;
 

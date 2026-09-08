@@ -1,5 +1,6 @@
 package com.agent.hopaw.infra.service;
 
+import com.agent.hopaw.infra.constant.AttachmentSourceEnum;
 import com.agent.hopaw.infra.mapper.AttachmentMapper;
 import com.agent.hopaw.infra.model.entity.Attachment;
 import org.slf4j.Logger;
@@ -175,7 +176,7 @@ public class AttachmentService implements IAttachmentService {
         attachment.setFileExtension(extLower);
         attachment.setFileSize((long) content.length);
         attachment.setMimeType(contentType);
-        attachment.setSource(source != null ? source : "upload");
+        attachment.setSource(source != null ? source : AttachmentSourceEnum.UPLOAD.getCode());
         attachment.setBizId(bizId);
         attachment.setUserId(userId);
         attachment.setStoragePath(storagePath);
