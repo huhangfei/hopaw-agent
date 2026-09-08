@@ -13,10 +13,11 @@ services:
       TZ: Asia/Shanghai
       # 运行时目录统一重定向到 /app/data（环境变量优先级高于 application-*.properties）
       SPRING_DATASOURCE_URL: jdbc:sqlite:/app/data/agent.db
+      AGENT_PLUGIN_DIR: /app/data/plugins
       HOPAW_ATTACHMENT_DIR: /app/data/attachments
       HOPAW_PROJECT_SPACE_DIR: /app/data/project-spaces
       HOPAW_EXPORT_DIR: /app/data/exports
-      AGENT_PLUGIN_DIR: /app/data/plugins
+      HOPAW_ENCRYPTION_KEY_PATH: /app/data/encryption.key
     volumes:
       - ./data:/app/data
       - ./logs:/app/logs

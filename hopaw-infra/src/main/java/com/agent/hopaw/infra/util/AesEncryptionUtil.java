@@ -2,6 +2,7 @@ package com.agent.hopaw.infra.util;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
 import javax.annotation.PostConstruct;
@@ -37,11 +38,12 @@ public class AesEncryptionUtil {
     /** 实例密钥：通过 new AesEncryptionUtil(keyBytes) 指定（如备份导入时使用压缩包内旧密钥） */
     private final SecretKey instanceKey;
 
-    private final Path keyPath;
+    private Path keyPath;
+
+    @Value("${hopaw.encryption.key.path:}")
+    private String configuredKeyPath;
 
     public AesEncryptionUtil() {
-        String home = System.getProperty("user.home");
-        this.keyPath = Paths.get(home, ".hopaw", "encryption.key");
         this.instanceKey = null;
     }
 
@@ -50,14 +52,14 @@ public class AesEncryptionUtil {
      * 用于备份导入等场景：用备份包内的旧密钥解密历史密文。
      */
     public AesEncryptionUtil(byte[] keyBytes) {
-        String home = System.getProperty("user.home");
-        this.keyPath = Paths.get(home, ".hopaw", "encryption.key");
+        this.keyPath = resolveKeyPath();
         this.instanceKey = new SecretKeySpec(keyBytes, ALGORITHM);
     }
 
     @PostConstruct
     public void init() {
         try {
+            this.keyPath = resolveKeyPath();
             File keyFile = keyPath.toFile();
             if (keyFile.exists()) {
                 secretKey = loadKey(keyFile);
@@ -70,6 +72,21 @@ public class AesEncryptionUtil {
         } catch (Exception e) {
             throw new RuntimeException("初始化加密密钥失败", e);
         }
+    }
+
+    /**
+     * 解析密钥路径：优先使用配置项，未配置则使用默认路径 ~/.hopaw/encryption.key
+     */
+    private Path resolveKeyPath() {
+        if (configuredKeyPath != null && !configuredKeyPath.isBlank()) {
+            Path configured = Paths.get(configuredKeyPath);
+            if (!configured.isAbsolute()) {
+                configured = Paths.get(System.getProperty("user.dir"), configuredKeyPath);
+            }
+            log.info("使用配置的加密密钥路径: {}", configured);
+            return configured;
+        }
+        return Paths.get(System.getProperty("user.home"), ".hopaw", "encryption.key");
     }
 
     /**
