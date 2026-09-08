@@ -38,4 +38,18 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         });
     }
+
+    // 全局 fetch 拦截：401/403 时自动跳转登录页（带回跳地址）
+    var _originalFetch = window.fetch;
+    window.fetch = function() {
+        return _originalFetch.apply(this, arguments).then(function(response) {
+            if (response.status === 401 || response.status === 403) {
+                var url = window.location.pathname;
+                if (url !== '/login') {
+                    window.location.href = '/login?redirect=' + encodeURIComponent(url);
+                }
+            }
+            return response;
+        });
+    };
 });

@@ -1,15 +1,24 @@
 package com.agent.hopaw.config;
 
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.web.servlet.config.annotation.InterceptorRegistry;
 import org.springframework.web.servlet.config.annotation.ResourceHandlerRegistry;
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
+
+import java.io.File;
 
 @Configuration
 public class WebMvcConfig implements WebMvcConfigurer {
 
     private final ThemeInterceptor themeInterceptor;
     private final AuthInterceptor authInterceptor;
+
+    @Value("${hopaw.attachment.dir:./attachments}")
+    private String attachmentDir;
+
+    @Value("${hopaw.attachment.url-prefix:/attachments}")
+    private String attachmentUrlPrefix;
 
     public WebMvcConfig(ThemeInterceptor themeInterceptor, AuthInterceptor authInterceptor) {
         this.themeInterceptor = themeInterceptor;
@@ -23,8 +32,12 @@ public class WebMvcConfig implements WebMvcConfigurer {
         registry.addResourceHandler("/exports/**")
                 .addResourceLocations(exportPath);
         // 附件文件访问：将 /attachments/** 映射到配置的附件目录
-        String attachmentPath = "file:" + System.getProperty("user.dir") + "/attachments/";
-        registry.addResourceHandler("/attachments/**")
+        File dir = new File(attachmentDir);
+        if (!dir.isAbsolute()) {
+            dir = new File(System.getProperty("user.dir"), attachmentDir);
+        }
+        String attachmentPath = "file:" + dir.getAbsolutePath() + "/";
+        registry.addResourceHandler(attachmentUrlPrefix + "/**")
                 .addResourceLocations(attachmentPath);
     }
 
@@ -32,7 +45,7 @@ public class WebMvcConfig implements WebMvcConfigurer {
     public void addInterceptors(InterceptorRegistry registry) {
         registry.addInterceptor(authInterceptor)
                 .addPathPatterns("/**")
-                .excludePathPatterns("/static/**", "/css/**", "/js/**", "/icons/**", "/images/**", "/test/**", "/ws/**", "/error", "/exports/**");
+                .excludePathPatterns("/static/**", "/css/**", "/js/**", "/icons/**", "/images/**", "/test/**", "/ws/**", "/error", "/exports/**", attachmentUrlPrefix + "/**");
 
         registry.addInterceptor(themeInterceptor)
                 .addPathPatterns("/**")
