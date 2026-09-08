@@ -477,7 +477,8 @@ function deleteModel(id) {
 
 // ==================== 扩展参数（JSON/表单双视图，单一数据源） ====================
 
-var EXT_PARAMS_KEYS = [
+// 模型扩展参数字段集：包含思考联动字段，与 supportThinking/supportedThinkingLevels 联动
+var MODEL_EXT_PARAMS_KEYS = [
     { key: 'enableThinking', type: 'boolean', defaultTrue: true },
     { key: 'temperature', type: 'number' },
     { key: 'timeoutSeconds', type: 'number' },
@@ -494,6 +495,24 @@ var EXT_PARAMS_KEYS = [
     { key: 'useMaxCompletionTokens', type: 'boolean' },
     { key: 'parallelToolCalls', type: 'boolean', defaultTrue: true }
 ];
+
+// 提供商扩展参数字段集：独立一套，仅通用参数，无思考联动字段
+var PROVIDER_EXT_PARAMS_KEYS = [
+    { key: 'temperature', type: 'number' },
+    { key: 'timeoutSeconds', type: 'number' },
+    { key: 'outputMaxTokens', type: 'number' },
+    { key: 'useMaxCompletionTokens', type: 'boolean' },
+    { key: 'accumulateToolCallId', type: 'boolean', defaultTrue: true },
+    { key: 'strictTools', type: 'boolean', defaultTrue: true },
+    { key: 'parallelToolCalls', type: 'boolean', defaultTrue: true },
+    { key: 'logRequests', type: 'boolean' },
+    { key: 'logResponses', type: 'boolean' }
+];
+
+/** 按弹框目标返回对应的字段集 */
+function getExtParamsKeys(target) {
+    return target === 'provider' ? PROVIDER_EXT_PARAMS_KEYS : MODEL_EXT_PARAMS_KEYS;
+}
 
 // 单一数据源：JSON 视图与表单视图都是它的渲染结果
 var extParamsState = { provider: {}, model: {} };
@@ -524,7 +543,7 @@ function resetExtParams(target) {
 /** 渲染表单视图：state → 表单字段 */
 function renderExtParamsForm(target) {
     var obj = extParamsState[target] || {};
-    EXT_PARAMS_KEYS.forEach(function(def) {
+    getExtParamsKeys(target).forEach(function(def) {
         var el = document.getElementById(target + 'Form_' + def.key);
         if (!el) return;
         var val = obj[def.key];
@@ -565,14 +584,15 @@ function showExtParamsView(target, view) {
 function collectExtParamsForm(target) {
     var obj = {};
     // 保留表单未覆盖的自定义参数
+    var keys = getExtParamsKeys(target);
     var prev = extParamsState[target] || {};
     Object.keys(prev).forEach(function(k) {
-        var known = EXT_PARAMS_KEYS.some(function(def) { return def.key === k; });
+        var known = keys.some(function(def) { return def.key === k; });
         if (!known) {
             obj[k] = prev[k];
         }
     });
-    EXT_PARAMS_KEYS.forEach(function(def) {
+    keys.forEach(function(def) {
         var el = document.getElementById(target + 'Form_' + def.key);
         if (!el || el.disabled) return; // 被禁用字段（如不支持思考时）不采集
         if (def.type === 'boolean') {
