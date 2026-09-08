@@ -555,7 +555,7 @@ public class WorkflowTaskService implements IWorkflowTaskService {
         systemMsgBuilder.append("任务名称：").append(task.getTitle()).append("\n");
         systemMsgBuilder.append("任务内容：").append(task.getContent()).append("\n");
         systemMsgBuilder.append("请根据任务内容执行，完成后给出执行结果摘要，如有产出结果，请放到文件系统中。\n");
-        systemMsgBuilder.append("记忆工具是你的核心工具，需要回忆什么信息时，先去调用记忆工具看看有没相关可用信息。\n");
+        systemMsgBuilder.append("记忆工具是你的核心工具，需要回忆什么信息时，先去调用记忆工具看看有没相关可用信息，只能查询记忆不要添加修改记忆。\n");
         systemMsgBuilder.append("在判断有需要调用工具就去调用，遇到危险操作，立刻停止操作。\n");
         systemMsgBuilder.append("你只能使用用户提供的工具，绝对不能调用不存在的工具。\n");
         systemMsgBuilder.append("任务评论工具使用指引：\n");

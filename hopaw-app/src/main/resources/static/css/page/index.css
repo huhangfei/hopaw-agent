@@ -451,8 +451,10 @@ body.dark-theme .session-running-spinner {
     display: flex;
     align-items: center;
     gap: 10px;
-    /* 允许标题超长时在 flex 布局内截断 */
+    /* 占用空白空间并允许超长时收缩截断，防止撑开整个 chat-header */
+    flex: 1 1 auto;
     min-width: 0;
+    overflow: hidden;
 }
 .chat-header-desc {
     font-size: 14px;
@@ -460,6 +462,10 @@ body.dark-theme .session-running-spinner {
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
+    /* 块级化 + 宽度约束，保证超长标题省略号且不撑大布局 */
+    display: block;
+    min-width: 0;
+    max-width: 100%;
 }
 .chat-header-actions {
     display: flex;
