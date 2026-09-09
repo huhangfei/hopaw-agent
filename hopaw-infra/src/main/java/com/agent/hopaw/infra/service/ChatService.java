@@ -225,7 +225,7 @@ public class ChatService implements IChatService {
                     "1，图片类型：![文件名](下载地址)\n" +
                     "2，其他类型：[attachment:附件ID:文件名:下载地址] \n";
         }
-        String tempFilePath=System.getProperty("user.dir")+"/tempFile";
+        String tempFilePath=System.getProperty("user.dir")+"/temp-file";
         systemMessage=systemMessage.replace("{agentName}", agent.getName())
                 .replace("{agentDescription}", agent.getDescription())
                 .replace("{agentId}", agent.getId().toString())

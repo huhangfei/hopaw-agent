@@ -20,8 +20,11 @@ services:
       HOPAW_ENCRYPTION_KEY_PATH: /app/data/encryption.key
     volumes:
       - ./data:/app/data
+      # 日志目录默认为相对路径 logs（可在系统设置中改为 /app/data/logs），挂载兜底
       - ./data/logs:/app/logs
-      - ./data/tempFile:/app/tempFile
+      # 临时文件目录默认为相对路径 temp-file（可在系统设置中改为 /app/data/temp-file），挂载兜底
+      - ./data/temp-file:/app/temp-file
+      # 导出目录默认为相对路径 exports（可在系统设置中改为 /app/data/exports），挂载兜底
       - ./data/exports:/app/exports
       # 技能目录默认为相对路径 skills（可在系统设置中改为 /app/data/skills），挂载兜底
       - ./data/skills:/app/skills
