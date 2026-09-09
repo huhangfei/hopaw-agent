@@ -866,6 +866,7 @@ public class AgentExecutor implements IAgentExecutor {
             chatSession.setUserId(userId);
             chatSession.setTitle(userIntent);
             chatSession.setEnableThinking(agentExecutorParams.getEnableThinking());
+            chatSession.setThinkingLevel(agentExecutorParams.getReasoningEffort());
             chatSession.setAiModelId(agentExecutorParams.getAiModelId());
             chatSession.setSkillNames(String.join(",", agentExecutorParams.getSkillNames() == null ? new ArrayList<>() : agentExecutorParams.getSkillNames()));
             chatSession.setLastUpdateTime(LocalDateTime.now());
@@ -894,6 +895,7 @@ public class AgentExecutor implements IAgentExecutor {
             chatSession.setAgentId(agentId);
             chatSession.setUserId(userId);
             chatSession.setEnableThinking(agentExecutorParams.getEnableThinking());
+            chatSession.setThinkingLevel(agentExecutorParams.getReasoningEffort());
             chatSession.setAiModelId(agentExecutorParams.getAiModelId());
             chatSession.setSkillNames(String.join(",", agentExecutorParams.getSkillNames() == null ? new ArrayList<>() : agentExecutorParams.getSkillNames()));
             chatSession.setLastUpdateTime(LocalDateTime.now());

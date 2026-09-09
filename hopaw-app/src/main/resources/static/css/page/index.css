@@ -1158,15 +1158,19 @@ body.dark-theme .chat-header-glow::after {
     color: #fff;
 }
 
-/* 标签容器 */
+/* 标签容器：占位高度，标签由 JS 按手柄百分比绝对定位 */
 .thinking-level-noui-labels {
-    display: flex;
-    justify-content: space-between;
-    padding: 0 8px;
+    position: relative;
+    height: 16px;
+    margin-top: 2px;
 }
 
 .thinking-level-noui-label {
+    position: absolute;
+    top: 0;
+    transform: translateX(-50%);
     font-size: 11px;
+    line-height: 16px;
     color: #999;
     cursor: pointer;
     transition: color 0.2s, font-weight 0.2s;
@@ -2024,6 +2028,7 @@ body.dark-theme .model-tag-cap {
 .message-content p {
     margin: 10px 0;
 }
+
 .message-content p:first-child {
     margin-top: 0;
 }
@@ -2137,6 +2142,9 @@ body.dark-theme .model-tag-cap {
     line-height: 1.5;
     word-break: break-word;
     overflow-wrap: anywhere;
+}
+.thinking-content p{
+    margin:0px 0px;
 }
 /* 思考小节：默认收起仅显示两行（3em = 12px * 1.5 * 2），完成后自动收起 */
 .thinking-section:not(.expanded) .thinking-content {

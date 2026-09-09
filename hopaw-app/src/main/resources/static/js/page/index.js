@@ -19,11 +19,12 @@ var THINKING_LEVELS = [
     {code: 'low',     name: '低',   color: '#38bdf8'},
     {code: 'medium',  name: '中',   color: '#667eea'},
     {code: 'high',    name: '高',   color: '#8b5cf6'},
-    {code: 'xhigh',   name: '极高', color: '#7c3aed'},
-    {code: 'max',     name: '最大', color: '#6d28d9'}
+    {code: 'xhigh',   name: '极高', color: '#ec4899'},
+    {code: 'max',     name: '最大', color: '#ef4444'}
 ];
 var currentThinkingLevels = [];   // 当前模型支持的等级（已按从低到高排序）
 var currentThinkingLevel = null;  // 当前选中等级 code
+var thinkingLevelFromModelDefault = false; // 会话/智能体均未配置等级：待模型加载后取支持列表末位
 var thinkingModelById = {};       // 模型ID → 模型数据（含 supportedThinkingLevelsArray）
 
 /**
@@ -2871,7 +2872,8 @@ window.onload = function() {
             // 智能体有配置，使用智能体的
             currentThinkingLevel = deepBtn.getAttribute('data-default-level');
         } else {
-            // 默认使用模型支持列表的最后一个
+            // 会话/智能体均未配置：先以 max 占位渲染，模型加载完成后取支持列表的最后一个
+            thinkingLevelFromModelDefault = true;
             currentThinkingLevel = 'max';
         }
         // 先以全量等级初始化滑块与按钮发光，模型数据加载后按 supportedThinkingLevelsArray 重建
@@ -3178,8 +3180,12 @@ function syncThinkingLevelsFromModel(model) {
     }
     currentThinkingLevels = levels;
 
-    // 当前等级不在新列表中：回退 high，仍不存在则取中间档
-    if (!findThinkingLevelMeta(currentThinkingLevel)) {
+    if (thinkingLevelFromModelDefault) {
+        // 会话/智能体均未配置等级：取模型支持列表的最后一个
+        currentThinkingLevel = levels[levels.length - 1].code;
+        thinkingLevelFromModelDefault = false;
+    } else if (!findThinkingLevelMeta(currentThinkingLevel)) {
+        // 当前等级不在新列表中：回退 high，仍不存在则取中间档
         var fallback = findThinkingLevelMeta('high');
         currentThinkingLevel = fallback ? fallback.code : levels[Math.floor(levels.length / 2)].code;
     }
@@ -3213,8 +3219,11 @@ function renderThinkingLevelSlider() {
         label.className = 'thinking-level-noui-label';
         label.textContent = meta.name;
         label.setAttribute('data-index', i);
+        // 绝对定位到滑块手柄的百分比位置，保证标签与圆点中心对齐
+        label.style.left = n > 1 ? (i / (n - 1) * 100) + '%' : '50%';
         label.addEventListener('click', function() {
-            thinkingNoUiSlider.set(i);
+            // set() 不触发 change 事件，直接走 selectThinkingLevel 统一更新滑块、标签与按钮发光
+            selectThinkingLevel(meta.code);
         });
         labelsContainer.appendChild(label);
     });
