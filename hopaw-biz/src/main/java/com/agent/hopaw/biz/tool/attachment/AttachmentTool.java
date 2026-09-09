@@ -133,8 +133,8 @@ public class AttachmentTool implements AgentTool {
             sb.append("类型: ").append(attachment.getFileType()).append(ext).append("\n");
             sb.append("大小: ").append(attachment.getFileSize()).append(" 字节\n");
             sb.append("下载地址: ").append(url).append("\n");
-            sb.append("预览地址: ").append(previewUrl).append("\n");
-            sb.append("说明: 预览地址返回HTML预览页，下载地址为原始文件资源");
+            //sb.append("预览地址: ").append(previewUrl).append("\n");
+            sb.append("说明: 下载地址为原始文件资源");
             return sb.toString();
         } catch (IOException e) {
             log.error("添加附件失败: {}", filePath, e);

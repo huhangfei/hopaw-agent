@@ -220,14 +220,16 @@ public class ChatService implements IChatService {
                     "在遇到需要用户提供信息的时候，不要猜，记忆中没有就问用户。\n" +
                     "在判断有需要调用工具就去调用，遇到危险操作，立刻停止操作，询问用户。\n" +
                     "你只能使用用户提供的工具，绝对不能调用不存在的工具。更不能编造工具。\n" +
-                    "如果需要写临时性的文件尽量写到系统临时目录，不要写到用户目录。\n" +
-                    "如果交付产物是附件，将结果输出为Markdown格式：\n" +
-                    "1，图片类型：![替代文本](图片地址)\n" +
+                    "如果需要写临时性的文件尽量写到{tempFilePath}目录，不要写到用户目录。\n" +
+                    "如果交付产物是上传的附件，将结果输出为Markdown格式：\n" +
+                    "1，图片类型：![文件名](下载地址)\n" +
                     "2，其他类型：[attachment:附件ID:文件名:下载地址] \n";
         }
+        String tempFilePath=System.getProperty("user.dir")+"/tempFile";
         systemMessage=systemMessage.replace("{agentName}", agent.getName())
                 .replace("{agentDescription}", agent.getDescription())
-                .replace("{agentId}", agent.getId().toString());
+                .replace("{agentId}", agent.getId().toString())
+                .replace("{tempFilePath}",tempFilePath);
         // 根据设置决定是否注入用户画像 / 任务记录作为系统提示词上下文
         if (isPromptIncludeUserProfile() && userId != null && !userId.isEmpty()) {
             String profile = longTermMemoryService.queryUserProfileMemoryContent(userId);
