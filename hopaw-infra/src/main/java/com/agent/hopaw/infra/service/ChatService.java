@@ -220,7 +220,10 @@ public class ChatService implements IChatService {
                     "在遇到需要用户提供信息的时候，不要猜，记忆中没有就问用户。\n" +
                     "在判断有需要调用工具就去调用，遇到危险操作，立刻停止操作，询问用户。\n" +
                     "你只能使用用户提供的工具，绝对不能调用不存在的工具。更不能编造工具。\n" +
-                    "如果需要写临时性的文件尽量写到系统临时目录，不要写到用户目录。\n";
+                    "如果需要写临时性的文件尽量写到系统临时目录，不要写到用户目录。\n" +
+                    "如果交付产物是附件，将结果输出为Markdown格式：\n" +
+                    "1，图片类型：![替代文本](图片地址)\n" +
+                    "2，其他类型：[attachment:附件ID:文件名:下载地址] \n";
         }
         systemMessage=systemMessage.replace("{agentName}", agent.getName())
                 .replace("{agentDescription}", agent.getDescription())

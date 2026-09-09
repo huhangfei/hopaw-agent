@@ -38,13 +38,30 @@ public class AiModelController {
     @GetMapping("/api/providers")
     @ResponseBody
     public List<AiModelProvider> getProviders() {
-        return aiModelProviderService.findAll();
+        List<AiModelProvider> providers = aiModelProviderService.findAll();
+        providers.forEach(this::maskApiKey);
+        return providers;
     }
 
     @GetMapping("/api/providers/{id}")
     @ResponseBody
     public AiModelProvider getProvider(@PathVariable Long id) {
-        return aiModelProviderService.findById(id);
+        AiModelProvider provider = aiModelProviderService.findById(id);
+        if (provider != null) {
+            maskApiKey(provider);
+        }
+        return provider;
+    }
+
+    private void maskApiKey(AiModelProvider provider) {
+        String key = provider.getApiKey();
+        if (key == null || key.isEmpty()) {
+            provider.setApiKey("");
+        } else if (key.length() > 8) {
+            provider.setApiKey(key.substring(0, 4) + "****" + key.substring(key.length() - 4));
+        } else {
+            provider.setApiKey("****");
+        }
     }
 
     @PostMapping("/api/providers")
@@ -63,10 +80,14 @@ public class AiModelController {
         if (existing != null) {
             aiModelProvider.setType(existing.getType());
             if ("builtin".equals(existing.getType())) {
-                // 内置提供商不能修改 sdkName
                 aiModelProvider.setSdkName(existing.getSdkName());
             } else {
                 validateCustomSdkName(aiModelProvider);
+            }
+            // 前端传回的apiKey是脱敏值，不更新；仅当显式传入明文密钥时才更新
+            String incomingKey = aiModelProvider.getApiKey();
+            if (incomingKey == null || incomingKey.isEmpty() || incomingKey.contains("****")) {
+                aiModelProvider.setApiKey(null);
             }
         }
         aiModelProvider.setId(id);

@@ -33,7 +33,32 @@ document.addEventListener('DOMContentLoaded', function() {
         marked.use({
             hooks: {
                 preprocess: function(md) {
-                    return md.replace(/(?<!~)~(?!~)/g, '&tilde;');
+                    // 附件标记 [attachment:id:name:url] 替换为占位符，防止被 marked 解析为链接
+                    var attachmentMap = {};
+                    var counter = 0;
+                    md = md.replace(/\[attachment:(\d+):([^:]+):([^\]]+)\]/g, function(match, id, name, url) {
+                        var key = '\u0000ATTACH_' + counter + '\u0000';
+                        attachmentMap[key] = { id: id, name: name, url: url };
+                        counter++;
+                        return key;
+                    });
+                    // 转义单波浪线
+                    md = md.replace(/(?<!~)~(?!~)/g, '&tilde;');
+                    // 还原附件标记为 HTML
+                    for (var key in attachmentMap) {
+                        var a = attachmentMap[key];
+                        var html = '<a href="javascript:void(0)" class="attachment-link" data-attachment-id="' + a.id + '" onclick="openAttachmentPreview(' + a.id + ')">' + escapeHtml(a.name) + '</a>';
+                        md = md.replace(key, html);
+                    }
+                    return md;
+                }
+            },
+            renderer: {
+                link: function(token) {
+                    var href = token.href || '';
+                    var title = token.title ? ' title="' + token.title + '"' : '';
+                    var text = token.text || '';
+                    return '<a href="' + href + '"' + title + ' target="_blank" rel="noopener noreferrer">' + text + '</a>';
                 }
             }
         });
