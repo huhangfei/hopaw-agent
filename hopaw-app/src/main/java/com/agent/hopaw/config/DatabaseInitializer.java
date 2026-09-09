@@ -427,6 +427,8 @@ public class DatabaseInitializer implements CommandLineRunner {
 
             // chat_sessions 增量加列 biz_type
             ensureColumn(stmt, "chat_sessions", "biz_type", "TEXT");
+            // chat_sessions 增量加列 thinking_level（思考等级）
+            ensureColumn(stmt, "chat_sessions", "thinking_level", "TEXT");
 
             // 工作流 - 项目表
             stmt.execute("CREATE TABLE IF NOT EXISTS projects (" +

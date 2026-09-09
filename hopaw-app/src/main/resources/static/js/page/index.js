@@ -2862,8 +2862,18 @@ window.onload = function() {
     var deepBtn = document.getElementById('deepThinkBtn');
     var thinkingDropdown = document.getElementById('thinkingDropdown');
     if (deepBtn) {
-        // 初始思考等级：智能体配置的 reasoningEffort，缺省 high（滑块在模型数据加载后渲染）
-        currentThinkingLevel = deepBtn.getAttribute('data-default-level') || 'high';
+        // 思考等级优先级：会话 > 智能体 > 模型列表末位
+        var currentSession = (initialChatSessions || []).find(function(s) { return s.sessionId === currentSessionId; });
+        if (currentSession && currentSession.thinkingLevel) {
+            // 会话有思考等级，使用会话的
+            currentThinkingLevel = currentSession.thinkingLevel;
+        } else if (deepBtn.getAttribute('data-default-level')) {
+            // 智能体有配置，使用智能体的
+            currentThinkingLevel = deepBtn.getAttribute('data-default-level');
+        } else {
+            // 默认使用模型支持列表的最后一个
+            currentThinkingLevel = 'max';
+        }
         // 先以全量等级初始化滑块与按钮发光，模型数据加载后按 supportedThinkingLevelsArray 重建
         currentThinkingLevels = THINKING_LEVELS.slice();
         renderThinkingLevelSlider();
@@ -3696,7 +3706,8 @@ function createNewSession() {
         aiModelId: currentModelId || null,
         enableThinking: deepBtn ? deepBtn.getAttribute('data-enabled') === 'true' : true,
         skillNames: getSelectedSkills().join(',') || null,
-        toolCallPermission: currentToolCallPermission || 'smart_call'
+        toolCallPermission: currentToolCallPermission || 'smart_call',
+        thinkingLevel: currentThinkingLevel || null
     };
 
     fetch('/api/session/create', {

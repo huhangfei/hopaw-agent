@@ -13,12 +13,13 @@
         <result property="aiModelId" column="ai_model_id"/>
         <result property="toolCallPermission" column="tool_call_permission"/>
         <result property="bizType" column="biz_type"/>
+        <result property="thinkingLevel" column="thinking_level"/>
         <result property="createTime" column="create_time"/>
         <result property="lastUpdateTime" column="last_update_time"/>
     </resultMap>
 
     <sql id="allColumns">
-        id, session_id, agent_id, user_id, title, enable_thinking, skill_names, ai_model_id, tool_call_permission, biz_type, create_time, last_update_time
+        id, session_id, agent_id, user_id, title, enable_thinking, skill_names, ai_model_id, tool_call_permission, biz_type, thinking_level, create_time, last_update_time
     </sql>
 
     <select id="findAll" resultMap="ChatSessionResultMap">
@@ -86,8 +87,8 @@
     </select>
 
     <insert id="insert" parameterType="com.agent.hopaw.infra.model.entity.ChatSession">
-        INSERT INTO chat_sessions (session_id, agent_id, user_id, title, enable_thinking, skill_names, ai_model_id, tool_call_permission, biz_type, create_time, last_update_time)
-        VALUES (#{sessionId}, #{agentId}, #{userId}, #{title}, #{enableThinking}, #{skillNames}, #{aiModelId}, #{toolCallPermission}, #{bizType}, #{createTime}, #{lastUpdateTime})
+        INSERT INTO chat_sessions (session_id, agent_id, user_id, title, enable_thinking, skill_names, ai_model_id, tool_call_permission, biz_type, thinking_level, create_time, last_update_time)
+        VALUES (#{sessionId}, #{agentId}, #{userId}, #{title}, #{enableThinking}, #{skillNames}, #{aiModelId}, #{toolCallPermission}, #{bizType}, #{thinkingLevel}, #{createTime}, #{lastUpdateTime})
         <selectKey resultType="long" keyProperty="id" order="AFTER">
             SELECT last_insert_rowid()
         </selectKey>
@@ -103,6 +104,7 @@
             skill_names = #{skillNames},
             ai_model_id = #{aiModelId},
             tool_call_permission = #{toolCallPermission},
+            thinking_level = #{thinkingLevel},
             last_update_time = #{lastUpdateTime}
         WHERE id = #{id}
     </update>

@@ -16,6 +16,8 @@ public class ChatSession {
     private String toolCallPermission;
     /** 业务类型：task / null */
     private String bizType;
+    /** 思考等级：none/minimal/low/medium/high/xhigh/max */
+    private String thinkingLevel;
     /** 会话执行器是否正在运行（非持久化字段，由接口实时计算） */
     private Boolean running;
     public ChatSession() {}
@@ -130,6 +132,14 @@ public class ChatSession {
 
     public void setBizType(String bizType) {
         this.bizType = bizType;
+    }
+
+    public String getThinkingLevel() {
+        return thinkingLevel;
+    }
+
+    public void setThinkingLevel(String thinkingLevel) {
+        this.thinkingLevel = thinkingLevel;
     }
 
     public Boolean getRunning() {
