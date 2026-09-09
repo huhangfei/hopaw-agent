@@ -150,7 +150,7 @@ public class AgentExecutor implements IAgentExecutor {
         this.memoryId = new ChatMemoryId(sessionId, this.requestId, agentId, userId);
         // 创建工具执行线程池
         this.toolExecutor = createToolExecutor();
-        this.agentMessageHandler = new AgentMessageHandler(this.sessionId, this.requestId, eventPublisher, toolInfoMap);
+        this.agentMessageHandler = new AgentMessageHandler(this.sessionId, this.requestId, eventPublisher);
         for (ToolSetInfo toolSet : agentExecutorParams.getToolSets()) {
             for (ToolInfo tool : toolSet.getTools()) {
                 toolInfoMap.put(tool.getName(), tool);
@@ -216,7 +216,7 @@ public class AgentExecutor implements IAgentExecutor {
         taskLatch.countDown();
 
         //立即通知前端会话已停止
-        agentMessageHandler.done();
+//        agentMessageHandler.done();
 
         // 关闭工具执行线程池，释放资源（工具已收到取消标记，直接中断）
         if (toolExecutor != null && !toolExecutor.isShutdown()) {
@@ -359,12 +359,12 @@ public class AgentExecutor implements IAgentExecutor {
     }
 
     @Override
-    public void execute(List<Content> contents) {
-        execute(contents, 300L);
+    public AgentExecutorResult execute(List<Content> contents) {
+        return execute(contents, 300L);
     }
 
     @Override
-    public void execute(List<Content> contents, long timeout) {
+    public AgentExecutorResult execute(List<Content> contents, long timeout) {
         try {
             // 启用可重置看门狗：超时时间在有活动（消息/工具调用/过程通知）时会顺延
             this.watchdogTimeoutMs = timeout * 1000L;
@@ -403,7 +403,7 @@ public class AgentExecutor implements IAgentExecutor {
                         resetWatchdog();
                         if (cancelTask.get()) {
                             agentMessageHandler.partialResponseHandler(r.text());
-                            agentMessageHandler.done();
+//                            agentMessageHandler.done();
                             ctx.streamingHandle().cancel(); // ✅ 真正中断：关闭流、停止LLM、省token
                             taskLatch.countDown();
                             return;
@@ -414,7 +414,7 @@ public class AgentExecutor implements IAgentExecutor {
                         resetWatchdog();
                         if (cancelTask.get()) {
                             agentMessageHandler.thinkingHandler(thinking);
-                            agentMessageHandler.done();
+//                            agentMessageHandler.done();
                             ctx.streamingHandle().cancel(); // ✅ 真正中断：关闭流、停止LLM、省token
                             taskLatch.countDown();
                             return;
@@ -537,6 +537,7 @@ public class AgentExecutor implements IAgentExecutor {
             taskLatch.countDown();
             agentMessageHandler.taskDone();
             updateMemoryStateToDone();
+            return new AgentExecutorResult(!agentMessageHandler.isError(), agentMessageHandler.getCurrentErrorMessage());
         }
     }
 
@@ -946,19 +947,30 @@ public class AgentExecutor implements IAgentExecutor {
         private StringBuilder thinkingBuilder = new StringBuilder();
         private final ApplicationEventPublisher eventPublisher;
         private final Consumer<ChatHistory> chatHistoryConsumer;
-        private final Map<String, ToolInfo> toolInfoMap;
 
+        public boolean isError() {
+            return isError;
+        }
+
+        private boolean isError=false;
+        private String currentErrorMessage= "";
         public AgentMessageHandler(String sessionId,
                                    String requestId,
-                                   ApplicationEventPublisher eventPublisher,
-                                   Map<String, ToolInfo> toolInfoMap) {
+                                   ApplicationEventPublisher eventPublisher) {
             this.sessionId = sessionId;
             this.requestId = requestId;
             this.eventPublisher = eventPublisher;
             this.chatHistoryConsumer = chatHistory -> {
                 eventPublisher.publishEvent(new ChatHistoryEvent(chatHistory));
             };
-            this.toolInfoMap = toolInfoMap;
+        }
+
+        public String getCurrentMessageType() {
+            return currentMessageType;
+        }
+
+        public String getCurrentErrorMessage() {
+            return currentErrorMessage;
         }
 
         public void sendMessageToChannel(AiMessageBaseInfo message) {
@@ -967,13 +979,6 @@ public class AgentExecutor implements IAgentExecutor {
                 message.setBizType(agentExecutorParams.getBizType());
             }
             eventPublisher.publishEvent(new AgentMessageEvent(userId, agentId, message));
-        }
-
-        public void done() {
-            //先结算流式消息（全量补发+入库），再发结束信号，保证前端先收到全量内容再做收尾清理
-            messageTypeChangedChatHistoryHandler("done");
-            AiMessageBaseInfo aiMessageBaseInfo = AiMessageBaseInfo.done(sessionId, requestId);
-            sendMessageToChannel(aiMessageBaseInfo);
         }
 
         public void taskDone() {
@@ -991,6 +996,8 @@ public class AgentExecutor implements IAgentExecutor {
                 type = "warn";
             } else {
                 message = "发生异常：" + ex.getMessage();
+                isError=true;
+                currentErrorMessage=message;
             }
             AiMessageBaseInfo info = AiMessageBaseInfo.build(type, sessionId, requestId).content(message);
             sendMessageToChannel(info);
@@ -1001,12 +1008,11 @@ public class AgentExecutor implements IAgentExecutor {
             errorChat.setUserId(userId);
             errorChat.setMessageNo(UuidUtil.generateSimpleUUID());
             chatHistoryConsumer.accept(errorChat);
-            taskDone();
         }
 
         private void onCompleteResponseHandler(ChatResponse response) {
             //发送
-            taskDone();
+            //taskDone();
         }
 
 

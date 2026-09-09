@@ -20,6 +20,7 @@ logs/
 *.nar
 *.ear
 *.zip
+*.tar
 *.tar.gz
 *.rar
 

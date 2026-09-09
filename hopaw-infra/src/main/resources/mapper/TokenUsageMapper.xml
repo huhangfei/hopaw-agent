@@ -85,11 +85,13 @@
         create_time
         FROM token_usage
         WHERE
-        user_id = #{userId}
-        <if test="agentId!=null">
-            AND agent_id = #{agentId}
+        <if test="userId != null and userId != ''">
+            user_id = #{userId} AND
         </if>
-        AND create_time >= #{startTime}
+        <if test="agentId!=null">
+            agent_id = #{agentId} AND
+        </if>
+        create_time >= #{startTime}
         AND create_time &lt; #{endTime}
         <if test="minId != null">AND id > #{minId}</if>
         <if test="source != null">AND source = #{source}</if>

@@ -18,6 +18,7 @@ public class WsStressTestBean {
 
     private static final Logger log = LoggerFactory.getLogger(WsStressTestBean.class);
 
+    private static final String SESSION_ID  ="990d8c6eabd6491fa32b4e7638b49359";
     private static final String MARKDOWN_CONTENT =
             "# 性能压测消息\n\n" +
             "这是一段包含 **Markdown** 格式的压测内容，用于测试前端 WebSocket 流式接收与渲染性能。\n\n" +
@@ -79,7 +80,7 @@ public class WsStressTestBean {
         String chunk = MARKDOWN_CONTENT.substring(charPos, charPos + chunkSize);
         charPos += chunkSize;
 
-        AiMessageBaseInfo message = AiMessageBaseInfo.chunk("990d8c6eabd6491fa32b4e7638b49359", currentRequestId, chunk);
+        AiMessageBaseInfo message = AiMessageBaseInfo.chunk(SESSION_ID, currentRequestId, chunk);
         message.setBizType(AgentExecutorBizTypeEnum.WorkflowTaskChat);
         eventPublisher.publishEvent(new AgentMessageEvent("1", 1L, message));
 
@@ -97,7 +98,7 @@ public class WsStressTestBean {
     }
 
     private void sendDone() {
-        AiMessageBaseInfo done = AiMessageBaseInfo.done(null, currentRequestId);
+        AiMessageBaseInfo done = AiMessageBaseInfo.taskDone(SESSION_ID, currentRequestId);
         done.setBizType(AgentExecutorBizTypeEnum.WorkflowTaskChat);
         eventPublisher.publishEvent(new AgentMessageEvent(null, 0L, done));
     }

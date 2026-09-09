@@ -1,5 +1,6 @@
 package com.agent.hopaw.infra.executor;
 
+import com.agent.hopaw.infra.model.dto.AgentExecutorResult;
 import dev.langchain4j.data.message.Content;
 
 import java.util.List;
@@ -36,12 +37,12 @@ public interface IAgentExecutor {
      * 超时时间默认600秒
      * @param contents 请求内容
      */
-    void execute(List<Content> contents);
+    AgentExecutorResult execute(List<Content> contents);
 
     /**
      * 执行
      * @param contents 请求内容
      * @param timeout 超时时间（秒）
      */
-    void execute(List<Content> contents,long timeout);
+    AgentExecutorResult execute(List<Content> contents,long timeout);
 }

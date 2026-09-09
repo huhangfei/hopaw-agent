@@ -2,6 +2,7 @@ package com.agent.hopaw.infra.task;
 
 import com.agent.hopaw.infra.constant.TaskStatusEnum;
 import com.agent.hopaw.infra.mapper.ChatHistoryMapper;
+import com.agent.hopaw.infra.model.dto.AgentExecutorResult;
 import com.agent.hopaw.infra.model.entity.ScheduledTask;
 import com.agent.hopaw.infra.model.entity.TaskSession;
 import com.agent.hopaw.infra.model.entity.WorkflowTask;

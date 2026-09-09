@@ -11,6 +11,7 @@ public class AvatarEvent {
     private String type;
     private String userId;
     private Long agentId;
+    private String sessionId;
     private String action;
     private String actionDescription;
     private String message;
@@ -40,6 +41,12 @@ public class AvatarEvent {
         event.autoShow = Boolean.TRUE;
         event.dismissible = Boolean.FALSE;
         event.soundFile = action.getSoundFile();
+        return event;
+    }
+
+    public static AvatarEvent action(String userId, Long agentId, String sessionId, AvatarAction action, String message) {
+        AvatarEvent event = action(userId, agentId, action, message);
+        event.sessionId = sessionId;
         return event;
     }
 
@@ -135,6 +142,14 @@ public class AvatarEvent {
 
     public void setAgentId(Long agentId) {
         this.agentId = agentId;
+    }
+
+    public String getSessionId() {
+        return sessionId;
+    }
+
+    public void setSessionId(String sessionId) {
+        this.sessionId = sessionId;
     }
 
     public String getAction() {

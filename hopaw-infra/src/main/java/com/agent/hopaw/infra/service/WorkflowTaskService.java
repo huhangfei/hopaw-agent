@@ -12,6 +12,7 @@ import com.agent.hopaw.infra.mapper.WorkflowTaskMapper;
 import com.agent.hopaw.infra.mapper.WorkflowTaskPreconditionMapper;
 import com.agent.hopaw.infra.memory.ProjectMemoryService;
 import com.agent.hopaw.infra.model.dto.AgentExecutorParams;
+import com.agent.hopaw.infra.model.dto.AgentExecutorResult;
 import com.agent.hopaw.infra.model.dto.ToolSetInfo;
 import com.agent.hopaw.infra.model.dto.UserChatRequest;
 import com.agent.hopaw.infra.model.entity.Agent;
@@ -372,7 +373,7 @@ public class WorkflowTaskService implements IWorkflowTaskService {
     }
 
     @Override
-    public void executeTask(UserChatRequest userChatRequest) {
+    public AgentExecutorResult executeTask(UserChatRequest userChatRequest) {
 
         Long taskId = taskSessionMapper.findTaskIdBySessionId(userChatRequest.getSessionId());
         if (taskId == null) {
@@ -392,7 +393,7 @@ public class WorkflowTaskService implements IWorkflowTaskService {
         // 创建任务执行器（复用或新建会话）
         IAgentExecutor executor = createTaskExecutor(task, agent, userChatRequest);
 
-        executeTask(taskId,executor,300,userChatRequest.getMessage());
+       return executeTask(taskId,executor,300,userChatRequest.getMessage());
     }
     /** 校验执行时段格式：HH:mm-HH:mm 且结束时间必须大于开始时间（空表示不限制） */
     private void validateExecutionPeriod(String executionPeriod) {
@@ -411,7 +412,7 @@ public class WorkflowTaskService implements IWorkflowTaskService {
         }
     }
 
-    private void executeTask(Long taskId,IAgentExecutor executor,long timeout,String message){
+    private AgentExecutorResult executeTask(Long taskId,IAgentExecutor executor,long timeout,String message){
         // 更新状态为 processing
         updateTaskStatus(taskId, TaskStatusEnum.PROCESSING.getCode(), null);
         if(message==null){
@@ -420,11 +421,11 @@ public class WorkflowTaskService implements IWorkflowTaskService {
         message="开始处理，当前时间："+LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"));
         message="\n"+message;
         // 执行
-        executor.execute(Arrays.asList(new TextContent(message)),timeout);
+        return executor.execute(Arrays.asList(new TextContent(message)),timeout);
     }
 
     @Override
-    public void executeTask(Long taskId) {
+    public AgentExecutorResult executeTask(Long taskId) {
         WorkflowTask task = workflowTaskMapper.findById(taskId);
         if (task == null) {
             throw new RuntimeException("任务不存在");
@@ -471,10 +472,11 @@ public class WorkflowTaskService implements IWorkflowTaskService {
             }
         }
         userChatRequest.setMessage(taskContent.toString());
-        executeTask(taskId,executor,300,userChatRequest.getMessage());
+        AgentExecutorResult agentExecutorResult = executeTask(taskId, executor, 300, userChatRequest.getMessage());
         // 执行完成后将本次预取的待处理评论标记为已处理（执行期间新增的评论不受影响，将在下次执行时处理）
         List<Long> processedCommentIds = comments.stream().map(WorkflowTaskComment::getId).collect(Collectors.toList());
         taskCommentService.markCommentsAsProcessed(processedCommentIds);
+        return agentExecutorResult;
     }
 
     /**
@@ -599,12 +601,12 @@ public class WorkflowTaskService implements IWorkflowTaskService {
      */
     private void appendProjectSpaceMemories(StringBuilder systemMsgBuilder, WorkflowTask task) {
         try {
-            String projectMemory = projectMemoryService.getProjectMemoryContent(task.getProjectId());
-            if (projectMemory != null && !projectMemory.isBlank()) {
-                systemMsgBuilder.append("\n--- 项目记忆 ---\n");
-                systemMsgBuilder.append("以下是项目沉淀的整体记忆（目标、进展、关键决策与经验教训），执行任务时请充分参考：\n");
-                systemMsgBuilder.append(projectMemory).append("\n");
-            }
+//            String projectMemory = projectMemoryService.getProjectMemoryContent(task.getProjectId());
+//            if (projectMemory != null && !projectMemory.isBlank()) {
+//                systemMsgBuilder.append("\n--- 项目记忆 ---\n");
+//                systemMsgBuilder.append("以下是项目沉淀的整体记忆（目标、进展、关键决策与经验教训），执行任务时请充分参考：\n");
+//                systemMsgBuilder.append(projectMemory).append("\n");
+//            }
             String taskMemory = projectMemoryService.getTaskMemoryContent(task.getProjectId(), task.getId());
             if (taskMemory != null && !taskMemory.isBlank()) {
                 systemMsgBuilder.append("\n--- 本任务历史记忆 ---\n");

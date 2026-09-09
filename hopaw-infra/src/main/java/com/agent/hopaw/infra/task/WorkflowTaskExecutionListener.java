@@ -34,7 +34,7 @@ public class WorkflowTaskExecutionListener {
             return;
         }
         String type = message.getType();
-        if (!"done".equals(type) && !"task-done".equals(type) && !"error".equals(type)) {
+        if (!"task-done".equals(type) && !"error".equals(type)) {
             return;
         }
         // 通过 task_sessions 关系表反查任务ID
@@ -42,7 +42,7 @@ public class WorkflowTaskExecutionListener {
         if (taskId == null) {
             return; // 非任务会话
         }
-        if ("done".equals(type) || "task-done".equals(type)) {
+        if ("task-done".equals(type)) {
             updateStatusIfTransitionAllowed(taskId, TaskStatusEnum.PENDING_ACCEPTANCE, null);
         } else if ("error".equals(type)) {
             if (updateStatusIfTransitionAllowed(taskId, TaskStatusEnum.FAILED, message.getContent())) {

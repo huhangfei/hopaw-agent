@@ -103,7 +103,7 @@ public class TokenUsageController {
                                         @RequestParam(required = false) String source,
                                         @RequestParam(required = false) String sessionId,
                                         @RequestParam(required = false) Long minId) {
-        java.util.List<TokenUsage> list = tokenUsageService.findTodayByAgentUser(agentId, CurrentUser.require(request), source, sessionId, minId, 30);
+        java.util.List<TokenUsage> list = tokenUsageService.findTodayByAgentUser(agentId, null, source, sessionId, minId, 30);
         return ResponseBean.success(list);
     }
 }

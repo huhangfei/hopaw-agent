@@ -181,7 +181,7 @@ public class AvatarService {
             return;
         }
         lastActions.put(agentId, currentActionCode);
-        AvatarEvent avatarEvent = AvatarEvent.action(userId, agentId, action, phrase);
+        AvatarEvent avatarEvent = AvatarEvent.action(userId, agentId, message.getSessionId(), action, phrase);
         publish(avatarEvent);
     }
 

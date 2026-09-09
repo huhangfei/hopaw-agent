@@ -1064,13 +1064,13 @@ function connectWebSocket() {
         var requestId = data.requestId;
 
         // 会话隔离：后端按用户广播，非当前会话的运行事件（任务/项目会话后台运行）不更新当前界面；
-        // session-title 仍需更新左侧会话列表标题；received/done/error/task-done 维护会话列表的运行loading图标
+        // session-title 仍需更新左侧会话列表标题；received/error/task-done 维护会话列表的运行loading图标
         if (data.sessionId && data.sessionId !== currentSessionId) {
             if (data.type === 'session-title') {
                 updateSessionTitle(data.sessionId, data.content, data.bizType);
             } else if (data.type === 'received') {
                 setSessionRunning(data.sessionId, true);
-            } else if (data.type === 'done' || data.type === 'error' || data.type === 'task-done') {
+            } else if (data.type === 'error' || data.type === 'task-done') {
                 setSessionRunning(data.sessionId, false);
             }
             return;
@@ -1099,9 +1099,6 @@ function connectWebSocket() {
             handleToolCall(data, requestId);
         } else if (data.type === 'thinking') {
             handleThinking(data, requestId);
-        } else if (data.type === 'done') {
-            setSessionRunning(data.sessionId || currentSessionId, false);
-            handleStreamingDone(data.message, data.response, requestId);
         } else if (data.type === 'session-title') {
             updateSessionTitle(data.sessionId, data.content, data.bizType);
         } else if (data.type === 'task-done') {
@@ -1796,36 +1793,6 @@ function handleStreamingChunk(data, requestId) {
     messagesDiv.scrollTop = messagesDiv.scrollHeight;
 }
 
-function handleStreamingDone(userMessage, response, requestId) {
-    var agentName = (function(){ var s = document.querySelector('.agent-select-toolbar'); return s ? s.options[s.selectedIndex].text : 'Agent'; })();
-    var msgState = streamingMessages[requestId];
-    if (!msgState || !msgState.currentStreamingMessage) {
-        enableInput();
-        return;
-    }
-    
-    // var contentDiv = msgState.currentStreamingMessage.querySelector('.message-content:last-of-type');
-    // if (contentDiv) {
-    //     contentDiv.setAttribute('data-raw-content', msgState.streamingMarkdownContent);
-    //
-    //     try {
-    //         if (typeof marked !== 'undefined') {
-    //             contentDiv.innerHTML = marked.parse(msgState.streamingMarkdownContent);
-    //         } else {
-    //             contentDiv.textContent = msgState.streamingMarkdownContent;
-    //         }
-    //     } catch (e) {
-    //         contentDiv.textContent = msgState.streamingMarkdownContent;
-    //     }
-    // }
-    
-    // 小节完成：刷新整盒 footer（唯一时间 + 整盒复制），小节自身不再有独立 footer
-    touchAgentTurnFooter(msgState.currentStreamingMessage.closest('.agent-turn'), formatMessageTime(new Date()));
-
-    delete streamingMessages[requestId];
-    enableInput();
-}
-
 function handleStreamingError(errorMessage, requestId) {
     var messagesDiv = document.getElementById('chatMessages');
 
@@ -2023,7 +1990,7 @@ function updateLockRemaining() {
                     }
                     renderLockCountdown();
                 } else if (lockObservedRunning) {
-                    // 会话已由运行转为结束，但未收到终止事件（如刷新/重连窗口错过 done/task-done）：恢复输入区
+                    // 会话已由运行转为结束，但未收到终止事件（如刷新/重连窗口错过 task-done）：恢复输入区
                     enableInput();
                 }
                 // running=false 且从未观测到运行时：保持现状，等待执行器真正启动
@@ -3107,8 +3074,8 @@ function selectModel(modelId, modelName) {
  * 兼容历史数据（旧版写入的 workflow-task-chat / project-chat）
  */
 function sessionFilterTypeOf(bizType) {
-    if (bizType === 'workflowTaskChat' || bizType === 'workflow-task-chat') return 'task';
-    if (bizType === 'projectChat' || bizType === 'project-chat') return 'project';
+    if (bizType === 'workflowTaskChat') return 'task';
+    if (bizType === 'projectChat') return 'project';
     return 'chat';
 }
 

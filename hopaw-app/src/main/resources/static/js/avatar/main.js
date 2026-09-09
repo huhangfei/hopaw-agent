@@ -429,6 +429,9 @@ var LAppDefine = {
         if (data.userId && currentUserId && data.userId !== currentUserId) {
             return;
         }
+        if (data.sessionId && typeof currentSessionId !== "undefined" && currentSessionId && data.sessionId !== currentSessionId) {
+            return;
+        }
         if (data.type === "avatar_intimacy" || data.action === "intimacy_up") {
             if (data.intimacyInfo) {
                 widget._intimacy && widget._intimacy.apply(data.intimacyInfo);
@@ -522,6 +525,9 @@ var LAppDefine = {
             return;
         }
         if (data.userId && currentUserId && data.userId !== currentUserId) {
+            return;
+        }
+        if (data.sessionId && typeof currentSessionId !== "undefined" && currentSessionId && data.sessionId !== currentSessionId) {
             return;
         }
         var maxSize = LAppDefine.EVENT_QUEUE_MAX_SIZE || 50;

@@ -166,7 +166,7 @@ public class ProjectTool implements AgentTool {
                 Project created = projectService.createProject(project);
                 return "成功：项目已创建，项目ID：" + created.getId() + "，状态：" + statusText(created.getStatus());
             }
-            // 更新：先读取现有项目，保留智能体与自动迭代配置（工具未提供这些参数，避免误清空）
+            // 更新：仅覆盖传入的非空字段，保留智能体与自动迭代配置等未传入字段
             // userId 传空：不做用户归属校验
             Project existing = projectService.getProject(projectId, null);
             if (existing == null) {
@@ -175,11 +175,12 @@ public class ProjectTool implements AgentTool {
             Project project = new Project();
             project.setId(projectId);
             project.setName(name.trim());
-            project.setDescription(description);
-            project.setStatus(status == null || status.trim().isEmpty() ? null : status.trim());
-            project.setAgentId(existing.getAgentId());
-            project.setAutoIterate(existing.getAutoIterate());
-            project.setIteratePrompt(existing.getIteratePrompt());
+            if (description != null) {
+                project.setDescription(description);
+            }
+            if (status != null && !status.trim().isEmpty()) {
+                project.setStatus(status.trim());
+            }
             Project updated = projectService.updateProject(project, null);
             return "成功：项目已更新，项目ID：" + updated.getId() + "，状态：" + statusText(updated.getStatus());
         } catch (RuntimeException e) {

@@ -1,5 +1,6 @@
 package com.agent.hopaw.infra.service;
 
+import com.agent.hopaw.infra.model.dto.AgentExecutorResult;
 import com.agent.hopaw.infra.model.dto.UserChatRequest;
 import com.agent.hopaw.infra.model.entity.TaskSession;
 import com.agent.hopaw.infra.model.entity.WorkflowTask;
@@ -65,8 +66,8 @@ public interface IWorkflowTaskService {
     /** 查询所有处理中状态的任务（按ID正序），供中断恢复扫描使用 */
     List<WorkflowTask> findProcessing();
 
-    void executeTask(Long taskId);
-    void executeTask(UserChatRequest userChatRequest);
+    AgentExecutorResult executeTask(Long taskId);
+    AgentExecutorResult executeTask(UserChatRequest userChatRequest);
     void updateTaskStatus(Long taskId, String status, String rejectReason);
     List<TaskSession> getTaskSessions(Long taskId);
     Long findTaskIdBySessionId(String sessionId);

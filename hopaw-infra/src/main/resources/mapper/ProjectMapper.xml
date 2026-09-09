@@ -36,14 +36,14 @@
     <update id="update" parameterType="com.agent.hopaw.infra.model.entity.Project">
         UPDATE projects
         SET name = #{name},
-            description = #{description},
-            status = #{status},
-            agent_id = #{agentId},
-            auto_iterate = #{autoIterate},
-            iterate_prompt = #{iteratePrompt},
-            notify_channels = #{notifyChannels},
-            notify_events = #{notifyEvents},
-            min_frequency = #{minFrequency},
+            description = COALESCE(#{description}, description),
+            status = COALESCE(#{status}, status),
+            agent_id = COALESCE(#{agentId}, agent_id),
+            auto_iterate = COALESCE(#{autoIterate}, auto_iterate),
+            iterate_prompt = COALESCE(#{iteratePrompt}, iterate_prompt),
+            notify_channels = COALESCE(#{notifyChannels}, notify_channels),
+            notify_events = COALESCE(#{notifyEvents}, notify_events),
+            min_frequency = COALESCE(#{minFrequency}, min_frequency),
             update_time = datetime('now','localtime')
         WHERE id = #{id}
     </update>
