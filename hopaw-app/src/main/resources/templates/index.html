@@ -160,14 +160,20 @@
                             </svg>
                         </button>
                         <input type="file" id="fileInput" style="display:none" multiple>
-                        <button type="button" class="chat-btn-deep" id="deepThinkBtn"
-                                th:attr="data-agent-id=${selectedAgent.id}, data-enabled=${selectedAgent.enableThinking}"
-                                th:classappend="${selectedAgent.enableThinking ? 'active' : ''}">
-                            <svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16">
-                                <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/>
-                            </svg>
-                            深度思考
-                        </button>
+                        <!-- 深度思考：仅图标；开启后悬停展开思考等级滑块（等级取自当前选中模型） -->
+                        <div class="thinking-dropdown" id="thinkingDropdown">
+                            <button type="button" class="chat-btn-deep" id="deepThinkBtn" title="深度思考"
+                                    th:attr="data-agent-id=${selectedAgent.id}, data-enabled=${selectedAgent.enableThinking}, data-default-level=${selectedAgent.reasoningEffort}"
+                                    th:classappend="${selectedAgent.enableThinking ? 'active' : ''}">
+                                <svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16">
+                                    <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/>
+                                </svg>
+                            </button>
+                            <div class="thinking-dropdown-menu" id="thinkingDropdownMenu">
+                                <div class="thinking-level-title">思考等级<span class="thinking-level-current" id="thinkingLevelCurrent"></span></div>
+                                <div class="thinking-level-track" id="thinkingLevelTrack"></div>
+                            </div>
+                        </div>
                         <div class="tool-permission-dropdown" id="toolPermissionDropdown">
                             <button type="button" class="chat-btn-permission" id="toolPermissionBtn">
                                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14">
@@ -360,12 +366,14 @@
 
 
 <th:block layout:fragment="extraCss">
+    <link rel="stylesheet" th:href="@{/css/nouislider.min.css}">
     <link rel="stylesheet" th:href="@{/css/page/agent-form.css}">
     <link rel="stylesheet" th:href="@{/css/page/index.css}">
     <link rel="stylesheet" th:href="@{/css/page/avatar.css(v=20260603a)}" th:if="${!avatarDisabled}">
 </th:block>
 
 <th:block layout:fragment="extraScripts">
+    <script th:src="@{/js/nouislider.min.js}"></script>
     <script th:src="@{/js/page/index.js}"></script>
     <script th:src="@{/js/agents-modal.js}"></script>
     <script th:src="@{/js/model-select.js}"></script>

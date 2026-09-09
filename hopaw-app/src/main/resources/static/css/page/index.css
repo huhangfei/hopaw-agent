@@ -933,30 +933,270 @@ body.dark-theme .chat-header-glow::after {
     width: 22px;
     height: 22px;
 }
+/* 深度思考容器：margin-left:auto 使其后的按钮组靠右对齐 */
+.thinking-dropdown {
+    position: relative;
+    display: inline-flex;
+    margin-left: auto;
+    flex-shrink: 0;
+}
+
+/* 深度思考按钮：仅图标 */
 .chat-btn-deep {
     display: inline-flex;
     align-items: center;
-    gap: 4px;
-    padding: 4px 12px;
+    justify-content: center;
+    width: 30px;
+    height: 30px;
     border: 1px solid #e0e0e0;
     border-radius: 14px;
     background: transparent;
     color: #666;
-    font-size: 13px;
     cursor: pointer;
     transition: all 0.2s;
-    height: 30px;
-    margin-left: auto;
+    white-space: nowrap;
+    overflow: hidden;
 }
 .chat-btn-deep:hover {
     border-color: #667eea;
     color: #667eea;
     background: #f8f9ff;
 }
+/* 开启态：颜色与发光随思考等级加深（--deep-color/--deep-glow/--deep-glow-color 由 JS 按等级设置） */
 .chat-btn-deep.active {
-    border-color: #667eea;
-    background: #667eea;
+    border-color: var(--deep-color, #667eea);
+    background: var(--deep-color, #667eea);
     color: #fff;
+    box-shadow: 0 0 var(--deep-glow, 6px) var(--deep-glow-color, rgba(102, 126, 234, 0.45));
+}
+
+/* 当前模型不支持思考：置灰禁用 */
+.thinking-dropdown.no-support .chat-btn-deep {
+    opacity: 0.45;
+    cursor: not-allowed;
+}
+.thinking-dropdown.no-support .chat-btn-deep:hover {
+    border-color: #e0e0e0;
+    color: #666;
+    background: transparent;
+}
+
+/* 等级切换脉冲：从按钮向外扩散一圈等级色光晕，强化"加深"体验 */
+@keyframes deepLevelPulse {
+    0% { box-shadow: 0 0 0 0 var(--deep-glow-color, rgba(102, 126, 234, 0.5)); }
+    100% { box-shadow: 0 0 0 12px rgba(0, 0, 0, 0); }
+}
+.chat-btn-deep.level-pulse {
+    animation: deepLevelPulse 0.5s ease-out;
+}
+
+/* 思考等级滑块浮层：仅开启态（.active）悬停时展开 */
+.thinking-dropdown-menu {
+    position: absolute;
+    bottom: calc(100% + 10px);
+    left: 50%;
+    transform: translateX(-50%) translateY(4px);
+    min-width: 236px;
+    background: #fff;
+    border: 1px solid #e0e0e0;
+    border-radius: 12px;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+    padding: 12px 16px 10px;
+    opacity: 0;
+    visibility: hidden;
+    pointer-events: none;
+    transition: opacity 0.18s ease, transform 0.18s ease, visibility 0.18s;
+    z-index: 1000;
+}
+/* 悬停桥接：填补按钮与浮层间的空隙，鼠标上移时不掉出悬停区域 */
+.thinking-dropdown-menu::after {
+    content: '';
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    height: 12px;
+}
+.thinking-dropdown.active:hover .thinking-dropdown-menu {
+    opacity: 1;
+    visibility: visible;
+    pointer-events: auto;
+    transform: translateX(-50%) translateY(0);
+}
+
+.thinking-level-title {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 12px;
+    color: #999;
+    margin-bottom: 14px;
+}
+/* 当前等级徽标：JS 按等级色设置文字与底色 */
+.thinking-level-current {
+    font-weight: 600;
+    padding: 1px 8px;
+    border-radius: 8px;
+    background: #f0f3ff;
+    transition: all 0.2s;
+}
+
+/* 滑块轨道：横轨 + 等级色填充 + 均分档位 */
+.thinking-level-track {
+    position: relative;
+    height: 32px;
+}
+.thinking-level-rail {
+    position: absolute;
+    top: 5px;
+    height: 4px;
+    border-radius: 2px;
+    background: #e8e8ee;
+}
+/* 填充：宽度和颜色由 JS 按等级设置，颜色随等级加深 */
+.thinking-level-fill {
+    position: absolute;
+    top: 5px;
+    height: 4px;
+    border-radius: 2px;
+    background: #667eea;
+    box-shadow: 0 0 6px rgba(102, 126, 234, 0.5);
+    transition: width 0.25s ease, background-color 0.25s ease, box-shadow 0.25s ease;
+}
+.thinking-level-stops {
+    position: relative;
+    display: flex;
+}
+.thinking-level-stop {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+    cursor: pointer;
+}
+.thinking-level-dot {
+    width: 8px;
+    height: 8px;
+    margin-top: 1px;
+    border-radius: 50%;
+    background: #fff;
+    border: 2px solid #cdd3e0;
+    transition: all 0.2s;
+}
+.thinking-level-stop:hover .thinking-level-dot {
+    transform: scale(1.3);
+}
+/* 选中档位：点亮 + 光晕（颜色由 JS 内联设置） */
+.thinking-level-stop.selected .thinking-level-dot {
+    transform: scale(1.35);
+}
+.thinking-level-label {
+    font-size: 11px;
+    color: #999;
+    line-height: 1;
+    white-space: nowrap;
+    transition: color 0.2s;
+}
+.thinking-level-stop:hover .thinking-level-label {
+    color: #555;
+}
+.thinking-level-stop.selected .thinking-level-label {
+    font-weight: 600;
+}
+
+/* noUiSlider 思考等级滑块样式 */
+.thinking-level-noui {
+    margin: 8px 0 4px;
+    height: 6px;
+}
+
+.thinking-level-noui .noUi-base {
+    background: transparent;
+}
+
+.thinking-level-noui .noUi-connects {
+    border-radius: 3px;
+}
+
+.thinking-level-noui .noUi-connect {
+    border-radius: 3px;
+    transition: background 0.2s, box-shadow 0.2s;
+}
+
+.thinking-level-noui .noUi-handle {
+    width: 18px !important;
+    height: 18px !important;
+    right: -9px !important;
+    top: -6px !important;
+    border-radius: 50% !important;
+    border: 2px solid #fff !important;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.2);
+    cursor: grab;
+    transition: box-shadow 0.2s, transform 0.15s;
+}
+
+.thinking-level-noui .noUi-handle:hover {
+    transform: scale(1.15);
+}
+
+.thinking-level-noui .noUi-handle:active {
+    cursor: grabbing;
+    transform: scale(1.1);
+}
+
+.thinking-level-noui .noUi-handle:before,
+.thinking-level-noui .noUi-handle:after {
+    display: none;
+}
+
+.thinking-level-noui .noUi-tooltip {
+    font-size: 11px;
+    padding: 2px 6px;
+    border-radius: 4px;
+    background: #333;
+    color: #fff;
+}
+
+/* 标签容器 */
+.thinking-level-noui-labels {
+    display: flex;
+    justify-content: space-between;
+    padding: 0 8px;
+}
+
+.thinking-level-noui-label {
+    font-size: 11px;
+    color: #999;
+    cursor: pointer;
+    transition: color 0.2s, font-weight 0.2s;
+    white-space: nowrap;
+    user-select: none;
+}
+
+.thinking-level-noui-label:hover {
+    color: #555;
+}
+
+.thinking-level-noui-label.selected {
+    font-weight: 600;
+}
+
+/* 暗色主题适配 */
+body.dark-theme .thinking-level-noui .noUi-target {
+    background: #3a3a4a;
+}
+
+body.dark-theme .thinking-level-noui .noUi-handle {
+    border-color: #2a2a3a !important;
+}
+
+body.dark-theme .thinking-level-noui-label {
+    color: #888;
+}
+
+body.dark-theme .thinking-level-noui-label:hover {
+    color: #bbb;
 }
 
 .tool-permission-dropdown {
@@ -977,6 +1217,9 @@ body.dark-theme .chat-header-glow::after {
     cursor: pointer;
     transition: all 0.2s;
     height: 30px;
+    /* 按钮过窄时文字不换行，超出部分隐藏 */
+    white-space: nowrap;
+    overflow: hidden;
 }
 
 .chat-btn-permission:hover {
@@ -1146,6 +1389,9 @@ body.dark-theme .chat-header-glow::after {
     cursor: pointer;
     transition: all 0.2s;
     height: 30px;
+    /* 按钮过窄时文字不换行，超出部分隐藏 */
+    white-space: nowrap;
+    overflow: hidden;
 }
 
 .chat-btn-skill:hover {
@@ -2536,9 +2782,38 @@ body.dark-theme .chat-btn-deep:hover {
 }
 
 body.dark-theme .chat-btn-deep.active {
-    border-color: #8ba3ff;
-    background: #8ba3ff;
+    border-color: var(--deep-color, #8ba3ff);
+    background: var(--deep-color, #8ba3ff);
     color: #fff;
+}
+
+body.dark-theme .thinking-dropdown.no-support .chat-btn-deep:hover {
+    border-color: #7d7dab;
+    color: #999;
+    background: transparent;
+}
+
+body.dark-theme .thinking-dropdown-menu {
+    background: #16213e;
+    border-color: #2d2d44;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
+}
+
+body.dark-theme .thinking-level-title {
+    color: #888;
+}
+
+body.dark-theme .thinking-level-rail {
+    background: #2d2d44;
+}
+
+body.dark-theme .thinking-level-dot {
+    background: #16213e;
+    border-color: #3d3d5c;
+}
+
+body.dark-theme .thinking-level-stop:hover .thinking-level-label {
+    color: #c0c0c0;
 }
 
 body.dark-theme .chat-btn-permission {

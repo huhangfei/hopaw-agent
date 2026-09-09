@@ -77,8 +77,8 @@ public class ChatWebSocketHandler extends TextWebSocketHandler {
             String sessionId = payload.getString("sessionId");
             Long aiModelId = payload.getLong("aiModelId");
             Boolean enableThinking = payload.getBoolean("enableThinking");
+            String reasoningEffort = payload.getString("reasoningEffort");
             String toolCallPermission = payload.getString("toolCallPermission");
-
             @SuppressWarnings("unchecked")
             List<String> skillNames = payload.getJSONArray("skills").toJavaList(String.class);
 
@@ -100,6 +100,7 @@ public class ChatWebSocketHandler extends TextWebSocketHandler {
             userChatRequest.setSessionId(sessionId);
             userChatRequest.setAiModelId(aiModelId);
             userChatRequest.setEnableThinking(enableThinking);
+            userChatRequest.setReasoningEffort(reasoningEffort);
             userChatRequest.setToolCallPermission(toolCallPermission);
             userChatRequest.setFiles(files);
             chatService.handle(userChatRequest);

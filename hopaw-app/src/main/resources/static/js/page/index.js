@@ -11,6 +11,33 @@ var currentSessionId = null;
 var currentToolCallPermission = 'smart_call';
 var attachedFiles = []; // { url, type, name }
 
+// ===== 深度思考等级滑块 =====
+// 等级元数据：固定从低到高排序，color 驱动滑块填充与按钮发光随等级加深的视觉体验
+var THINKING_LEVELS = [
+    {code: 'none',    name: '无',   color: '#94a3b8'},
+    {code: 'minimal', name: '极轻', color: '#7dd3fc'},
+    {code: 'low',     name: '低',   color: '#38bdf8'},
+    {code: 'medium',  name: '中',   color: '#667eea'},
+    {code: 'high',    name: '高',   color: '#8b5cf6'},
+    {code: 'xhigh',   name: '极高', color: '#7c3aed'},
+    {code: 'max',     name: '最大', color: '#6d28d9'}
+];
+var currentThinkingLevels = [];   // 当前模型支持的等级（已按从低到高排序）
+var currentThinkingLevel = null;  // 当前选中等级 code
+var thinkingModelById = {};       // 模型ID → 模型数据（含 supportedThinkingLevelsArray）
+
+/**
+ * hex 颜色转 rgba 字符串（等级发光颜色用）
+ */
+function hexToRgba(hex, alpha) {
+    var h = (hex || '').replace('#', '');
+    if (h.length === 3) h = h[0] + h[0] + h[1] + h[1] + h[2] + h[2];
+    var r = parseInt(h.substring(0, 2), 16);
+    var g = parseInt(h.substring(2, 4), 16);
+    var b = parseInt(h.substring(4, 6), 16);
+    return 'rgba(' + r + ',' + g + ',' + b + ',' + alpha + ')';
+}
+
 function openAttachmentPreview(id) {
     var overlay = document.createElement('div');
     overlay.className = 'attachment-preview-overlay';
@@ -1887,6 +1914,9 @@ function sendMessage() {
                 skills: getSelectedSkills(),
                 aiModelId: currentModelId,
                 enableThinking: deepBtn ? deepBtn.getAttribute('data-enabled') === 'true' : true,
+                // 思考等级：开启深度思考时随消息发送（未开启时置空，由后端按智能体/模型配置兜底）
+                reasoningEffort: (deepBtn && deepBtn.getAttribute('data-enabled') === 'true' && currentThinkingLevel)
+                    ? currentThinkingLevel : null,
                 toolCallPermission: currentToolCallPermission,
                 files: filesPayload
             };
@@ -2830,12 +2860,28 @@ window.onload = function() {
     }
 
     var deepBtn = document.getElementById('deepThinkBtn');
+    var thinkingDropdown = document.getElementById('thinkingDropdown');
     if (deepBtn) {
+        // 初始思考等级：智能体配置的 reasoningEffort，缺省 high（滑块在模型数据加载后渲染）
+        currentThinkingLevel = deepBtn.getAttribute('data-default-level') || 'high';
+        // 先以全量等级初始化滑块与按钮发光，模型数据加载后按 supportedThinkingLevelsArray 重建
+        currentThinkingLevels = THINKING_LEVELS.slice();
+        renderThinkingLevelSlider();
+        updateThinkingLevelUI(true);
+        // 初始开启态同步到容器（悬停展开滑块的条件）
+        if (thinkingDropdown && deepBtn.classList.contains('active')) {
+            thinkingDropdown.classList.add('active');
+        }
         deepBtn.addEventListener('click', function() {
+            // 当前模型不支持思考：按钮置灰不可用
+            if (thinkingDropdown && thinkingDropdown.classList.contains('no-support')) return;
             var current = this.getAttribute('data-enabled') === 'true';
             var newEnabled = !current;
             this.setAttribute('data-enabled', newEnabled);
             this.classList.toggle('active', newEnabled);
+            if (thinkingDropdown) {
+                thinkingDropdown.classList.toggle('active', newEnabled);
+            }
         });
     }
 
@@ -2966,6 +3012,8 @@ function loadModelSelector() {
                             html += '<div class="model-dropdown-empty">暂无模型</div>';
                         } else {
                             models.forEach(function(model) {
+                                // 缓存模型数据：思考等级滑块从模型读取 supportedThinkingLevelsArray
+                                thinkingModelById[model.id] = model;
                                 var activeClass = '';
                                 if (defaultModelId && defaultModelId === model.id) {
                                     activeClass = ' active';
@@ -3051,6 +3099,9 @@ function selectModel(modelId, modelName) {
         btn.classList.add('has-selected');
     }
 
+    // 切换模型后同步思考等级滑块（等级列表来自模型的 supportedThinkingLevelsArray）
+    syncThinkingLevelsFromModel(thinkingModelById[currentModelId]);
+
     var allSubItems = document.querySelectorAll('.model-sub-item');
     allSubItems.forEach(function(item) {
         if (item.getAttribute('data-model-id') == modelId) {
@@ -3065,6 +3116,267 @@ function selectModel(modelId, modelName) {
         menu.classList.remove('open');
         menu.style.display = ''; // 重置内联样式
         menu.style.visibility = '';
+    }
+}
+
+/**
+ * 按等级 code 查找当前模型支持的等级元数据
+ */
+function findThinkingLevelMeta(code) {
+    for (var i = 0; i < currentThinkingLevels.length; i++) {
+        if (currentThinkingLevels[i].code === code) return currentThinkingLevels[i];
+    }
+    return null;
+}
+
+/**
+ * 同步深度思考等级：依据当前选中模型的 supportedThinkingLevelsArray 重建滑块。
+ * 模型不支持思考时置灰按钮并强制关闭；当前等级不在列表中时回退 high（或中间档）。
+ */
+function syncThinkingLevelsFromModel(model) {
+    var dropdown = document.getElementById('thinkingDropdown');
+    var btn = document.getElementById('deepThinkBtn');
+    if (!dropdown || !btn) return;
+
+    // 模型不支持思考：置灰禁用并强制关闭（后端同样会强制关闭思考）
+    if (model && model.supportThinking === false) {
+        dropdown.classList.add('no-support');
+        btn.setAttribute('title', '当前模型不支持思考');
+        btn.setAttribute('data-enabled', 'false');
+        btn.classList.remove('active');
+        dropdown.classList.remove('active');
+        return;
+    }
+    dropdown.classList.remove('no-support');
+
+    // 等级列表：取模型配置的 supportedThinkingLevelsArray，按固定顺序从低到高排列并去重
+    var arr = (model && model.supportedThinkingLevelsArray) || [];
+    var seen = {};
+    var levels = [];
+    THINKING_LEVELS.forEach(function(meta) {
+        for (var i = 0; i < arr.length; i++) {
+            if (arr[i] && arr[i].trim() === meta.code && !seen[meta.code]) {
+                levels.push(meta);
+                seen[meta.code] = true;
+                break;
+            }
+        }
+    });
+    // 模型未配置等级时展示全部（后端会按模型扩展参数兜底约束）
+    if (levels.length === 0) {
+        levels = THINKING_LEVELS.slice();
+    }
+    currentThinkingLevels = levels;
+
+    // 当前等级不在新列表中：回退 high，仍不存在则取中间档
+    if (!findThinkingLevelMeta(currentThinkingLevel)) {
+        var fallback = findThinkingLevelMeta('high');
+        currentThinkingLevel = fallback ? fallback.code : levels[Math.floor(levels.length / 2)].code;
+    }
+    renderThinkingLevelSlider();
+    updateThinkingLevelUI(true);
+}
+
+/**
+ * 渲染思考等级滑块：使用 noUiSlider 实现平滑拖拽选择
+ */
+var thinkingNoUiSlider = null;
+
+function renderThinkingLevelSlider() {
+    var track = document.getElementById('thinkingLevelTrack');
+    if (!track) return;
+    track.innerHTML = '';
+
+    var n = currentThinkingLevels.length;
+    if (n === 0) return;
+
+    // 创建 noUiSlider 容器
+    var sliderContainer = document.createElement('div');
+    sliderContainer.className = 'thinking-level-noui';
+    track.appendChild(sliderContainer);
+
+    // 创建标签容器
+    var labelsContainer = document.createElement('div');
+    labelsContainer.className = 'thinking-level-noui-labels';
+    currentThinkingLevels.forEach(function(meta, i) {
+        var label = document.createElement('span');
+        label.className = 'thinking-level-noui-label';
+        label.textContent = meta.name;
+        label.setAttribute('data-index', i);
+        label.addEventListener('click', function() {
+            thinkingNoUiSlider.set(i);
+        });
+        labelsContainer.appendChild(label);
+    });
+    track.appendChild(labelsContainer);
+
+    // 销毁旧实例
+    if (thinkingNoUiSlider) {
+        thinkingNoUiSlider.destroy();
+        thinkingNoUiSlider = null;
+    }
+
+    // 找到当前选中等级的索引
+    var selectedIndex = 0;
+    for (var i = 0; i < currentThinkingLevels.length; i++) {
+        if (currentThinkingLevels[i].code === currentThinkingLevel) {
+            selectedIndex = i;
+            break;
+        }
+    }
+
+    // 初始化 noUiSlider
+    noUiSlider.create(sliderContainer, {
+        start: selectedIndex,
+        connect: 'lower',
+        step: 1,
+        range: {
+            'min': 0,
+            'max': n - 1
+        },
+        tooltips: false,
+        behaviour: 'tap-drag'
+    });
+
+    thinkingNoUiSlider = sliderContainer.noUiSlider;
+
+    // 更新滑块颜色
+    updateThinkingLevelSliderColor(selectedIndex);
+
+    // 滑块变化事件
+    thinkingNoUiSlider.on('update', function(values, handle) {
+        var idx = Math.round(parseFloat(values[0]));
+        var meta = currentThinkingLevels[idx];
+        if (meta) {
+            updateThinkingLevelSliderColor(idx);
+        }
+    });
+
+    thinkingNoUiSlider.on('change', function(values, handle) {
+        var idx = Math.round(parseFloat(values[0]));
+        var meta = currentThinkingLevels[idx];
+        if (meta) {
+            selectThinkingLevel(meta.code);
+        }
+    });
+
+    thinkingNoUiSlider.on('slide', function(values, handle) {
+        var idx = Math.round(parseFloat(values[0]));
+        updateThinkingLevelSliderColor(idx);
+    });
+
+    thinkingNoUiSlider.on('hover', function(values, handle) {
+        var idx = Math.round(parseFloat(values[0]));
+        updateThinkingLevelSliderColor(idx);
+    });
+}
+
+/**
+ * 更新 noUiSlider 滑块颜色（轨道填充 + 滑块手柄）
+ */
+function updateThinkingLevelSliderColor(index) {
+    var meta = currentThinkingLevels[index];
+    if (!meta) return;
+
+    var sliderContainer = document.querySelector('.thinking-level-noui');
+    if (!sliderContainer) return;
+
+    // 更新轨道填充颜色
+    var origin = sliderContainer.querySelector('.noUi-connect');
+    if (origin) {
+        origin.style.background = meta.color;
+        origin.style.boxShadow = '0 0 8px ' + hexToRgba(meta.color, 0.5);
+    }
+
+    // 更新滑块手柄颜色
+    var handle = sliderContainer.querySelector('.noUi-handle');
+    if (handle) {
+        handle.style.background = meta.color;
+        handle.style.borderColor = meta.color;
+        handle.style.boxShadow = '0 0 10px ' + hexToRgba(meta.color, 0.6);
+    }
+
+    // 更新标签样式
+    var labels = document.querySelectorAll('.thinking-level-noui-label');
+    labels.forEach(function(label, i) {
+        var isSelected = i === index;
+        label.classList.toggle('selected', isSelected);
+        if (isSelected) {
+            label.style.color = meta.color;
+            label.style.fontWeight = '600';
+        } else {
+            label.style.color = '';
+            label.style.fontWeight = '';
+        }
+    });
+
+    // 更新上方标签（如果有的话）
+    var currentEl = document.getElementById('thinkingLevelCurrent');
+    if (currentEl) {
+        currentEl.textContent = meta.name;
+        currentEl.style.color = meta.color;
+        currentEl.style.background = hexToRgba(meta.color, 0.12);
+    }
+}
+
+/**
+ * 仅更新滑块填充（悬停预览 / 移出恢复共用）：保持接口兼容
+ */
+function updateThinkingLevelFill(levelCode) {
+    // noUiSlider 模式下不需要此函数，保留接口兼容
+}
+
+function previewThinkingLevel(levelCode) {
+    // noUiSlider 模式下不需要此函数，保留接口兼容
+}
+
+/**
+ * 选中思考等级：更新滑块位置、标签样式、当前等级徽标与按钮发光
+ */
+function selectThinkingLevel(levelCode) {
+    if (!findThinkingLevelMeta(levelCode)) return;
+    currentThinkingLevel = levelCode;
+    updateThinkingLevelUI();
+}
+
+/**
+ * 刷新思考等级整体状态：滑块位置、标签样式、徽标、按钮随等级加深的发光。
+ * restoreOnly=true 时仅恢复展示（如模型切换后初始化），不触发切换脉冲。
+ */
+function updateThinkingLevelUI(restoreOnly) {
+    var meta = findThinkingLevelMeta(currentThinkingLevel) || currentThinkingLevels[0];
+    if (!meta) return;
+    var idx = currentThinkingLevels.indexOf(meta);
+
+    // 更新 noUiSlider 滑块位置
+    if (thinkingNoUiSlider) {
+        thinkingNoUiSlider.set(idx, false); // false = 不触发事件
+    }
+
+    // 更新滑块颜色和标签
+    updateThinkingLevelSliderColor(idx);
+
+    // 浮层标题：当前等级徽标
+    var currentEl = document.getElementById('thinkingLevelCurrent');
+    if (currentEl) {
+        currentEl.textContent = meta.name;
+        currentEl.style.color = meta.color;
+        currentEl.style.background = hexToRgba(meta.color, 0.1);
+    }
+
+    // 按钮随等级加深：颜色变深、发光半径增大（CSS 变量驱动 .active 样式）
+    var btn = document.getElementById('deepThinkBtn');
+    if (btn) {
+        btn.style.setProperty('--deep-color', meta.color);
+        btn.style.setProperty('--deep-glow', (4 + idx * 2) + 'px');
+        btn.style.setProperty('--deep-glow-color', hexToRgba(meta.color, 0.45));
+        btn.setAttribute('title', '深度思考：' + meta.name);
+        if (!restoreOnly) {
+            // 切换脉冲：重置动画强化"加深"的切换体验
+            btn.classList.remove('level-pulse');
+            void btn.offsetWidth;
+            btn.classList.add('level-pulse');
+        }
     }
 }
 
@@ -3195,6 +3507,23 @@ function updateSessionTitle(sessionId, newTitle, bizType) {
     var container = document.getElementById('sessionList');
     if (!container) return;
 
+    // 同步初始会话列表数据：新会话（含非当前筛选类型）补录进 initialChatSessions，已存在则更新标题；
+    // 切换筛选类型时 renderSessionList 依据该数组渲染，保证实时到达的新会话不丢失（运行状态取自 runningSessionIds）
+    var knownSession = (initialChatSessions || []).find(function(s) { return s.sessionId === sessionId; });
+    if (knownSession) {
+        if (newTitle) {
+            knownSession.title = newTitle;
+        }
+    } else {
+        initialChatSessions.unshift({
+            sessionId: sessionId,
+            title: newTitle || '未命名会话',
+            bizType: bizType || '',
+            lastUpdateTime: Date.now(),
+            running: !!runningSessionIds[sessionId]
+        });
+    }
+
     var existingItem = container.querySelector('.session-list-item[data-session-id="' + escapeHtml(sessionId) + '"]');
     if (existingItem) {
         var titleSpan = existingItem.querySelector('.session-list-item-title');
@@ -3204,17 +3533,17 @@ function updateSessionTitle(sessionId, newTitle, bizType) {
         return;
     }
 
-    var emptyEl = container.querySelector('.session-list-empty');
-    if (emptyEl) {
-        emptyEl.remove();
-    }
-
     // 根据 bizType 确定会话类型
     var filterType = sessionFilterTypeOf(bizType || '');
 
-    // 新会话需匹配当前筛选类型才插入，避免类型错乱
+    // 类型与当前筛选不符时不插入 DOM（数据已保留在 initialChatSessions，切换类型时可渲染）
     if (sessionTypeFilter !== filterType) {
         return;
+    }
+
+    var emptyEl = container.querySelector('.session-list-empty');
+    if (emptyEl) {
+        emptyEl.remove();
     }
 
     var item = document.createElement('div');
