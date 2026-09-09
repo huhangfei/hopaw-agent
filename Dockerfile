@@ -13,6 +13,10 @@ LABEL maintainer="hopaw-agent"
 
 WORKDIR /app
 
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends fonts-wqy-zenhei && \
+    rm -rf /var/lib/apt/lists/*
+
 # 应用自身类 jar
 COPY hopaw-app/target/hopaw-app-1.0.0.jar app.jar
 

@@ -872,7 +872,7 @@ public class AgentExecutor implements IAgentExecutor {
             chatSession.setToolCallPermission(agentExecutorParams.getToolCallPermission());
             chatSession.setBizType(agentExecutorParams.getBizType().getValue());
             chatSessionService.insertSession(chatSession);
-            agentMessageHandler.sendMessageToChannel(AiMessageBaseInfo.sessionTitle(sessionId, requestId, userIntent));
+            agentMessageHandler.sendMessageToChannel(AiMessageBaseInfo.sessionTitle(sessionId, requestId, userIntent, agentExecutorParams.getBizType()));
         } else {
             // 占位标题（旧默认“新聊天”或前端预创建会话的默认“新会话”）时分析用户意图/使用外部标题
             if ("新聊天".equals(chatSession.getTitle()) || "新会话".equals(chatSession.getTitle())) {
@@ -901,7 +901,7 @@ public class AgentExecutor implements IAgentExecutor {
             chatSessionService.updateSession(chatSession);
         }
         if (sendSessionTitle) {
-            agentMessageHandler.sendMessageToChannel(AiMessageBaseInfo.sessionTitle(sessionId, requestId, chatSession.getTitle()));
+            agentMessageHandler.sendMessageToChannel(AiMessageBaseInfo.sessionTitle(sessionId, requestId, chatSession.getTitle(), agentExecutorParams.getBizType()));
         }
 
     }

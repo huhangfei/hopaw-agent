@@ -1067,7 +1067,7 @@ function connectWebSocket() {
         // session-title 仍需更新左侧会话列表标题；received/done/error/task-done 维护会话列表的运行loading图标
         if (data.sessionId && data.sessionId !== currentSessionId) {
             if (data.type === 'session-title') {
-                updateSessionTitle(data.sessionId, data.content);
+                updateSessionTitle(data.sessionId, data.content, data.bizType);
             } else if (data.type === 'received') {
                 setSessionRunning(data.sessionId, true);
             } else if (data.type === 'done' || data.type === 'error' || data.type === 'task-done') {
@@ -1103,7 +1103,7 @@ function connectWebSocket() {
             setSessionRunning(data.sessionId || currentSessionId, false);
             handleStreamingDone(data.message, data.response, requestId);
         } else if (data.type === 'session-title') {
-            updateSessionTitle(data.sessionId, data.content);
+            updateSessionTitle(data.sessionId, data.content, data.bizType);
         } else if (data.type === 'task-done') {
             setSessionRunning(data.sessionId || currentSessionId, false);
             var msgState = streamingMessages[requestId];
@@ -3216,7 +3216,7 @@ function renderSessionList(sessions) {
     }
 }
 
-function updateSessionTitle(sessionId, newTitle) {
+function updateSessionTitle(sessionId, newTitle, bizType) {
     // 当前会话：同步更新消息区头部标题
     if (sessionId === currentSessionId) {
         var headerDesc = document.getElementById('chat-header-desc');
@@ -3242,14 +3242,18 @@ function updateSessionTitle(sessionId, newTitle) {
         emptyEl.remove();
     }
 
-    // 新会话由首页聊天创建，属聊天类型：当前筛选非聊天时不插入，避免类型错乱
-    if (sessionTypeFilter !== 'chat') {
+    // 根据 bizType 确定会话类型
+    var filterType = sessionFilterTypeOf(bizType || '');
+
+    // 新会话需匹配当前筛选类型才插入，避免类型错乱
+    if (sessionTypeFilter !== filterType) {
         return;
     }
 
     var item = document.createElement('div');
     item.className = 'session-list-item' + (sessionId === currentSessionId ? ' active' : '');
     item.setAttribute('data-session-id', sessionId);
+    item.setAttribute('data-biz-type', bizType || '');
 
     var titleSpan = document.createElement('span');
     titleSpan.className = 'session-list-item-title';
@@ -3267,13 +3271,29 @@ function updateSessionTitle(sessionId, newTitle) {
     editBtn.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>';
     item.appendChild(editBtn);
 
-    // 补充分类标签：新会话通常为聊天类型，与列表项结构保持一致
-    if (!item.querySelector('.session-tag')) {
-        var chatTag = document.createElement('span');
-        chatTag.className = 'session-tag session-tag-chat';
-        chatTag.setAttribute('title', '聊天');
-        chatTag.textContent = '聊天';
-        item.insertBefore(chatTag, item.firstChild);
+    // 根据类型添加分类标签和样式
+    var isTask = filterType === 'task';
+    var isProject = filterType === 'project';
+    if (isTask) {
+        item.classList.add('session-list-item-task');
+        var tag = document.createElement('span');
+        tag.className = 'session-tag session-tag-task';
+        tag.setAttribute('title', '任务会话');
+        tag.textContent = '任务';
+        item.insertBefore(tag, item.firstChild);
+    } else if (isProject) {
+        item.classList.add('session-list-item-project');
+        var tag = document.createElement('span');
+        tag.className = 'session-tag session-tag-project';
+        tag.setAttribute('title', '项目会话');
+        tag.textContent = '项目';
+        item.insertBefore(tag, item.firstChild);
+    } else {
+        var tag = document.createElement('span');
+        tag.className = 'session-tag session-tag-chat';
+        tag.setAttribute('title', '聊天');
+        tag.textContent = '聊天';
+        item.insertBefore(tag, item.firstChild);
     }
     // 运行中：给分类标签附加流光边框类
     if (runningSessionIds[sessionId]) {

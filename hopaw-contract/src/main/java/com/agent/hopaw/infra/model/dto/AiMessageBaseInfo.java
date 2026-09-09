@@ -99,6 +99,11 @@ public class AiMessageBaseInfo {
         this.bizType = bizType;
     }
 
+    public AiMessageBaseInfo bizType(AgentExecutorBizTypeEnum bizType) {
+        this.bizType = bizType;
+        return this;
+    }
+
 
     public static AiMessageBaseInfo build(String type, String sessionId, String requestId) {
         AiMessageBaseInfo aiMessageBaseInfo = new AiMessageBaseInfo(type)
@@ -131,5 +136,8 @@ public class AiMessageBaseInfo {
     }
     public static AiMessageBaseInfo sessionTitle(String sessionId, String requestId, String content) {
         return AiMessageBaseInfo.build("session-title", sessionId, requestId).content(content);
+    }
+    public static AiMessageBaseInfo sessionTitle(String sessionId, String requestId, String content, AgentExecutorBizTypeEnum bizType) {
+        return AiMessageBaseInfo.build("session-title", sessionId, requestId).content(content).bizType(bizType);
     }
 }
