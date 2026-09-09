@@ -42,6 +42,8 @@ public class SettingsController {
         put("notify",       new String[] {"/js/page/settings-notify.js", "/css/page/settings-notify.css"});
         put("session-clean", new String[] {"/js/page/settings-session-clean.js", "/css/page/settings-session-clean.css"});
         put("prompt",        new String[] {"/js/page/settings-prompt.js", null});
+        put("ip-blacklist",  new String[] {"/js/page/settings-ip-blacklist.js", "/css/page/settings-ip-blacklist.css"});
+        put("login-log",     new String[] {"/js/page/settings-login-log.js", "/css/page/settings-login-log.css"});
     }};
 
     private final MailUtil mailUtil;

@@ -561,6 +561,29 @@ public class DatabaseInitializer implements CommandLineRunner {
             // 一次性迁移：ai_models / ai_model_providers 的 create_time 由 UTC 转本地时间
             migrateAiModelUtcTimeToLocal(stmt);
 
+            // IP黑名单表
+            stmt.execute("CREATE TABLE IF NOT EXISTS ip_blacklist (" +
+                    "id INTEGER PRIMARY KEY AUTOINCREMENT, " +
+                    "ip TEXT NOT NULL UNIQUE, " +
+                    "remark TEXT, " +
+                    "create_time TIMESTAMP DEFAULT (datetime('now','localtime'))" +
+                    ")");
+
+            // 登录日志表
+            stmt.execute("CREATE TABLE IF NOT EXISTS login_log (" +
+                    "id INTEGER PRIMARY KEY AUTOINCREMENT, " +
+                    "user_id TEXT, " +
+                    "username TEXT, " +
+                    "ip TEXT, " +
+                    "result TEXT NOT NULL, " +
+                    "fail_reason TEXT, " +
+                    "create_time TIMESTAMP DEFAULT (datetime('now','localtime'))" +
+                    ")");
+            stmt.execute("CREATE INDEX IF NOT EXISTS idx_login_log_user ON login_log(user_id)");
+            stmt.execute("CREATE INDEX IF NOT EXISTS idx_login_log_ip ON login_log(ip)");
+            stmt.execute("CREATE INDEX IF NOT EXISTS idx_login_log_result ON login_log(result)");
+            stmt.execute("CREATE INDEX IF NOT EXISTS idx_login_log_time ON login_log(create_time)");
+
             log.info("Database tables created");
         }
     }

@@ -1,0 +1,49 @@
+<th:block th:fragment="content" xmlns:th="http://www.thymeleaf.org">
+<div class="settings-panel active" id="tab-ip-blacklist">
+    <div class="ipbl-toolbar">
+        <button class="btn-save-settings" onclick="ipblShowAdd()">添加IP</button>
+        <span class="ipbl-total" id="ipblTotal">共 0 条</span>
+    </div>
+    <div class="ipbl-card">
+        <table class="ipbl-table">
+            <thead>
+                <tr>
+                    <th style="width:60px;">#</th>
+                    <th>IP地址</th>
+                    <th>备注</th>
+                    <th>添加时间</th>
+                    <th style="width:80px;">操作</th>
+                </tr>
+            </thead>
+            <tbody id="ipblTableBody"></tbody>
+        </table>
+        <div class="ipbl-empty" id="ipblEmpty" style="display:none;">
+            <p>暂无黑名单记录</p>
+        </div>
+    </div>
+
+    <!-- 添加弹框 -->
+    <div class="modal-overlay" id="ipblAddModal">
+        <div class="modal modal-narrow">
+            <div class="modal-header">
+                <h3>添加IP黑名单</h3>
+                <button class="modal-close" onclick="ipblCloseAdd()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label>IP地址 *</label>
+                    <input type="text" id="ipblIpInput" placeholder="例如：192.168.1.100">
+                </div>
+                <div class="form-group">
+                    <label>备注</label>
+                    <input type="text" id="ipblRemarkInput" placeholder="可选">
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn-cancel" onclick="ipblCloseAdd()">取消</button>
+                <button class="btn-submit" onclick="ipblDoAdd()">确定</button>
+            </div>
+        </div>
+    </div>
+</div>
+</th:block>

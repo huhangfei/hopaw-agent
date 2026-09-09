@@ -50,7 +50,7 @@
             nickname = #{nickname},
             status = COALESCE(#{status}, status),
             password_enabled = COALESCE(#{passwordEnabled}, password_enabled),
-            password = #{password},
+            password = COALESCE(#{password}, password),
             remark = #{remark},
             update_time = datetime('now', 'localtime')
         WHERE id = #{id}

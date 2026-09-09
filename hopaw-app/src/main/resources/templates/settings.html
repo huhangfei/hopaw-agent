@@ -23,6 +23,8 @@
         <a th:href="@{/settings/scheduled-tasks}" class="settings-tab" th:classappend="${currentTab == 'scheduled-tasks' ? 'active' : ''}">定时任务</a>
         <a th:href="@{/settings/workflow-pool}" class="settings-tab" th:classappend="${currentTab == 'workflow-pool' ? 'active' : ''}">项目任务线程池</a>
         <a th:href="@{/settings/prompt}" class="settings-tab" th:classappend="${currentTab == 'prompt' ? 'active' : ''}">提示词设置</a>
+        <a th:href="@{/settings/ip-blacklist}" class="settings-tab" th:classappend="${currentTab == 'ip-blacklist' ? 'active' : ''}">IP黑名单</a>
+        <a th:href="@{/settings/login-log}" class="settings-tab" th:classappend="${currentTab == 'login-log' ? 'active' : ''}">登录日志</a>
     </div>
 
     <div th:replace="~{__${'settings/' + currentTab}__ :: content}"></div>

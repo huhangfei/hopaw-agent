@@ -1,0 +1,76 @@
+<th:block th:fragment="content" xmlns:th="http://www.thymeleaf.org">
+<div class="settings-panel active" id="tab-login-log">
+    <div class="ll-toolbar">
+        <div class="ll-filters">
+            <input type="text" id="llFilterUserId" placeholder="用户编号" class="ll-filter-input">
+            <input type="text" id="llFilterIp" placeholder="IP地址" class="ll-filter-input">
+            <select id="llFilterResult" class="ll-filter-select">
+                <option value="">全部结果</option>
+                <option value="success">成功</option>
+                <option value="failed">失败</option>
+            </select>
+            <button class="btn-save-settings" onclick="llSearch()">搜索</button>
+        </div>
+        <div class="ll-actions">
+            <button class="btn-save-settings" onclick="llShowConfig()">登录异常设置</button>
+            <button class="btn-save-settings ll-btn-danger" onclick="llClearAll()">清空日志</button>
+        </div>
+    </div>
+    <div class="ll-card">
+        <table class="ll-table">
+            <thead>
+                <tr>
+                    <th style="width:60px;">#</th>
+                    <th>用户编号</th>
+                    <th>用户名</th>
+                    <th>IP</th>
+                    <th>结果</th>
+                    <th>失败原因</th>
+                    <th>时间</th>
+                </tr>
+            </thead>
+            <tbody id="llTableBody"></tbody>
+        </table>
+        <div class="ll-empty" id="llEmpty" style="display:none;">
+            <p>暂无登录日志</p>
+        </div>
+        <div class="ll-pagination" id="llPagination">
+            <button class="sc-page-btn" id="llPrevBtn" onclick="llPrevPage()">上一页</button>
+            <span class="sc-page-info" id="llPageInfo">1 / 1</span>
+            <button class="sc-page-btn" id="llNextBtn" onclick="llNextPage()">下一页</button>
+            <span class="sc-total-info" id="llTotalInfo">共 0 条</span>
+        </div>
+    </div>
+
+    <!-- 登录异常设置弹框 -->
+    <div class="modal-overlay" id="llConfigModal">
+        <div class="modal modal-narrow">
+            <div class="modal-header">
+                <h3>登录异常设置</h3>
+                <button class="modal-close" onclick="llCloseConfig()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label>用户最大失败次数</label>
+                    <input type="number" id="llMaxUserFailures" min="1" value="10">
+                    <div class="form-hint">用户登录失败达到此次数后将被自动禁用</div>
+                </div>
+                <div class="form-group">
+                    <label>IP最大失败次数</label>
+                    <input type="number" id="llMaxIpFailures" min="1" value="20">
+                    <div class="form-hint">IP登录失败达到此次数后将被加入黑名单</div>
+                </div>
+                <div class="form-group">
+                    <label>异常通知渠道</label>
+                    <div id="llChannelCheckboxes" class="ll-channel-list"></div>
+                    <div class="form-hint">发生异常时向选中的渠道发送通知</div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn-cancel" onclick="llCloseConfig()">取消</button>
+                <button class="btn-submit" onclick="llSaveConfig()">保存</button>
+            </div>
+        </div>
+    </div>
+</div>
+</th:block>

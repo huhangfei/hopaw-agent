@@ -13,6 +13,7 @@ public class WebMvcConfig implements WebMvcConfigurer {
 
     private final ThemeInterceptor themeInterceptor;
     private final AuthInterceptor authInterceptor;
+    private final IpBlacklistInterceptor ipBlacklistInterceptor;
 
     @Value("${hopaw.attachment.dir:./attachments}")
     private String attachmentDir;
@@ -20,9 +21,11 @@ public class WebMvcConfig implements WebMvcConfigurer {
     @Value("${hopaw.attachment.url-prefix:/attachments}")
     private String attachmentUrlPrefix;
 
-    public WebMvcConfig(ThemeInterceptor themeInterceptor, AuthInterceptor authInterceptor) {
+    public WebMvcConfig(ThemeInterceptor themeInterceptor, AuthInterceptor authInterceptor,
+                        IpBlacklistInterceptor ipBlacklistInterceptor) {
         this.themeInterceptor = themeInterceptor;
         this.authInterceptor = authInterceptor;
+        this.ipBlacklistInterceptor = ipBlacklistInterceptor;
     }
 
     @Override
@@ -43,6 +46,11 @@ public class WebMvcConfig implements WebMvcConfigurer {
 
     @Override
     public void addInterceptors(InterceptorRegistry registry) {
+        // IP黑名单拦截器（最高优先级）
+        registry.addInterceptor(ipBlacklistInterceptor)
+                .addPathPatterns("/**")
+                .excludePathPatterns("/static/**", "/css/**", "/js/**", "/icons/**", "/images/**");
+
         registry.addInterceptor(authInterceptor)
                 .addPathPatterns("/**")
                 .excludePathPatterns("/static/**", "/css/**", "/js/**", "/icons/**", "/images/**", "/test/**", "/ws/**", "/error", "/exports/**", attachmentUrlPrefix + "/**");
