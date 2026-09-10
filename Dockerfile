@@ -38,4 +38,4 @@ HEALTHCHECK --interval=30s --timeout=5s --start-period=90s --retries=3 \
 
 # 分包启动：classpath 指向 app.jar + lib 下全部 jar
 # /app/lib-override 可通过 volume 挂载，同名 jar 优先于 /app/lib，实现不重建镜像的热替换
-ENTRYPOINT ["sh", "-c", "java $JAVA_OPTS -Duser.timezone=Asia/Shanghai -cp \"/app/lib-override/*:/app/lib/*:/app/app.jar\" com.agent.hopaw.AgentApplication --spring.profiles.active=prod"]
+ENTRYPOINT ["sh", "-c", "java $JAVA_OPTS -Duser.timezone=Asia/Shanghai -cp \"/app/lib/*:/app/app.jar\" com.agent.hopaw.AgentApplication --spring.profiles.active=prod"]

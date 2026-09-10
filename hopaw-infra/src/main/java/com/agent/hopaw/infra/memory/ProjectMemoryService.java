@@ -128,20 +128,6 @@ public class ProjectMemoryService implements IProjectMemoryService {
      * 返回 null 表示放弃 AI 结果（调用方按需回退）。
      */
     private String trySummarize(String memoryTitle, String existing, String newConversation, String userId) {
-        // 无现有记忆：AI 直接从纪要生成首版记忆（同样走校验+重试）
-        if (existing == null || existing.isBlank()) {
-            String first = callMemoryModel(memoryTitle, null, newConversation, userId);
-            if (first != null && !first.isBlank() && validateMemoryResult(memoryTitle, first, newConversation)) {
-                return first;
-            }
-            String retry = callMemoryModel(memoryTitle, null, newConversation, userId);
-            if (retry != null && !retry.isBlank() && validateMemoryResult(memoryTitle, retry, newConversation)) {
-                return retry;
-            }
-            // 校验两次不通过：仍返回可用的总结结果（优于直接丢弃），全部失败返回 null
-            return first != null && !first.isBlank() ? first : retry;
-        }
-        // 有现有记忆：合并压缩去重后写回全文（校验+重试）
         String merged = callMemoryModel(memoryTitle, existing, newConversation, userId);
         if (merged != null && !merged.isBlank() && validateMemoryResult(memoryTitle, merged, newConversation)) {
             return merged;
@@ -152,17 +138,13 @@ public class ProjectMemoryService implements IProjectMemoryService {
         if (retry != null && !retry.isBlank() && validateMemoryResult(memoryTitle, retry, newConversation)) {
             return retry;
         }
-        if (merged != null && !merged.isBlank()) {
-            // 两次校验均未通过但总结内容可用：仍采用总结结果（优于分节追加产生重复）
-            logger.warn("项目空间记忆总结两次校验未通过，采用首次总结结果（{}）", memoryTitle);
-            return merged;
-        }
+
         // AI 失败兜底：带时间戳分节追加（粗略截断保留最新内容）
-        return existing + "\n\n---- [" + LocalDateTime.now().format(TIME_FMT) + "] ----\n" + truncate(newConversation);
+        return (existing != null ? existing : "") + "\n\n---- [" + LocalDateTime.now().format(TIME_FMT) + "] 以下是因为上次记忆总结失败遗留的未总结信息，下次记忆整理一起处理 ----\n" + truncate(newConversation);
     }
 
     private String truncate(String text) {
-        return text != null && text.length() > 2000 ? text.substring(0, 2000) + "…" : text;
+        return text != null && text.length() > 10000 ? text.substring(0, 10000) + "…" : text;
     }
 
     /**
