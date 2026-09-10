@@ -1330,6 +1330,7 @@ function submitProject() {
                 showToast(id ? '项目更新成功' : '项目创建成功', 'success');
                 closeProjectModal();
                 loadProjects(currentPage);
+                loadProjectsForTaskModal();
                 // 如果是编辑当前选中项目，刷新详情
                 if (id && parseInt(id, 10) === currentProjectId) {
                     loadProjectDetail(currentProjectId);
@@ -1447,6 +1448,7 @@ function deleteCurrentProject() {
                     document.getElementById('detailContent').style.display = 'none';
                     document.getElementById('detailEmpty').style.display = 'flex';
                     loadProjects(currentPage);
+                    loadProjectsForTaskModal();
                 } else {
                     showToast(res.msg || '删除失败', 'error');
                 }

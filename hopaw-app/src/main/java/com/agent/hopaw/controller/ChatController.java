@@ -51,7 +51,12 @@ public class ChatController {
         List<Agent> agents = agentService.getAgentsPage(currentUserId, null, 0, 100);
         model.addAttribute("agents", agents);
         if(sessionId == null && !chatSessions.isEmpty()){
-            sessionId=chatSessions.get(0).getSessionId();
+            // 从已有会话列表中找自己最后更新的一条作为默认选中
+            sessionId = chatSessions.stream()
+                    .filter(s -> currentUserId.equals(s.getUserId()))
+                    .findFirst()
+                    .map(ChatSession::getSessionId)
+                    .orElse(null);
         }
         Agent selectedAgent=null;
         Long aiModelId=null;

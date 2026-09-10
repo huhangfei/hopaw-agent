@@ -7,6 +7,7 @@
     var pendingUserId = null;
     var sliding = false;
     var captchaEnabled = false;
+    var LAST_LOGIN_KEY = 'hopaw_last_login_user';
 
     // 查询验证码开关状态
     fetch('/api/auth/captcha-enabled').then(function (r) { return r.json(); })
@@ -14,6 +15,18 @@
         .catch(function () {});
 
     if (!accountList || !card) return;
+
+    // 页面加载时将上次登录的用户移到列表第一位
+    var lastUserId = localStorage.getItem(LAST_LOGIN_KEY);
+    if (lastUserId) {
+        var items = accountList.querySelectorAll('.login-account');
+        for (var i = 0; i < items.length; i++) {
+            if (items[i].dataset.userId === lastUserId) {
+                accountList.insertBefore(items[i], accountList.firstChild);
+                break;
+            }
+        }
+    }
 
     // 搜索过滤
     if (searchInput) {
@@ -76,6 +89,7 @@
         }).then(function (r) { return r.json(); })
             .then(function (resp) {
                 if (resp && resp.code === 200) {
+                    localStorage.setItem(LAST_LOGIN_KEY, userId);
                     showLoading();
                     var url = new URL(window.location.href);
                     var redirect = url.searchParams.get('redirect');

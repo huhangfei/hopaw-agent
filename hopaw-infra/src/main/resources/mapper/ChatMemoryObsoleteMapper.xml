@@ -39,7 +39,7 @@
         WHERE session_id = #{sessionId} AND user_id = #{userId} AND id &lt;= #{maxId}
     </delete>
     <insert id="insertBatch">
-        INSERT INTO chat_memory_obsolete (id, agent_id, user_id, message_id, message_json, status, session_id, create_time)
+        INSERT OR IGNORE INTO chat_memory_obsolete (id, agent_id, user_id, message_id, message_json, status, session_id, create_time)
         VALUES
         <foreach collection="list" item="chatMemory" separator=",">
             (#{chatMemory.id}, #{chatMemory.agentId}, #{chatMemory.userId}, #{chatMemory.messageId}, #{chatMemory.messageJson}, #{chatMemory.status}, #{chatMemory.sessionId}, #{chatMemory.createTime})
