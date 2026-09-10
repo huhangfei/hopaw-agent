@@ -1077,6 +1077,123 @@ function setCurrentAgentId(agentId) {
         }
     }
 }
+// ── WebSocket 消息渲染队列 ──
+// 所有类型消息先统一入队，由定时器每 10ms 批量取出分发；
+// 批次内相邻的 chunk/thinking 流式片段（type/requestId/messageNo/status 均一致）合并为一条再经现有方法渲染，
+// 降低高频片段逐条渲染（Markdown 解析 + DOM 刷新）的时间损耗；其余类型消息按原顺序原样分发
+var wsMessageQueue = [];
+var wsMessageQueueTimer = null;
+var WS_MESSAGE_FLUSH_INTERVAL_MS = 10;
+
+function enqueueWsMessage(data) {
+    wsMessageQueue.push(data);
+    if (wsMessageQueueTimer == null) {
+        wsMessageQueueTimer = setInterval(flushWsMessageQueue, WS_MESSAGE_FLUSH_INTERVAL_MS);
+    }
+}
+
+function flushWsMessageQueue() {
+    if (wsMessageQueue.length === 0) {
+        clearInterval(wsMessageQueueTimer);
+        wsMessageQueueTimer = null;
+        return;
+    }
+    // 入队时保存原始文本，统一在定时器批次内解析，onmessage 事件回调保持最轻量
+    var rawBatch = wsMessageQueue.splice(0, wsMessageQueue.length);
+    var batch = [];
+    for (var r = 0; r < rawBatch.length; r++) {
+        try {
+            batch.push(JSON.parse(rawBatch[r]));
+        } catch (e) {
+            console.error('WebSocket 消息解析失败', e);
+        }
+    }
+    var i = 0;
+    while (i < batch.length) {
+        var data = batch[i];
+        var next = i + 1;
+        // 仅合并相邻的同源流式片段（chunk/thinking）：status（partial/done）不同不能合并，
+        // requestId / messageNo 不同分属不同请求或不同条消息，同样不能合并
+        if (data.type === 'chunk' || data.type === 'thinking') {
+            while (next < batch.length
+                && batch[next].type === data.type
+                && batch[next].status === data.status
+                && batch[next].requestId === data.requestId
+                && batch[next].messageNo === data.messageNo) {
+                data.content = (data.content || '') + (batch[next].content || '');
+                next++;
+            }
+        }
+        try {
+            dispatchWsMessage(data);
+        } catch (e) {
+            // 单条消息处理异常不影响批次内后续消息
+            console.error('处理 WebSocket 消息失败', e);
+        }
+        i = next;
+    }
+}
+
+function dispatchWsMessage(data) {
+    var requestId = data.requestId;
+
+    // 会话隔离：后端按用户广播，非当前会话的运行事件（任务/项目会话后台运行）不更新当前界面；
+    // session-title 仍需更新左侧会话列表标题；received/error/task-done 维护会话列表的运行loading图标
+    if (data.sessionId && data.sessionId !== currentSessionId) {
+        if (data.type === 'session-title') {
+            updateSessionTitle(data.sessionId, data.content, data.bizType);
+        } else if (data.type === 'received') {
+            setSessionRunning(data.sessionId, true);
+        } else if (data.type === 'error' || data.type === 'task-done') {
+            setSessionRunning(data.sessionId, false);
+        }
+        return;
+    }
+
+    if (data.type !== 'received' && data.type !== 'session-title' && data.type !== 'user_message' && data.type !== 'token_usage') {
+        removeLoadingMessage();
+    }
+
+    if (data.type === 'received') {
+        showLoadingMessage();
+        setSessionRunning(data.sessionId || currentSessionId, true);
+        // 会话开始运行即禁用输入区（覆盖任务看板/项目迭代/其他标签页触发的运行，
+        // 本地 sendMessage 的禁用是幂等的）
+        disableInput();
+    } else if (data.type === 'user_message') {
+        // 用户消息回显：后端入库后推送（含任务/项目会话广播），统一渲染到消息列表
+        handleUserMessageEcho(data);
+    } else if (data.type === 'chunk') {
+        handleStreamingChunk(data, requestId);
+    } else if (data.type === 'tool_call') {
+        // 工具调用开始：刷新工具执行统计（会话总数/执行器已执行/上限）
+        if (data.status === 'started') {
+            loadToolStats();
+        }
+        handleToolCall(data, requestId);
+    } else if (data.type === 'thinking') {
+        handleThinking(data, requestId);
+    } else if (data.type === 'session-title') {
+        updateSessionTitle(data.sessionId, data.content, data.bizType);
+    } else if (data.type === 'task-done') {
+        setSessionRunning(data.sessionId || currentSessionId, false);
+        var msgState = streamingMessages[requestId];
+        if (msgState && msgState.currentStreamingMessage) {
+            // 小节收尾：刷新整盒 footer（唯一时间 + 整盒复制）
+            touchAgentTurnFooter(msgState.currentStreamingMessage.closest('.agent-turn'), formatMessageTime(new Date()));
+            msgState.currentStreamingMessage = null;
+        }
+        enableInput();
+    } else if (data.type === 'error') {
+        setSessionRunning(data.sessionId || currentSessionId, false);
+        handleStreamingError(data.content || data.message, requestId);
+    }  else if (data.type === 'warn') {
+        handleStreamingWarn(data.content || data.message, requestId);
+    } else if (data.type === 'token_usage') {
+        handleTokenUsageMessage(data);
+    }
+}
+
 function connectWebSocket() {
     var protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
     var wsUrl = protocol + '//' + window.location.host + '/ws/chat';
@@ -1086,66 +1203,10 @@ function connectWebSocket() {
     ws.onopen = function() {
         console.log('WebSocket 连接已建立');
     };
-    
+
     ws.onmessage = function(event) {
-        var data = JSON.parse(event.data);
-        var requestId = data.requestId;
-
-        // 会话隔离：后端按用户广播，非当前会话的运行事件（任务/项目会话后台运行）不更新当前界面；
-        // session-title 仍需更新左侧会话列表标题；received/error/task-done 维护会话列表的运行loading图标
-        if (data.sessionId && data.sessionId !== currentSessionId) {
-            if (data.type === 'session-title') {
-                updateSessionTitle(data.sessionId, data.content, data.bizType);
-            } else if (data.type === 'received') {
-                setSessionRunning(data.sessionId, true);
-            } else if (data.type === 'error' || data.type === 'task-done') {
-                setSessionRunning(data.sessionId, false);
-            }
-            return;
-        }
-
-        if (data.type !== 'received' && data.type !== 'session-title' && data.type !== 'user_message' && data.type !== 'token_usage') {
-            removeLoadingMessage();
-        }
-
-        if (data.type === 'received') {
-            showLoadingMessage();
-            setSessionRunning(data.sessionId || currentSessionId, true);
-            // 会话开始运行即禁用输入区（覆盖任务看板/项目迭代/其他标签页触发的运行，
-            // 本地 sendMessage 的禁用是幂等的）
-            disableInput();
-        } else if (data.type === 'user_message') {
-            // 用户消息回显：后端入库后推送（含任务/项目会话广播），统一渲染到消息列表
-            handleUserMessageEcho(data);
-        } else if (data.type === 'chunk') {
-            handleStreamingChunk(data, requestId);
-        } else if (data.type === 'tool_call') {
-            // 工具调用开始：刷新工具执行统计（会话总数/执行器已执行/上限）
-            if (data.status === 'started') {
-                loadToolStats();
-            }
-            handleToolCall(data, requestId);
-        } else if (data.type === 'thinking') {
-            handleThinking(data, requestId);
-        } else if (data.type === 'session-title') {
-            updateSessionTitle(data.sessionId, data.content, data.bizType);
-        } else if (data.type === 'task-done') {
-            setSessionRunning(data.sessionId || currentSessionId, false);
-            var msgState = streamingMessages[requestId];
-            if (msgState && msgState.currentStreamingMessage) {
-                // 小节收尾：刷新整盒 footer（唯一时间 + 整盒复制）
-                touchAgentTurnFooter(msgState.currentStreamingMessage.closest('.agent-turn'), formatMessageTime(new Date()));
-                msgState.currentStreamingMessage = null;
-            }
-            enableInput();
-        } else if (data.type === 'error') {
-            setSessionRunning(data.sessionId || currentSessionId, false);
-            handleStreamingError(data.content || data.message, requestId);
-        }  else if (data.type === 'warn') {
-            handleStreamingWarn(data.content || data.message, requestId);
-        } else if (data.type === 'token_usage') {
-            handleTokenUsageMessage(data);
-        }
+        // 所有消息（原始文本）统一入队，解析与分发统一由定时器批量完成，避免高频消息逐条处理的时间损耗
+        enqueueWsMessage(event.data);
     };
     
     ws.onclose = function() {

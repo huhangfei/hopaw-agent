@@ -1,11 +1,11 @@
-package com.agent.hopaw.infra.executor;
+package com.agent.hopaw.infra.test;
 
 import com.agent.hopaw.infra.constant.AgentExecutorBizTypeEnum;
 import com.agent.hopaw.infra.event.AgentMessageEvent;
 import com.agent.hopaw.infra.model.dto.AiMessageBaseInfo;
+import com.agent.hopaw.infra.model.dto.AiThinkingMessageInfo;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
@@ -18,7 +18,7 @@ public class WsStressTestBean {
 
     private static final Logger log = LoggerFactory.getLogger(WsStressTestBean.class);
 
-    private static final String SESSION_ID  ="990d8c6eabd6491fa32b4e7638b49359";
+    private static final String SESSION_ID  ="5dd382e2e0864b09ad1efdaa47f99876";
     private static final String MARKDOWN_CONTENT =
             "# 性能压测消息\n\n" +
             "这是一段包含 **Markdown** 格式的压测内容，用于测试前端 WebSocket 流式接收与渲染性能。\n\n" +
@@ -62,8 +62,20 @@ public class WsStressTestBean {
         log.info("WebSocket 压测已启用，每 100ms 流式发送 1-5 个字符");
     }
 
-    //@Scheduled(fixedRate = 2)
+    //@Scheduled(fixedRate = 1000000000)
+    public void task() {
+        while (true){
+//            try {
+//                Thread.sleep(1);
+//            } catch (InterruptedException e) {
+//                e.printStackTrace();
+//            }
+            sendChunk();
+        }
+
+    }
     public void sendChunk() {
+
         if (charPos == 0) {
             currentRequestId = "stress-" + UUID.randomUUID().toString().substring(0, 8);
             seq++;
@@ -78,15 +90,19 @@ public class WsStressTestBean {
         int chunkSize = ThreadLocalRandom.current().nextInt(1, 6);
         chunkSize = Math.min(chunkSize, remaining);
         String chunk = MARKDOWN_CONTENT.substring(charPos, charPos + chunkSize);
+        if(charPos==0){
+            chunk=chunk+"["+seq+"]";
+        }
         charPos += chunkSize;
 
-        AiMessageBaseInfo message = AiMessageBaseInfo.chunk(SESSION_ID, currentRequestId, chunk);
-        message.setBizType(AgentExecutorBizTypeEnum.WorkflowTaskChat);
-        eventPublisher.publishEvent(new AgentMessageEvent("1", 1L, message));
+        AiMessageBaseInfo message = AiThinkingMessageInfo.partial(SESSION_ID, currentRequestId, chunk);
+        message.setMessageNo(currentRequestId);
+        message.setBizType(AgentExecutorBizTypeEnum.Chat);
+        eventPublisher.publishEvent(new AgentMessageEvent("admin", 1L, message));
 
-        if (charPos >= MARKDOWN_CONTENT.length()) {
-            finishCurrentRound();
-        }
+//        if (charPos >= MARKDOWN_CONTENT.length()) {
+//            finishCurrentRound();
+//        }
     }
 
     private void finishCurrentRound() {
@@ -98,8 +114,12 @@ public class WsStressTestBean {
     }
 
     private void sendDone() {
+        AiMessageBaseInfo message = AiThinkingMessageInfo.done(SESSION_ID, currentRequestId, "");
+        message.setBizType(AgentExecutorBizTypeEnum.Chat);
+        message.setStatus("done");
+        eventPublisher.publishEvent(new AgentMessageEvent("admin", 1L, message));
         AiMessageBaseInfo done = AiMessageBaseInfo.taskDone(SESSION_ID, currentRequestId);
-        done.setBizType(AgentExecutorBizTypeEnum.WorkflowTaskChat);
-        eventPublisher.publishEvent(new AgentMessageEvent(null, 0L, done));
+        done.setBizType(AgentExecutorBizTypeEnum.Chat);
+        eventPublisher.publishEvent(new AgentMessageEvent("admin", 1L, done));
     }
 }
