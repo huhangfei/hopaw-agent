@@ -185,6 +185,78 @@ public class ImageOperationTool implements AgentTool {
     }
 
     @ToolSecurityLevel(ToolSecurityLevel.Level.PARAM_REQUIRE_APPROVAL)
+    @Tool(value = {"SVG文件转图片", "读取指定路径的SVG文件并渲染为位图保存到指定路径，输出格式由文件扩展名决定(.png/.jpg/.jpeg)", "SVG文件转图片"})
+    public String saveSvgFileToImage(
+            @P(description = "SVG文件的完整路径") String svgFilePath,
+            @P(description = "保存图片的完整文件路径，扩展名 .png 或 .jpg/.jpeg 决定输出格式，如 D:/images/logo.png") String filePath) {
+        try {
+            if (svgFilePath == null || svgFilePath.isBlank()) {
+                return "错误: SVG文件路径不能为空";
+            }
+            if (filePath == null || filePath.isBlank()) {
+                return "错误: 输出文件路径不能为空";
+            }
+
+            Path svgPath = Paths.get(svgFilePath).toAbsolutePath().normalize();
+            if (!Files.exists(svgPath)) {
+                return "错误: SVG文件不存在: " + svgFilePath;
+            }
+            if (!Files.isRegularFile(svgPath)) {
+                return "错误: 路径不是文件: " + svgFilePath;
+            }
+            String svgFileName = svgPath.getFileName().toString().toLowerCase(Locale.ROOT);
+            if (!svgFileName.endsWith(".svg")) {
+                return "错误: 文件不是SVG格式(扩展名需为.svg): " + svgFilePath;
+            }
+
+            String svgCode = Files.readString(svgPath);
+            if (svgCode == null || svgCode.isBlank()) {
+                return "错误: SVG文件内容为空: " + svgFilePath;
+            }
+
+            Path path = Paths.get(filePath).toAbsolutePath().normalize();
+            String name = path.getFileName().toString().toLowerCase(Locale.ROOT);
+            ImageTranscoder transcoder;
+            String format;
+            if (name.endsWith(".png")) {
+                transcoder = new PNGTranscoder();
+                format = "image/png";
+            } else if (name.endsWith(".jpg") || name.endsWith(".jpeg")) {
+                JPEGTranscoder jpeg = new JPEGTranscoder();
+                jpeg.addTranscodingHint(JPEGTranscoder.KEY_QUALITY, 0.9f);
+                transcoder = jpeg;
+                format = "image/jpeg";
+            } else {
+                return "错误: 不支持的输出格式，请使用 .png 或 .jpg/.jpeg 扩展名: " + filePath;
+            }
+
+            Path parent = path.getParent();
+            if (parent != null) {
+                Files.createDirectories(parent);
+            }
+
+            long start = System.currentTimeMillis();
+            TranscoderInput input = new TranscoderInput(new StringReader(svgCode));
+            try (OutputStream os = Files.newOutputStream(path)) {
+                TranscoderOutput output = new TranscoderOutput(os);
+                transcoder.transcode(input, output);
+            }
+
+            StringBuilder sb = new StringBuilder();
+            sb.append("SVG文件转图片成功\n");
+            sb.append("源文件: ").append(svgPath).append("\n");
+            sb.append("格式: ").append(format).append("\n");
+            sb.append("路径: ").append(path).append("\n");
+            sb.append("大小: ").append(formatFileSize(Files.size(path))).append("\n");
+            sb.append("耗时: ").append(System.currentTimeMillis() - start).append("ms");
+            return sb.toString();
+        } catch (Exception e) {
+            log.error("SVG文件转图片失败: {} -> {}", svgFilePath, filePath, e);
+            return "错误: SVG文件转图片失败 - " + e.getMessage();
+        }
+    }
+
+    @ToolSecurityLevel(ToolSecurityLevel.Level.PARAM_REQUIRE_APPROVAL)
     @Tool(value = {"缩放图片", "按比例或目标宽高缩放图片并保存到指定路径，可只传宽或高按比例缩放", "图片缩放"})
     public String scaleImage(
             @P(description = "源图片路径，支持 jpg/jpeg/png/bmp/gif") String sourcePath,
@@ -455,7 +527,7 @@ public class ImageOperationTool implements AgentTool {
 
     @Override
     public String getDescription() {
-        return "图片操作工具集，支持读取图片为base64、将SVG代码渲染保存为图片、缩放、压缩、旋转、裁剪、格式转换等图片操作";
+        return "图片操作工具集，支持读取图片为base64、将SVG代码或SVG文件渲染保存为图片、缩放、压缩、旋转、裁剪、格式转换等图片操作";
     }
 
     @Override
