@@ -294,6 +294,11 @@ body.dark-theme .store-search-input{
     border-color: #3d3d6b;
     color: #e0e0e0;
 }
+body.dark-theme .store-version-selector select {
+    background: #2d2d44;
+    border-color: #3d3d6b;
+    color: #e0e0e0;
+}
 body.dark-theme .store-progress-overlay{
     background: rgb(40 42 63 / 77%);
 }

@@ -147,17 +147,21 @@ public class PluginRepoService {
             throw new IllegalArgumentException("文件为空");
         }
 
-        byte[] originalBytes = file.getBytes();
-
         PluginExportInfo exportInfo = null;
         byte[] jsonBytes = null;
         byte[] jarBytes = null;
         Path tempDir = Files.createTempDirectory("plugin-import-");
         try {
             Path tempZip = tempDir.resolve(file.getOriginalFilename());
-            Files.write(tempZip, originalBytes);
 
-            try (ZipInputStream zis = new ZipInputStream(new java.io.ByteArrayInputStream(originalBytes))) {
+            // 流式写入原始ZIP文件，避免将整个文件加载到内存
+            try (java.io.InputStream is = file.getInputStream()) {
+                Files.copy(is, tempZip, StandardCopyOption.REPLACE_EXISTING);
+            }
+
+            // 流式读取ZIP内容，提取JSON和JAR
+            try (java.io.InputStream fis = Files.newInputStream(tempZip);
+                 ZipInputStream zis = new ZipInputStream(fis)) {
                 ZipEntry entry;
                 while ((entry = zis.getNextEntry()) != null) {
                     String entryName = entry.getName();
@@ -198,15 +202,17 @@ public class PluginRepoService {
             Path targetDir = packagesDir.resolve(pluginName).resolve(version);
             Files.createDirectories(targetDir);
 
+            // 流式复制ZIP文件到目标位置
             String zipFileName = pluginName + "-" + version + ".zip";
             Path targetZip = targetDir.resolve(zipFileName);
-            Files.write(targetZip, originalBytes);
+            Files.copy(tempZip, targetZip, StandardCopyOption.REPLACE_EXISTING);
 
             Path targetJson = targetDir.resolve(pluginName + ".json");
             Files.write(targetJson, jsonBytes);
 
+            long zipSize = Files.size(targetZip);
             log.info("Imported plugin: {} v{}, JAR哈希校验通过, size: {}", pluginName, version,
-                    formatFileSize(originalBytes.length));
+                    formatFileSize(zipSize));
 
             PluginRepoResult result = new PluginRepoResult();
             result.setName(pluginName);

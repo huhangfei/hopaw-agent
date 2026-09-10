@@ -18,7 +18,7 @@ public class DataSourceConfig {
     public DataSource dataSource() {
         DriverManagerDataSource ds = new DriverManagerDataSource();
         ds.setDriverClassName("org.sqlite.JDBC");
-        ds.setUrl("jdbc:sqlite:" + dbPath);
+        ds.setUrl("jdbc:sqlite:" + dbPath + "?journal_mode=MEMORY");
         return ds;
     }
 
