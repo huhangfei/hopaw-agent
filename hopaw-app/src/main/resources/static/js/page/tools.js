@@ -146,9 +146,10 @@ function exportPlugin(btn) {
 function localInstallPlugin(input) {
     if (!input.files || input.files.length === 0) return;
     var file = input.files[0];
+    var fileName = file.name.toLowerCase();
 
-    if (!file.name.toLowerCase().endsWith('.zip')) {
-        showToast('仅支持 .zip 格式的插件包', 'error');
+    if (!fileName.endsWith('.zip') && !fileName.endsWith('.jar')) {
+        showToast('仅支持 .zip 或 .jar 格式的插件包', 'error');
         input.value = '';
         return;
     }

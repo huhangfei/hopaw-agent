@@ -147,7 +147,24 @@ public class AgentToolController {
             return ResponseBean.fail("文件为空");
         }
         try {
-            PluginInstallResult result = IAgentToolService.installPluginFromBytes(file.getBytes());
+            String originalFilename = file.getOriginalFilename();
+            PluginInstallResult result;
+
+            // 根据文件扩展名自动判断类型
+            if (originalFilename != null && originalFilename.toLowerCase().endsWith(".jar")) {
+                // JAR文件：直接保存到临时文件后调用JAR安装
+                java.nio.file.Path tempJar = java.nio.file.Files.createTempFile("plugin-install-", ".jar");
+                try {
+                    file.transferTo(tempJar.toFile());
+                    result = IAgentToolService.installPluginFromJarFile(tempJar);
+                } finally {
+                    java.nio.file.Files.deleteIfExists(tempJar);
+                }
+            } else {
+                // ZIP文件或其他：使用原有的ZIP安装逻辑
+                result = IAgentToolService.installPluginFromBytes(file.getBytes());
+            }
+
             return ResponseBean.success(result);
         } catch (IllegalArgumentException e) {
             return ResponseBean.fail(e.getMessage());

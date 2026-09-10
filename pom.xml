@@ -33,6 +33,7 @@
         <module>tools/hopaw-tool-command</module>
         <module>tools/hopaw-tool-database</module>
         <module>tools/hopaw-tool-wechat</module>
+        <module>tools/hopaw-tool-http</module>
     </modules>
 
     <properties>
