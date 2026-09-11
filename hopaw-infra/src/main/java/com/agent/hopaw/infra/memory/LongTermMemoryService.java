@@ -298,7 +298,7 @@ public class LongTermMemoryService implements ILongTermMemoryService {
         if (!longTermMemories.isEmpty()) {
             longTermMemories.stream().map(LongTermMemory::getMemoryType).distinct().forEach(memoryType -> {
                 UserMemoryTypeEnum longTermMemoryTypeEnum = UserMemoryTypeEnum.fromCode(memoryType);
-                memory.append("----").append(longTermMemoryTypeEnum != null ? longTermMemoryTypeEnum.getName() : memoryType).append("(" + memoryType + ")").append("----\n");
+                memory.append("---").append(longTermMemoryTypeEnum != null ? longTermMemoryTypeEnum.getName() : memoryType).append("(" + memoryType + ")").append("---\n");
                 longTermMemories.stream().filter(x -> x.getMemoryType().equals(memoryType)).forEach(x -> {
                     memory.append(buildMemoryContent(x, includeDetail, false));
                 });
@@ -317,7 +317,7 @@ public class LongTermMemoryService implements ILongTermMemoryService {
         if (!longTermMemories.isEmpty()) {
             longTermMemories.stream().map(LongTermMemory::getMemoryType).distinct().forEach(memoryType -> {
                 UserMemoryTypeEnum longTermMemoryTypeEnum = UserMemoryTypeEnum.fromCode(memoryType);
-                memory.append("----").append(longTermMemoryTypeEnum != null ? longTermMemoryTypeEnum.getName() : memoryType).append("(" + memoryType + ")").append("----\n");
+                memory.append("---").append(longTermMemoryTypeEnum != null ? longTermMemoryTypeEnum.getName() : memoryType).append("(" + memoryType + ")").append("---\n");
                 longTermMemories.stream().filter(x -> x.getMemoryType().equals(memoryType)).forEach(x -> {
                     memory.append(buildMemoryContent(x, includeDetailFun, false));
                 });
@@ -361,7 +361,7 @@ public class LongTermMemoryService implements ILongTermMemoryService {
         }
 //        memorySb.append("更新时间:").append(memory.getUpdateTime().format(formatter)).append("\n")
 //                .append("创建时间:").append(memory.getCreateTime().format(formatter));
-        return memorySb.append("----------------\n").toString();
+        return memorySb.append("---\n").toString();
     }
 
     @Override

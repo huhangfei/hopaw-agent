@@ -1,4 +1,4 @@
-package com.agent.hopaw.config;
+package com.agent.hopaw.infra.config;
 
 import com.agent.hopaw.constant.DefaultUser;
 import com.agent.hopaw.infra.constant.ModelCapabilityEnum;
@@ -14,8 +14,6 @@ import javax.sql.DataSource;
 import java.sql.Connection;
 import java.sql.ResultSet;
 import java.sql.Statement;
-import java.util.HashMap;
-import java.util.Map;
 
 @Component
 @Order(1)

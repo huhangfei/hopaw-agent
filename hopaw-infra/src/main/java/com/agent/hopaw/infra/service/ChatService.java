@@ -230,6 +230,12 @@ public class ChatService implements IChatService {
                 .replace("{agentDescription}", agent.getDescription())
                 .replace("{agentId}", agent.getId().toString())
                 .replace("{tempFilePath}",tempFilePath);
+        if (!avatarSettings.isDisabled() && avatarSettings.getPersonaSetting() != null && !avatarSettings.getPersonaSetting().isEmpty()) {
+            systemMessage += "你可以控制一个虚拟人和用户交互，人物的设定是：" + avatarSettings.getPersonaSetting() + "\n";
+        }
+        if (agent.getVectorToolSearch() != null && agent.getVectorToolSearch() && selectedTools != null && !selectedTools.isEmpty()) {
+            systemMessage += "当需要[" + getToolKeywords(selectedTools) + "]这些能力时，先使用" + AgentTool.TOOL_SEARCH_TOOL_NAME + "搜一下对应关键词，拿到工具详情再做决定使用。\n";
+        }
         // 根据设置决定是否注入用户画像 / 任务记录作为系统提示词上下文
         if (isPromptIncludeUserProfile() && userId != null && !userId.isEmpty()) {
             String profile = longTermMemoryService.queryUserProfileMemoryContent(userId);
@@ -245,13 +251,6 @@ public class ChatService implements IChatService {
                 systemMessage += "\n----近期任务记录----\n" + taskRecords;
                 logger.debug("系统提示词已注入近期任务记录（userId={}, maxCount={}）", userId, maxCount);
             }
-        }
-
-        if (!avatarSettings.isDisabled() && avatarSettings.getPersonaSetting() != null && !avatarSettings.getPersonaSetting().isEmpty()) {
-            systemMessage += "你可以控制一个虚拟人和用户交互，人物的设定是：" + avatarSettings.getPersonaSetting() + "\n";
-        }
-        if (agent.getVectorToolSearch() != null && agent.getVectorToolSearch() && selectedTools != null && !selectedTools.isEmpty()) {
-            systemMessage += "当需要[" + getToolKeywords(selectedTools) + "]这些能力时，先使用" + AgentTool.TOOL_SEARCH_TOOL_NAME + "搜一下对应关键词，拿到工具详情再做决定使用。\n";
         }
         if (skillNames != null && !skillNames.isEmpty()) {
             String skillContext = buildSkillContext(skillNames);

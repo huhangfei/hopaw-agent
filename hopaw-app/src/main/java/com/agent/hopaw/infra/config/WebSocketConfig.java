@@ -1,4 +1,4 @@
-package com.agent.hopaw.config;
+package com.agent.hopaw.infra.config;
 
 import com.agent.hopaw.avatar.websocket.AvatarWebSocketHandler;
 import com.agent.hopaw.websocket.ChatWebSocketHandler;

@@ -7,17 +7,21 @@ import com.agent.hopaw.infra.model.dto.AiMessageBaseInfo;
 import com.agent.hopaw.infra.model.dto.AttachmentFile;
 import com.agent.hopaw.infra.model.dto.UserChatRequest;
 import com.agent.hopaw.infra.service.IChatService;
+import com.agent.hopaw.infra.websocket.dto.WebSocketBridgeMessage;
+import com.agent.hopaw.infra.websocket.service.WebSocketBridgeService;
 import com.alibaba.fastjson2.JSON;
 import com.alibaba.fastjson2.JSONObject;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.context.event.EventListener;
+import org.springframework.jms.annotation.JmsListener;
 import org.springframework.stereotype.Component;
 import org.springframework.web.socket.CloseStatus;
 import org.springframework.web.socket.TextMessage;
 import org.springframework.web.socket.WebSocketSession;
 import org.springframework.web.socket.handler.TextWebSocketHandler;
 
+import javax.jms.JMSException;
 import java.io.IOException;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
@@ -29,18 +33,18 @@ import java.util.concurrent.ConcurrentMap;
  */
 @Component
 public class ChatWebSocketHandler extends TextWebSocketHandler {
-    /**
-     * 每个session绑定一个锁
-     */
+
     private static final ConcurrentHashMap<String, Object> SESSION_LOCK_MAP = new ConcurrentHashMap<>();
 
     private static final Logger logger = LoggerFactory.getLogger(ChatWebSocketHandler.class);
     private final IChatService chatService;
+    private final WebSocketBridgeService bridgeService;
     private static final ConcurrentMap<String, ConcurrentLinkedQueue<String>> userSessionMap = new ConcurrentHashMap<>();
     private static final ConcurrentMap<String, WebSocketSession> sessionMap = new ConcurrentHashMap<>();
 
-    public ChatWebSocketHandler(IChatService chatService) {
+    public ChatWebSocketHandler(IChatService chatService, WebSocketBridgeService bridgeService) {
         this.chatService = chatService;
+        this.bridgeService = bridgeService;
     }
 
     @Override
@@ -82,7 +86,6 @@ public class ChatWebSocketHandler extends TextWebSocketHandler {
             @SuppressWarnings("unchecked")
             List<String> skillNames = payload.getJSONArray("skills").toJavaList(String.class);
 
-            // 解析附件文件
             List<AttachmentFile> files = new ArrayList<>();
             if (payload.containsKey("files") && payload.get("files") != null) {
                 try {
@@ -135,10 +138,10 @@ public class ChatWebSocketHandler extends TextWebSocketHandler {
         logger.info("Session closed: {}", session.getId());
     }
 
+    // ==================== Spring Event → Artemis ====================
+
     @EventListener
     public void onTokenUsageMessage(TokenUsageEvent message) {
-        // 项目/工作流任务会话的 token 用量推送给所有在线用户（前端按当前会话过滤，不影响他人统计）；
-        // source 值与业务类型对应：workflow-task-chat / project-chat
         String source = message.getSource();
         boolean broadcast = "workflow-task-chat".equals(source) || "project-chat".equals(source);
         String userId = message.getUserId();
@@ -156,15 +159,42 @@ public class ChatWebSocketHandler extends TextWebSocketHandler {
         data.put("sessionId", message.getSessionId());
         data.put("source", message.getSource());
         data.put("createTime", message.getCreateTime() != null ? message.getCreateTime().toString() : null);
-        String messageJson = JSON.toJSONString(data);
+        data.put("broadcast", broadcast);
+        bridgeService.sendTokenUsage(userId, JSON.toJSONString(data));
+    }
+
+    @EventListener
+    public void onAgentMessageEvent(AgentMessageEvent event) {
+        AiMessageBaseInfo message = event.getMessage();
+        AgentExecutorBizTypeEnum bizType = message != null ? message.getBizType() : AgentExecutorBizTypeEnum.Chat;
+        boolean broadcast = AgentExecutorBizTypeEnum.WorkflowTaskChat.equals(bizType)
+                || AgentExecutorBizTypeEnum.ProjectChat.equals(bizType);
+        String userId = event.getUserId();
+        if (userId == null && !broadcast) {
+            return;
+        }
+        JSONObject data = (JSONObject) JSON.toJSON(message);
+        data.put("broadcast", broadcast);
+        bridgeService.sendAgentMessage(userId, data.toJSONString());
+    }
+
+    // ==================== Artemis → WebSocket 推送 ====================
+
+    @JmsListener(destination = WebSocketBridgeService.QUEUE_TOKEN_USAGE)
+    public void consumeTokenUsage(javax.jms.TextMessage message) throws JMSException {
+        WebSocketBridgeMessage bridge = JSON.parseObject(message.getText(), WebSocketBridgeMessage.class);
+        JSONObject data = JSON.parseObject(bridge.getPayload());
+        boolean broadcast = data.getBooleanValue("broadcast");
+        String messageJson = data.toJSONString();
+
         if (broadcast) {
             sendToAllOnlineUsers(messageJson);
             return;
         }
+        String userId = bridge.getUserId();
+        if (userId == null) return;
         ConcurrentLinkedQueue<String> sessionIds = userSessionMap.get(userId);
-        if (sessionIds == null || sessionIds.isEmpty()) {
-            return;
-        }
+        if (sessionIds == null || sessionIds.isEmpty()) return;
         for (String id : sessionIds) {
             WebSocketSession wsSession = sessionMap.get(id);
             if (wsSession != null && wsSession.isOpen()) {
@@ -174,40 +204,39 @@ public class ChatWebSocketHandler extends TextWebSocketHandler {
                         wsSession.sendMessage(new TextMessage(messageJson));
                     }
                 } catch (IOException e) {
-                    logger.error("Failed to send token_usage message to session {}: {}", id, e.getMessage());
+                    logger.error("Failed to send token_usage to session {}: {}", id, e.getMessage());
                 }
             }
         }
     }
 
-    @EventListener
-    public void onAgentMessageEvent(AgentMessageEvent event) {
-        AiMessageBaseInfo message = event.getMessage();
-        // 项目/工作流任务会话：消息推送给所有在线用户（跨用户共享可见）；其余推送给会话归属用户
-        AgentExecutorBizTypeEnum bizType = message != null ? message.getBizType() : AgentExecutorBizTypeEnum.Chat;
-        if (AgentExecutorBizTypeEnum.WorkflowTaskChat.equals(bizType)
-                || AgentExecutorBizTypeEnum.ProjectChat.equals(bizType)) {
-            sendToAllOnlineUsers(JSON.toJSONString(message));
+    @JmsListener(destination = WebSocketBridgeService.QUEUE_AGENT_MESSAGE)
+    public void consumeAgentMessage(javax.jms.TextMessage message) throws JMSException {
+        WebSocketBridgeMessage bridge = JSON.parseObject(message.getText(), WebSocketBridgeMessage.class);
+        JSONObject data = JSON.parseObject(bridge.getPayload());
+        boolean broadcast = data.getBooleanValue("broadcast");
+        // 移除 broadcast 字段，不推送给前端
+        data.remove("broadcast");
+        String messageJson = data.toJSONString();
+
+        if (broadcast) {
+            sendToAllOnlineUsers(messageJson);
             return;
         }
-        String userId = event.getUserId();
-        if (userId == null) {
-            return;
-        }
+        String userId = bridge.getUserId();
+        if (userId == null) return;
         ConcurrentLinkedQueue<String> sessionIds = userSessionMap.get(userId);
-        if (sessionIds == null || sessionIds.isEmpty()) {
-            return;
-        }
+        if (sessionIds == null || sessionIds.isEmpty()) return;
         for (String id : sessionIds) {
             WebSocketSession wsSession = sessionMap.get(id);
             if (wsSession != null && wsSession.isOpen()) {
                 try {
                     Object lock = SESSION_LOCK_MAP.computeIfAbsent(id, k -> new Object());
                     synchronized (lock) {
-                        wsSession.sendMessage(new TextMessage(JSON.toJSONString(message)));
+                        wsSession.sendMessage(new TextMessage(messageJson));
                     }
                 } catch (IOException e) {
-                    logger.error("Failed to send agent message to session {}: {}", id, e.getMessage());
+                    logger.error("Failed to send agent_message to session {}: {}", id, e.getMessage());
                 }
             }
         }
@@ -226,7 +255,7 @@ public class ChatWebSocketHandler extends TextWebSocketHandler {
                     wsSession.sendMessage(new TextMessage(messageJson));
                 }
             } catch (IOException e) {
-                logger.error("Failed to broadcast agent message to session {}: {}", entry.getKey(), e.getMessage());
+                logger.error("Failed to broadcast message to session {}: {}", entry.getKey(), e.getMessage());
             }
         }
     }

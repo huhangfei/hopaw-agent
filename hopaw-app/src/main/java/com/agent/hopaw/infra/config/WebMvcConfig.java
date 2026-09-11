@@ -1,4 +1,4 @@
-package com.agent.hopaw.config;
+package com.agent.hopaw.infra.config;
 
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Configuration;

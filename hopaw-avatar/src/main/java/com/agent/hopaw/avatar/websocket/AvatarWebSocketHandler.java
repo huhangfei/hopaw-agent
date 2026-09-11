@@ -2,17 +2,21 @@ package com.agent.hopaw.avatar.websocket;
 
 import com.agent.hopaw.avatar.model.AvatarEvent;
 import com.agent.hopaw.avatar.service.AvatarSettingsService;
+import com.agent.hopaw.infra.websocket.dto.WebSocketBridgeMessage;
+import com.agent.hopaw.infra.websocket.service.WebSocketBridgeService;
 import com.alibaba.fastjson2.JSON;
 import com.alibaba.fastjson2.JSONObject;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.context.event.EventListener;
+import org.springframework.jms.annotation.JmsListener;
 import org.springframework.stereotype.Component;
 import org.springframework.web.socket.CloseStatus;
 import org.springframework.web.socket.TextMessage;
 import org.springframework.web.socket.WebSocketSession;
 import org.springframework.web.socket.handler.TextWebSocketHandler;
 
+import javax.jms.JMSException;
 import java.io.IOException;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
@@ -25,15 +29,18 @@ public class AvatarWebSocketHandler extends TextWebSocketHandler {
     private static final Logger logger = LoggerFactory.getLogger(AvatarWebSocketHandler.class);
     private static final ConcurrentHashMap<String, Object> SESSION_LOCK_MAP = new ConcurrentHashMap<>();
 
-    /** key = userId + "::" + agentId */
     private static final ConcurrentMap<String, ConcurrentLinkedQueue<String>> sessionKeyMap = new ConcurrentHashMap<>();
     private static final ConcurrentMap<String, WebSocketSession> sessionMap = new ConcurrentHashMap<>();
 
     private final AvatarSettingsService avatarSettingsService;
+    private final WebSocketBridgeService bridgeService;
 
-    public AvatarWebSocketHandler(AvatarSettingsService avatarSettingsService) {
+    public AvatarWebSocketHandler(AvatarSettingsService avatarSettingsService, WebSocketBridgeService bridgeService) {
         this.avatarSettingsService = avatarSettingsService;
+        this.bridgeService = bridgeService;
     }
+
+    // ==================== Spring Event → Artemis ====================
 
     @EventListener
     public void onAvatarEvent(AvatarEvent event) {
@@ -49,6 +56,18 @@ public class AvatarWebSocketHandler extends TextWebSocketHandler {
         if (!avatarSettingsService.isSoundEnabled(userId, agentId) && event.getSoundFile() != null) {
             event.setSoundFile(null);
         }
+        bridgeService.sendAvatarEvent(userId, JSON.toJSONString(event));
+    }
+
+    // ==================== Artemis → WebSocket 推送 ====================
+
+    @JmsListener(destination = WebSocketBridgeService.QUEUE_AVATAR_EVENT)
+    public void consumeAvatarEvent(javax.jms.TextMessage message) throws JMSException {
+        WebSocketBridgeMessage bridge = JSON.parseObject(message.getText(), WebSocketBridgeMessage.class);
+        AvatarEvent event = JSON.parseObject(bridge.getPayload(), AvatarEvent.class);
+        String userId = event.getUserId();
+        Long agentId = event.getAgentId();
+
         String key = buildKey(userId, agentId);
         ConcurrentLinkedQueue<String> sessionIds = sessionKeyMap.get(key);
         if (sessionIds == null || sessionIds.isEmpty()) {
@@ -134,10 +153,6 @@ public class AvatarWebSocketHandler extends TextWebSocketHandler {
         return userId + "::" + agentId;
     }
 
-    /**
-     * 判断指定 (userId, agentId) 当前是否存在活跃的虚拟人 WebSocket 会话。
-     * 用于定时任务避免无客户端时仍调用大模型做主动关怀。
-     */
     public boolean hasActiveSession(String userId, Long agentId) {
         if (userId == null || userId.isEmpty() || agentId == null) {
             return false;
@@ -147,11 +162,7 @@ public class AvatarWebSocketHandler extends TextWebSocketHandler {
     }
 
     /**
-     * 向指定用户推送 TTS 音频数据。
-     * @param userId 用户 ID
-     * @param agentId 智能体 ID
-     * @param audioBase64 base64 编码的 MP3 音频数据
-     * @param messageText 对应的文本内容（用于前端展示）
+     * 向指定用户推送 TTS 音频数据（直接推送，不经过 MQ）
      */
     public void sendTtsAudio(String userId, Long agentId, String audioBase64, String messageText) {
         if (userId == null || agentId == null || audioBase64 == null) {

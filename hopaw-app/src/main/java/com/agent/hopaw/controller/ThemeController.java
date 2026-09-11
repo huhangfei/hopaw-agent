@@ -1,6 +1,6 @@
 package com.agent.hopaw.controller;
 
-import com.agent.hopaw.config.ThemeInterceptor;
+import com.agent.hopaw.infra.config.ThemeInterceptor;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestParam;

@@ -1,4 +1,4 @@
-package com.agent.hopaw.config;
+package com.agent.hopaw.infra.config;
 
 import com.agent.hopaw.util.CurrentUser;
 import org.springframework.http.server.ServerHttpRequest;
