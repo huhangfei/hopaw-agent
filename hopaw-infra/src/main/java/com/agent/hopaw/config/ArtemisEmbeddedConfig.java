@@ -1,4 +1,4 @@
-package com.agent.hopaw.infra.config;
+package com.agent.hopaw.config;
 
 import org.apache.activemq.artemis.core.config.impl.ConfigurationImpl;
 import org.apache.activemq.artemis.core.server.embedded.EmbeddedActiveMQ;

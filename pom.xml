@@ -113,6 +113,11 @@
             </dependency>
             <dependency>
                 <groupId>dev.langchain4j</groupId>
+                <artifactId>langchain4j-ollama</artifactId>
+                <version>${langchain4j.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>dev.langchain4j</groupId>
                 <artifactId>langchain4j-embeddings-bge-small-zh-v15</artifactId>
                 <version>1.14.0-beta24</version>
             </dependency>

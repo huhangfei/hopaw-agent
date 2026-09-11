@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
+  <!-- llama.cpp 品牌色背景（深绿） -->
+  <rect width="100" height="100" rx="20" fill="#1a7f37"/>
+  <!-- llama 头 + C++ 符号 -->
+  <g fill="none" stroke="white" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+    <!-- llama 头部轮廓 -->
+    <path d="M30 55 Q28 35, 40 28 Q48 24, 55 28 Q62 32, 60 45 Q58 55, 50 58 Q42 58, 35 55 Z" fill="white"/>
+    <!-- 耳朵 -->
+    <path d="M36 33 L30 22 M52 30 L56 18"/>
+    <!-- 眼睛 -->
+    <circle cx="40" cy="42" r="1.5" fill="#1a7f37"/>
+    <circle cx="52" cy="42" r="1.5" fill="#1a7f37"/>
+    <!-- C++ 符号 -->
+    <text x="62" y="72" font-family="monospace" font-size="18" font-weight="bold" fill="white" stroke="none">C++</text>
+    <!-- 速度线条 -->
+    <path d="M22 68 L14 68 M22 74 L10 74 M22 80 L14 80"/>
+  </g>
+</svg>

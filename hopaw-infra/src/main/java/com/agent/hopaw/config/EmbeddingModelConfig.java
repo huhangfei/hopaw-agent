@@ -1,4 +1,4 @@
-package com.agent.hopaw.infra.config;
+package com.agent.hopaw.config;
 
 import dev.langchain4j.model.embedding.EmbeddingModel;
 import dev.langchain4j.model.embedding.onnx.bgesmallzhv15.BgeSmallZhV15EmbeddingModel;

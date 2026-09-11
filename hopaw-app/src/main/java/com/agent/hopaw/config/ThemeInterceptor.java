@@ -1,4 +1,4 @@
-package com.agent.hopaw.infra.config;
+package com.agent.hopaw.config;
 
 import com.agent.hopaw.infra.model.entity.Account;
 import com.agent.hopaw.infra.service.AccountService;

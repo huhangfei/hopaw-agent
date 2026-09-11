@@ -1,4 +1,4 @@
-package com.agent.hopaw.infra.config;
+package com.agent.hopaw.config;
 
 import com.agent.hopaw.constant.DefaultUser;
 import com.agent.hopaw.infra.constant.ModelCapabilityEnum;
@@ -735,6 +735,18 @@ public class DatabaseInitializer implements CommandLineRunner {
 
                         case "hy":
                             insertModel(stmt, providerId, "hy3", ModelCapabilityEnum.TEXT.getCode(), 262144);
+                            break;
+                        case "ollama":
+                            insertModel(stmt, providerId, "llama3.1", ModelCapabilityEnum.TEXT.getCode(), 128000);
+                            insertModel(stmt, providerId, "llama3.2", ModelCapabilityEnum.TEXT.getCode(), 128000);
+                            insertModel(stmt, providerId, "qwen2.5", ModelCapabilityEnum.TEXT.getCode(), 32768);
+                            insertModel(stmt, providerId, "deepseek-r1", ModelCapabilityEnum.TEXT.getCode(), 65536);
+                            insertModel(stmt, providerId, "mistral", ModelCapabilityEnum.TEXT.getCode(), 32768);
+                            insertModel(stmt, providerId, "phi3", ModelCapabilityEnum.TEXT.getCode(), 128000);
+                            insertModel(stmt, providerId, "gemma2", ModelCapabilityEnum.TEXT.getCode(), 8192);
+                            break;
+                        case "llamacpp":
+                            insertModel(stmt, providerId, "default", ModelCapabilityEnum.TEXT.getCode(), 4096);
                             break;
                     }
                     providerId++;

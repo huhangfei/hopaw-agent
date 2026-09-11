@@ -106,8 +106,8 @@ public class AiModelController {
         if (sdkName == null || sdkName.isBlank()) {
             throw new IllegalArgumentException("自定义提供商必须指定 sdkName");
         }
-        if (!"openai".equals(sdkName) && !"anthropic".equals(sdkName)) {
-            throw new IllegalArgumentException("自定义提供商的 sdkName 只能为 'openai' 或 'anthropic'");
+        if (!"openai".equals(sdkName) && !"anthropic".equals(sdkName) && !"ollama".equals(sdkName)) {
+            throw new IllegalArgumentException("自定义提供商的 sdkName 只能为 'openai'、'anthropic' 或 'ollama'");
         }
     }
 

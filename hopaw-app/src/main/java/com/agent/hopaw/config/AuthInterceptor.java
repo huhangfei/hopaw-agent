@@ -1,4 +1,4 @@
-package com.agent.hopaw.infra.config;
+package com.agent.hopaw.config;
 
 import com.agent.hopaw.util.CurrentUser;
 import org.slf4j.Logger;
