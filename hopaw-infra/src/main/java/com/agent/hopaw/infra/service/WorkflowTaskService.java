@@ -393,7 +393,7 @@ public class WorkflowTaskService implements IWorkflowTaskService {
         // 创建任务执行器（复用或新建会话）
         IAgentExecutor executor = createTaskExecutor(task, agent, userChatRequest);
 
-       return executeTask(taskId,executor,300,userChatRequest.getMessage());
+       return executeTask(taskId,executor,800,userChatRequest.getMessage());
     }
     /** 校验执行时段格式：HH:mm-HH:mm 且结束时间必须大于开始时间（空表示不限制） */
     private void validateExecutionPeriod(String executionPeriod) {
@@ -472,7 +472,7 @@ public class WorkflowTaskService implements IWorkflowTaskService {
             }
         }
         userChatRequest.setMessage(taskContent.toString());
-        AgentExecutorResult agentExecutorResult = executeTask(taskId, executor, 300, userChatRequest.getMessage());
+        AgentExecutorResult agentExecutorResult = executeTask(taskId, executor, 800, userChatRequest.getMessage());
         // 执行完成后将本次预取的待处理评论标记为已处理（执行期间新增的评论不受影响，将在下次执行时处理）
         List<Long> processedCommentIds = comments.stream().map(WorkflowTaskComment::getId).collect(Collectors.toList());
         taskCommentService.markCommentsAsProcessed(processedCommentIds);
@@ -811,7 +811,7 @@ public class WorkflowTaskService implements IWorkflowTaskService {
         }
     }
 
-    /** 任务状态变更全局通知：子类型 status_change */
+    /** 任务状态变更全局通知：子类型 status_change，广播给所有在线用户 */
     private void notifyTaskStatusChange(WorkflowTask task, String newStatus) {
         try {
             java.util.Map<String, Object> content = new java.util.HashMap<>();
@@ -820,20 +820,20 @@ public class WorkflowTaskService implements IWorkflowTaskService {
             content.put("title", task.getTitle());
             content.put("oldStatus", task.getStatus());
             content.put("newStatus", newStatus);
-            globalNoticeService.notify(task.getUserId(), GlobalNoticeTypeEnum.TASK, "status_change", content);
+            globalNoticeService.notify(null, GlobalNoticeTypeEnum.TASK, "status_change", content);
         } catch (Exception e) {
             logger.warn("任务状态变更通知推送失败: taskId={}", task.getId(), e);
         }
     }
 
-    /** 任务删除全局通知：子类型 deleted */
+    /** 任务删除全局通知：子类型 deleted，广播给所有在线用户 */
     private void notifyTaskDeleted(WorkflowTask task) {
         try {
             java.util.Map<String, Object> content = new java.util.HashMap<>();
             content.put("taskId", task.getId());
             content.put("projectId", task.getProjectId());
             content.put("title", task.getTitle());
-            globalNoticeService.notify(task.getUserId(), GlobalNoticeTypeEnum.TASK, "deleted", content);
+            globalNoticeService.notify(null, GlobalNoticeTypeEnum.TASK, "deleted", content);
         } catch (Exception e) {
             logger.warn("任务删除通知推送失败: taskId={}", task.getId(), e);
         }

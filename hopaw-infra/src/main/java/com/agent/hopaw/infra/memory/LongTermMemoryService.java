@@ -205,9 +205,22 @@ public class LongTermMemoryService implements ILongTermMemoryService {
      */
     @Override
     public List<LongTermMemory> queryUserTaskRecordsMemory(String sessionId, String userId) {
+        return queryUserTaskRecordsMemory(sessionId, userId, null);
+    }
+
+    /**
+     * 查询用户任务记录记忆（支持最大条数限制）
+     *
+     * @param sessionId 会话ID
+     * @param userId    用户ID
+     * @param maxResults 最大条数，null或0表示不限制
+     * @return
+     */
+    @Override
+    public List<LongTermMemory> queryUserTaskRecordsMemory(String sessionId, String userId, Integer maxResults) {
         int taskRecordsArrangeTimeoutHour = Integer.parseInt(sysConfigService.getValueByKey("taskRecordsArrangeTimeoutHour", "48"));
         LocalDateTime beginDateTime = LocalDateTime.now().minusHours(taskRecordsArrangeTimeoutHour);
-        List<LongTermMemory> taskRecords = longTermMemoryMapper.findBySessionIdAndUserIdAndMemoryTypeAndTime(sessionId, userId, UserMemoryTypeEnum.TASK_RECORDS.getCode(), beginDateTime);
+        List<LongTermMemory> taskRecords = longTermMemoryMapper.findBySessionIdAndUserIdAndMemoryTypeAndTimeWithLimit(sessionId, userId, UserMemoryTypeEnum.TASK_RECORDS.getCode(), beginDateTime, maxResults);
         return taskRecords;
     }
 
@@ -220,7 +233,21 @@ public class LongTermMemoryService implements ILongTermMemoryService {
      */
     @Override
     public String queryUserTaskRecordsMemoryContent(String sessionId, String userId, Boolean includeDetail) {
-        List<LongTermMemory> taskRecords = queryUserTaskRecordsMemory(sessionId, userId);
+        return queryUserTaskRecordsMemoryContent(sessionId, userId, includeDetail, null);
+    }
+
+    /**
+     * 查询用户任务记录记忆（支持最大条数限制）
+     *
+     * @param sessionId  会话ID
+     * @param userId     用户ID
+     * @param includeDetail 是否包含详情
+     * @param maxResults 最大条数，null或0表示不限制
+     * @return
+     */
+    @Override
+    public String queryUserTaskRecordsMemoryContent(String sessionId, String userId, Boolean includeDetail, Integer maxResults) {
+        List<LongTermMemory> taskRecords = queryUserTaskRecordsMemory(sessionId, userId, maxResults);
         return buildMemoryContent(taskRecords, includeDetail);
     }
 

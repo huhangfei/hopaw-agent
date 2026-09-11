@@ -145,10 +145,6 @@ public class ChatWebSocketHandler extends TextWebSocketHandler {
         if (userId == null && !broadcast) {
             return;
         }
-        ConcurrentLinkedQueue<String> sessionIds = userSessionMap.get(userId);
-        if (sessionIds == null || sessionIds.isEmpty()) {
-            return;
-        }
         Map<String, Object> data = new HashMap<>();
         data.put("type", "token_usage");
         data.put("id", null);
@@ -163,6 +159,10 @@ public class ChatWebSocketHandler extends TextWebSocketHandler {
         String messageJson = JSON.toJSONString(data);
         if (broadcast) {
             sendToAllOnlineUsers(messageJson);
+            return;
+        }
+        ConcurrentLinkedQueue<String> sessionIds = userSessionMap.get(userId);
+        if (sessionIds == null || sessionIds.isEmpty()) {
             return;
         }
         for (String id : sessionIds) {

@@ -239,10 +239,11 @@ public class ChatService implements IChatService {
             }
         }
         if (isPromptIncludeTaskRecords() && userId != null && !userId.isEmpty()) {
-            String taskRecords = longTermMemoryService.queryUserTaskRecordsMemoryContent(sessionId, userId, true);
+            Integer maxCount = getTaskRecordsMaxCount();
+            String taskRecords = longTermMemoryService.queryUserTaskRecordsMemoryContent(sessionId, userId, true, maxCount);
             if (taskRecords != null && !taskRecords.isEmpty()) {
                 systemMessage += "\n----近期任务记录----\n" + taskRecords;
-                logger.debug("系统提示词已注入近期任务记录（userId={}）", userId);
+                logger.debug("系统提示词已注入近期任务记录（userId={}, maxCount={}）", userId, maxCount);
             }
         }
 
@@ -272,6 +273,19 @@ public class ChatService implements IChatService {
      */
     private boolean isPromptIncludeTaskRecords() {
         return Boolean.parseBoolean(sysConfigService.getValueByKey("promptIncludeTaskRecords", "true"));
+    }
+
+    /**
+     * 读取"最大带入条数"设置（默认 5）
+     */
+    private Integer getTaskRecordsMaxCount() {
+        String value = sysConfigService.getValueByKey("promptIncludeTaskRecordsMaxCount", "5");
+        try {
+            int count = Integer.parseInt(value);
+            return count > 0 ? count : null;
+        } catch (NumberFormatException e) {
+            return null;
+        }
     }
 
     private String buildSkillContext(List<String> skillNames) {

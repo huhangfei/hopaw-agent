@@ -332,14 +332,14 @@ public class ProjectService implements IProjectService {
         // 更新为已完成/已归档/已暂停时，停止项目及其任务关联的运行中会话执行器
         stopProjectExecutorsIfNeeded(existing, status);
         projectMapper.updateStatus(id, status);
-        // 状态变更：推送全局通知（子类型 status_change）
+        // 状态变更：推送全局通知（子类型 status_change），广播给所有在线用户
         try {
             java.util.Map<String, Object> content = new java.util.HashMap<>();
             content.put("projectId", id);
             content.put("name", existing.getName());
             content.put("oldStatus", existing.getStatus());
             content.put("newStatus", status);
-            globalNoticeService.notify(userId, GlobalNoticeTypeEnum.PROJECT, "status_change", content);
+            globalNoticeService.notify(null, GlobalNoticeTypeEnum.PROJECT, "status_change", content);
         } catch (Exception e) {
             logger.warn("项目状态变更通知推送失败: projectId={}", id, e);
         }

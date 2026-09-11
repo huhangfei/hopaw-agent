@@ -3,10 +3,13 @@ var currentMemoryType = null;
 var currentNode = null;
 var allMemories = [];
 var memoryTypes = [];
+var selectedMemoryIds = new Set();
 
 function loadTree() {
     currentMemoryId = null;
     currentNode = null;
+    selectedMemoryIds.clear();
+    updateDeleteButton();
     document.getElementById('editorContent').innerHTML = '<div class="empty-state">请在左侧选择一条记忆</div>';
 
     fetch('/api/memory-manage/tree')
@@ -153,6 +156,17 @@ function createTreeNode(node, typeCode) {
     content.draggable = true;
     content.setAttribute('data-id', node.id);
     content.setAttribute('data-memory-type', node.memoryType || typeCode);
+
+    // 复选框
+    var checkbox = document.createElement('input');
+    checkbox.type = 'checkbox';
+    checkbox.className = 'tree-checkbox';
+    checkbox.setAttribute('data-id', node.id);
+    checkbox.addEventListener('click', function(e) {
+        e.stopPropagation();
+        toggleMemorySelection(node.id, checkbox.checked);
+    });
+    content.appendChild(checkbox);
 
     var toggle = document.createElement('span');
     toggle.className = 'tree-toggle' + (node.children && node.children.length > 0 ? ' expanded' : ' empty');
@@ -508,6 +522,53 @@ function renderTypeSelect(selectedType) {
 
 function escapeAttr(str) {
     return str.replace(/'/g, "\\'").replace(/"/g, '&quot;');
+}
+
+function toggleMemorySelection(id, checked) {
+    if (checked) {
+        selectedMemoryIds.add(id);
+    } else {
+        selectedMemoryIds.delete(id);
+    }
+    updateDeleteButton();
+}
+
+function updateDeleteButton() {
+    var btn = document.getElementById('deleteSelectedBtn');
+    var countSpan = document.getElementById('selectedCount');
+    if (selectedMemoryIds.size > 0) {
+        btn.style.display = '';
+        countSpan.textContent = selectedMemoryIds.size;
+    } else {
+        btn.style.display = 'none';
+    }
+}
+
+function deleteSelectedMemories() {
+    if (selectedMemoryIds.size === 0) return;
+    var ids = Array.from(selectedMemoryIds);
+    showConfirm('确定删除选中的 ' + ids.length + ' 条记忆？其子节点将变为根节点。').then(function(confirmed) {
+        if (!confirmed) return;
+        Promise.all(ids.map(function(id) {
+            return fetch('/api/memory-manage/' + id, { method: 'DELETE' }).then(function(r) { return r.json(); });
+        })).then(function(results) {
+            var successCount = results.filter(function(r) { return r.code === 200; }).length;
+            var failCount = results.length - successCount;
+            if (failCount === 0) {
+                showToast('成功删除 ' + successCount + ' 条记忆', 'success');
+            } else {
+                showToast('删除完成：成功 ' + successCount + ' 条，失败 ' + failCount + ' 条', 'warning');
+            }
+            selectedMemoryIds.clear();
+            updateDeleteButton();
+            currentMemoryId = null;
+            currentNode = null;
+            document.getElementById('editorContent').innerHTML = '<div class="empty-state">请在左侧选择一条记忆</div>';
+            loadTree();
+        }).catch(function(err) {
+            showToast('网络错误: ' + err.message, 'error');
+        });
+    });
 }
 
 function exportMemories() {

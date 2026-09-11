@@ -1,16 +1,21 @@
 package com.agent.hopaw.infra.memory;
 
+import dev.langchain4j.agent.tool.ToolExecutionRequest;
+import dev.langchain4j.data.message.AiMessage;
 import dev.langchain4j.data.message.AudioContent;
 import dev.langchain4j.data.message.ChatMessage;
 import dev.langchain4j.data.message.Content;
 import dev.langchain4j.data.message.ImageContent;
 import dev.langchain4j.data.message.PdfFileContent;
+import dev.langchain4j.data.message.SystemMessage;
 import dev.langchain4j.data.message.TextContent;
 import dev.langchain4j.data.message.ToolExecutionResultMessage;
 import dev.langchain4j.data.message.UserMessage;
 import dev.langchain4j.data.message.VideoContent;
 import dev.langchain4j.model.TokenCountEstimator;
 import dev.langchain4j.model.openai.OpenAiTokenCountEstimator;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -28,6 +33,8 @@ import java.util.List;
  * 文本部分与消息结构开销仍复用 {@link OpenAiTokenCountEstimator}，保持与纯文本场景一致的估算口径。
  */
 public class MultimodalTokenCountEstimator implements TokenCountEstimator {
+
+    private static final Logger logger = LoggerFactory.getLogger(MultimodalTokenCountEstimator.class);
 
     /** OpenAI 视觉计费：低精度图片固定 85 token */
     private static final int IMAGE_LOW_DETAIL_TOKENS = 85;
@@ -62,7 +69,7 @@ public class MultimodalTokenCountEstimator implements TokenCountEstimator {
             return estimateToolResultTokens((ToolExecutionResultMessage) message);
         }
         if (!(message instanceof UserMessage)) {
-            return delegate.estimateTokenCountInMessage(message);
+            return safeEstimateMessageTokens(message);
         }
         UserMessage userMessage = (UserMessage) message;
         int total = 0;
@@ -134,5 +141,54 @@ public class MultimodalTokenCountEstimator implements TokenCountEstimator {
             return IMAGE_HIGH_DETAIL_TOKENS;
         }
         return IMAGE_LOW_DETAIL_TOKENS;
+    }
+
+    /**
+     * 委托估算器失败时的兜底估算：OpenAiTokenCountEstimator 估算含多个工具调用的 AiMessage 时
+     * 会将工具参数按 JSON 解析，遇到截断/非法的参数文本（流式中断、网关截断等）会抛 RuntimeException，
+     * 导致同会话所有后续请求的窗口记忆估算持续失败。窗口记忆容量淘汰只需量级正确，此处降级为粗略估算。
+     */
+    private int safeEstimateMessageTokens(ChatMessage message) {
+        try {
+            return delegate.estimateTokenCountInMessage(message);
+        } catch (Exception e) {
+            logger.warn("Token 估算已降级为粗略估算：消息含截断或非法的工具参数 JSON，message={}", message, e);
+            return MESSAGE_OVERHEAD_TOKENS + estimateFallbackTokens(message);
+        }
+    }
+
+    /** 消息级粗略估算：AiMessage 按文本 + 各工具调用（名称 + 参数）估算；其他消息按文本估算 */
+    private static int estimateFallbackTokens(ChatMessage message) {
+        if (message instanceof AiMessage) {
+            AiMessage aiMessage = (AiMessage) message;
+            int tokens = estimateFallbackTokens(aiMessage.text());
+            if (aiMessage.hasToolExecutionRequests()) {
+                for (ToolExecutionRequest request : aiMessage.toolExecutionRequests()) {
+                    tokens += 7; // 单次工具调用结构开销，与委托估算器口径接近
+                    tokens += estimateFallbackTokens(request.name());
+                    tokens += estimateFallbackTokens(request.arguments());
+                }
+            }
+            return tokens;
+        }
+        if (message instanceof SystemMessage) {
+            return estimateFallbackTokens(((SystemMessage) message).text());
+        }
+        return 0;
+    }
+
+    /** 文本级粗略估算：中日韩字符按 BPE 量级 1 字 1 token，其余字符按约 4 字符 1 token */
+    private static int estimateFallbackTokens(String text) {
+        if (text == null || text.isEmpty()) {
+            return 0;
+        }
+        int cjkCount = 0;
+        for (int i = 0; i < text.length(); i++) {
+            char c = text.charAt(i);
+            if (c >= 0x4E00 && c <= 0x9FFF) {
+                cjkCount++;
+            }
+        }
+        return cjkCount + (text.length() - cjkCount + 3) / 4;
     }
 }

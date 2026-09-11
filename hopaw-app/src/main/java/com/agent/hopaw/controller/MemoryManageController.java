@@ -60,6 +60,27 @@ public class MemoryManageController {
         return ResponseBean.success(result);
     }
 
+    /**
+     * 获取用户的任务记录（按更新时间倒序）
+     */
+    @GetMapping("/api/memory-manage/task-records")
+    @ResponseBody
+    public ResponseBean taskRecords(HttpServletRequest request,
+                                   @RequestParam(required = false) String sessionId) {
+        String userId = CurrentUser.require(request);
+        List<LongTermMemory> list = longTermMemoryService.queryUserTaskRecordsMemory(sessionId, userId);
+        // 按更新时间倒序
+        list.sort((a, b) -> {
+            LocalDateTime tA = a.getUpdateTime() != null ? a.getUpdateTime() : a.getCreateTime();
+            LocalDateTime tB = b.getUpdateTime() != null ? b.getUpdateTime() : b.getCreateTime();
+            if (tA == null && tB == null) return 0;
+            if (tA == null) return 1;
+            if (tB == null) return -1;
+            return tB.compareTo(tA);
+        });
+        return ResponseBean.success(list);
+    }
+
     @GetMapping("/api/memory-manage/{id}")
     @ResponseBody
     public ResponseBean get(@PathVariable Long id) {
@@ -124,7 +145,16 @@ public class MemoryManageController {
 
     @DeleteMapping("/api/memory-manage/{id}")
     @ResponseBody
-    public ResponseBean delete(@PathVariable Long id) {
+    public ResponseBean delete(@PathVariable Long id, HttpServletRequest request) {
+        LongTermMemory memory = longTermMemoryService.getMemoryById(id);
+        if (memory == null) {
+            return ResponseBean.fail("记忆不存在");
+        }
+        // 验证是否是自己的记忆
+        String userId = CurrentUser.require(request);
+        if (memory.getUserId() != null && !memory.getUserId().equals(userId)) {
+            return ResponseBean.fail("无权删除他人的记忆");
+        }
         longTermMemoryService.deleteMemory(id);
         return ResponseBean.success(null);
     }

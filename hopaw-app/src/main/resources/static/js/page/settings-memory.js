@@ -3,7 +3,7 @@ var SETTINGS_KEYS = [
     'chat_memory_tool_result_max_length', 'memory_ai_model_id',
     'vector_store_path', 'vector_store_profile', 'vector_flush_scheduler_interval',
     'vector_flush_threshold', 'vector_flush_interval_ms',
-    'promptIncludeUserProfile', 'promptIncludeTaskRecords'
+    'promptIncludeUserProfile', 'promptIncludeTaskRecords', 'promptIncludeTaskRecordsMaxCount'
 ];
 
 function onSettingsLoaded() {
@@ -19,6 +19,10 @@ function onSettingsLoaded() {
 
     document.getElementById('promptIncludeUserProfile').checked = settingsCache['promptIncludeUserProfile'] !== 'false';
     document.getElementById('promptIncludeTaskRecords').checked = settingsCache['promptIncludeTaskRecords'] !== 'false';
+    document.getElementById('promptIncludeTaskRecordsMaxCount').value = settingsCache['promptIncludeTaskRecordsMaxCount'] || '5';
+
+    // 根据开关状态显示/隐藏最大条数输入框
+    toggleTaskRecordsMaxCountGroup();
 
     // 先加载提供商列表，串行回填已选模型
     loadProviders().then(function() {
@@ -113,6 +117,7 @@ function saveSettings() {
     var toolResultMaxLength = document.getElementById('chatMemoryToolResultMaxLength').value.trim() || '5120';
     var includeUserProfile = document.getElementById('promptIncludeUserProfile').checked;
     var includeTaskRecords = document.getElementById('promptIncludeTaskRecords').checked;
+    var maxCount = document.getElementById('promptIncludeTaskRecordsMaxCount').value.trim() || '0';
 
     var saves = [];
     saves.push(saveConfig('memory_ai_model_id', modelId, '记忆整理使用模型'));
@@ -122,6 +127,7 @@ function saveSettings() {
     saves.push(saveConfig('chat_memory_tool_result_max_length', toolResultMaxLength, '工具调用结果入库截断长度（单位：字符）'));
     saves.push(saveConfig('promptIncludeUserProfile', includeUserProfile ? 'true' : 'false', '提示词带入用户画像'));
     saves.push(saveConfig('promptIncludeTaskRecords', includeTaskRecords ? 'true' : 'false', '提示词带入近期任务记录'));
+    saves.push(saveConfig('promptIncludeTaskRecordsMaxCount', maxCount, '最大带入条数'));
 
     Promise.all(saves).then(function(results) {
         var allOk = results.every(function(r) { return r; });
@@ -220,3 +226,15 @@ function saveVectorStoreSettings() {
 
 // 初始化
 setupCascading();
+
+// 显示/隐藏最大条数输入框
+function toggleTaskRecordsMaxCountGroup() {
+    var checked = document.getElementById('promptIncludeTaskRecords').checked;
+    var group = document.getElementById('taskRecordsMaxCountGroup');
+    if (group) {
+        group.style.display = checked ? '' : 'none';
+    }
+}
+
+// 监听开关变化
+document.getElementById('promptIncludeTaskRecords').addEventListener('change', toggleTaskRecordsMaxCountGroup);

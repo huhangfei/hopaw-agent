@@ -65,6 +65,12 @@
                 <p class="form-hint">开启后，创建执行器时会将近期任务记录（受过期时间限制）作为系统提示词上下文注入，让 LLM 了解用户近期任务上下文。</p>
             </div>
 
+            <div class="form-group" id="taskRecordsMaxCountGroup">
+                <label for="promptIncludeTaskRecordsMaxCount">最大带入条数</label>
+                <input type="number" id="promptIncludeTaskRecordsMaxCount" class="settings-input" min="0" placeholder="5">
+                <p class="form-hint">限制带入系统提示词的最大任务记录条数，0 表示不限制（受过期时间内的所有记录）。</p>
+            </div>
+
             <div class="settings-actions">
                 <button class="btn-save-settings" onclick="saveSettings()">保存设置</button>
             </div>

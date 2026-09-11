@@ -14,6 +14,7 @@ public class ChatMemory {
      */
     private Integer status;
     private LocalDateTime createTime;
+    private String requestId;
 
     public ChatMemory() {}
 
@@ -88,5 +89,13 @@ public class ChatMemory {
 
     public void setSessionId(String sessionId) {
         this.sessionId = sessionId;
+    }
+
+    public String getRequestId() {
+        return requestId;
+    }
+
+    public void setRequestId(String requestId) {
+        this.requestId = requestId;
     }
 }

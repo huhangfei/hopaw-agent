@@ -15,8 +15,9 @@ import org.springframework.beans.factory.annotation.Autowired;
 import java.io.BufferedReader;
 import java.io.BufferedWriter;
 import java.io.File;
-import java.io.FileWriter;
 import java.io.IOException;
+import java.io.OutputStreamWriter;
+import java.io.FileOutputStream;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -196,7 +197,8 @@ public class FileOperationTool implements AgentTool {
     @Tool(value = {"写入文件", "写入内容到文本文件，会覆盖原文件", "文件写入"})
     public String writeFile(
             @P(description = "文件路径") String filePath,
-            @P(description = "要写入的内容") String content) {
+            @P(description = "要写入的内容") String content,
+            @P(description = "编码格式，如 UTF-8、GBK 等，默认 UTF-8", required = false) String encoding) {
         try {
             Path path = Paths.get(filePath).toAbsolutePath().normalize();
 
@@ -207,11 +209,15 @@ public class FileOperationTool implements AgentTool {
                 }
             }
 
-            try (BufferedWriter writer = new BufferedWriter(new FileWriter(path.toFile()))) {
+            String charset = (encoding != null && !encoding.isBlank()) ? encoding.trim() : "UTF-8";
+            try (BufferedWriter writer = new BufferedWriter(
+                    new OutputStreamWriter(new FileOutputStream(path.toFile()), java.nio.charset.Charset.forName(charset)))) {
                 writer.write(content);
             }
 
-            return "成功写入文件: " + filePath;
+            return "成功写入文件: " + filePath + " (编码: " + charset + ")";
+        } catch (java.nio.charset.UnsupportedCharsetException e) {
+            return "错误: 不支持的编码格式: " + encoding;
         } catch (IOException e) {
             log.error("写入文件失败: {}", filePath, e);
             return "错误: 写入文件失败 - " + e.getMessage();
@@ -222,7 +228,8 @@ public class FileOperationTool implements AgentTool {
     @Tool(value = {"追加文件", "追加内容到文本文件末尾", "文件写入"})
     public String appendFile(
             @P(description = "文件路径") String filePath,
-            @P(description = "要追加的内容") String content) {
+            @P(description = "要追加的内容") String content,
+            @P(description = "编码格式，如 UTF-8、GBK 等，默认 UTF-8", required = false) String encoding) {
         try {
             Path path = Paths.get(filePath).toAbsolutePath().normalize();
 
@@ -233,12 +240,16 @@ public class FileOperationTool implements AgentTool {
                 }
             }
 
-            try (BufferedWriter writer = new BufferedWriter(new FileWriter(path.toFile(), true))) {
+            String charset = (encoding != null && !encoding.isBlank()) ? encoding.trim() : "UTF-8";
+            try (BufferedWriter writer = new BufferedWriter(
+                    new OutputStreamWriter(new FileOutputStream(path.toFile(), true), java.nio.charset.Charset.forName(charset)))) {
                 writer.write(content);
                 writer.newLine();
             }
 
-            return "成功追加内容到文件: " + filePath;
+            return "成功追加内容到文件: " + filePath + " (编码: " + charset + ")";
+        } catch (java.nio.charset.UnsupportedCharsetException e) {
+            return "错误: 不支持的编码格式: " + encoding;
         } catch (IOException e) {
             log.error("追加文件内容失败: {}", filePath, e);
             return "错误: 追加文件内容失败 - " + e.getMessage();
@@ -249,7 +260,8 @@ public class FileOperationTool implements AgentTool {
     @Tool(value = {"按行写入文件", "按行写入内容到文本文件，会覆盖原文件", "文件写入"})
     public String writeFileByLine(
             @P(description = "文件路径") String filePath,
-            @P(description = "要写入的行内容列表，每行一个元素，用逗号分隔") String lines) {
+            @P(description = "要写入的行内容列表，每行一个元素，用逗号分隔") String lines,
+            @P(description = "编码格式，如 UTF-8、GBK 等，默认 UTF-8", required = false) String encoding) {
         try {
             Path path = Paths.get(filePath).toAbsolutePath().normalize();
 
@@ -261,15 +273,19 @@ public class FileOperationTool implements AgentTool {
             }
 
             String[] lineArray = lines.split(",");
+            String charset = (encoding != null && !encoding.isBlank()) ? encoding.trim() : "UTF-8";
 
-            try (BufferedWriter writer = new BufferedWriter(new FileWriter(path.toFile()))) {
+            try (BufferedWriter writer = new BufferedWriter(
+                    new OutputStreamWriter(new FileOutputStream(path.toFile()), java.nio.charset.Charset.forName(charset)))) {
                 for (String line : lineArray) {
                     writer.write(line.trim());
                     writer.newLine();
                 }
             }
 
-            return "成功写入 " + lineArray.length + " 行到文件: " + filePath;
+            return "成功写入 " + lineArray.length + " 行到文件: " + filePath + " (编码: " + charset + ")";
+        } catch (java.nio.charset.UnsupportedCharsetException e) {
+            return "错误: 不支持的编码格式: " + encoding;
         } catch (IOException e) {
             log.error("按行写入文件失败: {}", filePath, e);
             return "错误: 写入文件失败 - " + e.getMessage();
@@ -281,14 +297,17 @@ public class FileOperationTool implements AgentTool {
     public String insertLine(
             @P(description = "文件路径") String filePath,
             @P(description = "要插入的内容") String content,
-            @P(description = "插入位置行号(从1开始)，0表示在文件开头插入") Integer lineNumber) {
+            @P(description = "插入位置行号(从1开始)，0表示在文件开头插入") Integer lineNumber,
+            @P(description = "编码格式，如 UTF-8、GBK 等，默认 UTF-8", required = false) String encoding) {
         try {
             Path path = Paths.get(filePath).toAbsolutePath().normalize();
             if (!Files.exists(path)) {
                 return "错误: 文件不存在: " + filePath;
             }
 
-            List<String> allLines = Files.readAllLines(path);
+            String charset = (encoding != null && !encoding.isBlank()) ? encoding.trim() : "UTF-8";
+            java.nio.charset.Charset charsetObj = java.nio.charset.Charset.forName(charset);
+            List<String> allLines = Files.readAllLines(path, charsetObj);
 
             int insertPos = lineNumber != null && lineNumber > 0 ? lineNumber - 1 : 0;
             if (insertPos > allLines.size()) {
@@ -297,9 +316,11 @@ public class FileOperationTool implements AgentTool {
 
             allLines.add(insertPos, content);
 
-            Files.write(path, allLines);
+            Files.write(path, allLines, charsetObj);
 
-            return "成功在第 " + (insertPos + 1) + " 行插入内容";
+            return "成功在第 " + (insertPos + 1) + " 行插入内容 (编码: " + charset + ")";
+        } catch (java.nio.charset.UnsupportedCharsetException e) {
+            return "错误: 不支持的编码格式: " + encoding;
         } catch (IOException e) {
             log.error("插入行失败: {}", filePath, e);
             return "错误: 插入行失败 - " + e.getMessage();
@@ -314,7 +335,8 @@ public class FileOperationTool implements AgentTool {
             @P(description = "替换后的内容，正则模式下可用 $1、$2 引用捕获组") String replacement,
             @P(description = "起始行号(从1开始)，为空表示从第1行开始", required = false) Integer startLine,
             @P(description = "结束行号，为空表示到最后一行", required = false) Integer endLine,
-            @P(description = "是否使用正则表达式匹配，默认否", required = false) Boolean isRegex) {
+            @P(description = "是否使用正则表达式匹配，默认否", required = false) Boolean isRegex,
+            @P(description = "编码格式，如 UTF-8、GBK 等，默认 UTF-8", required = false) String encoding) {
         try {
             Path path = Paths.get(filePath).toAbsolutePath().normalize();
             if (!Files.exists(path)) {
@@ -333,7 +355,9 @@ public class FileOperationTool implements AgentTool {
                 return "错误: 起始行号不能大于结束行号";
             }
 
-            List<String> allLines = Files.readAllLines(path);
+            String charset = (encoding != null && !encoding.isBlank()) ? encoding.trim() : "UTF-8";
+            java.nio.charset.Charset charsetObj = java.nio.charset.Charset.forName(charset);
+            List<String> allLines = Files.readAllLines(path, charsetObj);
             boolean useRegex = isRegex != null && isRegex;
             Pattern regexPattern = null;
             if (useRegex) {
@@ -372,10 +396,10 @@ public class FileOperationTool implements AgentTool {
                 return "未找到匹配内容，文件未修改。行范围: " + start + (end == Integer.MAX_VALUE ? " 至末尾" : " 至 " + end);
             }
 
-            Files.write(path, allLines);
+            Files.write(path, allLines, charsetObj);
 
             StringBuilder result = new StringBuilder();
-            result.append("成功替换 ").append(replacedCount).append(" 行，文件: ").append(filePath).append("\n");
+            result.append("成功替换 ").append(replacedCount).append(" 行，文件: ").append(filePath).append(" (编码: ").append(charset).append(")\n");
             if (!changedLines.isEmpty()) {
                 result.append("变更明细（最多显示20行）:\n");
                 for (String cl : changedLines) {
@@ -386,6 +410,8 @@ public class FileOperationTool implements AgentTool {
                 }
             }
             return result.toString();
+        } catch (java.nio.charset.UnsupportedCharsetException e) {
+            return "错误: 不支持的编码格式: " + encoding;
         } catch (IOException e) {
             log.error("替换文件内容失败: {}", filePath, e);
             return "错误: 替换文件内容失败 - " + e.getMessage();

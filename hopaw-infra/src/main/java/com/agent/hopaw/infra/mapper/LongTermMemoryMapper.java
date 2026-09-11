@@ -13,6 +13,9 @@ public interface LongTermMemoryMapper {
     List<LongTermMemory> findByParentId(@Param("parentId") Long parentId);
 
     List<LongTermMemory> findBySessionIdAndUserIdAndMemoryTypeAndTime(@Param("sessionId") String sessionId, @Param("userId") String userId, @Param("memoryType") String memoryType, @Param("beginDateTime") LocalDateTime beginDateTime);
+
+    List<LongTermMemory> findBySessionIdAndUserIdAndMemoryTypeAndTimeWithLimit(@Param("sessionId") String sessionId, @Param("userId") String userId, @Param("memoryType") String memoryType, @Param("beginDateTime") LocalDateTime beginDateTime, @Param("maxResults") Integer maxResults);
+
     List<LongTermMemory> findBySessionIdAndUserIdAndMemoryTypeAndEndDateTime(@Param("sessionId") String sessionId, @Param("userId") String userId, @Param("memoryType") String memoryType, @Param("endDateTime") LocalDateTime endDateTime);
 
     List<LongTermMemory> findByUserIdAndMemoryType(@Param("userId") String userId, @Param("memoryType") String memoryType);

@@ -11,6 +11,15 @@ var currentSessionId = null;
 var currentToolCallPermission = 'smart_call';
 var attachedFiles = []; // { url, type, name }
 
+// 更新虚拟人组件可见性：仅 Chat 类型会话显示
+function updateAvatarVisibility() {
+    var widget = document.getElementById('avatarWidget');
+    if (!widget) return;
+    var currentSession = (initialChatSessions || []).find(function(s) { return s.sessionId === currentSessionId; });
+    var isChatType = !currentSession || !currentSession.bizType || currentSession.bizType === 'chat' || currentSession.bizType === '';
+    widget.style.display = isChatType ? '' : 'none';
+}
+
 // ===== 深度思考等级滑块 =====
 // 等级元数据：固定从低到高排序，color 驱动滑块填充与按钮发光随等级加深的视觉体验
 var THINKING_LEVELS = [
@@ -2760,6 +2769,7 @@ window.onload = function() {
     // 默认选中当前会话所属的类型（无会话时默认聊天）
     var currentSession = (initialChatSessions || []).find(function(s) { return s.sessionId === currentSessionId; });
     sessionTypeFilter = currentSession ? sessionFilterTypeOf(currentSession.bizType) : 'chat';
+    updateAvatarVisibility();
     var initialFilterBox = document.getElementById('sessionTypeFilter');
     if (initialFilterBox) {
         initialFilterBox.querySelectorAll('.session-type-tab').forEach(function(tab) {
@@ -4021,4 +4031,140 @@ function clearAttachedFiles() {
         area.innerHTML = '';
         area.style.display = 'none';
     }
+}
+
+/* ========== 近期任务记录 ========== */
+
+function showRecentTasksModal() {
+    if (!currentSessionId) {
+        showToast('当前无会话', 'error');
+        return;
+    }
+    var listEl = document.getElementById('recentTasksList');
+    listEl.innerHTML = '<div class="session-memory-empty">加载中...</div>';
+    document.getElementById('recentTasksModal').classList.add('active');
+    loadRecentTasks();
+}
+
+function hideRecentTasksModal() {
+    document.getElementById('recentTasksModal').classList.remove('active');
+}
+
+function loadRecentTasks() {
+    var listEl = document.getElementById('recentTasksList');
+    fetch('/api/memory-manage/task-records?userId=' + encodeURIComponent(currentUserId) + '&sessionId=' + encodeURIComponent(currentSessionId))
+        .then(function(r) { return r.json(); })
+        .then(function(resp) {
+            if (resp.code !== 200) {
+                listEl.innerHTML = '<div class="session-memory-empty">' + (resp.msg || '加载失败') + '</div>';
+                return;
+            }
+            renderRecentTasksList(listEl, resp.data || []);
+        })
+        .catch(function(err) {
+            listEl.innerHTML = '<div class="session-memory-empty">加载失败: ' + err.message + '</div>';
+        });
+}
+
+function renderRecentTasksList(listEl, list) {
+    listEl.innerHTML = '';
+    if (!list.length) {
+        listEl.innerHTML = '<div class="session-memory-empty">暂无近期任务记录</div>';
+        return;
+    }
+    list.forEach(function(item) {
+        var row = document.createElement('div');
+        row.className = 'recent-task-row';
+
+        var main = document.createElement('div');
+        main.className = 'recent-task-main';
+        var title = document.createElement('div');
+        title.className = 'recent-task-title';
+        title.textContent = item.summary || item.memory || '无标题';
+        title.title = item.summary || '';
+        main.appendChild(title);
+        var meta = document.createElement('div');
+        meta.className = 'recent-task-meta';
+        var timeStr = item.updateTime || item.createTime || '';
+        if (timeStr) {
+            timeStr = timeStr.replace('T', ' ').substring(0, 16);
+        }
+        meta.textContent = timeStr;
+        main.appendChild(meta);
+        row.appendChild(main);
+
+        var actions = document.createElement('div');
+        actions.className = 'recent-task-actions';
+
+        var viewBtn = document.createElement('button');
+        viewBtn.className = 'recent-task-btn';
+        viewBtn.textContent = '查看';
+        viewBtn.onclick = function(e) {
+            e.stopPropagation();
+            showRecentTaskDetail(item);
+        };
+        actions.appendChild(viewBtn);
+
+        // 只有自己创建的才能删除
+        if (item.userId === currentUserId) {
+            var deleteBtn = document.createElement('button');
+            deleteBtn.className = 'recent-task-btn recent-task-btn-danger';
+            deleteBtn.textContent = '删除';
+            deleteBtn.onclick = function(e) {
+                e.stopPropagation();
+                deleteRecentTask(item.id);
+            };
+            actions.appendChild(deleteBtn);
+        }
+
+        row.appendChild(actions);
+        listEl.appendChild(row);
+    });
+}
+
+function showRecentTaskDetail(item) {
+    var container = document.getElementById('recentTaskDetailBody');
+    var timeStr = item.updateTime || item.createTime || '';
+    if (timeStr) {
+        timeStr = timeStr.replace('T', ' ').substring(0, 19);
+    }
+    container.innerHTML =
+        '<div class="recent-task-detail-meta">' +
+            '<span>ID: ' + item.id + '</span>' +
+            '<span>用户: ' + (item.userId || '-') + '</span>' +
+            '<span>类型: ' + (item.memoryType || '-') + '</span>' +
+            '<span>更新时间: ' + timeStr + '</span>' +
+        '</div>' +
+        '<div class="recent-task-detail-field">' +
+            '<label>概要</label>' +
+            '<div class="recent-task-detail-content">' + escapeHtml(item.summary || '无') + '</div>' +
+        '</div>' +
+        '<div class="recent-task-detail-field">' +
+            '<label>内容</label>' +
+            '<div class="recent-task-detail-content recent-task-detail-memory">' + escapeHtml(item.memory || '无') + '</div>' +
+        '</div>';
+    document.getElementById('recentTaskDetailModal').classList.add('active');
+}
+
+function hideRecentTaskDetailModal() {
+    document.getElementById('recentTaskDetailModal').classList.remove('active');
+}
+
+function deleteRecentTask(id) {
+    showConfirm('确定删除此任务记录？').then(function(confirmed) {
+        if (!confirmed) return;
+        fetch('/api/memory-manage/' + id, { method: 'DELETE' })
+            .then(function(r) { return r.json(); })
+            .then(function(resp) {
+                if (resp.code === 200) {
+                    showToast('删除成功', 'success');
+                    loadRecentTasks();
+                } else {
+                    showToast(resp.msg || '删除失败', 'error');
+                }
+            })
+            .catch(function(err) {
+                showToast('删除失败: ' + err.message, 'error');
+            });
+    });
 }

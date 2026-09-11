@@ -3573,3 +3573,130 @@ body.dark-theme .request-log-detail-error {
     opacity: 0.8;
     background: rgba(128, 128, 128, 0.15);
 }
+
+/* ==================== 近期任务记录 ==================== */
+.recent-task-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 12px 16px;
+    border: 1px solid #e8e9f0;
+    border-radius: 8px;
+    margin-bottom: 8px;
+    cursor: pointer;
+    transition: all 0.15s;
+}
+.recent-task-row:hover {
+    background: #f5f6fa;
+    border-color: #667eea;
+}
+.recent-task-main {
+    flex: 1;
+    min-width: 0;
+}
+.recent-task-title {
+    font-size: 14px;
+    color: #333;
+    font-weight: 500;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+.recent-task-meta {
+    font-size: 12px;
+    color: #999;
+    margin-top: 4px;
+}
+.recent-task-actions {
+    display: flex;
+    gap: 8px;
+    flex-shrink: 0;
+    margin-left: 12px;
+}
+.recent-task-btn {
+    padding: 4px 12px;
+    font-size: 12px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    background: #fff;
+    cursor: pointer;
+    color: #666;
+    transition: all 0.15s;
+}
+.recent-task-btn:hover {
+    background: #667eea;
+    color: #fff;
+    border-color: #667eea;
+}
+.recent-task-btn-danger {
+    color: #e74c3c;
+    border-color: #e74c3c;
+}
+.recent-task-btn-danger:hover {
+    background: #e74c3c;
+    color: #fff;
+}
+.recent-task-detail-meta {
+    display: flex;
+    gap: 16px;
+    font-size: 12px;
+    color: #999;
+    margin-bottom: 16px;
+    flex-wrap: wrap;
+}
+.recent-task-detail-field {
+    margin-bottom: 16px;
+}
+.recent-task-detail-field label {
+    display: block;
+    font-size: 13px;
+    color: #666;
+    font-weight: 500;
+    margin-bottom: 6px;
+}
+.recent-task-detail-content {
+    padding: 12px;
+    background: #f5f6fa;
+    border-radius: 6px;
+    font-size: 14px;
+    color: #333;
+    line-height: 1.6;
+    white-space: pre-wrap;
+    word-break: break-word;
+}
+.recent-task-detail-memory {
+    max-height: 400px;
+    overflow-y: auto;
+}
+
+/* 暗色主题 */
+body.dark-theme .recent-task-row {
+    background: #1e2a45;
+    border-color: #2d3a5c;
+}
+body.dark-theme .recent-task-row:hover {
+    background: #232945;
+    border-color: #667eea;
+}
+body.dark-theme .recent-task-title {
+    color: #e0e0e0;
+}
+body.dark-theme .recent-task-meta {
+    color: #888;
+}
+body.dark-theme .recent-task-btn {
+    background: #2d3a5c;
+    border-color: #3d4a6c;
+    color: #c0c0c0;
+}
+body.dark-theme .recent-task-btn:hover {
+    background: #667eea;
+    color: #fff;
+}
+body.dark-theme .recent-task-detail-meta {
+    color: #888;
+}
+body.dark-theme .recent-task-detail-content {
+    background: #2d3a5c;
+    color: #e0e0e0;
+}

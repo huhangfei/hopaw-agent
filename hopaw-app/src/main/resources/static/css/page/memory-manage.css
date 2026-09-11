@@ -84,6 +84,40 @@
     background: #c0392b;
 }
 
+.btn-success {
+    background: #27ae60;
+    color: #fff;
+}
+
+.btn-success:hover {
+    background: #219a52;
+}
+
+.btn-info {
+    background: #3498db;
+    color: #fff;
+}
+
+.btn-info:hover {
+    background: #2980b9;
+}
+
+.btn-warning {
+    background: #f39c12;
+    color: #fff;
+}
+
+.btn-warning:hover {
+    background: #d68910;
+}
+
+.toolbar-divider {
+    width: 1px;
+    height: 24px;
+    background: #e0e0e0;
+    margin: 0 4px;
+}
+
 .btn-sm {
     padding: 4px 10px;
     font-size: 12px;
@@ -172,6 +206,15 @@
     cursor: pointer;
     transition: background 0.15s;
     border: 1px solid transparent;
+}
+
+.tree-checkbox {
+    width: 14px;
+    height: 14px;
+    margin: 0;
+    cursor: pointer;
+    flex-shrink: 0;
+    accent-color: #667eea;
 }
 
 .tree-node-content:hover {
@@ -486,6 +529,34 @@ body.dark-theme .btn-danger:hover {
     background: #ff7961;
 }
 
+body.dark-theme .btn-success {
+    background: #27ae60;
+}
+
+body.dark-theme .btn-success:hover {
+    background: #2ecc71;
+}
+
+body.dark-theme .btn-info {
+    background: #3498db;
+}
+
+body.dark-theme .btn-info:hover {
+    background: #5dade2;
+}
+
+body.dark-theme .btn-warning {
+    background: #f39c12;
+}
+
+body.dark-theme .btn-warning:hover {
+    background: #f1c40f;
+}
+
+body.dark-theme .toolbar-divider {
+    background: #3d3d6b;
+}
+
 body.dark-theme .tree-panel,
 body.dark-theme .editor-panel {
     background: #16213e;
@@ -509,6 +580,10 @@ body.dark-theme .tree-node-content:hover {
 body.dark-theme .tree-node-content.selected {
     background: #3d3d6b;
     border-color: #667eea;
+}
+
+body.dark-theme .tree-checkbox {
+    accent-color: #8ba3ff;
 }
 
 body.dark-theme .tree-node-content.drag-over {

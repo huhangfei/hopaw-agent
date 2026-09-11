@@ -39,7 +39,11 @@ public interface ILongTermMemoryService extends ILongTermMemoryProvider{
 
     List<LongTermMemory> queryUserTaskRecordsMemory(String sessionId, String userId);
 
+    List<LongTermMemory> queryUserTaskRecordsMemory(String sessionId, String userId, Integer maxResults);
+
     String queryUserTaskRecordsMemoryContent(String sessionId, String userId, Boolean includeDetail);
+
+    String queryUserTaskRecordsMemoryContent(String sessionId, String userId, Boolean includeDetail, Integer maxResults);
 
     List<LongTermMemory> queryUserExpandKnowledgeMemory(String sessionId, String userId);
 

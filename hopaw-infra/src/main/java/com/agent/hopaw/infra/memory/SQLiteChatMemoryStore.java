@@ -85,6 +85,9 @@ public class SQLiteChatMemoryStore implements IChatMemoryService {
 //                        continue;
 //                    }
                     String messageId = record.getMessageId();
+                    if(message instanceof ToolExecutionResultMessage){
+                        messageId = ((ToolExecutionResultMessage) message).id();
+                    }
                     if(messages.containsKey(messageId)){
                         messages.remove(messageId);
                     }
@@ -156,7 +159,7 @@ public class SQLiteChatMemoryStore implements IChatMemoryService {
 
         // 1. 收集所有已完成的 ToolExecutionResultMessage 的 ID
         Set<String> resolvedCallIds = new HashSet<>();
-        Map<String, LocalDateTime> callToolRequestCreateTime=new HashMap<>();
+        Map<String, ChatMemory> callToolRequestCreateTime=new HashMap<>();
         List<ChatMessage> chatMessages = new ArrayList<>();
         for (ChatMemory memory : original) {
             ChatMessage msg = ChatMessageDeserializer.messageFromJson(memory.getMessageJson());
@@ -164,7 +167,7 @@ public class SQLiteChatMemoryStore implements IChatMemoryService {
                 resolvedCallIds.add(((ToolExecutionResultMessage) msg).id());
             }else if(msg instanceof AiMessage aiMsg && aiMsg.hasToolExecutionRequests()){
                 for (ToolExecutionRequest req : aiMsg.toolExecutionRequests()) {
-                    callToolRequestCreateTime.put(req.id(), memory.getCreateTime());
+                    callToolRequestCreateTime.put(req.id(), memory);
                 }
             }
             chatMessages.add(msg);
@@ -183,9 +186,13 @@ public class SQLiteChatMemoryStore implements IChatMemoryService {
                                 .build();
                         String messageId = generateMessageId(errorMsg);
                         String messageJson = ChatMessageSerializer.messageToJson(errorMsg);
-                        LocalDateTime time = callToolRequestCreateTime.getOrDefault(req.id(), LocalDateTime.now());
-                        chatMemoryMapper.insert(memoryId.getAgentId(), memoryId.getUserId(), messageId, messageJson, memoryId.getSessionId(), memoryId.getRequestId(), time.plus(1, ChronoUnit.MILLIS));
-                        logger.info("为tool call {} 创建了错误结果 {}", req.id(), messageId);
+                        ChatMemory chatMemory = callToolRequestCreateTime.get(req.id());
+                        if(chatMemory!=null){
+                            LocalDateTime time = chatMemory.getCreateTime();
+                            chatMemoryMapper.insert(memoryId.getAgentId(), memoryId.getUserId(), messageId, messageJson, memoryId.getSessionId(), chatMemory.getRequestId(), time.plus(1, ChronoUnit.MILLIS));
+                            logger.info("为tool call {} 创建了错误结果 {}", req.id(), messageId);
+                        }
+
                     }
                 }
             }

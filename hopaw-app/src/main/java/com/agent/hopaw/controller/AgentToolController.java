@@ -152,8 +152,9 @@ public class AgentToolController {
 
             // 根据文件扩展名自动判断类型
             if (originalFilename != null && originalFilename.toLowerCase().endsWith(".jar")) {
-                // JAR文件：直接保存到临时文件后调用JAR安装
-                java.nio.file.Path tempJar = java.nio.file.Files.createTempFile("plugin-install-", ".jar");
+                // JAR文件：用原始文件名创建临时文件，保持文件名一致
+                String safeName = originalFilename.replaceAll("[\\\\/:*?\"<>|]", "_");
+                java.nio.file.Path tempJar = java.nio.file.Files.createTempFile("plugin-install-", "-" + safeName);
                 try {
                     file.transferTo(tempJar.toFile());
                     result = IAgentToolService.installPluginFromJarFile(tempJar);

@@ -11,17 +11,18 @@
         <result property="status" column="status"/>
         <result property="sessionId" column="session_id"/>
         <result property="createTime" column="create_time"/>
+        <result property="requestId" column="request_id"/>
     </resultMap>
 
     <select id="findBySessionId" resultMap="ChatMemoryResultMap">
-        SELECT id, agent_id, user_id, message_id, message_json, status, session_id, create_time
+        SELECT id, agent_id, user_id, message_id, message_json, status, session_id, create_time,request_id
         FROM chat_memory
         WHERE session_id = #{sessionId}
         ORDER BY create_time ASC
     </select>
 
     <select id="findByAgentIdAndUserIdInStatus" resultMap="ChatMemoryResultMap">
-        SELECT id, agent_id, user_id, message_id, message_json, status, session_id, create_time
+        SELECT id, agent_id, user_id, message_id, message_json, status, session_id, create_time,request_id
         FROM chat_memory
         WHERE agent_id = #{agentId} AND user_id = #{userId}
         <if test="status!=null and status.size()>0">
@@ -35,7 +36,7 @@
 
 
     <select id="findBySessionIdAndStatus" resultMap="ChatMemoryResultMap">
-        SELECT id, agent_id, user_id, message_id, message_json, status, session_id, create_time
+        SELECT id, agent_id, user_id, message_id, message_json, status, session_id, create_time,request_id
         FROM chat_memory
         WHERE session_id = #{sessionId}
         <if test="status!=null and status.size()>0">
@@ -48,13 +49,13 @@
     </select>
 
     <select id="findByAgentIdAndUserId" resultMap="ChatMemoryResultMap">
-        SELECT id, agent_id, user_id, message_id, message_json, status, session_id, create_time
+        SELECT id, agent_id, user_id, message_id, message_json, status, session_id, create_time,request_id
         FROM chat_memory
         WHERE agent_id = #{agentId} AND user_id = #{userId}
         ORDER BY create_time ASC
     </select>
     <select id="findByAgentIdAndUserIdAndStatus" resultMap="ChatMemoryResultMap">
-        SELECT id, agent_id, user_id, message_id, message_json, status, session_id, create_time
+        SELECT id, agent_id, user_id, message_id, message_json, status, session_id, create_time,request_id
         FROM chat_memory
         WHERE agent_id = #{agentId} AND user_id = #{userId} AND status = #{status}
         ORDER BY create_time ASC
@@ -130,7 +131,7 @@
         FROM chat_memory_obsolete
     </select>
     <select id="findObsoleteChatMemoryBySessionIdAndUserId" resultMap="ChatMemoryResultMap">
-        SELECT id, agent_id, user_id, message_id, message_json, status, session_id, create_time
+        SELECT id, agent_id, user_id, message_id, message_json, status, session_id, create_time,request_id
         FROM chat_memory_obsolete
         WHERE session_id = #{sessionId} AND user_id = #{userId}
         ORDER BY create_time ASC
@@ -141,7 +142,7 @@
         WHERE status = #{status}
     </select>
     <select id="findTaskDoneChatMemoryBySessionIdAndUserIdAfterId" resultMap="ChatMemoryResultMap">
-        SELECT id, agent_id, user_id, message_id, message_json, status, session_id, create_time
+        SELECT id, agent_id, user_id, message_id, message_json, status, session_id, create_time,request_id
         FROM chat_memory
         WHERE session_id = #{sessionId} AND user_id = #{userId} AND id > #{lastId}
         <if test="status!=null and status.size()>0">
