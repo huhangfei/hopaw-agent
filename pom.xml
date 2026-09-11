@@ -50,7 +50,8 @@
         <zip4j.version>2.11.5</zip4j.version>
         <batik.version>1.17</batik.version>
         <thumbnailator.version>0.4.20</thumbnailator.version>
-        <artemis.version>2.28.0</artemis.version>
+        <!-- 2.44.0：修复 JDK 24+ (JEP 486) Subject.getSubject 崩溃；2.50.0 起 groupId 改为 org.apache.artemis，不兼容 -->
+        <artemis.version>2.44.0</artemis.version>
     </properties>
 
     <dependencyManagement>

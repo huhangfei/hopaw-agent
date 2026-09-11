@@ -2,7 +2,14 @@ package com.agent.hopaw.tool.ssh;
 
 import com.agent.hopaw.infra.tool.ToolSecurityLevel;
 import com.agent.hopaw.infra.service.IAgentExecutorService;
+import com.agent.hopaw.infra.service.ISysConfigService;
 import com.agent.hopaw.infra.util.InvocationParametersWrapper;
+import com.agent.hopaw.infra.model.dto.ToolConfigItem;
+import com.agent.hopaw.infra.model.dto.ToolMapConfigItem;
+import com.agent.hopaw.infra.model.dto.ValidationRule;
+import com.agent.hopaw.infra.model.entity.SysConfig;
+import com.alibaba.fastjson2.JSON;
+import com.alibaba.fastjson2.TypeReference;
 import com.jcraft.jsch.*;
 import dev.langchain4j.agent.tool.P;
 import dev.langchain4j.agent.tool.Tool;
@@ -12,6 +19,9 @@ import org.slf4j.LoggerFactory;
 import com.agent.hopaw.infra.tool.AgentTool;
 import org.springframework.beans.factory.annotation.Autowired;
 
+import java.util.Collections;
+import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.*;
@@ -19,6 +29,8 @@ import java.util.concurrent.atomic.AtomicReference;
 
 /**
  * SSH远程连接工具插件
+ * 支持多服务器配置：在系统配置中添加多组服务器（配置名称 + IP + 端口 + 账号 + 密码），
+ * 密码加密存储，sshConnectFromConfig 传入配置名称即可建立连接。
  * 注意：作为插件使用时，不要加 @Component 注解，由插件加载器实例化并通过 @Autowired 注入依赖
  * @author hhf
  */
@@ -26,8 +38,20 @@ public class SshTool implements AgentTool {
     private static final Logger logger = LoggerFactory.getLogger(SshTool.class);
     private static final Map<String, Session> SESSION_CACHE = new ConcurrentHashMap<>();
 
+    /** 映射组配置键：服务器配置名称 → {host, port, username, password} */
+    private static final String CONFIG_KEY_SERVERS = "servers";
+
     @Autowired
     private IAgentExecutorService agentExecutorService;
+
+    @Autowired
+    private ISysConfigService sysConfigService;
+
+    /** 服务器配置缓存：配置名称 → 服务器连接信息 */
+    private volatile Map<String, SshServer> cachedServers = Collections.emptyMap();
+
+    /** 服务器连接配置 */
+    private record SshServer(String host, int port, String username, String password) {}
 
     /**
      * 无参构造函数 - 插件加载器使用
@@ -62,6 +86,110 @@ public class SshTool implements AgentTool {
         return "SSH, SFTP";
     }
 
+    // ========== 多服务器配置定义与解析 ==========
+
+    /**
+     * 映射组结构配置：主体 key = 配置名称（服务器配置主键），values = 每组内的字段。
+     * 存储为一条 JSON：{"服务器1":{"host":"...","port":"22","username":"...","password":"..."},...}
+     * 密码为敏感项，整条 JSON 加密存储。
+     */
+    @Override
+    public List<ToolConfigItem> getConfigItems() {
+        ToolMapConfigItem servers = new ToolMapConfigItem(CONFIG_KEY_SERVERS, "服务器配置",
+                "配置多组服务器：每组填写服务器配置名称（作为配置主键，sshConnectFromConfig 通过该名称建立连接），组内配置服务器IP、端口、账号与密码",
+                ToolConfigItem.ConfigType.TEXT_SINGLE);
+        servers.setValues(List.of(
+                new ToolConfigItem("host", "服务器IP", "服务器IP地址或域名", ToolConfigItem.ConfigType.TEXT_SINGLE)
+                        .validation(new ValidationRule().required()),
+                new ToolConfigItem("port", "SSH端口", "SSH端口号，默认22", ToolConfigItem.ConfigType.TEXT_SINGLE)
+                        .validation(new ValidationRule().value(1L, 65535L)),
+                new ToolConfigItem("username", "登录账号", "SSH登录用户名", ToolConfigItem.ConfigType.TEXT_SINGLE)
+                        .validation(new ValidationRule().required()),
+                new ToolConfigItem("password", "登录密码", "SSH登录密码（加密存储）", ToolConfigItem.ConfigType.TEXT_PASSWORD)
+                        .validation(new ValidationRule().required())
+        ));
+        return List.of(servers);
+    }
+
+    @Override
+    public void asyncInit() {
+        reloadServers();
+    }
+
+    @Override
+    public void onConfigChanged() {
+        reloadServers();
+    }
+
+    /**
+     * 从 sys_config 加载 servers 映射组配置，解析为 配置名称 → 服务器连接信息。
+     */
+    private void reloadServers() {
+        Map<String, SshServer> servers = new LinkedHashMap<>();
+        if (sysConfigService != null) {
+            SysConfig config = sysConfigService.getByKey(getConfigPrefix() + CONFIG_KEY_SERVERS);
+            String json = config != null ? config.getConfigValue() : null;
+            if (json != null && !json.trim().isEmpty()) {
+                try {
+                    LinkedHashMap<String, LinkedHashMap<String, String>> groups = JSON.parseObject(json,
+                            new TypeReference<LinkedHashMap<String, LinkedHashMap<String, String>>>() {});
+                    for (Map.Entry<String, LinkedHashMap<String, String>> e : groups.entrySet()) {
+                        String host = e.getValue() != null ? e.getValue().get("host") : null;
+                        String port = e.getValue() != null ? e.getValue().get("port") : null;
+                        String username = e.getValue() != null ? e.getValue().get("username") : null;
+                        String password = e.getValue() != null ? e.getValue().get("password") : null;
+                        int portVal;
+                        try {
+                            portVal = (port == null || port.trim().isEmpty()) ? 22 : Integer.parseInt(port.trim());
+                        } catch (NumberFormatException ex) {
+                            logger.warn("服务器配置[{}]端口不合法（{}），已跳过", e.getKey(), port);
+                            continue;
+                        }
+                        if (isNotBlank(host) && isNotBlank(username) && isNotBlank(password)) {
+                            servers.put(e.getKey(), new SshServer(host.trim(), portVal, username.trim(), password));
+                        } else {
+                            logger.warn("服务器配置[{}]不完整（缺少 host、username 或 password），已跳过", e.getKey());
+                        }
+                    }
+                } catch (Exception ex) {
+                    logger.error("服务器配置解析失败：{}", ex.getMessage());
+                }
+            }
+        }
+        this.cachedServers = servers;
+        logger.info("SSH服务器配置已加载，共{}个：{}", servers.size(), servers.keySet());
+    }
+
+    /**
+     * 按服务器配置主键解析连接信息；缓存为空时先尝试加载一次。
+     */
+    private SshServer resolveServer(String serverKey) {
+        if (serverKey == null || serverKey.trim().isEmpty()) {
+            return null;
+        }
+        if (cachedServers.isEmpty()) {
+            reloadServers();
+        }
+        return cachedServers.get(serverKey.trim());
+    }
+
+    /**
+     * 生成服务器配置解析失败的提示信息（含可用配置列表，便于模型自我修正）。
+     */
+    private String serverError(String serverKey) {
+        if (serverKey == null || serverKey.trim().isEmpty()) {
+            return "错误：服务器配置主键不能为空，请传入系统配置中添加的服务器配置名称";
+        }
+        if (cachedServers.isEmpty()) {
+            return "错误：尚未配置任何服务器，请先在系统配置的SSH工具中添加（每组包含配置名称、服务器IP、端口、账号、密码）";
+        }
+        return "错误：未找到服务器配置 [" + serverKey + "]，当前已配置的服务器：" + String.join("、", cachedServers.keySet());
+    }
+
+    private static boolean isNotBlank(String s) {
+        return s != null && !s.trim().isEmpty();
+    }
+
     @ToolSecurityLevel(ToolSecurityLevel.Level.ALL_REQUIRE_APPROVAL)
     @Tool(value = {"SSH连接", "SSH远程连接服务器，建立SSH会话。密码属于敏感信息，如果账号密码错误不要自行猜测，请搜索记忆或询问用户。连接成功后会返回sessionKey，后续操作需要使用此sessionKey。"})
     public String sshConnect(
@@ -94,6 +222,39 @@ public class SshTool implements AgentTool {
         } catch (JSchException e) {
             logger.error("SSH connection failed", e);
             return "错误：连接失败 - " + e.getMessage();
+        }
+    }
+
+    @ToolSecurityLevel(ToolSecurityLevel.Level.ALL_REQUIRE_APPROVAL)
+    @Tool(value = {"SSH按配置连接", "通过系统配置中预置的服务器配置主键建立SSH会话，无需传入明文的IP、账号与密码。服务器配置在系统配置的SSH工具中维护（包含服务器IP、端口、账号、密码，密码加密存储）。连接成功后返回该配置主键作为sessionKey，后续操作使用此sessionKey。"})
+    public String sshConnectFromConfig(
+            @P(description = "服务器配置主键，即系统配置中的服务器配置名称") String serverKey) {
+        SshServer server = resolveServer(serverKey);
+        if (server == null) {
+            return serverError(serverKey);
+        }
+        // sessionKey 即服务器配置主键（配置名称约束不含冒号，不会与 host:port 形式的 sessionKey 冲突）
+        String sessionKey = serverKey.trim();
+
+        if (SESSION_CACHE.containsKey(sessionKey)) {
+            Session existing = SESSION_CACHE.get(sessionKey);
+            if (existing.isConnected()) {
+                return "成功：已存在连接，sessionKey=" + sessionKey;
+            }
+        }
+
+        try {
+            JSch jsch = new JSch();
+            Session session = jsch.getSession(server.username(), server.host(), server.port());
+            session.setPassword(server.password());
+            session.setConfig("StrictHostKeyChecking", "no");
+            session.connect(30000);
+
+            SESSION_CACHE.put(sessionKey, session);
+            return "成功：连接已建立，sessionKey=" + sessionKey;
+        } catch (JSchException e) {
+            logger.error("SSH connection from config [{}] failed", sessionKey, e);
+            return "错误：连接失败（服务器配置 [" + sessionKey + "]，目标 " + server.host() + ":" + server.port() + "） - " + e.getMessage();
         }
     }
 

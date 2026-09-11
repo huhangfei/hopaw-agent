@@ -3936,32 +3936,32 @@ function createPreviewItem(id, url, uploading, fileInfo) {
         spinner.className = 'preview-spinner';
         overlay.appendChild(spinner);
         item.appendChild(overlay);
-    } else if (fileInfo && fileInfo.type !== 'image') {
-        item.classList.add('file-preview-non-image');
-        var icon = document.createElement('div');
-        icon.className = 'preview-file-icon';
-        var icons = { video: '🎬', audio: '🎵', file: '📄' };
-        icon.textContent = icons[fileInfo.type] || '📄';
-        item.appendChild(icon);
-
-        var name = document.createElement('div');
-        name.className = 'preview-file-name';
-        name.textContent = fileInfo.name;
-        name.title = fileInfo.name;
-        item.appendChild(name);
-
-        var removeBtn = document.createElement('button');
-        removeBtn.className = 'preview-remove';
-        removeBtn.textContent = 'X';
-        removeBtn.onclick = function(e) {
-            e.stopPropagation();
-            removeFileById(id);
-        };
-        item.appendChild(removeBtn);
     } else {
-        var img = document.createElement('img');
-        img.src = url;
-        item.appendChild(img);
+        // 点击预览项：复用聊天历史的附件预览弹框
+        var attId = fileInfo ? fileInfo.id : null;
+        if (attId) {
+            item.title = fileInfo.name || '';
+            item.onclick = function() { openAttachmentPreview(attId); };
+        }
+
+        if (fileInfo && fileInfo.type !== 'image') {
+            item.classList.add('file-preview-non-image');
+            var icon = document.createElement('div');
+            icon.className = 'preview-file-icon';
+            var icons = { video: '🎬', audio: '🎵', file: '📄' };
+            icon.textContent = icons[fileInfo.type] || '📄';
+            item.appendChild(icon);
+
+            var name = document.createElement('div');
+            name.className = 'preview-file-name';
+            name.textContent = fileInfo.name;
+            name.title = fileInfo.name;
+            item.appendChild(name);
+        } else {
+            var img = document.createElement('img');
+            img.src = url;
+            item.appendChild(img);
+        }
 
         var removeBtn = document.createElement('button');
         removeBtn.className = 'preview-remove';

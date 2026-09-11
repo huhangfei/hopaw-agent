@@ -1451,6 +1451,7 @@ body.dark-theme .thinking-level-noui-label:hover {
     overflow: hidden;
     border: 1px solid #e0e0e0;
     flex-shrink: 0;
+    cursor: pointer;
 }
 .file-preview-item img {
     width: 100%;

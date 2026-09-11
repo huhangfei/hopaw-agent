@@ -70,7 +70,6 @@ var FilePreview = (function () {
             case 'text':     html += renderText(); break;
             default:         html += renderUnsupported(type); break;
         }
-        html += renderDownload(url, name);
         html += '</div>';
         container.innerHTML = html;
 
@@ -112,12 +111,6 @@ var FilePreview = (function () {
         return '<div class="preview-unsupported">' +
             '<div class="file-icon">' + (FILE_TYPE_ICONS[type] || '📦') + '</div>' +
             '<div>该文件类型不支持在线预览</div>' +
-            '</div>';
-    }
-
-    function renderDownload(url, name) {
-        return '<div class="preview-download-wrap">' +
-            '<a class="preview-download" href="' + url + '" target="_blank" download="' + escapeAttr(name || '') + '">下载文件</a>' +
             '</div>';
     }
 

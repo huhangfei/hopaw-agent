@@ -13,10 +13,13 @@ html, body {
     background: #fff;
     min-height: 100%;
     box-sizing: border-box;
+    display: flex;
+    flex-direction: column;
 }
 
 /* 预览内容容器 */
 .preview-container {
+    flex: 1;
     display: flex;
     flex-direction: column;
     align-items: center;
@@ -25,7 +28,7 @@ html, body {
 
 .preview-container img {
     max-width: 100%;
-    max-height: 80vh;
+    height: 100vh;
     border-radius: 8px;
 }
 
@@ -43,7 +46,7 @@ html, body {
     padding: 16px;
     border-radius: 8px;
     overflow: auto;
-    max-height: 90vh;
+    height: 100vh;
     font-family: 'Consolas', 'Monaco', monospace;
     font-size: 13px;
     white-space: pre-wrap;
@@ -54,11 +57,11 @@ html, body {
 .preview-container .preview-markdown {
     width: 100%;
     background: #fff;
+    height: 100vh;
     color: #333;
     padding: 20px 24px;
     border-radius: 8px;
     overflow: auto;
-    max-height: 90vh;
     font-size: 14px;
     line-height: 1.7;
     border: 1px solid #e5e7eb;
@@ -137,7 +140,7 @@ html, body {
 /* PDF 预览 */
 .preview-container .preview-pdf {
     width: 100%;
-    height: 80vh;
+    height: 100vh;
     border: none;
 }
 
@@ -151,22 +154,6 @@ html, body {
 .preview-container .preview-unsupported .file-icon {
     font-size: 64px;
     margin-bottom: 12px;
-}
-
-/* 下载链接 */
-.preview-download-wrap {
-    width: 100%;
-    text-align: center;
-}
-
-.preview-download {
-    color: #4f46e5;
-    text-decoration: none;
-    font-size: 13px;
-}
-
-.preview-download:hover {
-    text-decoration: underline;
 }
 
 /* ========== 暗色主题适配 ========== */

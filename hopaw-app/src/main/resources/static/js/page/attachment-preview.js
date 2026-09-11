@@ -35,6 +35,7 @@ var AttachmentPreview = (function () {
             '<span class="info-item">来源: ' + escapeHtml(AttachmentSource.label(item.source) || '') + '</span>' +
             '<span class="info-item">创建时间: ' + escapeHtml(formatTime(item.createTime)) + '</span>' +
             '<span class="info-item">更新时间: ' + escapeHtml(formatTime(item.updateTime)) + '</span>' +
+            '<a class="preview-download" href="' + escapeHtml(item.url) + '" target="_blank" download="' + escapeHtml(item.originalName || '') + '">下载文件</a>' +
             '</div>';
         container.innerHTML = html;
     }
