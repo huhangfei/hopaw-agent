@@ -65,12 +65,26 @@
     background: #e84118;
 }
 
-.btn-add-header {
-    background: #4CAF50;
-    color: white;
+/* 会话列表头部的新会话小按钮：紧跟"会话列表"文字，仅显示 + 号 */
+.btn-add-session {
+    width: 20px;
+    height: 20px;
+    padding: 0;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    background: transparent;
+    color: #999;
+    /* session-panel-title 为 space-between 布局，auto 边距吸收剩余空间，保证类型筛选组仍靠右 */
+    margin-right: auto;
+    transition: background 0.15s, color 0.15s;
 }
-.btn-add-header:hover {
-    background: #45a049;
+.btn-add-session:hover {
+    background: #f0f2f5;
+    color: #667eea;
 }
 
 .header-dropdown {
@@ -2457,12 +2471,20 @@ body.dark-theme .agent-select {
     color: #e0e0e0;
     border-color: #3d3d6b;
     background: #1e3a5f;
+    /* 暗色背景下覆盖自带的深灰箭头为亮色，否则不可见 */
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='%23cccccc'%3E%3Cpath d='M7 10l5 5 5-5z'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 12px center;
 }
 
 body.dark-theme .agent-select-toolbar {
     color: #999;
     border-color: #999;
     background: transparent;
+    /* 暗色背景下覆盖自带的深灰箭头为亮色，否则不可见 */
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='%23cccccc'%3E%3Cpath d='M7 10l5 5 5-5z'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 8px center;
 }
 
 body.dark-theme .agent-select-toolbar:hover {
@@ -3200,12 +3222,12 @@ body.dark-theme .model-dropdown-empty {
     color: #777;
 }
 
-body.dark-theme .btn-add-header {
-    background: #2d5a2d;
-    color: #a8d4a8;
+body.dark-theme .btn-add-session {
+    color: #777;
 }
-body.dark-theme .btn-add-header:hover {
-    background: #3d7a3d;
+body.dark-theme .btn-add-session:hover {
+    background: #333;
+    color: #8b9aff;
 }
 
 body.dark-theme .btn-stop-header {

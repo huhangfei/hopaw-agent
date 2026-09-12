@@ -219,7 +219,20 @@ public class SshTool implements AgentTool {
     private Session jschConnect(String sessionKey, String username, String host, int port, String password) throws JSchException {
         Session existing = SESSION_CACHE.get(sessionKey);
         if (existing != null && existing.isConnected()) {
-            return existing;
+            if (isSessionAlive(existing)) {
+                return existing;
+            }
+            // 老连接不可用（isConnected 无法发现服务器重启/网络中断后的半死连接）：断开老连接并移除缓存，重新连接
+            logger.info("缓存的SSH连接已失效，断开并重新连接: sessionKey={}", sessionKey);
+            if (SESSION_CACHE.remove(sessionKey, existing)) {
+                disconnectQuietly(existing);
+            } else {
+                // 已被其他线程处理，复用其新连接
+                Session current = SESSION_CACHE.get(sessionKey);
+                if (current != null && current.isConnected()) {
+                    return current;
+                }
+            }
         }
         JSch jsch = new JSch();
         Session session = jsch.getSession(username, host, port);
@@ -244,6 +257,33 @@ public class SshTool implements AgentTool {
         disconnectQuietly(session);
         Session current = SESSION_CACHE.get(sessionKey);
         return current != null ? current : session;
+    }
+
+    /**
+     * 真实探测会话是否可用。
+     * isConnected() 只反映本地标志位，无法发现服务器重启/网络中断后的半死连接，
+     * 这里通过打开 exec channel 执行空命令（true）做一次真实往返，connect 成功即连接可用。
+     */
+    private boolean isSessionAlive(Session session) {
+        ChannelExec channel = null;
+        try {
+            channel = (ChannelExec) session.openChannel("exec");
+            channel.setCommand("true");
+            channel.setInputStream(null);
+            channel.connect(5000);
+            return true;
+        } catch (Exception e) {
+            logger.warn("SSH连接探测失败（{}），将重建连接", e.getMessage());
+            return false;
+        } finally {
+            if (channel != null) {
+                try {
+                    channel.disconnect();
+                } catch (Throwable ignore) {
+                    // 清理失败不影响主流程
+                }
+            }
+        }
     }
 
     private static void disconnectQuietly(Session session) {
