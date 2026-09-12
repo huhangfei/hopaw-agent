@@ -44,6 +44,9 @@ public class WebPagePlaywrightTool implements AgentTool {
         return t;
     });
 
+    /** 等待页面网络空闲的最长时间（毫秒），超时后按当前已渲染内容继续 */
+    private static final double NETWORK_IDLE_TIMEOUT = 15000;
+
     @Override
     public String getName() {
         return "webPagePlaywright";
@@ -144,6 +147,20 @@ public class WebPagePlaywrightTool implements AgentTool {
         }
     }
 
+    /**
+     * 等待页面 JS 渲染完成：等待网络空闲（无网络请求持续 500ms）。
+     * SPA 页面的内容通常在 load 事件之后由 XHR/fetch 异步加载，仅等 load 会拿到未渲染的骨架页。
+     * 部分页面存在持续轮询/长连接请求，网络永远不会空闲，此时超时后按当前已渲染内容继续。
+     */
+    private void waitForJsRendering(Page page, String url) {
+        try {
+            page.waitForLoadState(LoadState.NETWORKIDLE,
+                    new Page.WaitForLoadStateOptions().setTimeout(NETWORK_IDLE_TIMEOUT));
+        } catch (PlaywrightException e) {
+            logger.warn("等待网络空闲超时（页面可能存在持续轮询），按当前已渲染内容继续: url={}", url);
+        }
+    }
+
     @ToolSecurityLevel(ToolSecurityLevel.Level.SAFE)
     @Tool(value = {"获取网页用Playwright", "获取网页内容，输入URL地址，返回网页的纯文本内容"})
     public String fetchWebPageByPlaywright(@P(description = "URL地址") String url) {
@@ -175,7 +192,7 @@ public class WebPagePlaywrightTool implements AgentTool {
                 return "获取网页失败: 无法加载页面";
             }
 
-            page.waitForLoadState(LoadState.LOAD);
+            waitForJsRendering(page, url);
 
             String html = page.content();
 
@@ -235,7 +252,7 @@ public class WebPagePlaywrightTool implements AgentTool {
             if (response == null) {
                 return "截图失败: 无法加载页面";
             }
-            page.waitForLoadState(LoadState.LOAD);
+            waitForJsRendering(page, url.trim());
 
             // 按保存路径扩展名选择格式
             String lower = savePath.trim().toLowerCase();
