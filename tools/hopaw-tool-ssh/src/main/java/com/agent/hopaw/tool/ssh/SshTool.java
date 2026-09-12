@@ -203,25 +203,56 @@ public class SshTool implements AgentTool {
         int portVal = (port != null && port > 0) ? port : 22;
         String sessionKey = host + ":" + portVal;
 
-        if (SESSION_CACHE.containsKey(sessionKey)) {
-            Session existing = SESSION_CACHE.get(sessionKey);
-            if (existing.isConnected()) {
-                return "成功：已存在连接，sessionKey=" + sessionKey;
-            }
-        }
-
         try {
-            JSch jsch = new JSch();
-            Session session = jsch.getSession(username, host, portVal);
-            session.setPassword(password);
-            session.setConfig("StrictHostKeyChecking", "no");
-            session.connect(30000);
-
-            SESSION_CACHE.put(sessionKey, session);
+            Session session = jschConnect(sessionKey, username, host, portVal, password);
             return "成功：连接已建立，sessionKey=" + sessionKey;
         } catch (JSchException e) {
             logger.error("SSH connection failed", e);
             return "错误：连接失败 - " + e.getMessage();
+        }
+    }
+
+    /**
+     * 建立连接并注册到会话缓存（并发安全）。
+     * 使用 putIfAbsent/replace 保证：并发连接同一目标时只有一个连接被保留，竞争失败的连接立即关闭，不会泄漏。
+     */
+    private Session jschConnect(String sessionKey, String username, String host, int port, String password) throws JSchException {
+        Session existing = SESSION_CACHE.get(sessionKey);
+        if (existing != null && existing.isConnected()) {
+            return existing;
+        }
+        JSch jsch = new JSch();
+        Session session = jsch.getSession(username, host, port);
+        session.setPassword(password);
+        session.setConfig("StrictHostKeyChecking", "no");
+        session.connect(30000);
+
+        Session prev = SESSION_CACHE.putIfAbsent(sessionKey, session);
+        if (prev == null) {
+            return session;
+        }
+        // 并发窗口内已有其他线程抢先注册：优先复用，关闭本次新建连接避免泄漏
+        disconnectQuietly(session);
+        if (prev.isConnected()) {
+            return prev;
+        }
+        // 抢先注册的连接已断开：原子替换
+        if (SESSION_CACHE.replace(sessionKey, prev, session)) {
+            return session;
+        }
+        // replace 失败说明又被其他线程更新，复用当前缓存中的连接
+        disconnectQuietly(session);
+        Session current = SESSION_CACHE.get(sessionKey);
+        return current != null ? current : session;
+    }
+
+    private static void disconnectQuietly(Session session) {
+        if (session != null) {
+            try {
+                session.disconnect();
+            } catch (Throwable ignore) {
+                // 关闭失败不影响主流程
+            }
         }
     }
 
@@ -236,26 +267,35 @@ public class SshTool implements AgentTool {
         // sessionKey 即服务器配置主键（配置名称约束不含冒号，不会与 host:port 形式的 sessionKey 冲突）
         String sessionKey = serverKey.trim();
 
-        if (SESSION_CACHE.containsKey(sessionKey)) {
-            Session existing = SESSION_CACHE.get(sessionKey);
-            if (existing.isConnected()) {
-                return "成功：已存在连接，sessionKey=" + sessionKey;
-            }
-        }
-
         try {
-            JSch jsch = new JSch();
-            Session session = jsch.getSession(server.username(), server.host(), server.port());
-            session.setPassword(server.password());
-            session.setConfig("StrictHostKeyChecking", "no");
-            session.connect(30000);
-
-            SESSION_CACHE.put(sessionKey, session);
+            jschConnect(sessionKey, server.username(), server.host(), server.port(), server.password());
             return "成功：连接已建立，sessionKey=" + sessionKey;
         } catch (JSchException e) {
             logger.error("SSH connection from config [{}] failed", sessionKey, e);
             return "错误：连接失败（服务器配置 [" + sessionKey + "]，目标 " + server.host() + ":" + server.port() + "） - " + e.getMessage();
         }
+    }
+
+    @ToolSecurityLevel(ToolSecurityLevel.Level.SAFE)
+    @Tool(value = {"SSH获取服务器配置列表", "获取系统配置中所有已配置的SSH服务器列表（配置名称、服务器IP、端口、登录账号），不包含密码。可用于查询可用配置或确认某个配置主键是否存在，供sshConnectFromConfig使用。", "SSH,配置,列表,服务器"})
+    public String getSshConnectConfigs() {
+        if (cachedServers.isEmpty()) {
+            reloadServers();
+        }
+        if (cachedServers.isEmpty()) {
+            return "当前未配置任何SSH服务器，请先在系统配置的SSH工具中添加（每组包含配置名称、服务器IP、端口、账号、密码）";
+        }
+        StringBuilder sb = new StringBuilder("已配置 " + cachedServers.size() + " 台服务器（密码已隐藏）：\n");
+        int index = 1;
+        for (Map.Entry<String, SshServer> e : cachedServers.entrySet()) {
+            SshServer s = e.getValue();
+            sb.append(index++).append(". 配置名称：").append(e.getKey())
+                    .append("，服务器IP：").append(s.host())
+                    .append("，端口：").append(s.port())
+                    .append("，账号：").append(s.username())
+                    .append("\n");
+        }
+        return sb.toString().trim();
     }
 
     @ToolSecurityLevel(ToolSecurityLevel.Level.ALL_REQUIRE_APPROVAL)

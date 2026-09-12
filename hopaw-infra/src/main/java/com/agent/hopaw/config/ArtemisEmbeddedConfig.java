@@ -9,6 +9,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.DependsOn;
+import org.springframework.jms.connection.CachingConnectionFactory;
 import org.springframework.jms.core.JmsTemplate;
 
 import javax.jms.ConnectionFactory;
@@ -46,7 +47,13 @@ public class ArtemisEmbeddedConfig {
     @Bean
     @DependsOn("embeddedActiveMQ")
     public ConnectionFactory jmsConnectionFactory() {
-        return new ActiveMQConnectionFactory("vm://0");
+        // JmsTemplate 默认每次发送都新建并关闭 Connection，InVM 传输对正常关闭也会回调
+        // connectionDestroyed 并打印 failover DEBUG 日志（AMQ219006），造成周期性噪音；
+        // 用 CachingConnectionFactory 复用单条共享连接 + 缓存 Session，消除连接反复创建/销毁
+        ActiveMQConnectionFactory target = new ActiveMQConnectionFactory("vm://0");
+        CachingConnectionFactory caching = new CachingConnectionFactory(target);
+        caching.setSessionCacheSize(16);
+        return caching;
     }
 
     @Bean

@@ -10,7 +10,7 @@
         <relativePath>../../pom.xml</relativePath>
     </parent>
 
-    <artifactId>hopaw-tool-webpage</artifactId>
+    <artifactId>hopaw-tool-webpage-playwright</artifactId>
     <version>1.0.0</version>
     <packaging>jar</packaging>
     <properties>
@@ -36,8 +36,8 @@
             <artifactId>jsoup</artifactId>
         </dependency>
         <dependency>
-            <groupId>org.htmlunit</groupId>
-            <artifactId>htmlunit</artifactId>
+            <groupId>com.microsoft.playwright</groupId>
+            <artifactId>playwright</artifactId>
         </dependency>
     </dependencies>
     <build>

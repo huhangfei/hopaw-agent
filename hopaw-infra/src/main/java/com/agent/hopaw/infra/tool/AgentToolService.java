@@ -532,6 +532,11 @@ public class AgentToolService implements IAgentToolService {
 
     @Override
     public PluginInstallResult installPluginFromJarFile(Path jarPath) throws Exception {
+        return installPluginFromJarFile(jarPath, null);
+    }
+
+    @Override
+    public PluginInstallResult installPluginFromJarFile(Path jarPath, String jarFileName) throws Exception {
         if (jarPath == null) {
             throw new IllegalArgumentException("jarPath 不能为空");
         }
@@ -546,7 +551,11 @@ public class AgentToolService implements IAgentToolService {
             throw new IllegalArgumentException("JAR 文件为空: " + jarPath);
         }
 
-        String jarFileName = src.getName();
+        // 目标文件名优先取调用方指定的原始文件名，否则回退用源文件的名字
+        if (jarFileName == null || jarFileName.trim().isEmpty()) {
+            jarFileName = src.getName();
+        }
+        jarFileName = jarFileName.trim();
         if (!jarFileName.toLowerCase().endsWith(".jar")) {
             throw new IllegalArgumentException("文件扩展名必须为 .jar: " + jarFileName);
         }

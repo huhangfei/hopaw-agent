@@ -44,12 +44,15 @@ public class PluginClassLoader extends ClassLoader {
                     // 处理 BOOT-INF/classes/ 下的类(Spring Boot FAT JAR)
                     String className;
                     if (entryName.startsWith("BOOT-INF/classes/")) {
-                        className = entryName.substring("BOOT-INF/classes/".length())
-                                .replace('/', '.')
-                                .replace(".class", "");
+                        className = entryName.substring("BOOT-INF/classes/".length());
                     } else {
-                        className = entryName.replace('/', '.').replace(".class", "");
+                        className = entryName;
                     }
+                    // 先截掉结尾的 .class 后缀再做斜杠转换；
+                    // 不能用 replace(".class","")，否则路径中 class 开头的目录段会被误删
+                    // （如 corejs/classfile/Foo.class 曾被错误转为 corejsfile.Foo，导致运行时 NoClassDefFoundError）
+                    className = className.substring(0, className.length() - ".class".length())
+                            .replace('/', '.');
                     
                     byte[] bytes = readAllBytes(jar.getInputStream(entry));
                     classCache.put(className, bytes);

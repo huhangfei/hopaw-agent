@@ -36,4 +36,14 @@ public interface IAgentToolService {
      * @return 安装结果
      */
     PluginInstallResult installPluginFromJarFile(Path jarPath) throws Exception;
+
+    /**
+     * 直接从本地 .jar 文件安装插件，并指定目标文件名。
+     * 用于上传安装场景：临时文件路径与实际文件名不一致时，保留原始文件名入库。
+     *
+     * @param jarPath     本地 jar 文件路径
+     * @param jarFileName 目标文件名（以 .jar 结尾），为空时回退用 jarPath 的文件名
+     * @return 安装结果
+     */
+    PluginInstallResult installPluginFromJarFile(Path jarPath, String jarFileName) throws Exception;
 }
