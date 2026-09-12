@@ -186,9 +186,17 @@ function renderAllMessages() {
     messageContents.forEach(function(el) {
         var rawContent = el.getAttribute('data-raw-content');
         if (rawContent) {
-            el.innerHTML = renderMarkdown(rawContent);
+            // 思考内容：(思考) 标记内联拼接在开头，不单独占一行
+            el.innerHTML = el.classList.contains('thinking-content')
+                ? renderThinkingContent(rawContent)
+                : renderMarkdown(rawContent);
         }
     });
+}
+
+/** 渲染思考内容：(思考) 标记直接拼接在内容开头（同显示，节省一行空间） */
+function renderThinkingContent(content) {
+    return '<span class="thinking-label-inline">(思考)</span>' + renderMarkdown(content);
 }
 
 /* ================= Agent 回合大盒子：连续的 agent 消息（思考/文本/工具/错误/警告）归入同一容器，视觉上为一个整体 ================= */
@@ -329,7 +337,7 @@ function buildThinkingSection(content, expanded) {
 
     var think = document.createElement('div');
     think.className = 'message-content thinking-content';
-    think.textContent = content;
+    think.innerHTML = renderThinkingContent(content);
     think.setAttribute('data-raw-content', content);
     section.appendChild(think);
 
@@ -657,7 +665,7 @@ function buildHistoryMessageNode(chat) {
         // agent 小节无独立 footer（整盒底部统一展示时间与复制）
         if (!isAgent) { div.appendChild(buildHistoryFooter(timeText, null)); }
     } else if (type === 'thinking') {
-        appendLabel(div, '(思考)');
+        // (思考) 标记拼接在思考内容开头，不单独占一行
         // 历史思考消息默认收起，仅显示两行，点击展开
         div.appendChild(buildThinkingSection(chat.content, false));
     } else if (type === 'error' || type === 'warn') {
@@ -1777,11 +1785,7 @@ function handleThinking(data, requestId) {
                 msgState.currentStreamingMessage.setAttribute('data-message-no', data.messageNo);
             }
 
-            // 回合盒子头部已展示智能体名称，小节仅保留类型标签
-            var label = document.createElement('div');
-            label.className = 'message-label';
-            label.textContent = '(思考)';
-            msgState.currentStreamingMessage.appendChild(label);
+            // 回合盒子头部已展示智能体名称；(思考) 标记拼接在思考内容开头，不单独占一行
 
             // 实时输出期间保持展开，思考完成后自动收起
             thinkingSection = buildThinkingSection('', true);
@@ -1804,7 +1808,7 @@ function handleThinking(data, requestId) {
             // 增量片段：追加
             msgState.thinkingContent += (data.content || '');
         }
-        msgState.thinkingDiv.innerHTML = renderMarkdown(msgState.thinkingContent);
+        msgState.thinkingDiv.innerHTML = renderThinkingContent(msgState.thinkingContent);
         msgState.thinkingDiv.setAttribute('data-raw-content', msgState.thinkingContent);
         if (data.status === 'partial') {
             // 实时追加时保持展开，便于观察当前思考进度

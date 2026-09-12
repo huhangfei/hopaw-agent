@@ -2147,6 +2147,17 @@ body.dark-theme .model-tag-cap {
 .thinking-content p{
     margin:0px 0px;
 }
+/* (思考) 标记：内联拼接在思考内容开头，不单独占一行 */
+.thinking-label-inline {
+    font-weight: 600;
+    font-style: normal;
+    margin-right: 4px;
+}
+/* markdown 首段为块级 <p>：置为 inline 使 (思考) 标记与首行内容同行显示
+   （(思考) span 排在 <p> 之前，<p> 非首个子元素，须用 first-of-type） */
+.thinking-content > p:first-of-type {
+    display: inline;
+}
 /* 思考小节：默认收起仅显示两行（3em = 12px * 1.5 * 2），完成后自动收起 */
 .thinking-section:not(.expanded) .thinking-content {
     max-height: 3em;
