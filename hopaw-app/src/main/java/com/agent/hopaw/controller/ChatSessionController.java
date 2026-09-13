@@ -246,6 +246,27 @@ public class ChatSessionController {
     }
 
     /**
+     * 手动延长执行器看门狗的超时时间（秒，默认60）：
+     * 用于任务仍在进行但即将超时时用户主动续时
+     */
+    @PostMapping("/{sessionId}/extend-watchdog")
+    @ResponseBody
+    public ResponseBean extendWatchdog(@PathVariable String sessionId,
+                                       @RequestParam(defaultValue = "60") long seconds) {
+        if (seconds < 1) {
+            seconds = 60;
+        }
+        if (seconds > 3600) {
+            seconds = 3600;
+        }
+        var executor = agentExecutorService.getAgentExecutor(sessionId);
+        Map<String, Object> result = new HashMap<>(4);
+        result.put("running", executor != null && executor.running());
+        result.put("remainingSeconds", executor != null ? executor.extendWatchdog(seconds) : 0);
+        return ResponseBean.success(result);
+    }
+
+    /**
      * 会话清理设置页：分页查询当前用户的会话列表（含消息记录数量）
      */
     @GetMapping("/stats-page")

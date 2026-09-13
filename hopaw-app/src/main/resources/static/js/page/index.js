@@ -2133,6 +2133,38 @@ function renderLockCountdown() {
         el.textContent = '';
         el.style.display = 'none';
     }
+    // 超时剩余60秒内显示"延长超时"按钮（位于更多菜单左侧），超时解除或会话结束后隐藏
+    var extendBtn = document.getElementById('btnExtendTimeout');
+    if (extendBtn) {
+        if (lockRemainingSeconds > 0 && lockRemainingSeconds <= 60) {
+            extendBtn.classList.remove('hide');
+        } else {
+            extendBtn.classList.add('hide');
+        }
+    }
+}
+
+/**
+ * 延长当前执行器的看门狗超时时间60秒（超时临近时头部出现的沙漏+按钮）
+ */
+function extendSessionTimeout() {
+    if (!currentSessionId) return;
+    var btn = document.getElementById('btnExtendTimeout');
+    if (btn) btn.disabled = true;
+    fetch('/api/session/' + encodeURIComponent(currentSessionId) + '/extend-watchdog?seconds=60', { method: 'POST' })
+        .then(function(r) { return r.json(); })
+        .then(function(resp) {
+            if (resp.code === 200 && resp.data) {
+                if (resp.data.remainingSeconds > 0) {
+                    lockRemainingSeconds = resp.data.remainingSeconds;
+                    renderLockCountdown();
+                }
+            }
+        })
+        .catch(function() { /* 静默失败，下次轮询刷新 */ })
+        .finally(function() {
+            if (btn) btn.disabled = false;
+        });
 }
 
 function selectAgent(selectElement) {

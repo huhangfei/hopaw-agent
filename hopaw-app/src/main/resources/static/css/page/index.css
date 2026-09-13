@@ -65,6 +65,30 @@
     background: #e84118;
 }
 
+/* 延长超时按钮：超时剩余60秒内出现在更多菜单左侧，沙漏+加号图标，柔和琥珀色呼应超时语义 */
+.btn-extend-timeout {
+    height: 32px;
+    width: 32px;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: #fdf1e3;
+    color: #d98c2b;
+    flex-shrink: 0;
+    transition: background 0.15s, color 0.15s;
+}
+.btn-extend-timeout:hover {
+    background: #f9e3c8;
+    color: #c2761a;
+}
+.btn-extend-timeout:disabled {
+    opacity: 0.6;
+    cursor: default;
+}
+
 /* 会话列表头部的新会话小按钮：紧跟"会话列表"文字，仅显示 + 号 */
 .btn-add-session {
     width: 20px;
@@ -3228,6 +3252,15 @@ body.dark-theme .btn-add-session {
 body.dark-theme .btn-add-session:hover {
     background: #333;
     color: #8b9aff;
+}
+
+body.dark-theme .btn-extend-timeout {
+    background: #4a3a22;
+    color: #d9a04e;
+}
+body.dark-theme .btn-extend-timeout:hover {
+    background: #5c4828;
+    color: #e8b567;
 }
 
 body.dark-theme .btn-stop-header {

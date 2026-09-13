@@ -36,7 +36,7 @@ public class WebMvcConfig implements WebMvcConfigurer {
         registry.addResourceHandler("/exports/**")
                 .addResourceLocations(exportPath);
         String tempFilePath = "file:" + userDir + "/temp-file/";
-        registry.addResourceHandler(userDir+"/temp-file/**")
+        registry.addResourceHandler("/temp-file/**")
                 .addResourceLocations(tempFilePath);
         // 附件文件访问：将 /attachments/** 映射到配置的附件目录
         File dir = new File(attachmentDir);

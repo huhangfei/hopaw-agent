@@ -348,6 +348,20 @@ public class AgentExecutor implements IAgentExecutor {
         return Math.max(0, (elapsed + 999) / 1000);
     }
 
+    /**
+     * 手动延长看门狗截止时间（秒）：用于任务仍在进行但即将超时时用户主动续时。
+     * 原子累加截止时间，等待循环下一轮即感知到新的剩余时间；返回延长后的剩余秒数
+     */
+    @Override
+    public long extendWatchdog(long seconds) {
+        if (!running() || seconds <= 0) {
+            return getWatchdogRemainingSeconds();
+        }
+        long newDeadline = watchdogDeadlineMs.addAndGet(seconds * 1000L);
+        long remaining = newDeadline - System.currentTimeMillis();
+        return Math.max(0, (remaining + 999) / 1000);
+    }
+
     @Override
     public int getExecutedToolCount() {
         return executedToolCount.get();

@@ -44,6 +44,18 @@
                     <span class="chat-header-timer-text">运行中 <span id="runningElapsed"></span></span>
                     <span class="chat-header-timer-countdown" id="runningCountdown"></span>
                 </div>
+                <!-- 超时剩余60秒内显示：点击延长超时时间60秒 -->
+                <button class="btn-extend-timeout hide" id="btnExtendTimeout" onclick="extendSessionTimeout()"
+                        title="延长超时时间60秒">
+                    <svg viewBox="0 0 24 24" fill="currentColor" width="15" height="15">
+                        <!-- 沙漏：剩余时间 -->
+                        <g transform="translate(0.8,0.5) scale(0.78)">
+                            <path d="M5 2h14v3l-5.5 7L19 19v3H5v-3l5.5-7L5 5V2z"/>
+                        </g>
+                        <!-- 右下角加号：追加时间 -->
+                        <path d="M18.7 13.5h2v2.7h2.7v2h-2.7v2.7h-2v-2.7H16v-2h2.7v-2.7z"/>
+                    </svg>
+                </button>
                 <div class="header-dropdown">
                     <button class="btn-more" title="更多操作">
                         <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor">
