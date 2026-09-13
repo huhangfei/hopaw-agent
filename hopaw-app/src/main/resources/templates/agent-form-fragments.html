@@ -112,7 +112,7 @@
                 <div class="form-right" id="addToolListContainerFragment">
                     <div class="form-group">
                         <div class="tool-header">
-                            <label>工具</label>
+                            <label id="addToolPanelTitleFragment">工具</label>
                             <div class="tool-toggle-bar">
                                 <button type="button" class="btn-tool-toggle"
                                         onclick="selectAllTools('#addAgentModalFragment .checkbox-group')">全选
@@ -121,6 +121,9 @@
                                         onclick="deselectAllTools('#addAgentModalFragment .checkbox-group')">取消
                                 </button>
                             </div>
+                        </div>
+                        <div class="tool-mode-hint tool-mode-hint-include" id="addToolModeHintFragment">
+                            勾选该智能体可以使用的工具
                         </div>
                         <div class="checkbox-group">
                             <label th:each="ts : ${toolSets}" class="checkbox-item">
@@ -277,11 +280,13 @@
                         </div>
                     </div>
                 </div>
+                <!-- 允许全部工具时仍显示工具列表：此时勾选的是要排除的工具（exclude-mode） -->
                 <div class="form-right" id="editToolListContainerFragment"
-                     th:style="${agent.enableAllTools ? 'display:none' : ''}">
+                     th:classappend="${agent.enableAllTools ? 'exclude-mode' : ''}">
                     <div class="form-group">
                         <div class="tool-header">
-                            <label>工具</label>
+                            <label id="editToolPanelTitleFragment"
+                                   th:text="${agent.enableAllTools ? '排除工具' : '工具'}">工具</label>
                             <div class="tool-toggle-bar">
                                 <button type="button" class="btn-tool-toggle"
                                         onclick="selectAllTools('#editToolListFragment')">全选
@@ -290,6 +295,11 @@
                                         onclick="deselectAllTools('#editToolListFragment')">取消
                                 </button>
                             </div>
+                        </div>
+                        <div th:class="${agent.enableAllTools ? 'tool-mode-hint tool-mode-hint-exclude' : 'tool-mode-hint tool-mode-hint-include'}"
+                             id="editToolModeHintFragment"
+                             th:text="${agent.enableAllTools ? '已允许使用所有工具：此处勾选的工具将被排除，其余工具全部可用' : '勾选该智能体可以使用的工具'}">
+                            勾选该智能体可以使用的工具
                         </div>
                         <div class="checkbox-group" id="editToolListFragment">
                             <label th:each="ts : ${toolSets}" class="checkbox-item">

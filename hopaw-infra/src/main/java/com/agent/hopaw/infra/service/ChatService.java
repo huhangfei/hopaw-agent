@@ -3,16 +3,10 @@ package com.agent.hopaw.infra.service;
 import com.agent.hopaw.infra.constant.AgentExecutorBizTypeEnum;
 import com.agent.hopaw.infra.executor.IAgentExecutor;
 import com.agent.hopaw.infra.memory.ILongTermMemoryService;
-import com.agent.hopaw.infra.model.dto.AgentExecutorParams;
-import com.agent.hopaw.infra.model.dto.AttachmentFile;
-import com.agent.hopaw.infra.model.dto.AvatarSettings;
-import com.agent.hopaw.infra.model.dto.SkillInfo;
-import com.agent.hopaw.infra.model.dto.ToolSetInfo;
-import com.agent.hopaw.infra.model.dto.UserChatRequest;
+import com.agent.hopaw.infra.model.dto.*;
 import com.agent.hopaw.infra.model.entity.Agent;
 import com.agent.hopaw.infra.model.entity.ChatSession;
 import com.agent.hopaw.infra.tool.AgentTool;
-import com.agent.hopaw.infra.tool.IAgentToolService;
 import com.agent.hopaw.infra.util.UuidUtil;
 import dev.langchain4j.data.message.Content;
 import dev.langchain4j.data.message.ImageContent;
@@ -21,13 +15,12 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 
+import java.io.File;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Base64;
 import java.util.List;
 import java.util.function.Function;
@@ -41,7 +34,6 @@ public class ChatService implements IChatService {
     private static final Logger logger = LoggerFactory.getLogger(ChatService.class);
 
     private final IAgentService agentService;
-    private final IAgentToolService agentToolService;
     private final IAvatarSettingsService avatarSettingsService;
     private final ISkillService skillService;
     private final ILongTermMemoryService longTermMemoryService;
@@ -54,9 +46,8 @@ public class ChatService implements IChatService {
     private final IChatUserMessageService chatUserMessageService;
     private final IAttachmentService attachmentService;
 
-    public ChatService(IAgentService agentService, IAgentToolService agentToolService, IAvatarSettingsService avatarSettingsService, ISkillService skillService, ILongTermMemoryService longTermMemoryService, ISysConfigService sysConfigService, IMcpServerConfigService mcpServerConfigService, IAgentExecutorService agentExecutorService, IWorkflowTaskService workflowTaskService, IChatSessionService chatSessionService, IProjectIterateService projectIterateService, IChatUserMessageService chatUserMessageService, IAttachmentService attachmentService) {
+    public ChatService(IAgentService agentService, IAvatarSettingsService avatarSettingsService, ISkillService skillService, ILongTermMemoryService longTermMemoryService, ISysConfigService sysConfigService, IMcpServerConfigService mcpServerConfigService, IAgentExecutorService agentExecutorService, IWorkflowTaskService workflowTaskService, IChatSessionService chatSessionService, IProjectIterateService projectIterateService, IChatUserMessageService chatUserMessageService, IAttachmentService attachmentService) {
         this.agentService = agentService;
-        this.agentToolService = agentToolService;
         this.avatarSettingsService = avatarSettingsService;
         this.skillService = skillService;
         this.longTermMemoryService = longTermMemoryService;
@@ -95,21 +86,11 @@ public class ChatService implements IChatService {
             throw new RuntimeException("智能体没有设置AI模型");
         }
         AvatarSettings avatarSettings = avatarSettingsService.getSettings(userChatRequest.getUserId(), agent.getId());
-        List<String> selectedToolNames = parseToolNames(agent.getTools());
-        List<ToolSetInfo> selectedTools;
-        if (Boolean.TRUE.equals(agent.getEnableAllTools())) {
-            selectedTools = agentToolService.getToolSets();
-        } else {
-            if (!avatarSettings.isDisabled() && avatarSettings.getPersonaSetting() != null && !avatarSettings.getPersonaSetting().isEmpty()) {
-                if (!selectedToolNames.contains(IAvatarSettingsService.TOOL_NAME)) {
-                    selectedToolNames.add(IAvatarSettingsService.TOOL_NAME);
-                }
-            }
-            selectedTools = agentToolService.getToolSets().stream()
-                    .filter(t -> selectedToolNames.contains(t.getName()))
-                    .collect(Collectors.toList());
-
+        List<String> appendToolNames = new ArrayList<>();
+        if (!avatarSettings.isDisabled() && avatarSettings.getPersonaSetting() != null && !avatarSettings.getPersonaSetting().isEmpty()) {
+            appendToolNames.add(IAvatarSettingsService.TOOL_NAME);
         }
+        List<ToolSetInfo> selectedTools=agentService.getToolSetFromAgent(agent,appendToolNames);
         AgentExecutorParams agentExecutorParams = new AgentExecutorParams();
         agentExecutorParams.setSessionId(userChatRequest.getSessionId());
         agentExecutorParams.setRequestId(userChatRequest.getRequestId());
@@ -221,11 +202,12 @@ public class ChatService implements IChatService {
                     "在判断有需要调用工具就去调用，遇到危险操作，立刻停止操作，询问用户。\n" +
                     "你只能使用用户提供的工具，绝对不能调用不存在的工具。更不能编造工具。\n" +
                     "如果需要写临时性的文件尽量写到{tempFilePath}目录，不要写到用户目录。\n" +
+                    "{tempFilePath}目录的下载地址是：/temp-file/文件名，可用于Markdown格式图片展示。\n" +
                     "如果交付产物是上传的附件，将结果输出为Markdown格式：\n" +
                     "1，图片类型：![文件名](下载地址)\n" +
                     "2，其他类型：[attachment:附件ID:文件名:下载地址] \n";
         }
-        String tempFilePath=System.getProperty("user.dir")+"/temp-file";
+        String tempFilePath=System.getProperty("user.dir")+ File.separator +"temp-file";
         systemMessage=systemMessage.replace("{agentName}", agent.getName())
                 .replace("{agentDescription}", agent.getDescription())
                 .replace("{agentId}", agent.getId().toString())
@@ -310,10 +292,5 @@ public class ChatService implements IChatService {
         return selectedTools.stream().map(ToolSetInfo::getKeyword).collect(Collectors.joining(","));
     }
 
-    private List<String> parseToolNames(String toolsStr) {
-        if (toolsStr == null || toolsStr.isEmpty()) {
-            return new ArrayList<>();
-        }
-        return Arrays.stream(toolsStr.split(",")).collect(Collectors.toList());
-    }
+
 }

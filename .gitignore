@@ -52,3 +52,4 @@ vector_store.metadata
 /.trae/
 
 .cookies.tmp
+/temp-file/

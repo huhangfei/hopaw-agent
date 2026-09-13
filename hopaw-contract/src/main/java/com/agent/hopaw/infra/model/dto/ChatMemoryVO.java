@@ -23,6 +23,8 @@ public class ChatMemoryVO {
     private Boolean error;
     /** 状态：0 默认 / 1 任务结束 / 2 自动清理 / 3 手动清理 */
     private Integer status;
+    /** 估算 Token 数：content/thinking/toolName/toolArguments 文本估算合计（与窗口记忆淘汰同口径） */
+    private Integer estimatedTokens;
     private LocalDateTime createTime;
 
     public ChatMemoryVO() {}
@@ -53,6 +55,9 @@ public class ChatMemoryVO {
 
     public Integer getStatus() { return status; }
     public void setStatus(Integer status) { this.status = status; }
+
+    public Integer getEstimatedTokens() { return estimatedTokens; }
+    public void setEstimatedTokens(Integer estimatedTokens) { this.estimatedTokens = estimatedTokens; }
 
     public LocalDateTime getCreateTime() { return createTime; }
     public void setCreateTime(LocalDateTime createTime) { this.createTime = createTime; }

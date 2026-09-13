@@ -32,10 +32,10 @@ public class WebMvcConfig implements WebMvcConfigurer {
     public void addResourceHandlers(ResourceHandlerRegistry registry) {
         String userDir = System.getProperty("user.dir");
         // 导出文件下载：将 /exports/** 映射到项目根目录下的 exports/ 文件夹
-        String exportPath = "file:" + userDir + "/exports/";
+        String exportPath = "file:" + userDir + File.separator+"/exports/";
         registry.addResourceHandler("/exports/**")
                 .addResourceLocations(exportPath);
-        String tempFilePath = "file:" + userDir + "/temp-file/";
+        String tempFilePath = "file:" + userDir +File.separator+ "/temp-file/";
         registry.addResourceHandler("/temp-file/**")
                 .addResourceLocations(tempFilePath);
         // 附件文件访问：将 /attachments/** 映射到配置的附件目录
@@ -43,7 +43,7 @@ public class WebMvcConfig implements WebMvcConfigurer {
         if (!dir.isAbsolute()) {
             dir = new File(userDir, attachmentDir);
         }
-        String attachmentPath = "file:" + dir.getAbsolutePath() + "/";
+        String attachmentPath = "file:" + dir.getAbsolutePath() + File.separator;
         registry.addResourceHandler(attachmentUrlPrefix + "/**")
                 .addResourceLocations(attachmentPath);
     }

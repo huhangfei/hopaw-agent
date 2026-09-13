@@ -370,6 +370,7 @@ public class ChatSessionController {
 
     /**
      * 会话记忆列表：按会话编号查询 chat_memory，解析出各类型数据（system/user/ai/toolResult）
+     * 返回 memories 列表 + stats 统计（总记录数、各类型记录数、估算总 Token）
      */
     @GetMapping("/{sessionId}/memories")
     @ResponseBody
@@ -379,7 +380,40 @@ public class ChatSessionController {
         if (session == null || !isSessionVisibleToUser(session, CurrentUser.require(request))) {
             return ResponseBean.fail("会话不存在");
         }
-        return ResponseBean.success(chatMemoryService.getChatMemoryVosBySessionId(sessionId));
+        List<com.agent.hopaw.infra.model.dto.ChatMemoryVO> memories =
+                chatMemoryService.getChatMemoryVosBySessionId(sessionId);
+
+        // 统计：总记录数、各类型记录数、按多模态估算器口径估算总 Token
+        Map<String, Object> stats = new HashMap<>(8);
+        Map<String, Long> typeCounts = new HashMap<>(8);
+        int totalTokens = 0;
+        for (com.agent.hopaw.infra.model.dto.ChatMemoryVO vo : memories) {
+            String type = vo.getType() != null ? vo.getType() : "other";
+            typeCounts.merge(type, 1L, Long::sum);
+            // 与窗口记忆淘汰同口径的估算器：content/thinking/toolName/toolArguments 按文本估算
+            int tokens = MEMORY_TOKEN_ESTIMATOR.estimateTokenCountInText(nullToEmpty(vo.getContent()))
+                    + MEMORY_TOKEN_ESTIMATOR.estimateTokenCountInText(nullToEmpty(vo.getThinking()))
+                    + MEMORY_TOKEN_ESTIMATOR.estimateTokenCountInText(nullToEmpty(vo.getToolName()))
+                    + MEMORY_TOKEN_ESTIMATOR.estimateTokenCountInText(nullToEmpty(vo.getToolArguments()));
+            vo.setEstimatedTokens(tokens);
+            totalTokens += tokens;
+        }
+        stats.put("total", memories.size());
+        stats.put("typeCounts", typeCounts);
+        stats.put("estimatedTokens", totalTokens);
+
+        Map<String, Object> data = new HashMap<>(4);
+        data.put("memories", memories);
+        data.put("stats", stats);
+        return ResponseBean.success(data);
+    }
+
+    /** 记忆 Token 估算器：与 AgentExecutor 窗口记忆淘汰同口径（gpt-4o 编码），无状态可复用 */
+    private static final com.agent.hopaw.infra.memory.MultimodalTokenCountEstimator MEMORY_TOKEN_ESTIMATOR =
+            new com.agent.hopaw.infra.memory.MultimodalTokenCountEstimator("gpt-4o");
+
+    private static String nullToEmpty(String s) {
+        return s == null ? "" : s;
     }
 
     /**

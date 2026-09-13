@@ -3397,6 +3397,12 @@ body.dark-theme .attachment-preview-wrapper {
     font-size: 12px;
     color: #999;
 }
+.session-memory-tokens {
+    flex-shrink: 0;
+    font-size: 11px;
+    color: #64b5f6;
+    white-space: nowrap;
+}
 .session-memory-status {
     flex-shrink: 0;
     font-size: 12px;
@@ -3471,6 +3477,66 @@ body.dark-theme .session-memory-detail-btn:hover {
 body.dark-theme .session-memory-detail-value {
     color: #e0e0e0;
     background: #1a1f2e;
+}
+
+/* 会话记忆弹窗底部统计：总记录数/各类型数/估算Token，占据 footer 左侧 */
+.session-memory-stats {
+    margin-right: auto;
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 6px 10px;
+    font-size: 12px;
+    color: #666;
+    min-height: 22px;
+}
+.session-memory-stat-total {
+    font-weight: 500;
+    color: #333;
+}
+.session-memory-stat-type {
+    padding: 1px 8px;
+    border-radius: 8px;
+    background: #eceff1;
+    color: #546e7a;
+    white-space: nowrap;
+    cursor: pointer;
+    transition: box-shadow 0.15s;
+}
+.session-memory-stat-type:hover {
+    box-shadow: 0 0 0 1.5px currentColor;
+}
+.session-memory-stat-type.active {
+    font-weight: 600;
+    box-shadow: 0 0 0 2px currentColor;
+}
+.session-memory-stat-type.type-system { background: #eceff1; color: #607d8b; }
+.session-memory-stat-type.type-user { background: #e3f2fd; color: #1976D2; }
+.session-memory-stat-type.type-ai { background: #e8f5e9; color: #388e3c; }
+.session-memory-stat-type.type-toolResult { background: #fff3e0; color: #e65100; }
+.session-memory-stat-tokens {
+    color: #1976D2;
+    white-space: nowrap;
+}
+body.dark-theme .session-memory-stats {
+    color: #999;
+}
+body.dark-theme .session-memory-stat-total {
+    color: #ccc;
+}
+body.dark-theme .session-memory-stat-type {
+    background: #2d2d44;
+    color: #aaa;
+}
+body.dark-theme .session-memory-stat-type.type-system { background: #2d2d44; color: #90a4ae; }
+body.dark-theme .session-memory-stat-type.type-user { background: #1e3a5f; color: #64b5f6; }
+body.dark-theme .session-memory-stat-type.type-ai { background: #1b3323; color: #66bb6a; }
+body.dark-theme .session-memory-stat-type.type-toolResult { background: #3d3022; color: #ffb74d; }
+body.dark-theme .session-memory-stat-tokens {
+    color: #64b5f6;
+}
+body.dark-theme .session-memory-tokens {
+    color: #4d86c0;
 }
 
 /* ==================== 请求日志列表/详情弹框 ==================== */

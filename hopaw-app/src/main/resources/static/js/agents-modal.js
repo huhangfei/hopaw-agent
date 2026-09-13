@@ -139,8 +139,15 @@ function deselectAllTools(containerSelector) {
     });
 }
 
+/**
+ * 切换"允许使用所有工具"开关：
+ * - 允许全部时仍显示工具列表，此时勾选的是要【排除】的工具（exclude-mode）
+ * - 不允许全部时勾选的是要【使用】的工具
+ * 切换时同步更新面板标题与提示条，明显标示当前选择语义
+ */
 function toggleAllTools(mode) {
     var checkbox, hiddenInput, container;
+    var prefix = mode === 'add' ? 'add' : 'edit';
     if (mode === 'add') {
         checkbox = document.getElementById('addEnableAllToolsCheckboxFragment');
         hiddenInput = document.getElementById('addEnableAllToolsFragment');
@@ -154,7 +161,23 @@ function toggleAllTools(mode) {
         hiddenInput.value = checkbox.checked ? 'true' : 'false';
     }
     if (container) {
-        container.style.display = checkbox && checkbox.checked ? 'none' : '';
+        var excludeMode = !!(checkbox && checkbox.checked);
+        container.classList.toggle('exclude-mode', excludeMode);
+        var title = document.getElementById(prefix + 'ToolPanelTitleFragment');
+        var hint = document.getElementById(prefix + 'ToolModeHintFragment');
+        if (excludeMode) {
+            if (title) title.textContent = '排除工具';
+            if (hint) {
+                hint.textContent = '已允许使用所有工具：此处勾选的工具将被排除，其余工具全部可用';
+                hint.className = 'tool-mode-hint tool-mode-hint-exclude';
+            }
+        } else {
+            if (title) title.textContent = '工具';
+            if (hint) {
+                hint.textContent = '勾选该智能体可以使用的工具';
+                hint.className = 'tool-mode-hint tool-mode-hint-include';
+            }
+        }
     }
 }
 

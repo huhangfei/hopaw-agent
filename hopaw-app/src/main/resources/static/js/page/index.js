@@ -2225,6 +2225,10 @@ function deleteSession(sessionId) {
 
 /** 会话记忆列表缓存（详情弹框按 id 复用，避免二次请求） */
 var sessionMemoryCache = [];
+/** 记忆类型筛选：null 不筛选；点击底部类型徽标切换/取消 */
+var sessionMemoryTypeFilter = null;
+/** 统计缓存：切换筛选时刷新徽标高亮 */
+var sessionMemoryStatsCache = null;
 
 /** 记忆类型徽标文案 */
 var SESSION_MEMORY_TYPE_NAMES = { system: '系统', user: '用户', ai: 'AI', toolResult: '工具结果', other: '其他' };
@@ -2240,6 +2244,8 @@ function showSessionMemoryModal() {
     var listEl = document.getElementById('sessionMemoryList');
     if (!listEl) return;
     listEl.innerHTML = '<div class="session-memory-empty">加载中...</div>';
+    sessionMemoryTypeFilter = null;
+    setSessionMemoryStats(null);
     document.getElementById('sessionMemoryModal').classList.add('active');
 
     fetch('/api/session/' + encodeURIComponent(currentSessionId) + '/memories')
@@ -2249,22 +2255,86 @@ function showSessionMemoryModal() {
                 listEl.innerHTML = '<div class="session-memory-empty">' + (resp.msg || '加载失败') + '</div>';
                 return;
             }
-            sessionMemoryCache = resp.data || [];
+            var data = resp.data || {};
+            sessionMemoryCache = data.memories || [];
             renderSessionMemoryList(listEl, sessionMemoryCache);
+            setSessionMemoryStats(data.stats);
         })
         .catch(function(err) {
             listEl.innerHTML = '<div class="session-memory-empty">加载失败: ' + err.message + '</div>';
         });
 }
 
-/** 渲染记忆列表：每行展示类型/前20字符预览/时间，长文本点击详情查看全文 */
+/**
+ * 渲染弹窗底部统计：总记录数、各类型记录数、估算总Token（后端 MultimodalTokenCountEstimator 口径）
+ * 类型徽标可点击筛选/取消筛选列表；stats 为空时清空统计区
+ */
+function setSessionMemoryStats(stats) {
+    sessionMemoryStatsCache = stats;
+    var el = document.getElementById('sessionMemoryStats');
+    if (!el) return;
+    if (!stats) {
+        el.innerHTML = '';
+        return;
+    }
+    var typeOrder = ['system', 'user', 'ai', 'toolResult', 'other'];
+    var counts = stats.typeCounts || {};
+    var parts = [];
+    typeOrder.forEach(function(type) {
+        if (counts[type]) {
+            var active = sessionMemoryTypeFilter === type ? ' active' : '';
+            parts.push('<span class="session-memory-stat-type type-' + type + active + '"' +
+                ' onclick="toggleSessionMemoryTypeFilter(\'' + type + '\')"' +
+                ' title="点击筛选/取消筛选该类型">' +
+                (SESSION_MEMORY_TYPE_NAMES[type] || type) + ' ' + counts[type] + '</span>');
+        }
+    });
+    var totalText = '共 ' + (stats.total || 0) + ' 条';
+    if (sessionMemoryTypeFilter) {
+        totalText += '，筛选 ' + ((counts[sessionMemoryTypeFilter]) || 0) + ' 条';
+    }
+    var html = '<span class="session-memory-stat-total">' + totalText + '</span>';
+    if (parts.length) {
+        html += parts.join('');
+    }
+    html += '<span class="session-memory-stat-tokens">估算 ' + (stats.estimatedTokens || 0) + ' Token</span>';
+    el.innerHTML = html;
+}
+
+/**
+ * 切换记忆类型筛选：点击底部类型徽标仅显示该类型，再次点击取消筛选
+ */
+function toggleSessionMemoryTypeFilter(type) {
+    sessionMemoryTypeFilter = (sessionMemoryTypeFilter === type) ? null : type;
+    var listEl = document.getElementById('sessionMemoryList');
+    if (listEl) {
+        renderSessionMemoryList(listEl, sessionMemoryCache);
+    }
+    setSessionMemoryStats(sessionMemoryStatsCache);
+}
+
+/** 渲染记忆列表：每行展示类型/前20字符预览/时间，长文本点击详情查看全文；系统类型始终置顶 */
 function renderSessionMemoryList(listEl, list) {
     listEl.innerHTML = '';
     if (!list.length) {
         listEl.innerHTML = '<div class="session-memory-empty">暂无记忆数据</div>';
         return;
     }
-    list.forEach(function(item) {
+    // 类型筛选：底部点击的类型徽标
+    if (sessionMemoryTypeFilter) {
+        list = list.filter(function(item) { return (item.type || 'other') === sessionMemoryTypeFilter; });
+    }
+    if (!list.length) {
+        listEl.innerHTML = '<div class="session-memory-empty">该类型暂无记忆数据</div>';
+        return;
+    }
+    // 系统类型记忆永远排在最前，其余类型保持原有时间顺序
+    var sorted = list.slice().sort(function(a, b) {
+        var aSystem = (a.type === 'system') ? 0 : 1;
+        var bSystem = (b.type === 'system') ? 0 : 1;
+        return aSystem - bSystem;
+    });
+    sorted.forEach(function(item) {
         var row = document.createElement('div');
         row.className = 'session-memory-row';
 
@@ -2295,6 +2365,15 @@ function renderSessionMemoryList(listEl, list) {
         time.className = 'session-memory-time';
         time.textContent = item.createTime ? formatMessageTime(new Date(formatHistoryIsoTime(item.createTime))) : '';
         row.appendChild(time);
+
+        // 该条记忆的估算 Token 数（后端与窗口记忆淘汰同口径）
+        if (item.estimatedTokens != null) {
+            var tokensEl = document.createElement('span');
+            tokensEl.className = 'session-memory-tokens';
+            tokensEl.textContent = item.estimatedTokens + ' tk';
+            tokensEl.title = '估算 Token 数';
+            row.appendChild(tokensEl);
+        }
 
         var statusEl = document.createElement('span');
         statusEl.className = 'session-memory-status';

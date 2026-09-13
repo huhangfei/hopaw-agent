@@ -50,10 +50,8 @@ public class ProjectIterateService implements IProjectIterateService {
     private static final String EXECUTE_USER_MESSAGE = "【项目自动迭代】请执行本轮项目迭代检查。\n请严格按照本次自动迭代要求执行。\n";
 
     private final ProjectMapper projectMapper;
-    private final WorkflowTaskMapper workflowTaskMapper;
     private final IAgentService agentService;
     private final IAgentExecutorService agentExecutorService;
-    private final IAgentToolService agentToolService;
     private final IMcpServerConfigService mcpServerConfigService;
     private final IProjectService projectService;
     private final IProjectLogService projectLogService;
@@ -62,20 +60,16 @@ public class ProjectIterateService implements IProjectIterateService {
     private final IChatUserMessageService chatUserMessageService;
 
     public ProjectIterateService(ProjectMapper projectMapper,
-                                 WorkflowTaskMapper workflowTaskMapper,
                                  IAgentService agentService,
                                  IAgentExecutorService agentExecutorService,
-                                 IAgentToolService agentToolService,
                                  IMcpServerConfigService mcpServerConfigService,
                                  IProjectService projectService,
                                  IProjectLogService projectLogService,
                                  INotificationService notificationService,
                                  ProjectMemoryService projectMemoryService, IChatUserMessageService chatUserMessageService) {
         this.projectMapper = projectMapper;
-        this.workflowTaskMapper = workflowTaskMapper;
         this.agentService = agentService;
         this.agentExecutorService = agentExecutorService;
-        this.agentToolService = agentToolService;
         this.mcpServerConfigService = mcpServerConfigService;
         this.projectService = projectService;
         this.projectLogService = projectLogService;
@@ -290,24 +284,8 @@ public class ProjectIterateService implements IProjectIterateService {
     private IAgentExecutor createProjectExecutor(String requestId,Project project, Agent agent, String sessionId,
                                                  UserChatRequest userChatRequest) {
         String systemMessage = buildProjectSystemMessage(project, agent);
-
         // 构建工具集：智能体已配置工具 + 项目管理必需工具（projectTool / workflowTaskTool）
-        List<String> selectedToolNames = parseToolNames(agent.getTools());
-        if (!selectedToolNames.contains("projectTool")) {
-            selectedToolNames.add("projectTool");
-        }
-        if (!selectedToolNames.contains("workflowTaskTool")) {
-            selectedToolNames.add("workflowTaskTool");
-        }
-        List<ToolSetInfo> selectedTools;
-        if (Boolean.TRUE.equals(agent.getEnableAllTools())) {
-            selectedTools = agentToolService.getToolSets();
-        } else {
-            selectedTools = agentToolService.getToolSets().stream()
-                    .filter(t -> selectedToolNames.contains(t.getName()))
-                    .collect(Collectors.toList());
-        }
-
+        List<ToolSetInfo> selectedTools=agentService.getToolSetFromAgent(agent,"projectTool","workflowTaskTool");
         AgentExecutorParams params = new AgentExecutorParams();
         params.setSessionId(sessionId);
         params.setUserId(project.getUserId());
@@ -405,13 +383,6 @@ public class ProjectIterateService implements IProjectIterateService {
         return sb.toString();
     }
 
-
-    private List<String> parseToolNames(String toolsStr) {
-        if (toolsStr == null || toolsStr.isEmpty()) {
-            return new ArrayList<>();
-        }
-        return Arrays.stream(toolsStr.split(",")).collect(Collectors.toList());
-    }
 
     /** 项目状态码转中文描述 */
     private String statusText(String code) {

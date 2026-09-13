@@ -24,7 +24,6 @@ import com.agent.hopaw.infra.model.entity.TaskSession;
 import com.agent.hopaw.infra.model.entity.WorkflowTask;
 import com.agent.hopaw.infra.tool.IAgentToolService;
 import com.agent.hopaw.infra.util.UuidUtil;
-import dev.langchain4j.data.message.Content;
 import dev.langchain4j.data.message.TextContent;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -55,47 +54,39 @@ public class WorkflowTaskService implements IWorkflowTaskService {
     private final WorkflowTaskPreconditionMapper preconditionMapper;
     private final TaskSessionMapper taskSessionMapper;
     private final IAgentExecutorService agentExecutorService;
-    private final IChatSessionService chatSessionService;
     private final IAgentService agentService;
     private final IWorkflowTaskCommentService taskCommentService;
-    private final IAgentToolService agentToolService;
     private final IMcpServerConfigService mcpServerConfigService;
     private final IProjectService projectService;
     private final IProjectLogService projectLogService;
     private final IGlobalNoticeService globalNoticeService;
     private final INotificationService notificationService;
     private final com.agent.hopaw.infra.memory.ProjectMemoryService projectMemoryService;
-    private final IChatUserMessageService chatUserMessageService;
 
     public WorkflowTaskService(WorkflowTaskMapper workflowTaskMapper,
                                WorkflowTaskPreconditionMapper preconditionMapper,
                                TaskSessionMapper taskSessionMapper,
                                IAgentExecutorService agentExecutorService,
-                               IChatSessionService chatSessionService,
                                IAgentService agentService,
                                IWorkflowTaskCommentService taskCommentService,
-                               IAgentToolService agentToolService,
                                IMcpServerConfigService mcpServerConfigService,
                                IProjectService projectService,
                                IProjectLogService projectLogService,
                                IGlobalNoticeService globalNoticeService,
                                INotificationService notificationService,
-                               ProjectMemoryService projectMemoryService, IChatUserMessageService chatUserMessageService) {
+                               ProjectMemoryService projectMemoryService) {
         this.workflowTaskMapper = workflowTaskMapper;
         this.preconditionMapper = preconditionMapper;
         this.taskSessionMapper = taskSessionMapper;
         this.agentExecutorService = agentExecutorService;
-        this.chatSessionService = chatSessionService;
         this.agentService = agentService;
         this.taskCommentService = taskCommentService;
-        this.agentToolService = agentToolService;
         this.mcpServerConfigService = mcpServerConfigService;
         this.projectService = projectService;
         this.projectLogService = projectLogService;
         this.globalNoticeService = globalNoticeService;
         this.notificationService = notificationService;
         this.projectMemoryService = projectMemoryService;
-        this.chatUserMessageService = chatUserMessageService;
     }
 
     @Override
@@ -493,19 +484,7 @@ public class WorkflowTaskService implements IWorkflowTaskService {
         String systemMessage = buildTaskSystemMessage(task, agent);
 
         // 构建工具集（任务执行场景强制注入 workflowTaskTool，确保智能体可记录评论）
-        List<String> selectedToolNames = parseToolNames(agent.getTools());
-        if (!selectedToolNames.contains("workflowTaskTool")) {
-            selectedToolNames.add("workflowTaskTool");
-        }
-        List<ToolSetInfo> selectedTools;
-        if (Boolean.TRUE.equals(agent.getEnableAllTools())) {
-            selectedTools = agentToolService.getToolSets();
-        } else {
-            selectedTools = agentToolService.getToolSets().stream()
-                    .filter(t -> selectedToolNames.contains(t.getName()))
-                    .collect(Collectors.toList());
-        }
-
+        List<ToolSetInfo> selectedTools = agentService.getToolSetFromAgent(agent, "workflowTaskTool");
         // 构建 AgentExecutorParams
         AgentExecutorParams agentExecutorParams = new AgentExecutorParams();
         agentExecutorParams.setSessionId(userChatRequest.getSessionId());
@@ -651,11 +630,11 @@ public class WorkflowTaskService implements IWorkflowTaskService {
         }
     }
 
-    private List<String> parseToolNames(String toolsStr) {
-        if (toolsStr == null || toolsStr.isEmpty()) {
+    private List<String> parseStatus(String statusStr) {
+        if (statusStr == null || statusStr.isEmpty()) {
             return new ArrayList<>();
         }
-        return Arrays.stream(toolsStr.split(",")).collect(Collectors.toList());
+        return Arrays.stream(statusStr.split(",")).collect(Collectors.toList());
     }
 
     /* ========== 前置任务条件 ========== */
@@ -727,7 +706,7 @@ public class WorkflowTaskService implements IWorkflowTaskService {
                 continue;
             }
             // 要求状态为多选：前置任务当前状态命中任意一个勾选状态即满足
-            List<String> required = parseToolNames(pc.getRequiredStatus());
+            List<String> required = parseStatus(pc.getRequiredStatus());
             if (!required.contains(preTask.getStatus())) {
                 logger.info("任务前置条件未满足: taskId={}, preTaskId={}, preTaskStatus={}, required={}",
                         taskId, pc.getPreTaskId(), preTask.getStatus(), pc.getRequiredStatus());

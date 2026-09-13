@@ -1,21 +1,26 @@
 package com.agent.hopaw.infra.service;
 
 import com.agent.hopaw.infra.mapper.AgentMapper;
+import com.agent.hopaw.infra.model.dto.ToolSetInfo;
 import com.agent.hopaw.infra.model.entity.Agent;
+import com.agent.hopaw.infra.tool.IAgentToolService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
+import java.util.stream.Collectors;
 
 @Service
 public class AgentService implements IAgentService {
     private final static Logger logger = LoggerFactory.getLogger(AgentService.class);
     private final AgentMapper agentMapper;
-
-    public AgentService(AgentMapper agentMapper) {
+    private final IAgentToolService agentToolService;
+    public AgentService(AgentMapper agentMapper, IAgentToolService agentToolService) {
         this.agentMapper = agentMapper;
+        this.agentToolService = agentToolService;
     }
 
     @Override
@@ -111,5 +116,42 @@ public class AgentService implements IAgentService {
     public int countAgents(String userId, String keyword) {
         // 智能体数据不分用户，统计不过滤用户
         return agentMapper.countByUserIdWithKeyword(null, keyword);
+    }
+
+    @Override
+    public List<ToolSetInfo> getToolSetFromAgent(Agent agent,String ... appendTools){
+        List<String> appendToolNames=new ArrayList<>();
+        if(appendTools!=null){
+            for (String appendTool : appendTools) {
+                appendToolNames.add(appendTool);
+            }
+        }
+        return getToolSetFromAgent(agent,appendToolNames);
+    }
+    public List<ToolSetInfo> getToolSetFromAgent(Agent agent,List<String> appendTools){
+        List<String> selectedToolNames;
+        if (agent.getTools() != null && !agent.getTools().isEmpty()) {
+            selectedToolNames=Arrays.stream(agent.getTools().split(",")).collect(Collectors.toList());
+        } else {
+            selectedToolNames = new ArrayList<>();
+        }
+        List<ToolSetInfo> selectedTools;
+        if(appendTools==null){
+            appendTools=new ArrayList<>();
+        }
+        List<String> finalAppendTools = appendTools;
+        if (Boolean.TRUE.equals(agent.getEnableAllTools())) {
+            //启用所有,此时选中的是要排除的
+            selectedTools = agentToolService.getToolSets().stream()
+                    .filter(t -> !selectedToolNames.contains(t.getName()) && !finalAppendTools.contains(t.getName()))
+                    .collect(Collectors.toList());
+        } else {
+            //启用所有,此时选中的是要使用的
+            selectedTools = agentToolService.getToolSets().stream()
+                    .filter(t -> selectedToolNames.contains(t.getName()) || finalAppendTools.contains(t.getName()))
+                    .collect(Collectors.toList());
+
+        }
+        return selectedTools;
     }
 }

@@ -1,5 +1,6 @@
 package com.agent.hopaw.infra.service;
 
+import com.agent.hopaw.infra.model.dto.ToolSetInfo;
 import com.agent.hopaw.infra.model.entity.Agent;
 
 import java.util.List;
@@ -14,4 +15,6 @@ public interface IAgentService {
     void updateThinking(Long id, Boolean enabled, String userId);
     List<Agent> getAgentsPage(String userId, String keyword, int page, int size);
     int countAgents(String userId, String keyword);
+    List<ToolSetInfo> getToolSetFromAgent(Agent agent, String ... appendTools);
+    List<ToolSetInfo> getToolSetFromAgent(Agent agent, List<String> appendTools);
 }

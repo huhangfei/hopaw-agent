@@ -124,7 +124,64 @@
     padding-left: 24px;
 }
 
+/* ========== 工具选择模式提示条 ==========
+   允许全部工具（exclude-mode）时勾选=排除，否则勾选=使用；
+   提示条与面板配色随模式切换，明显标示当前语义 */
+.tool-mode-hint {
+    display: block;
+    padding: 6px 10px;
+    margin-bottom: 10px;
+    font-size: 12px;
+    border-radius: 6px;
+    line-height: 1.5;
+}
+.tool-mode-hint-include {
+    color: #4a6b8a;
+    background: #eef4fa;
+    border-left: 3px solid #667eea;
+}
+.tool-mode-hint-exclude {
+    color: #b06a15;
+    background: #fdf3e4;
+    border-left: 3px solid #d98c2b;
+    font-weight: 500;
+}
+
+/* 排除模式面板外观：琥珀色系与普通模式（蓝紫色）明显区分 */
+.form-right.exclude-mode {
+    border-left-color: #d98c2b;
+}
+.form-right.exclude-mode .checkbox-item:has(input:checked) {
+    border-color: #d98c2b;
+    background: #fdf3e4;
+}
+.form-right.exclude-mode .checkbox-item:has(input:checked) .tool-item-count {
+    background: #d98c2b;
+    color: #fff;
+}
+.form-right.exclude-mode .tool-item-name {
+    color: #9c6413;
+}
+
 /* ==================== Dark Theme ==================== */
+body.dark-theme .tool-mode-hint-include {
+    color: #a8c0e0;
+    background: #1e2d44;
+}
+body.dark-theme .tool-mode-hint-exclude {
+    color: #e0b070;
+    background: #3d3022;
+}
+body.dark-theme .form-right.exclude-mode {
+    border-left-color: #d98c2b;
+}
+body.dark-theme .form-right.exclude-mode .checkbox-item:has(input:checked) {
+    border-color: #b07a25;
+    background: #3d3022;
+}
+body.dark-theme .form-right.exclude-mode .tool-item-name {
+    color: #e0b070;
+}
 body.dark-theme .btn-tool-toggle {
     border-color: #8ba3ff;
     background: #1e3a5f;
