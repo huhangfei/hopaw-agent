@@ -51,7 +51,7 @@ public class AgentToolSetTool implements AgentTool {
      * 查询所有智能体工具集（含每个工具集下的工具名称、描述与安全级别）。
      */
     @ToolSecurityLevel(ToolSecurityLevel.Level.SAFE)
-    @Tool(value = {"查询所有智能体工具", "查询当前系统中所有可用的智能体工具集及各工具集内的工具清单（名称、描述、安全级别）"}, searchBehavior = SearchBehavior.ALWAYS_VISIBLE)
+    @Tool(value = {"查询所有智能体工具", "查询当前系统中所有可用的智能体工具集及各工具集内的工具清单（名称、描述、安全级别）"})
     public String findAllAgentTools(InvocationParameters invocationParameters) {
         List<ToolSetInfo> toolSets = agentToolService.getToolSets();
         if (toolSets == null || toolSets.isEmpty()) {
@@ -84,8 +84,8 @@ public class AgentToolSetTool implements AgentTool {
      * 按工具集名称查询单个工具集详情（含工具参数明细）。
      */
     @ToolSecurityLevel(ToolSecurityLevel.Level.SAFE)
-    @Tool(value = {"查询智能体工具集详情", "按工具集名称查询该工具集的详细信息和工具参数明细"}, searchBehavior = SearchBehavior.ALWAYS_VISIBLE)
-    public String findAgentToolSetDetail(@P(value = "工具集名称，例如 projectTool、workflowTaskTool", required = false) String toolSetName,
+    @Tool(value = {"查询智能体工具集详情", "按工具集名称查询该工具集的详细信息和工具参数明细"})
+    public String findAgentToolSetDetail(@P(value = "工具集名称，例如 projectTool、workflowTaskTool") String toolSetName,
                                          InvocationParameters invocationParameters) {
         List<ToolSetInfo> toolSets = agentToolService.getToolSets();
         if (toolSets == null || toolSets.isEmpty()) {

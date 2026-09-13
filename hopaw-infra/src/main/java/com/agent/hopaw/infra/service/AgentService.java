@@ -143,7 +143,7 @@ public class AgentService implements IAgentService {
         if (Boolean.TRUE.equals(agent.getEnableAllTools())) {
             //启用所有,此时选中的是要排除的
             selectedTools = agentToolService.getToolSets().stream()
-                    .filter(t -> !selectedToolNames.contains(t.getName()) && !finalAppendTools.contains(t.getName()))
+                    .filter(t -> !selectedToolNames.contains(t.getName()) || finalAppendTools.contains(t.getName()))
                     .collect(Collectors.toList());
         } else {
             //启用所有,此时选中的是要使用的

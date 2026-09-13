@@ -652,7 +652,17 @@ var LAppDefine = {
         if (!data.audio) return;
         try {
             var audioBytes = base64ToArrayBuffer(data.audio);
-            var blob = new Blob([audioBytes], { type: "audio/mp3" });
+            // 检测 WAV 头（RIFF....WAVE），Piper 等渠道返回 WAV 格式，MIME 需正确声明
+            var blobType = "audio/mp3";
+            try {
+                var head = new Uint8Array(audioBytes);
+                if (head.length >= 12
+                        && head[0] === 0x52 && head[1] === 0x49 && head[2] === 0x46 && head[3] === 0x46
+                        && head[8] === 0x57 && head[9] === 0x41 && head[10] === 0x56 && head[11] === 0x45) {
+                    blobType = "audio/wav";
+                }
+            } catch (e) {}
+            var blob = new Blob([audioBytes], { type: blobType });
             var url = URL.createObjectURL(blob);
             var audio = new Audio(url);
             audio.onended = function() {

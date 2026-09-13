@@ -1,4 +1,11 @@
 /* ========== TTS 列表 ========== */
+/* TTS 页面表单适应页面宽度（覆盖 settings.css 的 max-width: 600px） */
+#tab-tts .settings-form {
+    max-width: none;
+    width: 100%;
+    box-sizing: border-box;
+}
+
 .tts-list-header {
     display: flex;
     justify-content: space-between;
@@ -233,4 +240,235 @@ body.dark-theme .tts-form-title {
 
 body.dark-theme .tts-json-input {
     color: #e0e0e0;
+}
+
+/* ========== 渠道音色管理弹框 ========== */
+.tts-voice-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.45);
+    display: none;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+}
+
+.tts-voice-modal {
+    background: #fff;
+    border-radius: 12px;
+    width: 860px;
+    max-width: 94vw;
+    max-height: 84vh;
+    padding: 20px 22px;
+    display: flex;
+    flex-direction: column;
+    box-shadow: 0 8px 30px rgba(0, 0, 0, 0.18);
+}
+
+.tts-voice-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.tts-voice-title {
+    margin: 0;
+    font-size: 16px;
+    color: #333;
+}
+
+.tts-voice-close {
+    background: none;
+    border: none;
+    font-size: 22px;
+    line-height: 1;
+    color: #999;
+    cursor: pointer;
+    padding: 0 4px;
+}
+
+.tts-voice-close:hover {
+    color: #333;
+}
+
+.tts-voice-hint {
+    margin: 6px 0 12px;
+    font-size: 12px;
+    color: #999;
+}
+
+.tts-voice-toolbar {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 10px;
+}
+
+.btn-tts-voice-add {
+    background: #667eea;
+    color: #fff;
+    border: none;
+    padding: 6px 14px;
+    border-radius: 6px;
+    font-size: 12px;
+    cursor: pointer;
+}
+
+.btn-tts-voice-add:hover {
+    background: #5a6fd6;
+}
+
+.btn-tts-voice-reset {
+    background: none;
+    color: #e65100;
+    border: 1px solid #e65100;
+    padding: 5px 12px;
+    border-radius: 6px;
+    font-size: 12px;
+    cursor: pointer;
+}
+
+.btn-tts-voice-reset:hover {
+    background: #e65100;
+    color: #fff;
+}
+
+.tts-voice-count {
+    margin-left: auto;
+    font-size: 12px;
+    color: #999;
+}
+
+.tts-voice-table-wrap {
+    flex: 1;
+    overflow-y: auto;
+    border: 1px solid #ececec;
+    border-radius: 8px;
+}
+
+.tts-voice-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 13px;
+}
+
+.tts-voice-table thead th {
+    background: #f5f5f5;
+    padding: 8px 10px;
+    text-align: left;
+    font-weight: 600;
+    color: #666;
+    border-bottom: 2px solid #e0e0e0;
+    position: sticky;
+    top: 0;
+}
+
+.tts-voice-table tbody td {
+    padding: 6px 8px;
+    border-bottom: 1px solid #f0f0f0;
+    vertical-align: middle;
+}
+
+.tts-voice-input {
+    width: 100%;
+    box-sizing: border-box;
+    padding: 5px 8px;
+    border: 1px solid #ddd;
+    border-radius: 5px;
+    font-size: 12px;
+    color: #333;
+    background: #fff;
+}
+
+.tts-voice-input:focus {
+    outline: none;
+    border-color: #667eea;
+}
+
+.btn-tts-voice-del {
+    width: 24px;
+    height: 24px;
+    line-height: 1;
+    border: none;
+    background: none;
+    color: #e53935;
+    font-size: 16px;
+    cursor: pointer;
+    border-radius: 4px;
+}
+
+.btn-tts-voice-del:hover {
+    background: rgba(229, 57, 53, 0.1);
+}
+
+.tts-voice-actions {
+    display: flex;
+    gap: 10px;
+    justify-content: flex-end;
+    margin-top: 14px;
+    padding-top: 14px;
+    border-top: 1px solid #ececec;
+}
+
+.tts-voice-count-cell {
+    text-align: center;
+    color: #666;
+}
+
+/* 暗色主题：音色弹框 */
+body.dark-theme .tts-voice-modal {
+    background: #1e2130;
+    box-shadow: 0 8px 30px rgba(0, 0, 0, 0.5);
+}
+
+body.dark-theme .tts-voice-title {
+    color: #e0e0e0;
+}
+
+body.dark-theme .tts-voice-close:hover {
+    color: #fff;
+}
+
+body.dark-theme .tts-voice-table thead th {
+    background: #2d2d44;
+    color: #aaa;
+    border-bottom-color: #3d3d6b;
+}
+
+body.dark-theme .tts-voice-table tbody td {
+    border-bottom-color: #2d2d44;
+}
+
+body.dark-theme .tts-voice-input {
+    background: #171a26;
+    border-color: #3d3d6b;
+    color: #e0e0e0;
+}
+
+body.dark-theme .tts-voice-input:focus {
+    border-color: #8ba3ff;
+}
+
+body.dark-theme .tts-voice-table-wrap,
+body.dark-theme .tts-voice-actions {
+    border-color: #3d3d6b;
+}
+
+body.dark-theme .tts-voice-count,
+body.dark-theme .tts-voice-count-cell {
+    color: #999;
+}
+
+body.dark-theme .btn-tts-voice-add {
+    background: #8ba3ff;
+}
+
+body.dark-theme .btn-tts-voice-reset {
+    color: #ffb74d;
+    border-color: #ffb74d;
+}
+
+body.dark-theme .btn-tts-voice-reset:hover {
+    background: #ffb74d;
+    color: #1e2130;
 }

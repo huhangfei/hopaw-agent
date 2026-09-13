@@ -11,6 +11,8 @@ public class TtsConfig {
     private String configName;
     private String configJson;
     private Integer enabled;
+    /** 该渠道的音色数量（非表列，Controller 查询时填充） */
+    private Integer voiceCount;
     private String createTime;
     private String updateTime;
 
@@ -60,6 +62,14 @@ public class TtsConfig {
 
     public void setEnabled(Integer enabled) {
         this.enabled = enabled;
+    }
+
+    public Integer getVoiceCount() {
+        return voiceCount;
+    }
+
+    public void setVoiceCount(Integer voiceCount) {
+        this.voiceCount = voiceCount;
     }
 
     public String getCreateTime() {

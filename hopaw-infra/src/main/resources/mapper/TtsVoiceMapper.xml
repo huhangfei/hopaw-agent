@@ -1,0 +1,66 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.agent.hopaw.infra.mapper.TtsVoiceMapper">
+
+    <resultMap id="TtsVoiceResultMap" type="com.agent.hopaw.infra.model.dto.TtsVoice">
+        <id property="id" column="id"/>
+        <result property="configId" column="config_id"/>
+        <result property="voiceId" column="voice_id"/>
+        <result property="voiceName" column="voice_name"/>
+        <result property="language" column="language"/>
+        <result property="gender" column="gender"/>
+        <result property="description" column="description"/>
+        <result property="emotions" column="emotions" typeHandler="com.agent.hopaw.infra.handler.StringListTypeHandler"/>
+    </resultMap>
+
+    <select id="findByConfigId" resultMap="TtsVoiceResultMap">
+        SELECT id, config_id, voice_id, voice_name, language, gender, description, emotions
+        FROM tts_voice
+        WHERE config_id = #{configId}
+        ORDER BY id
+    </select>
+
+    <select id="findAll" resultMap="TtsVoiceResultMap">
+        SELECT id, config_id, voice_id, voice_name, language, gender, description, emotions
+        FROM tts_voice
+        ORDER BY id
+    </select>
+
+    <delete id="deleteAll">
+        DELETE FROM tts_voice
+    </delete>
+
+    <select id="countByConfigId" resultType="int">
+        SELECT COUNT(*) FROM tts_voice WHERE config_id = #{configId}
+    </select>
+
+    <insert id="insert" parameterType="com.agent.hopaw.infra.model.dto.TtsVoice">
+        <selectKey keyProperty="id" resultType="long" order="AFTER">
+            SELECT last_insert_rowid()
+        </selectKey>
+        INSERT INTO tts_voice (config_id, voice_id, voice_name, language, gender, description, emotions)
+        VALUES (#{configId}, #{voiceId}, #{voiceName}, #{language}, #{gender}, #{description},
+                #{emotions, typeHandler=com.agent.hopaw.infra.handler.StringListTypeHandler})
+    </insert>
+
+    <update id="update" parameterType="com.agent.hopaw.infra.model.dto.TtsVoice">
+        UPDATE tts_voice
+        SET voice_id = #{voiceId},
+            voice_name = #{voiceName},
+            language = #{language},
+            gender = #{gender},
+            description = #{description},
+            emotions = #{emotions, typeHandler=com.agent.hopaw.infra.handler.StringListTypeHandler},
+            update_time = CURRENT_TIMESTAMP
+        WHERE id = #{id}
+    </update>
+
+    <delete id="deleteById">
+        DELETE FROM tts_voice WHERE id = #{id}
+    </delete>
+
+    <delete id="deleteByConfigId">
+        DELETE FROM tts_voice WHERE config_id = #{configId}
+    </delete>
+
+</mapper>

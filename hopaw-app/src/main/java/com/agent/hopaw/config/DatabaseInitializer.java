@@ -316,6 +316,21 @@ public class DatabaseInitializer implements CommandLineRunner {
                     ")");
             ensureColumn(stmt, "tts_config", "config_name", "TEXT");
 
+            // 渠道音色表：每个 TTS 配置（渠道）的音色独立存储，添加配置时复制厂商默认音色，后续可增删改
+            stmt.execute("CREATE TABLE IF NOT EXISTS tts_voice (" +
+                    "id INTEGER PRIMARY KEY AUTOINCREMENT, " +
+                    "config_id INTEGER NOT NULL, " +
+                    "voice_id TEXT NOT NULL, " +
+                    "voice_name TEXT, " +
+                    "language TEXT, " +
+                    "gender TEXT, " +
+                    "description TEXT, " +
+                    "emotions TEXT, " +
+                    "create_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP, " +
+                    "update_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP" +
+                    ")");
+            stmt.execute("CREATE INDEX IF NOT EXISTS idx_tts_voice_config ON tts_voice(config_id)");
+
             stmt.execute("CREATE TABLE IF NOT EXISTS scheduled_tasks (" +
                     "id INTEGER PRIMARY KEY AUTOINCREMENT, " +
                     "task_name TEXT NOT NULL, " +
@@ -762,7 +777,7 @@ public class DatabaseInitializer implements CommandLineRunner {
                         escapeSQL("大虾\uD83E\uDD90"),
                         escapeSQL("善于使用多种工具解决用户问题"),
                         escapeSQL(tools),
-                        20480, 20, 1, 15,
+                        20480, 20, 1, 30,
                         DefaultUser.USER,
                         1,
                         0.5,

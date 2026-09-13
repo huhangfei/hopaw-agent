@@ -43,7 +43,7 @@ function loadTtsConfigList() {
 function renderTtsTable() {
     var tbody = document.getElementById('ttsTableBody');
     if (!ttsConfigList || ttsConfigList.length === 0) {
-        tbody.innerHTML = '<tr id="ttsEmptyRow"><td colspan="6" class="tts-empty">暂无 TTS 配置，点击"添加配置"开始</td></tr>';
+        tbody.innerHTML = '<tr id="ttsEmptyRow"><td colspan="7" class="tts-empty">暂无 TTS 配置，点击"添加配置"开始</td></tr>';
         return;
     }
 
@@ -65,7 +65,9 @@ function renderTtsTable() {
         rows += '<td><code>' + escapeHtml(cfg.vendorCode) + '</code></td>';
         rows += '<td class="tts-config-cell" title="' + escapeHtml(cfg.configJson || '') + '">' + configPreview + '</td>';
         rows += '<td>' + enabledBadge + '</td>';
+        rows += '<td class="tts-voice-count-cell">' + (cfg.voiceCount != null ? cfg.voiceCount : '-') + '</td>';
         rows += '<td class="tts-actions">'
+            + '<button class="btn-tts-edit" onclick="showTtsVoiceModal(' + cfg.id + ')">音色</button>'
             + '<button class="btn-tts-edit" onclick="editTtsConfig(' + cfg.id + ')">编辑</button>'
             + '<button class="btn-tts-delete" onclick="deleteTtsConfig(' + cfg.id + ')">删除</button>'
             + '</td>';
@@ -170,4 +172,161 @@ function deleteTtsConfig(id) {
 
 function onTtsVendorChange() {
     // 厂商切换时暂不联动音色，仅做记录
+}
+
+// ========== 渠道音色管理 ==========
+var ttsVoiceEditingConfigId = null;
+var ttsVoiceEditingList = [];
+
+/** 打开某渠道的音色管理弹框 */
+function showTtsVoiceModal(configId) {
+    ttsVoiceEditingConfigId = configId;
+    var cfg = null;
+    for (var i = 0; i < ttsConfigList.length; i++) {
+        if (ttsConfigList[i].id === configId) {
+            cfg = ttsConfigList[i];
+            break;
+        }
+    }
+    var title = document.getElementById('ttsVoiceTitle');
+    title.textContent = '渠道音色 - ' + ((cfg && cfg.configName) ? cfg.configName : ('#' + configId));
+    document.getElementById('ttsVoiceModal').style.display = 'flex';
+    renderTtsVoiceRows();
+    loadTtsVoices();
+}
+
+function hideTtsVoiceModal() {
+    document.getElementById('ttsVoiceModal').style.display = 'none';
+    ttsVoiceEditingConfigId = null;
+    ttsVoiceEditingList = [];
+}
+
+/** 拉取该渠道已配置的音色 */
+function loadTtsVoices() {
+    var tbody = document.getElementById('ttsVoiceTableBody');
+    tbody.innerHTML = '<tr><td colspan="6" class="tts-empty">加载中...</td></tr>';
+    fetch('/api/tts/config/' + encodeURIComponent(ttsVoiceEditingConfigId) + '/voices')
+        .then(function(r) { return r.json(); })
+        .then(function(resp) {
+            if (resp.msg !== 'success') {
+                tbody.innerHTML = '<tr><td colspan="6" class="tts-empty">加载失败: ' + escapeHtml(resp.msg || '') + '</td></tr>';
+                return;
+            }
+            ttsVoiceEditingList = resp.data || [];
+            renderTtsVoiceRows();
+        })
+        .catch(function(e) {
+            console.error('加载渠道音色失败:', e);
+            tbody.innerHTML = '<tr><td colspan="6" class="tts-empty">加载失败</td></tr>';
+        });
+}
+
+/** 渲染音色编辑行（含本地未保存的增删改） */
+function renderTtsVoiceRows() {
+    var tbody = document.getElementById('ttsVoiceTableBody');
+    if (!ttsVoiceEditingList.length) {
+        tbody.innerHTML = '<tr><td colspan="6" class="tts-empty">暂无音色，点击"+ 新增音色"添加</td></tr>';
+    } else {
+        var rows = '';
+        ttsVoiceEditingList.forEach(function(v, idx) {
+            var emotionsText = (v.emotions && v.emotions.length) ? v.emotions.join(',') : '';
+            rows += '<tr>'
+                + '<td><input type="text" class="tts-voice-input" value="' + escapeHtml(v.voiceId || '') + '" '
+                + 'onchange="ttsVoiceEditingList[' + idx + '].voiceId=this.value" placeholder="音色ID" required></td>'
+                + '<td><input type="text" class="tts-voice-input" value="' + escapeHtml(v.voiceName || '') + '" '
+                + 'onchange="ttsVoiceEditingList[' + idx + '].voiceName=this.value" placeholder="音色名称"></td>'
+                + '<td><input type="text" class="tts-voice-input" value="' + escapeHtml(v.language || '') + '" '
+                + 'onchange="ttsVoiceEditingList[' + idx + '].language=this.value" placeholder="如 zh-CN"></td>'
+                + '<td><input type="text" class="tts-voice-input" value="' + escapeHtml(v.gender || '') + '" '
+                + 'onchange="ttsVoiceEditingList[' + idx + '].gender=this.value" placeholder="male/female"></td>'
+                + '<td><input type="text" class="tts-voice-input" value="' + escapeHtml(emotionsText) + '" '
+                + 'onchange="ttsVoiceEditingList[' + idx + '].emotions=this.value.split(\',\').map(function(s){return s.trim()}).filter(function(s){return s})" '
+                + 'placeholder="happy,sad,neutral"></td>'
+                + '<td><button class="btn-tts-voice-del" onclick="removeTtsVoice(' + idx + ')">&times;</button></td>'
+                + '</tr>';
+        });
+        tbody.innerHTML = rows;
+    }
+    var countEl = document.getElementById('ttsVoiceCount');
+    countEl.textContent = '共 ' + ttsVoiceEditingList.length + ' 个音色';
+}
+
+/** 本地新增一行音色 */
+function addTtsVoiceRow() {
+    ttsVoiceEditingList.push({
+        id: null,
+        voiceId: '',
+        voiceName: '',
+        language: '',
+        gender: '',
+        description: '',
+        emotions: []
+    });
+    renderTtsVoiceRows();
+    // 聚焦最后一行第一个输入框
+    var inputs = document.querySelectorAll('#ttsVoiceTableBody input');
+    if (inputs.length) {
+        inputs[inputs.length - 5].focus();
+    }
+}
+
+/** 本地删除一行音色 */
+function removeTtsVoice(idx) {
+    ttsVoiceEditingList.splice(idx, 1);
+    renderTtsVoiceRows();
+}
+
+/** 保存音色：整体提交该渠道的音色列表 */
+function saveTtsVoices() {
+    var invalid = false;
+    for (var i = 0; i < ttsVoiceEditingList.length; i++) {
+        if (!ttsVoiceEditingList[i].voiceId || !ttsVoiceEditingList[i].voiceId.trim()) {
+            invalid = true;
+            break;
+        }
+    }
+    if (invalid) {
+        showToast('音色ID不能为空', 'error');
+        return;
+    }
+    fetch('/api/tts/config/' + encodeURIComponent(ttsVoiceEditingConfigId) + '/voices', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(ttsVoiceEditingList)
+    })
+        .then(function(r) { return r.json(); })
+        .then(function(resp) {
+            if (resp.msg === 'success') {
+                showToast('音色保存成功（共 ' + ((resp.data && resp.data.count) || 0) + ' 个）', 'success');
+                hideTtsVoiceModal();
+                loadTtsConfigList();
+            } else {
+                showToast('保存失败: ' + (resp.msg || ''), 'error');
+            }
+        })
+        .catch(function() {
+            showToast('保存失败', 'error');
+        });
+}
+
+/** 重置为厂商默认音色（覆盖当前渠道音色） */
+function resetTtsVoices() {
+    showConfirm('重置将丢弃当前渠道所有音色修改，恢复为该厂商的默认音色列表，确定继续吗？').then(function(confirmed) {
+        if (!confirmed) return;
+        fetch('/api/tts/config/' + encodeURIComponent(ttsVoiceEditingConfigId) + '/voices/reset', {
+            method: 'POST'
+        })
+            .then(function(r) { return r.json(); })
+            .then(function(resp) {
+                if (resp.msg === 'success') {
+                    showToast('已重置为默认音色（共 ' + ((resp.data && resp.data.count) || 0) + ' 个）', 'success');
+                    loadTtsVoices();
+                } else {
+                    showToast('重置失败: ' + (resp.msg || ''), 'error');
+                }
+            })
+            .catch(function() {
+                showToast('重置失败', 'error');
+            });
+    });
 }

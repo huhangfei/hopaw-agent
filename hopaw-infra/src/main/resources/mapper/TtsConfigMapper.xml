@@ -46,6 +46,9 @@
     </select>
 
     <insert id="insert" parameterType="com.agent.hopaw.infra.model.entity.TtsConfig">
+        <selectKey keyProperty="id" resultType="long" order="AFTER">
+            SELECT last_insert_rowid()
+        </selectKey>
         INSERT INTO tts_config (vendor_code, vendor_name, config_name, config_json, enabled)
         VALUES (#{vendorCode}, #{vendorName}, #{configName}, #{configJson}, COALESCE(#{enabled}, 0))
     </insert>

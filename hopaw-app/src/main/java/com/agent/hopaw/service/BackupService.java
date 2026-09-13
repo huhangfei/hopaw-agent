@@ -8,7 +8,9 @@ import com.agent.hopaw.infra.mapper.AgentMapper;
 import com.agent.hopaw.infra.mapper.LongTermMemoryMapper;
 import com.agent.hopaw.infra.mapper.SysConfigMapper;
 import com.agent.hopaw.infra.mapper.TtsConfigMapper;
+import com.agent.hopaw.infra.mapper.TtsVoiceMapper;
 import com.agent.hopaw.infra.memory.ILongTermMemoryService;
+import com.agent.hopaw.infra.model.dto.TtsVoice;
 import com.agent.hopaw.infra.model.entity.AiModel;
 import com.agent.hopaw.infra.model.entity.AiModelProvider;
 import com.agent.hopaw.infra.model.entity.Agent;
@@ -53,6 +55,7 @@ public class BackupService {
     private final AgentMapper agentMapper;
     private final AvatarConfigMapper avatarConfigMapper;
     private final TtsConfigMapper ttsConfigMapper;
+    private final TtsVoiceMapper ttsVoiceMapper;
     private final LongTermMemoryMapper longTermMemoryMapper;
     private final ILongTermMemoryService longTermMemoryService;
     private final Path encryptionKeyPath;
@@ -63,6 +66,7 @@ public class BackupService {
                          AgentMapper agentMapper,
                          AvatarConfigMapper avatarConfigMapper,
                          TtsConfigMapper ttsConfigMapper,
+                         TtsVoiceMapper ttsVoiceMapper,
                          LongTermMemoryMapper longTermMemoryMapper,
                          ILongTermMemoryService longTermMemoryService) {
         this.sysConfigMapper = sysConfigMapper;
@@ -71,6 +75,7 @@ public class BackupService {
         this.agentMapper = agentMapper;
         this.avatarConfigMapper = avatarConfigMapper;
         this.ttsConfigMapper = ttsConfigMapper;
+        this.ttsVoiceMapper = ttsVoiceMapper;
         this.longTermMemoryMapper = longTermMemoryMapper;
         this.longTermMemoryService = longTermMemoryService;
         this.encryptionKeyPath = Paths.get(System.getProperty("user.home"), ".hopaw", "encryption.key");
@@ -115,6 +120,9 @@ public class BackupService {
             // 备份保留原密文导出；导入时使用备份包内旧密钥解密后以本机密钥重加密
             List<TtsConfig> ttsConfigs = ttsConfigMapper.findAll();
             files.put("tts_config.json", toJsonBytes(ttsConfigs));
+            // 渠道音色随 TTS 配置一并导出，保证恢复后渠道音色完整
+            List<TtsVoice> ttsVoices = ttsVoiceMapper.findAll();
+            files.put("tts_voice.json", toJsonBytes(ttsVoices));
         }
 
         if (exportMemory) {
@@ -275,6 +283,14 @@ public class BackupService {
                 summary.append("tts_config: ").append(n).append(" 条\n");
             }
 
+            // tts_voice.json（渠道音色：先清空全表再重建，config_id 与导入后的 tts_config 对应）
+            Path ttsVoiceFile = tempDir.resolve("tts_voice.json");
+            if (Files.exists(ttsVoiceFile)) {
+                int n = importTtsVoices(ttsVoiceFile);
+                total += n;
+                summary.append("tts_voice: ").append(n).append(" 条\n");
+            }
+
             // long_term_memory.json（长时记忆，恢复时重新生成向量）
             Path memoryFile = tempDir.resolve("long_term_memory.json");
             if (Files.exists(memoryFile)) {
@@ -395,6 +411,28 @@ public class BackupService {
                 ttsConfigMapper.insert(config);
             }
             count++;
+        }
+        return count;
+    }
+
+    /**
+     * 导入渠道音色：先清空全表再重建。
+     * 音色无敏感字段，直接写入；insert 使用自增 id（原 id 不保留），config_id 与导入后的 tts_config 对应。
+     */
+    private int importTtsVoices(Path file) throws Exception {
+        String json = Files.readString(file, StandardCharsets.UTF_8);
+        List<TtsVoice> voices = JSON.parseArray(json, TtsVoice.class);
+        ttsVoiceMapper.deleteAll();
+        int count = 0;
+        if (voices != null) {
+            for (TtsVoice voice : voices) {
+                if (voice.getConfigId() == null || voice.getVoiceId() == null || voice.getVoiceId().isBlank()) {
+                    continue;
+                }
+                voice.setId(null);
+                ttsVoiceMapper.insert(voice);
+                count++;
+            }
         }
         return count;
     }

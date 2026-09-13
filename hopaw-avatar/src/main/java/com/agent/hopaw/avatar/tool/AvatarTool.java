@@ -175,7 +175,7 @@ public class AvatarTool implements AgentTool {
 
     @Override
     public String getKeyword() {
-        return "虚拟人：换装、移动、消息";
+        return "虚拟人换装,虚拟人移动,虚拟人消息,虚拟人语音,Avatar";
     }
 
     @Override

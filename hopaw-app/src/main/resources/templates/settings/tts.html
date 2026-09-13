@@ -1,6 +1,6 @@
 <th:block th:fragment="content" xmlns:th="http://www.thymeleaf.org">
 <div class="settings-panel active" id="tab-tts">
-    <div class="settings-form" style="max-width:900px;">
+    <div class="settings-form">
         <div class="tts-list-header">
             <h3>TTS 语音配置</h3>
             <button class="btn-add-tts" onclick="showTtsForm()">+ 添加配置</button>
@@ -15,7 +15,8 @@
                         <th>编号</th>
                         <th>配置</th>
                         <th style="width:80px;">状态</th>
-                        <th style="width:120px;">操作</th>
+                        <th style="width:80px;">音色数</th>
+                        <th style="width:180px;">操作</th>
                     </tr>
                 </thead>
                 <tbody id="ttsTableBody">
@@ -47,7 +48,7 @@
             <div class="form-group">
                 <label for="ttsConfigJson">厂商配置（JSON）</label>
                 <textarea id="ttsConfigJson" class="settings-input tts-json-input" rows="6" placeholder='{"appId":"xxx","accessToken":"xxx"}'></textarea>
-                <p class="form-hint">火山引擎: {"appId":"xxx","accessToken":"xxx","cluster":"volcano_tts"}<br>阿里云: {"accessKeyId":"xxx","accessKeySecret":"xxx","appKey":"xxx"}</p>
+                <p class="form-hint">火山引擎: {"appId":"xxx","accessToken":"xxx","cluster":"volcano_tts"}<br>阿里云: {"accessKeyId":"xxx","accessKeySecret":"xxx","appKey":"xxx"}<br>Piper: {"baseUrl":"http://&lt;Piper服务IP&gt;:5500"}</p>
             </div>
 
             <div class="form-group">
@@ -63,6 +64,41 @@
             <div class="tts-form-actions">
                 <button class="btn-save-settings" onclick="saveTtsForm()">保存</button>
                 <button class="btn-cancel" onclick="hideTtsForm()">取消</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 渠道音色管理弹框 -->
+    <div class="modal-overlay tts-voice-overlay" id="ttsVoiceModal" style="display:none;">
+        <div class="tts-voice-modal">
+            <div class="tts-voice-header">
+                <h4 class="tts-voice-title" id="ttsVoiceTitle">渠道音色</h4>
+                <button class="tts-voice-close" onclick="hideTtsVoiceModal()">&times;</button>
+            </div>
+            <p class="tts-voice-hint">该渠道独立维护音色列表，增删改不影响其他配置</p>
+            <div class="tts-voice-toolbar">
+                <button class="btn-tts-voice-add" onclick="addTtsVoiceRow()">+ 新增音色</button>
+                <button class="btn-tts-voice-reset" onclick="resetTtsVoices()">重置为默认音色</button>
+                <span class="tts-voice-count" id="ttsVoiceCount"></span>
+            </div>
+            <div class="tts-voice-table-wrap">
+                <table class="tts-voice-table">
+                    <thead>
+                        <tr>
+                            <th style="width:150px;">音色ID</th>
+                            <th style="width:170px;">名称</th>
+                            <th style="width:90px;">语言</th>
+                            <th style="width:80px;">性别</th>
+                            <th>情感(逗号分隔)</th>
+                            <th style="width:60px;">操作</th>
+                        </tr>
+                    </thead>
+                    <tbody id="ttsVoiceTableBody"></tbody>
+                </table>
+            </div>
+            <div class="tts-voice-actions">
+                <button class="btn-save-settings" onclick="saveTtsVoices()">保存音色</button>
+                <button class="btn-cancel" onclick="hideTtsVoiceModal()">关闭</button>
             </div>
         </div>
     </div>

@@ -667,22 +667,24 @@ public class AgentExecutor implements IAgentExecutor {
                             "工具执行异常：" + throwable.getMessage() + "。请根据异常信息调整调用方式或修正后重试。");
                 });
         List<AgentTool> selectedTools = agentExecutorParams.getToolSets().stream().map(x -> x.getAgentTool()).collect(Collectors.toList());
-        if (selectedTools != null && agentExecutorParams.getVectorToolSearch() != null && agentExecutorParams.getVectorToolSearch()) {
-            int maxResults = agentExecutorParams.getVectorToolSearchMaxResults() != null ? agentExecutorParams.getVectorToolSearchMaxResults() : 10;
-            aiBuilder.toolSearchStrategy(
-                    VectorToolSearchStrategy
-                            .builder()
-                            .embeddingModel(embeddingModel)
-                            .maxResults(maxResults).build()
-            );
-        }
-        if (!selectedTools.isEmpty()) {
+        if(selectedTools != null && !selectedTools.isEmpty()){
+            if (agentExecutorParams.getVectorToolSearch() != null && agentExecutorParams.getVectorToolSearch()) {
+                int maxResults = agentExecutorParams.getVectorToolSearchMaxResults() != null ? agentExecutorParams.getVectorToolSearchMaxResults() : 10;
+                aiBuilder.toolSearchStrategy(
+                        VectorToolSearchStrategy
+                                .builder()
+                                .embeddingModel(embeddingModel)
+                                .maxResults(maxResults).build()
+                );
+            }
             int maxToolInvocations = agentExecutorParams.getMaxToolInvocations() != null ? agentExecutorParams.getMaxToolInvocations() : 0;
             if (maxToolInvocations > 0) {
                 aiBuilder.maxToolCallingRoundTrips(maxToolInvocations);
             }
             aiBuilder.tools(selectedTools.toArray());
         }
+
+
 
         // MCP 工具集成：为每个已启用的 MCP 服务器创建客户端并注册
         List<McpServerConfig> mcpConfigs = agentExecutorParams.getMcpServerConfigs();

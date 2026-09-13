@@ -6,6 +6,7 @@ import com.agent.hopaw.infra.model.entity.TtsConfig;
 import com.agent.hopaw.infra.service.ITtsService;
 import com.agent.hopaw.infra.service.TtsConfigService;
 import com.agent.hopaw.infra.service.TtsServiceFactory;
+import com.agent.hopaw.infra.service.TtsVoiceService;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -17,16 +18,23 @@ public class TtsConfigController {
 
     private final TtsConfigService ttsConfigService;
     private final TtsServiceFactory ttsServiceFactory;
+    private final TtsVoiceService ttsVoiceService;
 
-    public TtsConfigController(TtsConfigService ttsConfigService, TtsServiceFactory ttsServiceFactory) {
+    public TtsConfigController(TtsConfigService ttsConfigService,
+                               TtsServiceFactory ttsServiceFactory,
+                               TtsVoiceService ttsVoiceService) {
         this.ttsConfigService = ttsConfigService;
         this.ttsServiceFactory = ttsServiceFactory;
+        this.ttsVoiceService = ttsVoiceService;
     }
 
-    /** 获取所有 TTS 配置（configJson 解密后返回，供前端展示与编辑） */
+    /** 获取所有 TTS 配置（configJson 解密后返回，附各渠道音色数，供前端展示与编辑） */
     @GetMapping("/configs")
     public ResponseBean listConfigs() {
         List<TtsConfig> configs = ttsConfigService.findAll();
+        for (TtsConfig config : configs) {
+            config.setVoiceCount(ttsVoiceService.countByConfigId(config.getId()));
+        }
         return ResponseBean.success(configs);
     }
 
@@ -47,20 +55,28 @@ public class TtsConfigController {
         return ResponseBean.success(config);
     }
 
-    /** 保存 TTS 配置（新增或更新）。同厂商可添加多条配置。configJson 加密后落库。 */
+    /**
+     * 保存 TTS 配置（新增或更新）。同厂商可添加多条配置。configJson 加密后落库。
+     * 新增配置时自动复制厂商实现的默认音色到该渠道。
+     */
     @PostMapping("/config")
     public ResponseBean saveConfig(@RequestBody TtsConfig config) {
         if (config.getVendorCode() == null || config.getVendorCode().isEmpty()) {
             return ResponseBean.fail("厂商编号不能为空");
         }
+        boolean isNew = config.getId() == null;
         ttsConfigService.save(config);
+        if (isNew) {
+            ttsVoiceService.initDefaultVoices(config.getId(), config.getVendorCode());
+        }
         return ResponseBean.success();
     }
 
-    /** 删除 TTS 配置 */
+    /** 删除 TTS 配置（同时删除该渠道的音色） */
     @DeleteMapping("/config/{id}")
     public ResponseBean deleteConfig(@PathVariable Long id) {
         ttsConfigService.deleteById(id);
+        ttsVoiceService.clearByConfigId(id);
         return ResponseBean.success();
     }
 
@@ -71,7 +87,10 @@ public class TtsConfigController {
         return ResponseBean.success(vendors);
     }
 
-    /** 获取指定厂商的音色列表 */
+    /**
+     * 获取音色列表：优先按 configId 查询该渠道已配置的音色（存储于 tts_voice 表）；
+     * 未传 configId 时返回厂商实现的默认音色（兼容旧调用）。
+     */
     @GetMapping("/voices")
     public ResponseBean listVoices(@RequestParam String vendorCode,
                                    @RequestParam(required = false) Long configId) {
@@ -79,14 +98,50 @@ public class TtsConfigController {
         if (service == null) {
             return ResponseBean.fail("不支持的厂商: " + vendorCode);
         }
-        String configJson = "";
         if (configId != null) {
             TtsConfig config = ttsConfigService.findById(configId);
-            if (config != null) {
-                configJson = config.getConfigJson();
+            if (config == null) {
+                return ResponseBean.fail("TTS 配置不存在: " + configId);
             }
+            // 兼容旧配置：渠道尚无音色数据时自动复制厂商默认音色，避免空列表
+            if (ttsVoiceService.countByConfigId(configId) == 0) {
+                ttsVoiceService.initDefaultVoices(configId, config.getVendorCode());
+            }
+            return ResponseBean.success(ttsVoiceService.listByConfigId(configId));
         }
-        List<TtsVoice> voices = service.listVoices(configJson);
-        return ResponseBean.success(voices);
+        return ResponseBean.success(service.listVoices(""));
+    }
+
+    /** 查询某渠道的音色列表 */
+    @GetMapping("/config/{configId}/voices")
+    public ResponseBean listConfigVoices(@PathVariable Long configId) {
+        TtsConfig config = ttsConfigService.findById(configId);
+        if (config == null) {
+            return ResponseBean.fail("TTS 配置不存在: " + configId);
+        }
+        // 兼容旧配置：渠道尚无音色数据时自动复制厂商默认音色
+        if (ttsVoiceService.countByConfigId(configId) == 0) {
+            ttsVoiceService.initDefaultVoices(configId, config.getVendorCode());
+        }
+        return ResponseBean.success(ttsVoiceService.listByConfigId(configId));
+    }
+
+    /** 全量保存某渠道的音色（前端弹框增删改后整体提交） */
+    @PutMapping("/config/{configId}/voices")
+    public ResponseBean saveConfigVoices(@PathVariable Long configId,
+                                         @RequestBody List<TtsVoice> voices) {
+        int count = ttsVoiceService.saveAll(configId, voices);
+        return ResponseBean.success(Map.of("count", count));
+    }
+
+    /** 重置某渠道的音色为厂商实现的默认音色 */
+    @PostMapping("/config/{configId}/voices/reset")
+    public ResponseBean resetConfigVoices(@PathVariable Long configId) {
+        TtsConfig config = ttsConfigService.findById(configId);
+        if (config == null) {
+            return ResponseBean.fail("TTS 配置不存在: " + configId);
+        }
+        int count = ttsVoiceService.initDefaultVoices(configId, config.getVendorCode());
+        return ResponseBean.success(Map.of("count", count));
     }
 }
