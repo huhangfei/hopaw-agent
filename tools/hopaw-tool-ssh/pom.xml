@@ -14,7 +14,7 @@
         <maven.install.skip>true</maven.install.skip>
     </properties>
     <artifactId>hopaw-tool-ssh</artifactId>
-    <version>1.0.0</version>
+    <version>1.0.1</version>
     <dependencies>
         <dependency>
             <groupId>com.hopaw.agent</groupId>

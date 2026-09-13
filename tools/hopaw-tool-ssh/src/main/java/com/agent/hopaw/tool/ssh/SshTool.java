@@ -86,6 +86,11 @@ public class SshTool implements AgentTool {
         return "SSH, SFTP";
     }
 
+    @Override
+    public String getVersion() {
+        return "1.0.2";
+    }
+
     // ========== 多服务器配置定义与解析 ==========
 
     /**
@@ -260,6 +265,31 @@ public class SshTool implements AgentTool {
     }
 
     /**
+     * 获取可用的SSH会话；会话不存在或已断开时自动重连。
+     * 仅 sessionKey 为服务器配置主键的连接支持自动重连（可从系统配置中取得连接凭证）；
+     * host:port 形式的连接（sshConnect 明文建立，密码不缓存）无法自动重连，返回 null 由调用方提示。
+     */
+    private Session acquireSession(String sessionKey) {
+        String key = sessionKey.trim();
+        SshServer server = resolveServer(key);
+        if (server != null) {
+            // jschConnect 内部会探测半死连接并自动重建
+            try {
+                return jschConnect(key, server.username(), server.host(), server.port(), server.password());
+            } catch (JSchException e) {
+                logger.error("SSH会话自动重连失败: sessionKey={}", key, e);
+                return null;
+            }
+        }
+        // host:port 形式：仅复用缓存中的现有连接
+        Session session = SESSION_CACHE.get(key);
+        if (session != null && session.isConnected()) {
+            return session;
+        }
+        return null;
+    }
+
+    /**
      * 真实探测会话是否可用。
      * isConnected() 只反映本地标志位，无法发现服务器重启/网络中断后的半死连接，
      * 这里通过打开 exec channel 执行空命令（true）做一次真实往返，connect 成功即连接可用。
@@ -351,9 +381,9 @@ public class SshTool implements AgentTool {
             return "错误：command 不能为空";
         }
 
-        Session session = SESSION_CACHE.get(sessionKey);
-        if (session == null || !session.isConnected()) {
-            return "错误：会话未连接或不存在，sessionKey=" + sessionKey;
+        Session session = acquireSession(sessionKey);
+        if (session == null) {
+            return "错误：会话未连接或不存在，且自动重连失败（host:port 形式的连接不支持自动重连，请重新执行sshConnect），sessionKey=" + sessionKey;
         }
         InvocationParametersWrapper invocationParametersWrapper = InvocationParametersWrapper.create(invocationParameters);
         String toolCallId = invocationParametersWrapper.getToolCallId();
@@ -433,9 +463,9 @@ public class SshTool implements AgentTool {
             return "错误：sessionKey、localPath、remotePath 不能为空";
         }
 
-        Session session = SESSION_CACHE.get(sessionKey);
-        if (session == null || !session.isConnected()) {
-            return "错误：会话未连接或不存在，sessionKey=" + sessionKey;
+        Session session = acquireSession(sessionKey);
+        if (session == null) {
+            return "错误：会话未连接或不存在，且自动重连失败（host:port 形式的连接不支持自动重连，请重新执行sshConnect），sessionKey=" + sessionKey;
         }
 
         InvocationParametersWrapper wrapper = InvocationParametersWrapper.create(invocationParameters);
@@ -484,9 +514,9 @@ public class SshTool implements AgentTool {
             return "错误：sessionKey、remotePath、localPath 不能为空";
         }
 
-        Session session = SESSION_CACHE.get(sessionKey);
-        if (session == null || !session.isConnected()) {
-            return "错误：会话未连接或不存在，sessionKey=" + sessionKey;
+        Session session = acquireSession(sessionKey);
+        if (session == null) {
+            return "错误：会话未连接或不存在，且自动重连失败（host:port 形式的连接不支持自动重连，请重新执行sshConnect），sessionKey=" + sessionKey;
         }
 
         InvocationParametersWrapper wrapper = InvocationParametersWrapper.create(invocationParameters);
