@@ -9,6 +9,7 @@ import com.agent.hopaw.infra.service.TtsServiceFactory;
 import com.agent.hopaw.infra.service.TtsVoiceService;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.Base64;
 import java.util.List;
 import java.util.Map;
 
@@ -143,5 +144,76 @@ public class TtsConfigController {
         }
         int count = ttsVoiceService.initDefaultVoices(configId, config.getVendorCode());
         return ResponseBean.success(Map.of("count", count));
+    }
+
+    /**
+     * 测试渠道配置：用指定音色合成文本，返回 base64 音频供前端播放。
+     */
+    @PostMapping("/config/{configId}/test")
+    public ResponseBean testSynthesize(@PathVariable Long configId,
+                                       @RequestBody TtsTestRequest request) {
+        TtsConfig config = ttsConfigService.findById(configId);
+        if (config == null) {
+            return ResponseBean.fail("TTS 配置不存在: " + configId);
+        }
+        if (request.getVoiceId() == null || request.getVoiceId().isBlank()) {
+            return ResponseBean.fail("请选择音色");
+        }
+        if (request.getText() == null || request.getText().isBlank()) {
+            return ResponseBean.fail("测试文本不能为空");
+        }
+        ITtsService service = ttsServiceFactory.getService(config.getVendorCode());
+        if (service == null) {
+            return ResponseBean.fail("不支持的厂商: " + config.getVendorCode());
+        }
+        byte[] audio = service.synthesize(config.getConfigJson(),
+                request.getVoiceId().trim(), request.getText().trim(), request.getEmotion());
+        if (audio == null || audio.length == 0) {
+            return ResponseBean.fail("合成失败，请检查厂商配置是否正确");
+        }
+        String format = isWav(audio) ? "wav" : "mp3";
+        return ResponseBean.success(Map.of(
+                "audio", Base64.getEncoder().encodeToString(audio),
+                "format", format,
+                "bytes", audio.length
+        ));
+    }
+
+    /** 检测 WAV 文件头（RIFF....WAVE） */
+    private static boolean isWav(byte[] a) {
+        return a.length >= 12
+                && a[0] == 'R' && a[1] == 'I' && a[2] == 'F' && a[3] == 'F'
+                && a[8] == 'W' && a[9] == 'A' && a[10] == 'V' && a[11] == 'E';
+    }
+
+    /** TTS 测试请求体 */
+    public static class TtsTestRequest {
+        private String voiceId;
+        private String text;
+        private String emotion;
+
+        public String getVoiceId() {
+            return voiceId;
+        }
+
+        public void setVoiceId(String voiceId) {
+            this.voiceId = voiceId;
+        }
+
+        public String getText() {
+            return text;
+        }
+
+        public void setText(String text) {
+            this.text = text;
+        }
+
+        public String getEmotion() {
+            return emotion;
+        }
+
+        public void setEmotion(String emotion) {
+            this.emotion = emotion;
+        }
     }
 }

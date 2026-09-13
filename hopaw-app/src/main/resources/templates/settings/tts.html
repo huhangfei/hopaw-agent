@@ -16,7 +16,7 @@
                         <th>配置</th>
                         <th style="width:80px;">状态</th>
                         <th style="width:80px;">音色数</th>
-                        <th style="width:180px;">操作</th>
+                        <th style="width:230px;">操作</th>
                     </tr>
                 </thead>
                 <tbody id="ttsTableBody">
@@ -99,6 +99,36 @@
             <div class="tts-voice-actions">
                 <button class="btn-save-settings" onclick="saveTtsVoices()">保存音色</button>
                 <button class="btn-cancel" onclick="hideTtsVoiceModal()">关闭</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 渠道测试弹框 -->
+    <div class="modal-overlay tts-test-overlay" id="ttsTestModal" style="display:none;">
+        <div class="tts-test-modal">
+            <div class="tts-voice-header">
+                <h4 class="tts-voice-title" id="ttsTestTitle">渠道测试</h4>
+                <button class="tts-voice-close" onclick="hideTtsTestModal()">&times;</button>
+            </div>
+            <p class="tts-voice-hint">左侧选择音色，右侧输入文本试听该渠道的合成效果</p>
+            <div class="tts-test-body">
+                <div class="tts-test-left">
+                    <div class="tts-test-voice-list" id="ttsTestVoiceList"></div>
+                </div>
+                <div class="tts-test-right">
+                    <textarea id="ttsTestText" class="settings-input tts-test-textarea" rows="8"
+                              placeholder="输入要合成的测试文本，支持长文本..."></textarea>
+                    <div class="tts-test-actions">
+                        <button class="btn-save-settings" id="ttsTestGenBtn" onclick="generateTtsTestAudio()">生成语音</button>
+                    </div>
+                    <div class="tts-test-player" id="ttsTestPlayer" style="display:none;">
+                        <audio id="ttsTestAudio" controls></audio>
+                        <div class="tts-test-player-bar">
+                            <span class="tts-test-player-info" id="ttsTestAudioInfo"></span>
+                            <button class="btn-tts-test-replay" onclick="replayTtsTestAudio()">&#x21bb; 重播</button>
+                        </div>
+                    </div>
+                </div>
             </div>
         </div>
     </div>

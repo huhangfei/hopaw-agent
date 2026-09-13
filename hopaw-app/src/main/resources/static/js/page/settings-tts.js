@@ -67,6 +67,7 @@ function renderTtsTable() {
         rows += '<td>' + enabledBadge + '</td>';
         rows += '<td class="tts-voice-count-cell">' + (cfg.voiceCount != null ? cfg.voiceCount : '-') + '</td>';
         rows += '<td class="tts-actions">'
+            + '<button class="btn-tts-test" onclick="showTtsTestModal(' + cfg.id + ')">测试</button>'
             + '<button class="btn-tts-edit" onclick="showTtsVoiceModal(' + cfg.id + ')">音色</button>'
             + '<button class="btn-tts-edit" onclick="editTtsConfig(' + cfg.id + ')">编辑</button>'
             + '<button class="btn-tts-delete" onclick="deleteTtsConfig(' + cfg.id + ')">删除</button>'
@@ -329,4 +330,182 @@ function resetTtsVoices() {
                 showToast('重置失败', 'error');
             });
     });
+}
+
+// ========== 渠道测试 ==========
+var ttsTestConfigId = null;
+var ttsTestVoices = [];
+var ttsTestSelectedVoiceId = null;
+var ttsTestObjectUrl = null;
+var ttsTestGenerating = false;
+
+/** 打开渠道测试弹框 */
+function showTtsTestModal(configId) {
+    ttsTestConfigId = configId;
+    ttsTestVoices = [];
+    ttsTestSelectedVoiceId = null;
+
+    var cfg = null;
+    for (var i = 0; i < ttsConfigList.length; i++) {
+        if (ttsConfigList[i].id === configId) {
+            cfg = ttsConfigList[i];
+            break;
+        }
+    }
+    document.getElementById('ttsTestTitle').textContent = '渠道测试 - ' + ((cfg && cfg.configName) ? cfg.configName : ('#' + configId));
+    clearTtsTestAudio();
+    document.getElementById('ttsTestText').value = '';
+    document.getElementById('ttsTestModal').style.display = 'flex';
+    renderTtsTestVoices();
+    loadTtsTestVoices();
+}
+
+/** 关闭测试弹框并清理音频资源 */
+function hideTtsTestModal() {
+    clearTtsTestAudio();
+    document.getElementById('ttsTestModal').style.display = 'none';
+    ttsTestConfigId = null;
+    ttsTestVoices = [];
+    ttsTestSelectedVoiceId = null;
+}
+
+/** 拉取该渠道的音色列表 */
+function loadTtsTestVoices() {
+    var list = document.getElementById('ttsTestVoiceList');
+    list.innerHTML = '<div class="tts-test-empty">加载中...</div>';
+    fetch('/api/tts/config/' + encodeURIComponent(ttsTestConfigId) + '/voices')
+        .then(function(r) { return r.json(); })
+        .then(function(resp) {
+            if (ttsTestConfigId === null) return;
+            if (resp.msg !== 'success') {
+                list.innerHTML = '<div class="tts-test-empty">加载失败: ' + escapeHtml(resp.msg || '') + '</div>';
+                return;
+            }
+            ttsTestVoices = resp.data || [];
+            renderTtsTestVoices();
+        })
+        .catch(function() {
+            list.innerHTML = '<div class="tts-test-empty">加载失败</div>';
+        });
+}
+
+/** 渲染左侧音色列表 */
+function renderTtsTestVoices() {
+    var list = document.getElementById('ttsTestVoiceList');
+    if (!ttsTestVoices.length) {
+        list.innerHTML = '<div class="tts-test-empty">暂无音色</div>';
+        return;
+    }
+    var html = '';
+    ttsTestVoices.forEach(function(v) {
+        var selected = (v.voiceId === ttsTestSelectedVoiceId) ? ' selected' : '';
+        var meta = [];
+        if (v.language) meta.push(escapeHtml(v.language));
+        if (v.gender) meta.push(escapeHtml(v.gender));
+        html += '<div class="tts-test-voice-item' + selected + '" onclick="selectTtsTestVoice(\'' + escapeHtmlForAttr(v.voiceId || '') + '\')">'
+            + '<div class="tts-test-voice-name">' + escapeHtml(v.voiceName || v.voiceId || '') + '</div>'
+            + '<div class="tts-test-voice-id">' + escapeHtml(v.voiceId || '') + '</div>'
+            + (meta.length ? '<div class="tts-test-voice-meta">' + meta.join(' · ') + '</div>' : '')
+            + '</div>';
+    });
+    list.innerHTML = html;
+}
+
+/** 选中某个音色 */
+function selectTtsTestVoice(voiceId) {
+    ttsTestSelectedVoiceId = voiceId;
+    renderTtsTestVoices();
+}
+
+/** 生成测试语音 */
+function generateTtsTestAudio() {
+    if (ttsTestGenerating) return;
+    if (!ttsTestSelectedVoiceId) {
+        showToast('请先在左侧选择音色', 'error');
+        return;
+    }
+    var text = document.getElementById('ttsTestText').value.trim();
+    if (!text) {
+        showToast('请输入测试文本', 'error');
+        return;
+    }
+    var btn = document.getElementById('ttsTestGenBtn');
+    ttsTestGenerating = true;
+    btn.disabled = true;
+    btn.textContent = '生成中...';
+    clearTtsTestAudio();
+
+    fetch('/api/tts/config/' + encodeURIComponent(ttsTestConfigId) + '/test', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ voiceId: ttsTestSelectedVoiceId, text: text })
+    })
+        .then(function(r) { return r.json(); })
+        .then(function(resp) {
+            if (resp.msg === 'success' && resp.data && resp.data.audio) {
+                playTtsTestAudio(resp.data.audio, resp.data.format, resp.data.bytes);
+            } else {
+                showToast('合成失败: ' + (resp.data || resp.msg || ''), 'error');
+            }
+        })
+        .catch(function() {
+            showToast('合成失败，请检查网络或服务状态', 'error');
+        })
+        .finally(function() {
+            ttsTestGenerating = false;
+            btn.disabled = false;
+            btn.textContent = '生成语音';
+        });
+}
+
+/** base64 音频写入播放器并自动播放 */
+function playTtsTestAudio(base64, format, bytes) {
+    try {
+        var binary = atob(base64);
+        var len = binary.length;
+        var bytesArr = new Uint8Array(len);
+        for (var i = 0; i < len; i++) {
+            bytesArr[i] = binary.charCodeAt(i);
+        }
+        var blob = new Blob([bytesArr], { type: 'audio/' + (format === 'wav' ? 'wav' : 'mpeg') });
+        ttsTestObjectUrl = URL.createObjectURL(blob);
+
+        var audio = document.getElementById('ttsTestAudio');
+        audio.src = ttsTestObjectUrl;
+        var sizeKb = bytes ? Math.round(bytes / 1024) : 0;
+        document.getElementById('ttsTestAudioInfo').textContent = '已生成 ' + (format || '').toUpperCase() + ' 音频，约 ' + sizeKb + ' KB';
+        document.getElementById('ttsTestPlayer').style.display = 'block';
+        var playPromise = audio.play();
+        if (playPromise && typeof playPromise.catch === 'function') {
+            playPromise.catch(function() { /* 浏览器策略拦截时用户手动点击播放 */ });
+        }
+    } catch (e) {
+        console.error('播放测试音频失败:', e);
+        showToast('音频解析失败', 'error');
+    }
+}
+
+/** 重播：从头播放 */
+function replayTtsTestAudio() {
+    var audio = document.getElementById('ttsTestAudio');
+    if (!audio.src) return;
+    try { audio.currentTime = 0; } catch (e) {}
+    var playPromise = audio.play();
+    if (playPromise && typeof playPromise.catch === 'function') {
+        playPromise.catch(function() {});
+    }
+}
+
+/** 清理播放器与 objectURL */
+function clearTtsTestAudio() {
+    var audio = document.getElementById('ttsTestAudio');
+    try { audio.pause(); } catch (e) {}
+    audio.removeAttribute('src');
+    try { audio.load(); } catch (e) {}
+    if (ttsTestObjectUrl) {
+        URL.revokeObjectURL(ttsTestObjectUrl);
+        ttsTestObjectUrl = null;
+    }
+    document.getElementById('ttsTestPlayer').style.display = 'none';
+    document.getElementById('ttsTestAudioInfo').textContent = '';
 }

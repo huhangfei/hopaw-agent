@@ -472,3 +472,242 @@ body.dark-theme .btn-tts-voice-reset:hover {
     background: #ffb74d;
     color: #1e2130;
 }
+
+/* ========== 渠道测试弹框 ========== */
+.tts-test-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.45);
+    display: none;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+}
+
+.tts-test-modal {
+    background: #fff;
+    border-radius: 12px;
+    width: 860px;
+    max-width: 94vw;
+    max-height: 84vh;
+    padding: 20px 22px;
+    display: flex;
+    flex-direction: column;
+    box-shadow: 0 8px 30px rgba(0, 0, 0, 0.18);
+}
+
+.tts-test-body {
+    display: flex;
+    gap: 16px;
+    flex: 1;
+    min-height: 0;
+    margin-top: 4px;
+}
+
+.tts-test-left {
+    width: 280px;
+    flex-shrink: 0;
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+}
+
+.tts-test-voice-list {
+    flex: 1;
+    overflow-y: auto;
+    border: 1px solid #ececec;
+    border-radius: 8px;
+}
+
+.tts-test-voice-item {
+    padding: 10px 12px;
+    cursor: pointer;
+    border-bottom: 1px solid #f0f0f0;
+    border-left: 3px solid transparent;
+    transition: background 0.15s;
+}
+
+.tts-test-voice-item:last-child {
+    border-bottom: none;
+}
+
+.tts-test-voice-item:hover {
+    background: #fafbff;
+}
+
+.tts-test-voice-item.selected {
+    background: #eef1ff;
+    border-left-color: #667eea;
+}
+
+.tts-test-voice-name {
+    font-size: 13px;
+    font-weight: 500;
+    color: #333;
+}
+
+.tts-test-voice-id {
+    font-size: 11px;
+    color: #999;
+    font-family: 'Consolas', 'Courier New', monospace;
+    margin-top: 2px;
+    word-break: break-all;
+}
+
+.tts-test-voice-meta {
+    font-size: 11px;
+    color: #aaa;
+    margin-top: 2px;
+}
+
+.tts-test-empty {
+    text-align: center;
+    color: #999;
+    padding: 32px 12px;
+    font-size: 13px;
+}
+
+.tts-test-right {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+    min-height: 0;
+}
+
+.tts-test-textarea {
+    flex: 1;
+    resize: none;
+    min-height: 180px;
+    font-size: 13px;
+    line-height: 1.6;
+}
+
+.tts-test-actions {
+    margin-top: 12px;
+    display: flex;
+    gap: 10px;
+}
+
+.tts-test-player {
+    margin-top: 14px;
+    padding-top: 14px;
+    border-top: 1px dashed #e0e0e0;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.tts-test-player audio {
+    width: 100%;
+}
+
+.tts-test-player-bar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+}
+
+.tts-test-player-info {
+    font-size: 12px;
+    color: #999;
+}
+
+.btn-tts-test-replay {
+    background: none;
+    color: #667eea;
+    border: 1px solid #667eea;
+    padding: 4px 14px;
+    border-radius: 6px;
+    font-size: 12px;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: all 0.2s;
+}
+
+.btn-tts-test-replay:hover {
+    background: #667eea;
+    color: white;
+}
+
+/* 测试按钮（表格操作列） */
+.btn-tts-test {
+    background: none;
+    color: #2e7d32;
+    border: 1px solid #2e7d32;
+    padding: 4px 12px;
+    border-radius: 6px;
+    font-size: 12px;
+    cursor: pointer;
+    margin-right: 6px;
+    transition: all 0.2s;
+}
+
+.btn-tts-test:hover {
+    background: #2e7d32;
+    color: white;
+}
+
+/* 暗色主题：测试弹框 */
+body.dark-theme .tts-test-modal {
+    background: #1e2130;
+    box-shadow: 0 8px 30px rgba(0, 0, 0, 0.5);
+}
+
+body.dark-theme .tts-test-voice-list {
+    border-color: #3d3d6b;
+}
+
+body.dark-theme .tts-test-voice-item {
+    border-bottom-color: #2d2d44;
+}
+
+body.dark-theme .tts-test-voice-item:hover {
+    background: #253555;
+}
+
+body.dark-theme .tts-test-voice-item.selected {
+    background: rgba(139, 163, 255, 0.12);
+    border-left-color: #8ba3ff;
+}
+
+body.dark-theme .tts-test-voice-name {
+    color: #e0e0e0;
+}
+
+body.dark-theme .tts-test-voice-id {
+    color: #888;
+}
+
+body.dark-theme .tts-test-empty {
+    color: #888;
+}
+
+body.dark-theme .tts-test-player {
+    border-top-color: #3d3d6b;
+}
+
+body.dark-theme .tts-test-player-info {
+    color: #999;
+}
+
+body.dark-theme .btn-tts-test-replay {
+    color: #8ba3ff;
+    border-color: #8ba3ff;
+}
+
+body.dark-theme .btn-tts-test-replay:hover {
+    background: #8ba3ff;
+    color: #1e2130;
+}
+
+body.dark-theme .btn-tts-test {
+    color: #69f0ae;
+    border-color: #69f0ae;
+}
+
+body.dark-theme .btn-tts-test:hover {
+    background: #69f0ae;
+    color: #1e2130;
+}
