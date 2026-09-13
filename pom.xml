@@ -19,7 +19,6 @@
     <modules>
         <module>hopaw-contract</module>
         <module>hopaw-infra</module>
-        <module>hopaw-biz</module>
         <module>hopaw-avatar</module>
         <module>hopaw-app</module>
         <module>hopaw-plugin-repo</module>

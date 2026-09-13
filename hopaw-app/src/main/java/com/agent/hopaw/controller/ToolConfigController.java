@@ -2,7 +2,7 @@ package com.agent.hopaw.controller;
 
 import com.agent.hopaw.infra.model.dto.ToolSetInfo;
 import com.agent.hopaw.infra.service.ToolConfigService;
-import com.agent.hopaw.infra.tool.AgentToolService;
+import com.agent.hopaw.infra.service.AgentToolService;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.*;
