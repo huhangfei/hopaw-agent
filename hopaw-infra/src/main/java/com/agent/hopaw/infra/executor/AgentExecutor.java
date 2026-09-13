@@ -669,12 +669,13 @@ public class AgentExecutor implements IAgentExecutor {
         List<AgentTool> selectedTools = agentExecutorParams.getToolSets().stream().map(x -> x.getAgentTool()).collect(Collectors.toList());
         if(selectedTools != null && !selectedTools.isEmpty()){
             if (agentExecutorParams.getVectorToolSearch() != null && agentExecutorParams.getVectorToolSearch()) {
-                int maxResults = agentExecutorParams.getVectorToolSearchMaxResults() != null ? agentExecutorParams.getVectorToolSearchMaxResults() : 10;
+                int maxResults = agentExecutorParams.getVectorToolSearchMaxResults() != null ? agentExecutorParams.getVectorToolSearchMaxResults() : 20;
                 aiBuilder.toolSearchStrategy(
                         VectorToolSearchStrategy
                                 .builder()
                                 .embeddingModel(embeddingModel)
-                                .maxResults(maxResults).build()
+                                .maxResults(maxResults)
+                                .build()
                 );
             }
             int maxToolInvocations = agentExecutorParams.getMaxToolInvocations() != null ? agentExecutorParams.getMaxToolInvocations() : 0;

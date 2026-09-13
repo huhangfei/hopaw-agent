@@ -3,9 +3,12 @@ package com.agent.hopaw.infra.tool.agenttoolset;
 import com.agent.hopaw.infra.model.dto.ToolInfo;
 import com.agent.hopaw.infra.model.dto.ToolParamInfo;
 import com.agent.hopaw.infra.model.dto.ToolSetInfo;
+import com.agent.hopaw.infra.model.entity.Agent;
+import com.agent.hopaw.infra.service.IAgentService;
 import com.agent.hopaw.infra.tool.AgentTool;
 import com.agent.hopaw.infra.tool.IAgentToolService;
 import com.agent.hopaw.infra.tool.ToolSecurityLevel;
+import com.agent.hopaw.infra.util.InvocationParametersWrapper;
 import dev.langchain4j.agent.tool.P;
 import dev.langchain4j.agent.tool.SearchBehavior;
 import dev.langchain4j.agent.tool.Tool;
@@ -22,9 +25,11 @@ import java.util.List;
 public class AgentToolSetTool implements AgentTool {
 
     private final IAgentToolService agentToolService;
+    private final IAgentService agentService;
 
-    public AgentToolSetTool(IAgentToolService agentToolService) {
+    public AgentToolSetTool(IAgentToolService agentToolService, IAgentService agentService) {
         this.agentToolService = agentToolService;
+        this.agentService = agentService;
     }
 
     @Override
@@ -51,9 +56,11 @@ public class AgentToolSetTool implements AgentTool {
      * 查询所有智能体工具集（含每个工具集下的工具名称、描述与安全级别）。
      */
     @ToolSecurityLevel(ToolSecurityLevel.Level.SAFE)
-    @Tool(value = {"查询所有智能体工具", "查询当前系统中所有可用的智能体工具集及各工具集内的工具清单（名称、描述、安全级别）"})
-    public String findAllAgentTools(InvocationParameters invocationParameters) {
-        List<ToolSetInfo> toolSets = agentToolService.getToolSets();
+    @Tool(value = {"获取所有智能体工具", "查询当前系统中所有可用的智能体工具集及各工具集内的工具清单（名称、描述、安全级别）"},searchBehavior = SearchBehavior.ALWAYS_VISIBLE)
+    public String getAllAgentTools(InvocationParameters invocationParameters) {
+        InvocationParametersWrapper wrapper=InvocationParametersWrapper.create(invocationParameters);
+        Agent agent = agentService.getAgentById(wrapper.getAgentId());
+        List<ToolSetInfo> toolSets = agentService.getToolSetFromAgent(agent);
         if (toolSets == null || toolSets.isEmpty()) {
             return "成功：当前系统中没有可用的智能体工具集";
         }
