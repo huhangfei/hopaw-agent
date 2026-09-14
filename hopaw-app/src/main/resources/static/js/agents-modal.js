@@ -333,6 +333,22 @@ function ensureAvatarSettingsModal() {
         '          <option value="">请先选择厂商</option>' +
         '        </select>' +
         '      </div>' +
+        '      <div class="form-group">' +
+        '        <label>启用分段合成</label>' +
+        '        <div class="toggle-wrapper">' +
+        '          <label class="toggle">' +
+        '            <input type="checkbox" id="avatarTtsSegmentEnabledInput" checked>' +
+        '            <span class="slider"></span>' +
+        '          </label>' +
+        '          <span class="toggle-label" id="avatarTtsSegmentEnabledLabel">已启用</span>' +
+        '          <span class="form-hint">开启后文本将按分段符号切分逐段合成，首段更快送达</span>' +
+        '        </div>' +
+        '      </div>' +
+        '      <div class="form-group">' +
+        '        <label for="avatarTtsSegmentDelimitersInput">分段符号</label>' +
+        '        <input type="text" id="avatarTtsSegmentDelimitersInput" class="form-input" placeholder="。！？；…" />' +
+        '        <span class="form-hint">每个字符均为独立分隔符，留空使用默认断句规则</span>' +
+        '      </div>' +
         '    </div>' +
         '    <div class="modal-footer">' +
         '      <button type="button" class="btn-cancel" onclick="closeAvatarSettingsModal()">取消</button>' +
@@ -444,6 +460,11 @@ function bindAvatarTtsToggleChange() {
         ttsInput.addEventListener('change', updateAvatarTtsToggleLabel);
         ttsInput._ttsToggleBound = true;
     }
+    var segInput = document.getElementById('avatarTtsSegmentEnabledInput');
+    if (segInput && !segInput._segToggleBound) {
+        segInput.addEventListener('change', updateAvatarTtsSegmentToggleLabel);
+        segInput._segToggleBound = true;
+    }
 }
 
 function updateAvatarToggleLabels() {
@@ -526,6 +547,10 @@ function fillAvatarSettings(settings, groups, selectedGroup) {
     if (settings.ttsConfigId) {
         loadAvatarTtsVoicesForConfig(settings.ttsVoiceId);
     }
+    // 分段合成字段
+    document.getElementById('avatarTtsSegmentEnabledInput').checked = settings.ttsSegmentEnabled !== false;
+    document.getElementById('avatarTtsSegmentDelimitersInput').value = settings.ttsSegmentDelimiters || '';
+    updateAvatarTtsSegmentToggleLabel();
 }
 
 function saveAvatarSettings() {
@@ -547,7 +572,9 @@ function saveAvatarSettings() {
         ttsEnabled: document.getElementById('avatarTtsEnabledInput').checked,
         ttsConfigId: document.getElementById('avatarTtsVendorSelect').value
             ? parseInt(document.getElementById('avatarTtsVendorSelect').value) : null,
-        ttsVoiceId: document.getElementById('avatarTtsVoiceSelect').value || ''
+        ttsVoiceId: document.getElementById('avatarTtsVoiceSelect').value || '',
+        ttsSegmentEnabled: document.getElementById('avatarTtsSegmentEnabledInput').checked,
+        ttsSegmentDelimiters: document.getElementById('avatarTtsSegmentDelimitersInput').value || ''
     };
     // 根据选中的音色自动填入支持的情感列表
     var selectedVoiceId = payload.ttsVoiceId;
@@ -729,6 +756,14 @@ function loadAvatarTtsVoices(vendorCode, defaultVoiceId) {
 function updateAvatarTtsToggleLabel() {
     var input = document.getElementById('avatarTtsEnabledInput');
     var label = document.getElementById('avatarTtsEnabledLabel');
+    if (input && label) {
+        label.textContent = input.checked ? '已启用' : '已禁用';
+    }
+}
+
+function updateAvatarTtsSegmentToggleLabel() {
+    var input = document.getElementById('avatarTtsSegmentEnabledInput');
+    var label = document.getElementById('avatarTtsSegmentEnabledLabel');
     if (input && label) {
         label.textContent = input.checked ? '已启用' : '已禁用';
     }

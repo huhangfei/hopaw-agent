@@ -12,7 +12,9 @@ import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
 import java.util.Base64;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 import java.util.function.BiConsumer;
 
 /**
@@ -22,6 +24,11 @@ import java.util.function.BiConsumer;
 public class TtsService {
 
     private static final Logger logger = LoggerFactory.getLogger(TtsService.class);
+
+    /** 内置强断句符（句子结束） */
+    private static final String DEFAULT_STRONG_DELIMITERS = "。！？!?；;…\n\r~";
+    /** 内置次级断句符（逗号等，用于超长段回退切分） */
+    private static final String DEFAULT_SECONDARY_DELIMITERS = "，,、：:";
 
     private final TtsConfigService ttsConfigService;
     private final AvatarConfigMapper avatarConfigMapper;
@@ -78,8 +85,19 @@ public class TtsService {
                 return;
             }
 
-            // 4. 按断句标点切分后逐段合成并回调，单段失败不影响后续段
-            List<String> segments = splitIntoSegments(text);
+            // 4. 根据配置决定是否分段
+            boolean segmentEnabled = !Boolean.FALSE.equals(agentConfig.getTtsSegmentEnabled());
+            List<String> segments;
+            if (segmentEnabled) {
+                segments = splitIntoSegments(text, agentConfig.getTtsSegmentDelimiters());
+            } else {
+                segments = new ArrayList<>();
+                if (text != null && !text.isBlank()) {
+                    segments.add(text.trim());
+                }
+            }
+
+            // 5. 逐段合成并回调，单段失败不影响后续段
             for (String segment : segments) {
                 try {
                     byte[] audio = service.synthesize(ttsConfig.getConfigJson(), voiceId, segment, emotion);
@@ -101,24 +119,44 @@ public class TtsService {
     private static final int MAX_SEGMENT_CHARS = 150;
 
     /**
-     * 按断句标点切分文本：强断句符（。！？!?；;…换行）后切分，英文句点仅在后接空白时视为断句（避免小数点误切）；
-     * 超长无断句的段退化为在次级标点（，,、：:）或硬切处断开。
+     * 按断句标点切分文本。
+     * @param text 待切分文本
+     * @param customDelimiters 用户自定义分隔符字符串（每个字符都是断句符），为 null 时使用内置默认值
      */
-    static List<String> splitIntoSegments(String text) {
+    static List<String> splitIntoSegments(String text, String customDelimiters) {
         List<String> segments = new ArrayList<>();
         if (text == null || text.isBlank()) {
             return segments;
         }
+
+        // 构建强断句符和次级断句符集合
+        Set<Character> strongChars = new HashSet<>();
+        Set<Character> secondaryChars = new HashSet<>();
+        if (customDelimiters != null && !customDelimiters.isEmpty()) {
+            // 用户自定义：所有字符均作为强断句符
+            for (char c : customDelimiters.toCharArray()) {
+                strongChars.add(c);
+            }
+        } else {
+            // 内置默认
+            for (char c : DEFAULT_STRONG_DELIMITERS.toCharArray()) {
+                strongChars.add(c);
+            }
+            for (char c : DEFAULT_SECONDARY_DELIMITERS.toCharArray()) {
+                secondaryChars.add(c);
+            }
+        }
+
         int len = text.length();
         StringBuilder buf = new StringBuilder();
         int lastSecondaryIdx = -1;
         for (int i = 0; i < len; i++) {
             char c = text.charAt(i);
             buf.append(c);
-            if (isSecondaryPunctuation(c)) {
+            if (secondaryChars.contains(c)) {
                 lastSecondaryIdx = buf.length() - 1;
             }
-            if (isSentenceEnd(text, i)) {
+            if (isSentenceEnd(text, i, strongChars)) {
                 addSegment(segments, buf);
                 lastSecondaryIdx = -1;
             } else if (buf.length() >= MAX_SEGMENT_CHARS) {
@@ -138,20 +176,16 @@ public class TtsService {
         return mergeShortSegments(segments);
     }
 
-    private static boolean isSentenceEnd(String text, int i) {
+    private static boolean isSentenceEnd(String text, int i, Set<Character> strongChars) {
         char c = text.charAt(i);
-        if (c == '。' || c == '！' || c == '？' || c == '；' || c == '…' || c == '\n' || c == '\r'
-                || c == '!' || c == '?' || c == ';') {
+        if (strongChars.contains(c)) {
+            // 英文句点仅在后接空白或位于末尾时视为断句（避免小数点误切）
+            if (c == '.') {
+                return i + 1 >= text.length() || Character.isWhitespace(text.charAt(i + 1));
+            }
             return true;
         }
-        if (c == '.') {
-            return i + 1 >= text.length() || Character.isWhitespace(text.charAt(i + 1));
-        }
         return false;
-    }
-
-    private static boolean isSecondaryPunctuation(char c) {
-        return c == '，' || c == ',' || c == '、' || c == '：' || c == ':';
     }
 
     private static void addSegment(List<String> segments, StringBuilder buf) {

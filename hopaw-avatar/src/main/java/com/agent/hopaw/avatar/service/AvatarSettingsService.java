@@ -91,6 +91,8 @@ public class AvatarSettingsService implements IAvatarSettingsService {
         settings.setTtsVoiceId(config.getTtsVoiceId());
         settings.setTtsEmotions(config.getTtsEmotions());
         settings.setTtsEnabled(Boolean.TRUE.equals(config.getTtsEnabled()));
+        settings.setTtsSegmentEnabled(!Boolean.FALSE.equals(config.getTtsSegmentEnabled()));
+        settings.setTtsSegmentDelimiters(config.getTtsSegmentDelimiters());
         return settings;
     }
 
@@ -127,6 +129,8 @@ public class AvatarSettingsService implements IAvatarSettingsService {
                 cfg.setTtsVoiceId(settings.getTtsVoiceId());
                 cfg.setTtsEmotions(settings.getTtsEmotions());
                 cfg.setTtsEnabled(settings.isTtsEnabled());
+                cfg.setTtsSegmentEnabled(settings.isTtsSegmentEnabled());
+                cfg.setTtsSegmentDelimiters(settings.getTtsSegmentDelimiters());
                 cfg.setTotalTokens(0L);
                 cfg.setLastProcessedChatId(0L);
                 int rows = avatarConfigMapper.insert(cfg);
@@ -143,6 +147,8 @@ public class AvatarSettingsService implements IAvatarSettingsService {
                 existing.setTtsVoiceId(settings.getTtsVoiceId());
                 existing.setTtsEmotions(settings.getTtsEmotions());
                 existing.setTtsEnabled(settings.isTtsEnabled());
+                existing.setTtsSegmentEnabled(settings.isTtsSegmentEnabled());
+                existing.setTtsSegmentDelimiters(settings.getTtsSegmentDelimiters());
                 int rows = avatarConfigMapper.update(existing);
                 logger.info("[avatar-settings] UPDATE 影响行数={} userId=[{}] agentId=[{}] modelGroup=[{}]",
                         rows, userId, agentId, existing.getModelGroup());

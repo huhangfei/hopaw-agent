@@ -29,6 +29,10 @@ public class AgentAvatarConfig {
     private String ttsEmotions;
     /** TTS 是否启用 */
     private Boolean ttsEnabled;
+    /** 是否启用分段合成 */
+    private Boolean ttsSegmentEnabled;
+    /** 分段符号（多个字符，使用时拆分为单字符数组） */
+    private String ttsSegmentDelimiters;
     private String createTime;
     private String updateTime;
 
@@ -153,6 +157,22 @@ public class AgentAvatarConfig {
 
     public void setTtsEnabled(Boolean ttsEnabled) {
         this.ttsEnabled = ttsEnabled;
+    }
+
+    public Boolean getTtsSegmentEnabled() {
+        return ttsSegmentEnabled;
+    }
+
+    public void setTtsSegmentEnabled(Boolean ttsSegmentEnabled) {
+        this.ttsSegmentEnabled = ttsSegmentEnabled;
+    }
+
+    public String getTtsSegmentDelimiters() {
+        return ttsSegmentDelimiters;
+    }
+
+    public void setTtsSegmentDelimiters(String ttsSegmentDelimiters) {
+        this.ttsSegmentDelimiters = ttsSegmentDelimiters;
     }
 
     public String getCreateTime() {

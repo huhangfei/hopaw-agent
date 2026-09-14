@@ -293,6 +293,8 @@ public class DatabaseInitializer implements CommandLineRunner {
                     "tts_voice_id TEXT, " +
                     "tts_emotions TEXT, " +
                     "tts_enabled INTEGER DEFAULT 0, " +
+                    "tts_segment_enabled INTEGER DEFAULT 1, " +
+                    "tts_segment_delimiters TEXT, " +
                     "create_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP, " +
                     "update_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP" +
                     ")");
@@ -301,6 +303,8 @@ public class DatabaseInitializer implements CommandLineRunner {
             ensureColumn(stmt, "agent_avatar_config", "tts_config_id", "INTEGER");
             ensureColumn(stmt, "agent_avatar_config", "tts_voice_id", "TEXT");
             ensureColumn(stmt, "agent_avatar_config", "tts_enabled", "INTEGER DEFAULT 0");
+            ensureColumn(stmt, "agent_avatar_config", "tts_segment_enabled", "INTEGER DEFAULT 1");
+            ensureColumn(stmt, "agent_avatar_config", "tts_segment_delimiters", "TEXT");
             stmt.execute("CREATE UNIQUE INDEX IF NOT EXISTS idx_agent_avatar_config_user_agent ON agent_avatar_config(user_id, agent_id)");
             stmt.execute("CREATE INDEX IF NOT EXISTS idx_agent_avatar_config_user ON agent_avatar_config(user_id)");
 
