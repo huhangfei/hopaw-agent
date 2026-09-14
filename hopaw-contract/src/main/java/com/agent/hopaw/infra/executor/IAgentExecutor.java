@@ -40,7 +40,7 @@ public interface IAgentExecutor {
 
     /**
      * 执行
-     * 超时时间默认600秒
+     * 超时时间默认360秒
      * @param contents 请求内容
      */
     AgentExecutorResult execute(List<Content> contents);

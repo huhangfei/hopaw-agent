@@ -374,7 +374,7 @@ public class AgentExecutor implements IAgentExecutor {
 
     @Override
     public AgentExecutorResult execute(List<Content> contents) {
-        return execute(contents, 300L);
+        return execute(contents, 360L);
     }
 
     @Override

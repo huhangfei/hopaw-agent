@@ -62,6 +62,7 @@ public class WorkflowTaskService implements IWorkflowTaskService {
     private final IGlobalNoticeService globalNoticeService;
     private final INotificationService notificationService;
     private final com.agent.hopaw.infra.memory.ProjectMemoryService projectMemoryService;
+    private final SessionTimeoutService sessionTimeoutService;
 
     public WorkflowTaskService(WorkflowTaskMapper workflowTaskMapper,
                                WorkflowTaskPreconditionMapper preconditionMapper,
@@ -74,7 +75,8 @@ public class WorkflowTaskService implements IWorkflowTaskService {
                                IProjectLogService projectLogService,
                                IGlobalNoticeService globalNoticeService,
                                INotificationService notificationService,
-                               ProjectMemoryService projectMemoryService) {
+                               ProjectMemoryService projectMemoryService,
+                               SessionTimeoutService sessionTimeoutService) {
         this.workflowTaskMapper = workflowTaskMapper;
         this.preconditionMapper = preconditionMapper;
         this.taskSessionMapper = taskSessionMapper;
@@ -87,6 +89,7 @@ public class WorkflowTaskService implements IWorkflowTaskService {
         this.globalNoticeService = globalNoticeService;
         this.notificationService = notificationService;
         this.projectMemoryService = projectMemoryService;
+        this.sessionTimeoutService = sessionTimeoutService;
     }
 
     @Override
@@ -384,7 +387,7 @@ public class WorkflowTaskService implements IWorkflowTaskService {
         // 创建任务执行器（复用或新建会话）
         IAgentExecutor executor = createTaskExecutor(task, agent, userChatRequest);
 
-       return executeTask(taskId,executor,800,userChatRequest.getMessage());
+       return executeTask(taskId,executor,sessionTimeoutService.getWorkflowTaskTimeoutSeconds(),userChatRequest.getMessage());
     }
     /** 校验执行时段格式：HH:mm-HH:mm 且结束时间必须大于开始时间（空表示不限制） */
     private void validateExecutionPeriod(String executionPeriod) {
@@ -463,7 +466,7 @@ public class WorkflowTaskService implements IWorkflowTaskService {
             }
         }
         userChatRequest.setMessage(taskContent.toString());
-        AgentExecutorResult agentExecutorResult = executeTask(taskId, executor, 800, userChatRequest.getMessage());
+        AgentExecutorResult agentExecutorResult = executeTask(taskId, executor, sessionTimeoutService.getWorkflowTaskTimeoutSeconds(), userChatRequest.getMessage());
         // 执行完成后将本次预取的待处理评论标记为已处理（执行期间新增的评论不受影响，将在下次执行时处理）
         List<Long> processedCommentIds = comments.stream().map(WorkflowTaskComment::getId).collect(Collectors.toList());
         taskCommentService.markCommentsAsProcessed(processedCommentIds);

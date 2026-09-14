@@ -45,8 +45,9 @@ public class ChatService implements IChatService {
     private final IProjectIterateService projectIterateService;
     private final IChatUserMessageService chatUserMessageService;
     private final IAttachmentService attachmentService;
+    private final SessionTimeoutService sessionTimeoutService;
 
-    public ChatService(IAgentService agentService, IAvatarSettingsService avatarSettingsService, ISkillService skillService, ILongTermMemoryService longTermMemoryService, ISysConfigService sysConfigService, IMcpServerConfigService mcpServerConfigService, IAgentExecutorService agentExecutorService, IWorkflowTaskService workflowTaskService, IChatSessionService chatSessionService, IProjectIterateService projectIterateService, IChatUserMessageService chatUserMessageService, IAttachmentService attachmentService) {
+    public ChatService(IAgentService agentService, IAvatarSettingsService avatarSettingsService, ISkillService skillService, ILongTermMemoryService longTermMemoryService, ISysConfigService sysConfigService, IMcpServerConfigService mcpServerConfigService, IAgentExecutorService agentExecutorService, IWorkflowTaskService workflowTaskService, IChatSessionService chatSessionService, IProjectIterateService projectIterateService, IChatUserMessageService chatUserMessageService, IAttachmentService attachmentService, SessionTimeoutService sessionTimeoutService) {
         this.agentService = agentService;
         this.avatarSettingsService = avatarSettingsService;
         this.skillService = skillService;
@@ -59,6 +60,7 @@ public class ChatService implements IChatService {
         this.projectIterateService = projectIterateService;
         this.chatUserMessageService = chatUserMessageService;
         this.attachmentService = attachmentService;
+        this.sessionTimeoutService = sessionTimeoutService;
     }
 
     @Override
@@ -115,7 +117,7 @@ public class ChatService implements IChatService {
             return getChatSystemMessage(userChatRequest.getSessionId(), agent, userChatRequest.getUserId(), selectedTools, userChatRequest.getSkillNames(), avatarSettings);
         };
         IAgentExecutor agentExecutor = agentExecutorService.createAgentExecutor(agentExecutorParams, systemMessageProvider);
-        agentExecutor.execute(buildContents(userChatRequest));
+        agentExecutor.execute(buildContents(userChatRequest), sessionTimeoutService.getChatTimeoutSeconds());
     }
 
     /**

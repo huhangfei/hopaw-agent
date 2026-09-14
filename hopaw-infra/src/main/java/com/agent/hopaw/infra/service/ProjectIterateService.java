@@ -45,8 +45,6 @@ public class ProjectIterateService implements IProjectIterateService {
     private static final Logger logger = LoggerFactory.getLogger(ProjectIterateService.class);
     private static final DateTimeFormatter TIME_FMT = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm");
 
-    /** 执行超时时间（秒），与定时拉起的工作流任务保持一致 */
-    private static final long EXECUTE_TIMEOUT_SECONDS = 800;
     private static final String EXECUTE_USER_MESSAGE = "【项目自动迭代】请执行本轮项目迭代检查。\n请严格按照本次自动迭代要求执行。\n";
 
     private final ProjectMapper projectMapper;
@@ -58,6 +56,7 @@ public class ProjectIterateService implements IProjectIterateService {
     private final INotificationService notificationService;
     private final com.agent.hopaw.infra.memory.ProjectMemoryService projectMemoryService;
     private final IChatUserMessageService chatUserMessageService;
+    private final SessionTimeoutService sessionTimeoutService;
 
     public ProjectIterateService(ProjectMapper projectMapper,
                                  IAgentService agentService,
@@ -66,7 +65,8 @@ public class ProjectIterateService implements IProjectIterateService {
                                  IProjectService projectService,
                                  IProjectLogService projectLogService,
                                  INotificationService notificationService,
-                                 ProjectMemoryService projectMemoryService, IChatUserMessageService chatUserMessageService) {
+                                 ProjectMemoryService projectMemoryService, IChatUserMessageService chatUserMessageService,
+                                 SessionTimeoutService sessionTimeoutService) {
         this.projectMapper = projectMapper;
         this.agentService = agentService;
         this.agentExecutorService = agentExecutorService;
@@ -76,6 +76,7 @@ public class ProjectIterateService implements IProjectIterateService {
         this.notificationService = notificationService;
         this.projectMemoryService = projectMemoryService;
         this.chatUserMessageService = chatUserMessageService;
+        this.sessionTimeoutService = sessionTimeoutService;
     }
 
     @Override
@@ -196,7 +197,7 @@ public class ProjectIterateService implements IProjectIterateService {
         String failReason = null;
         try {
             logger.info("项目迭代开始: projectId={}, session={}", projectId, sessionId);
-            executor.execute(Arrays.asList(new TextContent(userMessage)), EXECUTE_TIMEOUT_SECONDS);
+            executor.execute(Arrays.asList(new TextContent(userMessage)), sessionTimeoutService.getProjectTimeoutSeconds());
             logger.info("项目迭代完成: projectId={}", projectId);
         } catch (Exception e) {
             success = false;
@@ -264,7 +265,7 @@ public class ProjectIterateService implements IProjectIterateService {
         List<Content> contents = new ArrayList<>();
         contents.add(new TextContent(userChatRequest.getMessage()));
         logger.info("项目会话唤起开始: projectId={}, session={}", project.getId(), sessionId);
-        executor.execute(contents, EXECUTE_TIMEOUT_SECONDS);
+        executor.execute(contents, sessionTimeoutService.getProjectTimeoutSeconds());
         logger.info("项目会话唤起完成: projectId={}", project.getId());
     }
 
