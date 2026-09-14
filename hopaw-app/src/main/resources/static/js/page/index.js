@@ -329,7 +329,7 @@ function copyAgentTurnContent(btn) {
 
 /**
  * 构建思考小节（内容 + 展开/收起开关）：
- * 历史消息默认收起仅显示两行；实时输出时展开，完成后自动收起
+ * 历史消息默认收起仅显示两行；实时输出时限高5行滚动显示，完成后自动收起
  */
 function buildThinkingSection(content, expanded) {
     var section = document.createElement('div');
@@ -353,10 +353,26 @@ function buildThinkingSection(content, expanded) {
     return section;
 }
 
-/** 设置思考小节展开/收起状态 */
+/** 设置思考小节展开/收起状态（展开=查看全部，收起=两行；均为明确状态，退出实时滚动模式） */
 function setThinkingExpanded(section, expanded) {
     if (!section) return;
     section.classList.toggle('expanded', expanded);
+    section.classList.remove('streaming');
+    if (!expanded) {
+        // 收起时重置滚动位置：流式期间曾滚到底部，须归零才能显示前两行（与历史渲染一致）
+        var content = section.querySelector('.thinking-content');
+        if (content) { content.scrollTop = 0; }
+    }
+    updateThinkingToggle(section);
+}
+
+/** 设置思考小节实时滚动模式：流式输出中内容超过5行时限高5行滚动显示 */
+function setThinkingStreaming(section, streaming) {
+    if (!section) return;
+    section.classList.toggle('streaming', streaming);
+    if (streaming) {
+        section.classList.remove('expanded');
+    }
     updateThinkingToggle(section);
 }
 
@@ -1815,8 +1831,9 @@ function handleThinking(data, requestId) {
 
             // 回合盒子头部已展示智能体名称；(思考) 标记拼接在思考内容开头，不单独占一行
 
-            // 实时输出期间保持展开，思考完成后自动收起
-            thinkingSection = buildThinkingSection('', true);
+            // 实时输出期间限高5行滚动显示，思考完成后自动收起为两行
+            thinkingSection = buildThinkingSection('', false);
+            setThinkingStreaming(thinkingSection, true);
             msgState.currentStreamingMessage.appendChild(thinkingSection);
             msgState.thinkingDiv = thinkingSection.querySelector('.thinking-content');
 
@@ -1839,8 +1856,11 @@ function handleThinking(data, requestId) {
         msgState.thinkingDiv.innerHTML = renderThinkingContent(msgState.thinkingContent);
         msgState.thinkingDiv.setAttribute('data-raw-content', msgState.thinkingContent);
         if (data.status === 'partial') {
-            // 实时追加时保持展开，便于观察当前思考进度
-            setThinkingExpanded(thinkingSection, true);
+            // 实时追加：限高5行滚动显示并自动滚到底部跟踪最新内容；用户手动展开过则保持查看全部
+            if (thinkingSection && !thinkingSection.classList.contains('expanded')) {
+                setThinkingStreaming(thinkingSection, true);
+                msgState.thinkingDiv.scrollTop = msgState.thinkingDiv.scrollHeight;
+            }
         }
         messagesDiv.scrollTop = messagesDiv.scrollHeight;
         if (data.status === 'done' && msgState.currentStreamingMessage && msgState.lastMessageType === 'thinking') {

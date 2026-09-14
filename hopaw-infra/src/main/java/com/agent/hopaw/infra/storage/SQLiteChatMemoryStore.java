@@ -98,7 +98,10 @@ public class SQLiteChatMemoryStore implements IChatMemoryService {
                 }
             }
         }
-        return messages.values().stream().toList();
+        // SystemMessage 排到第一条（系统提示词始终位于列表首位），其余消息保持原有顺序
+        return messages.values().stream()
+                .sorted(Comparator.comparing(msg -> !(msg instanceof SystemMessage)))
+                .toList();
     }
 
     /**

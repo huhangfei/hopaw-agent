@@ -2220,6 +2220,16 @@ body.dark-theme .model-tag-cap {
     max-height: 3em;
     overflow: hidden;
 }
+/* 实时输出中：内容超过5行时限高滚动显示（7.5em = 12px * 1.5 * 5），追加时自动滚到底部；隐藏滚动条保持视觉干净 */
+.thinking-section.streaming:not(.expanded) .thinking-content {
+    max-height: 7.5em;
+    overflow-y: auto;
+    scrollbar-width: none;      /* Firefox */
+    -ms-overflow-style: none;   /* 旧版 Edge/IE */
+}
+.thinking-section.streaming:not(.expanded) .thinking-content::-webkit-scrollbar {
+    display: none;              /* Chrome/Safari/新版 Edge */
+}
 .thinking-toggle {
     display: inline-block;
     margin-top: 2px;
