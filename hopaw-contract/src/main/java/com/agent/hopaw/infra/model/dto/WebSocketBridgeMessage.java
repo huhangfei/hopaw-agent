@@ -1,4 +1,4 @@
-package com.agent.hopaw.infra.websocket.dto;
+package com.agent.hopaw.infra.model.dto;
 
 import java.io.Serializable;
 

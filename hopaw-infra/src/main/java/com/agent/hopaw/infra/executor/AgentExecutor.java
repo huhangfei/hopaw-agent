@@ -8,59 +8,50 @@ import com.agent.hopaw.infra.event.ChatHistoryEvent;
 import com.agent.hopaw.infra.exception.ToolCallRejectedException;
 import com.agent.hopaw.infra.memory.IChatMemoryService;
 import com.agent.hopaw.infra.memory.MultimodalTokenCountEstimator;
-import com.agent.hopaw.infra.model.entity.*;
 import com.agent.hopaw.infra.model.dto.*;
+import com.agent.hopaw.infra.model.entity.*;
 import com.agent.hopaw.infra.service.AiModelService;
 import com.agent.hopaw.infra.service.IChatModelListenerProvider;
 import com.agent.hopaw.infra.service.IChatSessionService;
-import com.agent.hopaw.infra.storage.ChatHistoryStore;
 import com.agent.hopaw.infra.tool.AgentTool;
 import com.agent.hopaw.infra.tool.ToolSecurityLevel;
-import com.agent.hopaw.infra.util.InvocationParametersWrapper;
-import com.agent.hopaw.infra.util.Md5Util;
-import com.agent.hopaw.infra.util.MultimodalMessageUtils;
-import com.agent.hopaw.infra.util.PendingResponse;
-import com.agent.hopaw.infra.util.UuidUtil;
+import com.agent.hopaw.infra.util.*;
 import com.alibaba.fastjson2.JSON;
-import dev.langchain4j.model.chat.request.DefaultChatRequestParameters;
-import org.springframework.context.ApplicationEventPublisher;
 import dev.langchain4j.agent.tool.ToolExecutionRequest;
-import dev.langchain4j.data.message.*;
+import dev.langchain4j.data.message.Content;
+import dev.langchain4j.data.message.TextContent;
+import dev.langchain4j.data.message.ToolExecutionResultMessage;
 import dev.langchain4j.invocation.InvocationParameters;
+import dev.langchain4j.mcp.McpToolProvider;
+import dev.langchain4j.mcp.client.DefaultMcpClient;
+import dev.langchain4j.mcp.client.McpClient;
+import dev.langchain4j.mcp.client.transport.McpTransport;
+import dev.langchain4j.mcp.client.transport.http.StreamableHttpMcpTransport;
+import dev.langchain4j.mcp.client.transport.stdio.StdioMcpTransport;
 import dev.langchain4j.memory.chat.TokenWindowChatMemory;
 import dev.langchain4j.model.chat.ChatModel;
 import dev.langchain4j.model.chat.StreamingChatModel;
 import dev.langchain4j.model.chat.listener.ChatModelListener;
 import dev.langchain4j.model.chat.request.ChatRequestParameters;
+import dev.langchain4j.model.chat.request.DefaultChatRequestParameters;
 import dev.langchain4j.model.chat.response.ChatResponse;
 import dev.langchain4j.model.chat.response.PartialThinking;
 import dev.langchain4j.model.chat.response.PartialToolCall;
 import dev.langchain4j.model.embedding.EmbeddingModel;
-import dev.langchain4j.model.openai.OpenAiTokenCountEstimator;
 import dev.langchain4j.service.AiServices;
-import dev.langchain4j.service.tool.ToolProvider;
-import dev.langchain4j.service.tool.ToolErrorHandlerResult;
 import dev.langchain4j.service.TokenStream;
+import dev.langchain4j.service.tool.ToolErrorHandlerResult;
+import dev.langchain4j.service.tool.ToolProvider;
 import dev.langchain4j.service.tool.search.vector.VectorToolSearchStrategy;
 import dev.langchain4j.store.memory.chat.InMemoryChatMemoryStore;
-import dev.langchain4j.mcp.McpToolProvider;
-import dev.langchain4j.mcp.client.DefaultMcpClient;
-import dev.langchain4j.mcp.client.McpClient;
-import dev.langchain4j.mcp.client.transport.McpTransport;
-import dev.langchain4j.mcp.client.transport.stdio.StdioMcpTransport;
-import dev.langchain4j.mcp.client.transport.http.StreamableHttpMcpTransport;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.util.StringUtils;
 
 import java.time.LocalDateTime;
 import java.util.*;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.LinkedBlockingQueue;
-import java.util.concurrent.ThreadFactory;
-import java.util.concurrent.ThreadPoolExecutor;
-import java.util.concurrent.TimeUnit;
+import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.Consumer;
 import java.util.function.Function;
@@ -1005,6 +996,8 @@ public class AgentExecutor implements IAgentExecutor {
             //先结算流式消息（全量补发+入库），再发结束信号，保证前端先收到全量内容再做收尾清理
             messageTypeChangedChatHistoryHandler("task-done");
             AiMessageBaseInfo aiMessageBaseInfo = AiMessageBaseInfo.taskDone(sessionId, requestId);
+            //携带本次任务运行总时长（毫秒），供执行统计消费方计算每秒Token等指标
+            aiMessageBaseInfo.setElapsedMs(startTimeMs > 0 ? System.currentTimeMillis() - startTimeMs : 0L);
             sendMessageToChannel(aiMessageBaseInfo);
         }
 
@@ -1156,6 +1149,8 @@ public class AgentExecutor implements IAgentExecutor {
                 );
                 toolChat.setToolCallStatus(callMessageInfo.getStatus());
                 toolChat.setSessionId(callMessageInfo.getSessionId());
+                //携带请求编号：供执行统计按请求维度统计工具执行次数
+                toolChat.setRequestId(requestId);
                 toolChat.setMessageNo(Md5Util.md5(callMessageInfo.getSessionId() + callMessageInfo.getToolCallId()));
                 chatHistoryConsumer.accept(toolChat);
             }

@@ -11,15 +11,16 @@
         <result property="totalTokens" column="total_tokens"/>
         <result property="userId" column="user_id"/>
         <result property="sessionId" column="session_id"/>
+        <result property="requestId" column="request_id"/>
         <result property="source" column="source"/>
         <result property="createTime" column="create_time"/>
     </resultMap>
 
     <insert id="insert" parameterType="com.agent.hopaw.infra.model.entity.TokenUsage">
         INSERT INTO token_usage (agent_id, model_name, input_tokens, output_tokens, total_tokens, user_id, session_id,
-                                 source, create_time)
+                                 request_id, source, create_time)
         VALUES (#{agentId}, #{modelName}, #{inputTokens}, #{outputTokens}, #{totalTokens}, #{userId}, #{sessionId},
-                #{source}, #{createTime})
+                #{requestId}, #{source}, #{createTime})
     </insert>
 
     <sql id="timeRangeFilter">
@@ -36,7 +37,7 @@
     </sql>
 
     <select id="findByTimeRange" resultMap="TokenUsageResultMap">
-        SELECT id, agent_id, model_name, input_tokens, output_tokens, total_tokens, user_id, session_id, source,
+        SELECT id, agent_id, model_name, input_tokens, output_tokens, total_tokens, user_id, session_id, request_id, source,
         create_time
         FROM token_usage
         WHERE 1=1
@@ -81,7 +82,7 @@
     </select>
 
     <select id="findTodayByAgentUser" resultMap="TokenUsageResultMap">
-        SELECT id, agent_id, model_name, input_tokens, output_tokens, total_tokens, user_id, session_id, source,
+        SELECT id, agent_id, model_name, input_tokens, output_tokens, total_tokens, user_id, session_id, request_id, source,
         create_time
         FROM token_usage
         WHERE
@@ -108,5 +109,15 @@
         COUNT(*) AS id
         FROM token_usage
         WHERE user_id = #{userId}
+    </select>
+
+    <!-- 按会话+请求编号汇总 Token 用量（执行统计消息用） -->
+    <select id="summaryBySessionAndRequest" resultMap="TokenUsageResultMap">
+        SELECT
+        COALESCE(SUM(input_tokens), 0) AS input_tokens,
+        COALESCE(SUM(output_tokens), 0) AS output_tokens,
+        COALESCE(SUM(total_tokens), 0) AS total_tokens
+        FROM token_usage
+        WHERE session_id = #{sessionId} AND request_id = #{requestId}
     </select>
 </mapper>

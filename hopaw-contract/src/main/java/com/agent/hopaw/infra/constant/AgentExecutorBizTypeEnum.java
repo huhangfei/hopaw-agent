@@ -34,4 +34,17 @@ public enum AgentExecutorBizTypeEnum {
         return null;
     }
 
+    /** 按模型调用来源（AiModelCallSourceEnum.value）反查业务类型：供 TokenUsageEvent 等仅携带 source 的事件映射 */
+    public static AgentExecutorBizTypeEnum getByAiModelCallSource(String source) {
+        if (source == null) {
+            return null;
+        }
+        for (AgentExecutorBizTypeEnum item : AgentExecutorBizTypeEnum.values()) {
+            if (source.equals(item.aiModelCallSourceEnum.getValue())) {
+                return item;
+            }
+        }
+        return null;
+    }
+
 }

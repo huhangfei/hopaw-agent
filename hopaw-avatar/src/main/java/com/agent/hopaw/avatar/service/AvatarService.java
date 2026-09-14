@@ -9,6 +9,7 @@ import com.agent.hopaw.avatar.model.UserIntimacyInfo;
 import com.agent.hopaw.infra.event.AgentMessageEvent;
 import com.agent.hopaw.infra.event.TokenUsageEvent;
 import com.agent.hopaw.infra.model.dto.AiMessageBaseInfo;
+import com.agent.hopaw.infra.model.dto.AiTaskStatsMessageInfo;
 import com.agent.hopaw.infra.model.dto.AiToolCallMessageInfo;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -131,6 +132,10 @@ public class AvatarService {
 
         AiMessageBaseInfo message = event.getMessage();
         if (message == null) {
+            return;
+        }
+        // 执行统计消息不驱动虚拟人动作（否则会立刻打断 task-done 的庆祝状态）
+        if (AiTaskStatsMessageInfo.TYPE_TASK_STATS.equals(message.getType())) {
             return;
         }
 

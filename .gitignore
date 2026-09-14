@@ -31,7 +31,6 @@ hs_err_pid*
 agent.db
 
 #config
-application-dev.properties
 /.deepseek/
 /.claude/
 

@@ -226,9 +226,12 @@ public class DatabaseInitializer implements CommandLineRunner {
                     "total_tokens INTEGER DEFAULT 0, " +
                     "user_id TEXT, " +
                     "session_id TEXT, " +
+                    "request_id TEXT, " +
                     "source TEXT, " +
                     "create_time DATETIME DEFAULT CURRENT_TIMESTAMP" +
                     ")");
+            // 兼容旧库：token_usage 增量补充请求编号列（历史数据为 NULL，仅新数据携带）
+            ensureColumn(stmt, "token_usage", "request_id", "TEXT");
 
             // 项目/工作流任务维度 token 用量表
             stmt.execute("CREATE TABLE IF NOT EXISTS biz_token_usage (" +

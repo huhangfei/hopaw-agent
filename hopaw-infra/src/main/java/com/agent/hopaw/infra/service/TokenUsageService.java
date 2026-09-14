@@ -30,6 +30,7 @@ public class TokenUsageService implements ITokenUsageService {
         tokenUsage.setTotalTokens(message.getTotalTokens());
         tokenUsage.setUserId(message.getUserId());
         tokenUsage.setSessionId(message.getSessionId());
+        tokenUsage.setRequestId(message.getRequestId());
         tokenUsage.setSource(message.getSource());
         tokenUsage.setCreateTime(message.getCreateTime() != null ? message.getCreateTime() : LocalDateTime.now());
         tokenUsageMapper.insert(tokenUsage);

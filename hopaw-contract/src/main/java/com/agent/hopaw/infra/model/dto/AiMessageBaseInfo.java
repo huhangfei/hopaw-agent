@@ -12,6 +12,8 @@ public class AiMessageBaseInfo {
     private String messageNo;
     /** 流式状态：partial=增量片段（content 为本次新增内容）；done=消息结束（content 为该消息全量内容，用于补全） */
     private String status;
+    /** 任务运行时长（毫秒）：task-done 消息携带，供执行统计消费方计算每秒Token等指标 */
+    private Long elapsedMs;
 
     public AiMessageBaseInfo(String type) {
         this.type = type;
@@ -87,6 +89,14 @@ public class AiMessageBaseInfo {
 
     public void setStatus(String status) {
         this.status = status;
+    }
+
+    public Long getElapsedMs() {
+        return elapsedMs;
+    }
+
+    public void setElapsedMs(Long elapsedMs) {
+        this.elapsedMs = elapsedMs;
     }
 
     /** 会话业务类型（chat / workflowTaskChat / projectChat），供前端区分会话来源 */

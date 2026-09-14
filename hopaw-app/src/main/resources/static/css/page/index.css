@@ -832,6 +832,39 @@ body.dark-theme .chat-header-glow::after {
 .agent-turn .agent-turn-footer {
     margin-top: 2px;
 }
+/* 任务执行统计条：task-done 后推送（耗时/工具/Tokens/速度），置于 footer 内时间的左侧，与正文轻量分割 */
+.agent-turn-stats {
+    display: inline-flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 3px 12px;
+    margin-right: auto;
+    font-size: 11px;
+    line-height: 1.5;
+    color: #8a919e;
+    background: rgba(255, 255, 255, 0.65);
+    border: 1px solid rgba(0, 0, 0, 0.06);
+    border-radius: 8px;
+    padding: 2px 10px;
+}
+.agent-turn-stats-item {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    white-space: nowrap;
+}
+.agent-turn-stats-label {
+    opacity: 0.75;
+}
+.agent-turn-stats-value {
+    font-weight: 600;
+    color: #5a6472;
+}
+/* Tokens 项的输入/输出细分：更小更淡，跟随主值之后 */
+.agent-turn-stats-sub {
+    font-size: 10px;
+    opacity: 0.75;
+}
 .message-label {
     font-weight: 600;
     font-size: 12px;
@@ -2787,6 +2820,16 @@ body.dark-theme .agent-turn {
 
 body.dark-theme .agent-turn .tool-inline-icon {
     background: #1f1f33;
+}
+
+body.dark-theme .agent-turn-stats {
+    background: rgba(0, 0, 0, 0.18);
+    border-color: rgba(255, 255, 255, 0.08);
+    color: #98a2b3;
+}
+
+body.dark-theme .agent-turn-stats-value {
+    color: #c3cad6;
 }
 
 body.dark-theme .message.user {

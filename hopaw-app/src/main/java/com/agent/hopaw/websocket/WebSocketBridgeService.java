@@ -1,6 +1,7 @@
-package com.agent.hopaw.infra.websocket.service;
+package com.agent.hopaw.websocket;
 
-import com.agent.hopaw.infra.websocket.dto.WebSocketBridgeMessage;
+import com.agent.hopaw.infra.model.dto.WebSocketBridgeMessage;
+import com.agent.hopaw.infra.service.IWebSocketBridgeService;
 import com.alibaba.fastjson2.JSON;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -12,14 +13,10 @@ import org.springframework.stereotype.Service;
  * 后续由 @JmsListener 消费并推送 WebSocket
  */
 @Service
-public class WebSocketBridgeService {
+public class WebSocketBridgeService implements IWebSocketBridgeService {
 
     private static final Logger log = LoggerFactory.getLogger(WebSocketBridgeService.class);
 
-    public static final String QUEUE_TOKEN_USAGE = "ws.chat.token_usage";
-    public static final String QUEUE_AGENT_MESSAGE = "ws.chat.agent_message";
-    public static final String QUEUE_GLOBAL_NOTICE = "ws.notice.global";
-    public static final String QUEUE_AVATAR_EVENT = "ws.avatar.event";
 
     private final JmsTemplate jmsTemplate;
 
@@ -27,18 +24,22 @@ public class WebSocketBridgeService {
         this.jmsTemplate = jmsTemplate;
     }
 
+    @Override
     public void sendTokenUsage(String userId, String payload) {
         send(QUEUE_TOKEN_USAGE, "token_usage", userId, payload);
     }
 
+    @Override
     public void sendAgentMessage(String userId, String payload) {
         send(QUEUE_AGENT_MESSAGE, "agent_message", userId, payload);
     }
 
+    @Override
     public void sendGlobalNotice(String userId, String payload) {
         send(QUEUE_GLOBAL_NOTICE, "global_notice", userId, payload);
     }
 
+    @Override
     public void sendAvatarEvent(String userId, String payload) {
         send(QUEUE_AVATAR_EVENT, "avatar_event", userId, payload);
     }
@@ -54,7 +55,7 @@ public class WebSocketBridgeService {
                 return textMsg;
             });
         } catch (Exception e) {
-            log.error("发送消息到 Artemis 队列失败: queue={}, userId={}, error={} {}", queue, userId, e.getMessage(),e);
+            WebSocketBridgeService.log.error("发送消息到 Artemis 队列失败: queue={}, userId={}, error={} {}", queue, userId, e.getMessage(), e);
         }
     }
 }

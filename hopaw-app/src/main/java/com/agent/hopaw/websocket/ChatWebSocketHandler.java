@@ -6,9 +6,9 @@ import com.agent.hopaw.infra.event.TokenUsageEvent;
 import com.agent.hopaw.infra.model.dto.AiMessageBaseInfo;
 import com.agent.hopaw.infra.model.dto.AttachmentFile;
 import com.agent.hopaw.infra.model.dto.UserChatRequest;
+import com.agent.hopaw.infra.model.dto.WebSocketBridgeMessage;
 import com.agent.hopaw.infra.service.IChatService;
-import com.agent.hopaw.infra.websocket.dto.WebSocketBridgeMessage;
-import com.agent.hopaw.infra.websocket.service.WebSocketBridgeService;
+import com.agent.hopaw.infra.service.IWebSocketBridgeService;
 import com.alibaba.fastjson2.JSON;
 import com.alibaba.fastjson2.JSONObject;
 import org.slf4j.Logger;
@@ -38,7 +38,7 @@ public class ChatWebSocketHandler extends TextWebSocketHandler {
 
     private static final Logger logger = LoggerFactory.getLogger(ChatWebSocketHandler.class);
     private final IChatService chatService;
-    private final WebSocketBridgeService bridgeService;
+    private final IWebSocketBridgeService bridgeService;
     private static final ConcurrentMap<String, ConcurrentLinkedQueue<String>> userSessionMap = new ConcurrentHashMap<>();
     private static final ConcurrentMap<String, WebSocketSession> sessionMap = new ConcurrentHashMap<>();
 

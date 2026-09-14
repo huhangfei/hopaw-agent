@@ -180,6 +180,7 @@ public class LangChain4jChatModelListener implements ChatModelListener {
                             tokenUsage.totalTokenCount(),
                             userId,
                             sessionId,
+                            requestId,
                             source.getValue(),
                             LocalDateTime.now()
                     );

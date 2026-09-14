@@ -57,4 +57,7 @@ public interface TokenUsageMapper {
 
     TokenUsage summaryByUserId(@Param("userId") String userId);
 
+    /** 按会话+请求编号汇总 Token 用量（执行统计消息用） */
+    TokenUsage summaryBySessionAndRequest(@Param("sessionId") String sessionId, @Param("requestId") String requestId);
+
 }

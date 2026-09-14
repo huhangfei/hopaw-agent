@@ -2,8 +2,8 @@ package com.agent.hopaw.avatar.websocket;
 
 import com.agent.hopaw.avatar.model.AvatarEvent;
 import com.agent.hopaw.avatar.service.AvatarSettingsService;
-import com.agent.hopaw.infra.websocket.dto.WebSocketBridgeMessage;
-import com.agent.hopaw.infra.websocket.service.WebSocketBridgeService;
+import com.agent.hopaw.infra.model.dto.WebSocketBridgeMessage;
+import com.agent.hopaw.infra.service.IWebSocketBridgeService;
 import com.alibaba.fastjson2.JSON;
 import com.alibaba.fastjson2.JSONObject;
 import org.slf4j.Logger;
@@ -33,9 +33,9 @@ public class AvatarWebSocketHandler extends TextWebSocketHandler {
     private static final ConcurrentMap<String, WebSocketSession> sessionMap = new ConcurrentHashMap<>();
 
     private final AvatarSettingsService avatarSettingsService;
-    private final WebSocketBridgeService bridgeService;
+    private final IWebSocketBridgeService bridgeService;
 
-    public AvatarWebSocketHandler(AvatarSettingsService avatarSettingsService, WebSocketBridgeService bridgeService) {
+    public AvatarWebSocketHandler(AvatarSettingsService avatarSettingsService, IWebSocketBridgeService bridgeService) {
         this.avatarSettingsService = avatarSettingsService;
         this.bridgeService = bridgeService;
     }
@@ -61,7 +61,7 @@ public class AvatarWebSocketHandler extends TextWebSocketHandler {
 
     // ==================== Artemis → WebSocket 推送 ====================
 
-    @JmsListener(destination = WebSocketBridgeService.QUEUE_AVATAR_EVENT)
+    @JmsListener(destination = IWebSocketBridgeService.QUEUE_AVATAR_EVENT)
     public void consumeAvatarEvent(javax.jms.TextMessage message) throws JMSException {
         WebSocketBridgeMessage bridge = JSON.parseObject(message.getText(), WebSocketBridgeMessage.class);
         AvatarEvent event = JSON.parseObject(bridge.getPayload(), AvatarEvent.class);

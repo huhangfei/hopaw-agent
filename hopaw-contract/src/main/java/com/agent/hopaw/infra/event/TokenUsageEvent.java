@@ -12,6 +12,8 @@ public class TokenUsageEvent {
     private Integer totalTokens;
     private String userId;
     private String sessionId;
+    /** 请求编号：关联本次用户请求，供按请求维度统计用量 */
+    private String requestId;
     private String source;
 
     /**
@@ -24,7 +26,7 @@ public class TokenUsageEvent {
     }
 
     public TokenUsageEvent(Long agentId, String modelName, Integer inputTokens, Integer outputTokens,
-                           Integer totalTokens, String userId, String sessionId, String source, LocalDateTime createTime) {
+                           Integer totalTokens, String userId, String sessionId, String requestId, String source, LocalDateTime createTime) {
         this.agentId = agentId;
         this.modelName = modelName;
         this.inputTokens = inputTokens;
@@ -32,6 +34,7 @@ public class TokenUsageEvent {
         this.totalTokens = totalTokens;
         this.userId = userId;
         this.sessionId = sessionId;
+        this.requestId = requestId;
         this.source = source;
         this.createTime = createTime;
     }
@@ -50,6 +53,8 @@ public class TokenUsageEvent {
     public void setUserId(String userId) { this.userId = userId; }
     public String getSessionId() { return sessionId; }
     public void setSessionId(String sessionId) { this.sessionId = sessionId; }
+    public String getRequestId() { return requestId; }
+    public void setRequestId(String requestId) { this.requestId = requestId; }
     public String getSource() { return source; }
     public void setSource(String source) { this.source = source; }
     public LocalDateTime getCreateTime() { return createTime; }

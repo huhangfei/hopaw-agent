@@ -307,6 +307,70 @@ function appendToAgentTurn(box, node) {
     }
 }
 
+// ================= 任务执行统计（task-done 后推送） =================
+
+/** 格式化运行时长：<60秒显示秒（保留1位小数），≥60秒用分钟表示（保留1位小数） */
+function formatTaskElapsed(elapsedMs) {
+    var ms = Number(elapsedMs);
+    if (isNaN(ms) || ms < 0) { return '-'; }
+    if (ms < 60000) { return (ms / 1000).toFixed(1) + 's'; }
+    return (ms / 60000).toFixed(1) + '分';
+}
+
+/** 格式化Token数量：≥1000用k表示（保留1位小数） */
+function formatTokenCount(n) {
+    var v = Number(n || 0);
+    if (Math.abs(v) >= 1000) { return (v / 1000).toFixed(1) + 'k'; }
+    return String(v);
+}
+
+/**
+ * 任务执行统计：运行时长/工具执行次数/Token用量/每秒Token，
+ * 渲染到本次请求回合盒子 footer 内时间的左侧（统计不落库，仅实时推送展示）
+ */
+function handleTaskStats(data) {
+    var messagesDiv = document.getElementById('chatMessages');
+    if (!messagesDiv) return;
+    // 按请求编号定位本次请求最后一个消息所在的回合盒子；未命中回退到最后一个回合盒子
+    var turnBox = null;
+    if (data.requestId) {
+        var nodes = messagesDiv.querySelectorAll('.message[data-request-id="' + data.requestId + '"]');
+        for (var i = nodes.length - 1; i >= 0; i--) {
+            var tb = nodes[i].closest('.agent-turn');
+            if (tb) { turnBox = tb; break; }
+        }
+    }
+    if (!turnBox) {
+        var turns = messagesDiv.querySelectorAll('.agent-turn');
+        if (turns.length) { turnBox = turns[turns.length - 1]; }
+    }
+    if (!turnBox) return;
+
+    var footer = turnBox.querySelector('.agent-turn-footer');
+    if (!footer) {
+        touchAgentTurnFooter(turnBox, formatMessageTime(new Date()));
+        footer = turnBox.querySelector('.agent-turn-footer');
+    }
+    if (!footer) return;
+
+    // 幂等：同请求统计已渲染时复用元素刷新
+    var statsEl = footer.querySelector('.agent-turn-stats');
+    if (!statsEl) {
+        statsEl = document.createElement('div');
+        statsEl.className = 'agent-turn-stats';
+        footer.insertBefore(statsEl, footer.querySelector('.message-time'));
+    }
+    var totalTokens = Number(data.totalTokens || 0);
+    var inputTokens = Number(data.inputTokens || 0);
+    var outputTokens = Number(data.outputTokens || 0);
+    var tps = Number(data.tokensPerSecond || 0);
+    statsEl.innerHTML =
+        '<span class="agent-turn-stats-item"><span class="agent-turn-stats-label">耗时</span><span class="agent-turn-stats-value">' + formatTaskElapsed(data.elapsedMs) + '</span></span>' +
+        '<span class="agent-turn-stats-item"><span class="agent-turn-stats-label">工具</span><span class="agent-turn-stats-value">' + Number(data.toolCallCount || 0) + ' 次</span><span class="agent-turn-stats-sub">' + formatTaskElapsed(data.toolElapsedMs) + '</span></span>' +
+        '<span class="agent-turn-stats-item"><span class="agent-turn-stats-label">Tokens</span><span class="agent-turn-stats-value">' + formatTokenCount(totalTokens) + '</span><span class="agent-turn-stats-sub">入 ' + formatTokenCount(inputTokens) + ' / 出 ' + formatTokenCount(outputTokens) + '</span></span>' +
+        '<span class="agent-turn-stats-item"><span class="agent-turn-stats-label">速度</span><span class="agent-turn-stats-value">' + (tps > 0 ? tps.toFixed(1) + ' tk/s' : '-') + '</span></span>';
+}
+
 /** 复制回合盒子内全部内容：按顺序拼接思考/文本/错误/警告等各小节 */
 function copyAgentTurnContent(btn) {
     var box = btn.closest('.agent-turn');
@@ -1220,6 +1284,9 @@ function dispatchWsMessage(data) {
             msgState.currentStreamingMessage = null;
         }
         enableInput();
+    } else if (data.type === 'task-stats') {
+        // 任务执行统计（task-done 后推送）：追加到回合盒子 footer 时间的左侧
+        handleTaskStats(data);
     } else if (data.type === 'error') {
         setSessionRunning(data.sessionId || currentSessionId, false);
         handleStreamingError(data.content || data.message, requestId);

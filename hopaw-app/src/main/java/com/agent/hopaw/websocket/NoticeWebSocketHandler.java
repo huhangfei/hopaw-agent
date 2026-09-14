@@ -2,8 +2,7 @@ package com.agent.hopaw.websocket;
 
 import com.agent.hopaw.infra.event.GlobalNoticeEvent;
 import com.agent.hopaw.infra.model.dto.GlobalNoticeMessage;
-import com.agent.hopaw.infra.websocket.dto.WebSocketBridgeMessage;
-import com.agent.hopaw.infra.websocket.service.WebSocketBridgeService;
+import com.agent.hopaw.infra.model.dto.WebSocketBridgeMessage;
 import com.alibaba.fastjson2.JSON;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;

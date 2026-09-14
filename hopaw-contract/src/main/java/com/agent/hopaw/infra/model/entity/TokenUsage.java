@@ -11,6 +11,8 @@ public class TokenUsage {
     private Integer totalTokens;
     private String userId;
     private String sessionId;
+    /** 请求编号：关联本次用户请求，供按请求维度统计用量 */
+    private String requestId;
     private String source;
     private LocalDateTime createTime;
 
@@ -34,4 +36,6 @@ public class TokenUsage {
     public void setCreateTime(LocalDateTime createTime) { this.createTime = createTime; }
     public String getSessionId() { return sessionId; }
     public void setSessionId(String sessionId) { this.sessionId = sessionId; }
+    public String getRequestId() { return requestId; }
+    public void setRequestId(String requestId) { this.requestId = requestId; }
 }

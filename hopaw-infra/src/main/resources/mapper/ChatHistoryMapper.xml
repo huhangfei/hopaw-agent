@@ -65,6 +65,20 @@
         WHERE session_id = #{sessionId} AND message_type = 'tool_call'
     </select>
 
+    <!-- 请求的工具调用次数（执行统计消息用，限会话范围） -->
+    <select id="countToolCallsBySessionAndRequest" resultType="java.lang.Integer">
+        SELECT COUNT(*)
+        FROM chat_history
+        WHERE session_id = #{sessionId} AND request_id = #{requestId} AND message_type = 'tool_call'
+    </select>
+
+    <!-- 请求的工具执行耗时汇总（执行统计消息用，限会话范围） -->
+    <select id="sumToolExecutionTimeBySessionAndRequest" resultType="java.lang.Long">
+        SELECT COALESCE(SUM(tool_execution_time), 0)
+        FROM chat_history
+        WHERE session_id = #{sessionId} AND request_id = #{requestId} AND message_type = 'tool_call'
+    </select>
+
     <!-- 批量统计多个会话的消息记录数量（会话清理设置页） -->
     <select id="countMessagesBySessionIds" resultType="java.util.HashMap">
         SELECT session_id, COUNT(*) AS cnt

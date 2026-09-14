@@ -26,6 +26,12 @@ public interface ChatHistoryMapper {
     /** 统计会话的工具调用总数（message_type='tool_call'） */
     int countToolCallsBySessionId(@Param("sessionId") String sessionId);
 
+    /** 统计请求的工具调用次数（message_type='tool_call'，限会话范围），供执行统计消息使用 */
+    int countToolCallsBySessionAndRequest(@Param("sessionId") String sessionId, @Param("requestId") String requestId);
+
+    /** 汇总请求的工具执行耗时（毫秒，限会话范围），供执行统计消息使用 */
+    Long sumToolExecutionTimeBySessionAndRequest(@Param("sessionId") String sessionId, @Param("requestId") String requestId);
+
     /** 批量统计多个会话的消息记录数量（返回 session_id / cnt） */
     List<Map<String, Object>> countMessagesBySessionIds(@Param("sessionIds") List<String> sessionIds);
 
