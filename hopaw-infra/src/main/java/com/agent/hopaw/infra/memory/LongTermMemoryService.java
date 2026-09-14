@@ -360,7 +360,7 @@ public class LongTermMemoryService implements ILongTermMemoryService {
             }
         }
 //        memorySb.append("更新时间:").append(memory.getUpdateTime().format(formatter)).append("\n")
-//                .append("创建时间:").append(memory.getCreateTime().format(formatter));
+        memorySb.append("创建时间:").append(memory.getCreateTime().format(formatter));
         return memorySb.append("---\n").toString();
     }
 
