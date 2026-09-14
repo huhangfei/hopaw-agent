@@ -48,4 +48,10 @@
         ORDER BY id DESC
     </select>
 
+    <select id="findAll" resultMap="NotifyChannelResultMap">
+        SELECT id, name, type, config, enabled, user_id, create_time, update_time
+        FROM notify_channels
+        ORDER BY id DESC
+    </select>
+
 </mapper>

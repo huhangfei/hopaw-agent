@@ -51,6 +51,11 @@
     color: #f59e0b;
     flex-shrink: 0;
 }
+.notify-channel-owner {
+    font-size: 12px;
+    color: #999;
+    flex-shrink: 0;
+}
 
 .notify-channel-actions {
     display: flex;
@@ -124,6 +129,10 @@ body.dark-theme .notify-channel-name {
 body.dark-theme .notify-channel-type {
     color: #8ba3ff;
     background: rgba(139, 163, 255, 0.12);
+}
+
+body.dark-theme .notify-channel-owner {
+    color: #888;
 }
 
 body.dark-theme .btn-channel {

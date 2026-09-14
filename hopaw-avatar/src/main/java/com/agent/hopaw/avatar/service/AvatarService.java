@@ -28,15 +28,18 @@ public class AvatarService {
 
     private final AvatarIntimacyConfig intimacyConfig;
     private final AvatarConfigMapper avatarConfigMapper;
+    private final com.agent.hopaw.infra.service.IAgentService agentService;
     private final ApplicationEventPublisher eventPublisher;
     /** userId -> agentId -> AvatarAction */
     private final Map<String, Map<Long, String>> userAgentLastActionCache = new ConcurrentHashMap<>();
 
     public AvatarService(AvatarIntimacyConfig intimacyConfig,
                          AvatarConfigMapper avatarConfigMapper,
+                         com.agent.hopaw.infra.service.IAgentService agentService,
                          ApplicationEventPublisher eventPublisher) {
         this.intimacyConfig = intimacyConfig;
         this.avatarConfigMapper = avatarConfigMapper;
+        this.agentService = agentService;
         this.eventPublisher = eventPublisher;
     }
 
@@ -225,6 +228,40 @@ public class AvatarService {
             logger.error("Failed to load all avatar configs: {}", e.getMessage());
         }
         return result;
+    }
+
+    /**
+     * 获取全部虚拟人排行数据（按 totalTokens 降序），每条包含 userId、agentId、level、title、totalTokens。
+     */
+    public java.util.List<java.util.Map<String, Object>> getAvatarRankings() {
+        java.util.List<java.util.Map<String, Object>> list = new java.util.ArrayList<>();
+        try {
+            List<AgentAvatarConfig> configs = avatarConfigMapper.findAll();
+            for (AgentAvatarConfig config : configs) {
+                if (config.getUserId() == null || config.getAgentId() == null) {
+                    continue;
+                }
+                long totalTokens = config.getTotalTokens() != null ? config.getTotalTokens().longValue() : 0L;
+                UserIntimacyInfo info = UserIntimacyInfo.from(config.getUserId(), totalTokens, intimacyConfig);
+                java.util.Map<String, Object> row = new java.util.LinkedHashMap<>();
+                row.put("userId", config.getUserId());
+                row.put("agentId", config.getAgentId());
+                String agentName = "";
+                try {
+                    com.agent.hopaw.infra.model.entity.Agent agent = agentService.getAgentById(config.getAgentId());
+                    if (agent != null) agentName = agent.getName();
+                } catch (Exception ignored) {}
+                row.put("agentName", agentName);
+                row.put("level", info.getIntimacyLevel());
+                row.put("title", info.getTitle());
+                row.put("totalTokens", totalTokens);
+                list.add(row);
+            }
+            list.sort((a, b) -> Long.compare((long) b.get("totalTokens"), (long) a.get("totalTokens")));
+        } catch (Exception e) {
+            logger.error("Failed to load avatar rankings: {}", e.getMessage());
+        }
+        return list;
     }
 
     private long loadTotalTokens(String userId, Long agentId) {

@@ -28,12 +28,11 @@ public class NotifyChannelController {
         this.notificationService = notificationService;
     }
 
-    // 查询当前用户全部通知渠道
+    // 查询全部通知渠道（不区分用户）
     @GetMapping("/api/notify/channels")
     @ResponseBody
     public ResponseBean listChannels(HttpServletRequest request) {
-        String userId = CurrentUser.require(request);
-        return ResponseBean.success(notifyChannelService.listByUser(userId));
+        return ResponseBean.success(notifyChannelService.listAll());
     }
 
     // 创建通知渠道
@@ -83,12 +82,11 @@ public class NotifyChannelController {
     // 测试发送：向指定渠道发送一条测试通知，返回发送结果（成功/失败原因）
     @PostMapping("/api/notify/channels/{id}/test")
     @ResponseBody
-    public ResponseBean testChannel(HttpServletRequest request, @PathVariable Long id) {
-        String userId = CurrentUser.require(request);
+    public ResponseBean testChannel(@PathVariable Long id) {
         try {
-            NotifyChannel channel = notifyChannelService.getChannel(id, userId);
+            NotifyChannel channel = notifyChannelService.getChannel(id);
             if (channel == null) {
-                return ResponseBean.fail("通知渠道不存在或无权访问");
+                return ResponseBean.fail("通知渠道不存在");
             }
             String err = notificationService.sendByChannelId(id, "测试通知", "这是一条来自通知渠道测试的消息，收到即表示渠道配置正常。");
             return err == null ? ResponseBean.success("发送成功") : ResponseBean.fail(err);

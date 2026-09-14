@@ -18,9 +18,15 @@ public interface INotifyChannelService {
     /** 删除渠道（校验归属） */
     boolean deleteChannel(Long id, String userId);
 
+    /** 按编号查询（不校验归属），不存在返回 null */
+    NotifyChannel getChannel(Long id);
+
     /** 按编号查询（校验归属），不存在或无权返回 null */
     NotifyChannel getChannel(Long id, String userId);
 
     /** 查询用户全部渠道 */
     List<NotifyChannel> listByUser(String userId);
+
+    /** 查询全部渠道（不区分用户） */
+    List<NotifyChannel> listAll();
 }

@@ -18,4 +18,6 @@ public interface NotifyChannelMapper {
     NotifyChannel findById(@Param("id") Long id);
 
     List<NotifyChannel> findByUserId(@Param("userId") String userId);
+
+    List<NotifyChannel> findAll();
 }

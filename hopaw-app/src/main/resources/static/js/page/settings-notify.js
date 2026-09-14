@@ -40,6 +40,7 @@ function renderNotifyChannelList() {
             '<span class="notify-channel-name">' + escapeHtml(ch.name) + '</span>' +
             '<span class="notify-channel-type">' + typeLabel + '</span>' +
             (ch.enabled === false ? '<span class="notify-channel-disabled">已停用</span>' : '') +
+            (ch.userId ? '<span class="notify-channel-owner">创建者: ' + escapeHtml(ch.userId) + '</span>' : '') +
             '</div>' +
             '<div class="notify-channel-actions">' +
             '<button class="btn-channel" onclick="testNotifyChannel(' + ch.id + ')">测试</button>' +

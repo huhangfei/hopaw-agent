@@ -40,6 +40,7 @@ public class SettingsController {
         put("prompt",        new String[] {"/js/page/settings-prompt.js", null});
         put("ip-blacklist",  new String[] {"/js/page/settings-ip-blacklist.js", "/css/page/settings-ip-blacklist.css"});
         put("login-log",     new String[] {"/js/page/settings-login-log.js", "/css/page/settings-login-log.css"});
+        put("avatar-rank",   new String[] {"/js/page/settings-avatar-rank.js", "/css/page/settings-avatar-rank.css"});
     }};
 
     private final MailUtil mailUtil;

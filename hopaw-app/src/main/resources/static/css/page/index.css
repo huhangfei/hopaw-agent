@@ -1986,6 +1986,25 @@ body.dark-theme .model-tag-cap {
     font-size: 12px;
     color: #999;
 }
+.tool-call-config-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 20px;
+    height: 20px;
+    border-radius: 4px;
+    background: #f0f0f0;
+    color: #666;
+    font-size: 12px;
+    text-decoration: none;
+    cursor: pointer;
+    transition: background .15s, color .15s;
+    flex-shrink: 0;
+}
+.tool-call-config-btn:hover {
+    background: #667eea;
+    color: #fff;
+}
 .tool-call-status.completed {
     color: #4CAF50;
     font-weight: 500;
@@ -3015,6 +3034,15 @@ body.dark-theme .tool-call-status {
 
 body.dark-theme .tool-call-status.completed {
     color: #81c784;
+}
+
+body.dark-theme .tool-call-config-btn {
+    background: #333;
+    color: #aaa;
+}
+body.dark-theme .tool-call-config-btn:hover {
+    background: #5a7fd4;
+    color: #fff;
 }
 
 body.dark-theme .tool-call[data-status="executed"] {

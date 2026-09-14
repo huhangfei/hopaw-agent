@@ -32,4 +32,9 @@ public class AvatarController {
     public Map<String, UserIntimacyInfo> getAllUserIntimacies() {
         return avatarService.getAllUserIntimacies();
     }
+
+    @GetMapping("/rankings")
+    public java.util.List<java.util.Map<String, Object>> getAvatarRankings() {
+        return avatarService.getAvatarRankings();
+    }
 }

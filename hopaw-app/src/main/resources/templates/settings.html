@@ -26,6 +26,7 @@
         <a th:href="@{/settings/prompt}" class="settings-tab" th:classappend="${currentTab == 'prompt' ? 'active' : ''}">提示词设置</a>
         <a th:href="@{/settings/ip-blacklist}" class="settings-tab" th:classappend="${currentTab == 'ip-blacklist' ? 'active' : ''}">IP黑名单</a>
         <a th:href="@{/settings/login-log}" class="settings-tab" th:classappend="${currentTab == 'login-log' ? 'active' : ''}">登录日志</a>
+        <a th:href="@{/settings/avatar-rank}" class="settings-tab" th:classappend="${currentTab == 'avatar-rank' ? 'active' : ''}">虚拟人排行</a>
     </div>
 
     <div th:replace="~{__${'settings/' + currentTab}__ :: content}"></div>

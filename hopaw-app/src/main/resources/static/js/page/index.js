@@ -759,6 +759,9 @@ function buildToolCallStaticNode(chat) {
     name.textContent = chat.toolName || '';
     header.appendChild(name);
 
+    var configBtn = createToolConfigButton(chat.toolName);
+    if (configBtn) header.appendChild(configBtn);
+
     var statusEl = document.createElement('span');
     statusEl.className = 'tool-call-status' + (finished ? ' completed' : '');
     if (status === 'started') {
@@ -1290,6 +1293,9 @@ function handleToolCall(data, requestId) {
         toolName.textContent =toolNameValue;
         toolCallHeader.appendChild(toolName);
 
+        var configBtn = createToolConfigButton(data.toolName);
+        if (configBtn) toolCallHeader.appendChild(configBtn);
+
         var toolCallStatus = document.createElement('span');
         toolCallStatus.className = 'tool-call-status';
         toolCallHeader.appendChild(toolCallStatus);
@@ -1528,7 +1534,10 @@ function handleToolCall(data, requestId) {
 var toolIconMap = {};
 var toolIconMapLoaded = false;
 
-/** 加载工具集列表并建立 工具名→图标 映射 */
+/** 工具名 → { toolSetName, hasConfigItems } 映射，用于工具执行列表显示配置按钮 */
+var toolConfigMap = {};
+
+/** 加载工具集列表并建立 工具名→图标 / 工具名→配置信息 映射 */
 function loadToolIconMap() {
     return fetch('/tools/api/list')
         .then(function(r) { return r.json(); })
@@ -1536,13 +1545,19 @@ function loadToolIconMap() {
             if (res.code === 200 && res.data) {
                 res.data.forEach(function(toolSet) {
                     var icon = toolSet.icon;
-                    if (!icon) return;
+                    var hasConfig = toolSet.hasConfigItems === true;
+                    var setName = toolSet.name || '';
                     (toolSet.tools || []).forEach(function(tool) {
                         if (!tool || !tool.name) return;
-                        toolIconMap[tool.name] = icon;
-                        // 历史接口的 toolName 已被后端替换为首个工具描述，描述同样注册（与 getToolNameAndDescriptionMap 同源）
+                        if (icon) toolIconMap[tool.name] = icon;
+                        if (hasConfig && setName) {
+                            toolConfigMap[tool.name] = { toolSetName: setName, hasConfigItems: true };
+                        }
                         if (tool.descriptions && tool.descriptions.length > 0 && tool.descriptions[0]) {
-                            toolIconMap[tool.descriptions[0]] = icon;
+                            if (icon) toolIconMap[tool.descriptions[0]] = icon;
+                            if (hasConfig && setName) {
+                                toolConfigMap[tool.descriptions[0]] = { toolSetName: setName, hasConfigItems: true };
+                            }
                         }
                     });
                 });
@@ -1557,6 +1572,19 @@ function loadToolIconMap() {
 
 /** 默认通用图标（所有工具的兜底），视为"无专属图标" */
 var TOOL_DEFAULT_ICON = 'agent-tool.svg';
+
+/** 创建工具配置按钮元素，工具集无配置时返回 null */
+function createToolConfigButton(toolName) {
+    var info = toolConfigMap[toolName];
+    if (!info || !info.hasConfigItems) return null;
+    var btn = document.createElement('a');
+    btn.className = 'tool-call-config-btn';
+    btn.href = '/tool-config/' + encodeURIComponent(info.toolSetName);
+    btn.title = '配置 ' + info.toolSetName;
+    btn.textContent = '⚙';
+    btn.onclick = function(e) { e.stopPropagation(); };
+    return btn;
+}
 
 /**
  * 按工具名渲染内联图标内容：工具集 SVG 图标（代码或地址），无专属图标时显示扳手

@@ -31,9 +31,9 @@ public class NotifyChannelService implements INotifyChannelService {
 
     @Override
     public NotifyChannel updateChannel(NotifyChannel channel, String userId) {
-        NotifyChannel existing = getChannel(channel.getId(), userId);
+        NotifyChannel existing = getChannel(channel.getId());
         if (existing == null) {
-            throw new RuntimeException("通知渠道不存在或无权访问");
+            throw new RuntimeException("通知渠道不存在");
         }
         validate(channel);
         existing.setName(channel.getName());
@@ -46,17 +46,26 @@ public class NotifyChannelService implements INotifyChannelService {
 
     @Override
     public boolean deleteChannel(Long id, String userId) {
-        NotifyChannel existing = getChannel(id, userId);
+        NotifyChannel existing = getChannel(id);
         if (existing == null) {
             return false;
+        }
+        if (!existing.getUserId().equals(userId)) {
+            throw new RuntimeException("无权删除此通知渠道");
         }
         return notifyChannelMapper.deleteById(id) > 0;
     }
 
     @Override
     public NotifyChannel getChannel(Long id, String userId) {
+        return getChannel(id);
+    }
+
+    /** 按编号查询（不校验归属） */
+    @Override
+    public NotifyChannel getChannel(Long id) {
         NotifyChannel channel = notifyChannelMapper.findById(id);
-        if (channel == null || !channel.getUserId().equals(userId)) {
+        if (channel == null) {
             return null;
         }
         return channel;
@@ -65,6 +74,12 @@ public class NotifyChannelService implements INotifyChannelService {
     @Override
     public List<NotifyChannel> listByUser(String userId) {
         List<NotifyChannel> list = notifyChannelMapper.findByUserId(userId);
+        return list != null ? list : new ArrayList<>();
+    }
+
+    @Override
+    public List<NotifyChannel> listAll() {
+        List<NotifyChannel> list = notifyChannelMapper.findAll();
         return list != null ? list : new ArrayList<>();
     }
 

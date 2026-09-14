@@ -53,15 +53,14 @@ public class NotifyChannelTool implements AgentTool {
     }
 
     /**
-     * 查询当前用户全部通知渠道（编号、名称、类型、启用状态）。
+     * 查询全部通知渠道（编号、名称、类型、启用状态）。
      */
     @ToolSecurityLevel(ToolSecurityLevel.Level.SAFE)
-    @Tool(value = {"查询通知渠道", "查询当前用户全部通知渠道（编号、名称、类型、启用状态）"})
+    @Tool(value = {"查询通知渠道", "查询全部通知渠道（编号、名称、类型、启用状态）"})
     public String queryNotifyChannels(InvocationParameters invocationParameters) {
-        InvocationParametersWrapper wrapper = InvocationParametersWrapper.create(invocationParameters);
-        List<NotifyChannel> channels = notifyChannelService.listByUser(wrapper.getUserId());
+        List<NotifyChannel> channels = notifyChannelService.listAll();
         if (channels == null || channels.isEmpty()) {
-            return "成功：当前用户暂无通知渠道，可先在系统设置-通知渠道中新增";
+            return "成功：暂无通知渠道，可先在系统设置-通知渠道中新增";
         }
         StringBuilder sb = new StringBuilder("共 " + channels.size() + " 个通知渠道：\n");
         for (NotifyChannel ch : channels) {
