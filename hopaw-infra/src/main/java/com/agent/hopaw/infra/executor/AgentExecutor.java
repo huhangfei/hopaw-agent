@@ -628,6 +628,7 @@ public class AgentExecutor implements IAgentExecutor {
         // 使用多模态估算器：OpenAiTokenCountEstimator 遇到图片消息会抛 Unknown content type 异常
         TokenWindowChatMemory.Builder memoryBuilder = TokenWindowChatMemory.builder()
                 .id(memoryId)
+                .alwaysKeepSystemMessageFirst(true)
                 .maxTokens(agentExecutorParams.getMaxMemoryTokens() != null ? agentExecutorParams.getMaxMemoryTokens() : Agent.DEFAULT_MAX_MEMORY_TOKENS,
                         new MultimodalTokenCountEstimator("gpt-4o"))
                 .chatMemoryStore(memoryStore != null ? memoryStore : new InMemoryChatMemoryStore());
