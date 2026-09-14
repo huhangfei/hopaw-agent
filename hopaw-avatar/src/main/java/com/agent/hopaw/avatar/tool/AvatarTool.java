@@ -124,13 +124,12 @@ public class AvatarTool implements AgentTool {
                 logger.warn("更新 lastProactiveGreetingTime 失败 userId={} agentId={} err={}",
                         targetUserId, targetAgentId, persistError.getMessage());
             }
-            // 异步合成 TTS 语音并推送
+            // 异步分段合成 TTS 语音并按序推送：按断句标点切分，每段合成完成立即发送，缩短首段等待
             CompletableFuture.runAsync(() -> {
                 try {
-                    String audioBase64 = ttsService.synthesizeToBase64(targetUserId, targetAgentId, trimmed,emotion);
-                    if (audioBase64 != null && !audioBase64.isEmpty()) {
-                        avatarWebSocketHandler.sendTtsAudio(targetUserId, targetAgentId, audioBase64, trimmed);
-                    }
+                    ttsService.synthesizeSegmented(targetUserId, targetAgentId, trimmed, emotion,
+                            (audioBase64, segmentText) ->
+                                    avatarWebSocketHandler.sendTtsAudio(targetUserId, targetAgentId, audioBase64, segmentText));
                 } catch (Exception ttsErr) {
                     logger.warn("TTS 合成/推送失败 userId={} agentId={} err={}",
                             targetUserId, targetAgentId, ttsErr.getMessage());

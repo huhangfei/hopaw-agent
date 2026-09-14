@@ -648,10 +648,30 @@ var LAppDefine = {
         }
     }
 
+    // TTS 分段音频队列：后端按断句标点分段合成并顺序推送，前端排队依次播放，避免多段重叠
+    var ttsAudioQueue = [];
+    var ttsAudioPlaying = false;
+
     function handleTtsAudio(data) {
         if (!data.audio) return;
+        ttsAudioQueue.push(data.audio);
+        playNextTtsAudio();
+    }
+
+    function playNextTtsAudio() {
+        if (ttsAudioPlaying) return;
+        var audioBase64 = ttsAudioQueue.shift();
+        if (!audioBase64) return;
+        ttsAudioPlaying = true;
+        var finished = false;
+        var finish = function() {
+            if (finished) return;
+            finished = true;
+            ttsAudioPlaying = false;
+            playNextTtsAudio();
+        };
         try {
-            var audioBytes = base64ToArrayBuffer(data.audio);
+            var audioBytes = base64ToArrayBuffer(audioBase64);
             // 检测 WAV 头（RIFF....WAVE），Piper 等渠道返回 WAV 格式，MIME 需正确声明
             var blobType = "audio/mp3";
             try {
@@ -667,19 +687,23 @@ var LAppDefine = {
             var audio = new Audio(url);
             audio.onended = function() {
                 URL.revokeObjectURL(url);
+                finish();
             };
             audio.onerror = function() {
                 URL.revokeObjectURL(url);
+                finish();
             };
             var playPromise = audio.play();
             if (playPromise && typeof playPromise.catch === "function") {
                 playPromise.catch(function(err) {
                     console.warn("TTS audio play failed:", err);
                     URL.revokeObjectURL(url);
+                    finish();
                 });
             }
         } catch (e) {
             console.warn("TTS audio decode error:", e);
+            finish();
         }
     }
 
