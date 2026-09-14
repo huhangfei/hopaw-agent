@@ -1,6 +1,10 @@
 package com.agent.hopaw.tool.image;
 
 import com.agent.hopaw.infra.tool.ToolSecurityLevel;
+import com.agent.hopaw.infra.model.dto.ToolConfigItem;
+import com.agent.hopaw.infra.model.dto.ValidationRule;
+import com.agent.hopaw.infra.model.entity.SysConfig;
+import com.agent.hopaw.infra.service.ISysConfigService;
 import dev.langchain4j.agent.tool.P;
 import dev.langchain4j.agent.tool.Tool;
 import dev.langchain4j.data.message.Content;
@@ -15,6 +19,7 @@ import org.apache.batik.transcoder.image.PNGTranscoder;
 import net.coobird.thumbnailator.Thumbnails;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
 
 import javax.imageio.IIOImage;
 import javax.imageio.ImageIO;
@@ -45,6 +50,15 @@ public class ImageOperationTool implements AgentTool {
 
     private static final Logger log = LoggerFactory.getLogger(ImageOperationTool.class);
 
+    private static final String CONFIG_KEY_MAX_RETURN_SIZE_KB = "maxReturnSizeKb";
+    private static final int DEFAULT_MAX_RETURN_SIZE_KB = 500;
+
+    @Autowired
+    private ISysConfigService sysConfigService;
+
+    /** 缓存：读取图片最大返回大小(KB)，0 表示不限制 */
+    private volatile int cachedMaxReturnSizeKb = 0;
+
     @ToolSecurityLevel(ToolSecurityLevel.Level.SAFE)
     @Tool(value = {"读取图片", "读取指定路径的图片文件并以图片内容返回给大模型，可通过质量参数压缩图片以减少数据量", "图片读取"})
     public List<Content> readImage(
@@ -65,9 +79,16 @@ public class ImageOperationTool implements AgentTool {
                 return errorResult("不是支持的图片文件(支持 jpg/jpeg/png/bmp/gif): " + filePath);
             }
 
+            long maxSizeBytes = cachedMaxReturnSizeKb > 0 ? cachedMaxReturnSizeKb * 1024L : 0;
+
             // 不压缩：图片内容直接作为 ImageContent 返回给大模型
             if (quality == null) {
                 byte[] bytes = Files.readAllBytes(path);
+                if (maxSizeBytes > 0 && bytes.length > maxSizeBytes) {
+                    return errorResult("目前图片大小 " + formatFileSize(bytes.length)
+                            + "，超过最大返回限制 " + formatFileSize(maxSizeBytes)
+                            + "，需要进一步压缩（可降低 quality 参数或减小图片尺寸）");
+                }
                 StringBuilder sb = new StringBuilder();
                 sb.append("图片读取成功，图片已作为图片内容提供\n");
                 sb.append("格式: ").append(mime).append("\n");
@@ -90,12 +111,23 @@ public class ImageOperationTool implements AgentTool {
             // 压缩无收益时回退原始数据
             if (compressed.length >= originalSize) {
                 byte[] bytes = Files.readAllBytes(path);
+                if (maxSizeBytes > 0 && bytes.length > maxSizeBytes) {
+                    return errorResult("目前图片大小 " + formatFileSize(bytes.length)
+                            + "，超过最大返回限制 " + formatFileSize(maxSizeBytes)
+                            + "，需要进一步压缩（可降低 quality 参数或减小图片尺寸）");
+                }
                 StringBuilder sb = new StringBuilder();
                 sb.append("图片读取成功(质量 ").append(q).append(" 压缩未减小体积，已返回原始数据)，图片已作为图片内容提供\n");
                 sb.append("格式: ").append(mime).append("\n");
                 sb.append("尺寸: ").append(img.getWidth()).append("x").append(img.getHeight()).append("\n");
                 sb.append("大小: ").append(formatFileSize(originalSize));
                 return imageResult(sb.toString(), bytes, mime);
+            }
+
+            if (maxSizeBytes > 0 && compressed.length > maxSizeBytes) {
+                return errorResult("压缩后图片大小 " + formatFileSize(compressed.length)
+                        + "，仍超过最大返回限制 " + formatFileSize(maxSizeBytes)
+                        + "，需要进一步压缩（可降低 quality 参数或减小图片尺寸）");
             }
 
             StringBuilder sb = new StringBuilder();
@@ -538,5 +570,42 @@ public class ImageOperationTool implements AgentTool {
     @Override
     public String getKeyword() {
         return "图片";
+    }
+
+    @Override
+    public List<ToolConfigItem> getConfigItems() {
+        return List.of(
+                new ToolConfigItem(CONFIG_KEY_MAX_RETURN_SIZE_KB, "读取图片最大返回大小(KB)",
+                        "读取图片时压缩后超过该大小则不返回图片只返回文字提醒，0 或不填表示不限制",
+                        ToolConfigItem.ConfigType.TEXT_SINGLE)
+                        .sensitive(false)
+        );
+    }
+
+    @Override
+    public void asyncInit() {
+        reloadConfig();
+    }
+
+    @Override
+    public void onConfigChanged() {
+        log.info("收到配置变更通知，重新加载图片操作工具配置");
+        reloadConfig();
+    }
+
+    private void reloadConfig() {
+        String prefix = getConfigPrefix();
+        SysConfig config = sysConfigService.getByKey(prefix + CONFIG_KEY_MAX_RETURN_SIZE_KB);
+        if (config != null && config.getConfigValue() != null && !config.getConfigValue().isBlank()) {
+            try {
+                this.cachedMaxReturnSizeKb = Integer.parseInt(config.getConfigValue().trim());
+            } catch (NumberFormatException e) {
+                this.cachedMaxReturnSizeKb = DEFAULT_MAX_RETURN_SIZE_KB;
+                log.warn("图片最大返回大小配置值无效，使用默认值 {}KB: {}", DEFAULT_MAX_RETURN_SIZE_KB, e.getMessage());
+            }
+        } else {
+            this.cachedMaxReturnSizeKb = 0;
+        }
+        log.info("图片操作工具配置已重载: maxReturnSizeKb={}", cachedMaxReturnSizeKb);
     }
 }

@@ -130,8 +130,10 @@ public class AvatarTool implements AgentTool {
                 try {
                     TtsEmotionEnum emotionEnum = TtsEmotionEnum.fromCode(emotion);
                     ttsService.synthesizeSegmented(targetUserId, targetAgentId, trimmed, emotionEnum,
-                            (audioBase64, segmentText) ->
-                                    avatarWebSocketHandler.sendTtsAudio(targetUserId, targetAgentId, audioBase64, segmentText));
+                            (groupId, audioBase64, segmentText) ->
+                                    avatarWebSocketHandler.sendTtsAudio(targetUserId, targetAgentId, groupId, audioBase64, segmentText),
+                            (groupId) ->
+                                    avatarWebSocketHandler.sendTtsAudioGroupComplete(targetUserId, targetAgentId, groupId));
                 } catch (Exception ttsErr) {
                     logger.warn("TTS 合成/推送失败 userId={} agentId={} err={}",
                             targetUserId, targetAgentId, ttsErr.getMessage());

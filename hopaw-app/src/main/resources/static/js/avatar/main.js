@@ -447,6 +447,10 @@ var LAppDefine = {
             handleTtsAudio(data);
             return;
         }
+        if (data.type === "avatar_tts_group_complete") {
+            handleTtsGroupComplete(data);
+            return;
+        }
         if (data.type === "avatar_intimacy_update" || data.action === "intimacy_update") {
             if (data.intimacyInfo) {
                 widget._intimacy && widget._intimacy.apply(data.intimacyInfo);
@@ -648,31 +652,92 @@ var LAppDefine = {
         }
     }
 
-    // TTS 分段音频队列：后端按断句标点分段合成并顺序推送，前端排队依次播放，避免多段重叠
-    var ttsAudioQueue = [];
-    var ttsAudioPlaying = false;
+    // TTS 分组音频队列：后端为每次语音请求生成 groupId，同一组所有分段推送完毕后发送 groupComplete。
+    // 前端按组顺序播放，播放完一组再播放下一组，避免多组并发串段。
+    var ttsGroupQueues = {};        // groupId → [{audio, text}, ...]
+    var ttsGroupReady = {};         // groupId → boolean（是否已收到 groupComplete）
+    var ttsGroupOrder = [];         // 按到达顺序记录 groupId，用于顺序播放
+    var ttsPlayingGroupId = null;   // 当前正在播放的 groupId
+    var ttsCurrentSegmentPlaying = false; // 当前组内是否正在播放某一段
 
     function handleTtsAudio(data) {
-        if (!data.audio) return;
-        ttsAudioQueue.push(data.audio);
-        playNextTtsAudio();
+        if (!data.audio || !data.groupId) return;
+        var gid = data.groupId;
+        if (!ttsGroupQueues[gid]) {
+            ttsGroupQueues[gid] = [];
+            ttsGroupOrder.push(gid);
+        }
+        ttsGroupQueues[gid].push({ audio: data.audio, text: data.text || '' });
+        tryPlayNextTtsGroup();
     }
 
-    function playNextTtsAudio() {
-        if (ttsAudioPlaying) return;
-        var audioBase64 = ttsAudioQueue.shift();
-        if (!audioBase64) return;
-        ttsAudioPlaying = true;
+    function handleTtsGroupComplete(data) {
+        if (!data.groupId) return;
+        ttsGroupReady[data.groupId] = true;
+        tryPlayNextTtsGroup();
+    }
+
+    /** 尝试播放下一组（或当前组的下一段） */
+    function tryPlayNextTtsGroup() {
+        // 如果当前正在播放一段，等它播完自动触发
+        if (ttsCurrentSegmentPlaying) return;
+
+        // 如果没有正在播放的组，找到队列中第一个 ready 的组开始
+        if (!ttsPlayingGroupId) {
+            for (var i = 0; i < ttsGroupOrder.length; i++) {
+                var gid = ttsGroupOrder[i];
+                if (ttsGroupReady[gid] && ttsGroupQueues[gid] && ttsGroupQueues[gid].length > 0) {
+                    ttsPlayingGroupId = gid;
+                    break;
+                }
+            }
+        }
+
+        if (!ttsPlayingGroupId) return;
+
+        // 播放当前组的下一段
+        var seg = ttsGroupQueues[ttsPlayingGroupId].shift();
+        if (seg) {
+            ttsCurrentSegmentPlaying = true;
+            playTtsSegment(seg.audio, function onEnd() {
+                ttsCurrentSegmentPlaying = false;
+                // 当前组还有剩余段，继续播放
+                if (ttsGroupQueues[ttsPlayingGroupId] && ttsGroupQueues[ttsPlayingGroupId].length > 0) {
+                    tryPlayNextTtsGroup();
+                } else {
+                    // 当前组播完，清理并切到下一组
+                    cleanupTtsGroup(ttsPlayingGroupId);
+                    ttsPlayingGroupId = null;
+                    tryPlayNextTtsGroup();
+                }
+            });
+        } else {
+            // 当前组没有剩余段了
+            if (ttsGroupReady[ttsPlayingGroupId]) {
+                cleanupTtsGroup(ttsPlayingGroupId);
+                ttsPlayingGroupId = null;
+                tryPlayNextTtsGroup();
+            }
+            // 如果还没收到 groupComplete，等收到后自然触发
+        }
+    }
+
+    function cleanupTtsGroup(gid) {
+        delete ttsGroupQueues[gid];
+        delete ttsGroupReady[gid];
+        var idx = ttsGroupOrder.indexOf(gid);
+        if (idx >= 0) ttsGroupOrder.splice(idx, 1);
+    }
+
+    function playTtsSegment(audioBase64, onEnd) {
         var finished = false;
         var finish = function() {
             if (finished) return;
             finished = true;
-            ttsAudioPlaying = false;
-            playNextTtsAudio();
+            onEnd();
         };
         try {
             var audioBytes = base64ToArrayBuffer(audioBase64);
-            // 检测 WAV 头（RIFF....WAVE），Piper 等渠道返回 WAV 格式，MIME 需正确声明
             var blobType = "audio/mp3";
             try {
                 var head = new Uint8Array(audioBytes);

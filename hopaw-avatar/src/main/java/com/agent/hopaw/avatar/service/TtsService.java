@@ -16,7 +16,9 @@ import java.util.Base64;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
+import java.util.UUID;
 import java.util.function.BiConsumer;
+import java.util.function.Consumer;
 
 /**
  * 虚拟人 TTS 聚合服务，负责根据 agent 配置查找 TTS 音色、根据全局配置获取厂商凭证，合成语音。
@@ -46,28 +48,35 @@ public class TtsService {
     /**
      * 按断句标点切分文本后逐段合成，每段合成完成即通过回调返回，供调用方顺序推送到前端。
      * 整段文本一次合成耗时过长，分段后首段可更早送达播放。
+     * 所有分段属于同一组（groupId），前端按组顺序播放，避免多组并发串段。
      * @param userId 用户 ID
      * @param agentId 智能体 ID
      * @param text 文本内容
      * @param emotion 标准情感枚举（可为 null）
-     * @param onSegment 分段回调：(base64 音频, 分段文本)；TTS 未启用或配置缺失时不回调
+     * @param onSegment 分段回调：(groupId, base64 音频, 分段文本)；TTS 未启用或配置缺失时不回调
+     * @param onGroupComplete 本组所有分段推送完毕回调：(groupId)；保证每个请求都触发一次
      */
     public void synthesizeSegmented(String userId, Long agentId, String text, TtsEmotionEnum emotion,
-                                    BiConsumer<String, String> onSegment) {
+                                    TriConsumer<String, String, String> onSegment,
+                                    Consumer<String> onGroupComplete) {
+        String groupId = UUID.randomUUID().toString();
         try {
             // 1. 查询 agent 的 TTS 配置
             AgentAvatarConfig agentConfig = avatarConfigMapper.findByUserAndAgent(userId, agentId);
             if (agentConfig == null || !Boolean.TRUE.equals(agentConfig.getTtsEnabled())) {
+                onGroupComplete.accept(groupId);
                 return;
             }
             Long ttsConfigId = agentConfig.getTtsConfigId();
             String voiceId = agentConfig.getTtsVoiceId();
             if (ttsConfigId == null) {
                 logger.warn("TTS: agent {} 未配置 TTS 配置主键", agentId);
+                onGroupComplete.accept(groupId);
                 return;
             }
             if (voiceId == null || voiceId.isEmpty()) {
                 logger.warn("TTS: agent {} 未配置音色", agentId);
+                onGroupComplete.accept(groupId);
                 return;
             }
 
@@ -75,6 +84,7 @@ public class TtsService {
             TtsConfig ttsConfig = ttsConfigService.findById(ttsConfigId);
             if (ttsConfig == null || ttsConfig.getEnabled() == null || ttsConfig.getEnabled() != 1) {
                 logger.warn("TTS: 配置 id={} 未启用或不存在", ttsConfigId);
+                onGroupComplete.accept(groupId);
                 return;
             }
             String vendorCode = ttsConfig.getVendorCode();
@@ -83,6 +93,7 @@ public class TtsService {
             ITtsService service = ttsServiceFactory.getService(vendorCode);
             if (service == null) {
                 logger.warn("TTS 厂商未注册: {}", vendorCode);
+                onGroupComplete.accept(groupId);
                 return;
             }
 
@@ -103,7 +114,7 @@ public class TtsService {
                 try {
                     byte[] audio = service.synthesize(ttsConfig.getConfigJson(), voiceId, segment, emotion);
                     if (audio != null && audio.length > 0) {
-                        onSegment.accept(Base64.getEncoder().encodeToString(audio), segment);
+                        onSegment.accept(groupId, Base64.getEncoder().encodeToString(audio), segment);
                     }
                 } catch (Exception e) {
                     logger.warn("TTS 分段合成失败（跳过该段）: segment={} err={}", segment, e.getMessage());
@@ -111,7 +122,16 @@ public class TtsService {
             }
         } catch (Exception e) {
             logger.error("TTS 合成失败: {}", e.getMessage(), e);
+        } finally {
+            // 6. 保证每个请求都触发完成回调，无论正常结束还是异常
+            onGroupComplete.accept(groupId);
         }
+    }
+
+    /** 三参数回调接口 */
+    @FunctionalInterface
+    public interface TriConsumer<A, B, C> {
+        void accept(A a, B b, C c);
     }
 
     /** 单段最小字符数：过短的分段向后合并，避免产生大量极小的合成请求 */

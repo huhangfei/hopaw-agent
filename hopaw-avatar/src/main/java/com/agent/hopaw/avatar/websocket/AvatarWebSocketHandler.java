@@ -164,7 +164,7 @@ public class AvatarWebSocketHandler extends TextWebSocketHandler {
     /**
      * 向指定用户推送 TTS 音频数据（直接推送，不经过 MQ）
      */
-    public void sendTtsAudio(String userId, Long agentId, String audioBase64, String messageText) {
+    public void sendTtsAudio(String userId, Long agentId, String groupId, String audioBase64, String messageText) {
         if (userId == null || agentId == null || audioBase64 == null) {
             return;
         }
@@ -175,6 +175,7 @@ public class AvatarWebSocketHandler extends TextWebSocketHandler {
         }
         JSONObject msg = new JSONObject();
         msg.put("type", "avatar_tts_audio");
+        msg.put("groupId", groupId);
         msg.put("audio", audioBase64);
         msg.put("text", messageText != null ? messageText : "");
         String messageJson = msg.toJSONString();
@@ -188,6 +189,37 @@ public class AvatarWebSocketHandler extends TextWebSocketHandler {
                     }
                 } catch (IOException e) {
                     logger.error("Failed to send TTS audio to session {}: {}", id, e.getMessage());
+                }
+            }
+        }
+    }
+
+    /**
+     * 向指定用户推送 TTS 分组完成标记，前端据此判断该组所有分段已就绪
+     */
+    public void sendTtsAudioGroupComplete(String userId, Long agentId, String groupId) {
+        if (userId == null || agentId == null || groupId == null) {
+            return;
+        }
+        String key = buildKey(userId, agentId);
+        ConcurrentLinkedQueue<String> sessionIds = sessionKeyMap.get(key);
+        if (sessionIds == null || sessionIds.isEmpty()) {
+            return;
+        }
+        JSONObject msg = new JSONObject();
+        msg.put("type", "avatar_tts_group_complete");
+        msg.put("groupId", groupId);
+        String messageJson = msg.toJSONString();
+        for (String id : sessionIds) {
+            WebSocketSession wsSession = sessionMap.get(id);
+            if (wsSession != null && wsSession.isOpen()) {
+                try {
+                    Object lock = SESSION_LOCK_MAP.computeIfAbsent(id, k -> new Object());
+                    synchronized (lock) {
+                        wsSession.sendMessage(new TextMessage(messageJson));
+                    }
+                } catch (IOException e) {
+                    logger.error("Failed to send TTS group complete to session {}: {}", id, e.getMessage());
                 }
             }
         }
