@@ -1,5 +1,6 @@
 package com.agent.hopaw.infra.service.tts;
 
+import com.agent.hopaw.infra.constant.TtsEmotionEnum;
 import com.agent.hopaw.infra.model.dto.TtsVoice;
 import com.agent.hopaw.infra.service.ITtsService;
 import com.alibaba.fastjson2.JSON;
@@ -256,7 +257,7 @@ public class AliyunTtsService implements ITtsService {
     }
 
     @Override
-    public byte[] synthesize(String configJson, String voiceId, String text, String emotion) {
+    public byte[] synthesize(String configJson, String voiceId, String text, TtsEmotionEnum emotion) {
         if (text == null || text.isEmpty()) {
             logger.warn("阿里云 TTS: 文本为空，跳过合成");
             return new byte[0];
@@ -285,8 +286,8 @@ public class AliyunTtsService implements ITtsService {
                     .append("&volume=50")
                     .append("&speech_rate=0")
                     .append("&pitch_rate=0");
-            if (emotion != null && !emotion.isEmpty()) {
-                urlBuilder.append("&emotion=").append(URLEncoder.encode(emotion, "UTF-8"));
+            if (emotion != null) {
+                urlBuilder.append("&emotion=").append(URLEncoder.encode(emotion.getCode(), "UTF-8"));
             }
 
             byte[] audioBytes = httpGet(urlBuilder.toString());

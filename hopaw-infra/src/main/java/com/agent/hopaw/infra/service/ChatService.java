@@ -1,6 +1,7 @@
 package com.agent.hopaw.infra.service;
 
 import com.agent.hopaw.infra.constant.AgentExecutorBizTypeEnum;
+import com.agent.hopaw.infra.constant.TtsEmotionEnum;
 import com.agent.hopaw.infra.executor.IAgentExecutor;
 import com.agent.hopaw.infra.memory.ILongTermMemoryService;
 import com.agent.hopaw.infra.model.dto.*;
@@ -14,6 +15,7 @@ import dev.langchain4j.data.message.TextContent;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
+import org.springframework.util.StringUtils;
 
 import java.io.File;
 import java.nio.file.Files;
@@ -21,6 +23,7 @@ import java.nio.file.Path;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Base64;
 import java.util.List;
 import java.util.function.Function;
@@ -214,8 +217,16 @@ public class ChatService implements IChatService {
                 .replace("{agentDescription}", agent.getDescription())
                 .replace("{agentId}", agent.getId().toString())
                 .replace("{tempFilePath}",tempFilePath);
-        if (!avatarSettings.isDisabled() && avatarSettings.getPersonaSetting() != null && !avatarSettings.getPersonaSetting().isEmpty()) {
+        if (!avatarSettings.isDisabled()
+                && avatarSettings.getPersonaSetting() != null
+                && !avatarSettings.getPersonaSetting().isEmpty()) {
             systemMessage += "你可以控制一个虚拟人和用户交互，人物的设定是：" + avatarSettings.getPersonaSetting() + "\n";
+            if(avatarSettings.isSoundEnabled() && avatarSettings.getTtsConfigId()!=null && StringUtils.hasLength(avatarSettings.getTtsVoiceId())){
+                systemMessage += "可以通过发送虚拟人消息向用户输出语音。\n";
+                if(avatarSettings.getTtsEmotions()!=null && StringUtils.hasLength(avatarSettings.getTtsEmotions())){
+                    systemMessage += "发送虚拟人消息支持的语音音色：" + avatarSettings.getTtsEmotions() + "。\n";
+                }
+            }
         }
         if (agent.getVectorToolSearch() != null && agent.getVectorToolSearch() && selectedTools != null && !selectedTools.isEmpty()) {
             systemMessage += "当需要[" + getToolKeywords(selectedTools) + "]这些能力时，先使用" + AgentTool.TOOL_SEARCH_TOOL_NAME + "搜一下对应关键词，拿到工具详情再做决定使用。\n";

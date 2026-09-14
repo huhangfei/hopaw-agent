@@ -1,5 +1,6 @@
 package com.agent.hopaw.infra.service;
 
+import com.agent.hopaw.infra.constant.TtsEmotionEnum;
 import com.agent.hopaw.infra.model.dto.TtsVoice;
 
 import java.util.List;
@@ -30,8 +31,8 @@ public interface ITtsService {
      * @param configJson 厂商配置 JSON
      * @param voiceId 音色编号
      * @param text 文本内容
-     * @param emotion 情感类型（可为 null，仅多情感音色有效，如 happy/angry/sad 等）
-     * @return 音频字节数组（MP3 格式）
+     * @param emotion 标准情感枚举（可为 null，各实现自行映射为厂商格式）
+     * @return 音频字节数组
      */
-    byte[] synthesize(String configJson, String voiceId, String text, String emotion);
+    byte[] synthesize(String configJson, String voiceId, String text, TtsEmotionEnum emotion);
 }

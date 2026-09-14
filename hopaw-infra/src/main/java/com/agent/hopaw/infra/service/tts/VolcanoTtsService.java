@@ -1,5 +1,6 @@
 package com.agent.hopaw.infra.service.tts;
 
+import com.agent.hopaw.infra.constant.TtsEmotionEnum;
 import com.agent.hopaw.infra.model.dto.TtsVoice;
 import com.agent.hopaw.infra.service.ITtsService;
 import com.alibaba.fastjson2.JSON;
@@ -82,7 +83,7 @@ public class VolcanoTtsService implements ITtsService {
     }
 
     @Override
-    public byte[] synthesize(String configJson, String voiceId, String text, String emotion) {
+    public byte[] synthesize(String configJson, String voiceId, String text, TtsEmotionEnum emotion) {
         if (text == null || text.isEmpty()) {
             logger.warn("火山引擎 TTS: 文本为空，跳过合成");
             return new byte[0];

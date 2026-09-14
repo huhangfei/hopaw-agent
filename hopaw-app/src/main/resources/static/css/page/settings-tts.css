@@ -575,6 +575,67 @@ body.dark-theme .btn-tts-voice-reset:hover {
     min-height: 0;
 }
 
+.tts-test-emotion-bar {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 10px;
+    flex-wrap: wrap;
+}
+
+.tts-test-emotion-bar label {
+    font-size: 13px;
+    color: #666;
+    white-space: nowrap;
+}
+
+.tts-test-emotion-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+}
+
+.tts-emotion-tag {
+    display: inline-block;
+    padding: 3px 10px;
+    font-size: 12px;
+    border-radius: 12px;
+    border: 1px solid #d0d0d0;
+    background: #f5f5f5;
+    color: #555;
+    cursor: pointer;
+    user-select: none;
+    transition: all .15s;
+}
+
+.tts-emotion-tag:hover {
+    border-color: #4a90d9;
+    color: #4a90d9;
+}
+
+.tts-emotion-tag.selected {
+    background: #4a90d9;
+    border-color: #4a90d9;
+    color: #fff;
+}
+
+body.dark-theme .tts-emotion-tag {
+    border-color: #555;
+    background: #2a2a2a;
+    color: #aaa;
+}
+
+body.dark-theme .tts-emotion-tag:hover {
+    border-color: #6aafff;
+    color: #6aafff;
+}
+
+body.dark-theme .tts-emotion-tag.selected {
+    background: #3a6ea5;
+    border-color: #3a6ea5;
+    color: #fff;
+}
+
 .tts-test-textarea {
     flex: 1;
     resize: none;

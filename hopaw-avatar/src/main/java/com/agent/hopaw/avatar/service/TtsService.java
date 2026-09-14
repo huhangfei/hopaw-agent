@@ -2,6 +2,7 @@ package com.agent.hopaw.avatar.service;
 
 import com.agent.hopaw.avatar.entity.AgentAvatarConfig;
 import com.agent.hopaw.avatar.mapper.AvatarConfigMapper;
+import com.agent.hopaw.infra.constant.TtsEmotionEnum;
 import com.agent.hopaw.infra.model.entity.TtsConfig;
 import com.agent.hopaw.infra.service.ITtsService;
 import com.agent.hopaw.infra.service.TtsConfigService;
@@ -48,10 +49,10 @@ public class TtsService {
      * @param userId 用户 ID
      * @param agentId 智能体 ID
      * @param text 文本内容
-     * @param emotion 情感类型（可为 null）
+     * @param emotion 标准情感枚举（可为 null）
      * @param onSegment 分段回调：(base64 音频, 分段文本)；TTS 未启用或配置缺失时不回调
      */
-    public void synthesizeSegmented(String userId, Long agentId, String text, String emotion,
+    public void synthesizeSegmented(String userId, Long agentId, String text, TtsEmotionEnum emotion,
                                     BiConsumer<String, String> onSegment) {
         try {
             // 1. 查询 agent 的 TTS 配置

@@ -1,5 +1,6 @@
 package com.agent.hopaw.controller;
 
+import com.agent.hopaw.infra.constant.TtsEmotionEnum;
 import com.agent.hopaw.infra.model.dto.ResponseBean;
 import com.agent.hopaw.infra.model.dto.TtsVoice;
 import com.agent.hopaw.infra.model.entity.TtsConfig;
@@ -167,7 +168,8 @@ public class TtsConfigController {
             return ResponseBean.fail("不支持的厂商: " + config.getVendorCode());
         }
         byte[] audio = service.synthesize(config.getConfigJson(),
-                request.getVoiceId().trim(), request.getText().trim(), request.getEmotion());
+                request.getVoiceId().trim(), request.getText().trim(),
+                TtsEmotionEnum.fromCode(request.getEmotion()));
         if (audio == null || audio.length == 0) {
             return ResponseBean.fail("合成失败，请检查厂商配置是否正确");
         }

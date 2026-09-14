@@ -1,6 +1,23 @@
 var ttsVendorMap = {};
 var ttsConfigList = [];
 
+var TTS_VENDOR_HINTS = {
+    aliyun: '阿里云: {"accessKeyId":"xxx","accessKeySecret":"xxx","appKey":"xxx"}',
+    volcano: '火山引擎: {"appId":"xxx","accessToken":"xxx","cluster":"volcano_tts"}',
+    piper: 'Piper: {"baseUrl":"http://&lt;Piper服务IP&gt;:5500"}',
+    mimo: 'MiMo TTS: {"apiKey":"xxx","baseUrl":"https://api.xiaomimimo.com/v1"}<br>可选 model: mimo-v2.5-tts / mimo-v2.5-tts-voicedesign / mimo-v2.5-tts-voiceclone'
+};
+
+var TTS_EMOTION_NAMES = {
+    neutral: '平静', happy: '开心', sad: '悲伤', angry: '愤怒',
+    fear: '恐惧', surprise: '惊讶', hate: '厌恶', arousal: '激动',
+    disgust: '反感', jealousy: '嫉妒', embarrassed: '尴尬',
+    frustrated: '沮丧', affectionate: '深情', gentle: '温柔',
+    serious: '严肃', excited: '兴奋', lively: '活泼',
+    newscast: '新闻播报', 'customer-service': '客服',
+    story: '故事讲述', living: '生活化'
+};
+
 function onSettingsLoaded() {
     loadTtsVendors();
 }
@@ -85,6 +102,7 @@ function showTtsForm() {
     document.getElementById('ttsConfigJson').value = '';
     document.getElementById('ttsEnabled').checked = true;
     document.getElementById('ttsEditForm').style.display = 'block';
+    document.getElementById('ttsConfigHint').textContent = '请先选择厂商';
 }
 
 function hideTtsForm() {
@@ -109,6 +127,7 @@ function editTtsConfig(id) {
     document.getElementById('ttsConfigJson').value = cfg.configJson || '';
     document.getElementById('ttsEnabled').checked = cfg.enabled === 1;
     document.getElementById('ttsEditForm').style.display = 'block';
+    onTtsVendorChange();
 }
 
 function saveTtsForm() {
@@ -172,7 +191,13 @@ function deleteTtsConfig(id) {
 }
 
 function onTtsVendorChange() {
-    // 厂商切换时暂不联动音色，仅做记录
+    var vendorCode = document.getElementById('ttsVendorSelect').value;
+    var hintEl = document.getElementById('ttsConfigHint');
+    if (vendorCode && TTS_VENDOR_HINTS[vendorCode]) {
+        hintEl.innerHTML = TTS_VENDOR_HINTS[vendorCode];
+    } else {
+        hintEl.textContent = '请先选择厂商';
+    }
 }
 
 // ========== 渠道音色管理 ==========
@@ -336,6 +361,7 @@ function resetTtsVoices() {
 var ttsTestConfigId = null;
 var ttsTestVoices = [];
 var ttsTestSelectedVoiceId = null;
+var ttsTestSelectedEmotion = null;
 var ttsTestObjectUrl = null;
 var ttsTestGenerating = false;
 
@@ -344,6 +370,7 @@ function showTtsTestModal(configId) {
     ttsTestConfigId = configId;
     ttsTestVoices = [];
     ttsTestSelectedVoiceId = null;
+    ttsTestSelectedEmotion = null;
 
     var cfg = null;
     for (var i = 0; i < ttsConfigList.length; i++) {
@@ -367,6 +394,7 @@ function hideTtsTestModal() {
     ttsTestConfigId = null;
     ttsTestVoices = [];
     ttsTestSelectedVoiceId = null;
+    ttsTestSelectedEmotion = null;
 }
 
 /** 拉取该渠道的音色列表 */
@@ -411,10 +439,45 @@ function renderTtsTestVoices() {
     list.innerHTML = html;
 }
 
+/** 渲染右侧情感选择条 */
+function renderTtsTestEmotions() {
+    var bar = document.getElementById('ttsTestEmotionBar');
+    var list = document.getElementById('ttsTestEmotionList');
+    // 查找当前选中音色的情感列表
+    var voice = null;
+    for (var i = 0; i < ttsTestVoices.length; i++) {
+        if (ttsTestVoices[i].voiceId === ttsTestSelectedVoiceId) {
+            voice = ttsTestVoices[i];
+            break;
+        }
+    }
+    if (!voice || !voice.emotions || voice.emotions.length === 0) {
+        bar.style.display = 'none';
+        ttsTestSelectedEmotion = null;
+        return;
+    }
+    bar.style.display = 'flex';
+    var html = '<span class="tts-emotion-tag' + (!ttsTestSelectedEmotion ? ' selected' : '') + '" onclick="selectTtsTestEmotion(null)">默认</span>';
+    voice.emotions.forEach(function(code) {
+        var name = TTS_EMOTION_NAMES[code] || code;
+        var sel = (ttsTestSelectedEmotion === code) ? ' selected' : '';
+        html += '<span class="tts-emotion-tag' + sel + '" onclick="selectTtsTestEmotion(\'' + escapeHtmlForAttr(code) + '\')">' + escapeHtml(name) + '</span>';
+    });
+    list.innerHTML = html;
+}
+
+/** 选中/取消情感 */
+function selectTtsTestEmotion(code) {
+    ttsTestSelectedEmotion = code;
+    renderTtsTestEmotions();
+}
+
 /** 选中某个音色 */
 function selectTtsTestVoice(voiceId) {
     ttsTestSelectedVoiceId = voiceId;
+    ttsTestSelectedEmotion = null;
     renderTtsTestVoices();
+    renderTtsTestEmotions();
 }
 
 /** 生成测试语音 */
@@ -438,7 +501,7 @@ function generateTtsTestAudio() {
     fetch('/api/tts/config/' + encodeURIComponent(ttsTestConfigId) + '/test', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ voiceId: ttsTestSelectedVoiceId, text: text })
+        body: JSON.stringify({ voiceId: ttsTestSelectedVoiceId, text: text, emotion: ttsTestSelectedEmotion || '' })
     })
         .then(function(r) { return r.json(); })
         .then(function(resp) {

@@ -4,6 +4,7 @@ import com.agent.hopaw.avatar.mapper.AvatarConfigMapper;
 import com.agent.hopaw.avatar.model.AvatarEvent;
 import com.agent.hopaw.avatar.service.TtsService;
 import com.agent.hopaw.avatar.websocket.AvatarWebSocketHandler;
+import com.agent.hopaw.infra.constant.TtsEmotionEnum;
 import com.agent.hopaw.infra.service.IAvatarSettingsService;
 import com.agent.hopaw.infra.tool.AgentTool;
 import com.agent.hopaw.infra.tool.ToolSecurityLevel;
@@ -127,7 +128,8 @@ public class AvatarTool implements AgentTool {
             // 异步分段合成 TTS 语音并按序推送：按断句标点切分，每段合成完成立即发送，缩短首段等待
             CompletableFuture.runAsync(() -> {
                 try {
-                    ttsService.synthesizeSegmented(targetUserId, targetAgentId, trimmed, emotion,
+                    TtsEmotionEnum emotionEnum = TtsEmotionEnum.fromCode(emotion);
+                    ttsService.synthesizeSegmented(targetUserId, targetAgentId, trimmed, emotionEnum,
                             (audioBase64, segmentText) ->
                                     avatarWebSocketHandler.sendTtsAudio(targetUserId, targetAgentId, audioBase64, segmentText));
                 } catch (Exception ttsErr) {
