@@ -33,6 +33,10 @@ public interface AvatarConfigMapper {
                            @Param("agentId") Long agentId,
                            @Param("soundEnabled") Boolean soundEnabled);
 
+    int updateTtsEnabled(@Param("userId") String userId,
+                         @Param("agentId") Long agentId,
+                         @Param("ttsEnabled") Boolean ttsEnabled);
+
     int updateLastProactiveGreetingTime(@Param("userId") String userId,
                                         @Param("agentId") Long agentId,
                                         @Param("lastProactiveGreetingTime") String lastProactiveGreetingTime);

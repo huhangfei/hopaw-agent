@@ -10,6 +10,8 @@ var LAppDefine = {
     RESTORE_BTN_ID: "avatarRestoreBtn",
     SETTINGS_BTN_ID: "avatarSettingsBtn",
     CHANGE_MODEL_BTN_ID: "avatarChangeModelBtn",
+    TTS_TOGGLE_BTN_ID: "avatarTtsToggleBtn",
+    TTS_ENABLED_API: "/api/avatar/tts-enabled",
     IS_DRAGABLE: true,
     BUTTON_ID: "Change",
     TEXURE_BUTTON_ID: "texure",
@@ -121,6 +123,7 @@ var LAppDefine = {
         var resBtn = document.getElementById(LAppDefine.RESTORE_BTN_ID);
         var settingsBtn = document.getElementById(LAppDefine.SETTINGS_BTN_ID);
         var changeModelBtn = document.getElementById(LAppDefine.CHANGE_MODEL_BTN_ID);
+        var ttsToggleBtn = document.getElementById(LAppDefine.TTS_TOGGLE_BTN_ID);
         if (minBtn) {
             minBtn.addEventListener("click", function (e) {
                 e.stopPropagation();
@@ -178,6 +181,17 @@ var LAppDefine = {
                 playAvatarSound(LAppDefine.CHANGE_MODEL_SOUND_FILE);
             });
             changeModelBtn.addEventListener("pointerdown", function (e) {
+                e.stopPropagation();
+            });
+        }
+        if (ttsToggleBtn) {
+            ttsToggleBtn.addEventListener("click", function (e) {
+                e.stopPropagation();
+                e.preventDefault();
+                if (widget.classList.contains("dragging")) return;
+                toggleTtsBroadcast();
+            });
+            ttsToggleBtn.addEventListener("pointerdown", function (e) {
                 e.stopPropagation();
             });
         }
@@ -404,6 +418,8 @@ var LAppDefine = {
             currentAgentId = agentId;
         } catch (e) {}
         reconnectAvatarWebSocket();
+        // 智能体切换后重新同步提示音开关与 TTS 播报开关状态
+        syncSoundEnabledFromServer();
         // 智能体切换后重新拉取该智能体配置的模型分组，并加载对应 Live2D 模型
         try {
             currentLoadedModel = null;
@@ -525,13 +541,17 @@ var LAppDefine = {
         if (!widget) {
             return;
         }
-        if (isMinimized()) {
-            return;
-        }
         if (data.userId && currentUserId && data.userId !== currentUserId) {
             return;
         }
         if (data.sessionId && typeof currentSessionId !== "undefined" && currentSessionId && data.sessionId !== currentSessionId) {
+            return;
+        }
+        if (isMinimized()) {
+            // 缩小状态下：消息类事件仍播提示音（不显示气泡），其余事件丢弃
+            if (isMessageEventWithSound(data)) {
+                playAvatarSound(data.soundFile);
+            }
             return;
         }
         var maxSize = LAppDefine.EVENT_QUEUE_MAX_SIZE || 50;
@@ -539,6 +559,18 @@ var LAppDefine = {
             avatarEventQueue.shift();
         }
         avatarEventQueue.push(data);
+    }
+
+    /** 判断事件是否为携带提示音的消息类事件（动作/亲密度/主动消息/普通气泡消息） */
+    function isMessageEventWithSound(data) {
+        if (!data || !data.soundFile) return false;
+        var type = data.type || "";
+        var action = data.action || "";
+        if (type === "avatar_tts_audio" || type === "avatar_tts_group_complete") return false;
+        if (type === "avatar_move" || action === "move") return false;
+        if (type === "avatar_change_model" || action === "change_model") return false;
+        if (type === "avatar_intimacy_update" || action === "intimacy_update") return false;
+        return true;
     }
 
     function startAvatarEventQueue() {
@@ -622,9 +654,70 @@ var LAppDefine = {
                     if (typeof resp.data.soundEnabled === "boolean") {
                         setAvatarSoundEnabled(resp.data.soundEnabled);
                     }
+                    // 同步 TTS 播报开关（快捷小喇叭按钮状态）
+                    if (typeof resp.data.ttsEnabled === "boolean") {
+                        setAvatarTtsEnabled(resp.data.ttsEnabled);
+                    }
                 })
                 .catch(function () {});
         } catch (e) {}
+    }
+
+    // ========== TTS 播报快捷开关 ==========
+    // null = 尚未从服务端同步，true/false = 当前播报开关状态
+    var avatarTtsEnabled = null;
+
+    function setAvatarTtsEnabled(enabled) {
+        avatarTtsEnabled = enabled === true;
+        refreshTtsToggleBtn();
+    }
+
+    function refreshTtsToggleBtn() {
+        var btn = document.getElementById(LAppDefine.TTS_TOGGLE_BTN_ID);
+        if (!btn) return;
+        if (avatarTtsEnabled === false) {
+            btn.classList.add("off");
+            btn.title = "开启语音播报";
+        } else {
+            btn.classList.remove("off");
+            btn.title = "关闭语音播报";
+        }
+    }
+
+    function toggleTtsBroadcast() {
+        if (avatarTtsEnabled === null) {
+            // 状态尚未同步完成，先拉取一次
+            syncSoundEnabledFromServer();
+            return;
+        }
+        var prev = avatarTtsEnabled;
+        var next = !avatarTtsEnabled;
+        // 乐观更新按钮状态，失败时回滚
+        setAvatarTtsEnabled(next);
+        if (!next) {
+            stopTtsPlaybackAndClearQueues();
+        }
+        var agentId = getCurrentAgentId();
+        var url = LAppDefine.TTS_ENABLED_API;
+        if (agentId !== null && agentId !== undefined && agentId !== "") {
+            url += "?agentId=" + encodeURIComponent(agentId);
+        }
+        fetch(url, {
+            method: "PUT",
+            headers: { "Content-Type": "application/json" },
+            credentials: "same-origin",
+            body: JSON.stringify({ enabled: next })
+        })
+            .then(function (r) { return r.json(); })
+            .then(function (resp) {
+                if (!resp || resp.code !== 200) {
+                    throw new Error("tts-enabled api failed");
+                }
+            })
+            .catch(function (e) {
+                console.warn("切换 TTS 播报开关失败，已回滚", e);
+                setAvatarTtsEnabled(prev);
+            });
     }
 
     function playAvatarSound(soundFile) {
@@ -659,8 +752,29 @@ var LAppDefine = {
     var ttsGroupOrder = [];         // 按到达顺序记录 groupId，用于顺序播放
     var ttsPlayingGroupId = null;   // 当前正在播放的 groupId
     var ttsCurrentSegmentPlaying = false; // 当前组内是否正在播放某一段
+    var ttsCurrentAudio = null;     // 当前正在播放的音频对象（用于关闭播报时停止播放）
+
+    /** 关闭播报时：清空 TTS 分组队列并停止当前正在播放的段 */
+    function stopTtsPlaybackAndClearQueues() {
+        if (ttsCurrentAudio) {
+            try {
+                ttsCurrentAudio.pause();
+                if (ttsCurrentAudio._objectUrl) {
+                    URL.revokeObjectURL(ttsCurrentAudio._objectUrl);
+                }
+            } catch (_) {}
+            ttsCurrentAudio = null;
+        }
+        ttsGroupQueues = {};
+        ttsGroupReady = {};
+        ttsGroupOrder.length = 0;
+        ttsPlayingGroupId = null;
+        ttsCurrentSegmentPlaying = false;
+    }
 
     function handleTtsAudio(data) {
+        // 播报已关闭：丢弃在途音频
+        if (avatarTtsEnabled === false) return;
         if (!data.audio || !data.groupId) return;
         var gid = data.groupId;
         if (!ttsGroupQueues[gid]) {
@@ -679,6 +793,11 @@ var LAppDefine = {
 
     /** 尝试播放下一组（或当前组的下一段） */
     function tryPlayNextTtsGroup() {
+        // 播报已关闭：清空队列，不再播放
+        if (avatarTtsEnabled === false) {
+            stopTtsPlaybackAndClearQueues();
+            return;
+        }
         // 如果当前正在播放一段，等它播完自动触发
         if (ttsCurrentSegmentPlaying) return;
 
@@ -750,12 +869,16 @@ var LAppDefine = {
             var blob = new Blob([audioBytes], { type: blobType });
             var url = URL.createObjectURL(blob);
             var audio = new Audio(url);
+            audio._objectUrl = url;
+            ttsCurrentAudio = audio;
             audio.onended = function() {
                 URL.revokeObjectURL(url);
+                if (ttsCurrentAudio === audio) ttsCurrentAudio = null;
                 finish();
             };
             audio.onerror = function() {
                 URL.revokeObjectURL(url);
+                if (ttsCurrentAudio === audio) ttsCurrentAudio = null;
                 finish();
             };
             var playPromise = audio.play();
@@ -763,6 +886,7 @@ var LAppDefine = {
                 playPromise.catch(function(err) {
                     console.warn("TTS audio play failed:", err);
                     URL.revokeObjectURL(url);
+                    if (ttsCurrentAudio === audio) ttsCurrentAudio = null;
                     finish();
                 });
             }
@@ -1012,6 +1136,9 @@ var LAppDefine = {
                 return;
             }
             if (e.target.closest && e.target.closest("#" + LAppDefine.CHANGE_MODEL_BTN_ID)) {
+                return;
+            }
+            if (e.target.closest && e.target.closest("#" + LAppDefine.TTS_TOGGLE_BTN_ID)) {
                 return;
             }
             var pt = getPointerXY(e);

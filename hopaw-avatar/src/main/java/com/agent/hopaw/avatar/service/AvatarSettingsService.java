@@ -173,6 +173,35 @@ public class AvatarSettingsService implements IAvatarSettingsService {
         return !Boolean.FALSE.equals(config.getSoundEnabled());
     }
 
+    /**
+     * 快捷切换 TTS 播报开关（仅更新 tts_enabled 单字段，不覆盖其他配置）。
+     * 配置行不存在时插入最小配置行。
+     */
+    public void updateTtsEnabled(String userId, Long agentId, boolean enabled) {
+        if (userId == null || userId.isEmpty()) {
+            logger.warn("跳过切换 TTS 播报开关，userId 为空");
+            return;
+        }
+        if (agentId == null) {
+            logger.warn("跳过切换 TTS 播报开关，agentId 为空 userId=[{}]", userId);
+            return;
+        }
+        try {
+            AgentAvatarConfig existing = avatarConfigMapper.findByUserAndAgent(userId, agentId);
+            if (existing == null) {
+                AgentAvatarConfig cfg = new AgentAvatarConfig();
+                cfg.setUserId(userId);
+                cfg.setAgentId(agentId);
+                cfg.setTtsEnabled(enabled);
+                avatarConfigMapper.insert(cfg);
+            } else {
+                avatarConfigMapper.updateTtsEnabled(userId, agentId, enabled);
+            }
+        } catch (Exception e) {
+            logger.error("切换 TTS 播报开关失败 userId=[{}] agentId=[{}] enabled=[{}]", userId, agentId, enabled, e);
+        }
+    }
+
     public List<AvatarModelGroup> listModelGroups() {
         return DEFAULT_MODEL_GROUPS;
     }

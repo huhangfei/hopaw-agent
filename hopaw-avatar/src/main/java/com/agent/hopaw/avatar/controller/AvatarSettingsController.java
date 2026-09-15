@@ -62,6 +62,23 @@ public class AvatarSettingsController {
         return ResponseBean.success();
     }
 
+    /** 快捷切换 TTS 播报开关（仅更新 tts_enabled 单字段） */
+    @PutMapping("/tts-enabled")
+    public ResponseBean updateTtsEnabled(HttpServletRequest request,
+                                         @RequestHeader(value = "X-User-Id", required = false) String headerUserId,
+                                         @RequestParam(value = "agentId", required = false) Long agentId,
+                                         @RequestBody Map<String, Object> body) {
+        String userId = resolveUserId(request, headerUserId);
+        Object enabledVal = body == null ? null : body.get("enabled");
+        if (!(enabledVal instanceof Boolean)) {
+            return ResponseBean.fail("参数 enabled 必须为布尔值");
+        }
+        boolean enabled = (Boolean) enabledVal;
+        logger.info("[avatar-settings] PUT /tts-enabled userId={} agentId={} enabled={}", userId, agentId, enabled);
+        avatarSettingsService.updateTtsEnabled(userId, agentId, enabled);
+        return ResponseBean.success();
+    }
+
     @GetMapping("/task/status")
     public ResponseBean getTaskStatus() {
         ScheduledTask task = scheduledTaskService.findByTaskType(AvatarTaskHandler.TYPE);

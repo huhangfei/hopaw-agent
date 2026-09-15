@@ -127,6 +127,36 @@
     touch-action: manipulation;
 }
 
+.avatar-tts-btn {
+    position: absolute;
+    top: calc(100% + 8px);
+    left: calc(50% + 36px);
+    transform: translateY(-6px) scale(0.9);
+    width: 24px;
+    height: 24px;
+    padding: 0;
+    border: none;
+    border-radius: 50%;
+    background: rgba(0, 0, 0, 0.55);
+    color: #ffffff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.2s ease, transform 0.2s ease, background 0.2s ease;
+    z-index: 4;
+    touch-action: manipulation;
+}
+
+/* TTS 播报开关图标：启用显示喇叭，禁用显示喇叭+斜杠 */
+.avatar-tts-btn .tts-icon-off { display: none; }
+.avatar-tts-btn .tts-icon-on { display: block; }
+.avatar-tts-btn.off .tts-icon-on { display: none; }
+.avatar-tts-btn.off .tts-icon-off { display: block; }
+.avatar-tts-btn.off { background: rgba(120, 120, 120, 0.65); }
+
 .avatar-widget::after {
     content: "";
     position: absolute;
@@ -141,24 +171,29 @@
 .avatar-widget:hover .avatar-settings-btn,
 .avatar-settings-btn:focus,
 .avatar-widget:hover .avatar-change-model-btn,
-.avatar-change-model-btn:focus {
+.avatar-change-model-btn:focus,
+.avatar-widget:hover .avatar-tts-btn,
+.avatar-tts-btn:focus {
     opacity: 1;
     transform: translateY(0) scale(1);
     pointer-events: auto;
 }
 
 .avatar-settings-btn:hover,
-.avatar-change-model-btn:hover {
+.avatar-change-model-btn:hover,
+.avatar-tts-btn:hover {
     background: rgba(0, 0, 0, 0.8);
 }
 
 .avatar-settings-btn:active,
-.avatar-change-model-btn:active {
+.avatar-change-model-btn:active,
+.avatar-tts-btn:active {
     transform: translateY(0) scale(0.92);
 }
 
 .avatar-widget.minimized .avatar-settings-btn,
-.avatar-widget.minimized .avatar-change-model-btn {
+.avatar-widget.minimized .avatar-change-model-btn,
+.avatar-widget.minimized .avatar-tts-btn {
     display: none;
 }
 

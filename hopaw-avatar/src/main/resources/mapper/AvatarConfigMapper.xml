@@ -130,6 +130,13 @@
         WHERE user_id = #{userId} AND agent_id = #{agentId}
     </update>
 
+    <update id="updateTtsEnabled">
+        UPDATE agent_avatar_config
+        SET tts_enabled = #{ttsEnabled},
+            update_time = datetime('now', 'localtime')
+        WHERE user_id = #{userId} AND agent_id = #{agentId}
+    </update>
+
     <update id="updateLastProactiveGreetingTime">
         UPDATE agent_avatar_config
         SET last_proactive_greeting_time = #{lastProactiveGreetingTime},

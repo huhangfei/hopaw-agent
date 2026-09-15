@@ -28,8 +28,8 @@ public class TtsService {
 
     private static final Logger logger = LoggerFactory.getLogger(TtsService.class);
 
-    /** 内置强断句符（句子结束） */
-    private static final String DEFAULT_STRONG_DELIMITERS = "。！？!?；;…\n\r~";
+    /** 内置强断句符（句子结束）；英文句点由 isSentenceEnd 做小数点保护（后接空白或位于末尾才断句） */
+    private static final String DEFAULT_STRONG_DELIMITERS = "。！？!?；;…\n\r~.";
     /** 内置次级断句符（逗号等，用于超长段回退切分） */
     private static final String DEFAULT_SECONDARY_DELIMITERS = "，,、：:";
 
@@ -142,7 +142,7 @@ public class TtsService {
     /**
      * 按断句标点切分文本。
      * @param text 待切分文本
-     * @param customDelimiters 用户自定义分隔符字符串（每个字符都是断句符），为 null 时使用内置默认值
+     * @param customDelimiters 用户自定义分隔符字符串（每个字符都是强断句符，替换内置强断句符），为 null 时使用内置默认值；次级断句符始终使用内置默认
      */
     static List<String> splitIntoSegments(String text, String customDelimiters) {
         List<String> segments = new ArrayList<>();
@@ -153,8 +153,12 @@ public class TtsService {
         // 构建强断句符和次级断句符集合
         Set<Character> strongChars = new HashSet<>();
         Set<Character> secondaryChars = new HashSet<>();
+        // 次级断句符始终使用内置默认，仅用于超长段回退切分，不受自定义配置影响
+        for (char c : DEFAULT_SECONDARY_DELIMITERS.toCharArray()) {
+            secondaryChars.add(c);
+        }
         if (customDelimiters != null && !customDelimiters.isEmpty()) {
-            // 用户自定义：所有字符均作为强断句符
+            // 用户自定义：所有字符均作为强断句符（替换内置强断句符）
             for (char c : customDelimiters.toCharArray()) {
                 strongChars.add(c);
             }
@@ -162,9 +166,6 @@ public class TtsService {
             // 内置默认
             for (char c : DEFAULT_STRONG_DELIMITERS.toCharArray()) {
                 strongChars.add(c);
-            }
-            for (char c : DEFAULT_SECONDARY_DELIMITERS.toCharArray()) {
-                secondaryChars.add(c);
             }
         }
 
