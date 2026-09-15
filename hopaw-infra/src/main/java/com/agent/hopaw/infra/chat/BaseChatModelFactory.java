@@ -5,6 +5,7 @@ import com.agent.hopaw.infra.model.dto.AiModelVO;
 import com.agent.hopaw.infra.model.dto.ModelCapabilityTestResult;
 import com.alibaba.fastjson2.JSON;
 import com.alibaba.fastjson2.JSONObject;
+import dev.langchain4j.data.message.AudioContent;
 import dev.langchain4j.data.message.ImageContent;
 import dev.langchain4j.data.message.TextContent;
 import dev.langchain4j.data.message.UserMessage;
@@ -227,6 +228,26 @@ public abstract class BaseChatModelFactory implements ChatModelFactory {
             logger.error("测试图片能力异常", e);
         }
 
+
+        try {
+            String audioBase64 = getAudioAsBase64();
+            if (!audioBase64.isEmpty()) {
+                ChatResponse chatResponse = chatModel.chat(UserMessage.from(
+                        TextContent.from("直接复述你听到的内容，不要多说其他的！"),
+                        AudioContent.from(audioBase64, "audio/wav")));
+                if (chatResponse.aiMessage().text().trim().equals("猫")) {
+                    modelCapabilities.add(ModelCapabilityEnum.AUDIO);
+                } else {
+                    errors.add("音频能力测试未通过：返回结果不符合预期");
+                }
+            } else {
+                errors.add("音频能力测试跳过：无法读取测试音频");
+            }
+        } catch (Exception e) {
+            errors.add("音频能力测试异常：" + e.getMessage());
+            logger.error("测试音频能力异常", e);
+        }
+
         boolean verified = !modelCapabilities.isEmpty();
         String message;
         if (verified) {
@@ -264,6 +285,26 @@ public abstract class BaseChatModelFactory implements ChatModelFactory {
             return java.util.Base64.getEncoder().encodeToString(imageBytes);
         } catch (Exception e) {
             logger.error("读取图片并转换为base64失败", e);
+            return "";
+        }
+    }
+    private String getAudioAsBase64() {
+        try {
+            // 读取资源目录下static/audios/audio.wav为base64
+            ClassLoader classLoader = getClass().getClassLoader();
+            java.io.InputStream inputStream = classLoader.getResourceAsStream("static/audios/audio.wav");
+            if (inputStream == null) {
+                logger.error("无法找到资源文件: static/audios/audio.wav");
+                return "";
+            }
+
+            byte[] bytes = inputStream.readAllBytes();
+            inputStream.close();
+
+            // 转换为base64字符串
+            return java.util.Base64.getEncoder().encodeToString(bytes);
+        } catch (Exception e) {
+            logger.error("读取音频并转换为base64失败", e);
             return "";
         }
     }

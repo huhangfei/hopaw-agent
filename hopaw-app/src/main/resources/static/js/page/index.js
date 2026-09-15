@@ -4618,7 +4618,7 @@ function renderAttachSelectGrid(list) {
         html += '<div class="attach-select-card' + (checked ? ' checked' : '') + '" data-id="' + a.id + '" onclick="toggleAttachSelect(' + a.id + ', this)">' +
             '<div class="attach-select-thumb">' + thumb + '</div>' +
             '<div class="attach-select-name" title="' + escapeHtml(a.originalName || '') + '">' + escapeHtml(truncateName(a.originalName || '', 14)) + '</div>' +
-            '<div class="attach-select-check"><input type="checkbox"' + (checked ? ' checked' : '') + ' onclick="event.stopPropagation()"></div>' +
+            '<div class="attach-select-check"><input type="checkbox"' + (checked ? ' checked' : '') + ' onclick="event.stopPropagation(); toggleAttachSelectCb(' + a.id + ', this)"></div>' +
             '</div>';
     }
     grid.innerHTML = html;
@@ -4627,14 +4627,28 @@ function renderAttachSelectGrid(list) {
 function toggleAttachSelect(id, cardEl) {
     if (attachSelectState.selected[id]) {
         delete attachSelectState.selected[id];
-        cardEl.classList.remove('selected');
+        cardEl.classList.remove('checked');
         var cb = cardEl.querySelector('input[type=checkbox]');
         if (cb) cb.checked = false;
     } else {
         attachSelectState.selected[id] = true;
-        cardEl.classList.add('selected');
+        cardEl.classList.add('checked');
         var cb2 = cardEl.querySelector('input[type=checkbox]');
         if (cb2) cb2.checked = true;
+    }
+    var count = Object.keys(attachSelectState.selected).length;
+    document.getElementById('attachSelectCount').textContent = '已选 ' + count + ' 个';
+}
+
+function toggleAttachSelectCb(id, checkbox) {
+    var card = checkbox.closest('.attach-select-card');
+    if (!card) return;
+    if (checkbox.checked) {
+        attachSelectState.selected[id] = true;
+        card.classList.add('checked');
+    } else {
+        delete attachSelectState.selected[id];
+        card.classList.remove('checked');
     }
     var count = Object.keys(attachSelectState.selected).length;
     document.getElementById('attachSelectCount').textContent = '已选 ' + count + ' 个';

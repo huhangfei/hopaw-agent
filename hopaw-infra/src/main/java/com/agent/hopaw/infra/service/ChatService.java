@@ -1,17 +1,15 @@
 package com.agent.hopaw.infra.service;
 
 import com.agent.hopaw.infra.constant.AgentExecutorBizTypeEnum;
-import com.agent.hopaw.infra.constant.TtsEmotionEnum;
 import com.agent.hopaw.infra.executor.IAgentExecutor;
 import com.agent.hopaw.infra.memory.ILongTermMemoryService;
 import com.agent.hopaw.infra.model.dto.*;
 import com.agent.hopaw.infra.model.entity.Agent;
+import com.agent.hopaw.infra.model.entity.AiModel;
 import com.agent.hopaw.infra.model.entity.ChatSession;
 import com.agent.hopaw.infra.tool.AgentTool;
 import com.agent.hopaw.infra.util.UuidUtil;
-import dev.langchain4j.data.message.Content;
-import dev.langchain4j.data.message.ImageContent;
-import dev.langchain4j.data.message.TextContent;
+import dev.langchain4j.data.message.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
@@ -49,8 +47,9 @@ public class ChatService implements IChatService {
     private final IChatUserMessageService chatUserMessageService;
     private final IAttachmentService attachmentService;
     private final SessionTimeoutService sessionTimeoutService;
+    private final IAiModelService aiModelService;
 
-    public ChatService(IAgentService agentService, IAvatarSettingsService avatarSettingsService, ISkillService skillService, ILongTermMemoryService longTermMemoryService, ISysConfigService sysConfigService, IMcpServerConfigService mcpServerConfigService, IAgentExecutorService agentExecutorService, IWorkflowTaskService workflowTaskService, IChatSessionService chatSessionService, IProjectIterateService projectIterateService, IChatUserMessageService chatUserMessageService, IAttachmentService attachmentService, SessionTimeoutService sessionTimeoutService) {
+    public ChatService(IAgentService agentService, IAvatarSettingsService avatarSettingsService, ISkillService skillService, ILongTermMemoryService longTermMemoryService, ISysConfigService sysConfigService, IMcpServerConfigService mcpServerConfigService, IAgentExecutorService agentExecutorService, IWorkflowTaskService workflowTaskService, IChatSessionService chatSessionService, IProjectIterateService projectIterateService, IChatUserMessageService chatUserMessageService, IAttachmentService attachmentService, SessionTimeoutService sessionTimeoutService, IAiModelService aiModelService) {
         this.agentService = agentService;
         this.avatarSettingsService = avatarSettingsService;
         this.skillService = skillService;
@@ -64,6 +63,7 @@ public class ChatService implements IChatService {
         this.chatUserMessageService = chatUserMessageService;
         this.attachmentService = attachmentService;
         this.sessionTimeoutService = sessionTimeoutService;
+        this.aiModelService = aiModelService;
     }
 
     @Override
@@ -95,7 +95,7 @@ public class ChatService implements IChatService {
         if (!avatarSettings.isDisabled() && avatarSettings.getPersonaSetting() != null && !avatarSettings.getPersonaSetting().isEmpty()) {
             appendToolNames.add(IAvatarSettingsService.TOOL_NAME);
         }
-        List<ToolSetInfo> selectedTools=agentService.getToolSetFromAgent(agent,appendToolNames);
+        List<ToolSetInfo> selectedTools = agentService.getToolSetFromAgent(agent, appendToolNames);
         AgentExecutorParams agentExecutorParams = new AgentExecutorParams();
         agentExecutorParams.setSessionId(userChatRequest.getSessionId());
         agentExecutorParams.setRequestId(userChatRequest.getRequestId());
@@ -146,28 +146,42 @@ public class ChatService implements IChatService {
     private List<Content> buildContents(UserChatRequest userChatRequest) {
         List<Content> contents = new ArrayList<>();
         contents.add(new TextContent(userChatRequest.getMessage()));
-
+        String[] capabilitiesArray = new String[0];
+        //判断模型是否支持图片 音频 视频
+        AiModel aiModel = aiModelService.findById(userChatRequest.getAiModelId());
+        if (aiModel != null) {
+            capabilitiesArray = aiModel.getCapabilitiesArray();
+        }
         List<AttachmentFile> files = userChatRequest.getFiles();
         if (files != null && !files.isEmpty()) {
             for (AttachmentFile file : files) {
-                if (file.getId() == null) {continue;}
+                if (file.getId() == null) {
+                    continue;
+                }
                 Path filePath = attachmentService.getAbsolutePath(file.getId());
-                if ("image".equals(file.getType())) {
-                    try {
-
-                        if (!Files.exists(filePath)) {
-                            logger.warn("图片文件不存在: {}", filePath);
-                            continue;
-                        }
-                        byte[] bytes = Files.readAllBytes(filePath);
-                        String base64 = Base64.getEncoder().encodeToString(bytes);
-                        String mimeType = getMimeType(filePath.toString());
-                        contents.add(ImageContent.from(base64, mimeType));
-                    } catch (Exception e) {
-                        logger.error("图片转 Base64 失败: {} -> {}", file.getUrl(), e.getMessage());
-                    }
-                }else{
+                if (!Arrays.stream(capabilitiesArray).anyMatch(x -> x.equals(file.getType()))) {
                     contents.add(new TextContent("附件：" + filePath.toString()));
+                    continue;
+                }
+                try {
+                    if (!Files.exists(filePath)) {
+                        logger.warn("图片文件不存在: {}", filePath);
+                        continue;
+                    }
+                    byte[] bytes = Files.readAllBytes(filePath);
+                    String base64 = Base64.getEncoder().encodeToString(bytes);
+                    String mimeType = getMimeType(filePath.toString());
+                    if ("image".equals(file.getType())) {
+                        contents.add(ImageContent.from(base64, mimeType));
+                    }else if("audio".equals(file.getType())){
+                        contents.add(AudioContent.from(base64, mimeType));
+                    }else if("video".equals(file.getType())){
+                        contents.add(VideoContent.from(base64, mimeType));
+                    }else{
+                        contents.add(new TextContent("附件：" + filePath.toString()));
+                    }
+                } catch (Exception e) {
+                    logger.error("图片转 Base64 失败: {} -> {}", file.getUrl(), e.getMessage());
                 }
             }
         }
@@ -176,12 +190,66 @@ public class ChatService implements IChatService {
 
     private String getMimeType(String fileName) {
         String lower = fileName.toLowerCase();
-        if (lower.endsWith(".png")) return "image/png";
+        // 图片
+        if (lower.endsWith(".png"))  return "image/png";
         if (lower.endsWith(".jpg") || lower.endsWith(".jpeg")) return "image/jpeg";
-        if (lower.endsWith(".gif")) return "image/gif";
-        if (lower.endsWith(".bmp")) return "image/bmp";
+        if (lower.endsWith(".gif"))  return "image/gif";
+        if (lower.endsWith(".bmp"))  return "image/bmp";
         if (lower.endsWith(".webp")) return "image/webp";
-        return "image/png";
+        if (lower.endsWith(".svg"))  return "image/svg+xml";
+        if (lower.endsWith(".ico"))  return "image/x-icon";
+        if (lower.endsWith(".tiff") || lower.endsWith(".tif")) return "image/tiff";
+        // 视频
+        if (lower.endsWith(".mp4"))  return "video/mp4";
+        if (lower.endsWith(".webm")) return "video/webm";
+        if (lower.endsWith(".ogg"))  return "video/ogg";
+        if (lower.endsWith(".mov"))  return "video/quicktime";
+        if (lower.endsWith(".avi"))  return "video/x-msvideo";
+        if (lower.endsWith(".mkv"))  return "video/x-matroska";
+        if (lower.endsWith(".flv"))  return "video/x-flv";
+        if (lower.endsWith(".wmv"))  return "video/x-ms-wmv";
+        if (lower.endsWith(".m4v"))  return "video/x-m4v";
+        // 音频
+        if (lower.endsWith(".mp3"))  return "audio/mpeg";
+        if (lower.endsWith(".wav"))  return "audio/wav";
+        if (lower.endsWith(".flac")) return "audio/flac";
+        if (lower.endsWith(".aac"))  return "audio/aac";
+        if (lower.endsWith(".m4a"))  return "audio/mp4";
+        if (lower.endsWith(".ogg"))  return "audio/ogg";
+        if (lower.endsWith(".wma"))  return "audio/x-ms-wma";
+        if (lower.endsWith(".opus")) return "audio/opus";
+        // 文档
+        if (lower.endsWith(".pdf"))  return "application/pdf";
+        if (lower.endsWith(".doc"))  return "application/msword";
+        if (lower.endsWith(".docx")) return "application/vnd.openxmlformats-officedocument.wordprocessingml.document";
+        if (lower.endsWith(".xls"))  return "application/vnd.ms-excel";
+        if (lower.endsWith(".xlsx")) return "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet";
+        if (lower.endsWith(".ppt"))  return "application/vnd.ms-powerpoint";
+        if (lower.endsWith(".pptx")) return "application/vnd.openxmlformats-officedocument.presentationml.presentation";
+        // 文本
+        if (lower.endsWith(".txt"))  return "text/plain";
+        if (lower.endsWith(".csv"))  return "text/csv";
+        if (lower.endsWith(".html") || lower.endsWith(".htm")) return "text/html";
+        if (lower.endsWith(".xml"))  return "text/xml";
+        if (lower.endsWith(".json")) return "application/json";
+        if (lower.endsWith(".yaml") || lower.endsWith(".yml")) return "text/yaml";
+        if (lower.endsWith(".md"))   return "text/markdown";
+        if (lower.endsWith(".log"))  return "text/plain";
+        // 压缩包
+        if (lower.endsWith(".zip"))  return "application/zip";
+        if (lower.endsWith(".rar"))  return "application/vnd.rar";
+        if (lower.endsWith(".7z"))   return "application/x-7z-compressed";
+        if (lower.endsWith(".tar"))  return "application/x-tar";
+        if (lower.endsWith(".gz"))   return "application/gzip";
+        // 其他
+        if (lower.endsWith(".css"))  return "text/css";
+        if (lower.endsWith(".js"))   return "application/javascript";
+        if (lower.endsWith(".java")) return "text/x-java-source";
+        if (lower.endsWith(".py"))   return "text/x-python";
+        if (lower.endsWith(".sh"))   return "application/x-sh";
+        if (lower.endsWith(".sql"))  return "application/sql";
+        if (lower.endsWith(".apk"))  return "application/vnd.android.package-archive";
+        return "application/octet-stream";
     }
 
     /**
@@ -212,18 +280,18 @@ public class ChatService implements IChatService {
                     "1，图片类型：![文件名](下载地址)\n" +
                     "2，其他类型：[attachment:附件ID:文件名:下载地址] \n";
         }
-        String tempFilePath=System.getProperty("user.dir")+ File.separator +"temp-file";
-        systemMessage=systemMessage.replace("{agentName}", agent.getName())
+        String tempFilePath = System.getProperty("user.dir") + File.separator + "temp-file";
+        systemMessage = systemMessage.replace("{agentName}", agent.getName())
                 .replace("{agentDescription}", agent.getDescription())
                 .replace("{agentId}", agent.getId().toString())
-                .replace("{tempFilePath}",tempFilePath);
+                .replace("{tempFilePath}", tempFilePath);
         if (!avatarSettings.isDisabled()
                 && avatarSettings.getPersonaSetting() != null
                 && !avatarSettings.getPersonaSetting().isEmpty()) {
             systemMessage += "你可以控制一个虚拟人和用户交互，人物的设定是：" + avatarSettings.getPersonaSetting() + "\n";
-            if(avatarSettings.isSoundEnabled() && avatarSettings.getTtsConfigId()!=null && StringUtils.hasLength(avatarSettings.getTtsVoiceId())){
+            if (avatarSettings.isSoundEnabled() && avatarSettings.getTtsConfigId() != null && StringUtils.hasLength(avatarSettings.getTtsVoiceId())) {
                 systemMessage += "可以通过发送虚拟人消息向用户输出语音。\n";
-                if(avatarSettings.getTtsEmotions()!=null && StringUtils.hasLength(avatarSettings.getTtsEmotions())){
+                if (avatarSettings.getTtsEmotions() != null && StringUtils.hasLength(avatarSettings.getTtsEmotions())) {
                     systemMessage += "发送虚拟人消息支持的语音音色：" + avatarSettings.getTtsEmotions() + "。\n";
                 }
             }
@@ -251,7 +319,7 @@ public class ChatService implements IChatService {
             String skillContext = buildSkillContext(skillNames);
             systemMessage += skillContext;
         }
-        systemMessage=systemMessage+"\n今日日期："+ LocalDate.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd"));
+        systemMessage = systemMessage + "\n今日日期：" + LocalDate.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd"));
         return systemMessage;
     }
 
