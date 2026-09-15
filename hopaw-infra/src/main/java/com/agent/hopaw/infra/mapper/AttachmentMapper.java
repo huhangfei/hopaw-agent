@@ -32,4 +32,6 @@ public interface AttachmentMapper {
                                  @Param("fileType") String fileType);
 
     int countByStoragePath(@Param("storagePath") String storagePath);
+
+    int countBySourceStoragePath(@Param("sourceStoragePath") String sourceStoragePath);
 }

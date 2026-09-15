@@ -68,7 +68,7 @@ public class TaskStatsEventListener {
         }
         try {
             IAgentExecutor executor = agentExecutorService.getAgentExecutor(event.getSessionId());
-            if (executor == null || !executor.running()) {
+            if (executor == null) {
                 return;
             }
             long elapsedMs = executor.getElapsedSeconds() * 1000L;

@@ -168,7 +168,14 @@
                                 <div class="skills-dropdown-list" id="skillsCheckboxList"></div>
                             </div>
                         </div>
-                        <button type="button" class="chat-btn-attach" id="attachBtn" title="添加附件">
+                        <button type="button" class="chat-btn-attach" id="uploadBtn" title="上传本地文件">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14">
+                                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                                <polyline points="17 8 12 3 7 8"/>
+                                <line x1="12" y1="3" x2="12" y2="15"/>
+                            </svg>
+                        </button>
+                        <button type="button" class="chat-btn-attach" id="attachFromListBtn" title="从附件选择">
                             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14">
                                 <path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"/>
                             </svg>
@@ -413,7 +420,30 @@
             </div>
         </div>
     </div>
-</div>
+
+    <!-- 从附件选择弹框 -->
+    <div class="modal-overlay" id="attachSelectModal">
+        <div class="modal modal-attach-select">
+            <div class="modal-header">
+                <h3>从附件选择</h3>
+                <button class="modal-close" onclick="hideAttachSelectModal()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="attach-select-search">
+                    <input type="text" id="attachSelectKeyword" placeholder="搜索附件名称...">
+                    <button type="button" class="btn-search" onclick="searchAttachSelect()">搜索</button>
+                </div>
+                <div class="attach-select-grid" id="attachSelectGrid"></div>
+                <div class="attach-select-pagination" id="attachSelectPagination"></div>
+            </div>
+            <div class="modal-footer">
+                <span class="attach-select-count" id="attachSelectCount">已选 0 个</span>
+                <button type="button" class="btn-cancel" onclick="hideAttachSelectModal()">取消</button>
+                <button type="button" class="btn-primary" onclick="confirmAttachSelect()">确认选择</button>
+            </div>
+        </div>
+    </div>
+    </div>
 
 
 <th:block layout:fragment="extraCss">

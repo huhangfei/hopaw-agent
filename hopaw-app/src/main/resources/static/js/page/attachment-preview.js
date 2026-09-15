@@ -35,8 +35,12 @@ var AttachmentPreview = (function () {
             '<span class="info-item">来源: ' + escapeHtml(AttachmentSource.label(item.source) || '') + '</span>' +
             '<span class="info-item">创建时间: ' + escapeHtml(formatTime(item.createTime)) + '</span>' +
             '<span class="info-item">更新时间: ' + escapeHtml(formatTime(item.updateTime)) + '</span>' +
-            '<a class="preview-download" href="' + escapeHtml(item.url) + '" target="_blank" download="' + escapeHtml(item.originalName || '') + '">下载文件</a>' +
-            '</div>';
+            '<a class="preview-download" href="' + escapeHtml(item.url) + '" target="_blank" download="' + escapeHtml(item.originalName || '') + '">下载文件</a>';
+        if (item.fileType === 'image' && item.sourceUrl && item.sourceUrl !== item.url) {
+            var srcName = (item.originalName || '源文件');
+            html += '<a class="preview-download preview-download-source" href="' + escapeHtml(item.sourceUrl) + '" target="_blank" download="' + escapeHtml(srcName) + '">下载源文件</a>';
+        }
+        html += '</div>';
         container.innerHTML = html;
     }
 

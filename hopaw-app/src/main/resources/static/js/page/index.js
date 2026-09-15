@@ -3057,16 +3057,24 @@ window.onload = function() {
         });
     }
 
-    // 附件按钮
-    var attachBtn = document.getElementById('attachBtn');
+    // 上传本地文件按钮
+    var uploadBtn = document.getElementById('uploadBtn');
     var fileInput = document.getElementById('fileInput');
-    if (attachBtn && fileInput) {
-        attachBtn.addEventListener('click', function() {
+    if (uploadBtn && fileInput) {
+        uploadBtn.addEventListener('click', function() {
             fileInput.click();
         });
         fileInput.addEventListener('change', function() {
             handleFiles(fileInput.files);
             fileInput.value = '';
+        });
+    }
+
+    // 从附件选择按钮
+    var attachFromListBtn = document.getElementById('attachFromListBtn');
+    if (attachFromListBtn) {
+        attachFromListBtn.addEventListener('click', function() {
+            showAttachSelectModal();
         });
     }
 
@@ -4397,4 +4405,300 @@ function deleteRecentTask(id) {
                 showToast('删除失败: ' + err.message, 'error');
             });
     });
+}
+
+/* ========== 从附件选择 ========== */
+
+var attachSelectState = { page: 1, size: 12, keyword: '', selected: {} };
+
+function showAttachSelectModal() {
+    attachSelectState = { page: 1, size: 12, keyword: '', selected: {} };
+    var modal = document.getElementById('attachSelectModal');
+    modal.classList.add('active');
+    document.getElementById('attachSelectKeyword').value = '';
+    loadAttachSelectList();
+}
+
+function hideAttachSelectModal() {
+    document.getElementById('attachSelectModal').classList.remove('active');
+}
+
+function searchAttachSelect() {
+    attachSelectState.keyword = document.getElementById('attachSelectKeyword').value.trim();
+    attachSelectState.page = 1;
+    loadAttachSelectList();
+}
+
+function loadAttachSelectList() {
+    var grid = document.getElementById('attachSelectGrid');
+    grid.innerHTML = '<div class="attach-select-loading">加载中...</div>';
+
+    var params = new URLSearchParams({
+        page: attachSelectState.page,
+        size: attachSelectState.size,
+        keyword: attachSelectState.keyword
+    });
+
+    fetch('/api/attachments/page?' + params.toString())
+        .then(function(r) { return r.json(); })
+        .then(function(resp) {
+            if (resp.code !== 200 || !resp.data) {
+                grid.innerHTML = '<div class="attach-select-empty">加载失败</div>';
+                return;
+            }
+            var list = resp.data.list || [];
+            var total = resp.data.total || 0;
+            if (!list.length) {
+                grid.innerHTML = '<div class="attach-select-empty">暂无附件</div>';
+                renderAttachSelectPagination(total);
+                return;
+            }
+            var html = '';
+            for (var i = 0; i < list.length; i++) {
+                var att = list[i];
+                var checked = attachSelectState.selected[att.id] ? ' checked' : '';
+                html += '<div class="attach-select-card' + checked + '" data-id="' + att.id + '" onclick="toggleAttachSelect(' + att.id + ', this)">' +
+                    '<div class="attach-select-card-check"><input type="checkbox"' + checked + ' onclick="event.stopPropagation()"></div>' +
+                    '<div class="attach-select-card-icon">' + getFileTypeIcon(att.fileType, att.fileExtension) + '</div>' +
+                    '<div class="attach-select-card-name" title="' + escapeHtml(att.originalName || '') + '">' + escapeHtml(truncateName(att.originalName || '', 12)) + '</div>' +
+                    '<div class="attach-select-card-meta">' + escapeHtml(att.fileExtension || '') + ' · ' + formatFileSize(att.fileSize) + '</div>' +
+                    '</div>';
+            }
+            grid.innerHTML = html;
+            renderAttachSelectPagination(total);
+        })
+        .catch(function(err) {
+            grid.innerHTML = '<div class="attach-select-empty">加载失败: ' + err.message + '</div>';
+        });
+}
+
+function toggleAttachSelect(id, el) {
+    if (attachSelectState.selected[id]) {
+        delete attachSelectState.selected[id];
+        el.classList.remove('checked');
+    } else {
+        attachSelectState.selected[id] = true;
+        el.classList.add('checked');
+    }
+    var count = Object.keys(attachSelectState.selected).length;
+    document.getElementById('attachSelectCount').textContent = '已选 ' + count + ' 个';
+}
+
+function confirmAttachSelect() {
+    var ids = Object.keys(attachSelectState.selected);
+    if (!ids.length) {
+        showToast('请至少选择一个附件', 'error');
+        return;
+    }
+    fetch('/api/attachments/page?size=100&page=1')
+        .then(function(r) { return r.json(); })
+        .then(function(resp) {
+            if (resp.code !== 200 || !resp.data) return;
+            var list = resp.data.list || [];
+            for (var i = 0; i < list.length; i++) {
+                var att = list[i];
+                if (!attachSelectState.selected[att.id]) continue;
+                var fileInfo = { url: att.url, type: att.fileType, name: att.originalName, id: att.id };
+                var exists = attachedFiles.some(function(f) { return f.url === fileInfo.url; });
+                if (!exists) {
+                    attachedFiles.push(fileInfo);
+                    renderFilePreview(fileInfo);
+                }
+            }
+            hideAttachSelectModal();
+        })
+        .catch(function() {
+            hideAttachSelectModal();
+        });
+}
+
+function renderAttachSelectPagination(total) {
+    var el = document.getElementById('attachSelectPagination');
+    var totalPages = Math.ceil(total / attachSelectState.size);
+    if (totalPages <= 1) { el.innerHTML = ''; return; }
+    var html = '';
+    if (attachSelectState.page > 1) {
+        html += '<button class="attach-page-btn" onclick="goAttachSelectPage(' + (attachSelectState.page - 1) + ')">上一页</button>';
+    }
+    html += '<span class="attach-page-info">' + attachSelectState.page + ' / ' + totalPages + '</span>';
+    if (attachSelectState.page < totalPages) {
+        html += '<button class="attach-page-btn" onclick="goAttachSelectPage(' + (attachSelectState.page + 1) + ')">下一页</button>';
+    }
+    el.innerHTML = html;
+}
+
+function goAttachSelectPage(page) {
+    attachSelectState.page = page;
+    loadAttachSelectList();
+}
+
+function getFileTypeIcon(fileType, ext) {
+    if (fileType === 'image') return '🖼️';
+    if (fileType === 'video') return '🎬';
+    if (fileType === 'audio') return '🎵';
+    if (ext === '.pdf') return '📄';
+    if (ext === '.md' || ext === '.markdown') return '📝';
+    if (ext === '.txt' || ext === '.log') return '📃';
+    return '📦';
+}
+
+function truncateName(name, maxLen) {
+    if (!name || name.length <= maxLen) return name;
+    var ext = '';
+    var dotIdx = name.lastIndexOf('.');
+    if (dotIdx > 0) {
+        ext = name.substring(dotIdx);
+        name = name.substring(0, dotIdx);
+    }
+    return name.substring(0, maxLen - ext.length - 3) + '...' + ext;
+}
+
+/* ========== 从附件选择 ========== */
+
+var attachSelectState = { page: 1, size: 18, keyword: '', selected: {}, total: 0 };
+
+function showAttachSelectModal() {
+    attachSelectState.page = 1;
+    attachSelectState.keyword = '';
+    attachSelectState.selected = {};
+    var kwInput = document.getElementById('attachSelectKeyword');
+    if (kwInput) kwInput.value = '';
+    document.getElementById('attachSelectGrid').innerHTML = '<div class="attach-select-loading">加载中...</div>';
+    document.getElementById('attachSelectCount').textContent = '已选 0 个';
+    document.getElementById('attachSelectModal').classList.add('active');
+    loadAttachSelectPage();
+}
+
+function hideAttachSelectModal() {
+    document.getElementById('attachSelectModal').classList.remove('active');
+}
+
+function searchAttachSelect() {
+    attachSelectState.keyword = (document.getElementById('attachSelectKeyword').value || '').trim();
+    attachSelectState.page = 1;
+    loadAttachSelectPage();
+}
+
+function loadAttachSelectPage() {
+    var s = attachSelectState;
+    var params = new URLSearchParams({
+        page: s.page, size: s.size, keyword: s.keyword, source: '', tag: '', fileType: ''
+    });
+    fetch('/api/attachments/page?' + params.toString())
+        .then(function(r) { return r.json(); })
+        .then(function(resp) {
+            if (resp.code !== 200 || !resp.data) {
+                document.getElementById('attachSelectGrid').innerHTML = '<div class="attach-select-empty">加载失败</div>';
+                return;
+            }
+            s.total = resp.data.total || 0;
+            var list = resp.data.list || [];
+            renderAttachSelectGrid(list);
+            renderAttachSelectPagination(resp.data.page, s.size, s.total);
+        })
+        .catch(function() {
+            document.getElementById('attachSelectGrid').innerHTML = '<div class="attach-select-empty">加载失败</div>';
+        });
+}
+
+function renderAttachSelectGrid(list) {
+    var grid = document.getElementById('attachSelectGrid');
+    if (!list.length) {
+        grid.innerHTML = '<div class="attach-select-empty">暂无附件</div>';
+        return;
+    }
+    var html = '';
+    for (var i = 0; i < list.length; i++) {
+        var a = list[i];
+        var checked = attachSelectState.selected[a.id] ? 'checked' : '';
+        var isImage = a.fileType === 'image';
+        var thumb = isImage
+            ? '<img src="' + escapeHtml(a.url) + '" alt="">'
+            : '<span class="attach-select-file-icon">' + getAttachIcon(a.fileExtension) + '</span>';
+        html += '<div class="attach-select-card' + (checked ? ' checked' : '') + '" data-id="' + a.id + '" onclick="toggleAttachSelect(' + a.id + ', this)">' +
+            '<div class="attach-select-thumb">' + thumb + '</div>' +
+            '<div class="attach-select-name" title="' + escapeHtml(a.originalName || '') + '">' + escapeHtml(truncateName(a.originalName || '', 14)) + '</div>' +
+            '<div class="attach-select-check"><input type="checkbox"' + (checked ? ' checked' : '') + ' onclick="event.stopPropagation()"></div>' +
+            '</div>';
+    }
+    grid.innerHTML = html;
+}
+
+function toggleAttachSelect(id, cardEl) {
+    if (attachSelectState.selected[id]) {
+        delete attachSelectState.selected[id];
+        cardEl.classList.remove('selected');
+        var cb = cardEl.querySelector('input[type=checkbox]');
+        if (cb) cb.checked = false;
+    } else {
+        attachSelectState.selected[id] = true;
+        cardEl.classList.add('selected');
+        var cb2 = cardEl.querySelector('input[type=checkbox]');
+        if (cb2) cb2.checked = true;
+    }
+    var count = Object.keys(attachSelectState.selected).length;
+    document.getElementById('attachSelectCount').textContent = '已选 ' + count + ' 个';
+}
+
+function renderAttachSelectPagination(currentPage, pageSize, total) {
+    var el = document.getElementById('attachSelectPagination');
+    var totalPages = Math.ceil(total / pageSize);
+    if (totalPages <= 1) { el.innerHTML = ''; return; }
+    var html = '';
+    if (currentPage > 1) {
+        html += '<button class="page-btn" onclick="goAttachSelectPage(' + (currentPage - 1) + ')">上一页</button>';
+    }
+    html += '<span class="page-info">' + currentPage + ' / ' + totalPages + '</span>';
+    if (currentPage < totalPages) {
+        html += '<button class="page-btn" onclick="goAttachSelectPage(' + (currentPage + 1) + ')">下一页</button>';
+    }
+    el.innerHTML = html;
+}
+
+function goAttachSelectPage(page) {
+    attachSelectState.page = page;
+    loadAttachSelectPage();
+}
+
+function confirmAttachSelect() {
+    var ids = Object.keys(attachSelectState.selected);
+    if (!ids.length) { showToast('请至少选择一个附件', 'error'); return; }
+    var params = new URLSearchParams({ page: 1, size: 200, keyword: '', source: '', tag: '', fileType: '' });
+    fetch('/api/attachments/page?' + params.toString())
+        .then(function(r) { return r.json(); })
+        .then(function(resp) {
+            if (resp.code !== 200 || !resp.data) return;
+            var allList = resp.data.list || [];
+            var idSet = {};
+            for (var i = 0; i < ids.length; i++) idSet[ids[i]] = true;
+            for (var j = 0; j < allList.length; j++) {
+                var a = allList[j];
+                if (idSet[String(a.id)]) {
+                    var exists = false;
+                    for (var k = 0; k < attachedFiles.length; k++) {
+                        if (attachedFiles[k].id === a.id) { exists = true; break; }
+                    }
+                    if (!exists) {
+                        var fileInfo = { url: a.url, type: a.fileType, name: a.originalName, id: a.id };
+                        attachedFiles.push(fileInfo);
+                        renderFilePreview(fileInfo);
+                    }
+                }
+            }
+            hideAttachSelectModal();
+        });
+}
+
+function getAttachIcon(ext) {
+    if (!ext) return '📄';
+    var e = ext.toLowerCase();
+    if (e === 'pdf') return '📕';
+    if (e === 'doc' || e === 'docx') return '📘';
+    if (e === 'xls' || e === 'xlsx') return '📗';
+    if (e === 'ppt' || e === 'pptx') return '📙';
+    if (e === 'zip' || e === 'rar' || e === '7z') return '🗜️';
+    if (e === 'txt' || e === 'md') return '📝';
+    if (e === 'mp3' || e === 'wav' || e === 'ogg') return '🎵';
+    if (e === 'mp4' || e === 'avi' || e === 'mov') return '🎬';
+    return '📄';
 }

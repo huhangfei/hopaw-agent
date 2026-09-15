@@ -98,6 +98,18 @@
     text-decoration: underline;
 }
 
+.preview-info .preview-download-source {
+    margin-left: 0;
+    padding-left: 12px;
+    border-left: 1px solid #e0e0e0;
+    color: #059669;
+}
+
+body.dark-theme .preview-info .preview-download-source {
+    border-left-color: #3d3d5c;
+    color: #34d399;
+}
+
 /* 预览主体 iframe */
 .preview-body-iframe {
     width: 100%;

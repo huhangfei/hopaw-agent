@@ -33,6 +33,10 @@ public class Attachment {
     private String userId;
     /** 存储路径（相对路径，如 2026-08-12/xxx.png） */
     private String storagePath;
+    /** 源文件访问URL（图片压缩前的原始文件；非图片或未压缩时与 url 相同） */
+    private String sourceUrl;
+    /** 源文件存储路径（相对路径；非图片或未压缩时与 storagePath 相同） */
+    private String sourceStoragePath;
     private LocalDateTime createTime;
     private LocalDateTime updateTime;
 
@@ -146,6 +150,22 @@ public class Attachment {
 
     public void setStoragePath(String storagePath) {
         this.storagePath = storagePath;
+    }
+
+    public String getSourceUrl() {
+        return sourceUrl;
+    }
+
+    public void setSourceUrl(String sourceUrl) {
+        this.sourceUrl = sourceUrl;
+    }
+
+    public String getSourceStoragePath() {
+        return sourceStoragePath;
+    }
+
+    public void setSourceStoragePath(String sourceStoragePath) {
+        this.sourceStoragePath = sourceStoragePath;
     }
 
     public LocalDateTime getCreateTime() {

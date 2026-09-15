@@ -439,11 +439,16 @@ public class DatabaseInitializer implements CommandLineRunner {
                     "remark TEXT, " +
                     "user_id TEXT, " +
                     "storage_path TEXT, " +
+                    "source_url TEXT, " +
+                    "source_storage_path TEXT, " +
                     "create_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP, " +
                     "update_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP" +
                     ")");
             stmt.execute("CREATE INDEX IF NOT EXISTS idx_attachments_user ON attachments(user_id)");
             stmt.execute("CREATE INDEX IF NOT EXISTS idx_attachments_source ON attachments(source, biz_id)");
+            // 兼容旧库：附件增量补充源文件地址列（图片压缩前的原始文件地址，与处理后的 url/storage_path 对应）
+            ensureColumn(stmt, "attachments", "source_url", "TEXT");
+            ensureColumn(stmt, "attachments", "source_storage_path", "TEXT");
 
             // chat_sessions 增量加列 biz_type
             ensureColumn(stmt, "chat_sessions", "biz_type", "TEXT");
