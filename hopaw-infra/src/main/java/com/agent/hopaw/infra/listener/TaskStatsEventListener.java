@@ -14,6 +14,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.context.event.EventListener;
+import org.springframework.core.annotation.Order;
 import org.springframework.stereotype.Service;
 
 /**
@@ -61,6 +62,7 @@ public class TaskStatsEventListener {
      * 运行时长通过执行器服务接口获取（执行器已结束时跳过，等待 task-done 出最终统计）。
      */
     @EventListener
+    @Order(100)
     public void listenTokenUsageEvent(TokenUsageEvent event) {
         String requestId = event.getRequestId();
         if (requestId == null || event.getSessionId() == null) {

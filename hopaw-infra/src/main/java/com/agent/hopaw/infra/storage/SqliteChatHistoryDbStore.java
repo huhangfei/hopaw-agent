@@ -4,6 +4,7 @@ import com.agent.hopaw.infra.event.ChatHistoryEvent;
 import com.agent.hopaw.infra.mapper.ChatHistoryMapper;
 import com.agent.hopaw.infra.model.entity.ChatHistory;
 import org.springframework.context.event.EventListener;
+import org.springframework.core.annotation.Order;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
@@ -23,6 +24,7 @@ public class SqliteChatHistoryDbStore implements ChatHistoryStore {
     }
 
     @EventListener
+    @Order(1)
     public void listenChatHistoryEvent(ChatHistoryEvent chatHistoryEvent) {
         ChatHistory chatHistory = chatHistoryEvent.getChatHistory();
         if(chatHistory.getMessageType().equals("tool_call")){

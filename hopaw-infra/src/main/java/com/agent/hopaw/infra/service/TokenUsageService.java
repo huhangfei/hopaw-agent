@@ -4,6 +4,7 @@ import com.agent.hopaw.infra.event.TokenUsageEvent;
 import com.agent.hopaw.infra.mapper.TokenUsageMapper;
 import com.agent.hopaw.infra.model.entity.TokenUsage;
 import org.springframework.context.event.EventListener;
+import org.springframework.core.annotation.Order;
 import org.springframework.stereotype.Service;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -21,6 +22,7 @@ public class TokenUsageService implements ITokenUsageService {
     }
 
     @EventListener
+    @Order(1)
     public void onTokenUsageMessage(TokenUsageEvent message) {
         TokenUsage tokenUsage = new TokenUsage();
         tokenUsage.setAgentId(message.getAgentId());
