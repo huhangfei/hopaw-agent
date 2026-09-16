@@ -8,7 +8,8 @@
 <body>
 <div layout:fragment="pageTitle">提示词管理</div>
 
-<div layout:fragment="content">
+<div class="cap-page" layout:fragment="content">
+    <div th:replace="~{fragments/cap-tabs :: cap-tabs(${activeTab})}"></div>
     <div class="prompts-container">
         <div class="prompts-header">
             <h2>提示词管理</h2>
@@ -62,6 +63,7 @@
 </div>
 
 <th:block layout:fragment="extraCss">
+    <link rel="stylesheet" th:href="@{/css/page/cap-tabs.css}">
     <link rel="stylesheet" th:href="@{/css/page/prompts.css}">
 </th:block>
 

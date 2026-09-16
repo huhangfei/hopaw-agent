@@ -28,6 +28,7 @@ public class ToolConfigController {
         Map<String, Object> config = toolConfigService.getToolConfig(toolName);
         model.addAttribute("config", config);
         model.addAttribute("toolName", toolName);
+        model.addAttribute("activePage", "tools");
         return "tool-config";
     }
 
@@ -48,6 +49,7 @@ public class ToolConfigController {
     public String index(Model model) {
         List<ToolSetInfo> toolSets = agentToolService.getToolSets();
         model.addAttribute("toolSets", toolSets);
+        model.addAttribute("activePage", "tools");
         return "tool-config-index";
     }
 }

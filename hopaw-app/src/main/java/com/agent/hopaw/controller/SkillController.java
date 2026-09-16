@@ -31,6 +31,7 @@ public class SkillController {
     @GetMapping
     public String skillsPage(Model model) {
         model.addAttribute("activePage", "skills");
+        model.addAttribute("activeTab", "skills");
         return "skills";
     }
 

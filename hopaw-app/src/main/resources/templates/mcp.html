@@ -8,8 +8,10 @@
 <body>
 <div layout:fragment="pageTitle">🤖 HoPaw - 连接工具</div>
 
-<main class="mcp-content" layout:fragment="content">
-    <div class="mcp-page">
+<div class="cap-page" layout:fragment="content">
+    <div th:replace="~{fragments/cap-tabs :: cap-tabs(${activeTab})}"></div>
+    <main class="mcp-content">
+        <div class="mcp-page">
         <div class="mcp-header">
             <h3>MCP 服务器列表</h3>
             <button class="btn-add-mcp" onclick="showMcpDialog()">
@@ -81,7 +83,9 @@
         </div>
     </div>
 </main>
+</div>
 <th:block layout:fragment="extraCss">
+    <link rel="stylesheet" th:href="@{/css/page/cap-tabs.css}">
     <link rel="stylesheet" th:href="@{/css/page/mcp.css}">
 </th:block>
 

@@ -8,8 +8,10 @@
 <body>
 <div layout:fragment="pageTitle">🤖 HoPaw - 智能体管理</div>
 
-<main layout:fragment="content" class="agents-container">
-    <div class="agents-header">
+<div class="cap-page" layout:fragment="content">
+    <div th:replace="~{fragments/cap-tabs :: cap-tabs(${activeTab})}"></div>
+    <main class="agents-container">
+        <div class="agents-header">
         <h2>智能体管理</h2>
         <div class="agents-toolbar">
             <div class="agents-search">
@@ -55,8 +57,10 @@
         </div>
     </div>
 </main>
+</div>
 
 <th:block layout:fragment="extraCss">
+    <link rel="stylesheet" th:href="@{/css/page/cap-tabs.css}">
     <link rel="stylesheet" th:href="@{/css/page/agent-form.css}">
     <link rel="stylesheet" th:href="@{/css/page/agents.css}">
 </th:block>

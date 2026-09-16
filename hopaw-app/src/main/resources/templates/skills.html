@@ -8,8 +8,10 @@
 <body>
 <div layout:fragment="pageTitle">🤖 HoPaw - 技能管理</div>
 
-<main class="skills-content" layout:fragment="content">
-    <div class="skills-page">
+<div class="cap-page" layout:fragment="content">
+    <div th:replace="~{fragments/cap-tabs :: cap-tabs(${activeTab})}"></div>
+    <main class="skills-content">
+        <div class="skills-page">
         <div class="skills-header">
             <h3>技能列表</h3>
             <div class="skills-header-actions">
@@ -103,7 +105,9 @@
         </div>
     </div>
 </main>
+</div>
 <th:block layout:fragment="extraCss">
+    <link rel="stylesheet" th:href="@{/css/page/cap-tabs.css}">
     <link rel="stylesheet" th:href="@{/css/page/skills.css}">
 </th:block>
 

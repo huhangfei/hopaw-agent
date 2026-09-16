@@ -1,0 +1,70 @@
+/* ========== 智能体能力 - Tab 导航条 ========== */
+
+.cap-page,
+.content-wrapper {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+
+.cap-tabs {
+    display: flex;
+    gap: 2px;
+    padding: 0 12px;
+    background: #f8f9fa;
+    border-bottom: 1px solid #e8e8e8;
+    flex-shrink: 0;
+}
+
+.cap-tab {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 10px 16px;
+    font-size: 13px;
+    color: #666;
+    text-decoration: none;
+    border-bottom: 2px solid transparent;
+    cursor: pointer;
+    transition: color 0.15s, border-color 0.15s;
+    white-space: nowrap;
+}
+
+.cap-tab svg {
+    width: 15px;
+    height: 15px;
+    flex-shrink: 0;
+}
+
+.cap-tab:hover {
+    color: #333;
+    background: rgba(0,0,0,0.03);
+}
+
+.cap-tab.active {
+    color: #667eea;
+    border-bottom-color: #667eea;
+    font-weight: 500;
+}
+
+/* 暗色主题 */
+
+body.dark-theme .cap-tabs {
+    background: #1a1f36;
+    border-bottom-color: #2d3a5c;
+}
+
+body.dark-theme .cap-tab {
+    color: #8899bb;
+}
+
+body.dark-theme .cap-tab:hover {
+    color: #c0c8e8;
+    background: rgba(255,255,255,0.03);
+}
+
+body.dark-theme .cap-tab.active {
+    color: #8ba3ff;
+    border-bottom-color: #8ba3ff;
+}

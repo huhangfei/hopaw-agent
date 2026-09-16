@@ -39,6 +39,8 @@ public class AgentToolController {
     @GetMapping
     public String toolsPage(Model model) {
         model.addAttribute("toolSets", IAgentToolService.getToolSets());
+        model.addAttribute("activePage", "tools");
+        model.addAttribute("activeTab", "tools");
         return "tools";
     }
 

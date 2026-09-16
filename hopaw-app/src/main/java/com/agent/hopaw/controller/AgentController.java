@@ -37,6 +37,7 @@ public class AgentController {
     @GetMapping("/agents")
     public String index(Model model) {
         model.addAttribute("activePage", "agents");
+        model.addAttribute("activeTab", "agents");
         return "agents";
     }
 

@@ -8,62 +8,64 @@
 <body>
 <div layout:fragment="pageTitle">🤖 HoPaw - 工具管理</div>
 
-<div class="tools-split" layout:fragment="content">
-    <div class="tools-list-panel">
-        <div class="tools-list-header">
-            <div class="tools-list-header-row">
-                <h3>工具集列表</h3>
-                <button class="btn-install-plugin" onclick="location.href='/tools/plugin-store'" title="插件商店">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <path d="M3 3h18l-1 16H4L3 3z"></path>
-                        <circle cx="9" cy="21" r="1"></circle>
-                        <circle cx="18" cy="21" r="1"></circle>
-                    </svg>
-                    插件商店
-                </button>
-                <button class="btn-local-install" onclick="document.getElementById('localInstallInput').click()" title="从本地安装插件">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
-                        <polyline points="17 8 12 3 7 8"></polyline>
-                        <line x1="12" y1="3" x2="12" y2="15"></line>
-                    </svg>
-                </button>
-                <input type="file" id="localInstallInput" accept=".zip,.jar" style="display:none;" onchange="localInstallPlugin(this)">
-            </div>
-            <div class="tools-list-search">
-                <input type="text" class="tools-search-input" id="toolsSearchInput" placeholder="搜索工具集..." oninput="filterTools()">
-            </div>
-        </div>
-        <div class="tools-list-body">
-            <div th:each="toolSet, iter : ${toolSets}"
-             class="tool-list-item"
-             th:classappend="${iter.first ? 'active' : ''}"
-             th:attr="data-index=${iter.index}"
-             onclick="selectToolSet(this)">
-                <div class="tool-list-icon">
-                    <th:block th:if="${toolSet.iconIsSvgCode()}">
-                        <span th:utext="${toolSet.icon}"></span>
-                    </th:block>
-                    <th:block th:unless="${toolSet.iconIsSvgCode()}">
-                        <img th:src="@{/icons/tools/__${toolSet.icon}__}" alt="icon" onerror="this.style.display='none'">
-                    </th:block>
+<div class="content-wrapper" layout:fragment="content">
+    <div th:replace="~{fragments/cap-tabs :: cap-tabs(${activeTab})}"></div>
+    <div class="tools-split">
+        <div class="tools-list-panel">
+            <div class="tools-list-header">
+                <div class="tools-list-header-row">
+                    <h3>工具集列表</h3>
+                    <button class="btn-install-plugin" onclick="location.href='/tools/plugin-store'" title="插件商店">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M3 3h18l-1 16H4L3 3z"></path>
+                            <circle cx="9" cy="21" r="1"></circle>
+                            <circle cx="18" cy="21" r="1"></circle>
+                        </svg>
+                        插件商店
+                    </button>
+                    <button class="btn-local-install" onclick="document.getElementById('localInstallInput').click()" title="从本地安装插件">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                            <polyline points="17 8 12 3 7 8"></polyline>
+                            <line x1="12" y1="3" x2="12" y2="15"></line>
+                        </svg>
+                    </button>
+                    <input type="file" id="localInstallInput" accept=".zip,.jar" style="display:none;" onchange="localInstallPlugin(this)">
                 </div>
-                <div class="tool-list-info">
-                    <div class="tool-list-name"><span th:text="${toolSet.name}"></span><span class="tool-list-source-badge" th:classappend="${toolSet.source.code == 'built_in' ? 'source-builtin' : 'source-plugin'}" th:text="${toolSet.source.description}"></span><span class="tool-list-config-tag" th:if="${toolSet.hasConfigItems}" title="此工具集支持配置">可配置</span></div>
-                    <div class="tool-list-desc" th:text="${toolSet.description}"></div>
-                    <div class="tool-list-meta">
-                        <span class="tool-list-count" th:text="|${#lists.size(toolSet.tools)} 个工具方法|"></span>
-                        <span class="tool-list-version" th:if="${toolSet.version != null and !toolSet.version.isEmpty()}" th:text="|v${toolSet.version}|"></span>
+                <div class="tools-list-search">
+                    <input type="text" class="tools-search-input" id="toolsSearchInput" placeholder="搜索工具集..." oninput="filterTools()">
+                </div>
+            </div>
+            <div class="tools-list-body">
+                <div th:each="toolSet, iter : ${toolSets}"
+                 class="tool-list-item"
+                 th:classappend="${iter.first ? 'active' : ''}"
+                 th:attr="data-index=${iter.index}"
+                 onclick="selectToolSet(this)">
+                    <div class="tool-list-icon">
+                        <th:block th:if="${toolSet.iconIsSvgCode()}">
+                            <span th:utext="${toolSet.icon}"></span>
+                        </th:block>
+                        <th:block th:unless="${toolSet.iconIsSvgCode()}">
+                            <img th:src="@{/icons/tools/__${toolSet.icon}__}" alt="icon" onerror="this.style.display='none'">
+                        </th:block>
+                    </div>
+                    <div class="tool-list-info">
+                        <div class="tool-list-name"><span th:text="${toolSet.name}"></span><span class="tool-list-source-badge" th:classappend="${toolSet.source.code == 'built_in' ? 'source-builtin' : 'source-plugin'}" th:text="${toolSet.source.description}"></span><span class="tool-list-config-tag" th:if="${toolSet.hasConfigItems}" title="此工具集支持配置">可配置</span></div>
+                        <div class="tool-list-desc" th:text="${toolSet.description}"></div>
+                        <div class="tool-list-meta">
+                            <span class="tool-list-count" th:text="|${#lists.size(toolSet.tools)} 个工具方法|"></span>
+                            <span class="tool-list-version" th:if="${toolSet.version != null and !toolSet.version.isEmpty()}" th:text="|v${toolSet.version}|"></span>
+                        </div>
                     </div>
                 </div>
-            </div>
-            <div th:if="${#lists.isEmpty(toolSets)}" class="tools-list-empty">
-                暂无工具数据
+                <div th:if="${#lists.isEmpty(toolSets)}" class="tools-list-empty">
+                    暂无工具数据
+                </div>
             </div>
         </div>
-    </div>
 
-    <div class="tools-detail-panel">
+        <div class="tools-detail-panel">
         <div th:each="toolSet, iter : ${toolSets}"
              class="tool-detail"
              th:classappend="${iter.first ? 'active' : ''}"
@@ -149,8 +151,10 @@
         </div>
     </div>
 </div>
+</div>
 
 <th:block layout:fragment="extraCss">
+    <link rel="stylesheet" th:href="@{/css/page/cap-tabs.css}">
     <link rel="stylesheet" th:href="@{/css/page/tools.css}">
 </th:block>
 

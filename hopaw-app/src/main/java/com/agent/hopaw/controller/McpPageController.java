@@ -12,6 +12,7 @@ public class McpPageController {
     @GetMapping
     public String mcpPage(Model model) {
         model.addAttribute("activePage", "mcp");
+        model.addAttribute("activeTab", "mcp");
         return "mcp";
     }
 }
