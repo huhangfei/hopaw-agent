@@ -84,7 +84,7 @@
 .avatar-settings-btn {
     position: absolute;
     top: calc(100% + 8px);
-    left: calc(50% - 28px);
+    left: calc(45% - 28px);
     transform: translateY(-6px) scale(0.9);
     width: 24px;
     height: 24px;
@@ -107,7 +107,7 @@
 .avatar-change-model-btn {
     position: absolute;
     top: calc(100% + 8px);
-    left: calc(50% + 4px);
+    left: calc(45% + 4px);
     transform: translateY(-6px) scale(0.9);
     width: 24px;
     height: 24px;
@@ -130,7 +130,7 @@
 .avatar-tts-btn {
     position: absolute;
     top: calc(100% + 8px);
-    left: calc(50% + 36px);
+    left: calc(45% + 36px);
     transform: translateY(-6px) scale(0.9);
     width: 24px;
     height: 24px;
