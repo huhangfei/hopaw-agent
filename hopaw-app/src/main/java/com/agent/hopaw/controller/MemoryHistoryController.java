@@ -29,6 +29,7 @@ public class MemoryHistoryController {
     @GetMapping("/memory-history")
     public String page(Model model) {
         model.addAttribute("accounts", accountService.listAccounts());
+        model.addAttribute("activeTab", "memory-history");
         return "memory-history";
     }
 

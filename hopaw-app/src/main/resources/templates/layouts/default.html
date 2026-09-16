@@ -84,7 +84,7 @@
                 </svg>
                 <span class="menu-label">任务看板</span>
             </a>
-            <a href="/agents" class="menu-btn" th:classappend="${activePage == 'agents' or activePage == 'tools' or activePage == 'skills' or activePage == 'mcp' or activePage == 'prompts' ? 'active' : ''}" title="智能体能力">
+            <a href="/agents" class="menu-btn" th:classappend="${activePage == 'agents' or activePage == 'tools' or activePage == 'skills' or activePage == 'mcp' or activePage == 'prompts' or activePage == 'memory-manage' or activePage == 'models' ? 'active' : ''}" title="智能体能力">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
                     <rect x="3" y="7" width="18" height="13" rx="2"/>
                     <circle cx="8" cy="12" r="1.5" fill="currentColor"/>
@@ -93,72 +93,11 @@
                     <line x1="9" y1="4" x2="15" y2="4"/>
                     <circle cx="12" cy="3" r="1" fill="currentColor"/>
                 </svg>
-                <span class="menu-label">智能体能力</span>
+                <span class="menu-label">智能构建</span>
             </a>
-            <a href="/models" class="menu-btn" th:classappend="${activePage == 'models' ? 'active' : ''}" title="模型管理">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
-                    <rect x="2" y="2" width="9" height="9" rx="2"/>
-                    <rect x="13" y="2" width="9" height="9" rx="2"/>
-                    <rect x="2" y="13" width="9" height="9" rx="2"/>
-                    <rect x="13" y="13" width="9" height="9" rx="2"/>
-                </svg>
-                <span class="menu-label">模型管理</span>
-            </a>
-            <div class="menu-group" id="menuGroupMemory">
-                <button class="menu-btn menu-parent-btn" th:classappend="${activePage == 'memory-manage' or activePage == 'vector-history' ? 'active-parent' : ''}" onclick="toggleMenuSub('menuGroupMemory')" title="记忆">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
-                        <path d="M9 2.5C6.5 2.5 4.5 4.5 4.5 7c0 2.3 1.3 4.2 3.2 5.1.3.1.5.4.5.7V15h2v1.5h-1.5V18h6.6v-1.5H13.8V15h2v-2.2c0-.3.2-.6.5-.7 1.9-.9 3.2-2.8 3.2-5.1 0-2.5-2-4.5-4.5-4.5H9z" fill="currentColor" fill-opacity="0.15"/>
-                        <path d="M9 18v2c0 .6.4 1 1 1h4c.6 0 1-.4 1-1v-2"/>
-                        <line x1="9" y1="18.5" x2="15" y2="18.5"/>
-                        <line x1="9" y1="20" x2="15" y2="20"/>
-                        <path d="M7 6.5c.5-.8 1.3-1.3 2.2-1.3"/>
-                        <path d="M6.8 8.5c.4-.5 1-1 1.7-1.2"/>
-                        <path d="M7.2 10.5c.4-.3.9-.5 1.5-.5"/>
-                        <path d="M17 6.5c-.5-.8-1.3-1.3-2.2-1.3"/>
-                        <path d="M17.2 8.5c-.4-.5-1-1-1.7-1.2"/>
-                        <path d="M16.8 10.5c-.4-.3-.9-.5-1.5-.5"/>
-                        <path d="M12 4.5v7.5"/>
-                    </svg>
-                    <span class="menu-label">记忆</span>
-                </button>
-                <div class="menu-sub-items">
-                    <a href="/memory-manage" class="menu-btn menu-sub-item" th:classappend="${activePage == 'memory-manage' ? 'active' : ''}" title="记忆管理">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
-                            <path d="M9 2.5C6.5 2.5 4.5 4.5 4.5 7c0 2.3 1.3 4.2 3.2 5.1.3.1.5.4.5.7V15h2v1.5h-1.5V18h6.6v-1.5H13.8V15h2v-2.2c0-.3.2-.6.5-.7 1.9-.9 3.2-2.8 3.2-5.1 0-2.5-2-4.5-4.5-4.5H9z" fill="currentColor" fill-opacity="0.15"/>
-                            <path d="M9 18v2c0 .6.4 1 1 1h4c.6 0 1-.4 1-1v-2"/>
-                            <line x1="9" y1="18.5" x2="15" y2="18.5"/>
-                            <line x1="9" y1="20" x2="15" y2="20"/>
-                            <path d="M7 6.5c.5-.8 1.3-1.3 2.2-1.3"/>
-                            <path d="M6.8 8.5c.4-.5 1-1 1.7-1.2"/>
-                            <path d="M7.2 10.5c.4-.3.9-.5 1.5-.5"/>
-                            <path d="M17 6.5c-.5-.8-1.3-1.3-2.2-1.3"/>
-                            <path d="M17.2 8.5c-.4-.5-1-1-1.7-1.2"/>
-                            <path d="M16.8 10.5c-.4-.3-.9-.5-1.5-.5"/>
-                            <path d="M12 4.5v7.5"/>
-                        </svg>
-                        <span class="menu-label">记忆管理</span>
-                    </a>
-                    <a href="/memory-history" class="menu-btn menu-sub-item" th:classappend="${activePage == 'memory-history' ? 'active' : ''}" title="记忆历史">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
-                            <circle cx="12" cy="5" r="2"/>
-                            <circle cx="5" cy="12" r="2"/>
-                            <circle cx="19" cy="12" r="2"/>
-                            <circle cx="8" cy="19" r="2"/>
-                            <circle cx="16" cy="19" r="2"/>
-                            <line x1="12" y1="7" x2="5" y2="10"/>
-                            <line x1="12" y1="7" x2="19" y2="10"/>
-                            <line x1="7" y1="12" x2="17" y2="12"/>
-                            <line x1="5" y1="13" x2="8" y2="17"/>
-                            <line x1="19" y1="13" x2="16" y2="17"/>
-                            <line x1="10" y1="19" x2="14" y2="19"/>
-                        </svg>
-                        <span class="menu-label">记忆历史</span>
-                    </a>
-                </div>
-            </div>
 
 
-            <a href="/token-usage" class="menu-btn" th:classappend="${activePage == 'token-usage' or activePage == 'attachments' or activePage == 'accounts' or activePage == 'session-clean' or activePage == 'scheduled-tasks' or activePage == 'ip-blacklist' or activePage == 'login-log' ? 'active' : ''}" title="系统运维">
+            <a href="/token-usage" class="menu-btn" th:classappend="${activePage == 'token-usage' or activePage == 'attachments' or activePage == 'accounts' or activePage == 'session-clean' or activePage == 'scheduled-tasks' or activePage == 'ip-blacklist' or activePage == 'login-log' or activePage == 'memory-history' ? 'active' : ''}" title="系统运维">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
                     <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
                 </svg>
@@ -218,70 +157,7 @@
             }
         }
 
-        (function initSubMenu() {
-            var group = document.getElementById('menuGroupMemory');
-            if (!group) return;
-            var expanded = localStorage.getItem('menuGroupMemory_expanded');
-            if (expanded === 'true' || expanded === null) {
-                group.classList.add('expanded');
-            }
-        })();
-
-        function toggleMenuSub(groupId) {
-            var group = document.getElementById(groupId);
-            if (!group) return;
-            var menu = document.getElementById('mainMenu');
-            if (menu && menu.classList.contains('collapsed')) {
-                group.classList.toggle('popup-visible');
-                return;
-            }
-            group.classList.toggle('expanded');
-
-            if (group.classList.contains('expanded')) {
-                try { localStorage.setItem(groupId + '_expanded', 'true'); } catch(e) {}
-            } else {
-                try { localStorage.setItem(groupId + '_expanded', 'false'); } catch(e) {}
-            }
-        }
-
-        (function initCollapsedPopup() {
-            var menu = document.getElementById('mainMenu');
-            if (!menu) return;
-            var groups = menu.querySelectorAll('.menu-group');
-            groups.forEach(function(group) {
-                var parentBtn = group.querySelector('.menu-parent-btn');
-                if (!parentBtn) return;
-                var hideTimer = null;
-
-                function cancelHide() {
-                    if (hideTimer) { clearTimeout(hideTimer); hideTimer = null; }
-                }
-
-                function showPopup() {
-                    if (!menu.classList.contains('collapsed')) return;
-                    cancelHide();
-                    var items = group.querySelector('.menu-sub-items');
-                    if (!items) return;
-                    var rect = parentBtn.getBoundingClientRect();
-                    items.style.top = rect.top + 'px';
-                    items.style.left = (rect.right + 4) + 'px';
-                    group.classList.add('popup-visible');
-                }
-
-                function hidePopup() {
-                    cancelHide();
-                    hideTimer = setTimeout(function() {
-                        group.classList.remove('popup-visible');
-                    }, 180);
-                }
-
-                parentBtn.addEventListener('mouseenter', showPopup);
-                parentBtn.addEventListener('mouseleave', hidePopup);
-                group.querySelector('.menu-sub-items').addEventListener('mouseenter', showPopup);
-                group.querySelector('.menu-sub-items').addEventListener('mouseleave', hidePopup);
-            });
-        })();
-    </script>
+        </script>
     <script th:src="@{/js/common.js}"></script>
     <script th:src="@{/js/toast.js}"></script>
     <script th:src="@{/js/modal.js}"></script>

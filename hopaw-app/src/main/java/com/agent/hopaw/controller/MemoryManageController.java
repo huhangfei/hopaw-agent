@@ -39,6 +39,7 @@ public class MemoryManageController {
 
     @GetMapping("/memory-manage")
     public String page(Model model) {
+        model.addAttribute("activeTab", "memory-manage");
         return "memory-manage";
     }
 

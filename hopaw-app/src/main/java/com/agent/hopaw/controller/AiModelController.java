@@ -32,6 +32,7 @@ public class AiModelController {
         List<AiModelProvider> providers = aiModelProviderService.findAll();
         model.addAttribute("providers", providers);
         model.addAttribute("defaultAiModelExtParamsJson", aiModelService.getDefaultAiModelExtParamsJson());
+        model.addAttribute("activeTab", "models");
         return "models";
     }
 

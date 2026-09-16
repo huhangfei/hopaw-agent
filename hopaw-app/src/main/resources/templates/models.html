@@ -8,11 +8,13 @@
 <body>
 <div layout:fragment="pageTitle">🤖 HoPaw - 模型管理</div>
 
-<main layout:fragment="content" class="models-container">
-    <div class="models-header">
-        <h2>AI 模型管理</h2>
-        <button class="btn-add-provider" onclick="showAddProviderModal()">
-            <svg viewBox="0 0 24 24" fill="currentColor">
+<div class="cap-page" layout:fragment="content">
+    <div th:replace="~{fragments/cap-tabs :: cap-tabs(${activeTab})}"></div>
+    <main class="models-container">
+        <div class="models-header">
+            <h2>AI 模型管理</h2>
+            <button class="btn-add-provider" onclick="showAddProviderModal()">
+                <svg viewBox="0 0 24 24" fill="currentColor">
                 <path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/>
             </svg>
             添加提供商
@@ -469,8 +471,10 @@
         </div>
     </div>
 </main>
+</div>
 
 <th:block layout:fragment="extraCss">
+    <link rel="stylesheet" th:href="@{/css/page/cap-tabs.css}">
     <link rel="stylesheet" th:href="@{/css/page/models.css}">
 </th:block>
 
