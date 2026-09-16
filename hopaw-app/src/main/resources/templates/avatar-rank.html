@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+      xmlns:th="http://www.thymeleaf.org"
+      layout:decorate="~{layouts/default}">
+<head>
+    <title>🤖 HoPaw - 排行榜</title>
+</head>
+<body>
+<div layout:fragment="pageTitle">🤖 HoPaw - 排行榜</div>
+
+<main layout:fragment="content" class="settings-content">
+    <div class="settings-form avatar-rank-page">
+        <div class="avatar-rank-header">
+            <h3>虚拟人等级排行</h3>
+            <span class="avatar-rank-count" id="avatarRankCount"></span>
+        </div>
+        <div class="avatar-rank-table-wrap">
+            <table class="avatar-rank-table">
+                <thead>
+                <tr>
+                    <th class="col-rank">名次</th>
+                    <th class="col-user">用户</th>
+                    <th class="col-agent">智能体</th>
+                    <th class="col-level">等级</th>
+                    <th class="col-title">称号</th>
+                    <th class="col-tokens">累计Token</th>
+                </tr>
+                </thead>
+                <tbody id="avatarRankBody">
+                </tbody>
+            </table>
+            <div class="avatar-rank-empty" id="avatarRankEmpty" style="display:none;">暂无虚拟人数据</div>
+        </div>
+    </div>
+</main>
+
+<th:block layout:fragment="extraCss">
+    <link rel="stylesheet" th:href="@{/css/page/settings.css}">
+    <link rel="stylesheet" th:href="@{/css/page/settings-avatar-rank.css}">
+</th:block>
+
+<th:block layout:fragment="extraScripts">
+    <script th:src="@{/js/page/settings-common.js}"></script>
+    <script th:src="@{/js/page/settings-avatar-rank.js}"></script>
+</th:block>
+</body>
+</html>

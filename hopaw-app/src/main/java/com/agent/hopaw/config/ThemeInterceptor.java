@@ -97,6 +97,7 @@ public class ThemeInterceptor implements HandlerInterceptor {
             case "/scheduled-tasks":          return "scheduled-tasks";
             case "/ip-blacklist":          return "ip-blacklist";
             case "/login-log":          return "login-log";
+            case "/avatar-rank":          return "avatar-rank";
             default:                return "";
         }
     }

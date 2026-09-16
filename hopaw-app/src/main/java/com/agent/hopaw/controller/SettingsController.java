@@ -37,7 +37,6 @@ public class SettingsController {
         put("session-timeout", new String[] {"/js/page/settings-session-timeout.js", null});
         put("image-upload",  new String[] {"/js/page/settings-image-upload.js", "/css/page/settings-image-upload.css"});
         put("prompt",        new String[] {"/js/page/settings-prompt.js", null});
-        put("avatar-rank",   new String[] {"/js/page/settings-avatar-rank.js", "/css/page/settings-avatar-rank.css"});
     }};
 
     private final MailUtil mailUtil;
