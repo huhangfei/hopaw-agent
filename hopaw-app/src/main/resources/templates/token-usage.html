@@ -8,10 +8,12 @@
 <body>
 <div layout:fragment="pageTitle">🤖 HoPaw - Token 用量统计</div>
 
-<main layout:fragment="content" class="usage-container">
-    <div class="usage-header">
-        <h2>Token 用量统计</h2>
-    </div>
+<div class="cap-page" layout:fragment="content">
+    <div th:replace="~{fragments/op-tabs :: op-tabs(${activeTab})}"></div>
+    <main class="usage-container">
+        <div class="usage-header">
+            <h2>Token 用量统计</h2>
+        </div>
 
     <div class="filter-card">
         <div class="filter-row">
@@ -117,8 +119,10 @@
         <button class="page-btn" id="nextPage" onclick="goPage(currentPage + 1)">下一页</button>
     </div>
 </main>
+</div>
 
 <th:block layout:fragment="extraCss">
+    <link rel="stylesheet" th:href="@{/css/page/cap-tabs.css}">
     <link rel="stylesheet" th:href="@{/css/page/token-usage.css}">
 </th:block>
 

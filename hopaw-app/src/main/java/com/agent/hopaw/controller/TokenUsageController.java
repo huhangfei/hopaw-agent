@@ -52,6 +52,8 @@ public class TokenUsageController {
         }
         model.addAttribute("sourceMap", sourceMap);
 
+        model.addAttribute("activePage", "token-usage");
+        model.addAttribute("activeTab", "token-usage");
         return "token-usage";
     }
 

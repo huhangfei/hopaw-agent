@@ -31,6 +31,7 @@ public class AttachmentController {
     @GetMapping("/attachments")
     public String index(Model model) {
         model.addAttribute("activePage", "attachments");
+        model.addAttribute("activeTab", "attachments");
         return "attachments";
     }
 

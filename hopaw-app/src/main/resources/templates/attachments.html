@@ -8,8 +8,10 @@
 <body>
 <div layout:fragment="pageTitle">🤖 HoPaw - 附件管理</div>
 
-<main layout:fragment="content" class="attachments-container">
-    <div class="attachments-toolbar">
+<div class="cap-page" layout:fragment="content">
+    <div th:replace="~{fragments/op-tabs :: op-tabs(${activeTab})}"></div>
+    <main class="attachments-container">
+        <div class="attachments-toolbar">
         <div class="toolbar-left">
             <div class="search-box">
                 <input type="text" id="attachmentKeyword" placeholder="搜索文件名或备注..." class="search-input">
@@ -87,8 +89,10 @@
         </div>
     </div>
 </main>
+</div>
 
 <th:block layout:fragment="extraCss">
+    <link rel="stylesheet" th:href="@{/css/page/cap-tabs.css}">
     <link rel="stylesheet" th:href="@{/css/page/attachments.css}">
 </th:block>
 

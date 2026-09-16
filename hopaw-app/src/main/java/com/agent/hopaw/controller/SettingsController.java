@@ -32,15 +32,11 @@ public class SettingsController {
         put("plugin-store", new String[] {"/js/page/settings-plugin-store.js", null});
         put("account",      new String[] {"/js/page/settings-account.js", null});
         put("backup",       new String[] {"/js/page/settings-backup.js", null});
-        put("scheduled-tasks", new String[] {"/js/page/scheduled-tasks.js", "/css/page/scheduled-tasks.css"});
         put("workflow-pool", new String[] {"/js/page/settings-workflow-pool.js", null});
         put("notify",       new String[] {"/js/page/settings-notify.js", "/css/page/settings-notify.css"});
-        put("session-clean", new String[] {"/js/page/settings-session-clean.js", "/css/page/settings-session-clean.css"});
         put("session-timeout", new String[] {"/js/page/settings-session-timeout.js", null});
         put("image-upload",  new String[] {"/js/page/settings-image-upload.js", "/css/page/settings-image-upload.css"});
         put("prompt",        new String[] {"/js/page/settings-prompt.js", null});
-        put("ip-blacklist",  new String[] {"/js/page/settings-ip-blacklist.js", "/css/page/settings-ip-blacklist.css"});
-        put("login-log",     new String[] {"/js/page/settings-login-log.js", "/css/page/settings-login-log.css"});
         put("avatar-rank",   new String[] {"/js/page/settings-avatar-rank.js", "/css/page/settings-avatar-rank.css"});
     }};
 

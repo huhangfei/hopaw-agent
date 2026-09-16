@@ -93,6 +93,10 @@ public class ThemeInterceptor implements HandlerInterceptor {
             case "/projects":       return "projects";
             case "/prompts":       return "prompts";
             case "/login":          return "login";
+            case "/session-clean":          return "session-clean";
+            case "/scheduled-tasks":          return "scheduled-tasks";
+            case "/ip-blacklist":          return "ip-blacklist";
+            case "/login-log":          return "login-log";
             default:                return "";
         }
     }

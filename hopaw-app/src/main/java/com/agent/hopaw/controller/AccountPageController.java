@@ -12,6 +12,7 @@ public class AccountPageController {
     @GetMapping
     public String accountsPage(Model model) {
         model.addAttribute("activePage", "accounts");
+        model.addAttribute("activeTab", "accounts");
         return "accounts";
     }
 }

@@ -8,10 +8,12 @@
 <body>
 <div layout:fragment="pageTitle">🤖 HoPaw - 账户管理</div>
 
-<main layout:fragment="content" class="accounts-container">
-    <div class="accounts-header">
-        <h2>账户管理</h2>
-        <button class="btn-add-account" onclick="showAddModal()">
+<div class="cap-page" layout:fragment="content">
+    <div th:replace="~{fragments/op-tabs :: op-tabs(${activeTab})}"></div>
+    <main class="accounts-container">
+        <div class="accounts-header">
+            <h2>账户管理</h2>
+            <button class="btn-add-account" onclick="showAddModal()">
             <svg viewBox="0 0 24 24" fill="currentColor">
                 <path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/>
             </svg>
@@ -172,8 +174,10 @@
         </div>
     </div>
 </main>
+</div>
 
 <th:block layout:fragment="extraCss">
+    <link rel="stylesheet" th:href="@{/css/page/cap-tabs.css}">
     <link rel="stylesheet" th:href="@{/css/page/accounts.css}">
 </th:block>
 
