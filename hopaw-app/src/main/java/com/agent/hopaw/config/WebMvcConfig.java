@@ -38,6 +38,10 @@ public class WebMvcConfig implements WebMvcConfigurer {
         String tempFilePath = "file:" + userDir +File.separator+ "/temp-file/";
         registry.addResourceHandler("/temp-file/**")
                 .addResourceLocations(tempFilePath);
+        // 头像文件访问：将 /avatars/** 映射到项目根目录下的 avatars/ 文件夹
+        String avatarPath = "file:" + userDir + File.separator + "avatars" + File.separator;
+        registry.addResourceHandler("/avatars/**")
+                .addResourceLocations(avatarPath);
         // 附件文件访问：将 /attachments/** 映射到配置的附件目录
         File dir = new File(attachmentDir);
         if (!dir.isAbsolute()) {
@@ -57,7 +61,7 @@ public class WebMvcConfig implements WebMvcConfigurer {
 
         registry.addInterceptor(authInterceptor)
                 .addPathPatterns("/**")
-                .excludePathPatterns("/static/**", "/css/**", "/js/**", "/icons/**", "/images/**", "/test/**", "/ws/**", "/error", "/exports/**", attachmentUrlPrefix + "/**");
+                .excludePathPatterns("/static/**", "/css/**", "/js/**", "/icons/**", "/images/**", "/test/**", "/ws/**", "/error", "/exports/**", attachmentUrlPrefix + "/**", "/avatars/**");
 
         registry.addInterceptor(themeInterceptor)
                 .addPathPatterns("/**")

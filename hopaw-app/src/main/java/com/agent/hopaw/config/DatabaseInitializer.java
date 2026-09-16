@@ -387,6 +387,9 @@ public class DatabaseInitializer implements CommandLineRunner {
             try {
                 stmt.execute("ALTER TABLE agents ADD COLUMN enable_all_tools INTEGER DEFAULT 0");
             } catch (Exception ignored) {}
+            try {
+                stmt.execute("ALTER TABLE agents ADD COLUMN avatar TEXT");
+            } catch (Exception ignored) {}
 
             stmt.execute("CREATE TABLE IF NOT EXISTS accounts (" +
                     "id INTEGER PRIMARY KEY AUTOINCREMENT, " +

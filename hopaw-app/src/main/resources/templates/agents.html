@@ -27,24 +27,11 @@
         </div>
     </div>
 
-    <div class="agents-card">
-        <table class="agents-table">
-            <thead>
-                <tr>
-                    <th style="width: 15%;">名称</th>
-                    <th style="width: 30%;">描述</th>
-                    <th style="width: 20%;">模型</th>
-                    <th style="width: 20%;">工具</th>
-                    <th style="width: 15%;">操作</th>
-                </tr>
-            </thead>
-            <tbody id="agentsTableBody">
-            </tbody>
-        </table>
+    <div class="agents-grid" id="agentsGrid">
+        </div>
         <div class="agents-empty" id="agentsEmpty" style="display: none;">
             <p>暂无智能体，点击"添加智能体"按钮开始创建</p>
         </div>
-    </div>
 
     <div class="agents-pagination" id="agentsPagination" style="display: none;">
         <span class="pagination-info" id="paginationInfo"></span>
@@ -57,6 +44,39 @@
         </div>
     </div>
 </main>
+
+<!-- 头像编辑弹框 -->
+<div id="avatarEditorModal" class="modal-overlay" style="display:none;">
+    <div class="modal avatar-editor-modal">
+        <div class="modal-header">
+            <h3>编辑头像</h3>
+            <button class="modal-close" onclick="closeAvatarEditor()">&times;</button>
+        </div>
+        <div class="modal-body">
+            <div class="avatar-preview-area">
+                <div class="avatar-preview-large" id="avatarPreviewLarge">
+                    <span id="avatarPreviewPlaceholder">暂无头像</span>
+                </div>
+            </div>
+            <div class="avatar-upload-area">
+                <input type="file" id="avatarFileInput" accept="image/jpeg,image/png,image/gif,image/webp" style="display:none;" onchange="onAvatarFileSelected(event)">
+                <button class="btn-avatar-upload" onclick="document.getElementById('avatarFileInput').click()">
+                    <svg viewBox="0 0 24 24" fill="currentColor" width="18" height="18"><path d="M9 16h6v-6h4l-7-7-7 7h4v6zm-4 2h14v2H5v-2z"/></svg>
+                    本地上传
+                </button>
+                <button class="btn-avatar-clear" id="btnAvatarClear" onclick="clearAvatarSelection()" style="display:none;">
+                    <svg viewBox="0 0 24 24" fill="currentColor" width="18" height="18"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+                    清除头像
+                </button>
+            </div>
+            <div id="avatarUploadStatus" class="avatar-upload-status" style="display:none;"></div>
+        </div>
+        <div class="modal-footer">
+            <button class="btn-cancel" onclick="closeAvatarEditor()">取消</button>
+            <button class="btn-submit" id="btnAvatarSave" onclick="saveAvatar()" disabled>保存</button>
+        </div>
+    </div>
+</div>
 </div>
 
 <th:block layout:fragment="extraCss">

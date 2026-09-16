@@ -13,12 +13,16 @@ import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.WebDataBinder;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
 import javax.servlet.http.HttpServletRequest;
 import java.beans.PropertyEditorSupport;
+import java.io.File;
+import java.io.IOException;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.UUID;
 
 @Controller
 public class AgentController {
@@ -133,5 +137,47 @@ public class AgentController {
         } catch (Exception e) {
             return ResponseBean.fail(e.getMessage());
         }
+    }
+
+    @PostMapping("/api/agent/avatar")
+    @ResponseBody
+    public ResponseBean uploadAvatar(@RequestParam(value = "file", required = false) MultipartFile file,
+                                     @RequestParam("agentId") Long agentId,
+                                     @RequestParam(value = "clear", defaultValue = "false") boolean clear) {
+        Agent agent = agentService.getAgentById(agentId);
+        if (agent == null) {
+            return ResponseBean.fail("智能体不存在");
+        }
+        if (clear) {
+            agent.setAvatar(null);
+            agentService.updateAgent(agent);
+            return ResponseBean.success("");
+        }
+        if (file == null || file.isEmpty()) {
+            return ResponseBean.fail("请选择文件");
+        }
+        String originalName = file.getOriginalFilename();
+        String ext = "";
+        if (originalName != null && originalName.contains(".")) {
+            ext = originalName.substring(originalName.lastIndexOf(".")).toLowerCase();
+        }
+        if (!".jpg".equals(ext) && !".jpeg".equals(ext) && !".png".equals(ext) && !".gif".equals(ext) && !".webp".equals(ext)) {
+            return ResponseBean.fail("仅支持 jpg/jpeg/png/gif/webp 格式");
+        }
+        String fileName = "agent_" + agentId + "_" + UUID.randomUUID().toString().replace("-", "") + ext;
+        File avatarDir = new File(System.getProperty("user.dir"), "avatars");
+        if (!avatarDir.exists()) {
+            avatarDir.mkdirs();
+        }
+        File dest = new File(avatarDir, fileName);
+        try {
+            file.transferTo(dest);
+        } catch (IOException e) {
+            return ResponseBean.fail("上传失败: " + e.getMessage());
+        }
+        String avatarUrl = "/avatars/" + fileName;
+        agent.setAvatar(avatarUrl);
+        agentService.updateAgent(agent);
+        return ResponseBean.success(avatarUrl);
     }
 }

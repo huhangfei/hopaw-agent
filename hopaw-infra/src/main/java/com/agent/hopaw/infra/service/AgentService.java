@@ -90,6 +90,7 @@ public class AgentService implements IAgentService {
             existing.setVectorToolSearch(agent.getVectorToolSearch() != null ? agent.getVectorToolSearch() : true);
             existing.setVectorToolSearchMaxResults(agent.getVectorToolSearchMaxResults() != null ? agent.getVectorToolSearchMaxResults() : 5);
             existing.setEnableAllTools(agent.getEnableAllTools());
+            existing.setAvatar(agent.getAvatar());
             agentMapper.update(existing);
         }
     }

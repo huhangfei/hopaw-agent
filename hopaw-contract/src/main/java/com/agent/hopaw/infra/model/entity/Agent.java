@@ -28,6 +28,7 @@ public class Agent {
     private Boolean enableAllTools;
     private String extParams;
     private String userId;
+    private String avatar;
 
 
     public Agent() {}
@@ -188,5 +189,13 @@ public class Agent {
 
     public void setUserId(String userId) {
         this.userId = userId;
+    }
+
+    public String getAvatar() {
+        return avatar;
+    }
+
+    public void setAvatar(String avatar) {
+        this.avatar = avatar;
     }
 }
