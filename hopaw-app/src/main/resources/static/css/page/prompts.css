@@ -1,0 +1,364 @@
+/* ========== 提示词管理 ========== */
+
+.prompts-container {
+    padding: 24px;
+    max-width: 1200px;
+    margin: 0 auto;
+}
+
+.prompts-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+    flex-wrap: wrap;
+    gap: 12px;
+}
+
+.prompts-header h2 {
+    margin: 0;
+    font-size: 20px;
+    color: #333;
+}
+
+.prompts-actions {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex-wrap: wrap;
+}
+
+.prompts-search {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+}
+
+.prompts-search input,
+.prompts-search select {
+    padding: 7px 12px;
+    border: 1px solid #ddd;
+    border-radius: 6px;
+    font-size: 13px;
+    background: #fff;
+    color: #333;
+}
+
+.prompts-search input {
+    width: 180px;
+}
+
+.prompts-search select {
+    min-width: 100px;
+}
+
+.btn-primary {
+    padding: 7px 16px;
+    background: #667eea;
+    color: #fff;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 13px;
+    white-space: nowrap;
+}
+.btn-primary:hover {
+    background: #5a6fd6;
+}
+
+/* ========== 卡片网格 ========== */
+
+.prompts-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    gap: 16px;
+    min-height: 200px;
+}
+
+.prompt-card {
+    background: #fff;
+    border: 1px solid #e8e8e8;
+    border-radius: 10px;
+    padding: 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    transition: box-shadow 0.2s, border-color 0.2s;
+}
+.prompt-card:hover {
+    border-color: #c0c8e8;
+    box-shadow: 0 2px 12px rgba(0,0,0,0.06);
+}
+
+.prompt-card-top {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 8px;
+}
+
+.prompt-card-name {
+    font-size: 15px;
+    font-weight: 600;
+    color: #333;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    flex: 1;
+    min-width: 0;
+}
+
+.prompt-card-heat {
+    display: inline-flex;
+    align-items: center;
+    gap: 3px;
+    padding: 2px 8px;
+    background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+    color: #fff;
+    border-radius: 10px;
+    font-size: 11px;
+    font-weight: 600;
+    white-space: nowrap;
+    flex-shrink: 0;
+}
+.prompt-card-heat.zero {
+    background: #d0d0d0;
+}
+
+.prompt-card-content {
+    font-size: 13px;
+    color: #666;
+    line-height: 1.5;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+    word-break: break-word;
+}
+
+.prompt-card-tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+}
+
+.prompt-tag {
+    display: inline-block;
+    padding: 2px 8px;
+    background: #eef1ff;
+    color: #667eea;
+    border-radius: 10px;
+    font-size: 11px;
+    white-space: nowrap;
+}
+
+.prompt-card-footer {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-top: auto;
+    padding-top: 8px;
+    border-top: 1px solid #f0f0f0;
+}
+
+.prompt-card-time {
+    font-size: 11px;
+    color: #999;
+}
+
+.prompt-card-actions {
+    display: flex;
+    gap: 6px;
+}
+
+.prompt-card-actions button {
+    padding: 4px 10px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    background: #fff;
+    color: #666;
+    cursor: pointer;
+    font-size: 12px;
+    transition: all 0.15s;
+}
+.prompt-card-actions button:hover {
+    border-color: #667eea;
+    color: #667eea;
+}
+.prompt-card-actions .btn-copy {
+    border-color: #52c41a;
+    color: #52c41a;
+}
+.prompt-card-actions .btn-copy:hover {
+    background: #52c41a;
+    color: #fff;
+}
+.prompt-card-actions .btn-delete {
+    border-color: #ff4d4f;
+    color: #ff4d4f;
+}
+.prompt-card-actions .btn-delete:hover {
+    background: #ff4d4f;
+    color: #fff;
+}
+
+/* 空状态 */
+.prompts-empty {
+    grid-column: 1 / -1;
+    text-align: center;
+    padding: 60px 20px;
+    color: #999;
+    font-size: 14px;
+}
+
+/* 分页 */
+.prompts-pagination {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 12px;
+    margin-top: 20px;
+}
+
+.prompts-page-btn {
+    padding: 5px 14px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    background: #fff;
+    color: #333;
+    cursor: pointer;
+    font-size: 12px;
+}
+.prompts-page-btn:hover {
+    background: #f5f5f5;
+}
+
+.prompts-page-info {
+    font-size: 12px;
+    color: #999;
+}
+
+/* 弹框表单 */
+.form-group {
+    margin-bottom: 14px;
+}
+
+.form-group label {
+    display: block;
+    font-size: 13px;
+    font-weight: 500;
+    color: #333;
+    margin-bottom: 5px;
+}
+
+.form-hint {
+    font-weight: 400;
+    color: #999;
+    font-size: 12px;
+}
+
+.form-group input,
+.form-group textarea {
+    width: 100%;
+    padding: 8px 12px;
+    border: 1px solid #ddd;
+    border-radius: 6px;
+    font-size: 13px;
+    box-sizing: border-box;
+    background: #fff;
+    color: #333;
+}
+
+.form-group textarea {
+    resize: vertical;
+    font-family: inherit;
+}
+
+.form-group input:focus,
+.form-group textarea:focus {
+    outline: none;
+    border-color: #667eea;
+}
+
+.btn-cancel {
+    padding: 7px 16px;
+    background: #f0f0f0;
+    color: #333;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 13px;
+}
+.btn-cancel:hover {
+    background: #e0e0e0;
+}
+
+/* ========== 暗色主题 ========== */
+
+body.dark-theme .prompts-header h2 {
+    color: #e0e0e0;
+}
+
+body.dark-theme .prompts-search input,
+body.dark-theme .prompts-search select {
+    background: #2d3a5c;
+    border-color: #3d4a6c;
+    color: #e0e0e0;
+}
+
+body.dark-theme .prompt-card {
+    background: #1a1f36;
+    border-color: #2d3a5c;
+}
+body.dark-theme .prompt-card:hover {
+    border-color: #4a5580;
+}
+
+body.dark-theme .prompt-card-name {
+    color: #e0e0e0;
+}
+
+body.dark-theme .prompt-card-content {
+    color: #aaa;
+}
+
+body.dark-theme .prompt-tag {
+    background: #2d3570;
+    color: #8ba3ff;
+}
+
+body.dark-theme .prompt-card-footer {
+    border-top-color: #2d3a5c;
+}
+
+body.dark-theme .prompt-card-actions button {
+    background: #2d3a5c;
+    border-color: #3d4a6c;
+    color: #c0c0c0;
+}
+body.dark-theme .prompt-card-actions button:hover {
+    border-color: #667eea;
+    color: #8ba3ff;
+}
+
+body.dark-theme .prompts-page-btn {
+    background: #2d3a5c;
+    border-color: #3d4a6c;
+    color: #c0c0c0;
+}
+
+body.dark-theme .form-group label {
+    color: #e0e0e0;
+}
+
+body.dark-theme .form-group input,
+body.dark-theme .form-group textarea {
+    background: #2d3a5c;
+    border-color: #3d4a6c;
+    color: #e0e0e0;
+}
+
+body.dark-theme .btn-cancel {
+    background: #2d3a5c;
+    color: #c0c0c0;
+}

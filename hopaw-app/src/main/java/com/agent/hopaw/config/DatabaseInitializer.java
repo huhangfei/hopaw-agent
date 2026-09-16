@@ -611,6 +611,20 @@ public class DatabaseInitializer implements CommandLineRunner {
             stmt.execute("CREATE INDEX IF NOT EXISTS idx_login_log_result ON login_log(result)");
             stmt.execute("CREATE INDEX IF NOT EXISTS idx_login_log_time ON login_log(create_time)");
 
+            // 提示词表
+            stmt.execute("CREATE TABLE IF NOT EXISTS prompts (" +
+                    "id INTEGER PRIMARY KEY AUTOINCREMENT, " +
+                    "name TEXT NOT NULL, " +
+                    "content TEXT NOT NULL, " +
+                    "tags TEXT, " +
+                    "heat INTEGER DEFAULT 0, " +
+                    "user_id TEXT NOT NULL, " +
+                    "create_time TIMESTAMP DEFAULT (datetime('now','localtime')), " +
+                    "update_time TIMESTAMP DEFAULT (datetime('now','localtime'))" +
+                    ")");
+            stmt.execute("CREATE INDEX IF NOT EXISTS idx_prompts_user ON prompts(user_id)");
+            stmt.execute("CREATE INDEX IF NOT EXISTS idx_prompts_heat ON prompts(heat DESC)");
+
             log.info("Database tables created");
         }
     }
