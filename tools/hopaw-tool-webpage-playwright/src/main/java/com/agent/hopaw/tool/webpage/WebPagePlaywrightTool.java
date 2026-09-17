@@ -177,12 +177,14 @@ public class WebPagePlaywrightTool implements AgentTool {
     }
 
     @ToolSecurityLevel(ToolSecurityLevel.Level.SAFE)
-    @Tool(value = {"获取网页用Playwright", "获取网页内容，输入URL地址，返回网页的纯文本内容"})
+    @Tool(value = {"获取网页用Playwright", "获取网页内容，输入URL地址，返回网页的纯文本或HTML源文件"})
     public String fetchWebPageByPlaywright(@P(description = "URL地址") String url,
-                                           @P(description = "返回文本最大长度，超出截断，默认5000", required = false) Integer maxLength) {
+                                           @P(description = "返回文本最大长度，超出截断，默认5000", required = false) Integer maxLength,
+                                           @P(description = "返回格式: text=纯文本(默认), html=HTML源文件", required = false) String format) {
         // 确保 Playwright 已初始化
         ensureInitialized();
         int maxLen = (maxLength != null && maxLength > 0) ? maxLength : 5000;
+        String fmt = (format != null && !format.trim().isEmpty()) ? format.trim() : "text";
 
         BrowserContext context = null;
         Page page = null;
@@ -213,9 +215,11 @@ public class WebPagePlaywrightTool implements AgentTool {
 
             String html = page.content();
 
-            String text = Jsoup.clean(html, Safelist.none());
-            text = Jsoup.parse(text).text();
-
+            if ("html".equalsIgnoreCase(fmt)) {
+                return html.length() > maxLen ? html.substring(0, maxLen) + "..." : html;
+            }
+            // 纯文本：Jsoup.clean(Safelist.none()) 输出仍是 HTML 实体，需再 parse().text() 解码
+            String text = Jsoup.parse(html).text();
             return text.length() > maxLen ? text.substring(0, maxLen) + "..." : text;
 
         } catch (Exception e) {

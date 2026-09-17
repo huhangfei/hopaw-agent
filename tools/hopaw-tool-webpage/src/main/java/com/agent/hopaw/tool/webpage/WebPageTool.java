@@ -127,12 +127,16 @@ public class WebPageTool implements AgentTool {
     }
 
     /**
-     * 提取页面文本
+     * 提取页面内容
+     * @param format text=纯文本, html=源文件
      */
-    private String extractText(HtmlPage page, int maxLength) {
+    private String extractContent(HtmlPage page, int maxLength, String format) {
         String html = page.asXml();
-        String text = Jsoup.clean(html, Safelist.none());
-        text = Jsoup.parse(text).text();
+        if ("html".equalsIgnoreCase(format)) {
+            return html.length() > maxLength ? html.substring(0, maxLength) + "..." : html;
+        }
+        // 纯文本：Jsoup.clean(Safelist.none()) 输出仍是 HTML 实体，需再 parse().text() 解码
+        String text = Jsoup.parse(html).text();
         if (text.isEmpty()) {
             return "获取网页失败: 页面没有可提取的文本内容";
         }
@@ -140,13 +144,15 @@ public class WebPageTool implements AgentTool {
     }
 
     @ToolSecurityLevel(ToolSecurityLevel.Level.SAFE)
-    @Tool(value = {"获取网页", "获取网页内容，输入URL地址，返回网页的纯文本内容"})
+    @Tool(value = {"获取网页", "获取网页内容，输入URL地址，返回网页的纯文本或HTML源文件"})
     public String fetchWebPage(@P(description = "URL地址") String url,
-                               @P(description = "返回文本最大长度，超出截断，默认5000", required = false) Integer maxLength) {
+                               @P(description = "返回文本最大长度，超出截断，默认5000", required = false) Integer maxLength,
+                               @P(description = "返回格式: text=纯文本(默认), html=HTML源文件", required = false) String format) {
         if (url == null || url.trim().isEmpty()) {
             return "获取网页失败: URL不能为空";
         }
         int maxLen = (maxLength != null && maxLength > 0) ? maxLength : 5000;
+        String fmt = (format != null && !format.trim().isEmpty()) ? format.trim() : "text";
         String target = url.trim();
 
         // 首选启用 JS 渲染抓取（独立 WebClient，支持并发）
@@ -155,13 +161,13 @@ public class WebPageTool implements AgentTool {
             HtmlPage page = client.getPage(target);
             // 等待页面中的异步 JS 渲染完成（如前端框架动态加载内容）
             client.waitForBackgroundJavaScript(WAIT_JS_TIMEOUT);
-            return extractText(page, maxLen);
+            return extractContent(page, maxLen, fmt);
         } catch (Throwable e) {
             // JS 引擎编译超限（如页面内存在超大 JS 方法）或相关类加载失败时，降级为无 JS 模式重新抓取；
             // 注意 NoClassDefFoundError 等 Error 不是 Exception，必须 catch Throwable 才能兜住
             if (isClassSizeError(e)) {
                 logger.warn("JS引擎编译异常，降级为无JS模式抓取: url={}, cause={}", target, e.getMessage());
-                return fetchWithoutJs(target, maxLen);
+                return fetchWithoutJs(target, maxLen, fmt);
             }
             logger.error("获取网页失败:url=" + target, e);
             return "获取网页失败: " + e.getMessage();
@@ -174,11 +180,11 @@ public class WebPageTool implements AgentTool {
     /**
      * 无 JS 模式抓取（兜底：至少能提取静态 HTML 文本；独立 WebClient，支持并发）
      */
-    private String fetchWithoutJs(String url, int maxLength) {
+    private String fetchWithoutJs(String url, int maxLength, String format) {
         WebClient client = createWebClient(false);
         try {
             HtmlPage page = client.getPage(url);
-            return extractText(page, maxLength);
+            return extractContent(page, maxLength, format);
         } catch (Throwable e) {
             logger.error("无JS模式获取网页失败:url=" + url, e);
             return "获取网页失败: " + e.getMessage();
