@@ -28,6 +28,8 @@ services:
       - ./data/exports:/app/exports
       # 技能目录默认为相对路径 skills（可在系统设置中改为 /app/data/skills），挂载兜底
       - ./data/skills:/app/skills
+      #头像
+      - ./data/avatars:/app/avatars
       - ./data/ms-playwright:/root/.cache/ms-playwright
     # 按需调整 JVM 内存
     # mem_limit: 2g
