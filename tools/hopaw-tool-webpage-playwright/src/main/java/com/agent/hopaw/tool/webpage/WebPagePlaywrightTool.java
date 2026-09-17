@@ -79,7 +79,12 @@ public class WebPagePlaywrightTool implements AgentTool {
                 try {
                     Thread.currentThread().setContextClassLoader(this.getClass().getClassLoader());
                     logger.info("Initializing Playwright...");
-                    playwright = Playwright.create();
+                    // 跳过浏览器自动下载，避免Docker环境OOM被Kill
+                    // 浏览器需预装：mvn exec:java -e -Dexec.mainClass=com.microsoft.playwright.CLI -Dexec.args="install chromium"
+                    java.util.Map<String, String> env = new java.util.HashMap<>();
+                    env.put("PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD", "1");
+                    Playwright.CreateOptions createOptions = new Playwright.CreateOptions().setEnv(env);
+                    playwright = Playwright.create(createOptions);
                     BrowserType.LaunchOptions launchOptions = new BrowserType.LaunchOptions()
                             .setHeadless(true)
                             .setArgs(java.util.Arrays.asList(

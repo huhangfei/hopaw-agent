@@ -25,6 +25,9 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     libpango-1.0-0 libcairo2 libasound2 libxshmfence1 \
     && rm -rf /var/lib/apt/lists/*
 
+# Playwright: 跳过运行时浏览器下载（Docker构建时预装）
+ENV PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD=1
+
 # 应用自身类 jar
 COPY hopaw-app/target/hopaw-app-1.0.0.jar app.jar
 

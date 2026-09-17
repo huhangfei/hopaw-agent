@@ -1,6 +1,6 @@
 # hopaw-agent 容器编排
 # 使用：先执行 docker-build.bat 构建镜像，再 docker-compose up -d
-# 数据持久化：SQLite 库与全部运行时目录统一挂载在 ./data 下，容器重建不丢数据
+# 数据持久化：SQLite 库与全部运行时目录统一挂载在./data 下，容器重建不丢数据
 services:
   hopaw-agent:
     image: hopaw-agent:1.0.0
@@ -11,7 +11,7 @@ services:
       - "8080:8080"
     environment:
       TZ: Asia/Shanghai
-      # 运行时目录统一重定向到 /app/data（环境变量优先级高于 application-*.properties）
+      # 运行时目录统一重定向到 /app/data（环境变量优先级高于 application-*.properties�?
       SPRING_DATASOURCE_URL: jdbc:sqlite:/app/data/agent.db
       AGENT_PLUGIN_DIR: /app/data/plugins
       HOPAW_ATTACHMENT_DIR: /app/data/attachments
@@ -30,6 +30,5 @@ services:
       - ./data/skills:/app/skills
       #头像
       - ./data/avatars:/app/avatars
-      - ./data/ms-playwright:/root/.cache/ms-playwright
     # 按需调整 JVM 内存
-    # mem_limit: 2g
+    mem_limit: 1.5g
