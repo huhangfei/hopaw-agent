@@ -150,7 +150,7 @@ public class ProjectIterateService implements IProjectIterateService {
         int maxCount = 20;
         StringBuilder sb=new StringBuilder();
         // 注入项目日志，提供历史信息
-        List<ProjectLog> logs =projectLogService.getLogsPage(projectId, 1, 100);
+        List<ProjectLog> logs =projectLogService.getLogsPage(projectId, 1, 200);
         if (logs != null && !logs.isEmpty()) {
             // 合并连续的 auto_iterate 记录
             List<String> mergedLines = new ArrayList<>();
@@ -180,9 +180,9 @@ public class ProjectIterateService implements IProjectIterateService {
                     i++;
                 }
             }
-            // 取最新的 maxCount 条
-            int start = Math.max(0, mergedLines.size() - maxCount);
-            List<String> displayLines = mergedLines.subList(start, mergedLines.size());
+            // 取最新的 maxCount 条（列表已是新→旧排序，取前 maxCount 条）
+            List<String> displayLines = mergedLines.size() > maxCount
+                    ? mergedLines.subList(0, maxCount) : mergedLines;
             sb.append("\n--- 项目日志---\n");
             if (mergedLines.size() > maxCount) {
                 sb.append("\n（以下仅展示最近日志，如需了解更早的历史关键结论，请使用项目工具查询项目日志。\n");
