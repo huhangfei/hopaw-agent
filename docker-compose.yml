@@ -11,6 +11,7 @@ services:
       - "8080:8080"
     environment:
       TZ: Asia/Shanghai
+      JAVA_OPTS: "-Xms1g -Xmx2g"
       # 运行时目录统一重定向到 /app/data（环境变量优先级高于 application-*.properties�?
       SPRING_DATASOURCE_URL: jdbc:sqlite:/app/data/agent.db
       AGENT_PLUGIN_DIR: /app/data/plugins
@@ -30,5 +31,8 @@ services:
       - ./data/skills:/app/skills
       #头像
       - ./data/avatars:/app/avatars
-    # 按需调整 JVM 内存
-    mem_limit: 1.5g
+      # Playwright 浏览器缓存持久化（避免每次容器重建重下 970MB）
+      - ./data/ms-playwright:/root/.cache/ms-playwright
+    # JVM 默认堆为限制值的 25%；Chromium 网页插件运行时渲染页面还需数百 MB 余量，
+    # 过低会导致浏览器安装/渲染时被 OOM Kill（exit 137），按需调整
+    mem_limit: 3g

@@ -209,6 +209,9 @@ public class SshTool implements AgentTool {
         String sessionKey = host + ":" + portVal;
 
         try {
+
+            sshDisconnect(sessionKey);
+
             Session session = jschConnect(sessionKey, username, host, portVal, password);
             return "成功：连接已建立，sessionKey=" + sessionKey;
         } catch (JSchException e) {
