@@ -123,7 +123,7 @@
     min-width: 0;
 }
 
-.rank-card-name {
+.rank-card-user {
     font-size: 15px;
     font-weight: 600;
     color: #333;
@@ -132,7 +132,7 @@
     white-space: nowrap;
 }
 
-.rank-card-user {
+.rank-card-agent {
     font-size: 12px;
     color: #999;
     margin-top: 2px;
@@ -219,11 +219,11 @@ body.dark-theme .rank-card-avatar-icon {
     color: #666;
 }
 
-body.dark-theme .rank-card-name {
+body.dark-theme .rank-card-user {
     color: #e0e0e0;
 }
 
-body.dark-theme .rank-card-user {
+body.dark-theme .rank-card-agent {
     color: #888;
 }
 
