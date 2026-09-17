@@ -251,7 +251,8 @@ public class ImageOperationTool implements AgentTool {
             ImageTranscoder transcoder;
             String format;
             if (name.endsWith(".png")) {
-                transcoder = new PNGTranscoder();
+                PNGTranscoder png = new PNGTranscoder();
+                transcoder = png;
                 format = "image/png";
             } else if (name.endsWith(".jpg") || name.endsWith(".jpeg")) {
                 JPEGTranscoder jpeg = new JPEGTranscoder();
@@ -265,6 +266,15 @@ public class ImageOperationTool implements AgentTool {
             Path parent = path.getParent();
             if (parent != null) {
                 Files.createDirectories(parent);
+            }
+
+            // 解析SVG原始尺寸，2倍缩放输出高清PNG
+            float scale = 2.0f;
+            float svgWidth = parseSvgWidth(svgCode);
+            float svgHeight = parseSvgHeight(svgCode);
+            if (svgWidth > 0 && svgHeight > 0) {
+                transcoder.addTranscodingHint(ImageTranscoder.KEY_WIDTH, svgWidth * scale);
+                transcoder.addTranscodingHint(ImageTranscoder.KEY_HEIGHT, svgHeight * scale);
             }
 
             long start = System.currentTimeMillis();
@@ -585,6 +595,38 @@ public class ImageOperationTool implements AgentTool {
     @Override
     public void asyncInit() {
         reloadConfig();
+    }
+
+    /**
+     * 解析SVG宽度（支持width属性和viewBox）
+     */
+    private float parseSvgWidth(String svgCode) {
+        // 尝试从width属性解析
+        java.util.regex.Matcher m = java.util.regex.Pattern.compile("width=[\"']([\\d.]+)(?:px)?[\"']", java.util.regex.Pattern.CASE_INSENSITIVE).matcher(svgCode);
+        if (m.find()) {
+            try { return Float.parseFloat(m.group(1)); } catch (Exception ignored) {}
+        }
+        // 尝试从viewBox解析
+        m = java.util.regex.Pattern.compile("viewBox=[\"'][\\d.]+\\s+[\\d.]+\\s+([\\d.]+)\\s+([\\d.]+)[\"']").matcher(svgCode);
+        if (m.find()) {
+            try { return Float.parseFloat(m.group(1)); } catch (Exception ignored) {}
+        }
+        return -1;
+    }
+
+    /**
+     * 解析SVG高度（支持height属性和viewBox）
+     */
+    private float parseSvgHeight(String svgCode) {
+        java.util.regex.Matcher m = java.util.regex.Pattern.compile("height=[\"']([\\d.]+)(?:px)?[\"']", java.util.regex.Pattern.CASE_INSENSITIVE).matcher(svgCode);
+        if (m.find()) {
+            try { return Float.parseFloat(m.group(1)); } catch (Exception ignored) {}
+        }
+        m = java.util.regex.Pattern.compile("viewBox=[\"'][\\d.]+\\s+[\\d.]+\\s+([\\d.]+)\\s+([\\d.]+)[\"']").matcher(svgCode);
+        if (m.find()) {
+            try { return Float.parseFloat(m.group(2)); } catch (Exception ignored) {}
+        }
+        return -1;
     }
 
     @Override
