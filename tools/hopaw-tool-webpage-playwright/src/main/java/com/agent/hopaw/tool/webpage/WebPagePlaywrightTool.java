@@ -80,7 +80,17 @@ public class WebPagePlaywrightTool implements AgentTool {
                     Thread.currentThread().setContextClassLoader(this.getClass().getClassLoader());
                     logger.info("Initializing Playwright...");
                     playwright = Playwright.create();
-                    browser = playwright.chromium().launch();
+                    BrowserType.LaunchOptions launchOptions = new BrowserType.LaunchOptions()
+                            .setHeadless(true)
+                            .setArgs(java.util.Arrays.asList(
+                                    "--no-sandbox",
+                                    "--disable-setuid-sandbox",
+                                    "--disable-dev-shm-usage",
+                                    "--disable-gpu",
+                                    "--disable-extensions",
+                                    "--disable-background-networking"
+                            ));
+                    browser = playwright.chromium().launch(launchOptions);
                     initialized = true;
                     logger.info("WebPageTool Playwright initialized successfully");
                 } catch (Exception e) {
