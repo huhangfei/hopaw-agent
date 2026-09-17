@@ -178,10 +178,12 @@ public class WebPagePlaywrightTool implements AgentTool {
 
     @ToolSecurityLevel(ToolSecurityLevel.Level.SAFE)
     @Tool(value = {"获取网页用Playwright", "获取网页内容，输入URL地址，返回网页的纯文本内容"})
-    public String fetchWebPageByPlaywright(@P(description = "URL地址") String url) {
+    public String fetchWebPageByPlaywright(@P(description = "URL地址") String url,
+                                           @P(description = "返回文本最大长度，超出截断，默认5000", required = false) Integer maxLength) {
         // 确保 Playwright 已初始化
         ensureInitialized();
-        
+        int maxLen = (maxLength != null && maxLength > 0) ? maxLength : 5000;
+
         BrowserContext context = null;
         Page page = null;
         try {
@@ -214,7 +216,7 @@ public class WebPagePlaywrightTool implements AgentTool {
             String text = Jsoup.clean(html, Safelist.none());
             text = Jsoup.parse(text).text();
 
-            return text.length() > 50000 ? text.substring(0, 50000) + "..." : text;
+            return text.length() > maxLen ? text.substring(0, maxLen) + "..." : text;
 
         } catch (Exception e) {
             logger.error("获取网页失败:url="+url, e);
