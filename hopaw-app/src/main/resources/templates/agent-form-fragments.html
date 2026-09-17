@@ -164,6 +164,7 @@
         <div class="modal-body">
             <form th:action="@{/agent/update}" method="post" class="modal-form" id="editAgentFormFragment" onsubmit="return false;">
                 <input type="hidden" name="id" id="editAgentIdFragment" th:value="${agent.id}">
+                <input type="hidden" name="avatar" th:value="${agent.avatar}">
                 <div class="form-left">
                     <div class="form-group">
                         <label>名称</label>

@@ -163,6 +163,11 @@ function toggleAllTools(mode) {
     if (container) {
         var excludeMode = !!(checkbox && checkbox.checked);
         container.classList.toggle('exclude-mode', excludeMode);
+        if (excludeMode) {
+            container.querySelectorAll('.checkbox-group input[type="checkbox"]').forEach(function(cb) {
+                cb.checked = false;
+            });
+        }
         var title = document.getElementById(prefix + 'ToolPanelTitleFragment');
         var hint = document.getElementById(prefix + 'ToolModeHintFragment');
         if (excludeMode) {
