@@ -181,13 +181,15 @@ public class ProjectIterateService implements IProjectIterateService {
                 }
             }
             // 取最新的 maxCount 条（列表已是新→旧排序，取前 maxCount 条）
-            List<String> displayLines = mergedLines.size() > maxCount
-                    ? mergedLines.subList(0, maxCount) : mergedLines;
+            List<String> displayLines = new ArrayList<>(mergedLines.size() > maxCount
+                    ? mergedLines.subList(0, maxCount) : mergedLines);
             sb.append("\n--- 项目日志---\n");
             if (mergedLines.size() > maxCount) {
                 sb.append("\n（以下仅展示最近日志，如需了解更早的历史关键结论，请使用项目工具查询项目日志。\n");
             }
             sb.append("\n--- 本次").append(displayLines.size()).append("条 ---\n");
+            // 反转为时间正序（从老到新）
+            java.util.Collections.reverse(displayLines);
             for (String line : displayLines) {
                 sb.append(line).append("\n");
             }
