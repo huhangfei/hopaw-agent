@@ -149,6 +149,8 @@ function renderAgentList(list) {
                         '<svg viewBox="0 0 24 24" fill="currentColor" width="14" height="14"><path d="M21 11.18V8l-6-4.5L9 8v3.18L3 14v2l6-4.5V19l2 1.5V10.5L21 11.18z"/></svg>' +
                         escapeHtml(modelName) +
                     '</span>' +
+                    (agent.enableThinking ? '<span class="agent-tag agent-tag-thinking">启用思考</span>' : '') +
+                    (agent.reasoningEffort ? '<span class="agent-tag agent-tag-effort">' + escapeHtml(reasoningEffortLabel(agent.reasoningEffort)) + '</span>' : '') +
                 '</div>' +
             '</div>' +
             (toolsHtml ?
@@ -346,4 +348,9 @@ function saveAvatar() {
             saveBtn.disabled = false;
         });
     }
+}
+
+function reasoningEffortLabel(code) {
+    var map = { none:'无', minimal:'极轻', low:'低', medium:'中', high:'高', xhigh:'极高', max:'最大' };
+    return map[code] || code;
 }
