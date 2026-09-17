@@ -17,15 +17,15 @@ function loadAvatarRankings() {
 }
 
 function renderAvatarRankings(list) {
-    var tbody = document.getElementById('avatarRankBody');
+    var grid = document.getElementById('avatarRankGrid');
     var empty = document.getElementById('avatarRankEmpty');
     var countEl = document.getElementById('avatarRankCount');
-    if (!tbody) return;
+    if (!grid) return;
 
     countEl.textContent = '共 ' + list.length + ' 个虚拟人';
 
     if (!list.length) {
-        tbody.innerHTML = '';
+        grid.innerHTML = '';
         empty.style.display = '';
         return;
     }
@@ -36,23 +36,35 @@ function renderAvatarRankings(list) {
         var r = list[i];
         var rank = i + 1;
         var medal = getMedal(rank);
-        var rankClass = rank <= 3 ? 'rank-top' : '';
-        html += '<tr class="' + rankClass + '">'
-            + '<td class="col-rank">' + medal + '</td>'
-            + '<td class="col-user">' + escapeHtml(r.userId || '') + '</td>'
-            + '<td class="col-agent">' + escapeHtml(r.agentName || String(r.agentId || '')) + '</td>'
-            + '<td class="col-level"><span class="rank-level-badge">Lv.' + r.level + '</span></td>'
-            + '<td class="col-title">' + escapeHtml(r.title || '') + '</td>'
-            + '<td class="col-tokens">' + formatTokens(r.totalTokens || 0) + '</td>'
-            + '</tr>';
+        var rankClass = rank <= 3 ? 'rank-card-top' : '';
+        var avatarHtml = '';
+        if (r.agentAvatar) {
+            avatarHtml = '<img src="' + escapeAttr(r.agentAvatar) + '" alt="头像" class="rank-card-avatar-img">';
+        } else {
+            avatarHtml = '<svg viewBox="0 0 24 24" fill="currentColor" class="rank-card-avatar-icon"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 3c1.66 0 3 1.34 3 3s-1.34 3-3 3-3-1.34-3-3 1.34-3 3-3zm0 14.2c-2.5 0-4.71-1.28-6-3.22.03-1.99 4-3.08 6-3.08 1.99 0 5.97 1.09 6 3.08-1.29 1.94-3.5 3.22-6 3.22z"/></svg>';
+        }
+
+        html += '<div class="rank-card ' + rankClass + '">'
+            + '<div class="rank-card-rank">' + medal + '</div>'
+            + '<div class="rank-card-avatar">' + avatarHtml + '</div>'
+            + '<div class="rank-card-info">'
+            +   '<div class="rank-card-name">' + escapeHtml(r.agentName || '智能体') + '</div>'
+            +   '<div class="rank-card-user">' + escapeHtml(r.userId || '') + '</div>'
+            + '</div>'
+            + '<div class="rank-card-right">'
+            +   '<span class="rank-level-badge">Lv.' + r.level + '</span>'
+            +   '<div class="rank-card-title">' + escapeHtml(r.title || '') + '</div>'
+            +   '<div class="rank-card-tokens">' + formatTokens(r.totalTokens || 0) + ' Token</div>'
+            + '</div>'
+            + '</div>';
     }
-    tbody.innerHTML = html;
+    grid.innerHTML = html;
 }
 
 function getMedal(rank) {
-    if (rank === 1) return '<span class="medal medal-gold" title="第1名">🥇 1</span>';
-    if (rank === 2) return '<span class="medal medal-silver" title="第2名">🥈 2</span>';
-    if (rank === 3) return '<span class="medal medal-bronze" title="第3名">🥉 3</span>';
+    if (rank === 1) return '<span class="medal medal-gold" title="第1名">🥇</span>';
+    if (rank === 2) return '<span class="medal medal-silver" title="第2名">🥈</span>';
+    if (rank === 3) return '<span class="medal medal-bronze" title="第3名">🥉</span>';
     return '<span class="medal medal-normal">' + rank + '</span>';
 }
 
@@ -65,4 +77,9 @@ function formatTokens(tokens) {
 function escapeHtml(str) {
     if (!str) return '';
     return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+}
+
+function escapeAttr(str) {
+    if (!str) return '';
+    return str.replace(/"/g, '&quot;').replace(/'/g, '&#39;');
 }

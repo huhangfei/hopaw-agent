@@ -252,11 +252,16 @@ public class AvatarService {
                 row.put("userId", config.getUserId());
                 row.put("agentId", config.getAgentId());
                 String agentName = "";
+                String agentAvatar = "";
                 try {
                     com.agent.hopaw.infra.model.entity.Agent agent = agentService.getAgentById(config.getAgentId());
-                    if (agent != null) agentName = agent.getName();
+                    if (agent != null) {
+                        agentName = agent.getName();
+                        agentAvatar = agent.getAvatar() != null ? agent.getAvatar() : "";
+                    }
                 } catch (Exception ignored) {}
                 row.put("agentName", agentName);
+                row.put("agentAvatar", agentAvatar);
                 row.put("level", info.getIntimacyLevel());
                 row.put("title", info.getTitle());
                 row.put("totalTokens", totalTokens);
