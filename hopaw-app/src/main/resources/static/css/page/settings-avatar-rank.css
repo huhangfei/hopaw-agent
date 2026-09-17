@@ -10,8 +10,9 @@
 .avatar-rank-header {
     display: flex;
     align-items: center;
-    justify-content: space-between;
+    justify-content: center;
     margin-bottom: 16px;
+    gap: 12px;
 }
 
 .avatar-rank-header h3 {
@@ -30,6 +31,8 @@
     display: flex;
     flex-direction: column;
     gap: 10px;
+    max-width: 600px;
+    margin: 0 auto;
 }
 
 .rank-card {
@@ -49,7 +52,6 @@
 }
 
 .rank-card-top {
-    background: linear-gradient(135deg, #fffbe6 0%, #fff9db 100%);
     box-shadow: 0 2px 8px rgba(255, 193, 7, 0.15);
 }
 
@@ -121,6 +123,7 @@
 .rank-card-info {
     flex: 1;
     min-width: 0;
+    text-align: center;
 }
 
 .rank-card-user {
@@ -194,7 +197,6 @@ body.dark-theme .rank-card:hover {
 }
 
 body.dark-theme .rank-card-top {
-    background: linear-gradient(135deg, rgba(255, 215, 0, 0.08) 0%, rgba(255, 215, 0, 0.04) 100%);
     box-shadow: 0 2px 8px rgba(255, 193, 7, 0.1);
 }
 
