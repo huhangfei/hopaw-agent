@@ -150,19 +150,46 @@ public class ProjectIterateService implements IProjectIterateService {
         int maxCount = 20;
         StringBuilder sb=new StringBuilder();
         // 注入项目日志，提供历史信息
-        List<ProjectLog> logs =projectLogService.getLogsPage(projectId, 1, maxCount);
+        List<ProjectLog> logs =projectLogService.getLogsPage(projectId, 1, 100);
         if (logs != null && !logs.isEmpty()) {
+            // 合并连续的 auto_iterate 记录
+            List<String> mergedLines = new ArrayList<>();
+            int i = 0;
+            while (i < logs.size()) {
+                ProjectLog log = logs.get(i);
+                if ("auto_iterate".equals(log.getAction())) {
+                    int count = 1;
+                    String lastTime = log.getCreateTime() != null ? log.getCreateTime().format(TIME_FMT) : "";
+                    int j = i + 1;
+                    while (j < logs.size() && "auto_iterate".equals(logs.get(j).getAction())) {
+                        count++;
+                        if (logs.get(j).getCreateTime() != null) {
+                            lastTime = logs.get(j).getCreateTime().format(TIME_FMT);
+                        }
+                        j++;
+                    }
+                    mergedLines.add("内容：已自动迭代" + count + "次，最后一次时间：" + lastTime);
+                    i = j;
+                } else {
+                    StringBuilder line = new StringBuilder();
+                    line.append("操作者：[").append(log.getOperatorName()).append("](").append(log.getOperatorId()).append(")\n");
+                    line.append("日志类型：[").append(log.getLogType()).append("]\n");
+                    line.append("时间：[").append(log.getCreateTime() != null ? log.getCreateTime().format(TIME_FMT) : "").append("] ");
+                    line.append("内容：").append(log.getDetail() != null ? log.getDetail() : "");
+                    mergedLines.add(line.toString());
+                    i++;
+                }
+            }
+            // 取最新的 maxCount 条
+            int start = Math.max(0, mergedLines.size() - maxCount);
+            List<String> displayLines = mergedLines.subList(start, mergedLines.size());
             sb.append("\n--- 项目日志---\n");
-            if (logs.size()==20) {
+            if (mergedLines.size() > maxCount) {
                 sb.append("\n（以下仅展示最近日志，如需了解更早的历史关键结论，请使用项目工具查询项目日志。\n");
             }
-            sb.append("\n--- 本次").append(logs.size()).append("条 ---\n");
-            for (ProjectLog log : logs) {
-                sb.append("操作者：["+(log.getOperatorName())+"]("+log.getOperatorId()+")\n");
-                sb.append("日志类型：["+(log.getLogType())+"]\n");
-                sb.append("时间：[").append(log.getCreateTime() != null ? log.getCreateTime().format(TIME_FMT) : "").append("] ");
-                sb.append("内容："+(log.getDetail() != null ? log.getDetail() : ""));
-                sb.append("\n");
+            sb.append("\n--- 本次").append(displayLines.size()).append("条 ---\n");
+            for (String line : displayLines) {
+                sb.append(line).append("\n");
             }
             return sb.toString();
         }
