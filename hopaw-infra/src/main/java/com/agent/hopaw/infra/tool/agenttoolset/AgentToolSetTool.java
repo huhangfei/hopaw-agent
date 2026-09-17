@@ -139,6 +139,59 @@ public class AgentToolSetTool implements AgentTool {
         return "失败：工具集不存在：" + target + "，可先调用「查询所有智能体工具」获取工具集清单";
     }
 
+    /**
+     * 按工具名称查询单个工具详情（跨工具集检索首个匹配的工具）。
+     */
+    @ToolSecurityLevel(ToolSecurityLevel.Level.SAFE)
+    @Tool(value = {"查询智能体工具详情", "按工具名称查询该工具的详细信息和参数明细，并返回该工具所属的工具集"})
+    public String findAgentToolDetailByName(@P(value = "工具名称，例如 readImage、generateImage") String toolName) {
+        if (toolName == null || toolName.trim().isEmpty()) {
+            return "失败：工具名称不能为空，可先调用「获取所有智能体工具」获取工具清单";
+        }
+        String target = toolName.trim();
+        List<ToolSetInfo> toolSets = agentToolService.getToolSets();
+        if (toolSets == null || toolSets.isEmpty()) {
+            return "失败：当前系统中没有可用的智能体工具集";
+        }
+        for (ToolSetInfo toolSet : toolSets) {
+            List<ToolInfo> tools = toolSet.getTools();
+            if (tools == null || tools.isEmpty()) {
+                continue;
+            }
+            for (ToolInfo tool : tools) {
+                if (!target.equals(tool.getName())) {
+                    continue;
+                }
+                StringBuilder sb = new StringBuilder();
+                sb.append("工具名称：").append(tool.getName()).append("\n");
+                if (toolSet.getName() != null) {
+                    sb.append("所属工具集：").append(toolSet.getName());
+                    if (toolSet.getSource() != null) {
+                        sb.append("（").append(toolSet.getSource().getDescription()).append("）");
+                    }
+                    sb.append("\n");
+                }
+                sb.append("描述：").append(tool.getDescription() != null ? tool.getDescription() : "").append("\n");
+                sb.append("安全级别：").append(securityLevelText(tool.getSecurityLevel())).append("\n");
+                List<ToolParamInfo> params = tool.getParameters();
+                if (params != null && !params.isEmpty()) {
+                    sb.append("参数：\n");
+                    for (ToolParamInfo param : params) {
+                        sb.append("  - ").append(param.getName())
+                                .append("（").append(param.getType()).append("）")
+                                .append(param.isRequired() ? " [必填] " : " [可选] ")
+                                .append(param.getDescription() != null ? param.getDescription() : "")
+                                .append("\n");
+                    }
+                } else {
+                    sb.append("参数：（无）\n");
+                }
+                return "成功：\n" + sb;
+            }
+        }
+        return "失败：未找到工具：" + target + "，可先调用「获取所有智能体工具」获取工具清单";
+    }
+
     /** 安全级别转中文描述 */
     private String securityLevelText(ToolSecurityLevel.Level level) {
         if (level == null) {
