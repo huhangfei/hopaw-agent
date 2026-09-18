@@ -9,9 +9,15 @@
  *
  * 棋子标识：piece=1 为 LLM(黑/X)，piece=2 为用户(白/O)。
  * 用户落子回传格式："x,y"。
+ *
+ * 状态缓存：对局状态会持久化到 localStorage（key 带插件专属命名空间，避免与其他插件冲突），
+ * 刷新页面后自动恢复棋盘、棋子、布局与等待落子状态。
  */
 (function () {
     'use strict';
+
+    /** 缓存 key：带插件专属命名空间前缀，插件隔离，避免与其他插件/页面覆盖。 */
+    var STORAGE_KEY = 'hopaw.plugin.gomoku.state';
 
     var boardEl = null;
     var statusEl = null;
@@ -170,6 +176,127 @@
         }
     }
 
+    // =====================================================================
+    // 状态缓存（localStorage，插件隔离 key，刷新后恢复）
+    // =====================================================================
+
+    /** 序列化当前对局状态并写入缓存。 */
+    function saveState() {
+        if (!size || size <= 0) return;
+        var state = {
+            size: size,
+            board: boardState,
+            gameId: currentGameId || null,
+            lastMove: lastMove || null,
+            active: !!active,
+            waiting: !!waiting,
+            pendingRequestId: pendingRequestId || null,
+            // 倒计时绝对截止时间戳；未在倒计时时存 null
+            timerDeadline: (waiting && timerInterval) ? timerDeadline : null
+        };
+        try {
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+        } catch (e) {
+            // localStorage 不可用（隐私模式等）时静默失败，不影响对局
+        }
+    }
+
+    /** 从缓存读取状态，无有效数据返回 null。 */
+    function loadState() {
+        try {
+            var raw = localStorage.getItem(STORAGE_KEY);
+            if (!raw) return null;
+            var state = JSON.parse(raw);
+            if (!state || typeof state.size !== 'number' || state.size < 9 || state.size > 19) {
+                return null;
+            }
+            return state;
+        } catch (e) {
+            return null;
+        }
+    }
+
+    /** 清除缓存。 */
+    function clearState() {
+        try {
+            localStorage.removeItem(STORAGE_KEY);
+        } catch (e) {
+            // 忽略
+        }
+    }
+
+    /** 仅清除当前最后一手的高亮标记。 */
+    function clearLastHighlight() {
+        var marked = boardEl.querySelectorAll('.plugin-gomoku-piece.last');
+        for (var i = 0; i < marked.length; i++) {
+            marked[i].classList.remove('last');
+        }
+    }
+
+    /** 刷新后恢复对局：重建棋盘、渲染棋子、恢复布局与等待状态。返回是否恢复成功。 */
+    function restoreState() {
+        var saved = loadState();
+        if (!saved) return false;
+
+        size = saved.size;
+        currentGameId = saved.gameId || null;
+
+        // 恢复布局（若刷新前棋盘是展开状态）
+        if (saved.active) {
+            openPanel();
+        }
+
+        buildBoard(size);
+
+        // 恢复棋子
+        var board = saved.board;
+        if (Array.isArray(board)) {
+            for (var r = 0; r < size && r < board.length; r++) {
+                var row = board[r];
+                if (!Array.isArray(row)) continue;
+                for (var c = 0; c < size && c < row.length; c++) {
+                    if (row[c] === 1 || row[c] === 2) {
+                        renderPiece(c, r, row[c]);
+                    }
+                }
+            }
+        }
+
+        // 修正最后一手高亮（renderPiece 逐颗渲染会留下错误高亮）
+        clearLastHighlight();
+        if (saved.lastMove && saved.lastMove.x != null && saved.lastMove.y != null) {
+            lastMove = { x: saved.lastMove.x, y: saved.lastMove.y };
+            var lmCell = cellAt(lastMove.x, lastMove.y);
+            if (lmCell) {
+                var lmPiece = lmCell.querySelector('.plugin-gomoku-piece');
+                if (lmPiece) lmPiece.classList.add('last');
+            }
+        } else {
+            lastMove = null;
+        }
+
+        // 恢复等待落子状态 + 倒计时（仅当尚未过期）
+        if (saved.waiting && saved.pendingRequestId) {
+            waiting = true;
+            pendingRequestId = saved.pendingRequestId;
+            setStatus('轮到你落子(白)', 'active');
+            if (saved.timerDeadline && saved.timerDeadline > Date.now()) {
+                timerDeadline = saved.timerDeadline;
+                timerEl.hidden = false;
+                renderTimer();
+                timerInterval = setInterval(renderTimer, 1000);
+            } else {
+                stopTimer();
+            }
+        } else {
+            waiting = false;
+            pendingRequestId = null;
+            setStatus('对局进行中');
+        }
+
+        return true;
+    }
+
     function onCellClick(ev) {
         if (!waiting || !pendingRequestId) return;
         var cell = ev.currentTarget;
@@ -185,6 +312,7 @@
 
         var rid = pendingRequestId;
         pendingRequestId = null;
+        saveState();
         if (window.PluginHook && rid) {
             window.PluginHook.report(rid, x + ',' + y);
         }
@@ -196,6 +324,7 @@
         openPanel();
         buildBoard(n);
         setStatus('你的回合(黑)', 'active');
+        saveState();
     }
 
     function handlePlace(payload) {
@@ -220,6 +349,7 @@
                 setStatus('你的回合(黑)', 'active');
             }
         }
+        saveState();
     }
 
     function handleRequestMove(requestId, payload) {
@@ -228,6 +358,7 @@
         setStatus('轮到你落子(白)', 'active');
         var timeoutSec = (payload && payload.timeout) ? payload.timeout : 60;
         startTimer(timeoutSec);
+        saveState();
     }
 
     function handleCommand(cmd) {
@@ -246,6 +377,7 @@
             if (active) closePanel();
             stopTimer();
             setStatus('待命');
+            clearState();
         }
     }
 
@@ -254,6 +386,7 @@
         closePanel();
         stopTimer();
         setStatus('待命');
+        clearState();
     }
 
     function onRestart() {
@@ -263,6 +396,7 @@
         }
         stopTimer();
         setStatus('待命');
+        clearState();
     }
 
     function bindButtons() {
@@ -276,6 +410,8 @@
         if (window.PluginHook) {
             window.PluginHook.onCommand(handleCommand);
         }
+        // 刷新后恢复上次未结束的对局
+        restoreState();
     }
 
     if (window.PluginLoader) {
