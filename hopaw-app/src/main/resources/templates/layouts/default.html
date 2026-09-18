@@ -12,7 +12,7 @@
     <link rel="stylesheet" th:href="@{/css/dark-theme.css}">
     <th:block layout:fragment="extraCss"></th:block>
 </head>
-<body th:class="${currentTheme == 'dark' ? 'dark-theme' : ''}">
+<body th:class="${currentTheme == 'dark' ? 'dark-theme' : ''}" th:attr="data-page=${activePage}">
     <header>
         <div class="header-content">
             <h1 layout:fragment="pageTitle">🤖 HoPaw</h1>

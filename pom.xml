@@ -36,6 +36,7 @@
         <module>tools/hopaw-tool-wechat</module>
         <module>tools/hopaw-tool-http</module>
         <module>tools/hopaw-tool-qrcode</module>
+        <module>tools/hopaw-tool-canvas</module>
     </modules>
 
     <properties>

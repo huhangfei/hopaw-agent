@@ -1,0 +1,77 @@
+/* 画布工具插件样式：并排实时画布面板（挂在 #plugin-slot-canvas） */
+#plugin-slot-canvas {
+    display: none;
+    flex: 0 0 0;
+    overflow: hidden;
+}
+
+.plugin-canvas-panel {
+    box-sizing: border-box;
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    padding: 12px;
+    background: var(--color-background-secondary, #fff);
+    border-left: 1px solid var(--color-border-tertiary, rgba(0, 0, 0, 0.12));
+}
+
+.plugin-canvas-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 10px;
+}
+
+.plugin-canvas-title {
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--color-text-primary, #222);
+}
+
+.plugin-canvas-status {
+    font-size: 11px;
+    color: var(--color-text-tertiary, #888);
+    padding: 2px 8px;
+    border-radius: 10px;
+    background: var(--color-background-tertiary, #f1f1f1);
+}
+
+.plugin-canvas-status.active {
+    color: #185fa5;
+    background: #e6f1fb;
+}
+
+.plugin-canvas-board {
+    flex: 1;
+    width: 100%;
+    border: 1px solid var(--color-border-tertiary, rgba(0, 0, 0, 0.12));
+    border-radius: 8px;
+    background: #fff;
+    cursor: crosshair;
+}
+
+/* 画布激活时：会话区收缩、画布并排 */
+.chat-wrapper.canvas-active #plugin-slot-canvas {
+    display: flex;
+    flex: 1 1 50%;
+    transition: flex-basis 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.chat-wrapper.canvas-active .chat-area {
+    flex: 0 0 50%;
+    transition: flex-basis 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.chat-wrapper.canvas-active .tool-panel {
+    display: none;
+}
+
+/* 暗色主题适配 */
+body.dark-theme .plugin-canvas-panel {
+    background: #232637;
+    border-left-color: rgba(255, 255, 255, 0.12);
+}
+body.dark-theme .plugin-canvas-board {
+    background: #1b1d2b;
+    border-color: rgba(255, 255, 255, 0.12);
+}

@@ -44,6 +44,11 @@ public class WebSocketBridgeService implements IWebSocketBridgeService {
         send(QUEUE_AVATAR_EVENT, "avatar_event", userId, payload);
     }
 
+    @Override
+    public void sendPluginCommand(String userId, String payload) {
+        send(QUEUE_PLUGIN, "plugin_command", userId, payload);
+    }
+
     private void send(String queue, String eventType, String userId, String payload) {
         try {
             WebSocketBridgeMessage msg = new WebSocketBridgeMessage(eventType, userId, payload);

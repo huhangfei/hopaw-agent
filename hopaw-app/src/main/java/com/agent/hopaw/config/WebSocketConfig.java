@@ -3,6 +3,7 @@ package com.agent.hopaw.config;
 import com.agent.hopaw.avatar.websocket.AvatarWebSocketHandler;
 import com.agent.hopaw.websocket.ChatWebSocketHandler;
 import com.agent.hopaw.websocket.NoticeWebSocketHandler;
+import com.agent.hopaw.websocket.PluginWebSocketHandler;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.web.socket.config.annotation.EnableWebSocket;
 import org.springframework.web.socket.config.annotation.WebSocketConfigurer;
@@ -15,12 +16,14 @@ public class WebSocketConfig implements WebSocketConfigurer {
     private final ChatWebSocketHandler chatWebSocketHandler;
     private final AvatarWebSocketHandler avatarWebSocketHandler;
     private final NoticeWebSocketHandler noticeWebSocketHandler;
+    private final PluginWebSocketHandler pluginWebSocketHandler;
 
     public WebSocketConfig(ChatWebSocketHandler chatWebSocketHandler, AvatarWebSocketHandler avatarWebSocketHandler,
-                           NoticeWebSocketHandler noticeWebSocketHandler) {
+                           NoticeWebSocketHandler noticeWebSocketHandler, PluginWebSocketHandler pluginWebSocketHandler) {
         this.chatWebSocketHandler = chatWebSocketHandler;
         this.avatarWebSocketHandler = avatarWebSocketHandler;
         this.noticeWebSocketHandler = noticeWebSocketHandler;
+        this.pluginWebSocketHandler = pluginWebSocketHandler;
     }
 
     @Override
@@ -35,6 +38,11 @@ public class WebSocketConfig implements WebSocketConfigurer {
 
         // 全局通知通道：所有页面订阅，接收公共消息推送
         registry.addHandler(noticeWebSocketHandler, "/ws/notice")
+                .addInterceptors(new WSHandshakeInterceptor())
+                .setAllowedOrigins("*");
+
+        // 插件前端指令下行通道
+        registry.addHandler(pluginWebSocketHandler, "/ws/plugin")
                 .addInterceptors(new WSHandshakeInterceptor())
                 .setAllowedOrigins("*");
     }

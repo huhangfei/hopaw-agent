@@ -6,6 +6,7 @@ public interface IWebSocketBridgeService {
      String QUEUE_AGENT_MESSAGE = "ws.chat.agent_message";
      String QUEUE_GLOBAL_NOTICE = "ws.notice.global";
      String QUEUE_AVATAR_EVENT = "ws.avatar.event";
+     String QUEUE_PLUGIN = "ws.plugin.cmd";
     void sendTokenUsage(String userId, String payload);
 
     void sendAgentMessage(String userId, String payload);
@@ -13,5 +14,10 @@ public interface IWebSocketBridgeService {
     void sendGlobalNotice(String userId, String payload);
 
     void sendAvatarEvent(String userId, String payload);
+
+    /**
+     * 下发插件前端指令（后端 @Tool → 前端插件 JS）。
+     */
+    void sendPluginCommand(String userId, String payload);
 
 }

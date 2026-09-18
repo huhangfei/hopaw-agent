@@ -1,0 +1,25 @@
+{
+  "assets": [
+    {
+      "id": "canvas-css",
+      "type": "css",
+      "path": "static/canvas.css",
+      "pages": ["index"]
+    },
+    {
+      "id": "canvas-js",
+      "type": "js",
+      "path": "static/canvas.js",
+      "pages": ["index"],
+      "position": "body-end"
+    },
+    {
+      "id": "canvas-html",
+      "type": "html",
+      "path": "static/canvas.html",
+      "pages": ["index"],
+      "mount": "#plugin-slot-canvas",
+      "mode": "append"
+    }
+  ]
+}
