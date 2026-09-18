@@ -81,7 +81,14 @@ public class CanvasTool implements AgentTool {
     @ToolSecurityLevel(ToolSecurityLevel.Level.SAFE)
     @Tool(value = {"追加画布绘制命令", "向浏览器前端实时画布下发绘制命令，支持 JSON 描述图形"})
     public String appendDraw(
-            @P("绘制命令，JSON 字符串，如 {\"type\":\"rect\",\"x\":10,\"y\":10,\"w\":100,\"h\":80,\"color\":\"#4f66d8\"}") String command) {
+            @P("绘制命令，JSON 字符串。支持的 type 及参数：" +
+              "clear(清空，无参数)；" +
+              "rect(矩形，x,y,w,h,color)；" +
+              "circle(圆形，x,y,r,color)；" +
+              "line(线段，x1,y1,x2,y2,w,color)；" +
+              "polygon(多边形，points 为 [[x,y],[x,y],...] 坐标数组，color 填充色，可选 stroke/strokeColor/lineWidth 描边，可选 fill=false 仅描边)；" +
+              "text(文字，text,x,y,size,color)。" +
+              "示例：{\"type\":\"polygon\",\"points\":[[10,10],[60,10],[35,60]],\"color\":\"#4f66d8\"}") String command) {
         sendCommand("draw", command, null);
         return "绘制命令已下发。";
     }

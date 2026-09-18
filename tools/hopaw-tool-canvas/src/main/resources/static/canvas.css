@@ -3,6 +3,7 @@
     display: none;
     flex: 0 0 0;
     overflow: hidden;
+    min-width: 0;
 }
 
 .plugin-canvas-panel {
@@ -10,15 +11,18 @@
     display: flex;
     flex-direction: column;
     height: 100%;
+    min-height: 0;
     padding: 12px;
     background: var(--color-background-secondary, #fff);
     border-left: 1px solid var(--color-border-tertiary, rgba(0, 0, 0, 0.12));
 }
 
 .plugin-canvas-header {
+    flex-shrink: 0;
     display: flex;
     align-items: center;
     justify-content: space-between;
+    gap: 8px;
     margin-bottom: 10px;
 }
 
@@ -41,8 +45,29 @@
     background: #e6f1fb;
 }
 
+.plugin-canvas-close {
+    flex-shrink: 0;
+    width: 24px;
+    height: 24px;
+    padding: 0;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border: none;
+    border-radius: 6px;
+    background: #f0f2f5;
+    color: #888;
+    cursor: pointer;
+    transition: background .18s ease, color .18s ease;
+}
+.plugin-canvas-close:hover {
+    background: #ff5252;
+    color: #fff;
+}
+
 .plugin-canvas-board {
     flex: 1;
+    min-height: 0;
     width: 100%;
     border: 1px solid var(--color-border-tertiary, rgba(0, 0, 0, 0.12));
     border-radius: 8px;
@@ -50,20 +75,17 @@
     cursor: crosshair;
 }
 
-/* 画布激活时：会话区收缩、画布并排 */
-.chat-wrapper.canvas-active #plugin-slot-canvas {
+/* 画布激活时：会话区收缩、画布并排，插件槽位撑满高度 */
+.chat-wrapper.canvas-active #plugin-slot {
     display: flex;
     flex: 1 1 50%;
+    height: 100%;
     transition: flex-basis 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .chat-wrapper.canvas-active .chat-area {
     flex: 0 0 50%;
     transition: flex-basis 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-}
-
-.chat-wrapper.canvas-active .tool-panel {
-    display: none;
 }
 
 /* 暗色主题适配 */
@@ -74,4 +96,12 @@ body.dark-theme .plugin-canvas-panel {
 body.dark-theme .plugin-canvas-board {
     background: #1b1d2b;
     border-color: rgba(255, 255, 255, 0.12);
+}
+body.dark-theme .plugin-canvas-close {
+    background: #2a2e42;
+    color: #8ea2ff;
+}
+body.dark-theme .plugin-canvas-close:hover {
+    background: #ff5252;
+    color: #fff;
 }
