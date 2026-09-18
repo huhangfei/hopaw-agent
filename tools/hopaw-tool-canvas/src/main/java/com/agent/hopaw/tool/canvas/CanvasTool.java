@@ -7,11 +7,15 @@ import com.agent.hopaw.infra.tool.ToolSecurityLevel;
 import com.alibaba.fastjson2.JSON;
 import dev.langchain4j.agent.tool.P;
 import dev.langchain4j.agent.tool.Tool;
+import dev.langchain4j.data.message.Content;
+import dev.langchain4j.data.message.ImageContent;
+import dev.langchain4j.data.message.TextContent;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
@@ -83,20 +87,72 @@ public class CanvasTool implements AgentTool {
     }
 
     @ToolSecurityLevel(ToolSecurityLevel.Level.SAFE)
-    @Tool(value = {"结束画布绘制并获取结果", "结束画布绘制，前端还原布局并回传画布结果图，返回图片内容"})
-    public String finishCanvas() {
+    @Tool(value = {"结束画布绘制并获取结果", "结束画布绘制，前端还原布局并回传画布结果图，以图片内容返回给大模型"})
+    public List<Content> finishCanvas() {
         String requestId = UUID.randomUUID().toString();
         // 先注册待回传槽位，再下发结束指令
         pluginResultStore.register(requestId, null);
         sendCommand("finish", null, requestId);
 
-        // 阻塞等待前端回传（纯 string 透传，此处期望前端回传图片 base64 或 URL）
+        // 阻塞等待前端回传（纯 string 透传，期望前端回传 canvas.toDataURL() 的 data URL）
         String result = pluginResultStore.await(requestId, IPluginResultStore.DEFAULT_TIMEOUT_SECONDS);
         if (result == null) {
-            return "获取画布结果超时，可能前端画布未就绪或未在浏览器打开会话页面。";
+            return List.of(new TextContent("错误: 获取画布结果超时，可能前端画布未就绪或未在浏览器打开会话页面。"));
         }
         logger.info("CanvasTool: received canvas result ({} chars)", result.length());
-        return result;
+
+        // 解析 data URL（形如 data:image/png;base64,xxxxx），提取 MIME 与纯 base64
+        DataUrl dataUrl = parseDataUrl(result);
+        if (dataUrl == null) {
+            return List.of(new TextContent("错误: 前端回传的画布结果不是有效的图片 data URL。"));
+        }
+        return List.of(
+                new TextContent("画布绘制完成，结果图已作为图片内容提供（格式 " + dataUrl.mimeType + "）"),
+                ImageContent.from(dataUrl.base64, dataUrl.mimeType));
+    }
+
+    /**
+     * 解析 data URL：返回 MIME 类型与纯 base64（不含 data:...;base64, 前缀）。
+     * 无法解析时返回 null。
+     */
+    private DataUrl parseDataUrl(String dataUrl) {
+        if (dataUrl == null || !dataUrl.startsWith("data:")) {
+            return null;
+        }
+        int comma = dataUrl.indexOf(',');
+        if (comma < 0) {
+            return null;
+        }
+        String header = dataUrl.substring(0, comma);
+        String data = dataUrl.substring(comma + 1);
+        // header 形如 data:image/png;base64
+        int colon = header.indexOf(':');
+        String meta = colon >= 0 ? header.substring(colon + 1) : header;
+        int semicolon = meta.indexOf(';');
+        String mimeType = semicolon >= 0 ? meta.substring(0, semicolon) : meta;
+        if (mimeType == null || mimeType.isEmpty()) {
+            mimeType = "image/png";
+        }
+        String base64 = data;
+        // 若 header 声明 base64，但部分实现可能仍带前缀，做一层兜底剥离
+        if (base64.indexOf("base64,") >= 0) {
+            base64 = base64.substring(base64.indexOf("base64,") + "base64,".length());
+        }
+        if (base64.isEmpty()) {
+            return null;
+        }
+        return new DataUrl(mimeType, base64);
+    }
+
+    /** data URL 解析结果：MIME 类型 + 纯 base64 */
+    private static final class DataUrl {
+        final String mimeType;
+        final String base64;
+
+        DataUrl(String mimeType, String base64) {
+            this.mimeType = mimeType;
+            this.base64 = base64;
+        }
     }
 
     /**
