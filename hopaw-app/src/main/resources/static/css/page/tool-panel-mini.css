@@ -278,15 +278,6 @@
 .mini-token-stats:hover .mini-donut-box {
     transform: scale(1.1);
 }
-.mini-tool-count {
-    font-size: 10px;
-    color: #8a93a8;
-    font-weight: 600;
-    margin-top: 1px;
-    line-height: 1.2;
-    text-align: center;
-    white-space: nowrap;
-}
 
 /* ---------- 工具执行气泡列表 ---------- */
 .mini-tool-list {
@@ -650,9 +641,6 @@ body.dark-theme .mini-tool-bubble[data-status="failed"],
 body.dark-theme .mini-tool-bubble[data-status="rejected"] {
     background: #34201f;
     border-color: #6b3535;
-}
-body.dark-theme .mini-tool-count {
-    color: #7c849e;
 }
 body.dark-theme #miniTokenBars {
     background: #232637;

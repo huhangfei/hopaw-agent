@@ -18,6 +18,9 @@ var LAppDefine = {
     DRAG_THRESHOLD: 5,
     STORAGE_KEY: "hopaw_avatar_position",
     MINIMIZED_STORAGE_KEY: "hopaw_avatar_minimized",
+    MINIMIZED_Y_STORAGE_KEY: "hopaw_avatar_minimized_y",
+    MINIMIZED_DEFAULT_BOTTOM: 135,
+    MINIMIZED_EDGE_MARGIN: 8,
     WS_URL: "/ws/avatar",
     INTIMACY_API: "/api/avatar/intimacy",
     MODELS_API: "/api/avatar/models/pool",
@@ -78,6 +81,15 @@ var LAppDefine = {
         } catch (e) {}
     }
 
+    /** 读取缩小态吸附的 Y 位置（bottom 像素），未设置时用默认值 */
+    function getMinimizedBottom() {
+        try {
+            var v = parseInt(localStorage.getItem(LAppDefine.MINIMIZED_Y_STORAGE_KEY), 10);
+            if (!isNaN(v) && v >= 0) return v;
+        } catch (e) {}
+        return LAppDefine.MINIMIZED_DEFAULT_BOTTOM;
+    }
+
     function enterMinimized(skipTransition) {
         if (widget._cancelMove) widget._cancelMove();
         if (widget._avatarBubble) widget._avatarBubble.hideAll();
@@ -89,7 +101,7 @@ var LAppDefine = {
             widget.style.left = "";
             widget.style.top = "";
             widget.style.right = "";
-            widget.style.bottom = "";
+            widget.style.bottom = getMinimizedBottom() + "px";
             void widget.offsetWidth;
             widget.style.transition = prev;
         } else {
@@ -97,7 +109,7 @@ var LAppDefine = {
             widget.style.left = "";
             widget.style.top = "";
             widget.style.right = "";
-            widget.style.bottom = "";
+            widget.style.bottom = getMinimizedBottom() + "px";
         }
         setMinimizedStored(true);
     }
@@ -1126,8 +1138,11 @@ var LAppDefine = {
             return { x: e.clientX, y: e.clientY };
         }
 
+        var dragMode = "xy"; // xy = 完整态自由拖动；y = 缩小态仅拖动吸附 Y 位置
+        var startBottom = 0;
+        var suppressClick = false;
+
         function onPointerDown(e) {
-            if (isMinimized()) return;
             if (e.button !== undefined && e.button !== 0) return;
             if (e.target.closest && e.target.closest(".avatar-minimize-btn")) {
                 return;
@@ -1141,20 +1156,37 @@ var LAppDefine = {
             if (e.target.closest && e.target.closest("#" + LAppDefine.TTS_TOGGLE_BTN_ID)) {
                 return;
             }
+            /* 缩小态（吸附小球）也允许拖动：仅改变吸附 Y 位置 */
+            var minimizedDrag = isMinimized();
+            if (!minimizedDrag && !LAppDefine.IS_DRAGABLE) return;
             var pt = getPointerXY(e);
             pointerId = e.pointerId !== undefined ? e.pointerId : null;
+            dragMode = minimizedDrag ? "y" : "xy";
             startX = pt.x;
             startY = pt.y;
-            var rect = widget.getBoundingClientRect();
-            offsetX = pt.x - rect.left;
-            offsetY = pt.y - rect.top;
+            if (minimizedDrag) {
+                startBottom = parseFloat(widget.style.bottom);
+                if (isNaN(startBottom)) startBottom = getMinimizedBottom();
+                widget.style.transition = "none"; /* 拖动期间关闭 bottom 过渡，避免跟手延迟 */
+            } else {
+                var rect = widget.getBoundingClientRect();
+                offsetX = pt.x - rect.left;
+                offsetY = pt.y - rect.top;
+                if (widget.setPointerCapture && pointerId !== null) {
+                    try { widget.setPointerCapture(pointerId); } catch (_) {}
+                }
+            }
             isDragging = true;
             isMoved = false;
-            if (widget.setPointerCapture && pointerId !== null) {
-                try { widget.setPointerCapture(pointerId); } catch (_) {}
-            }
             widget.style.cursor = "grabbing";
             widget.classList.add("dragging");
+        }
+
+        function clampMinimizedBottom(b) {
+            var h = widget.offsetHeight || 50;
+            var minB = LAppDefine.MINIMIZED_EDGE_MARGIN;
+            var maxB = Math.max(minB, window.innerHeight - h - LAppDefine.MINIMIZED_EDGE_MARGIN);
+            return Math.min(Math.max(minB, b), maxB);
         }
 
         function onPointerMove(e) {
@@ -1169,7 +1201,14 @@ var LAppDefine = {
                 isMoved = true;
             }
             if (e.cancelable) e.preventDefault();
-            applyPosition(pt.x - offsetX, pt.y - offsetY);
+            if (dragMode === "y") {
+                widget.style.left = "auto";
+                widget.style.top = "auto";
+                widget.style.right = "";
+                widget.style.bottom = clampMinimizedBottom(startBottom + (startY - pt.y)) + "px";
+            } else {
+                applyPosition(pt.x - offsetX, pt.y - offsetY);
+            }
         }
 
         function onPointerUp() {
@@ -1177,25 +1216,50 @@ var LAppDefine = {
             isDragging = false;
             widget.style.cursor = "grab";
             widget.classList.remove("dragging");
-            if (pointerId !== null && widget.releasePointerCapture) {
-                try { widget.releasePointerCapture(pointerId); } catch (_) {}
+            if (dragMode === "y") {
+                widget.style.transition = ""; /* 恢复 CSS 过渡 */
+                if (isMoved) {
+                    suppressClick = true; /* 拖动结束抑制本次 click，避免误触恢复 */
+                    try {
+                        var b = parseFloat(widget.style.bottom);
+                        if (!isNaN(b)) {
+                            localStorage.setItem(LAppDefine.MINIMIZED_Y_STORAGE_KEY, String(Math.round(b)));
+                        }
+                    } catch (err) {}
+                }
+            } else {
+                if (pointerId !== null && widget.releasePointerCapture) {
+                    try { widget.releasePointerCapture(pointerId); } catch (_) {}
+                }
+                if (isMoved) {
+                    widget._savePosition();
+                }
             }
             pointerId = null;
-            if (isMoved) {
-                widget._savePosition();
-            }
         }
 
+        /* 拖动缩小球后抑制紧随的 click（捕获阶段，先于恢复按钮的 click 处理） */
+        widget.addEventListener("click", function (e) {
+            if (suppressClick) {
+                suppressClick = false;
+                e.stopPropagation();
+                e.preventDefault();
+            }
+        }, true);
+
+        /* pointerdown 用捕获阶段：缩小态下事件目标是覆盖整球的恢复按钮，
+           其冒泡阶段会 stopPropagation，气泡阶段监听收不到 */
         widget.style.cursor = "grab";
         widget.style.touchAction = "none";
 
         if (window.PointerEvent) {
-            widget.addEventListener("pointerdown", onPointerDown);
-            widget.addEventListener("pointermove", onPointerMove);
-            widget.addEventListener("pointerup", onPointerUp);
-            widget.addEventListener("pointercancel", onPointerUp);
+            widget.addEventListener("pointerdown", onPointerDown, true);
+            /* 缩小态拖动不使用指针捕获（否则 click 无法到达恢复按钮），改用 window 跟踪 */
+            window.addEventListener("pointermove", onPointerMove);
+            window.addEventListener("pointerup", onPointerUp);
+            window.addEventListener("pointercancel", onPointerUp);
         } else {
-            widget.addEventListener("mousedown", onPointerDown);
+            widget.addEventListener("mousedown", onPointerDown, true);
             widget.addEventListener("touchstart", onPointerDown, { passive: true });
             widget.addEventListener("touchmove", onPointerMove, { passive: false });
             widget.addEventListener("touchend", onPointerUp);
@@ -1215,7 +1279,13 @@ var LAppDefine = {
         }
 
         window.addEventListener("resize", function () {
-            if (isMinimized()) return;
+            if (isMinimized()) {
+                /* 视口变化时重新夹紧缩小球的吸附 Y 位置 */
+                var b = parseFloat(widget.style.bottom);
+                if (isNaN(b)) b = getMinimizedBottom();
+                widget.style.bottom = clampMinimizedBottom(b) + "px";
+                return;
+            }
             var rect = widget.getBoundingClientRect();
             applyPosition(rect.left, rect.top);
             try {

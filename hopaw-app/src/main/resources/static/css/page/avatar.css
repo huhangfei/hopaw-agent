@@ -212,6 +212,12 @@
     right: 0;
     transform: translateX(0);
 }
+/* 拖动中固定在右缘吸附位，避免 hover 触发 right 变化导致小球横跳 */
+.avatar-widget.minimized.dragging {
+    right: -30px;
+    transform: none;
+    cursor: grabbing;
+}
 .avatar-widget.minimized .avatar-canvas,
 .avatar-widget.minimized .avatar-bubble-stack,
 .avatar-widget.minimized .avatar-intimacy-card,

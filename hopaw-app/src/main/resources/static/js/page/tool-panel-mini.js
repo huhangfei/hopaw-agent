@@ -414,21 +414,25 @@
         return html;
     }
 
-    /* 工具状态统计：甜甜圈 + 计数 */
+    /* 解析完整视图统计文本：“共X次 · 本次Y/Z”（Z 为 0 或 ∞ 表示不限制） */
+    function parseToolStatsText() {
+        var statsText = (byId('toolExecStats') || {}).textContent || '';
+        var m = statsText.match(/本次\s*(\d+)\s*\/\s*(\d+|∞)/);
+        if (!m) return { used: 0, max: 0 };
+        return {
+            used: parseInt(m[1], 10) || 0,
+            max: m[2] === '∞' ? 0 : (parseInt(m[2], 10) || 0)
+        };
+    }
+
+    /* 工具状态统计：外圈状态分布甜甜圈 + 内圈本次/上限进度环 */
     function updateMiniToolStats(calls) {
         var counts = {};
-        var active = 0;
         calls.forEach(function (c) {
             counts[c.status] = (counts[c.status] || 0) + 1;
-            if (c.status === 'started' || c.status === 'running' || c.status === 'preparing' || c.status === 'approval') active++;
         });
 
-        var countEl = byId('miniToolCount');
         var total = calls.length;
-        if (countEl) {
-            countEl.textContent = total + (active > 0 ? ' · 活' + active : '');
-            countEl.title = '共 ' + total + ' 次工具调用' + (active > 0 ? '，' + active + ' 个进行中' : '');
-        }
 
         if (!miniToolStatsChart || !window.Chart) return;
         var data = [], colors = [], labels = [];
@@ -445,7 +449,21 @@
         miniToolStatsChart.data.labels = labels;
         miniToolStatsChart.data.datasets[0].data = data;
         miniToolStatsChart.data.datasets[0].backgroundColor = colors;
-        miniToolStatsChart.options.plugins.miniCenterText.text = String(total);
+
+        /* 内圈：本次已执行 / 执行器上限 */
+        var st = parseToolStatsText();
+        var hasRatio = st.used > 0 && st.max > 0;
+        if (miniToolStatsChart.data.datasets[1]) {
+            miniToolStatsChart.data.datasets[1].data = hasRatio
+                ? [st.used, Math.max(0, st.max - st.used)]
+                : [0, 0];
+        }
+        miniToolStatsChart.options.plugins.miniCenterText.text = hasRatio
+            ? st.used + '/' + st.max
+            : String(total);
+        miniToolStatsChart.options.plugins.miniCenterText.font = hasRatio
+            ? '700 8px -apple-system, "Segoe UI", "Microsoft YaHei", sans-serif'
+            : null;
         miniToolStatsChart.options.plugins.miniCenterText.color = isDark() ? '#aeb6d3' : '#5a6478';
         miniToolStatsChart.update();
     }
@@ -472,7 +490,7 @@
             }
         });
         if (!hasAny) html += '<div class="mini-popover-row"><span class="mini-popover-value">暂无工具调用</span></div>';
-        html += '<div class="mini-popover-hint">悬停下方气泡查看参数与输出</div>';
+        html += '<div class="mini-popover-hint">内圈为本次已执行/上限进度 · 悬停下方气泡查看参数与输出</div>';
         return html;
     }
 
@@ -506,13 +524,21 @@
     function syncMiniToken() {
         if (!miniMode) return;
 
-        /* 甜甜圈：今日输入/输出占比，中心显示总量 */
+        /* 外圈：今日输入/输出占比；中心显示今日总量 */
         if (miniTokenDonut && window.Chart) {
             var d = tokenState.daily;
             var sum = (d.input || 0) + (d.output || 0);
             var data = sum > 0 ? [d.input || 0, d.output || 0] : [1, 0];
             miniTokenDonut.data.datasets[0].data = data;
             miniTokenDonut.data.datasets[0].backgroundColor = sum > 0 ? ['#2196F3', '#4CAF50'] : ['#dfe3ec', '#dfe3ec'];
+
+            /* 内圈：最新一次输入/输出占比 */
+            var last = (tokenState.chartData || []).slice(-1)[0];
+            if (miniTokenDonut.data.datasets[1]) {
+                miniTokenDonut.data.datasets[1].data = last
+                    ? [last.inputTokens || 0, last.outputTokens || 0]
+                    : [0, 0];
+            }
             miniTokenDonut.options.plugins.miniCenterText.text = fmtNum(d.total || 0);
             miniTokenDonut.options.plugins.miniCenterText.color = isDark() ? '#aeb6d3' : '#5a6478';
             miniTokenDonut.update();
@@ -609,7 +635,7 @@
             + '<span class="mini-popover-legend-item"><span class="mini-popover-legend-dot" style="background:#2196F3"></span>输入</span>'
             + '<span class="mini-popover-legend-item"><span class="mini-popover-legend-dot" style="background:#4CAF50"></span>输出</span>'
             + '</div>';
-        html += '<div class="mini-popover-hint">柱状图随会话实时追加（最近 8 次）</div>';
+        html += '<div class="mini-popover-hint">内圈为最新一次输入/输出 · 柱状图实时追加（最近 8 次）</div>';
         return html;
     }
 
@@ -627,7 +653,7 @@
                 ctx.save();
                 ctx.textAlign = 'center';
                 ctx.textBaseline = 'middle';
-                ctx.font = '700 9px -apple-system, "Segoe UI", "Microsoft YaHei", sans-serif';
+                ctx.font = opts.font || '700 9px -apple-system, "Segoe UI", "Microsoft YaHei", sans-serif';
                 ctx.fillStyle = opts.color || '#5a6478';
                 ctx.fillText(String(opts.text), x, y);
                 ctx.restore();
@@ -635,16 +661,29 @@
         };
     }
 
-    function donutConfig(labels, data, colors) {
+    /* 双环甜甜圈：外圈为主数据，inner 可选内圈（如 本次/上限 进度、最新输入输出） */
+    function donutConfig(labels, data, colors, inner) {
+        var datasets = [{
+            data: data,
+            backgroundColor: colors,
+            borderWidth: 1.5,
+            borderColor: isDark() ? '#232637' : '#fff',
+            weight: 2
+        }];
+        if (inner) {
+            datasets.push({
+                data: inner.data || [0, 0],
+                backgroundColor: inner.colors || ['#667eea', 'rgba(102,126,234,.18)'],
+                borderWidth: 0,
+                weight: 1
+            });
+        }
         return {
             type: 'doughnut',
-            data: {
-                labels: labels,
-                datasets: [{ data: data, backgroundColor: colors, borderWidth: 1.5, borderColor: isDark() ? '#232637' : '#fff' }]
-            },
+            data: { labels: labels, datasets: datasets },
             options: {
                 responsive: false,
-                cutout: '64%',
+                cutout: inner ? '58%' : '64%',
                 animation: { duration: 450, easing: 'easeOutQuart' },
                 plugins: {
                     legend: { display: false },
@@ -660,13 +699,17 @@
         destroyMiniCharts();
         var tsc = byId('miniToolStatsChart');
         if (tsc) {
-            var cfgT = donutConfig(['暂无'], [1], ['#dfe3ec']);
+            /* 内圈：本次/上限 进度环 */
+            var cfgT = donutConfig(['暂无'], [1], ['#dfe3ec'],
+                { data: [0, 0], colors: ['#667eea', 'rgba(102,126,234,.18)'] });
             cfgT.options.plugins.miniCenterText = { text: '0', color: '#5a6478' };
             miniToolStatsChart = new Chart(tsc, cfgT);
         }
         var tdc = byId('miniTokenDonut');
         if (tdc) {
-            var cfgD = donutConfig(['输入', '输出'], [1, 0], ['#dfe3ec', '#dfe3ec']);
+            /* 内圈：最新一次输入/输出 */
+            var cfgD = donutConfig(['输入', '输出'], [1, 0], ['#dfe3ec', '#dfe3ec'],
+                { data: [0, 0], colors: ['#2196F3', '#4CAF50'] });
             cfgD.options.plugins.miniCenterText = { text: '0', color: '#5a6478' };
             miniTokenDonut = new Chart(tdc, cfgD);
         }
