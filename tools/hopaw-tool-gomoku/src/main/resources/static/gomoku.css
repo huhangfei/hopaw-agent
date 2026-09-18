@@ -185,6 +185,11 @@
 
 .chat-wrapper.gomoku-active .plugin-gomoku-panel {
     display: flex;
+    /* 关键：面板必须撑满槽位宽度。面板内容（棋盘）是 JS 按像素算出来的固定宽，
+       若面板宽度由内容决定，boardWrap.clientWidth 会测到棋盘自身宽度（自引用循环），
+       首次测量又发生在槽位展开瞬间，得到极小值导致棋盘永久偏窄。 */
+    flex: 1 1 0;
+    min-width: 0;
 }
 
 .chat-wrapper.gomoku-active .chat-area {

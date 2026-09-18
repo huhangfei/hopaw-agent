@@ -27,6 +27,7 @@
     var timerEl = null;
     var timerInterval = null; // 倒计时定时器
     var timerDeadline = 0;    // 倒计时截止时间戳(ms)
+    var boardResizeObserver = null; // 棋盘容器尺寸监听（展开过渡/窗口变化时自动重算格子）
 
     var size = 15;
     var cells = [];           // size x size 的格子 DOM
@@ -72,9 +73,8 @@
         }
         panelMiniForced = true;
         active = true;
-
-        // 展开有 0.3s flex 过渡，过渡结束后按实际尺寸再校准一次格子
-        setTimeout(resizeBoard, 350);
+        // 槽位展开有 0.3s flex 过渡，boardWrap 尺寸变化由 ResizeObserver 自动触发重算，
+        // 这里无需再额外定时校准
     }
 
     function closePanel() {
@@ -121,6 +121,7 @@
     /**
      * 按容器可用空间计算格子边长：取宽高较小者均分给 n 格，
      * 限制在 [16, 44]px，保证棋盘尽量撑满且格子保持正方形。
+     * 前提：面板已通过 flex:1 撑满槽位宽度，boardWrap.clientWidth 即真实可用宽。
      */
     function resizeBoard() {
         if (!boardEl || !boardWrapEl || !size || size <= 0) return;
@@ -129,11 +130,22 @@
         var chrome = 18 + gapTotal;
         var availW = boardWrapEl.clientWidth - chrome;
         var availH = boardWrapEl.clientHeight - chrome;
-        if (availW <= 0 && availH <= 0) return;
+        // 任一方向不可测（如槽位尚未展开）时不落子计算，避免钳到最小值
+        if (availW <= 0 || availH <= 0) return;
         var cell = Math.floor(Math.min(availW, availH) / size);
         cell = Math.max(16, Math.min(cell, 44));
         boardEl.style.gridTemplateColumns = 'repeat(' + size + ', ' + cell + 'px)';
         boardEl.style.gridTemplateRows = 'repeat(' + size + ', ' + cell + 'px)';
+    }
+
+    /** 监听棋盘容器尺寸变化（槽位展开过渡、窗口缩放等），自动重算格子。 */
+    function watchBoardResize() {
+        if (boardResizeObserver || !boardWrapEl) return;
+        if (typeof ResizeObserver === 'undefined') return;
+        boardResizeObserver = new ResizeObserver(function () {
+            resizeBoard();
+        });
+        boardResizeObserver.observe(boardWrapEl);
     }
 
     function cellAt(x, y) {
@@ -430,7 +442,8 @@
     function init() {
         findEls();
         bindButtons();
-        window.addEventListener('resize', resizeBoard);
+        // 窗口缩放/槽位展开过渡时 boardWrap 尺寸都会变，统一由 ResizeObserver 驱动重算
+        watchBoardResize();
         if (window.PluginHook) {
             window.PluginHook.onCommand(handleCommand);
         }
