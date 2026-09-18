@@ -20,6 +20,7 @@
     var STORAGE_KEY = 'hopaw.plugin.gomoku.state';
 
     var boardEl = null;
+    var boardWrapEl = null;
     var statusEl = null;
     var closeBtn = null;
     var restartBtn = null;
@@ -42,6 +43,7 @@
 
     function findEls() {
         boardEl = document.querySelector('[data-gomoku-board]');
+        boardWrapEl = document.querySelector('.plugin-gomoku-board-wrap');
         statusEl = document.querySelector('[data-gomoku-status]');
         closeBtn = document.querySelector('[data-gomoku-close]');
         restartBtn = document.querySelector('[data-gomoku-restart]');
@@ -70,6 +72,9 @@
         }
         panelMiniForced = true;
         active = true;
+
+        // 展开有 0.3s flex 过渡，过渡结束后按实际尺寸再校准一次格子
+        setTimeout(resizeBoard, 350);
     }
 
     function closePanel() {
@@ -94,8 +99,7 @@
         cells = [];
         boardState = [];
         boardEl.innerHTML = '';
-        boardEl.style.gridTemplateColumns = 'repeat(' + n + ', 1fr)';
-        boardEl.style.gridTemplateRows = 'repeat(' + n + ', 1fr)';
+        resizeBoard();
 
         for (var r = 0; r < n; r++) {
             boardState[r] = [];
@@ -112,6 +116,24 @@
             }
         }
         lastMove = null;
+    }
+
+    /**
+     * 按容器可用空间计算格子边长：取宽高较小者均分给 n 格，
+     * 限制在 [16, 44]px，保证棋盘尽量撑满且格子保持正方形。
+     */
+    function resizeBoard() {
+        if (!boardEl || !boardWrapEl || !size || size <= 0) return;
+        // 可用宽高需扣除棋盘自身 padding(8*2) + border(1*2) 及格线 gap
+        var gapTotal = (size - 1) * 1;
+        var chrome = 18 + gapTotal;
+        var availW = boardWrapEl.clientWidth - chrome;
+        var availH = boardWrapEl.clientHeight - chrome;
+        if (availW <= 0 && availH <= 0) return;
+        var cell = Math.floor(Math.min(availW, availH) / size);
+        cell = Math.max(16, Math.min(cell, 44));
+        boardEl.style.gridTemplateColumns = 'repeat(' + size + ', ' + cell + 'px)';
+        boardEl.style.gridTemplateRows = 'repeat(' + size + ', ' + cell + 'px)';
     }
 
     function cellAt(x, y) {
@@ -331,10 +353,11 @@
         if (!payload) return;
         renderPiece(payload.x, payload.y, payload.piece);
         var status = payload.status;
+        // status: 1=LLM(黑)胜 2=用户(白)胜 3=和棋 —— 注意以用户视角展示
         if (status === 1) {
-            setStatus('你赢了', 'win');
-        } else if (status === 2) {
             setStatus('对方赢了', 'lose');
+        } else if (status === 2) {
+            setStatus('你赢了', 'win');
         } else if (status === 3) {
             setStatus('和棋', 'draw');
         } else {
@@ -407,6 +430,7 @@
     function init() {
         findEls();
         bindButtons();
+        window.addEventListener('resize', resizeBoard);
         if (window.PluginHook) {
             window.PluginHook.onCommand(handleCommand);
         }

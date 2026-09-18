@@ -202,6 +202,8 @@ public class GomokuTool implements AgentTool {
         }
 
         game.place(x, y, Game.PIECE_USER);
+        // 用户落子同步到前端（本地已预渲染，幂等），并携带最新胜负状态
+        sendCommand("place", game.getId(), null, buildPlacePayload(x, y, Game.PIECE_USER, game, null));
 
         if (game.finished()) {
             return game.statusText() + "\n\n" + renderBoard(game);

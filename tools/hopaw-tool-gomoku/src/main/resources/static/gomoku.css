@@ -113,8 +113,6 @@
 .plugin-gomoku-board {
     display: grid;
     gap: 1px;
-    width: 100%;
-    max-width: 100%;
     background: #d9a06b;
     padding: 8px;
     border-radius: 8px;
@@ -124,8 +122,7 @@
 }
 
 .plugin-gomoku-cell {
-    width: 100%;
-    aspect-ratio: 1 / 1;
+    box-sizing: border-box;
     min-width: 0;
     min-height: 0;
     padding: 0;
