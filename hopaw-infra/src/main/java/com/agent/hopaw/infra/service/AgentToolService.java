@@ -112,10 +112,10 @@ public class AgentToolService implements IAgentToolService {
         List<ToolSetInfo> result = new ArrayList<>();
         List<DynamicToolRegistry.PluginEntry> allPluginEntries = dynamicToolRegistry.getAllPluginEntries();
         for (DynamicToolRegistry.PluginEntry entry : allPluginEntries) {
-            List<AgentTool> tools = entry.tools;
+            List<AgentTool> tools = entry.getTools();
             for (AgentTool tool : tools) {
                 ToolSetInfo toolSetInfo = scanToolSet(tool, AgentToolSourceEnum.PLUGIN);
-                toolSetInfo.setJarFileName(entry.jarFileName);
+                toolSetInfo.setJarFileName(entry.getJarFileName());
                 if(!AgentTool.DEFAULT_ICON.equals(toolSetInfo.getIcon())){
                     toolSetInfo.setIcon(entry.getCachedResource("static/icons/tools/"+tool.getIcon()));
                 }
@@ -216,16 +216,8 @@ public class AgentToolService implements IAgentToolService {
             if (isUpgrade) {
                 log.info("Plugin {} is installed, uninstalling before upgrade", toolName);
                 reportStage(stageCallback, "uninstalling");
-                DynamicToolRegistry.PluginEntry removed = dynamicToolRegistry.unregister(jarFileName);
-                if (removed != null) {
-                    for (AgentTool tool : removed.tools) {
-                        try {
-                            tool.destroy();
-                        } catch (Exception e) {
-                            log.error("Error calling destroy() on tool: {}", tool.getClass().getSimpleName(), e);
-                        }
-                    }
-                }
+                // unregister 内部会统一调用各工具的 destroy 并关闭 classloader，无需重复 destroy
+                dynamicToolRegistry.unregister(jarFileName);
                 File existingFile = targetPath.toFile();
                 if (existingFile.exists() && !existingFile.delete()) {
                     log.warn("Failed to delete existing plugin file: {}", targetPath);
@@ -374,10 +366,10 @@ public class AgentToolService implements IAgentToolService {
 
         Map<String, DynamicToolRegistry.PluginEntry> allPlugins = dynamicToolRegistry.getPlugins();
         for (DynamicToolRegistry.PluginEntry entry : allPlugins.values()) {
-            if (entry.tools.isEmpty()) continue;
-            AgentTool existingTool = entry.tools.get(0);
+            if (entry.getTools().isEmpty()) continue;
+            AgentTool existingTool = entry.getTools().get(0);
             String existingPluginName = existingTool.getName();
-            if (!entry.jarFileName.equals(jarFile.getName()) && existingPluginName.equals(scanResult.pluginName)) {
+            if (!entry.getJarFileName().equals(jarFile.getName()) && existingPluginName.equals(scanResult.pluginName)) {
                 conflictingPlugins.add(existingPluginName);
             }
         }
@@ -436,7 +428,7 @@ public class AgentToolService implements IAgentToolService {
             }
 
             DynamicToolRegistry.PluginEntry entry = dynamicToolRegistry.getPlugins().get(jarFileName);
-            if (entry == null || entry.tools.isEmpty()) {
+            if (entry == null || entry.getTools().isEmpty()) {
                 log.warn("exportPlugin: plugin not loaded or has no tools: {}", jarFileName);
                 return null;
             }
@@ -517,8 +509,8 @@ public class AgentToolService implements IAgentToolService {
         if (existingFile.exists() || dynamicToolRegistry.hasPlugin(jarFileName)) {
             isUpgrade = true;
             DynamicToolRegistry.PluginEntry existing = dynamicToolRegistry.getPlugins().get(jarFileName);
-            if (existing != null && !existing.tools.isEmpty()) {
-                previousVersion = existing.tools.get(0).getVersion();
+            if (existing != null && !existing.getTools().isEmpty()) {
+                previousVersion = existing.getTools().get(0).getVersion();
             }
             jarPluginLoader.unloadAndDeletePlugin(jarFileName);
         }
@@ -577,8 +569,8 @@ public class AgentToolService implements IAgentToolService {
         if (existingFile.exists() || dynamicToolRegistry.hasPlugin(jarFileName)) {
             isUpgrade = true;
             DynamicToolRegistry.PluginEntry existing = dynamicToolRegistry.getPlugins().get(jarFileName);
-            if (existing != null && !existing.tools.isEmpty()) {
-                previousVersion = existing.tools.get(0).getVersion();
+            if (existing != null && !existing.getTools().isEmpty()) {
+                previousVersion = existing.getTools().get(0).getVersion();
             }
             jarPluginLoader.unloadAndDeletePlugin(jarFileName);
         }
@@ -594,8 +586,8 @@ public class AgentToolService implements IAgentToolService {
         try {
             // 加载后从注册表中读取版本号
             DynamicToolRegistry.PluginEntry entry = dynamicToolRegistry.getPlugins().get(jarFileName);
-            if (entry != null && !entry.tools.isEmpty()) {
-                version = entry.tools.get(0).getVersion();
+            if (entry != null && !entry.getTools().isEmpty()) {
+                version = entry.getTools().get(0).getVersion();
             }
         } catch (Exception ignored) {
             // 版本读取失败不阻塞安装结果

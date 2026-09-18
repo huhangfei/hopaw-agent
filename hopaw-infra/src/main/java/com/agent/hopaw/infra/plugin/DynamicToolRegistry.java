@@ -1,6 +1,5 @@
 package com.agent.hopaw.infra.plugin;
 
-import com.agent.hopaw.infra.model.dto.ToolSetInfo;
 import com.agent.hopaw.infra.tool.AgentTool;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -26,23 +25,40 @@ public class DynamicToolRegistry {
 
     private final ConcurrentMap<String, PluginEntry> plugins = new ConcurrentHashMap<>();
 
-    public void register(String jarFileName, PluginClassLoader classLoader, List<AgentTool> tools) {
+    /**
+     * 注册插件。并发安全：使用 putIfAbsent 原子化，拒绝重复注册同名插件。
+     *
+     * @return true 表示本次成功注册；false 表示同名插件已存在（本次被拒绝），
+     *         调用方需自行关闭传入的 classLoader。
+     */
+    public boolean register(String jarFileName, PluginClassLoader classLoader, List<AgentTool> tools) {
         PluginEntry entry = new PluginEntry(jarFileName, classLoader, tools);
-        plugins.put(jarFileName, entry);
-        logger.info("Registered plugin [{}] with {} tools", jarFileName, tools.size());
+        boolean added = plugins.putIfAbsent(jarFileName, entry) == null;
+        if (added) {
+            logger.info("Registered plugin [{}] with {} tools", jarFileName, tools.size());
+        } else {
+            logger.warn("Plugin [{}] already registered, ignore duplicate registration", jarFileName);
+        }
+        return added;
     }
 
     public PluginEntry unregister(String jarFileName) {
         PluginEntry entry = plugins.remove(jarFileName);
         if (entry != null) {
             // 调用所有工具的 destroy 方法（如果存在）
-            for (AgentTool tool : entry.tools) {
+            for (AgentTool tool : entry.getTools()) {
                 try {
                     tool.destroy();
                     logger.debug("Called destroy() on tool: {}", tool.getName());
-                 } catch (Exception e) {
+                } catch (Exception e) {
                     logger.error("Error calling destroy() on tool: {}", tool.getClass().getSimpleName(), e);
                 }
+            }
+            // 关闭 classloader，释放 JAR 文件句柄与临时文件，保证 Windows 上可删除 JAR
+            try {
+                entry.getClassLoader().close();
+            } catch (Exception e) {
+                logger.error("Error closing plugin classloader [{}]", jarFileName, e);
             }
             logger.info("Unregistered plugin [{}]", jarFileName);
         }
@@ -52,14 +68,14 @@ public class DynamicToolRegistry {
     public List<AgentTool> getAllDynamicTools() {
         List<AgentTool> result = new ArrayList<>();
         for (PluginEntry entry : plugins.values()) {
-            result.addAll(entry.tools);
+            result.addAll(entry.getTools());
         }
         return Collections.unmodifiableList(result);
     }
-    public List<PluginEntry> getAllPluginEntries() {
-        return Collections.unmodifiableList(plugins.values().stream().collect(Collectors.toList()));
-    }
 
+    public List<PluginEntry> getAllPluginEntries() {
+        return List.copyOf(plugins.values());
+    }
 
     public boolean hasPlugin(String jarFileName) {
         return plugins.containsKey(jarFileName);
@@ -78,9 +94,9 @@ public class DynamicToolRegistry {
     }
 
     public static class PluginEntry {
-        public final String jarFileName;
-        public final PluginClassLoader classLoader;
-        public final List<AgentTool> tools;
+        private final String jarFileName;
+        private final PluginClassLoader classLoader;
+        private final List<AgentTool> tools;
         // 缓存该插件的所有资源文件内容 (资源路径 -> 内容)
         private final Map<String, String> resourceCache = new ConcurrentHashMap<>();
 
@@ -89,16 +105,37 @@ public class DynamicToolRegistry {
             this.classLoader = classLoader;
             this.tools = Collections.unmodifiableList(tools);
         }
-        
+
+        public String getJarFileName() {
+            return jarFileName;
+        }
+
+        public PluginClassLoader getClassLoader() {
+            return classLoader;
+        }
+
+        public List<AgentTool> getTools() {
+            return tools;
+        }
+
         /**
-         * 获取缓存的资源内容,如果不存在则从 JAR 中加载
+         * 获取缓存的资源内容，如果不存在则从 JAR 中加载；加载失败或资源为空时不缓存。
          */
         public String getCachedResource(String resourcePath) {
-            return resourceCache.computeIfAbsent(resourcePath, this::loadResourceFromJar);
+            String cached = resourceCache.get(resourcePath);
+            if (cached != null) {
+                return cached;
+            }
+            String content = loadResourceFromJar(resourcePath);
+            if (content != null && !content.isEmpty()) {
+                resourceCache.putIfAbsent(resourcePath, content);
+                return content;
+            }
+            return "";
         }
-        
+
         /**
-         * 从 JAR 文件中加载资源内容
+         * 从 JAR 文件中加载资源内容；失败返回 null（由调用方决定是否缓存）。
          */
         private String loadResourceFromJar(String resourcePath) {
             try (InputStream is = classLoader.getResourceAsStream(resourcePath)) {
@@ -113,7 +150,7 @@ public class DynamicToolRegistry {
                 logger.error("Failed to load resource: {}", resourcePath, e);
             }
             logger.warn("Resource not found: {}", resourcePath);
-            return "";
+            return null;
         }
     }
 }
