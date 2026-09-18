@@ -247,7 +247,9 @@
             </form>
         </div>
     </main>
-    <aside class="tool-panel">
+    <aside class="tool-panel" id="toolPanel">
+        <!-- 完整视图：原有三个区块整体包入，收缩时整体淡出隐藏，内容与逻辑不丢失 -->
+        <div class="tool-panel-full" id="toolPanelFull">
         <div class="tool-panel-section tool-panel-top">
             <div class="tool-panel-title session-panel-title">
                 <span>会话列表</span>
@@ -259,6 +261,13 @@
                     <span class="session-type-tab" data-type="project" onclick="filterSessionsByType('project')">项目</span>
                     <span class="session-type-tab" data-type="task" onclick="filterSessionsByType('task')">任务</span>
                 </div>
+                <!-- 收缩按钮：切换为右侧窄条简化模式 -->
+                <button type="button" class="btn-collapse-panel" onclick="toggleToolPanelMini(true)" title="收缩为简化模式">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" width="13" height="13">
+                        <polyline points="13 17 18 12 13 7"/>
+                        <polyline points="6 17 11 12 6 7"/>
+                    </svg>
+                </button>
             </div>
             <div class="tool-panel-body session-list-body" id="sessionList">
             </div>
@@ -277,6 +286,41 @@
                 <span id="tokenLastStats" style="font-size:11px;font-weight:400;margin-left:8px;float: right;"></span>
             </div>
             <div class="tool-panel-body" id="tokenUsage">
+            </div>
+        </div>
+        </div>
+
+        <!-- 简化视图：右侧窄条（56px）。数据由 tool-panel-mini.js 从完整视图 DOM 同步，功能等价、信息不丢失 -->
+        <div class="tool-panel-mini hide" id="toolPanelMini" aria-label="简化面板">
+            <button type="button" class="mini-icon-btn mini-expand-btn" onclick="toggleToolPanelMini(false)" title="展开完整面板">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" width="13" height="13">
+                    <polyline points="11 17 6 12 11 7"/>
+                    <polyline points="18 17 13 12 18 7"/>
+                </svg>
+            </button>
+            <button type="button" class="mini-icon-btn mini-add-session-btn" onclick="createNewSession()" title="新会话">
+                <svg viewBox="0 0 24 24" fill="currentColor" width="14" height="14"><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/></svg>
+            </button>
+            <!-- 类型筛选：单字气泡，与完整视图共用 filterSessionsByType -->
+            <div class="mini-type-filter" id="miniTypeFilter">
+                <span class="mini-type-tab" data-type="chat" title="聊天会话" onclick="filterSessionsByType('chat')">聊</span>
+                <span class="mini-type-tab" data-type="project" title="项目会话" onclick="filterSessionsByType('project')">项</span>
+                <span class="mini-type-tab" data-type="task" title="任务会话" onclick="filterSessionsByType('task')">任</span>
+            </div>
+            <!-- 会话气泡列表：两字气泡，悬停向左弹出完整信息卡片 -->
+            <div class="mini-session-list" id="miniSessionList"></div>
+            <div class="mini-divider"></div>
+            <!-- 工具执行统计：状态分布甜甜圈 + 执行项气泡（工具集图标），悬停弹出名称/时间/参数/输入输出 -->
+            <div class="mini-tool-stats" id="miniToolStatsWrap">
+                <div class="mini-donut-box"><canvas id="miniToolStatsChart" width="46" height="46"></canvas></div>
+                <div class="mini-tool-count" id="miniToolCount">0</div>
+            </div>
+            <div class="mini-tool-list" id="miniToolList"></div>
+            <div class="mini-divider"></div>
+            <!-- Token 总览：输入/输出占比甜甜圈 + 竖向柱状图（实时追加），悬停弹出统计 -->
+            <div class="mini-token-stats" id="miniTokenStatsWrap">
+                <div class="mini-donut-box"><canvas id="miniTokenDonut" width="46" height="46"></canvas></div>
+                <canvas id="miniTokenBars" width="46" height="58"></canvas>
             </div>
         </div>
     </aside>
@@ -462,6 +506,7 @@
     <link rel="stylesheet" th:href="@{/css/nouislider.min.css}">
     <link rel="stylesheet" th:href="@{/css/page/agent-form.css}">
     <link rel="stylesheet" th:href="@{/css/page/index.css}">
+    <link rel="stylesheet" th:href="@{/css/page/tool-panel-mini.css(v=20260918a)}">
     <link rel="stylesheet" th:href="@{/css/page/avatar.css(v=20260603a)}" th:if="${!avatarDisabled}">
 </th:block>
 
@@ -472,6 +517,7 @@
     <script th:src="@{/js/model-select.js}"></script>
     <script th:src="@{/js/marked.min.js}"></script>
     <script th:src="@{/js/chart.umd.min.js}"></script>
+    <script th:src="@{/js/page/tool-panel-mini.js(v=20260918a)}"></script>
 
     <script th:inline="javascript">
         setCurrentAgentId(/*[[${selectedAgentId}]]*/ null);
