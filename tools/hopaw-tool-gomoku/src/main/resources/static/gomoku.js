@@ -17,6 +17,9 @@
     var statusEl = null;
     var closeBtn = null;
     var restartBtn = null;
+    var timerEl = null;
+    var timerInterval = null; // 倒计时定时器
+    var timerDeadline = 0;    // 倒计时截止时间戳(ms)
 
     var size = 15;
     var cells = [];           // size x size 的格子 DOM
@@ -36,6 +39,7 @@
         statusEl = document.querySelector('[data-gomoku-status]');
         closeBtn = document.querySelector('[data-gomoku-close]');
         restartBtn = document.querySelector('[data-gomoku-restart]');
+        timerEl = document.querySelector('[data-gomoku-timer]');
     }
 
     function setStatus(text, cls) {
@@ -132,6 +136,40 @@
         p.classList.add('last');
     }
 
+    /** 启动等待用户落子的倒计时。 */
+    function startTimer(timeoutSec) {
+        stopTimer();
+        if (!timerEl || !timeoutSec || timeoutSec <= 0) return;
+        timerDeadline = Date.now() + timeoutSec * 1000;
+        timerEl.hidden = false;
+        renderTimer();
+        timerInterval = setInterval(renderTimer, 1000);
+    }
+
+    function renderTimer() {
+        if (!timerEl) return;
+        var remain = Math.max(0, Math.ceil((timerDeadline - Date.now()) / 1000));
+        var mm = Math.floor(remain / 60);
+        var ss = remain % 60;
+        var text = mm > 0 ? (mm + ':' + (ss < 10 ? '0' : '') + ss) : String(ss);
+        timerEl.innerHTML = '剩余落子时间 <span class="plugin-gomoku-timer-num">' + text + '</span> 秒';
+        timerEl.classList.toggle('urgent', remain <= 10);
+        if (remain <= 0) {
+            stopTimer();
+        }
+    }
+
+    /** 停止并隐藏倒计时。 */
+    function stopTimer() {
+        if (timerInterval) {
+            clearInterval(timerInterval);
+            timerInterval = null;
+        }
+        if (timerEl) {
+            timerEl.hidden = true;
+        }
+    }
+
     function onCellClick(ev) {
         if (!waiting || !pendingRequestId) return;
         var cell = ev.currentTarget;
@@ -142,6 +180,7 @@
         // 本地先渲染用户棋子，等待后端确认（后端会再下发 place 同步，幂等）
         renderPiece(x, y, 2);
         waiting = false;
+        stopTimer();
         setStatus('等待对方', 'active');
 
         var rid = pendingRequestId;
@@ -174,10 +213,12 @@
         }
     }
 
-    function handleRequestMove(requestId) {
+    function handleRequestMove(requestId, payload) {
         waiting = true;
         pendingRequestId = requestId;
         setStatus('轮到你落子(白)', 'active');
+        var timeoutSec = (payload && payload.timeout) ? payload.timeout : 60;
+        startTimer(timeoutSec);
     }
 
     function handleCommand(cmd) {
@@ -191,9 +232,10 @@
             handlePlace(cmd.payload);
         } else if (cmd.action === 'request-move') {
             if (!active) { openPanel(); }
-            handleRequestMove(cmd.requestId);
+            handleRequestMove(cmd.requestId, cmd.payload);
         } else if (cmd.action === 'close') {
             if (active) closePanel();
+            stopTimer();
             setStatus('待命');
         }
     }
@@ -201,6 +243,7 @@
     function onClose() {
         if (!active) return;
         closePanel();
+        stopTimer();
         setStatus('待命');
     }
 
@@ -209,6 +252,7 @@
         if (boardEl && size > 0) {
             buildBoard(size);
         }
+        stopTimer();
         setStatus('待命');
     }
 

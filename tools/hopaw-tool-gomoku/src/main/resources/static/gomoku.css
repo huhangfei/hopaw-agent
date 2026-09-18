@@ -94,6 +94,22 @@
     overflow: auto;
 }
 
+.plugin-gomoku-timer {
+    flex-shrink: 0;
+    text-align: center;
+    font-size: 12px;
+    font-variant-numeric: tabular-nums;
+    color: var(--color-text-tertiary, #888);
+    padding: 4px 0 8px;
+}
+.plugin-gomoku-timer .plugin-gomoku-timer-num {
+    font-weight: 600;
+    color: #185fa5;
+}
+.plugin-gomoku-timer.urgent .plugin-gomoku-timer-num {
+    color: #d94545;
+}
+
 .plugin-gomoku-board {
     display: grid;
     gap: 1px;
@@ -201,4 +217,10 @@ body.dark-theme .plugin-gomoku-btn:hover {
 body.dark-theme .plugin-gomoku-btn.plugin-gomoku-close:hover {
     background: #ff5252;
     color: #fff;
+}
+body.dark-theme .plugin-gomoku-timer .plugin-gomoku-timer-num {
+    color: #8ea2ff;
+}
+body.dark-theme .plugin-gomoku-timer.urgent .plugin-gomoku-timer-num {
+    color: #ff7a7a;
 }

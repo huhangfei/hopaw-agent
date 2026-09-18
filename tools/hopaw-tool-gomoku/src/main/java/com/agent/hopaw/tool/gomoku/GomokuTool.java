@@ -47,8 +47,8 @@ public class GomokuTool implements AgentTool {
     private static final int MIN_BOARD_SIZE = 9;
     private static final int MAX_BOARD_SIZE = 19;
 
-    /** 等待用户落子的默认超时（秒），比暂存服务默认略短以留余量。 */
-    private static final long USER_MOVE_TIMEOUT_SECONDS = 60L;
+    /** 等待用户落子的默认超时（秒）。倒计时同步给前端，需与 await 保持一致。 */
+    private static final long USER_MOVE_TIMEOUT_SECONDS = 300L;
 
     @Autowired
     private IWebSocketBridgeService webSocketBridgeService;
@@ -159,8 +159,10 @@ public class GomokuTool implements AgentTool {
 
         String requestId = UUID.randomUUID().toString();
         requestGameMap.put(requestId, game.getId());
-        // 下发等待指令，前端进入「等待用户点击」状态
-        sendCommand("request-move", game.getId(), requestId, null);
+        // 下发等待指令，前端进入「等待用户点击」状态，并携带超时秒数用于倒计时展示
+        Map<String, Object> waitPayload = new HashMap<>();
+        waitPayload.put("timeout", USER_MOVE_TIMEOUT_SECONDS);
+        sendCommand("request-move", game.getId(), requestId, waitPayload);
 
         // 阻塞等待前端回传用户落子坐标（形如 "x,y"）
         String move = pluginResultStore.await(requestId, USER_MOVE_TIMEOUT_SECONDS);
