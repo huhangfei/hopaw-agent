@@ -2,12 +2,21 @@
     <div class="plugin-canvas-header">
         <span class="plugin-canvas-title">实时画布</span>
         <span class="plugin-canvas-status" data-canvas-status>待命</span>
-        <button type="button" class="plugin-canvas-close" data-canvas-close title="关闭画布" aria-label="关闭画布">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" width="14" height="14">
-                <line x1="18" y1="6" x2="6" y2="18"/>
-                <line x1="6" y1="6" x2="18" y2="18"/>
-            </svg>
-        </button>
+        <span class="plugin-canvas-actions">
+            <button type="button" class="plugin-canvas-btn" data-canvas-download title="下载当前画布图片" aria-label="下载画布图片">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="14" height="14">
+                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                    <polyline points="7 10 12 15 17 10"/>
+                    <line x1="12" y1="15" x2="12" y2="3"/>
+                </svg>
+            </button>
+            <button type="button" class="plugin-canvas-btn plugin-canvas-close" data-canvas-close title="关闭画布" aria-label="关闭画布">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" width="14" height="14">
+                    <line x1="18" y1="6" x2="6" y2="18"/>
+                    <line x1="6" y1="6" x2="18" y2="18"/>
+                </svg>
+            </button>
+        </span>
     </div>
     <canvas class="plugin-canvas-board" width="640" height="480"></canvas>
 </div>

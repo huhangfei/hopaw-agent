@@ -26,11 +26,12 @@ import java.util.UUID;
  * 由前端插件 JS 在 canvas 上实时绘制；当需要把结果返回给 LLM 时，后端阻塞等待前端
  * 通过暂存服务回传的 string（如 canvas.toDataURL() 的图片 base64）。</p>
  *
- * <p>三个 @Tool：</p>
+ * <p>四个 @Tool：</p>
  * <ul>
  *   <li>{@code drawCanvas} —— 开始绘制，前端收缩会话区并新建并排画布；</li>
  *   <li>{@code appendDraw} —— 下发实时绘制命令，前端在画布上绘制；</li>
- *   <li>{@code finishCanvas} —— 结束绘制，前端还原布局并回传画布结果图，后端阻塞等待后返回给 LLM。</li>
+ *   <li>{@code getCanvasResult} —— 获取当前画布结果图（不关闭插件），后端阻塞等待后返回给 LLM；</li>
+ *   <li>{@code closeCanvas} —— 结束会话，前端还原布局并关闭插件。</li>
  * </ul>
  */
 public class CanvasTool implements AgentTool {
@@ -94,19 +95,19 @@ public class CanvasTool implements AgentTool {
     }
 
     @ToolSecurityLevel(ToolSecurityLevel.Level.SAFE)
-    @Tool(value = {"结束画布绘制并获取结果", "结束画布绘制，前端还原布局并回传画布结果图，以图片内容返回给大模型"})
-    public List<Content> finishCanvas() {
+    @Tool(value = {"获取当前画布结果", "获取当前画布内容为图片返回给大模型，不关闭画布插件，可继续追加绘制"})
+    public List<Content> getCanvasResult() {
         String requestId = UUID.randomUUID().toString();
-        // 先注册待回传槽位，再下发结束指令
+        // 先注册待回传槽位，再下发快照指令（前端回传 dataURL，不关闭插件）
         pluginResultStore.register(requestId, null);
-        sendCommand("finish", null, requestId);
+        sendCommand("snapshot", null, requestId);
 
         // 阻塞等待前端回传（纯 string 透传，期望前端回传 canvas.toDataURL() 的 data URL）
         String result = pluginResultStore.await(requestId, IPluginResultStore.DEFAULT_TIMEOUT_SECONDS);
         if (result == null) {
             return List.of(new TextContent("错误: 获取画布结果超时，可能前端画布未就绪或未在浏览器打开会话页面。"));
         }
-        logger.info("CanvasTool: received canvas result ({} chars)", result.length());
+        logger.info("CanvasTool: received canvas snapshot ({} chars)", result.length());
 
         // 解析 data URL（形如 data:image/png;base64,xxxxx），提取 MIME 与纯 base64
         DataUrl dataUrl = parseDataUrl(result);
@@ -114,8 +115,15 @@ public class CanvasTool implements AgentTool {
             return List.of(new TextContent("错误: 前端回传的画布结果不是有效的图片 data URL。"));
         }
         return List.of(
-                new TextContent("画布绘制完成，结果图已作为图片内容提供（格式 " + dataUrl.mimeType + "）"),
+                new TextContent("画布当前结果已作为图片内容提供（格式 " + dataUrl.mimeType + "），画布保持打开可继续绘制。"),
                 ImageContent.from(dataUrl.base64, dataUrl.mimeType));
+    }
+
+    @ToolSecurityLevel(ToolSecurityLevel.Level.SAFE)
+    @Tool(value = {"结束画布会话并关闭插件", "结束画布会话，前端还原布局并关闭画布插件"})
+    public String closeCanvas() {
+        sendCommand("close", null, null);
+        return "画布会话已结束，插件已关闭。";
     }
 
     /**

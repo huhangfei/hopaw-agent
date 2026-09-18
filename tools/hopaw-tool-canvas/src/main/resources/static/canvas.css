@@ -45,7 +45,14 @@
     background: #e6f1fb;
 }
 
-.plugin-canvas-close {
+.plugin-canvas-actions {
+    flex-shrink: 0;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.plugin-canvas-btn {
     flex-shrink: 0;
     width: 24px;
     height: 24px;
@@ -60,7 +67,11 @@
     cursor: pointer;
     transition: background .18s ease, color .18s ease;
 }
-.plugin-canvas-close:hover {
+.plugin-canvas-btn:hover {
+    background: #667eea;
+    color: #fff;
+}
+.plugin-canvas-btn.plugin-canvas-close:hover {
     background: #ff5252;
     color: #fff;
 }
@@ -75,17 +86,20 @@
     cursor: crosshair;
 }
 
-/* 画布激活时：会话区收缩、画布并排，插件槽位撑满高度 */
+/* 画布激活时：会话区与画布对称平分空间，插件槽位撑满高度。
+   注意：chat-area 保持 flex:1（grow 1）不变，仅让 #plugin-slot 也 grow 1 平分，
+   避免 flex-grow 瞬时归 0 导致聊天区被压到 0 宽度。 */
 .chat-wrapper.canvas-active #plugin-slot {
     display: flex;
-    flex: 1 1 50%;
+    flex: 1 1 0;
     height: 100%;
-    transition: flex-basis 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    min-width: 0;
+    transition: flex-grow 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .chat-wrapper.canvas-active .chat-area {
-    flex: 0 0 50%;
-    transition: flex-basis 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    flex: 1 1 0;
+    min-width: 0;
 }
 
 /* 暗色主题适配 */
@@ -97,11 +111,15 @@ body.dark-theme .plugin-canvas-board {
     background: #1b1d2b;
     border-color: rgba(255, 255, 255, 0.12);
 }
-body.dark-theme .plugin-canvas-close {
+body.dark-theme .plugin-canvas-btn {
     background: #2a2e42;
     color: #8ea2ff;
 }
-body.dark-theme .plugin-canvas-close:hover {
+body.dark-theme .plugin-canvas-btn:hover {
+    background: #667eea;
+    color: #fff;
+}
+body.dark-theme .plugin-canvas-btn.plugin-canvas-close:hover {
     background: #ff5252;
     color: #fff;
 }

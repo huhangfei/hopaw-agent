@@ -2,12 +2,15 @@
  * 画布工具插件前端逻辑。
  *
  * 通过 PluginHook 监听后端 @Tool 下发的指令：
- *   - action=start  收缩会话区、新建并排画布（侧边栏收缩为迷你条）
- *   - action=draw   在画布上实时绘制（payload 为 JSON 图形描述）
- *   - action=finish 还原布局、回传 canvas.toDataURL() 结果
+ *   - action=start    收缩会话区、新建并排画布（侧边栏收缩为迷你条）
+ *   - action=draw     在画布上实时绘制（payload 为 JSON 图形描述）
+ *   - action=snapshot 获取当前画布结果图（回传 dataURL，不关闭插件）
+ *   - action=close    结束会话、关闭插件（还原布局，不回传结果）
  *
- * 关闭按钮：点击后隐藏画布、还原聊天区，并恢复侧边栏状态。
- *   若画布期间用户手动切换过侧边栏，则保持用户当前状态；否则恢复到画布开始前的状态。
+ * 头部按钮：
+ *   - 下载：下载当前画布图片
+ *   - 关闭：隐藏画布、还原聊天区，并恢复侧边栏状态。
+ *     若画布期间用户手动切换过侧边栏，则保持用户当前状态；否则恢复到画布开始前的状态。
  */
 (function () {
     'use strict';
@@ -16,6 +19,7 @@
     var ctx = null;
     var statusEl = null;
     var closeBtn = null;
+    var downloadBtn = null;
     var active = false;
     // 画布打开时侧边栏是否为迷你态（用于关闭时恢复）
     var panelMiniAtStart = false;
@@ -26,6 +30,7 @@
         board = document.querySelector('.plugin-canvas-board');
         statusEl = document.querySelector('[data-canvas-status]');
         closeBtn = document.querySelector('[data-canvas-close]');
+        downloadBtn = document.querySelector('[data-canvas-download]');
     }
 
     function setStatus(text, isActive) {
@@ -83,6 +88,10 @@
             ctx = board.getContext('2d');
         }
         ctx.clearRect(0, 0, board.width, board.height);
+    }
+
+    function snapshotDataUrl() {
+        return board ? board.toDataURL('image/png') : '';
     }
 
     function renderCommand(cmdStr) {
@@ -154,30 +163,44 @@
         } else if (cmd.action === 'draw') {
             if (!active) { initCanvas(); shrinkChatArea(); }
             renderCommand(cmd.payload);
-        } else if (cmd.action === 'finish') {
+        } else if (cmd.action === 'snapshot') {
+            // 获取当前结果图：回传 dataURL，不关闭插件
             if (!active) { initCanvas(); shrinkChatArea(); }
-            var result = board ? board.toDataURL('image/png') : '';
-            restoreLayout();
+            var result = snapshotDataUrl();
             if (window.PluginHook && cmd.requestId) {
                 window.PluginHook.report(cmd.requestId, result);
             }
+        } else if (cmd.action === 'close') {
+            // 结束会话：仅还原布局，不回传结果
+            if (active) { restoreLayout(); }
         }
     }
 
     function closeCanvas() {
         if (!active) return;
-        // 关闭时无需回传结果，仅还原布局与侧边栏
         restoreLayout();
     }
 
-    function bindClose() {
-        if (!closeBtn) return;
-        closeBtn.addEventListener('click', closeCanvas);
+    function downloadCanvas() {
+        if (!board) return;
+        var dataUrl = snapshotDataUrl();
+        if (!dataUrl) return;
+        var a = document.createElement('a');
+        a.href = dataUrl;
+        a.download = 'canvas-' + Date.now() + '.png';
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+    }
+
+    function bindButtons() {
+        if (closeBtn) closeBtn.addEventListener('click', closeCanvas);
+        if (downloadBtn) downloadBtn.addEventListener('click', downloadCanvas);
     }
 
     function init() {
         findEls();
-        bindClose();
+        bindButtons();
         if (window.PluginHook) {
             window.PluginHook.onCommand(handleCommand);
         }
