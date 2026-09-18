@@ -1,0 +1,6034 @@
+
+
+
+交通信号控制管理平台通信协议
+——与第三方系统对接协议
+V1.0
+
+
+
+
+
+
+
+
+
+2020年9月5日
+
+
+目  录
+ TOC \o "1-3" \h \z \u  HYPERLINK \l _Toc16442 目  录	 PAGEREF _Toc16442 \h i
+ HYPERLINK \l _Toc15757 1 概述	 PAGEREF _Toc15757 \h 1
+ HYPERLINK \l _Toc28058 2 登录	 PAGEREF _Toc28058 \h 1
+ HYPERLINK \l _Toc2003 2.1 系统连接请求	 PAGEREF _Toc2003 \h 1
+ HYPERLINK \l _Toc4795 2.2 系统断开请求	 PAGEREF _Toc4795 \h 3
+ HYPERLINK \l _Toc6965 2.3 心跳推送-扩展	 PAGEREF _Toc6965 \h 6
+ HYPERLINK \l _Toc9315 3 信号参数查询	 PAGEREF _Toc9315 \h 7
+ HYPERLINK \l _Toc1656 3.1 信号机时间查询-扩展	 PAGEREF _Toc1656 \h 7
+ HYPERLINK \l _Toc30475 3.2 系统参数	 PAGEREF _Toc30475 \h 10
+ HYPERLINK \l _Toc29139 3.3 区域参数	 PAGEREF _Toc29139 \h 13
+ HYPERLINK \l _Toc10534 3.4 路口参数	 PAGEREF _Toc10534 \h 19
+ HYPERLINK \l _Toc9369 3.5 路口参数-扩展	 PAGEREF _Toc9369 \h 24
+ HYPERLINK \l _Toc17576 3.6 信号机参数	 PAGEREF _Toc17576 \h 27
+ HYPERLINK \l _Toc2361 3.7 信号灯组参数	 PAGEREF _Toc2361 \h 30
+ HYPERLINK \l _Toc31101 3.8 检测器参数	 PAGEREF _Toc31101 \h 33
+ HYPERLINK \l _Toc10810 3.9 检测器参数-扩展	 PAGEREF _Toc10810 \h 36
+ HYPERLINK \l _Toc8475 3.10 车道参数	 PAGEREF _Toc8475 \h 39
+ HYPERLINK \l _Toc14363 3.11 相位参数	 PAGEREF _Toc14363 \h 42
+ HYPERLINK \l _Toc31580 3.12 相位参数-扩展	 PAGEREF _Toc31580 \h 45
+ HYPERLINK \l _Toc26439 3.13 阶段参数	 PAGEREF _Toc26439 \h 49
+ HYPERLINK \l _Toc22318 3.14 相序方案表号-扩展	 PAGEREF _Toc22318 \h 52
+ HYPERLINK \l _Toc11890 3.15 配时方案参数-扩展	 PAGEREF _Toc11890 \h 55
+ HYPERLINK \l _Toc11756 3.16 配时日计划表-扩展	 PAGEREF _Toc11756 \h 59
+ HYPERLINK \l _Toc28958 3.17 配时调度计划表-扩展	 PAGEREF _Toc28958 \h 63
+ HYPERLINK \l _Toc11866 4 信号参数设置	 PAGEREF _Toc11866 \h 67
+ HYPERLINK \l _Toc16159 4.1 信号机校时-扩展	 PAGEREF _Toc16159 \h 67
+ HYPERLINK \l _Toc23702 4.2 检测器参数	 PAGEREF _Toc23702 \h 69
+ HYPERLINK \l _Toc22862 4.3 检测器参数-扩展	 PAGEREF _Toc22862 \h 72
+ HYPERLINK \l _Toc22143 4.4 车道参数	 PAGEREF _Toc22143 \h 75
+ HYPERLINK \l _Toc27857 4.5 相位参数	 PAGEREF _Toc27857 \h 78
+ HYPERLINK \l _Toc2141 4.6 相位参数-扩展	 PAGEREF _Toc2141 \h 82
+ HYPERLINK \l _Toc16798 4.7 阶段参数	 PAGEREF _Toc16798 \h 86
+ HYPERLINK \l _Toc15320 4.8 相序方案表号-扩展	 PAGEREF _Toc15320 \h 90
+ HYPERLINK \l _Toc15912 4.9 配时方案参数-扩展	 PAGEREF _Toc15912 \h 94
+ HYPERLINK \l _Toc31602 4.10 配时日计划表-扩展	 PAGEREF _Toc31602 \h 98
+ HYPERLINK \l _Toc29010 4.11 配时调度计划表-扩展	 PAGEREF _Toc29010 \h 102
+ HYPERLINK \l _Toc22317 4.12 启动信号参数下发-扩展	 PAGEREF _Toc22317 \h 107
+ HYPERLINK \l _Toc7451 5 运行信息订阅	 PAGEREF _Toc7451 \h 111
+ HYPERLINK \l _Toc15106 5.1 系统状态	 PAGEREF _Toc15106 \h 111
+ HYPERLINK \l _Toc20393 5.2 路口状态	 PAGEREF _Toc20393 \h 114
+ HYPERLINK \l _Toc20042 5.3 信号机故障	 PAGEREF _Toc20042 \h 118
+ HYPERLINK \l _Toc17815 5.4 路口运行控制方式	 PAGEREF _Toc17815 \h 122
+ HYPERLINK \l _Toc19283 5.5 路口运行周期	 PAGEREF _Toc19283 \h 126
+ HYPERLINK \l _Toc26538 5.6 路口运行周期-扩展	 PAGEREF _Toc26538 \h 130
+ HYPERLINK \l _Toc30897 5.7 路口运行阶段	 PAGEREF _Toc30897 \h 134
+ HYPERLINK \l _Toc1896 5.8 路口运行阶段-扩展	 PAGEREF _Toc1896 \h 139
+ HYPERLINK \l _Toc31247 5.9 路口运行相位灯态	 PAGEREF _Toc31247 \h 143
+ HYPERLINK \l _Toc22816 5.10 路口运行控制方案	 PAGEREF _Toc22816 \h 150
+ HYPERLINK \l _Toc7308 5.11 路口交通流统计数据	 PAGEREF _Toc7308 \h 154
+ HYPERLINK \l _Toc24413 5.12 路口检测器I/O过车数据-扩展	 PAGEREF _Toc24413 \h 160
+ HYPERLINK \l _Toc8928 6 信号控制	 PAGEREF _Toc8928 \h 166
+ HYPERLINK \l _Toc23268 6.1 指定控制方式	 PAGEREF _Toc23268 \h 166
+ HYPERLINK \l _Toc30693 6.2 锁定交通流向	 PAGEREF _Toc30693 \h 169
+ HYPERLINK \l _Toc11175 6.3 指定控制方案	 PAGEREF _Toc11175 \h 173
+ HYPERLINK \l _Toc8764 6.4 指定阶段-扩展	 PAGEREF _Toc8764 \h 175
+ HYPERLINK \l _Toc12890 6.5 中心临时方案控制-扩展	 PAGEREF _Toc12890 \h 178
+ HYPERLINK \l _Toc27161 7 响应错误信息	 PAGEREF _Toc27161 \h 182
+
+
+
+
+
+概述
+本协议是交通信号控制管理平台与第三方信号控制系统之间的通讯协议。交通信号控制管理平台为服务端，第三方信号控制系统为客户端，第三方信号控制系统向交通信号控制管理平台建立连接，交通信号控制管理平台通过此协议向第三方信号控制系统实现信号参数的获取、信号运行信息的订阅和信号控制。
+参考文件：GA/T 1049《公安交通集成指挥平台指挥平台通信协议》；
+依据文件：GA/T 1049.2-2013《公安交通集成指挥平台指挥平台通信协议 第2部分：交通信号控制系统》。
+登录
+系统连接请求
+注：登录口令需要加密（暂定MD5加密），登录成功后返回TOKEN码。所有的通信协议双方都需要验证TOKEN码。
+<SDO_User>
+<UserName>用户名</UserName>
+<Pwd>口令</Pwd>
+</SDO_User >
+Request:
+<?xml version="1.0" encoding="UTF-8"?>
+<Message>
+  <Version>1.0</Version>
+  <Token></Token>
+  <From>
+    <Address>
+      <Sys>TICP</Sys>
+      <SubSys/>
+      <Instance/>
+    </Address>
+  </From>
+  <To>
+    <Address>
+      <Sys>UTCS</Sys>
+      <SubSys/>
+      <Instance/>
+    </Address>
+  </To>
+  <Type>REQUEST</Type>
+  <Seq>1</Seq>
+  <Body>
+    <Operation order="1" name="Login">
+       <SDO_User>
+<UserName>admin</UserName>
+<Pwd>E10ADC3949BA59ABBE56E057F20F883E</Pwd>
+</SDO_User >
+    </Operation>  
+  </Body>
+</Message>
+Response:
+<?xml version="1.0" encoding="UTF-8"?>
+<Message>
+  <Version>1.0</Version>
+  <Token>977F4181A561D345D3961373C012EAC0</Token>
+  <From>
+    <Address>
+      <Sys>UTCS</Sys>
+      <SubSys/>
+      <Instance/>
+    </Address>
+  </From>
+  <To>
+    <Address>
+      <Sys>TICP</Sys>
+      <SubSys/>
+      <Instance/>
+    </Address>
+  </To>
+  <Type>RESPONSE</Type>
+  <Seq>20140829084311000015</Seq>
+  <Body>
+    <Operation order="1" name="Login">
+      	<SDO_User>
+<UserName>admin</UserName>
+<Pwd> </Pwd>
+</SDO_User >
+    </Operation>
+  </Body>
+</Message>
+系统断开请求
+<SDO_User>
+<UserName>用户名</UserName>
+<Pwd>口令</Pwd>
+</SDO_User >
+Request:
+<?xml version="1.0" encoding="UTF-8"?>
+<Message>
+  <Version>1.0</Version>
+  <Token>977F4181A561D345D3961373C012EAC0</Token>
+  <From>
+    <Address>
+      <Sys>TICP</Sys>
+      <SubSys/>
+      <Instance/>
+    </Address>
+  </From>
+  <To>
+    <Address>
+      <Sys>UTCS</Sys>
+      <SubSys/>
+      <Instance/>
+    </Address>
+  </To>
+  <Type>REQUEST</Type>
+  <Seq>1</Seq>
+  <Body>
+    <Operation order="1" name="Logout">
+       <SDO_User>
+<UserName>admin</UserName>
+<Pwd>E10ADC3949BA59ABBE56E057F20F883E</Pwd>
+</SDO_User >
+    </Operation>  
+  </Body>
+</Message>
+Response:
+<?xml version="1.0" encoding="UTF-8"?>
+<Message>
+  <Version>1.0</Version>
+  <Token></Token>
+  <From>
+    <Address>
+      <Sys>UTCS</Sys>
+      <SubSys/>
+      <Instance/>
+    </Address>
+  </From>
+  <To>
+    <Address>
+      <Sys>TICP</Sys>
+      <SubSys/>
+      <Instance/>
+    </Address>
+  </To>
+  <Type>RESPONSE</Type>
+  <Seq>20140829084311000015</Seq>
+  <Body>
+    <Operation order="1" name="Logout">
+      	<SDO_User>
+<UserName>admin</UserName>
+<Pwd> </Pwd>
+</SDO_User >
+    </Operation>
+  </Body>
+</Message>
+
+心跳推送-扩展
+注:登录成功后双方互发心跳，心跳带当前时间秒级时间戳
+<?xml version="1.0" encoding="UTF-8"?>
+<Message>
+  <Version>1.0</Version>
+  <Token>977F4181A561D345D3961373C012EAC0</Token>
+  <From>
+    <Address>
+      <Sys>UTCS</Sys>
+      <SubSys/>
+      <Instance/>
+    </Address>
+  </From>
+  <To>
+    <Address>
+      <Sys>TICP</Sys>
+      <SubSys/>
+      <Instance/>
+    </Address>
+  </To>
+  <Type>Push</Type>
+  <Seq>20140829084311000012</Seq>
+  <Body>
+    <Operation order="1" name="Subscribe">
+       <Heartbeat>
+<TimeStamp> 1599283925000 </TimeStamp>
+</Heartbeat>
+    </Operation>
+  </Body>
+</Message>
+
+信号参数查询
+信号机时间查询-扩展
+<SignalTime>
+	 <CrossID>路口编号</CrossID>
+<SysTimeStamp>信号机当前秒级时间戳</SysTimeStamp>
+</SignalTime>
+Request:
+<?xml version="1.0" encoding="UTF-8"?>
+<Message>
+  <Version>1.0</Version>
+  <Token>977F4181A561D345D3961373C012EAC0</Token>
+  <From>
+    <Address>
+      <Sys>TICP</Sys>
+      <SubSys/>
+      <Instance/>
+    </Address>
+  </From>
+  <To>
+    <Address>
+      <Sys>UTCS</Sys>
+      <SubSys/>
+      <Instance/>
+    </Address>
+  </To>
+  <Type>REQUEST</Type>
+  <Seq>1</Seq>
+  <Body>
+    <Operation order="1" name="Get">
+       <TSCCmd>
+			<ObjName>SignalTime</ObjName>
+			<ID>10001</ID>
+			<No></No>
+      </TSCCmd>
+    </Operation>  
+  </Body>
+</Message>
+Response:
+<?xml version="1.0" encoding="UTF-8"?>
+<Message>
+  <Version>1.0</Version>
+  <Token>977F4181A561D345D3961373C012EAC0</Token>
+  <From>
+    <Address>
+      <Sys>UTCS</Sys>
+      <SubSys/>
+      <Instance/>
+    </Address>
+  </From>
+  <To>
+    <Address>
+      <Sys>TICP</Sys>
+      <SubSys/>
+      <Instance/>
+    </Address>
+  </To>
+  <Type>RESPONSE</Type>
+  <Seq>20140829084311000015</Seq>
+  <Body>
+    <Operation order="1" name="Get">
+      <SignalTime>
+	 <CrossID>10001</CrossID>
+<SysTimeStamp>1599283925000</SysTimeStamp>
+</SignalTime>
+    </Operation>
+  </Body>
+</Message>
+
+系统参数
+<SysInfo>
+<SysName>系统名称</SysName>
+<SysVersion>版本号</SysVersion>
+<Supplier>供应商</Supplier>
+<RegionIDList>
+<!--区域编号列表-->
+<RegionID>区域编号</RegionID>
+……
+</RegionIDList>
+<SignalControlerIDList>
+<!--信号机设备编号列表-->
+<SignalControlerID>信号机设备编号</SignalControlerID>
+……
+</SignalControlerIDList>
+</SysInfo>
+系统参数对象描述见附录B中B.1.1。
+Request:
+<?xml version="1.0" encoding="UTF-8"?>
+<Message>
+  <Version>1.0</Version>
+  <Token>977F4181A561D345D3961373C012EAC0</Token>
+  <From>
+    <Address>
+      <Sys>TICP</Sys>
+      <SubSys/>
+      <Instance/>
+    </Address>
+  </From>
+  <To>
+    <Address>
+      <Sys>UTCS</Sys>
+      <SubSys/>
+      <Instance/>
+    </Address>
+  </To>
+  <Type>REQUEST</Type>
+  <Seq>1</Seq>
+  <Body>
+    <Operation order="1" name="Get">
+       <TSCCmd>
+		<ObjName>SysInfo</ObjName>
+		<ID></ID>
+		<No></No>
+      </TSCCmd>
+    </Operation>  
+  </Body>
+</Message>
+Response:
+<?xml version="1.0" encoding="UTF-8"?>
+<Message>
+  <Version>1.0</Version>
+  <Token>977F4181A561D345D3961373C012EAC0</Token>
+  <From>
+    <Address>
+      <Sys>UTCS</Sys>
+      <SubSys/>
+      <Instance/>
+    </Address>
+  </From>
+  <To>
+    <Address>
+      <Sys>TICP</Sys>
+      <SubSys/>
+      <Instance/>
+    </Address>
+  </To>
+  <Type>RESPONSE</Type>
+  <Seq>20140829084311000015</Seq>
+  <Body>
+    <Operation order="1" name="Get">
+      <SysInfo>
+        <SysName>智能交通管控平台</SysName>
+        <SysVersion>1.0</SysVersion>
+        <Supplier>XXX品牌公司</Supplier>
+        <RegionIDList>
+	  		<RegionID>330100211</RegionID>
+<RegionID>330100212</RegionID>
+        </RegionIDList>
+        <SignalControlerIDList>
+	    <SignalControlerID>33010058792223258</SignalControlerID>
+     <SignalControlerID>33010058792223259</SignalControlerID>
+        </SignalControlerIDList>
+      </SysInfo>
+    </Operation>
+  </Body>
+</Message>
+
+
+区域参数
+<RegionParam>
+<RegionID>区域编号</RegionID>
+<RegionName>名称</RegionName>
+<SubRegionIDList>
+<!--子区编号列表  -->
+<SubRegionID>子区编号</SubRegionID>
+……
+</SubRegionIDList>
+<CrossIDList>
+<!--区域直属路口的路口编号列表 -->
+<CrossID>路口编号</CrossID>
+……
+</CrossIDList>
+</RegionParam>
+区域参数对象描述见附录B中B.1.2。如一个区域未下设任何子区，则SubRegionIDList可以不包含 任何子元素。
+
+Request:
+<?xml version="1.0" encoding="UTF-8"?>
+<Message>
+  <Version>1.0</Version>
+  <Token>977F4181A561D345D3961373C012EAC0</Token>
+  <From>
+    <Address>
+      <Sys>TICP</Sys>
+      <SubSys/>
+      <Instance/>
+    </Address>
+  </From>
+  <To>
+    <Address>
+      <Sys>UTCS</Sys>
+      <SubSys/>
+      <Instance/>
+    </Address>
+  </To>
+  <Type>REQUEST</Type>
+  <Seq>20140829084311000013</Seq>
+  <Body>
+    <Operation order="1" name="Get">
+      <TSCCmd>
+	<ObjName>RegionParam</ObjName>
+	<ID>330100211</ID>(ID表示RegionID)
+	<No></No>
+      </TSCCmd>
+    </Operation>
+  </Body>
+</Message>
+
+Response:
+<?xml version="1.0" encoding="UTF-8"?>
+<Message>
+  <Version>1.0</Version>
+  <Token>977F4181A561D345D3961373C012EAC0</Token>
+  <From>
+    <Address>
+      <Sys>UTCS</Sys>
+      <SubSys/>
+      <Instance/>
+    </Address>
+  </From>
+  <To>
+    <Address>
+      <Sys>TICP</Sys>
+      <SubSys/>
+      <Instance/>
+    </Address>
+  </To>
+  <Type>RESPONSE</Type>
+  <Seq>20140829084311000013</Seq>
+  <Body>
+    <Operation order="1" name="Get">
+      <RegionParam>
+      <RegionID>330100211</RegionID>
+      <RegionName>海淀区</RegionName>
+      <SubRegionIDList>
+	    	<SubRegionID>33010021133</SubRegionID>
+	   </SubRegionIDList>
+      <CrossIDList>
+	        <CrossID>33010021133250</CrossID>
+	   </CrossIDList>
+      </RegionParam>
+    </Operation>
+  </Body>
+</Message>
+
+5.1.4	子区参数
+
+<SubRegionParam>
+<SubRegionID>子区编号</SubRegionID>
+<SubRegionName>名称</SubRegionName>
+<CrossIDList>
+<!--路口编号列表  -->
+<CrossID>路口编号</CrossID>
+……
+</CrossIDList>
+</SubRegionParam>
+子区参数对象描述见附录B中B.1.3。
+
+Request:
+<?xml version="1.0" encoding="UTF-8"?>
+<Message>
+  <Version>1.0</Version>
+  <Token>977F4181A561D345D3961373C012EAC0</Token>
+  <From>
+    <Address>
+      <Sys>TICP</Sys>
+      <SubSys/>
+      <Instance/>
+    </Address>
+  </From>
+  <To>
+    <Address>
+      <Sys>UTCS</Sys>
+      <SubSys/>
+      <Instance/>
+    </Address>
+  </To>
+  <Type>REQUEST</Type>
+  <Seq>20140829084311000022</Seq>
+  <Body>
+    <Operation order="1" name="Get">
+      <TSCCmd>
+	<ObjName>SubRegionParam</ObjName>
+	<ID>33010021133</ID>
+	<No></No>
+      </TSCCmd>
+    </Operation>
+  </Body>
+</Message>
+Response:
+<?xml version="1.0" encoding="UTF-8"?>
+<Message>
+  <Version>1.0</Version>
+  <Token>977F4181A561D345D3961373C012EAC0</Token>
+  <From>
+    <Address>
+      <Sys>UTCS</Sys>
+      <SubSys/>
+      <Instance/>
+    </Address>
+  </From>
+  <To>
+    <Address>
+      <Sys>TICP</Sys>
+      <SubSys/>
+      <Instance/>
+    </Address>
+  </To>
+  <Type>RESPONSE</Type>
+  <Seq>20140829084311000022</Seq>
+  <Body>
+    <Operation order="1" name="Get">
+      <SubRegionParam>
+	<SubRegionID>33010021133</SubRegionID>
+        <SubRegionName>江二十三组</SubRegionName>
+        <CrossIDList>
+	  <CrossID>33010021133250</CrossID>
+	</CrossIDList>
+      </SubRegionParam>
+    </Operation>
+  </Body>
+</Message>
+
+路口参数
+<CrossParam>
+<CrossID>路口编号</CrossID>
+<CrossName>名称</CrossName>
+<Feature>特征</Feature>
+<IsKey>是否关键路口</IsKey>
+<DetIDList>
+<!--检测器编号列表（对应检测器参数中的检测器编号）-->
+<DetID>检测器号</DetID>
+……
+</DetIDList>
+<LaneNoList>
+<!--车道序号列表（对应车道参数中的车道号）-->
+<LaneNo>车道序号</LaneNo>
+……
+</LaneNoList>
+<PhaseNoList>
+<!--相位序号列表（对应相位参数中的相位号）-->
+<PhaseNo>相位序号</PhaseNo>
+……
+</PhaseNoList>
+<StageNoList>
+<!--阶段序号列表-->
+<StageNo>阶段序号</StageNo>
+……
+</StageNoList>
+<PlanNoList>
+<!--配时方案序号列表-->
+<PlanNo>方案序号</PlanNo>
+……
+</PlanNoList>
+</CrossParam>
+信号控制路口（简称路口）参数对象描述信息见附录B中B.1.4。
+
+Request:
+<?xml version="1.0" encoding="UTF-8"?>
+<Message>
+  <Version>1.0</Version>
+  <Token>977F4181A561D345D3961373C012EAC0</Token>
+  <From>
+    <Address>
+      <Sys>TICP</Sys>
+      <SubSys/>
+      <Instance/>
+    </Address>
+  </From>
+  <To>
+    <Address>
+      <Sys>UTCS</Sys>
+      <SubSys/>
+      <Instance/>
+    </Address>
+  </To>
+  <Type>REQUEST</Type>
+  <Seq>20140829084311000004</Seq>
+  <Body>
+    <Operation order="1" name="Get">
+      <TSCCmd>
+			<ObjName>CrossParam</ObjName>
+			<ID>33010021133250</ID>(ID为CrossID)
+			<No></No>
+      </TSCCmd>
+    </Operation>
+  </Body>
+</Message>
+
+Response:
+<?xml version="1.0" encoding="UTF-8"?>
+<Message>
+  <Version>1.0</Version>
+  <Token>977F4181A561D345D3961373C012EAC0</Token>
+  <From>
+    <Address>
+      <Sys>UTCS</Sys>
+      <SubSys/>
+      <Instance/>
+    </Address>
+  </From>
+  <To>
+    <Address>
+      <Sys>TICP</Sys>
+      <SubSys/>
+      <Instance/>
+    </Address>
+  </To>
+  <Type>RESPONSE</Type>
+  <Seq>20140829084311000004</Seq>
+  <Body>
+    <Operation order="1" name="Get">
+      <CrossParam>
+		 <CrossID>33010021133250</CrossID>
+        <CrossName>滨安路环兴路路口</CrossName>
+        <Feature>00</Feature>
+        <DetIDList>
+	       <DetID>1</DetID>
+<DetID>2</DetID>
+	     </DetIDList>
+        <LaneNoList>
+	  		<LaneNo>1</LaneNo>
+<LaneNo>2</LaneNo>
+		 </LaneNoList>
+        <PhaseNoList>
+	  		<PhaseNo>1</PhaseNo>
+<PhaseNo>2</PhaseNo>
+<PhaseNo>3</PhaseNo>
+<PhaseNo>4</PhaseNo>
+<PhaseNo>5</PhaseNo>
+<PhaseNo>6</PhaseNo>
+		 </PhaseNoList>
+        <StageNoList>
+<StageNo>1</StageNo>
+<StageNo>2</StageNo>
+<StageNo>3</StageNo>
+<StageNo>4</StageNo>
+		 </StageNoList>
+        <PlanNoList>
+	  		<PlanNo>1</PlanNo>
+		 </PlanNoList>
+      </CrossParam>
+    </Operation>
+  </Body>
+</Message>
+路口参数-扩展
+<CrossParamExtend>
+<CrossID>路口编号</CrossID>
+<Longitude>经度</Longitude>
+<Latitude>纬度</Latitude>
+
+<DailyPlanIDList>
+<!—日计划号列表（对应日计划表中的计划序号）-->
+<DailyPlanNo>日计划序号</DailyPlanNo>
+……
+</DailyPlanIDList>
+<ScheduleList>
+<!—调度号列表（对应调度表中的调度序号）-->
+<ScheduleNo>调度序号</ScheduleNo>
+……
+</ScheduleList>
+<CrossParamExtend>
+
+Request:
+<?xml version="1.0" encoding="UTF-8"?>
+<Message>
+  <Version>1.0</Version>
+  <Token>977F4181A561D345D3961373C012EAC0</Token>
+  <From>
+    <Address>
+      <Sys>TICP</Sys>
+      <SubSys/>
+      <Instance/>
+    </Address>
+  </From>
+  <To>
+    <Address>
+      <Sys>UTCS</Sys>
+      <SubSys/>
+      <Instance/>
+    </Address>
+  </To>
+  <Type>REQUEST</Type>
+  <Seq>20140829084311000004</Seq>
+  <Body>
+    <Operation order="1" name="Get">
+      <TSCCmd>
+			<ObjName> CrossParamExtend </ObjName>
+			<ID>33010021133250</ID>(ID为CrossID)
+			<No></No>(为空代表路口下所有的编号，可以为具体的项编号)
+      </TSCCmd>
+    </Operation>
+  </Body>
+</Message>
+
+Response:
+<?xml version="1.0" encoding="UTF-8"?>
+<Message>
+  <Version>1.0</Version>
+  <Token>977F4181A561D345D3961373C012EAC0</Token>
+  <From>
+    <Address>
+      <Sys>UTCS</Sys>
+      <SubSys/>
+      <Instance/>
+    </Address>
+  </From>
+  <To>
+    <Address>
+      <Sys>TICP</Sys>
+      <SubSys/>
+      <Instance/>
+    </Address>
+  </To>
+  <Type>RESPONSE</Type>
+  <Seq>20140829084311000004</Seq>
+  <Body>
+    <Operation order="1" name="Get">
+      <CrossParamExtend>
+<CrossID>33010021133250</CrossID>
+<Longitude>116.322667 </Longitude>
+<Latitude>39.991539</Latitude>
+
+<DailyPlanIDList>
+<DailyPlanNo>1</DailyPlanNo>
+</DailyPlanIDList>
+<ScheduleList>
+<ScheduleNo>1</ScheduleNo>
+</ScheduleList>
+<CrossParamExtend>
+    </Operation>
+  </Body>
+</Message>
+信号机参数
+<SignalControler>
+<SignalControlerID>设备编号</SignalControlerID>
+<Supplier>供应商</Supplier>
+<Type>规格型号</Type>
+<CrossIDList>
+<!--信号机控制路口编号列表-->
+<CrossID>路口编号</CrossID>
+……
+</CrossIDList>
+<LampGroupNoList>
+<!--信号机控制灯组序号列表-->
+<LampGroupNo>信号灯组序号</LampGroupNo>
+</LampGroupNoList>
+
+</SignalControler>
+信号机参数的对象描述见附录B中B.1.5。
+Request:
+<?xml version="1.0" encoding="UTF-8"?>
+<Message>
+  <Version>1.0</Version>
+  <Token>977F4181A561D345D3961373C012EAC0</Token>
+  <From>
+    <Address>
+      <Sys>TICP</Sys>
+      <SubSys/>
+      <Instance/>
+    </Address>
+  </From>
+  <To>
+    <Address>
+      <Sys>UTCS</Sys>
+      <SubSys/>
+      <Instance/>
+    </Address>
+  </To>
+  <Type>REQUEST</Type>
+  <Seq>20140829084311000020</Seq>
+  <Body>
+    <Operation order="1" name="Get">
+      <TSCCmd>
+	<ObjName>SignalControler</ObjName>
+	<ID>33010058792223258</ID>( SignalControlerID设备编号)
+		    <No></No>(为空代表路口下所有的编号，可以为具体的项编号)
+      </TSCCmd>
+    </Operation>
+  </Body>
+</Message>
+
+Response:
+<?xml version="1.0" encoding="UTF-8"?>
+<Message>
+  <Version>1.0</Version>
+  <Token>977F4181A561D345D3961373C012EAC0</Token>
+  <From>
+    <Address>
+      <Sys>UTCS</Sys>
+      <SubSys/>
+      <Instance/>
+    </Address>
+  </From>
+  <To>
+    <Address>
+      <Sys>TICP</Sys>
+      <SubSys/>
+      <Instance/>
+    </Address>
+  </To>
+  <Type>RESPONSE</Type>
+  <Seq>20140829084311000020</Seq>
+  <Body>
+    <Operation order="1" name="Get">
+      <SignalControler>
+        <SignalControlerID>33010058792223258</SignalControlerID>
+        <Supplier>XXX品牌公司</Supplier>
+        <Type>1</Type>
+        <CrossIDList>
+	  		<CrossID>33010021133250</CrossID>
+        </CrossIDList>
+        <LampGroupNoList>     
+           <LampGroupNo>1</LampGroupNo>
+<LampGroupNo>2</LampGroupNo>
+<LampGroupNo>3</LampGroupNo>
+<LampGroupNo>4</LampGroupNo>
+<LampGroupNo>5</LampGroupNo>
+<LampGroupNo>6</LampGroupNo>
+<LampGroupNo>7</LampGroupNo>
+        </LampGroupNoList>   
+      </SignalControler> 
+    </Operation>
+  </Body>
+</Message>
+
+
+信号灯组参数
+
+<LampGroup>
+<SignalControlerID>信号机设备编号</SignalControlerID>
+<LampGroupNo>序号</LampGroupNo>
+<Direction>方向</Direction>
+<Type>灯组类型</Type>
+</LampGroup>
+信号灯组参数的对象描述见附录B中B.1.6。
+Request:
+<?xml version="1.0" encoding="UTF-8"?>
+<Message>
+  <Version>1.0</Version>
+  <Token>977F4181A561D345D3961373C012EAC0</Token>
+  <From>
+    <Address>
+      <Sys>TICP</Sys>
+      <SubSys/>
+      <Instance/>
+    </Address>
+  </From>
+  <To>
+    <Address>
+      <Sys>UTCS</Sys>
+      <SubSys/>
+      <Instance/>
+    </Address>
+  </To>
+  <Type>REQUEST</Type>
+  <Seq>20140829084311000019</Seq>
+  <Body>
+    <Operation order="1" name="Get">
+      <TSCCmd>
+	<ObjName>LampGroup</ObjName>
+	        <ID>33010058792223258</ID>(信号机ID)
+		    <No></No>(为空代表路口下所有的编号，可以为具体的项编号)
+      </TSCCmd>
+    </Operation>
+  </Body>
+</Message>
+
+Response:
+<?xml version="1.0" encoding="UTF-8"?>
+<Message>
+  <Version>1.0</Version>
+  <Token>977F4181A561D345D3961373C012EAC0</Token>
+  <From>
+    <Address>
+      <Sys>UTCS</Sys>
+      <SubSys/>
+      <Instance/>
+    </Address>
+  </From>
+  <To>
+    <Address>
+      <Sys>TICP</Sys>
+      <SubSys/>
+      <Instance/>
+    </Address>
+  </To>
+  <Type>RESPONSE</Type>
+  <Seq>20140829084311000019</Seq>
+  <Body>
+    <Operation order="1" name="Get">
+      <LampGroup>
+        <SignalControlerID>33010058792223258</SignalControlerID>
+        <LampGroupNo>1</LampGroupNo>
+        <Direction>1</Direction>
+        <Type>10</Type>
+      </LampGroup>
+    </Operation>
+  </Body>
+</Message>
+检测器参数
+<DetParam>
+<DetID>检测器编号</DetID>
+<Distance>距停车线距离</Distance>
+<CrossID>路口编号</CrossID>
+<LaneNoList>
+<!--车道序号列表（对应车道参数中的车道号）-->
+<LaneNo>车道序号</LaneNo>
+……
+</LaneNoList>
+</DetParam>
+检测器参数对象描述见附录B中B.1.7。
+Request:
+<?xml version="1.0" encoding="UTF-8"?>
+<Message>
+  <Version>1.0</Version>
+  <Token>977F4181A561D345D3961373C012EAC0</Token>
+  <From>
+    <Address>
+      <Sys>TICP</Sys>
+      <SubSys/>
+      <Instance/>
+    </Address>
+  </From>
+  <To>
+    <Address>
+      <Sys>UTCS</Sys>
+      <SubSys/>
+      <Instance/>
+    </Address>
+  </To>
+  <Type>REQUEST</Type>
+  <Seq>20140829084311000002</Seq>
+  <Body>
+    <Operation order="1" name="Get">
+      <TSCCmd>
+	    <ObjName>DetParam</ObjName>
+	    <ID>33010021133250</ID>(路口ID)
+	    <No></No>(为空代表路口下所有的编号，可以为具体的项编号)
+      </TSCCmd>
+    </Operation>
+  </Body>
+</Message>
+
+Response:
+<?xml version="1.0" encoding="UTF-8"?>
+<Message>
+  <Version>1.0</Version>
+  <Token>977F4181A561D345D3961373C012EAC0</Token>
+  <From>
+    <Address>
+      <Sys>UTCS</Sys>
+      <SubSys/>
+      <Instance/>
+    </Address>
+  </From>
+  <To>
+    <Address>
+      <Sys>TICP</Sys>
+      <SubSys/>
+      <Instance/>
+    </Address>
+  </To>
+  <Type>RESPONSE</Type>
+  <Seq>20140829084311000002</Seq>
+  <Body>
+    <Operation order="1" name="Get">
+      <DetParam>
+		 <DetID>3301002113325012</DetID>
+        <Distance>1.1</Distance>
+        <CrossID>33010021133250</CrossID>
+        <LaneNoList>
+	       <LaneNo>1</LaneNo>
+<LaneNo>2</LaneNo>
+        </LaneNoList>
+      </DetParam>
+    </Operation>
+  </Body>
+</Message>
+检测器参数-扩展
+<DetParamExtend>
+<DetID>检测器编号</DetID>
+<DetCycle>检测器数据统计周期</DetCycle>
+<DetType>检测器类型</DetType>//检测器类型编码：1、线圈2；视频3；地磁4；微波检测器；5超声波检测器；6红外检测器；7视频检测器；8雷达检测器；9雷视一体检测
+<CrossID>路口编号</CrossID>
+</DetParamExtend>
+Request:
+<?xml version="1.0" encoding="UTF-8"?>
+<Message>
+  <Version>1.0</Version>
+  <Token>977F4181A561D345D3961373C012EAC0</Token>
+  <From>
+    <Address>
+      <Sys>TICP</Sys>
+      <SubSys/>
+      <Instance/>
+    </Address>
+  </From>
+  <To>
+    <Address>
+      <Sys>UTCS</Sys>
+      <SubSys/>
+      <Instance/>
+    </Address>
+  </To>
+  <Type>REQUEST</Type>
+  <Seq>20140829084311000002</Seq>
+  <Body>
+    <Operation order="1" name="Get">
+      <TSCCmd>
+	    <ObjName>DetParamExtend</ObjName>
+	    <ID>33010021133250</ID>(路口ID)
+	    <No></No>(为空代表路口下所有的编号，可以为具体的项编号)
+      </TSCCmd>
+    </Operation>
+  </Body>
+</Message>
+
+Response:
+<?xml version="1.0" encoding="UTF-8"?>
+<Message>
+  <Version>1.0</Version>
+  <Token>977F4181A561D345D3961373C012EAC0</Token>
+  <From>
+    <Address>
+      <Sys>UTCS</Sys>
+      <SubSys/>
+      <Instance/>
+    </Address>
+  </From>
+  <To>
+    <Address>
+      <Sys>TICP</Sys>
+      <SubSys/>
+      <Instance/>
+    </Address>
+  </To>
+  <Type>RESPONSE</Type>
+  <Seq>20140829084311000002</Seq>
+  <Body>
+    <Operation order="1" name="Get">
+      <DetParamExtend>
+	  <DetID>1</DetID>
+<DetType>1</DetType>
+        <DetCycle>300</DetCycle>
+        <CrossID>33010021133250</CrossID>       
+      </DetParamExtend>
+    </Operation>
+  </Body>
+</Message>
+
+
+车道参数
+<LaneParam>
+<CrossID>路口编号</CrossID>
+<LaneNo>车道序号</LaneNo>//每个方向下每个属性下车道序号从黄线内侧至外侧由1开始编号
+<Direction>方向</Direction>
+<Attribute>属性</Attribute>
+<Movement>流向</Movement>
+<Feature>特性</Feature>
+</LaneParam>
+车道参数对象描述见附录B中B.1.8。
+Request:
+<?xml version="1.0" encoding="UTF-8"?>
+<Message>
+  <Version>1.0</Version>
+  <Token>977F4181A561D345D3961373C012EAC0</Token>
+  <From>
+    <Address>
+      <Sys>TICP</Sys>
+      <SubSys/>
+      <Instance/>
+    </Address>
+  </From>
+  <To>
+    <Address>
+      <Sys>UTCS</Sys>
+      <SubSys/>
+      <Instance/>
+    </Address>
+  </To>
+  <Type>REQUEST</Type>
+  <Seq>20140829084311000001</Seq>
+  <Body>
+    <Operation order="1" name="Get">
+      <TSCCmd>
+		<ObjName>LaneParam</ObjName>
+		<ID>33010021133250</ID>(CrossID路口ID)
+		<No></No>(为空代表路口下所有的编号，可以为具体的项编号)
+      </TSCCmd>
+    </Operation>
+  </Body>
+</Message>
+
+Response:
+<?xml version="1.0" encoding="UTF-8"?>
+<Message>
+  <Version>1.2</Version>
+  <Token>977F4181A561D345D3961373C012EAC0</Token>
+  <From>
+    <Address>
+      <Sys>UTCS</Sys>
+      <SubSys/>
+      <Instance/>
+    </Address>
+  </From>
+  <To>
+    <Address>
+      <Sys>TICP</Sys>
+      <SubSys/>
+      <Instance/>
+    </Address>
+  </To>
+  <Type>RESPONSE</Type>
+  <Seq>20140829084311000001</Seq>
+  <Body>
+    <Operation order="1" name="Get">
+      <LaneParam>
+        <CrossID>33010021133250</CrossID>
+        <LaneNo>1</LaneNo>
+<LaneId>车道ID</LaneId>
+        <Direction>1</Direction>
+        <Attribute>1</Attribute>
+        <Movement>11</Movement>
+        <Feature>1</Feature>
+      </LaneParam>
+    </Operation>
+  </Body>
+</Message>
+
+相位参数
+<PhaseParam>
+<CrossID>路口编号</CrossID>
+<PhaseNo>相位序号</PhaseNo>
+<PhaseName>名称</PhaseName>
+<Attribute>特征</Attribute>
+<LaneNoList>
+
+<!--相位放行车道序号列表  -->
+<LaneNo>车道序号</LaneNo>
+……
+</LaneNoList>
+<PedDirList>
+<!--相位放行人行道方向-->
+<Direction></Direction>
+<Direction></Direction>
+……
+</PedDirList>
+</PhaseParam>
+相位参数对象描述见附录B中B.1.9。
+Request:
+<?xml version="1.0" encoding="UTF-8"?>
+<Message>
+  <Version>1.0</Version>
+  <Token>977F4181A561D345D3961373C012EAC0</Token>
+  <From>
+    <Address>
+      <Sys>TICP</Sys>
+      <SubSys/>
+      <Instance/>
+    </Address>
+  </From>
+  <To>
+    <Address>
+      <Sys>UTCS</Sys>
+      <SubSys/>
+      <Instance/>
+    </Address>
+  </To>
+  <Type>REQUEST</Type>
+  <Seq>20140829084311000017</Seq>
+  <Body>
+    <Operation order="1" name="Get">
+      <TSCCmd>
+		<ObjName>PhaseParam</ObjName>
+		<ID>33010021133250</ID>(这里是CrossID)
+		<No></No>(为空代表路口下所有的编号，可以为具体的项编号)
+      </TSCCmd>
+    </Operation>
+  </Body>
+</Message>
+
+Response:
+<?xml version="1.0" encoding="UTF-8"?>
+<Message>
+  <Version>1.0</Version>
+  <Token>977F4181A561D345D3961373C012EAC0</Token>
+  <From>
+    <Address>
+      <Sys>UTCS</Sys>
+      <SubSys/>
+      <Instance/>
+    </Address>
+  </From>
+  <To>
+    <Address>
+      <Sys>TICP</Sys>
+      <SubSys/>
+      <Instance/>
+    </Address>
+  </To>
+  <Type>RESPONSE</Type>
+  <Seq>20140829084311000017</Seq>
+  <Body>
+    <Operation order="1" name="Get">
+      <PhaseParam>
+		 <CrossID>33010021133250</CrossID>
+        <PhaseNo>1</PhaseNo>
+        <PhaseName>东直行</PhaseName>
+        <Attribute>11</Attribute>
+        <LaneNoList>
+	        <LaneNo>1</LaneNo>
+		 </LaneNoList>
+        <PedDirList>
+          <Direction>1</Direction>
+	     </PedDirList>
+      </PhaseParam>
+<PhaseParam>
+		 <CrossID>33010021133250</CrossID>
+        <PhaseNo>2</PhaseNo>
+        <PhaseName>西直行</PhaseName>
+        <Attribute>11</Attribute>
+        <LaneNoList>
+	        <LaneNo>3</LaneNo>
+		 </LaneNoList>
+        <PedDirList>
+          <Direction>2</Direction>
+	     </PedDirList>
+      </PhaseParam>
+    </Operation>
+  </Body>
+</Message>
+相位参数-扩展
+注：增加最大绿和最小绿参数
+<PhaseParamExtend>
+<CrossID>路口编号</CrossID>
+<PhaseNo>相位序号</PhaseNo>
+<GreenMax>相位最大绿时间</GreenMax>
+<GreenMin>相位最小绿时间</GreenMin>
+<PhaseType>相位类型</PhaseType>//1机动车相位、2非机动车相位、3行人相位
+<TransitionList>
+相位过渡列表
+	<Transition>
+		<Order>过渡序列（从1开始递增）</Order>
+		<Type>过渡灯色（对应附录灯色定义表30）</Type>
+		<Time>过渡时长（秒）</Time>
+	</Transition>
+	……
+</TransitionList>
+</PhaseParamExtend>
+Request:
+<?xml version="1.0" encoding="UTF-8"?>
+<Message>
+  <Version>1.0</Version>
+  <Token>977F4181A561D345D3961373C012EAC0</Token>
+  <From>
+    <Address>
+      <Sys>TICP</Sys>
+      <SubSys/>
+      <Instance/>
+    </Address>
+  </From>
+  <To>
+    <Address>
+      <Sys>UTCS</Sys>
+      <SubSys/>
+      <Instance/>
+    </Address>
+  </To>
+  <Type>REQUEST</Type>
+  <Seq>20140829084311000017</Seq>
+  <Body>
+    <Operation order="1" name="Get">
+      <TSCCmd>
+		<ObjName>PhaseParamExtend</ObjName>
+		<ID>33010021133250</ID>(这里是CrossID)
+		<No></No>(为空代表路口下所有的编号，可以为具体的项编号)
+      </TSCCmd>
+    </Operation>
+  </Body>
+</Message>
+Response:
+<?xml version="1.0" encoding="UTF-8"?>
+<Message>
+  <Version>1.0</Version>
+  <Token>977F4181A561D345D3961373C012EAC0</Token>
+  <From>
+    <Address>
+      <Sys>UTCS</Sys>
+      <SubSys/>
+      <Instance/>
+    </Address>
+  </From>
+  <To>
+    <Address>
+      <Sys>TICP</Sys>
+      <SubSys/>
+      <Instance/>
+    </Address>
+  </To>
+  <Type>RESPONSE</Type>
+  <Seq>20140829084311000017</Seq>
+  <Body>
+    <Operation order="1" name="Get">
+      <PhaseParamExtend>
+<CrossID>33010021133250</CrossID>
+        <PhaseNo>1</PhaseNo>
+        <GreenMax>80</GreenMax>
+<GreenMin>10</GreenMin>
+<PhaseType>1</PhaseType>
+<TransitionList>
+	<Transition>
+	<Order>1</Order>
+	<Type>23</Type>
+	<Time>3</Time>
+	</Transition>
+	<Transition>
+	<Order>2</Order>
+	<Type>22</Type>
+	<Time>3</Time>
+	</Transition>
+	<Transition>
+	<Order>3</Order>
+	<Type>21</Type>
+	<Time>2</Time>
+	</Transition>
+</TransitionList>
+
+      </PhaseParamExtend>
+<PhaseParamExtend>
+<CrossID>33010021133250</CrossID>
+        <PhaseNo>2</PhaseNo>
+        <GreenMax>80</GreenMax>
+<GreenMin>10</GreenMin>
+<PhaseType>1</PhaseType>
+<TransitionList>
+	<Transition>
+	<Order>1</Order>
+	<Type>23</Type>
+	<Time>3</Time>
+	</Transition>
+	<Transition>
+	<Order>2</Order>
+	<Type>22</Type>
+	<Time>3</Time>
+	</Transition>
+	<Transition>
+	<Order>3</Order>
+	<Type>21</Type>
+	<Time>2</Time>
+	</Transition>
+</TransitionList>
+      </PhaseParamExtend>
+    </Operation>
+  </Body>
+</Message>
+
+
+阶段参数
+<StageParam>
+<CrossID>路口编号</CrossID>
+<StageNo>阶段号</StageNo>
+<StageName>名称</StageName>
+<Attribute>特征</Attribute>
+<Green>绿灯时间</Green>
+<RedYellow>红黄时间</RedYellow>
+<Yellow>黄灯时间</Yellow>
+<AllRed>全红时间</AllRed>
+<GreenFlash>绿闪时间</GreenFlash>
+<PhaseNoList>
+<!--放行相位序号列表-->
+<PhaseNo>相位序号</PhaseNo>
+……
+</PhaseNoList>
+</StageParam>
+阶段参数对象描述见附录B中B.1.10。
+Request:
+<?xml version="1.0" encoding="UTF-8"?>
+<Message>
+  <Version>1.0</Version>
+  <Token>977F4181A561D345D3961373C012EAC0</Token>
+  <From>
+    <Address>
+      <Sys>TICP</Sys>
+      <SubSys/>
+      <Instance/>
+    </Address>
+  </From>
+  <To>
+    <Address>
+      <Sys>UTCS</Sys>
+      <SubSys/>
+      <Instance/>
+    </Address>
+  </To>
+  <Type>REQUEST</Type>
+  <Seq>20140829084311000003</Seq>
+  <Body>
+    <Operation order="1" name="Get">
+      <TSCCmd>
+	<ObjName>StageParam</ObjName>
+	<ID>33010021133250</ID>(CrossID)
+	<No></No>(为空代表路口下所有的编号，可以为具体的项编号)
+      </TSCCmd>
+</Operation>
+  </Body>
+</Message>
+
+Response:
+<?xml version="1.0" encoding="UTF-8"?>
+<Message>
+  <Version>1.0</Version>
+  <Token>977F4181A561D345D3961373C012EAC0</Token>
+  <From>
+    <Address>
+      <Sys>UTCS</Sys>
+      <SubSys/>
+      <Instance/>
+    </Address>
+  </From>
+  <To>
+    <Address>
+      <Sys>TICP</Sys>
+      <SubSys/>
+      <Instance/>
+    </Address>
+  </To>
+  <Type>RESPONSE</Type>
+  <Seq>20140829084311000003</Seq>
+  <Body>
+    <Operation order="1" name="Get">
+      <StageParam>
+        <CrossID>33010021133250</CrossID>
+        <StageNo>1</StageNo>
+        <StageName>Stage01</StageName>
+        <Attribute>1</Attribute>
+        <Green>30</Green>
+        <RedYellow>1</RedYellow>
+        <Yellow>1</Yellow>
+        <AllRed>20</AllRed>
+<GreenFlash>3</GreenFlash>
+        <PhaseNoList>
+	  <PhaseNo>1</PhaseNo>
+	  <PhaseNo>2</PhaseNo>
+        </PhaseNoList>
+      </StageParam>
+    </Operation>
+  </Body>
+</Message>
+相序方案表号-扩展
+注：相同的阶段放行顺序堤取为一个相序方案
+<StagePlanExtend>
+<CrossID>路口编号</CrossID>
+<StagePlanNo>相序方案表号</StagePlanNo>
+<StageNoList>
+<!—对应相序方案放行阶段对应时间列表-->
+<SeqNo>放行序号</SeqNo>
+<StageNo>阶段序号</StageNo>
+……
+</StageNoList>
+</StagePlanExtend>
+Request:
+<?xml version="1.0" encoding="UTF-8"?>
+<Message>
+  <Version>1.0</Version>
+  <Token>977F4181A561D345D3961373C012EAC0</Token>
+  <From>
+    <Address>
+      <Sys>TICP</Sys>
+      <SubSys/>
+      <Instance/>
+    </Address>
+  </From>
+  <To>
+    <Address>
+      <Sys>UTCS</Sys>
+      <SubSys/>
+      <Instance/>
+    </Address>
+  </To>
+  <Type>REQUEST</Type>
+  <Seq>20140829084311000012</Seq>
+  <Body>
+    <Operation order="1" name="Get">
+      <TSCCmd>
+	<ObjName> StagePlanExtend </ObjName>
+	<ID>33010021133250</ID>(CrossID)
+	<No></No>(为空代表路口下所有的编号，可以为具体的项编号)
+      </TSCCmd>
+    </Operation>
+  </Body>
+</Message>
+Response:
+<?xml version="1.0" encoding="UTF-8"?>
+<Message>
+  <Version>1.0</Version>
+  <Token>977F4181A561D345D3961373C012EAC0</Token>
+  <From>
+    <Address>
+      <Sys>UTCS</Sys>
+      <SubSys/>
+      <Instance/>
+    </Address>
+  </From>
+  <To>
+    <Address>
+      <Sys>TICP</Sys>
+      <SubSys/>
+      <Instance/>
+    </Address>
+  </To>
+  <Type>RESPONSE</Type>
+  <Seq>20140829084311000012</Seq>
+  <Body>
+    <Operation order="1" name="Get">
+      <StagePlanExtend>
+		 <CrossID>33010021133250</CrossID>        
+<StagePlanNo>1</StagePlanNo>
+        <StageNoList>
+	<SeqNo>1</SeqNo>
+<StageNo>1</StageNo>
+</StageNoList>
+<StageNoList>
+	<SeqNo>2</SeqNo>
+<StageNo>2</StageNo>
+</StageNoList>
+      </StagePlanExtend>
+    </Operation>
+  </Body>
+</Message>
+
+配时方案参数-扩展
+注：引用方案相序表，定义相序阶段放行时间为配时方案，同一组放行相序可以定义多个放行时间方案。
+<PlanParamExtend>
+<CrossID>路口编号</CrossID>
+<PlanNo>方案序号</PlanNo>
+<CycleLen>周期长度</CycleLen>
+<CoordStageNo>协调阶段号</CoordStageNo>
+<OffSet>协调阶段差</OffSet>
+<StagePlanNo>相序方案表号</StagePlanNo>
+<StageNoList>
+<!—对应相序方案放行阶段对应时间列表-->
+<SeqNo>放行序号</SeqNo>
+<StageNo>阶段序号</StageNo>
+<StageTime>阶段时间（包括过渡时间）</StageTime>
+<StageMaxGreenTime>阶段最大绿时间</StageMaxGreenTime>
+<StageMinGreenTime>阶段最小绿时间</StageMinGreenTime>
+……
+</StageNoList>
+</PlanParamExtend>
+Request:
+<?xml version="1.0" encoding="UTF-8"?>
+<Message>
+  <Version>1.0</Version>
+  <Token>977F4181A561D345D3961373C012EAC0</Token>
+  <From>
+    <Address>
+      <Sys>TICP</Sys>
+      <SubSys/>
+      <Instance/>
+    </Address>
+  </From>
+  <To>
+    <Address>
+      <Sys>UTCS</Sys>
+      <SubSys/>
+      <Instance/>
+    </Address>
+  </To>
+  <Type>REQUEST</Type>
+  <Seq>20140829084311000012</Seq>
+  <Body>
+    <Operation order="1" name="Get">
+      <TSCCmd>
+	<ObjName> PlanParamExtend </ObjName>
+	<ID>33010021133250</ID>(CrossID)
+	<No></No>(为空代表路口下所有的编号，可以为具体的项编号)
+      </TSCCmd>
+    </Operation>
+  </Body>
+</Message>
+Response:
+<?xml version="1.0" encoding="UTF-8"?>
+<Message>
+  <Version>1.0</Version>
+  <Token>977F4181A561D345D3961373C012EAC0</Token>
+  <From>
+    <Address>
+      <Sys>UTCS</Sys>
+      <SubSys/>
+      <Instance/>
+    </Address>
+  </From>
+  <To>
+    <Address>
+      <Sys>TICP</Sys>
+      <SubSys/>
+      <Instance/>
+    </Address>
+  </To>
+  <Type>RESPONSE</Type>
+  <Seq>20140829084311000012</Seq>
+  <Body>
+    <Operation order="1" name="Get">
+      <PlanParamExtend>
+		 <CrossID>33010021133250</CrossID>
+        <PlanNo>1</PlanNo>
+        <CycleLen>110</CycleLen>
+        <CoordStageNo>1</CoordStageNo>
+        <OffSet>1</OffSet>
+<StagePlanNo>1</StagePlanNo>
+        <StageNoList>
+	<SeqNo>1</SeqNo>
+<StageNo>1</StageNo>
+<StageTime>60</StageTime>
+<StageMaxGreenTime>80</StageMaxGreenTime>
+<StageMinGreenTime>10</StageMinGreenTime>
+</StageNoList>
+<StageNoList>
+	<SeqNo>2</SeqNo>
+<StageNo>2</StageNo>
+<StageTime>50</StageTime>
+<StageMaxGreenTime>80</StageMaxGreenTime>
+<StageMinGreenTime>10</StageMinGreenTime>
+</StageNoList>
+      </PlanParamExtend>
+    </Operation>
+  </Body>
+</Message>
+
+
+配时日计划表-扩展 
+注：日计划既是天24小时内划分的时段执行方案和控制模式，通过日计划表可区分早晚高峰放行的不同方案。
+<DailyPlanParamExtend>
+<CrossID>路口编号</CrossID>
+<DailyPlanNo>日计划序号</DailyPlanNo>
+<TimeList>
+<!—时段列表-->
+<StartTime>执行时段（hh24:mi）</StartTime>
+<PlanNo>执行配时方案号</PlanNo>
+<ControlModel>控制模式</ControlModel>
+……
+</TimeList>
+<DailyPlanParamExtend>
+Request:
+<?xml version="1.0" encoding="UTF-8"?>
+<Message>
+  <Version>1.0</Version>
+  <Token>977F4181A561D345D3961373C012EAC0</Token>
+  <From>
+    <Address>
+      <Sys>TICP</Sys>
+      <SubSys/>
+      <Instance/>
+    </Address>
+  </From>
+  <To>
+    <Address>
+      <Sys>UTCS</Sys>
+      <SubSys/>
+      <Instance/>
+    </Address>
+  </To>
+  <Type>REQUEST</Type>
+  <Seq>20140829084311000012</Seq>
+  <Body>
+    <Operation order="1" name="Get">
+      <TSCCmd>
+	<ObjName> DailyPlanParamExtend </ObjName>
+	<ID>33010021133250</ID>(CrossID)
+	<No></No>(为空代表路口下所有的编号，可以为具体的项编号)
+      </TSCCmd>
+    </Operation>
+  </Body>
+</Message>
+Response:
+<?xml version="1.0" encoding="UTF-8"?>
+<Message>
+  <Version>1.0</Version>
+  <Token>977F4181A561D345D3961373C012EAC0</Token>
+  <From>
+    <Address>
+      <Sys>UTCS</Sys>
+      <SubSys/>
+      <Instance/>
+    </Address>
+  </From>
+  <To>
+    <Address>
+      <Sys>TICP</Sys>
+      <SubSys/>
+      <Instance/>
+    </Address>
+  </To>
+  <Type>RESPONSE</Type>
+  <Seq>20140829084311000012</Seq>
+  <Body>
+    <Operation order="1" name="Get">
+      <DailyPlanParamExtend>
+		 <CrossID>33010021133250</CrossID>
+        <DailyPlanNo>1</DailyPlanNo>    
+        <TimeList>
+	<StartTime>00:00</StartTime>
+<PlanNo>1</PlanNo>
+<ControlModel>10</ControlModel>
+</TimeList>
+<TimeList>
+	<StartTime>07:00</StartTime>
+<PlanNo>2</PlanNo>
+<ControlModel>10</ControlModel>
+</TimeList>
+      </DailyPlanParamExtend>
+      <DailyPlanParamExtend>
+		 <CrossID>33010021133250</CrossID>
+        <DailyPlanNo>2</DailyPlanNo>    
+        <TimeList>
+	<StartTime>00:00</StartTime>
+<PlanNo>2</PlanNo>
+<ControlModel>10</ControlModel>
+</TimeList>
+<TimeList>
+	<StartTime>07:00</StartTime>
+<PlanNo>1</PlanNo>
+<ControlModel>10</ControlModel>
+</TimeList>
+      </DailyPlanParamExtend>
+    </Operation>
+  </Body>
+</Message>
+
+配时调度计划表-扩展 
+注：调度类型按日期和星期两种类型调度，日期型分公历日期和农历日期，调度计划表既是指定不同的星期或日期调用执行不同的日计划。
+<ScheduleParamExtend>
+<CrossID>路口编号</CrossID>
+<ScheduleNo>调度表序号</ScheduleNo>
+<ScheduleList>
+<!—调度列表-->
+<ScheduleType>调度类型（1公历日期型2农历日期型3星期型）</ScheduleType>
+<Months>月份(1,2,3…12)</Months>
+<Days>日期(1,3,4,…30)</Days>
+<Weeks>星期(1,2,3,4,5,6,7)</Weeks>
+<Priority>优先级(1-10)</Priority>
+<DailyPlanNo>日计划编号</DailyPlanNo>
+……
+</ScheduleList>
+</ScheduleParamExtend>
+Request:
+<?xml version="1.0" encoding="UTF-8"?>
+<Message>
+  <Version>1.0</Version>
+  <Token>977F4181A561D345D3961373C012EAC0</Token>
+  <From>
+    <Address>
+      <Sys>TICP</Sys>
+      <SubSys/>
+      <Instance/>
+    </Address>
+  </From>
+  <To>
+    <Address>
+      <Sys>UTCS</Sys>
+      <SubSys/>
+      <Instance/>
+    </Address>
+  </To>
+  <Type>REQUEST</Type>
+  <Seq>20140829084311000012</Seq>
+  <Body>
+    <Operation order="1" name="Get">
+      <TSCCmd>
+	<ObjName> ScheduleParamExtend </ObjName>
+	<ID>33010021133250</ID>(CrossID)
+	<No></No>(为空代表路口下所有的编号，可以为具体的项编号)
+      </TSCCmd>
+    </Operation>
+  </Body>
+</Message>
+Response:
+<?xml version="1.0" encoding="UTF-8"?>
+<Message>
+  <Version>1.0</Version>
+  <Token>977F4181A561D345D3961373C012EAC0</Token>
+  <From>
+    <Address>
+      <Sys>UTCS</Sys>
+      <SubSys/>
+      <Instance/>
+    </Address>
+  </From>
+  <To>
+    <Address>
+      <Sys>TICP</Sys>
+      <SubSys/>
+      <Instance/>
+    </Address>
+  </To>
+  <Type>RESPONSE</Type>
+  <Seq>20140829084311000012</Seq>
+  <Body>
+    <Operation order="1" name="Get">
+      <ScheduleParamExtend>
+		 <CrossID>33010021133250</CrossID>
+        <ScheduleNo>1</ScheduleNo>    
+    <ScheduleList>
+<ScheduleType>1</ScheduleType>
+<Months>1,2</Months>
+<Days>3,4,5,23,24,25</Days>
+<Weeks> </Weeks>
+<Priority>1</Priority>
+<DailyPlanNo>1</DailyPlanNo>
+</ScheduleList>  
+      </ScheduleParamExtend>
+<ScheduleParamExtend>
+		 <CrossID>33010021133250</CrossID>
+        <ScheduleNo>2</ScheduleNo>      
+    <ScheduleList>
+<ScheduleType>3</ScheduleType>
+<Months></Months>
+<Days></Days>
+<Weeks>1,2,3,4,5,6,7</Weeks>
+<Priority>2</Priority>
+<DailyPlanNo>2</DailyPlanNo>
+</ScheduleList>
+      </ScheduleParamExtend>
+    </Operation>
+  </Body>
+</Message>
+
+
+
+
+信号参数设置
+信号机校时-扩展
+<SignalTime>
+	 <CrossID>路口编号</CrossID>
+<SysTimeStamp>信号机当前秒级时间戳</SysTimeStamp>
+</SignalTime>
+Request:
+<?xml version="1.0" encoding="UTF-8"?>
+<Message>
+  <Version>1.0</Version>
+  <Token>977F4181A561D345D3961373C012EAC0</Token>
+  <From>
+    <Address>
+      <Sys>TICP</Sys>
+      <SubSys/>
+      <Instance/>
+    </Address>
+  </From>
+  <To>
+    <Address>
+      <Sys>UTCS</Sys>
+      <SubSys/>
+      <Instance/>
+    </Address>
+  </To>
+  <Type>REQUEST</Type>
+  <Seq>1</Seq>
+  <Body>
+    <Operation order="1" name="Set">
+       <SignalTime>
+	 <CrossID>10001</CrossID>
+<SysTimeStamp>1599283925000</SysTimeStamp>
+</SignalTime>
+    </Operation>  
+  </Body>
+</Message>
+Response:
+<?xml version="1.0" encoding="UTF-8"?>
+<Message>
+  <Version>1.0</Version>
+  <Token>977F4181A561D345D3961373C012EAC0</Token>
+  <From>
+    <Address>
+      <Sys>UTCS</Sys>
+      <SubSys/>
+      <Instance/>
+    </Address>
+  </From>
+  <To>
+    <Address>
+      <Sys>TICP</Sys>
+      <SubSys/>
+      <Instance/>
+    </Address>
+  </To>
+  <Type>RESPONSE</Type>
+  <Seq>20140829084311000015</Seq>
+  <Body>
+    <Operation order="1" name="Set">
+      <SignalTime>
+	 <CrossID>10001</CrossID>
+<SysTimeStamp>1599283925000</SysTimeStamp>
+</SignalTime>
+    </Operation>
+  </Body>
+</Message>
+
+检测器参数
+<DetParam>
+<DetID>检测器编号</DetID>
+<Distance>距停车线距离</Distance>
+<CrossID>路口编号</CrossID>
+<LaneNoList>
+<!--车道序号列表（对应车道参数中的车道号）-->
+<LaneNo>车道序号</LaneNo>
+……
+</LaneNoList>
+</DetParam>
+检测器参数对象描述见附录B中B.1.7。
+Request:
+<?xml version="1.0" encoding="UTF-8"?>
+<Message>
+  <Version>1.0</Version>
+  <Token>977F4181A561D345D3961373C012EAC0</Token>
+  <From>
+    <Address>
+      <Sys>TICP</Sys>
+      <SubSys/>
+      <Instance/>
+    </Address>
+  </From>
+  <To>
+    <Address>
+      <Sys>UTCS</Sys>
+      <SubSys/>
+      <Instance/>
+    </Address>
+  </To>
+  <Type>REQUEST</Type>
+  <Seq>20140829084311000002</Seq>
+  <Body>
+    <Operation order="1" name="Set">
+      <DetParam>
+		 <DetID>3301002113325012</DetID>
+        <Distance>1.1</Distance>
+        <CrossID>33010021133250</CrossID>
+        <LaneNoList>
+	       <LaneNo>1</LaneNo>
+<LaneNo>2</LaneNo>
+        </LaneNoList>
+      </DetParam>
+    </Operation>
+  </Body>
+</Message>
+Response:
+<?xml version="1.0" encoding="UTF-8"?>
+<Message>
+  <Version>1.0</Version>
+  <Token>977F4181A561D345D3961373C012EAC0</Token>
+  <From>
+    <Address>
+      <Sys>UTCS</Sys>
+      <SubSys/>
+      <Instance/>
+    </Address>
+  </From>
+  <To>
+    <Address>
+      <Sys>TICP</Sys>
+      <SubSys/>
+      <Instance/>
+    </Address>
+  </To>
+  <Type>RESPONSE</Type>
+  <Seq>20140829084311000002</Seq>
+  <Body>
+    <Operation order="1" name="Set">
+      <DetParam>
+		 <DetID>3301002113325012</DetID>
+        <Distance>1.1</Distance>
+        <CrossID>33010021133250</CrossID>
+        <LaneNoList>
+	       <LaneNo>1</LaneNo>
+<LaneNo>2</LaneNo>
+        </LaneNoList>
+      </DetParam>
+    </Operation>
+  </Body>
+</Message>
+检测器参数-扩展
+<DetParamExtend>
+<DetID>检测器编号</DetID>
+<DetCycle>检测器数据统计周期</DetCycle>
+<DetType>检测器类型</DetType>//检测器类型编码：1、线圈2；视频3；地磁4；微波检测器；5超声波检测器；6红外检测器；7视频检测器；8雷达检测器；9雷视一体检测
+<CrossID>路口编号</CrossID>
+</DetParamExtend>
+Request:
+<?xml version="1.0" encoding="UTF-8"?>
+<Message>
+  <Version>1.0</Version>
+  <Token>977F4181A561D345D3961373C012EAC0</Token>
+  <From>
+    <Address>
+      <Sys>TICP</Sys>
+      <SubSys/>
+      <Instance/>
+    </Address>
+  </From>
+  <To>
+    <Address>
+      <Sys>UTCS</Sys>
+      <SubSys/>
+      <Instance/>
+    </Address>
+  </To>
+  <Type>REQUEST</Type>
+  <Seq>20140829084311000002</Seq>
+  <Body>
+    <Operation order="1" name="Set">
+      <DetParamExtend>
+	  <DetID>1</DetID>
+        <DetCycle>300</DetCycle>
+<DetType>1</DetType>
+        <CrossID>33010021133250</CrossID>       
+      </DetParamExtend>
+    </Operation>
+  </Body>
+</Message>
+
+Response:
+<?xml version="1.0" encoding="UTF-8"?>
+<Message>
+  <Version>1.0</Version>
+  <Token>977F4181A561D345D3961373C012EAC0</Token>
+  <From>
+    <Address>
+      <Sys>UTCS</Sys>
+      <SubSys/>
+      <Instance/>
+    </Address>
+  </From>
+  <To>
+    <Address>
+      <Sys>TICP</Sys>
+      <SubSys/>
+      <Instance/>
+    </Address>
+  </To>
+  <Type>RESPONSE</Type>
+  <Seq>20140829084311000002</Seq>
+  <Body>
+    <Operation order="1" name="Set">
+      <DetParamExtend>
+<DetID>1</DetID>
+        <DetCycle>300</DetCycle>
+<DetType>1</DetType>
+        <CrossID>33010021133250</CrossID>       
+      </DetParamExtend>
+    </Operation>
+  </Body>
+</Message>
+
+车道参数
+<LaneParam>
+<CrossID>路口编号</CrossID>
+<LaneNo>方向+车道序号</LaneNo>//每个方向下每个属性下车道序号从黄线内侧至外侧由1开始编号
+<Direction>方向</Direction>
+<Attribute>属性</Attribute>
+<Movement>流向</Movement>
+<Feature>特性</Feature>
+</LaneParam>
+车道参数对象描述见附录B中B.1.8。
+Request:
+<?xml version="1.0" encoding="UTF-8"?>
+<Message>
+  <Version>1.0</Version>
+  <Token>977F4181A561D345D3961373C012EAC0</Token>
+  <From>
+    <Address>
+      <Sys>TICP</Sys>
+      <SubSys/>
+      <Instance/>
+    </Address>
+  </From>
+  <To>
+    <Address>
+      <Sys>UTCS</Sys>
+      <SubSys/>
+      <Instance/>
+    </Address>
+  </To>
+  <Type>REQUEST</Type>
+  <Seq>20140829084311000001</Seq>
+  <Body>
+    <Operation order="1" name="Set">
+      <LaneParam>
+        <CrossID>33010021133250</CrossID>
+        <LaneNo>1</LaneNo>
+        <Direction>1</Direction>
+        <Attribute>1</Attribute>
+        <Movement>11</Movement>
+        <Feature>1</Feature>
+      </LaneParam>
+    </Operation>
+  </Body>
+</Message>
+
+Response:
+<?xml version="1.0" encoding="UTF-8"?>
+<Message>
+  <Version>1.2</Version>
+  <Token>977F4181A561D345D3961373C012EAC0</Token>
+  <From>
+    <Address>
+      <Sys>UTCS</Sys>
+      <SubSys/>
+      <Instance/>
+    </Address>
+  </From>
+  <To>
+    <Address>
+      <Sys>TICP</Sys>
+      <SubSys/>
+      <Instance/>
+    </Address>
+  </To>
+  <Type>RESPONSE</Type>
+  <Seq>20140829084311000001</Seq>
+  <Body>
+    <Operation order="1" name="Set">
+      <LaneParam>
+        <CrossID>33010021133250</CrossID>
+        <LaneNo>1</LaneNo>
+        <Direction>1</Direction>
+        <Attribute>1</Attribute>
+        <Movement>11</Movement>
+        <Feature>1</Feature>
+      </LaneParam>
+    </Operation>
+  </Body>
+</Message>
+
+相位参数
+<PhaseParam>
+<CrossID>路口编号</CrossID>
+<PhaseNo>相位序号</PhaseNo>
+<PhaseName>名称</PhaseName>
+<Attribute>特征</Attribute>
+<LaneNoList>
+
+<!--相位放行车道序号列表  -->
+<LaneNo>车道序号</LaneNo>
+……
+</LaneNoList>
+<PedDirList>
+<!--相位放行人行道方向-->
+<Direction></Direction>
+<Direction></Direction>
+……
+</PedDirList>
+</PhaseParam>
+相位参数对象描述见附录B中B.1.9。
+Request:
+<?xml version="1.0" encoding="UTF-8"?>
+<Message>
+  <Version>1.0</Version>
+  <Token>977F4181A561D345D3961373C012EAC0</Token>
+  <From>
+    <Address>
+      <Sys>TICP</Sys>
+      <SubSys/>
+      <Instance/>
+    </Address>
+  </From>
+  <To>
+    <Address>
+      <Sys>UTCS</Sys>
+      <SubSys/>
+      <Instance/>
+    </Address>
+  </To>
+  <Type>REQUEST</Type>
+  <Seq>20140829084311000017</Seq>
+  <Body>
+    <Operation order="1" name="Set">
+      <PhaseParam>
+		 <CrossID>33010021133250</CrossID>
+        <PhaseNo>1</PhaseNo>
+        <PhaseName>东直行</PhaseName>
+        <Attribute>11</Attribute>
+        <LaneNoList>
+	        <LaneNo>1</LaneNo>
+		 </LaneNoList>
+        <PedDirList>
+          <Direction>1</Direction>
+	     </PedDirList>
+      </PhaseParam>
+<PhaseParam>
+		 <CrossID>33010021133250</CrossID>
+        <PhaseNo>2</PhaseNo>
+        <PhaseName>西直行</PhaseName>
+        <Attribute>11</Attribute>
+        <LaneNoList>
+	        <LaneNo>3</LaneNo>
+		 </LaneNoList>
+        <PedDirList>
+          <Direction>2</Direction>
+	     </PedDirList>
+      </PhaseParam>
+    </Operation>
+  </Body>
+</Message>
+
+Response:
+<?xml version="1.0" encoding="UTF-8"?>
+<Message>
+  <Version>1.0</Version>
+  <Token>977F4181A561D345D3961373C012EAC0</Token>
+  <From>
+    <Address>
+      <Sys>UTCS</Sys>
+      <SubSys/>
+      <Instance/>
+    </Address>
+  </From>
+  <To>
+    <Address>
+      <Sys>TICP</Sys>
+      <SubSys/>
+      <Instance/>
+    </Address>
+  </To>
+  <Type>RESPONSE</Type>
+  <Seq>20140829084311000017</Seq>
+  <Body>
+    <Operation order="1" name="Set">
+      <PhaseParam>
+		 <CrossID>33010021133250</CrossID>
+        <PhaseNo>1</PhaseNo>
+        <PhaseName>东直行</PhaseName>
+        <Attribute>11</Attribute>
+        <LaneNoList>
+	        <LaneNo>1</LaneNo>
+		 </LaneNoList>
+        <PedDirList>
+          <Direction>1</Direction>
+	     </PedDirList>
+      </PhaseParam>
+<PhaseParam>
+		 <CrossID>33010021133250</CrossID>
+        <PhaseNo>2</PhaseNo>
+        <PhaseName>西直行</PhaseName>
+        <Attribute>11</Attribute>
+        <LaneNoList>
+	        <LaneNo>3</LaneNo>
+		 </LaneNoList>
+        <PedDirList>
+          <Direction>2</Direction>
+	     </PedDirList>
+      </PhaseParam>
+    </Operation>
+  </Body>
+</Message>
+相位参数-扩展
+注：增加最大绿和最小绿参数
+<PhaseParamExtend>
+<CrossID>路口编号</CrossID>
+<PhaseNo>相位序号</PhaseNo>
+<GreenMax>相位最大绿时间</GreenMax>
+<GreenMin>相位最小绿时间</GreenMin>
+<PhaseType>相位类型</PhaseType>//1机动车相位、2非机动车相位、3行人相位
+<TransitionList>
+相位过渡列表
+	<Transition>
+		<Order>过渡序列（从1开始递增）</Order>
+		<Type>过渡灯色（对应附录灯色定义表30）</Type>
+		<Time>过渡时长（秒）</Time>
+	</Transition>
+	……
+</TransitionList>
+</PhaseParamExtend>
+Request:
+<?xml version="1.0" encoding="UTF-8"?>
+<Message>
+  <Version>1.0</Version>
+  <Token>977F4181A561D345D3961373C012EAC0</Token>
+  <From>
+    <Address>
+      <Sys>TICP</Sys>
+      <SubSys/>
+      <Instance/>
+    </Address>
+  </From>
+  <To>
+    <Address>
+      <Sys>UTCS</Sys>
+      <SubSys/>
+      <Instance/>
+    </Address>
+  </To>
+  <Type>REQUEST</Type>
+  <Seq>20140829084311000017</Seq>
+  <Body>
+    <Operation order="1" name="Set">
+       <PhaseParamExtend>
+<CrossID>33010021133250</CrossID>
+        <PhaseNo>1</PhaseNo>
+        <GreenMax>80</GreenMax>
+<PhaseType>1</PhaseType>
+<TransitionList>
+	<Transition>
+	<Order>1</Order>
+	<Type>23</Type>
+	<Time>3</Time>
+	</Transition>
+	<Transition>
+	<Order>2</Order>
+	<Type>22</Type>
+	<Time>3</Time>
+	</Transition>
+	<Transition>
+	<Order>3</Order>
+	<Type>21</Type>
+	<Time>2</Time>
+	</Transition>
+</TransitionList>
+<GreenMin>10</GreenMin>
+      </PhaseParamExtend>
+<PhaseParamExtend>
+<CrossID>33010021133250</CrossID>
+        <PhaseNo>2</PhaseNo>
+        <GreenMax>80</GreenMax>
+<GreenMin>10</GreenMin>
+<TransitionList>
+	<Transition>
+	<Order>1</Order>
+	<Type>23</Type>
+	<Time>3</Time>
+	</Transition>
+	<Transition>
+	<Order>2</Order>
+	<Type>22</Type>
+	<Time>3</Time>
+	</Transition>
+	<Transition>
+	<Order>3</Order>
+	<Type>21</Type>
+	<Time>2</Time>
+	</Transition>
+</TransitionList>
+      </PhaseParamExtend>
+    </Operation>
+  </Body>
+</Message>
+
+Response:
+<?xml version="1.0" encoding="UTF-8"?>
+<Message>
+  <Version>1.0</Version>
+  <Token>977F4181A561D345D3961373C012EAC0</Token>
+  <From>
+    <Address>
+      <Sys>UTCS</Sys>
+      <SubSys/>
+      <Instance/>
+    </Address>
+  </From>
+  <To>
+    <Address>
+      <Sys>TICP</Sys>
+      <SubSys/>
+      <Instance/>
+    </Address>
+  </To>
+  <Type>RESPONSE</Type>
+  <Seq>20140829084311000017</Seq>
+  <Body>
+    <Operation order="1" name="Set">
+       <PhaseParamExtend>
+<CrossID>33010021133250</CrossID>
+        <PhaseNo>1</PhaseNo>
+        <GreenMax>80</GreenMax>
+<GreenMin>10</GreenMin>
+      </PhaseParamExtend>
+<PhaseParamExtend>
+<CrossID>33010021133250</CrossID>
+        <PhaseNo>2</PhaseNo>
+        <GreenMax>80</GreenMax>
+<GreenMin>10</GreenMin>
+      </PhaseParamExtend>
+    </Operation>
+  </Body>
+</Message>
+
+
+
+阶段参数
+<StageParam>
+<CrossID>路口编号</CrossID>
+<StageNo>阶段号</StageNo>
+<StageName>名称</StageName>
+<Attribute>特征</Attribute>
+<Green>绿灯时间</Green>
+<RedYellow>红黄时间</RedYellow>
+<Yellow>黄灯时间</Yellow>
+<AllRed>全红时间</AllRed>
+<GreenFlash>绿闪时间</GreenFlash>
+<PhaseNoList>
+<!--放行相位序号列表-->
+<PhaseNo>相位序号</PhaseNo>
+……
+</PhaseNoList>
+</StageParam>
+阶段参数对象描述见附录B中B.1.10。
+Request:
+<?xml version="1.0" encoding="UTF-8"?>
+<Message>
+  <Version>1.0</Version>
+  <Token>977F4181A561D345D3961373C012EAC0</Token>
+  <From>
+    <Address>
+      <Sys>TICP</Sys>
+      <SubSys/>
+      <Instance/>
+    </Address>
+  </From>
+  <To>
+    <Address>
+      <Sys>UTCS</Sys>
+      <SubSys/>
+      <Instance/>
+    </Address>
+  </To>
+  <Type>REQUEST</Type>
+  <Seq>20140829084311000003</Seq>
+  <Body>
+    <Operation order="1" name="Set">
+      <StageParam>
+        <CrossID>33010021133250</CrossID>
+        <StageNo>1</StageNo>
+        <StageName>Stage01</StageName>
+        <Attribute>1</Attribute>
+        <RedYellow>0</RedYellow>
+        <Yellow>2</Yellow>
+        <AllRed>2</AllRed>
+<GreenFlash>3</GreenFlash>
+        <PhaseNoList>
+	  <PhaseNo>1</PhaseNo>
+	  <PhaseNo>2</PhaseNo>
+        </PhaseNoList>
+      </StageParam>
+<StageParam>
+        <CrossID>33010021133250</CrossID>
+        <StageNo>2</StageNo>
+        <StageName>Stage01</StageName>
+        <Attribute>1</Attribute>
+        <RedYellow>0</RedYellow>
+        <Yellow>2</Yellow>
+        <AllRed>2</AllRed>
+<GreenFlash>3</GreenFlash>
+        <PhaseNoList>
+	  <PhaseNo>3</PhaseNo>
+	  <PhaseNo>4</PhaseNo>
+        </PhaseNoList>
+      </StageParam>
+</Operation>
+  </Body>
+</Message>
+
+Response:
+<?xml version="1.0" encoding="UTF-8"?>
+<Message>
+  <Version>1.0</Version>
+  <Token>977F4181A561D345D3961373C012EAC0</Token>
+  <From>
+    <Address>
+      <Sys>UTCS</Sys>
+      <SubSys/>
+      <Instance/>
+    </Address>
+  </From>
+  <To>
+    <Address>
+      <Sys>TICP</Sys>
+      <SubSys/>
+      <Instance/>
+    </Address>
+  </To>
+  <Type>RESPONSE</Type>
+  <Seq>20140829084311000003</Seq>
+  <Body>
+    <Operation order="1" name="Set">
+      <StageParam>
+        <CrossID>33010021133250</CrossID>
+        <StageNo>1</StageNo>
+        <StageName>Stage01</StageName>
+        <Attribute>1</Attribute>
+        <Green>30</Green>
+        <RedYellow>1</RedYellow>
+        <Yellow>1</Yellow>
+        <AllRed>20</AllRed>
+        <PhaseNoList>
+	  <PhaseNo>1</PhaseNo>
+	  <PhaseNo>2</PhaseNo>
+        </PhaseNoList>
+      </StageParam>
+<StageParam>
+        <CrossID>33010021133250</CrossID>
+        <StageNo>2</StageNo>
+        <StageName>Stage01</StageName>
+        <Attribute>1</Attribute>
+        <RedYellow>0</RedYellow>
+        <Yellow>2</Yellow>
+        <AllRed>2</AllRed>
+        <PhaseNoList>
+	  <PhaseNo>3</PhaseNo>
+	  <PhaseNo>4</PhaseNo>
+        </PhaseNoList>
+      </StageParam>
+    </Operation>
+  </Body>
+</Message>
+相序方案表号-扩展
+注：相同的阶段放行顺序堤取为一个相序方案
+<StagePlanExtend>
+<CrossID>路口编号</CrossID>
+<StagePlanNo>相序方案表号</StagePlanNo>
+<StageNoList>
+<!—对应相序方案放行阶段对应时间列表-->
+<SeqNo>放行序号</SeqNo>
+<StageNo>阶段序号</StageNo>
+……
+</StageNoList>
+</StagePlanExtend>
+Request:
+<?xml version="1.0" encoding="UTF-8"?>
+<Message>
+  <Version>1.0</Version>
+  <Token>977F4181A561D345D3961373C012EAC0</Token>
+  <From>
+    <Address>
+      <Sys>TICP</Sys>
+      <SubSys/>
+      <Instance/>
+    </Address>
+  </From>
+  <To>
+    <Address>
+      <Sys>UTCS</Sys>
+      <SubSys/>
+      <Instance/>
+    </Address>
+  </To>
+  <Type>REQUEST</Type>
+  <Seq>20140829084311000012</Seq>
+  <Body>
+    <Operation order="1" name="Set">
+     <StagePlanExtend>
+		 <CrossID>33010021133250</CrossID>        
+<StagePlanNo>1</StagePlanNo>
+        <StageNoList>
+	<SeqNo>1</SeqNo>
+<StageNo>1</StageNo>
+</StageNoList>
+<StageNoList>
+	<SeqNo>2</SeqNo>
+<StageNo>2</StageNo>
+</StageNoList>
+      </StagePlanExtend>
+    </Operation>
+  </Body>
+</Message>
+Response:
+<?xml version="1.0" encoding="UTF-8"?>
+<Message>
+  <Version>1.0</Version>
+  <Token>977F4181A561D345D3961373C012EAC0</Token>
+  <From>
+    <Address>
+      <Sys>UTCS</Sys>
+      <SubSys/>
+      <Instance/>
+    </Address>
+  </From>
+  <To>
+    <Address>
+      <Sys>TICP</Sys>
+      <SubSys/>
+      <Instance/>
+    </Address>
+  </To>
+  <Type>RESPONSE</Type>
+  <Seq>20140829084311000012</Seq>
+  <Body>
+    <Operation order="1" name="Set">
+      <StagePlanExtend>
+		 <CrossID>33010021133250</CrossID>        
+<StagePlanNo>1</StagePlanNo>
+        <StageNoList>
+	<SeqNo>1</SeqNo>
+<StageNo>1</StageNo>
+</StageNoList>
+<StageNoList>
+	<SeqNo>2</SeqNo>
+<StageNo>2</StageNo>
+</StageNoList>
+      </StagePlanExtend>
+    </Operation>
+  </Body>
+</Message>
+
+配时方案参数-扩展
+注：引用方案相序表，定义相序阶段放行时间为配时方案，同一组放行相序可以定义多个放行时间方案。
+<PlanParamExtend>
+<CrossID>路口编号</CrossID>
+<PlanNo>方案序号</PlanNo>
+<CycleLen>周期长度</CycleLen>
+<CoordStageNo>协调阶段号</CoordStageNo>
+<OffSet>协调阶段差</OffSet>
+<StagePlanNo>相序方案表号</StagePlanNo>
+<StageNoList>
+<!—对应相序方案放行阶段对应时间列表-->
+<SeqNo>放行序号</SeqNo>
+<StageNo>阶段序号</StageNo>
+<StageTime>阶段时间（包括过渡时间）</StageTime>
+<StageMaxGreenTime>阶段最大绿时间</StageMaxGreenTime>
+<StageMinGreenTime>阶段最小绿时间</StageMinGreenTime>
+……
+</StageNoList>
+</PlanParamExtend>
+Request:
+<?xml version="1.0" encoding="UTF-8"?>
+<Message>
+  <Version>1.0</Version>
+  <Token>977F4181A561D345D3961373C012EAC0</Token>
+  <From>
+    <Address>
+      <Sys>TICP</Sys>
+      <SubSys/>
+      <Instance/>
+    </Address>
+  </From>
+  <To>
+    <Address>
+      <Sys>UTCS</Sys>
+      <SubSys/>
+      <Instance/>
+    </Address>
+  </To>
+  <Type>REQUEST</Type>
+  <Seq>20140829084311000012</Seq>
+  <Body>
+    <Operation order="1" name="Set">
+      <PlanParamExtend>
+		 <CrossID>33010021133250</CrossID>
+        <PlanNo>1</PlanNo>
+        <CycleLen>110</CycleLen>
+        <CoordStageNo>1</CoordStageNo>
+        <OffSet>1</OffSet>
+<StagePlanNo>1</StagePlanNo>
+        <StageNoList>
+	<SeqNo>1</SeqNo>
+<StageNo>1</StageNo>
+<StageTime>60</StageTime>
+<StageMaxGreenTime>80</StageMaxGreenTime>
+<StageMinGreenTime>10</StageMinGreenTime>
+</StageNoList>
+<StageNoList>
+	<SeqNo>2</SeqNo>
+<StageNo>2</StageNo>
+<StageTime>50</StageTime>
+<StageMaxGreenTime>80</StageMaxGreenTime>
+<StageMinGreenTime>10</StageMinGreenTime>
+</StageNoList>
+      </PlanParamExtend>
+    </Operation>
+  </Body>
+</Message>
+Response:
+<?xml version="1.0" encoding="UTF-8"?>
+<Message>
+  <Version>1.0</Version>
+  <Token>977F4181A561D345D3961373C012EAC0</Token>
+  <From>
+    <Address>
+      <Sys>UTCS</Sys>
+      <SubSys/>
+      <Instance/>
+    </Address>
+  </From>
+  <To>
+    <Address>
+      <Sys>TICP</Sys>
+      <SubSys/>
+      <Instance/>
+    </Address>
+  </To>
+  <Type>RESPONSE</Type>
+  <Seq>20140829084311000012</Seq>
+  <Body>
+    <Operation order="1" name="Set">
+      <PlanParamExtend>
+		 <CrossID>33010021133250</CrossID>
+        <PlanNo>1</PlanNo>
+        <CycleLen>110</CycleLen>
+        <CoordStageNo>1</CoordStageNo>
+        <OffSet>1</OffSet>
+<StagePlanNo>1</StagePlanNo>
+        <StageNoList>
+	<SeqNo>1</SeqNo>
+<StageNo>1</StageNo>
+<StageTime>60</StageTime>
+</StageNoList>
+<StageNoList>
+	<SeqNo>2</SeqNo>
+<StageNo>2</StageNo>
+<StageTime>50</StageTime>
+</StageNoList>
+      </PlanParamExtend>
+    </Operation>
+  </Body>
+</Message>
+
+
+配时日计划表-扩展 
+注：日计划既是天24小时内划分的时段执行方案和控制模式，通过日计划表可区分早晚高峰放行的不同方案。
+<DailyPlanParamExtend>
+<CrossID>路口编号</CrossID>
+<DailyPlanNo>日计划序号</DailyPlanNo>
+<TimeList>
+<!—时段列表-->
+<StartTime>执行时段（hh24:mi）</StartTime>
+<PlanNo>执行配时方案号</PlanNo>
+<ControlModel>控制模式</ControlModel>
+……
+</TimeList>
+<DailyPlanParamExtend>
+Request:
+<?xml version="1.0" encoding="UTF-8"?>
+<Message>
+  <Version>1.0</Version>
+  <Token>977F4181A561D345D3961373C012EAC0</Token>
+  <From>
+    <Address>
+      <Sys>TICP</Sys>
+      <SubSys/>
+      <Instance/>
+    </Address>
+  </From>
+  <To>
+    <Address>
+      <Sys>UTCS</Sys>
+      <SubSys/>
+      <Instance/>
+    </Address>
+  </To>
+  <Type>REQUEST</Type>
+  <Seq>20140829084311000012</Seq>
+  <Body>
+    <Operation order="1" name="Set">
+      <DailyPlanParamExtend>
+		 <CrossID>33010021133250</CrossID>
+        <DailyPlanNo>1</DailyPlanNo>    
+        <TimeList>
+	<StartTime>00:00</StartTime>
+<PlanNo>1</PlanNo>
+<ControlModel>10</ControlModel>
+</TimeList>
+<TimeList>
+	<StartTime>07:00</StartTime>
+<PlanNo>2</PlanNo>
+<ControlModel>10</ControlModel>
+</TimeList>
+      </DailyPlanParamExtend>
+      <DailyPlanParamExtend>
+		 <CrossID>33010021133250</CrossID>
+        <DailyPlanNo>2</DailyPlanNo>    
+        <TimeList>
+	<StartTime>00:00</StartTime>
+<PlanNo>2</PlanNo>
+<ControlModel>10</ControlModel>
+</TimeList>
+<TimeList>
+	<StartTime>07:00</StartTime>
+<PlanNo>1</PlanNo>
+<ControlModel>10</ControlModel>
+</TimeList>
+      </DailyPlanParamExtend>
+    </Operation>
+  </Body>
+</Message>
+Response:
+<?xml version="1.0" encoding="UTF-8"?>
+<Message>
+  <Version>1.0</Version>
+  <Token>977F4181A561D345D3961373C012EAC0</Token>
+  <From>
+    <Address>
+      <Sys>UTCS</Sys>
+      <SubSys/>
+      <Instance/>
+    </Address>
+  </From>
+  <To>
+    <Address>
+      <Sys>TICP</Sys>
+      <SubSys/>
+      <Instance/>
+    </Address>
+  </To>
+  <Type>RESPONSE</Type>
+  <Seq>20140829084311000012</Seq>
+  <Body>
+    <Operation order="1" name="Set">
+      <DailyPlanParamExtend>
+		 <CrossID>33010021133250</CrossID>
+        <DailyPlanNo>1</DailyPlanNo>    
+        <TimeList>
+	<StartTime>00:00</StartTime>
+<PlanNo>1</PlanNo>
+<ControlModel>10</ControlModel>
+</TimeList>
+<TimeList>
+	<StartTime>07:00</StartTime>
+<PlanNo>2</PlanNo>
+<ControlModel>10</ControlModel>
+</TimeList>
+      </DailyPlanParamExtend>
+      <DailyPlanParamExtend>
+		 <CrossID>33010021133250</CrossID>
+        <DailyPlanNo>2</DailyPlanNo>    
+        <TimeList>
+	<StartTime>00:00</StartTime>
+<PlanNo>2</PlanNo>
+<ControlModel>10</ControlModel>
+</TimeList>
+<TimeList>
+	<StartTime>07:00</StartTime>
+<PlanNo>1</PlanNo>
+<ControlModel>10</ControlModel>
+</TimeList>
+      </DailyPlanParamExtend>
+    </Operation>
+  </Body>
+</Message>
+
+配时调度计划表-扩展 
+注：调度类型按日期和星期两种类型调度，日期型分公历日期和农历日期，调度计划表既是指定不同的星期或日期调用执行不同的日计划。
+<ScheduleParamExtend>
+<CrossID>路口编号</CrossID>
+<ScheduleNo>调度表序号</ScheduleNo>
+<ScheduleList>
+<!—调度列表-->
+<ScheduleType>调度类型（1公历日期型2农历日期型3星期型）</ScheduleType>
+<Months>月份(1,2,3…12)</Months>
+<Days>日期(1,3,4,…30)</Days>
+<Weeks>星期(1,2,3,4,5,6,7)</Weeks>
+<Priority>优先级(1-10)</Priority>
+<DailyPlanNo>日计划编号</DailyPlanNo>
+……
+</ScheduleList>
+<ScheduleParamExtend>
+Request:
+<?xml version="1.0" encoding="UTF-8"?>
+<Message>
+  <Version>1.0</Version>
+  <Token>977F4181A561D345D3961373C012EAC0</Token>
+  <From>
+    <Address>
+      <Sys>TICP</Sys>
+      <SubSys/>
+      <Instance/>
+    </Address>
+  </From>
+  <To>
+    <Address>
+      <Sys>UTCS</Sys>
+      <SubSys/>
+      <Instance/>
+    </Address>
+  </To>
+  <Type>REQUEST</Type>
+  <Seq>20140829084311000012</Seq>
+  <Body>
+    <Operation order="1" name="Set">
+      <ScheduleParamExtend>
+		 <CrossID>33010021133250</CrossID>
+        <ScheduleNo>1</ScheduleNo>    
+    <ScheduleList>
+<ScheduleType>1</ScheduleType>
+<Months>1,2</Months>
+<Days>3,4,5,23,24,25</Days>
+<Weeks> </Weeks>
+<Priority>1</Priority>
+<DailyPlanNo>1</DailyPlanNo>
+</ScheduleList>  
+      </ScheduleParamExtend>
+<ScheduleParamExtend>
+		 <CrossID>33010021133250</CrossID>
+        <ScheduleNo>2</ScheduleNo>      
+    <ScheduleList>
+<ScheduleType>3</ScheduleType>
+<Months></Months>
+<Days></Days>
+<Weeks>1,2,3,4,5,6,7</Weeks>
+<Priority>2</Priority>
+<DailyPlanNo>2</DailyPlanNo>
+</ScheduleList>
+      </ScheduleParamExtend>
+    </Operation>
+  </Body>
+</Message>
+Response:
+<?xml version="1.0" encoding="UTF-8"?>
+<Message>
+  <Version>1.0</Version>
+  <Token>977F4181A561D345D3961373C012EAC0</Token>
+  <From>
+    <Address>
+      <Sys>UTCS</Sys>
+      <SubSys/>
+      <Instance/>
+    </Address>
+  </From>
+  <To>
+    <Address>
+      <Sys>TICP</Sys>
+      <SubSys/>
+      <Instance/>
+    </Address>
+  </To>
+  <Type>RESPONSE</Type>
+  <Seq>20140829084311000012</Seq>
+  <Body>
+    <Operation order="1" name="Set">
+      <ScheduleParamExtend>
+		 <CrossID>33010021133250</CrossID>
+        <ScheduleNo>1</ScheduleNo>    
+    <ScheduleList>
+<ScheduleType>1</ScheduleType>
+<Months>1,2</Months>
+<Days>3,4,5,23,24,25</Days>
+<Weeks> </Weeks>
+<Priority>1</Priority>
+<DailyPlanNo>1</DailyPlanNo>
+</ScheduleList>  
+      </ScheduleParamExtend>
+<ScheduleParamExtend>
+		 <CrossID>33010021133250</CrossID>
+        <ScheduleNo>2</ScheduleNo>      
+    <ScheduleList>
+<ScheduleType>3</ScheduleType>
+<Months></Months>
+<Days></Days>
+<Weeks>1,2,3,4,5,6,7</Weeks>
+<Priority>2</Priority>
+<DailyPlanNo>2</DailyPlanNo>
+</ScheduleList>
+      </ScheduleParamExtend>
+    </Operation>
+  </Body>
+</Message>
+启动信号参数下发-扩展
+注：平台下发信号参数前先发“启动信号参数下发”，对应信号系统端根据信号参数内的参数项进行收取对应的参数项（SignalParameters），信号系统将参数项收全后统一校验生效执行（如意外没收全，超时判断舍弃）。
+<StartSignalParameters>
+	  <CrossID>路口编号</CrossID>
+<SignalParameters>
+<SignalObject>
+<ObjectName>PhaseParam</ObjectName>//相位参数
+<ObjectSeq>20212342342322123101</ObjectSeq>//对应下发项的seq
+</SignalObject>
+.....下发的参数项名称.....
+<SignalObject>
+<ObjectName>ScheduleParamExtend</ObjectName>//阶段参数
+<ObjectSeq>20212342342322123102</ObjectSeq>//对应下发项的seq
+</SignalObject>
+</SignalParameters>
+</StartSignalParameters>
+Request://实例是下发10001路口下的阶段参数和配时方案参数
+<?xml version="1.0" encoding="UTF-8"?>
+<Message>
+  <Version>1.0</Version>
+  <Token>977F4181A561D345D3961373C012EAC0</Token>
+  <From>
+    <Address>
+      <Sys>TICP</Sys>
+      <SubSys/>
+      <Instance/>
+    </Address>
+  </From>
+  <To>
+    <Address>
+      <Sys>UTCS</Sys>
+      <SubSys/>
+      <Instance/>
+    </Address>
+  </To>
+  <Type>REQUEST</Type>
+  <Seq>1</Seq>
+  <Body>
+    <Operation order="1" name="Set">
+    <StartSignalParameters>
+	  <CrossID>10001</CrossID>
+<SignalParameters>
+<SignalObject>
+<ObjectName>StageParam</ObjectName>
+<ObjectSeq>20212342342322123101</ObjectSeq>
+</SignalObject>
+<SignalObject>
+<ObjectName>PlanParamExtend</ObjectName>
+<ObjectSeq>20212342342322123102</ObjectSeq>
+</SignalObject>
+</SignalParameters>
+</StartSignalParameters>
+    </Operation>  
+  </Body>
+</Message>
+Response:
+<?xml version="1.0" encoding="UTF-8"?>
+<Message>
+  <Version>1.0</Version>
+  <Token>977F4181A561D345D3961373C012EAC0</Token>
+  <From>
+    <Address>
+      <Sys>UTCS</Sys>
+      <SubSys/>
+      <Instance/>
+    </Address>
+  </From>
+  <To>
+    <Address>
+      <Sys>TICP</Sys>
+      <SubSys/>
+      <Instance/>
+    </Address>
+  </To>
+  <Type>RESPONSE</Type>
+  <Seq>20140829084311000015</Seq>
+  <Body>
+    <Operation order="1" name="Set">
+       <StartSignalParameters>
+	   <CrossID>10001</CrossID>
+<SignalParameters>
+<SignalObject>
+<ObjectName>StageParam</ObjectName>
+<ObjectSeq>20212342342322123101</ObjectSeq>
+</SignalObject>
+<SignalObject>
+<ObjectName>PlanParamExtend</ObjectName>
+<ObjectSeq>20212342342322123102</ObjectSeq>
+</SignalObject>
+</SignalParameters>
+</StartSignalParameters>
+    </Operation>
+  </Body>
+</Message>
+
+
+
+运行信息订阅
+系统状态
+<SysState>
+<Value>状态</Value>
+</SysState>
+Request:
+<?xml version="1.0" encoding="UTF-8"?>
+<Message>
+  <Version>1.0</Version>
+  <Token>977F4181A561D345D3961373C012EAC0</Token>
+  <From>
+    <Address>
+      <Sys>TICP</Sys>
+      <SubSys/>
+      <Instance/>
+    </Address>
+  </From>
+  <To>
+    <Address>
+      <Sys>UTCS</Sys>
+      <SubSys/>
+      <Instance/>
+    </Address>
+  </To>
+  <Type>REQUEST</Type>
+  <Seq>20140829084311000012</Seq>
+  <Body>
+    <Operation order="1" name="Subscribe">
+      <SDO_MsgEntity>
+ <Cmd>Start/Stop</Cmd>//订阅或取消订阅
+ <Type>SysState</Type>
+ <CrossIDList>0</CrossIDList>
+</SDO_MsgEntity>
+    </Operation>
+  </Body>
+</Message>
+Response:
+<?xml version="1.0" encoding="UTF-8"?>
+<Message>
+  <Version>1.0</Version>
+  <Token>977F4181A561D345D3961373C012EAC0</Token>
+  <From>
+    <Address>
+      <Sys>UTCS</Sys>
+      <SubSys/>
+      <Instance/>
+    </Address>
+  </From>
+  <To>
+    <Address>
+      <Sys>TICP</Sys>
+      <SubSys/>
+      <Instance/>
+    </Address>
+  </To>
+  <Type> Response </Type>
+  <Seq>20140829084311000012</Seq>
+  <Body>
+    <Operation order="1" name="Subscribe">
+       <SysState>
+<Value>Online</Value>
+</SysState>
+    </Operation>
+  </Body>
+</Message>
+Push:
+<?xml version="1.0" encoding="UTF-8"?>
+<Message>
+  <Version>1.0</Version>
+  <Token>977F4181A561D345D3961373C012EAC0</Token>
+  <From>
+    <Address>
+      <Sys>UTCS</Sys>
+      <SubSys/>
+      <Instance/>
+    </Address>
+  </From>
+  <To>
+    <Address>
+      <Sys>TICP</Sys>
+      <SubSys/>
+      <Instance/>
+    </Address>
+  </To>
+  <Type>Push</Type>
+  <Seq>20140829084311000012</Seq>
+  <Body>
+    <Operation order="1" name="Subscribe">
+       <SysState>
+<Value>Online</Value>
+</SysState>
+    </Operation>
+  </Body>
+</Message>
+路口状态
+<CrossState>
+<CrossID>路口编号</CrossID>
+<Value>状态</Value>
+</CrossState>
+路口状态对象描述见附录B中B.2.3。
+Request:
+<?xml version="1.0" encoding="UTF-8"?>
+<Message>
+  <Version>1.0</Version>
+  <Token>977F4181A561D345D3961373C012EAC0</Token>
+  <From>
+    <Address>
+      <Sys>TICP</Sys>
+      <SubSys/>
+      <Instance/>
+    </Address>
+  </From>
+  <To>
+    <Address>
+      <Sys>UTCS</Sys>
+      <SubSys/>
+      <Instance/>
+    </Address>
+  </To>
+  <Type>REQUEST</Type>
+  <Seq>20140829084311000012</Seq>
+  <Body>
+    <Operation order="1" name="Subscribe">
+      <SDO_MsgEntity>
+ <Cmd>Start/Stop</Cmd>//订阅或取消订阅
+ <Type> CrossState </Type>
+ <CrossIDList>10001,10002</CrossIDList>//0为所有路口
+</SDO_MsgEntity>
+    </Operation>
+  </Body>
+</Message>
+Response:
+<?xml version="1.0" encoding="UTF-8"?>
+<Message>
+  <Version>1.0</Version>
+  <Token>977F4181A561D345D3961373C012EAC0</Token>
+  <From>
+    <Address>
+      <Sys>UTCS</Sys>
+      <SubSys/>
+      <Instance/>
+    </Address>
+  </From>
+  <To>
+    <Address>
+      <Sys>TICP</Sys>
+      <SubSys/>
+      <Instance/>
+    </Address>
+  </To>
+  <Type> Response </Type>
+  <Seq>20140829084311000012</Seq>
+  <Body>
+    <Operation order="1" name="Subscribe">
+       <CrossState>
+<CrossID>10001</CrossID>
+<Value> Online </Value>
+</CrossState>
+<CrossState>
+<CrossID>10002</CrossID>
+<Value> Online </Value>
+</CrossState>
+    </Operation>
+  </Body>
+</Message>
+Push:
+<?xml version="1.0" encoding="UTF-8"?>
+<Message>
+  <Version>1.0</Version>
+  <Token>977F4181A561D345D3961373C012EAC0</Token>
+  <From>
+    <Address>
+      <Sys>UTCS</Sys>
+      <SubSys/>
+      <Instance/>
+    </Address>
+  </From>
+  <To>
+    <Address>
+      <Sys>TICP</Sys>
+      <SubSys/>
+      <Instance/>
+    </Address>
+  </To>
+  <Type>Push</Type>
+  <Seq>20140829084311000012</Seq>
+  <Body>
+    <Operation order="1" name="Subscribe">
+       <CrossState>
+<CrossID>10001</CrossID>
+<Value> Online </Value>
+</CrossState>
+<CrossState>
+<CrossID>10002</CrossID>
+<Value> Online </Value>
+</CrossState>
+    </Operation>
+  </Body>
+</Message>
+
+信号机故障
+<SignalControlerError>
+<SignalControlerID>信号机编号</SignalControlerID>
+<ErrorType>故障类型</ErrorType>
+<ErrorDesc>故障描述</ErrorDesc>
+<OccerTime>故障发生时间</OccerTime>
+</SignalControlerError>
+信号机故障对象描述见附录B中B.2.4。
+Request:
+<?xml version="1.0" encoding="UTF-8"?>
+<Message>
+  <Version>1.0</Version>
+  <Token>977F4181A561D345D3961373C012EAC0</Token>
+  <From>
+    <Address>
+      <Sys>TICP</Sys>
+      <SubSys/>
+      <Instance/>
+    </Address>
+  </From>
+  <To>
+    <Address>
+      <Sys>UTCS</Sys>
+      <SubSys/>
+      <Instance/>
+    </Address>
+  </To>
+  <Type>REQUEST</Type>
+  <Seq>20140829084311000012</Seq>
+  <Body>
+    <Operation order="1" name="Subscribe">
+      <SDO_MsgEntity>
+ <Cmd>Start/Stop</Cmd>//订阅或取消订阅
+ <Type> SignalControlerError </Type>
+  <CrossIDList>10001,10002</CrossIDList>//0为所有路口
+</SDO_MsgEntity>
+    </Operation>
+  </Body>
+</Message>
+Response:
+<?xml version="1.0" encoding="UTF-8"?>
+<Message>
+  <Version>1.0</Version>
+  <Token>977F4181A561D345D3961373C012EAC0</Token>
+  <From>
+    <Address>
+      <Sys>UTCS</Sys>
+      <SubSys/>
+      <Instance/>
+    </Address>
+  </From>
+  <To>
+    <Address>
+      <Sys>TICP</Sys>
+      <SubSys/>
+      <Instance/>
+    </Address>
+  </To>
+  <Type> Response </Type>
+  <Seq>20140829084311000012</Seq>
+  <Body>
+    <Operation order="1" name="Subscribe">
+       <SignalControlerError>
+<SignalControlerID>10001</SignalControlerID>
+<ErrorType>1</ErrorType>
+<ErrorDesc>黄灯故障</ErrorDesc>
+<OccerTime>2020-08-22 01:12:30</OccerTime>
+</SignalControlerError>
+<SignalControlerError>
+<SignalControlerID>10002</SignalControlerID>
+<ErrorType>1</ErrorType>
+<ErrorDesc>黄灯故障</ErrorDesc>
+<OccerTime>2020-08-22 01:12:30</OccerTime>
+</SignalControlerError>
+    </Operation>
+  </Body>
+</Message>
+Push:
+<?xml version="1.0" encoding="UTF-8"?>
+<Message>
+  <Version>1.0</Version>
+  <Token>977F4181A561D345D3961373C012EAC0</Token>
+  <From>
+    <Address>
+      <Sys>UTCS</Sys>
+      <SubSys/>
+      <Instance/>
+    </Address>
+  </From>
+  <To>
+    <Address>
+      <Sys>TICP</Sys>
+      <SubSys/>
+      <Instance/>
+    </Address>
+  </To>
+  <Type>Push</Type>
+  <Seq>20140829084311000012</Seq>
+  <Body>
+    <Operation order="1" name="Subscribe">
+       <SignalControlerError>
+<SignalControlerID>10001</SignalControlerID>
+<ErrorType>1</ErrorType>
+<ErrorDesc>黄灯故障</ErrorDesc>
+<OccerTime>2020-08-22 01:12:30</OccerTime>
+</SignalControlerError>
+<SignalControlerError>
+<SignalControlerID>10002</SignalControlerID>
+<ErrorType>1</ErrorType>
+<ErrorDesc>黄灯故障</ErrorDesc>
+<OccerTime>2020-08-22 01:12:30</OccerTime>
+</SignalControlerError>
+    </Operation>
+  </Body>
+</Message>
+
+路口运行控制方式
+<CrossControlMode>
+<CrossID>路口编号</CrossID>
+<Value>控制方式</Value>
+</CrossControlMode>
+路口控制方式对象描述见附录B中B.2.5。
+Request:
+<?xml version="1.0" encoding="UTF-8"?>
+<Message>
+  <Version>1.0</Version>
+  <Token>977F4181A561D345D3961373C012EAC0</Token>
+  <From>
+    <Address>
+      <Sys>TICP</Sys>
+      <SubSys/>
+      <Instance/>
+    </Address>
+  </From>
+  <To>
+    <Address>
+      <Sys>UTCS</Sys>
+      <SubSys/>
+      <Instance/>
+    </Address>
+  </To>
+  <Type>REQUEST</Type>
+  <Seq>20140829084311000012</Seq>
+  <Body>
+    <Operation order="1" name="Subscribe">
+      <SDO_MsgEntity>
+ <Cmd>Start/Stop</Cmd>//订阅或取消订阅
+ <Type> CrossControlMode </Type>
+  <CrossIDList>10001,10002</CrossIDList>//0为所有路口
+</SDO_MsgEntity>
+    </Operation>
+  </Body>
+</Message>
+Response:
+<?xml version="1.0" encoding="UTF-8"?>
+<Message>
+  <Version>1.0</Version>
+  <Token>977F4181A561D345D3961373C012EAC0</Token>
+  <From>
+    <Address>
+      <Sys>UTCS</Sys>
+      <SubSys/>
+      <Instance/>
+    </Address>
+  </From>
+  <To>
+    <Address>
+      <Sys>TICP</Sys>
+      <SubSys/>
+      <Instance/>
+    </Address>
+  </To>
+  <Type> Response </Type>
+  <Seq>20140829084311000012</Seq>
+  <Body>
+    <Operation order="1" name="Subscribe">
+       <CrossControlMode>
+<CrossID>10001</CrossID>
+<Value>21</Value>
+</CrossControlMode>
+<CrossControlMode>
+<CrossID>10002</CrossID>
+<Value>21</Value>
+</CrossControlMode>
+    </Operation>
+  </Body>
+</Message>
+Push:
+<?xml version="1.0" encoding="UTF-8"?>
+<Message>
+  <Version>1.0</Version>
+  <Token>977F4181A561D345D3961373C012EAC0</Token>
+  <From>
+    <Address>
+      <Sys>UTCS</Sys>
+      <SubSys/>
+      <Instance/>
+    </Address>
+  </From>
+  <To>
+    <Address>
+      <Sys>TICP</Sys>
+      <SubSys/>
+      <Instance/>
+    </Address>
+  </To>
+  <Type>Push</Type>
+  <Seq>20140829084311000012</Seq>
+  <Body>
+    <Operation order="1" name="Subscribe">
+       <CrossControlMode>
+<CrossID>10001</CrossID>
+<Value>21</Value>
+</CrossControlMode>
+<CrossControlMode>
+<CrossID>10002</CrossID>
+<Value>21</Value>
+</CrossControlMode>
+    </Operation>
+  </Body>
+</Message>
+
+路口运行周期
+<CrossCycle>
+<CrossID>路口编号</CrossID>
+<StartTime>周期开始时间</StartTime>
+<LastCycleLen>上周期长度</LastCycleLen>
+</CrossCycle>
+路口周期对象描述见附录B中B.2.6。
+Request:
+<?xml version="1.0" encoding="UTF-8"?>
+<Message>
+  <Version>1.0</Version>
+  <Token>977F4181A561D345D3961373C012EAC0</Token>
+  <From>
+    <Address>
+      <Sys>TICP</Sys>
+      <SubSys/>
+      <Instance/>
+    </Address>
+  </From>
+  <To>
+    <Address>
+      <Sys>UTCS</Sys>
+      <SubSys/>
+      <Instance/>
+    </Address>
+  </To>
+  <Type>REQUEST</Type>
+  <Seq>20140829084311000012</Seq>
+  <Body>
+    <Operation order="1" name="Subscribe">
+      <SDO_MsgEntity>
+ <Cmd>Start/Stop</Cmd>//订阅或取消订阅
+ <Type> CrossCycle </Type>
+  <CrossIDList>10001,10002</CrossIDList>//0为所有路口
+</SDO_MsgEntity>
+    </Operation>
+  </Body>
+</Message>
+Response:
+<?xml version="1.0" encoding="UTF-8"?>
+<Message>
+  <Version>1.0</Version>
+  <Token>977F4181A561D345D3961373C012EAC0</Token>
+  <From>
+    <Address>
+      <Sys>UTCS</Sys>
+      <SubSys/>
+      <Instance/>
+    </Address>
+  </From>
+  <To>
+    <Address>
+      <Sys>TICP</Sys>
+      <SubSys/>
+      <Instance/>
+    </Address>
+  </To>
+  <Type> Response </Type>
+  <Seq>20140829084311000012</Seq>
+  <Body>
+    <Operation order="1" name="Subscribe">
+       <CrossCycle>
+<CrossID>10001</CrossID>
+<StartTime>2020-09-03 07:00:30</StartTime>
+<LastCycleLen>120</LastCycleLen>
+</CrossCycle>
+<CrossCycle>
+<CrossID>10002</CrossID>
+<StartTime>2020-09-03 07:00:20</StartTime>
+<LastCycleLen>120</LastCycleLen>
+</CrossCycle>
+    </Operation>
+  </Body>
+</Message>
+
+Push:
+<?xml version="1.0" encoding="UTF-8"?>
+<Message>
+  <Version>1.0</Version>
+  <Token>977F4181A561D345D3961373C012EAC0</Token>
+  <From>
+    <Address>
+      <Sys>UTCS</Sys>
+      <SubSys/>
+      <Instance/>
+    </Address>
+  </From>
+  <To>
+    <Address>
+      <Sys>TICP</Sys>
+      <SubSys/>
+      <Instance/>
+    </Address>
+  </To>
+  <Type>Push</Type>
+  <Seq>20140829084311000012</Seq>
+  <Body>
+    <Operation order="1" name="Subscribe">
+       <CrossCycle>
+<CrossID>10001</CrossID>
+<StartTime>2020-09-03 07:00:30</StartTime>
+<LastCycleLen>120</LastCycleLen>
+</CrossCycle>
+<CrossCycle>
+<CrossID>10002</CrossID>
+<StartTime>2020-09-03 07:00:20</StartTime>
+<LastCycleLen>120</LastCycleLen>
+</CrossCycle>
+    </Operation>
+  </Body>
+</Message>
+
+路口运行周期-扩展
+<CrossCycleExtend>
+<CrossID>路口编号</CrossID>
+<CurCycleLen>当前周期运行时长</CurCycleLen>
+<CurCycleRemainLen>当前周期剩于时长</CurCycleRemainLen>
+</CrossCycleExtend>
+Request:
+<?xml version="1.0" encoding="UTF-8"?>
+<Message>
+  <Version>1.0</Version>
+  <Token>977F4181A561D345D3961373C012EAC0</Token>
+  <From>
+    <Address>
+      <Sys>TICP</Sys>
+      <SubSys/>
+      <Instance/>
+    </Address>
+  </From>
+  <To>
+    <Address>
+      <Sys>UTCS</Sys>
+      <SubSys/>
+      <Instance/>
+    </Address>
+  </To>
+  <Type>REQUEST</Type>
+  <Seq>20140829084311000012</Seq>
+  <Body>
+    <Operation order="1" name="Subscribe">
+      <SDO_MsgEntity>
+ <Cmd>Start/Stop</Cmd>//订阅或取消订阅
+ <Type> CrossCycleExtend </Type>
+  <CrossIDList>10001,10002</CrossIDList>//0为所有路口
+</SDO_MsgEntity>
+    </Operation>
+  </Body>
+</Message>
+Response:
+<?xml version="1.0" encoding="UTF-8"?>
+<Message>
+  <Version>1.0</Version>
+  <Token>977F4181A561D345D3961373C012EAC0</Token>
+  <From>
+    <Address>
+      <Sys>UTCS</Sys>
+      <SubSys/>
+      <Instance/>
+    </Address>
+  </From>
+  <To>
+    <Address>
+      <Sys>TICP</Sys>
+      <SubSys/>
+      <Instance/>
+    </Address>
+  </To>
+  <Type> Response </Type>
+  <Seq>20140829084311000012</Seq>
+  <Body>
+    <Operation order="1" name="Subscribe">
+             <CrossCycleExtend>
+<CrossID>10001</CrossID>
+<CurCycleLen>50</CurCycleLen>
+<CurCycleRemainLen>70</CurCycleRemainLen>
+</CrossCycleExtend>
+<CrossCycleExtend>
+<CrossID>10002</CrossID>
+<CurCycleLen>40</CurCycleLen>
+<CurCycleRemainLen>60</CurCycleRemainLen>
+</CrossCycleExtend>
+    </Operation>
+  </Body>
+</Message>
+Push:
+<?xml version="1.0" encoding="UTF-8"?>
+<Message>
+  <Version>1.0</Version>
+  <Token>977F4181A561D345D3961373C012EAC0</Token>
+  <From>
+    <Address>
+      <Sys>UTCS</Sys>
+      <SubSys/>
+      <Instance/>
+    </Address>
+  </From>
+  <To>
+    <Address>
+      <Sys>TICP</Sys>
+      <SubSys/>
+      <Instance/>
+    </Address>
+  </To>
+  <Type>Push</Type>
+  <Seq>20140829084311000012</Seq>
+  <Body>
+    <Operation order="1" name="Subscribe">
+      <CrossCycleExtend>
+<CrossID>10001</CrossID>
+<CurCycleLen>50</CurCycleLen>
+<CurCycleRemainLen>70</CurCycleRemainLen>
+</CrossCycleExtend>
+<CrossCycleExtend>
+<CrossID>10002</CrossID>
+<CurCycleLen>40</CurCycleLen>
+<CurCycleRemainLen>60</CurCycleRemainLen>
+</CrossCycleExtend>
+    </Operation>
+  </Body>
+</Message>
+
+路口运行阶段
+<CrossStage>
+<CrossID>路口编号</CrossID>
+<LastStageNo>上个阶段号</LastStageNo>
+<LastStageLen>上个阶段长度</LastStageLen>
+<CurStageNo>当前阶段号</CurStageNo>
+<CurStageLen>当前阶段长度</CurStageLen>
+</CrossStage>
+路口阶段对象描述见附录B中B.2.7。
+Request:
+<?xml version="1.0" encoding="UTF-8"?>
+<Message>
+  <Version>1.0</Version>
+  <Token>977F4181A561D345D3961373C012EAC0</Token>
+  <From>
+    <Address>
+      <Sys>TICP</Sys>
+      <SubSys/>
+      <Instance/>
+    </Address>
+  </From>
+  <To>
+    <Address>
+      <Sys>UTCS</Sys>
+      <SubSys/>
+      <Instance/>
+    </Address>
+  </To>
+  <Type>REQUEST</Type>
+  <Seq>20140829084311000012</Seq>
+  <Body>
+    <Operation order="1" name="Subscribe">
+      <SDO_MsgEntity>
+ <Cmd>Start/Stop</Cmd>//订阅或取消订阅
+ <Type> CrossStage </Type>
+  <CrossIDList>10001,10002</CrossIDList>//0为所有路口
+</SDO_MsgEntity>
+    </Operation>
+  </Body>
+</Message>
+Response:
+<?xml version="1.0" encoding="UTF-8"?>
+<Message>
+  <Version>1.0</Version>
+  <Token>977F4181A561D345D3961373C012EAC0</Token>
+  <From>
+    <Address>
+      <Sys>UTCS</Sys>
+      <SubSys/>
+      <Instance/>
+    </Address>
+  </From>
+  <To>
+    <Address>
+      <Sys>TICP</Sys>
+      <SubSys/>
+      <Instance/>
+    </Address>
+  </To>
+  <Type> Response </Type>
+  <Seq>20140829084311000012</Seq>
+  <Body>
+    <Operation order="1" name="Subscribe">
+      <CrossStage>
+<CrossID>10001</CrossID>
+<LastStageNo>1</LastStageNo>
+<LastStageLen>30</LastStageLen>
+<CurStageNo>2</CurStageNo>
+<CurStageLen>13</CurStageLen>
+</CrossStage>
+<CrossStage>
+<CrossID>10002</CrossID>
+<LastStageNo>1</LastStageNo>
+<LastStageLen>25</LastStageLen>
+<CurStageNo>2</CurStageNo>
+<CurStageLen>17</CurStageLen>
+</CrossStage>
+    </Operation>
+  </Body>
+</Message>
+Push:
+<?xml version="1.0" encoding="UTF-8"?>
+<Message>
+  <Version>1.0</Version>
+  <Token>977F4181A561D345D3961373C012EAC0</Token>
+  <From>
+    <Address>
+      <Sys>UTCS</Sys>
+      <SubSys/>
+      <Instance/>
+    </Address>
+  </From>
+  <To>
+    <Address>
+      <Sys>TICP</Sys>
+      <SubSys/>
+      <Instance/>
+    </Address>
+  </To>
+  <Type>Push</Type>
+  <Seq>20140829084311000012</Seq>
+  <Body>
+    <Operation order="1" name="Subscribe">
+      <CrossStage>
+<CrossID>10001</CrossID>
+<LastStageNo>1</LastStageNo>
+<LastStageLen>30</LastStageLen>
+<CurStageNo>2</CurStageNo>
+<CurStageLen>13</CurStageLen>
+</CrossStage>
+<CrossStage>
+<CrossID>10002</CrossID>
+<LastStageNo>1</LastStageNo>
+<LastStageLen>25</LastStageLen>
+<CurStageNo>2</CurStageNo>
+<CurStageLen>17</CurStageLen>
+</CrossStage>
+    </Operation>
+  </Body>
+</Message>
+
+
+路口运行阶段-扩展
+<CrossStageExtend>
+<CrossID>路口编号</CrossID>
+<CurStageNo>当前阶段号</CurStageNo>
+<StageStartTime>阶段开始时间（yyyy-mm-dd hh24:mi:ss）</StageStartTime>
+<StagePlanNo>相序表号</StagePlanNo>
+<StageRunLen>阶段已执行时长</StageRunLen>
+<CurStageRemainLen>当前阶段剩余时长</CurStageRemainLen>
+</CrossStageExtend>
+路口阶段对象描述见附录B中B.2.7。
+Request:
+<?xml version="1.0" encoding="UTF-8"?>
+<Message>
+  <Version>1.0</Version>
+  <Token>977F4181A561D345D3961373C012EAC0</Token>
+  <From>
+    <Address>
+      <Sys>TICP</Sys>
+      <SubSys/>
+      <Instance/>
+    </Address>
+  </From>
+  <To>
+    <Address>
+      <Sys>UTCS</Sys>
+      <SubSys/>
+      <Instance/>
+    </Address>
+  </To>
+  <Type>REQUEST</Type>
+  <Seq>20140829084311000012</Seq>
+  <Body>
+    <Operation order="1" name="Subscribe">
+      <SDO_MsgEntity>
+ <Cmd>Start/Stop</Cmd>//订阅或取消订阅
+ <Type> CrossStageExtend </Type>
+  <CrossIDList>10001,10002</CrossIDList>//0为所有路口
+</SDO_MsgEntity>
+    </Operation>
+  </Body>
+</Message>
+Response:
+<?xml version="1.0" encoding="UTF-8"?>
+<Message>
+  <Version>1.0</Version>
+  <Token>977F4181A561D345D3961373C012EAC0</Token>
+  <From>
+    <Address>
+      <Sys>UTCS</Sys>
+      <SubSys/>
+      <Instance/>
+    </Address>
+  </From>
+  <To>
+    <Address>
+      <Sys>TICP</Sys>
+      <SubSys/>
+      <Instance/>
+    </Address>
+  </To>
+  <Type>Response</Type>
+  <Seq>20140829084311000012</Seq>
+  <Body>
+    <Operation order="1" name="Subscribe">
+      <CrossStageExtend>
+<CrossID>10001</CrossID>
+<CurStageNo>1</CurStageNo>
+<StageStartTime>2020-09-08 20:29:05</StageStartTime>
+<StagePlanNo>1</StagePlanNo>
+<StageRunLen>5</StageRunLen>
+<CurStageRemainLen>20</CurStageRemainLen>
+</CrossStageExtend>
+<CrossStageExtend>
+<CrossID>10002</CrossID>
+<CurStageNo>2</CurStageNo>
+<StageStartTime>2020-09-08 20:29:05</StageStartTime>
+<StagePlanNo>1</StagePlanNo>
+<StageRunLen>5</StageRunLen>
+<CurStageRemainLen>23</CurStageRemainLen>
+</CrossStageExtend>
+    </Operation>
+  </Body>
+</Message>
+Push:
+<?xml version="1.0" encoding="UTF-8"?>
+<Message>
+  <Version>1.0</Version>
+  <Token>977F4181A561D345D3961373C012EAC0</Token>
+  <From>
+    <Address>
+      <Sys>UTCS</Sys>
+      <SubSys/>
+      <Instance/>
+    </Address>
+  </From>
+  <To>
+    <Address>
+      <Sys>TICP</Sys>
+      <SubSys/>
+      <Instance/>
+    </Address>
+  </To>
+  <Type>Push</Type>
+  <Seq>20140829084311000012</Seq>
+  <Body>
+    <Operation order="1" name="Subscribe">
+      <CrossStageExtend>
+<CrossID>10001</CrossID>
+<CurStageNo>1</CurStageNo>
+<StageStartTime>2020-09-08 20:29:05</StageStartTime>
+<StagePlanNo>1</StagePlanNo>
+<StageRunLen>5</StageRunLen>
+<CurStageRemainLen>20</CurStageRemainLen>
+</CrossStageExtend>
+<CrossStageExtend>
+<CrossID>10002</CrossID>
+<CurStageNo>2</CurStageNo>
+<StageStartTime>2020-09-08 20:29:05</StageStartTime>
+<StagePlanNo>1</StagePlanNo>
+<StageRunLen>5</StageRunLen>
+<CurStageRemainLen>23</CurStageRemainLen>
+</CrossStageExtend>
+    </Operation>
+  </Body>
+</Message>
+
+路口运行相位灯态
+<CrossPhaseLampStatus>
+<CrossID>路口编号</CrossID>
+<PhaseLampStatusList>
+<!--相位灯态列表 -->
+<PhaseLampStatus>
+<PhaseNo>相位序号</PhaseNo>
+<LampStatus>灯态</LampStatus>
+</PhaseLampStatus>
+……
+</PhaseLampStatusList>
+</CrossPhaseLampStatus>
+路口相位灯态给出了路口所有相位的实时灯态信息，其对象描述见附录B中B.2.8。
+Request:
+<?xml version="1.0" encoding="UTF-8"?>
+<Message>
+  <Version>1.0</Version>
+  <Token>977F4181A561D345D3961373C012EAC0</Token>
+  <From>
+    <Address>
+      <Sys>TICP</Sys>
+      <SubSys/>
+      <Instance/>
+    </Address>
+  </From>
+  <To>
+    <Address>
+      <Sys>UTCS</Sys>
+      <SubSys/>
+      <Instance/>
+    </Address>
+  </To>
+  <Type>REQUEST</Type>
+  <Seq>20140829084311000012</Seq>
+  <Body>
+    <Operation order="1" name="Subscribe">
+      <SDO_MsgEntity>
+ <Cmd>Start/Stop</Cmd>//订阅或取消订阅
+ <Type> CrossPhaseLampStatus </Type>
+ <CrossIDList>10001,10002</CrossIDList>//0为所有路口
+</SDO_MsgEntity>
+    </Operation>
+  </Body>
+</Message>
+Response:
+<?xml version="1.0" encoding="UTF-8"?>
+<Message>
+  <Version>1.0</Version>
+  <Token>977F4181A561D345D3961373C012EAC0</Token>
+  <From>
+    <Address>
+      <Sys>UTCS</Sys>
+      <SubSys/>
+      <Instance/>
+    </Address>
+  </From>
+  <To>
+    <Address>
+      <Sys>TICP</Sys>
+      <SubSys/>
+      <Instance/>
+    </Address>
+  </To>
+  <Type>Response</Type>
+  <Seq>20140829084311000012</Seq>
+  <Body>
+    <Operation order="1" name="Subscribe">
+      <CrossPhaseLampStatus>
+<CrossID>10001</CrossID>
+<PhaseLampStatusList>
+<PhaseLampStatus>
+<PhaseNo>1</PhaseNo>
+<LampStatus>21</LampStatus>
+</PhaseLampStatus>
+<PhaseLampStatus>
+<PhaseNo>2</PhaseNo>
+<LampStatus>21</LampStatus>
+</PhaseLampStatus>
+<PhaseLampStatus>
+<PhaseNo>3</PhaseNo>
+<LampStatus>23</LampStatus>
+</PhaseLampStatus>
+<PhaseLampStatus>
+<PhaseNo>4</PhaseNo>
+<LampStatus>23</LampStatus>
+</PhaseLampStatus>
+</PhaseLampStatusList>
+</CrossPhaseLampStatus>
+<CrossPhaseLampStatus>
+<CrossID>10002</CrossID>
+<PhaseLampStatusList>
+<PhaseLampStatus>
+<PhaseNo>1</PhaseNo>
+<LampStatus>21</LampStatus>
+</PhaseLampStatus>
+<PhaseLampStatus>
+<PhaseNo>2</PhaseNo>
+<LampStatus>21</LampStatus>
+</PhaseLampStatus>
+<PhaseLampStatus>
+<PhaseNo>3</PhaseNo>
+<LampStatus>23</LampStatus>
+</PhaseLampStatus>
+<PhaseLampStatus>
+<PhaseNo>4</PhaseNo>
+<LampStatus>23</LampStatus>
+</PhaseLampStatus>
+</PhaseLampStatusList>
+</CrossPhaseLampStatus>
+    </Operation>
+  </Body>
+</Message>
+Push:
+<?xml version="1.0" encoding="UTF-8"?>
+<Message>
+  <Version>1.0</Version>
+  <Token>977F4181A561D345D3961373C012EAC0</Token>
+  <From>
+    <Address>
+      <Sys>UTCS</Sys>
+      <SubSys/>
+      <Instance/>
+    </Address>
+  </From>
+  <To>
+    <Address>
+      <Sys>TICP</Sys>
+      <SubSys/>
+      <Instance/>
+    </Address>
+  </To>
+  <Type>Push</Type>
+  <Seq>20140829084311000012</Seq>
+  <Body>
+    <Operation order="1" name="Subscribe">
+      <CrossPhaseLampStatus>
+<CrossID>10001</CrossID>
+<PhaseLampStatusList>
+<PhaseLampStatus>
+<PhaseNo>1</PhaseNo>
+<LampStatus>21</LampStatus>
+</PhaseLampStatus>
+<PhaseLampStatus>
+<PhaseNo>2</PhaseNo>
+<LampStatus>21</LampStatus>
+</PhaseLampStatus>
+<PhaseLampStatus>
+<PhaseNo>3</PhaseNo>
+<LampStatus>23</LampStatus>
+</PhaseLampStatus>
+<PhaseLampStatus>
+<PhaseNo>4</PhaseNo>
+<LampStatus>23</LampStatus>
+</PhaseLampStatus>
+</PhaseLampStatusList>
+</CrossPhaseLampStatus>
+<CrossPhaseLampStatus>
+<CrossID>10002</CrossID>
+<PhaseLampStatusList>
+<PhaseLampStatus>
+<PhaseNo>1</PhaseNo>
+<LampStatus>21</LampStatus>
+</PhaseLampStatus>
+<PhaseLampStatus>
+<PhaseNo>2</PhaseNo>
+<LampStatus>21</LampStatus>
+</PhaseLampStatus>
+<PhaseLampStatus>
+<PhaseNo>3</PhaseNo>
+<LampStatus>23</LampStatus>
+</PhaseLampStatus>
+<PhaseLampStatus>
+<PhaseNo>4</PhaseNo>
+<LampStatus>23</LampStatus>
+</PhaseLampStatus>
+</PhaseLampStatusList>
+</CrossPhaseLampStatus>
+    </Operation>
+  </Body>
+</Message>
+
+路口运行控制方案
+<CrossPlan>
+<CrossID>路口编号</CrossID>
+<PlanNo>方案号</PlanNo>
+</CrossPlan>
+路口控制方案对象描述见附录B中B.2.9。
+Request:
+<?xml version="1.0" encoding="UTF-8"?>
+<Message>
+  <Version>1.0</Version>
+  <Token>977F4181A561D345D3961373C012EAC0</Token>
+  <From>
+    <Address>
+      <Sys>TICP</Sys>
+      <SubSys/>
+      <Instance/>
+    </Address>
+  </From>
+  <To>
+    <Address>
+      <Sys>UTCS</Sys>
+      <SubSys/>
+      <Instance/>
+    </Address>
+  </To>
+  <Type>REQUEST</Type>
+  <Seq>20140829084311000012</Seq>
+  <Body>
+    <Operation order="1" name="Subscribe">
+      <SDO_MsgEntity>
+ <Cmd>Start/Stop</Cmd>//订阅或取消订阅
+ <Type> CrossPlan </Type>
+  <CrossIDList>10001,10002</CrossIDList>//0为所有路口
+</SDO_MsgEntity>
+    </Operation>
+  </Body>
+</Message>
+Response:
+<?xml version="1.0" encoding="UTF-8"?>
+<Message>
+  <Version>1.0</Version>
+  <Token>977F4181A561D345D3961373C012EAC0</Token>
+  <From>
+    <Address>
+      <Sys>UTCS</Sys>
+      <SubSys/>
+      <Instance/>
+    </Address>
+  </From>
+  <To>
+    <Address>
+      <Sys>TICP</Sys>
+      <SubSys/>
+      <Instance/>
+    </Address>
+  </To>
+  <Type> Response </Type>
+  <Seq>20140829084311000012</Seq>
+  <Body>
+    <Operation order="1" name="Subscribe">
+      <CrossPlan>
+<CrossID>10001</CrossID>
+<PlanNo>1</PlanNo>
+</CrossPlan>
+<CrossPlan>
+<CrossID>10002</CrossID>
+<PlanNo>5</PlanNo>
+</CrossPlan>
+    </Operation>
+  </Body>
+</Message>
+Push:
+<?xml version="1.0" encoding="UTF-8"?>
+<Message>
+  <Version>1.0</Version>
+  <Token>977F4181A561D345D3961373C012EAC0</Token>
+  <From>
+    <Address>
+      <Sys>UTCS</Sys>
+      <SubSys/>
+      <Instance/>
+    </Address>
+  </From>
+  <To>
+    <Address>
+      <Sys>TICP</Sys>
+      <SubSys/>
+      <Instance/>
+    </Address>
+  </To>
+  <Type>Push</Type>
+  <Seq>20140829084311000012</Seq>
+  <Body>
+    <Operation order="1" name="Subscribe">
+      <CrossPlan>
+<CrossID>10001</CrossID>
+<PlanNo>1</PlanNo>
+</CrossPlan>
+<CrossPlan>
+<CrossID>10002</CrossID>
+<PlanNo>5</PlanNo>
+</CrossPlan>
+    </Operation>
+  </Body>
+</Message>
+
+路口交通流统计数据
+<CrossTrafficData>
+<CrossID>路口编号</CrossID>
+<EndTime>统计截止时间</EndTime>
+<Interval>时间间隔</Interval>
+<DataList>
+<!--流量列表-->
+<Data>
+<LaneNo>车道序号</LaneNo>
+<Volume>交通流量</Volume>
+<AvgVehLen>平均车长</AvgVehLen>
+<Pcu>当量小汽车</Pcu>
+<HeadDistance>平均车头间距</HeadDistance>
+<HeadTime>平均车头时距</HeadTime>
+<Speed>平均速度</Speed>
+<Saturation>饱和度</Saturation>
+<Density>密度</Density>
+<QueueLength>平均排队长度</QueueLength>
+<Occupancy>占有率</Occupancy>
+</Data>
+……
+</DataList>
+</CrossTrafficData> 
+路口交通流数据对象描述见附录B中B.2.10。 
+注：交通流数据的主动推送时机为统计截止时间到达时由交通信号控制系统发出。
+Request:
+<?xml version="1.0" encoding="UTF-8"?>
+<Message>
+  <Version>1.0</Version>
+  <Token>977F4181A561D345D3961373C012EAC0</Token>
+  <From>
+    <Address>
+      <Sys>TICP</Sys>
+      <SubSys/>
+      <Instance/>
+    </Address>
+  </From>
+  <To>
+    <Address>
+      <Sys>UTCS</Sys>
+      <SubSys/>
+      <Instance/>
+    </Address>
+  </To>
+  <Type>REQUEST</Type>
+  <Seq>20140829084311000012</Seq>
+  <Body>
+    <Operation order="1" name="Subscribe ">
+      <SDO_MsgEntity>
+ <Cmd>Start/Stop</Cmd>//开始或停止订阅
+ <Type>  CrossTrafficData </Type>
+  <CrossIDList>10001,10002</CrossIDList>//0为所有路口
+</SDO_MsgEntity>
+    </Operation>
+  </Body>
+</Message>
+Response:
+<?xml version="1.0" encoding="UTF-8"?>
+<Message>
+  <Version>1.0</Version>
+  <Token>977F4181A561D345D3961373C012EAC0</Token>
+  <From>
+    <Address>
+      <Sys>UTCS</Sys>
+      <SubSys/>
+      <Instance/>
+    </Address>
+  </From>
+  <To>
+    <Address>
+      <Sys>TICP</Sys>
+      <SubSys/>
+      <Instance/>
+    </Address>
+  </To>
+  <Type>Response</Type>
+  <Seq>20140829084311000012</Seq>
+  <Body>
+    <Operation order="1" name="Subscribe">
+      <CrossTrafficData>
+		<CrossID>10001</CrossID>
+<EndTime>2020-07-05 09:00:00</EndTime>
+       <Interval>5</Interval>
+       <DataList>
+<Data>
+<LaneNo>1</LaneNo>
+<Volume>25</Volume>
+<AvgVehLen>5</AvgVehLen>
+<Pcu>25</Pcu>
+<HeadDistance>1.5</HeadDistance>
+<HeadTime>1</HeadTime>
+<Speed>30</Speed>
+<Saturation>0.4</Saturation>
+<Density> </Density>
+<QueueLength>50</QueueLength>
+<Occupancy>0.6</Occupancy>
+</Data>
+<Data>
+<LaneNo>2</LaneNo>
+<Volume>15</Volume>
+<AvgVehLen>5</AvgVehLen>
+<Pcu>25</Pcu>
+<HeadDistance>1.5</HeadDistance>
+<HeadTime>1</HeadTime>
+<Speed>30</Speed>
+<Saturation>0.4</Saturation>
+<Density> </Density>
+<QueueLength>50</QueueLength>
+<Occupancy>0.6</Occupancy>
+</Data>
+</DataList>
+     </CrossTrafficData>
+    </Operation>
+  </Body>
+</Message>
+Push:
+<?xml version="1.0" encoding="UTF-8"?>
+<Message>
+  <Version>1.0</Version>
+  <Token>977F4181A561D345D3961373C012EAC0</Token>
+  <From>
+    <Address>
+      <Sys>UTCS</Sys>
+      <SubSys/>
+      <Instance/>
+    </Address>
+  </From>
+  <To>
+    <Address>
+      <Sys>TICP</Sys>
+      <SubSys/>
+      <Instance/>
+    </Address>
+  </To>
+  <Type>Push</Type>
+  <Seq>20140829084311000012</Seq>
+  <Body>
+    <Operation order="1" name="Subscribe">
+      <CrossTrafficData>
+		<CrossID>10001</CrossID>
+<EndTime>2020-07-05 09:00:00</EndTime>
+       <Interval>5</Interval>
+       <DataList>
+<Data>
+<LaneNo>1</LaneNo>
+<Volume>25</Volume>
+<AvgVehLen>5</AvgVehLen>
+<Pcu>25</Pcu>
+<HeadDistance>1.5</HeadDistance>
+<HeadTime>1</HeadTime>
+<Speed>30</Speed>
+<Saturation>0.4</Saturation>
+<Density> </Density>
+<QueueLength>50</QueueLength>
+<Occupancy>0.6</Occupancy>
+</Data>
+<Data>
+<LaneNo>2</LaneNo>
+<Volume>15</Volume>
+<AvgVehLen>5</AvgVehLen>
+<Pcu>25</Pcu>
+<HeadDistance>1.5</HeadDistance>
+<HeadTime>1</HeadTime>
+<Speed>30</Speed>
+<Saturation>0.4</Saturation>
+<Density> </Density>
+<QueueLength>50</QueueLength>
+<Occupancy>0.6</Occupancy>
+</Data>
+</DataList>
+     </CrossTrafficData>
+    </Operation>
+  </Body>
+</Message>
+
+路口检测器I/O过车数据-扩展
+<CrossDetectorRealData>
+<CrossID>路口编号</CrossID>
+<dataTime>数据时间</dataTime>
+<DataList>
+<!--流量列表-->
+<Data>
+<DetID>检测器序号</DetID>
+<CarState>车辆状态（有车/无车/故障）</CarState>
+</Data>
+……
+</DataList>
+</CrossDetectorRealData> 
+注：交通流检测器I/O过车数据，信号机检测器当前实时的脉冲信号。
+Request:
+<?xml version="1.0" encoding="UTF-8"?>
+<Message>
+  <Version>1.0</Version>
+  <Token>977F4181A561D345D3961373C012EAC0</Token>
+  <From>
+    <Address>
+      <Sys>TICP</Sys>
+      <SubSys/>
+      <Instance/>
+    </Address>
+  </From>
+  <To>
+    <Address>
+      <Sys>UTCS</Sys>
+      <SubSys/>
+      <Instance/>
+    </Address>
+  </To>
+  <Type>REQUEST</Type>
+  <Seq>20140829084311000012</Seq>
+  <Body>
+    <Operation order="1" name="Subscribe">
+      <SDO_MsgEntity>
+ <Cmd>Start/Stop</Cmd>//开始或停止订阅
+ <Type> CrossDetectorRealData </Type>
+  <CrossIDList>10001,10002</CrossIDList>//0为所有路口
+</SDO_MsgEntity>
+    </Operation>
+  </Body>
+</Message>
+Response:
+<?xml version="1.0" encoding="UTF-8"?>
+<Message>
+  <Version>1.0</Version>
+  <Token>977F4181A561D345D3961373C012EAC0</Token>
+  <From>
+    <Address>
+      <Sys>UTCS</Sys>
+      <SubSys/>
+      <Instance/>
+    </Address>
+  </From>
+  <To>
+    <Address>
+      <Sys>TICP</Sys>
+      <SubSys/>
+      <Instance/>
+    </Address>
+  </To>
+  <Type> Response </Type>
+  <Seq>20140829084311000012</Seq>
+  <Body>
+    <Operation order="1" name="Subscribe">
+      <CrossDetectorRealData>
+<CrossID>10001</CrossID>
+<dataTime>2020-07-03 07:05:00</dataTime>
+<DataList>
+<Data>
+<DetID>1</DetID>
+<CarState>有车</CarState>
+</Data>
+<Data>
+<DetID>2</DetID>
+<CarState>有车</CarState>
+</Data>
+<Data>
+<DetID>3</DetID>
+<CarState>无车</CarState>
+</Data>
+<Data>
+<DetID>4</DetID>
+<CarState>无车</CarState>
+</Data>
+<Data>
+<DetID>5</DetID>
+<CarState>无车</CarState>
+</Data>
+</DataList>
+</CrossDetectorRealData>
+    </Operation>
+  </Body>
+</Message>
+
+Push:
+<?xml version="1.0" encoding="UTF-8"?>
+<Message>
+  <Version>1.0</Version>
+  <Token>977F4181A561D345D3961373C012EAC0</Token>
+  <From>
+    <Address>
+      <Sys>UTCS</Sys>
+      <SubSys/>
+      <Instance/>
+    </Address>
+  </From>
+  <To>
+    <Address>
+      <Sys>TICP</Sys>
+      <SubSys/>
+      <Instance/>
+    </Address>
+  </To>
+  <Type>Push</Type>
+  <Seq>20140829084311000012</Seq>
+  <Body>
+    <Operation order="1" name="Subscribe">
+      <CrossDetectorRealData>
+<CrossID>10001</CrossID>
+<dataTime>2020-07-03 07:05:00</dataTime>
+<DataList>
+<Data>
+<DetID>1</DetID>
+<CarState>有车</CarState>
+</Data>
+<Data>
+<DetID>2</DetID>
+<CarState>有车</CarState>
+</Data>
+<Data>
+<DetID>3</DetID>
+<CarState>无车</CarState>
+</Data>
+<Data>
+<DetID>4</DetID>
+<CarState>无车</CarState>
+</Data>
+<Data>
+<DetID>5</DetID>
+<CarState>无车</CarState>
+</Data>
+</DataList>
+</CrossDetectorRealData>
+    </Operation>
+  </Body>
+</Message>
+信号控制
+指定控制方式
+<CrossControlMode>
+<CrossID>路口编号</CrossID>
+<Value>控制方式</Value>
+</CrossControlMode>
+路口控制方式对象描述见附录B中B.2.5。
+Request:
+<?xml version="1.0" encoding="UTF-8"?>
+<Message>
+  <Version>1.0</Version>
+  <Token>977F4181A561D345D3961373C012EAC0</Token>
+  <From>
+    <Address>
+      <Sys>TICP</Sys>
+      <SubSys/>
+      <Instance/>
+    </Address>
+  </From>
+  <To>
+    <Address>
+      <Sys>UTCS</Sys>
+      <SubSys/>
+      <Instance/>
+    </Address>
+  </To>
+  <Type>REQUEST</Type>
+  <Seq>20140829084311000012</Seq>
+  <Body>
+    <Operation order="1" name="Set">
+      <TSCCmd>
+<CrossControlMode>
+<CrossID>10001</CrossID>
+<Value>21</Value>//0为取消控制
+</CrossControlMode>
+</TSCCmd>
+    </Operation>
+  </Body>
+</Message>
+Response:
+<?xml version="1.0" encoding="UTF-8"?>
+<Message>
+  <Version>1.0</Version>
+  <Token>977F4181A561D345D3961373C012EAC0</Token>
+  <From>
+    <Address>
+      <Sys>UTCS</Sys>
+      <SubSys/>
+      <Instance/>
+    </Address>
+  </From>
+  <To>
+    <Address>
+      <Sys>TICP</Sys>
+      <SubSys/>
+      <Instance/>
+    </Address>
+  </To>
+  <Type> Response </Type>
+  <Seq>20140829084311000012</Seq>
+  <Body>
+    <Operation order="1" name="Set">
+      <TSCCmd>
+<CrossControlMode>
+<CrossID>10001</CrossID>
+<Value>21</Value> 
+</CrossControlMode>
+</TSCCmd>
+    </Operation>
+  </Body>
+</Message>
+锁定交通流向
+锁定：
+<LockFlowDirection>
+<CrossID>路口编号</CrossID>
+<Type>交通流类型</Type>
+<Entrance>进口方向</Entrance>
+<Exit>出口方向</Exit>
+<StartTime>开始时间</StartTime>
+<Duration>锁定持续时间</Duration>
+</LockFlowDirection>
+解锁：
+<UnLockFlowDirection>
+<CrossID>路口编号</CrossID>
+<Type>交通流类型</Type>
+<Entrance>进口方向</Entrance>
+<Exit>出口方向</Exit>
+</UnLockFlowDirection>
+对象描述见附录B中B.3.2。
+Request:
+<?xml version="1.0" encoding="UTF-8"?>
+<Message>
+  <Version>1.0</Version>
+  <Token>977F4181A561D345D3961373C012EAC0</Token>
+  <From>
+    <Address>
+      <Sys>TICP</Sys>
+      <SubSys/>
+      <Instance/>
+    </Address>
+  </From>
+  <To>
+    <Address>
+      <Sys>UTCS</Sys>
+      <SubSys/>
+      <Instance/>
+    </Address>
+  </To>
+  <Type>REQUEST</Type>
+  <Seq>20140829084311000012</Seq>
+  <Body>
+    <Operation order="1" name="Set">
+      <TSCCmd>
+<LockFlowDirection>
+        <CrossID>10001</CrossID>
+        <Type>1</Type>
+        <Entrance>0</Entrance>
+        <Exit>4</Exit>
+        <StartTime>09:00:00</StartTime>（时分秒）
+        <Duration>0</Duration>(0表示持续锁定)
+      </LockFlowDirection>
+<LockFlowDirection>(可以一次锁定多个交通流向)
+        <CrossID>10001</CrossID>
+        <Type>1</Type>
+        <Entrance>2</Entrance>
+        <Exit>0</Exit>
+        <StartTime>09:00:00</StartTime>（时分秒）
+        <Duration>0</Duration>(0表示持续锁定)
+      </LockFlowDirection>
+
+</TSCCmd>
+    </Operation>
+  </Body>
+</Message>
+Response:
+<?xml version="1.0" encoding="UTF-8"?>
+<Message>
+  <Version>1.0</Version>
+  <Token>977F4181A561D345D3961373C012EAC0</Token>
+  <From>
+    <Address>
+      <Sys>UTCS</Sys>
+      <SubSys/>
+      <Instance/>
+    </Address>
+  </From>
+  <To>
+    <Address>
+      <Sys>TICP</Sys>
+      <SubSys/>
+      <Instance/>
+    </Address>
+  </To>
+  <Type> Response </Type>
+  <Seq>20140829084311000012</Seq>
+  <Body>
+    <Operation order="1" name="Set">
+      <TSCCmd>
+<LockFlowDirection>
+        <CrossID>10001</CrossID>
+        <Type>1</Type>
+        <Entrance>0</Entrance>
+        <Exit>4</Exit>
+        <StartTime>09:00:00</StartTime>（时分秒）
+        <Duration>0</Duration>(0表示持续锁定)
+      </LockFlowDirection>
+<LockFlowDirection>(可以一次锁定多个交通流向)
+        <CrossID>10001</CrossID>
+        <Type>1</Type>
+        <Entrance>2</Entrance>
+        <Exit>0</Exit>
+        <StartTime>09:00:00</StartTime>（时分秒）
+        <Duration>0</Duration>(0表示持续锁定)
+      </LockFlowDirection>
+</TSCCmd>
+    </Operation>
+  </Body>
+</Message>
+指定控制方案
+<CrossPlan>
+<CrossID>路口编号</CrossID>
+<PlanNo>方案号</PlanNo>
+</CrossPlan>
+Request:
+<?xml version="1.0" encoding="UTF-8"?>
+<Message>
+  <Version>1.0</Version>
+  <Token>977F4181A561D345D3961373C012EAC0</Token>
+  <From>
+    <Address>
+      <Sys>TICP</Sys>
+      <SubSys/>
+      <Instance/>
+    </Address>
+  </From>
+  <To>
+    <Address>
+      <Sys>UTCS</Sys>
+      <SubSys/>
+      <Instance/>
+    </Address>
+  </To>
+  <Type>REQUEST</Type>
+  <Seq>20140829084311000012</Seq>
+  <Body>
+    <Operation order="1" name="Set">
+      <TSCCmd>
+<CrossPlan>
+<CrossID>10001</CrossID>
+<PlanNo>1</PlanNo>//0为取消方案指定
+</CrossPlan>
+</TSCCmd>
+    </Operation>
+  </Body>
+</Message>
+Response:
+<?xml version="1.0" encoding="UTF-8"?>
+<Message>
+  <Version>1.0</Version>
+  <Token>977F4181A561D345D3961373C012EAC0</Token>
+  <From>
+    <Address>
+      <Sys>UTCS</Sys>
+      <SubSys/>
+      <Instance/>
+    </Address>
+  </From>
+  <To>
+    <Address>
+      <Sys>TICP</Sys>
+      <SubSys/>
+      <Instance/>
+    </Address>
+  </To>
+  <Type> Response </Type>
+  <Seq>20140829084311000012</Seq>
+  <Body>
+    <Operation order="1" name="Set">
+      <TSCCmd>
+<CrossPlan>
+<CrossID>10001</CrossID>
+<PlanNo>1</PlanNo> 
+</CrossPlan>
+</TSCCmd>
+    </Operation>
+  </Body>
+</Message>
+
+指定阶段-扩展
+<CrossStage>
+<CrossID>路口编号</CrossID>
+<StageNo>阶段号</StageNo>//0为取消指定
+</CrossStage>
+Request:
+<?xml version="1.0" encoding="UTF-8"?>
+<Message>
+  <Version>1.0</Version>
+  <Token>977F4181A561D345D3961373C012EAC0</Token>
+  <From>
+    <Address>
+      <Sys>TICP</Sys>
+      <SubSys/>
+      <Instance/>
+    </Address>
+  </From>
+  <To>
+    <Address>
+      <Sys>UTCS</Sys>
+      <SubSys/>
+      <Instance/>
+    </Address>
+  </To>
+  <Type>REQUEST</Type>
+  <Seq>20140829084311000012</Seq>
+  <Body>
+    <Operation order="1" name="Set">
+      <TSCCmd>
+<CrossStage>
+<CrossID>10001</CrossID>
+<StageNo>1</StageNo>
+</CrossStage>
+</TSCCmd>
+    </Operation>
+  </Body>
+</Message>
+Response:
+<?xml version="1.0" encoding="UTF-8"?>
+<Message>
+  <Version>1.0</Version>
+  <Token>977F4181A561D345D3961373C012EAC0</Token>
+  <From>
+    <Address>
+      <Sys>UTCS</Sys>
+      <SubSys/>
+      <Instance/>
+    </Address>
+  </From>
+  <To>
+    <Address>
+      <Sys>TICP</Sys>
+      <SubSys/>
+      <Instance/>
+    </Address>
+  </To>
+  <Type> Response </Type>
+  <Seq>20140829084311000012</Seq>
+  <Body>
+    <Operation order="1" name="Set">
+      <TSCCmd>
+<CrossStage>
+<CrossID>10001</CrossID>
+<StageNo>1</StageNo>
+</CrossStage>
+</TSCCmd>
+    </Operation>
+  </Body>
+</Message>
+中心临时方案控制-扩展
+注：定义中心临时配时方案控制，此临时配时方案不会改变信号机中原有的配置参数。基于原信号方案放行相序临时调整各相序放行阶段时间，取消中心临时方案控制后信机返回原有自主的策略控制（取消控制：将指定控制方式发送0）。<CoordStageNo>协调阶段号</CoordStageNo>协调阶段号为0信号系统当前周期生效，否则信号系统取值<OffSet>协调阶段差</OffSet>，协调阶段差为-1时当前周期执行完且不过渡下个周期生效，协调阶段差大于等于0时当前周期执行完且走协调过渡后生效。
+<TemporaryControlPlan>
+<CrossID>路口编号</CrossID>
+<CycleLen>周期长度</CycleLen>
+<CoordStageNo>协调阶段号</CoordStageNo>
+<OffSet>协调阶段差</OffSet>
+<StagePlanNo>相序方案表号</StagePlanNo>
+<PlanNo>方案序号</PlanNo>
+<StageNoList>
+<!—对应相序方案放行阶段对应时间列表-->
+<SeqNo>放行序号</SeqNo>
+<StageNo>阶段序号</StageNo>
+<StageTime>阶段时间（包括过渡时间）</StageTime>
+……
+</StageNoList>
+</TemporaryControlPlan>
+Request:
+<?xml version="1.0" encoding="UTF-8"?>
+<Message>
+  <Version>1.0</Version>
+  <Token>977F4181A561D345D3961373C012EAC0</Token>
+  <From>
+    <Address>
+      <Sys>TICP</Sys>
+      <SubSys/>
+      <Instance/>
+    </Address>
+  </From>
+  <To>
+    <Address>
+      <Sys>UTCS</Sys>
+      <SubSys/>
+      <Instance/>
+    </Address>
+  </To>
+  <Type>REQUEST</Type>
+  <Seq>20140829084311000012</Seq>
+  <Body>
+    <Operation order="1" name="Set">
+      <TSCCmd>
+<TemporaryControlPlan>
+<CrossID>10001</CrossID>
+<CycleLen>150</CycleLen>
+<CoordStageNo>1</CoordStageNo>
+<OffSet>30</OffSet>
+<StagePlanNo>1</StagePlanNo>
+<PlanNo>1</PlanNo>
+<StageNoList>
+<SeqNo>1</SeqNo>
+<StageNo>1</StageNo>
+<StageTime>60</StageTime>
+</StageNoList>
+<StageNoList>
+<SeqNo>2</SeqNo>
+<StageNo>3</StageNo>
+<StageTime>50</StageTime>
+</StageNoList>
+<StageNoList>
+<SeqNo>3</SeqNo>
+<StageNo>2</StageNo>
+<StageTime>40</StageTime>
+</StageNoList>
+</TemporaryControlPlan>
+</TSCCmd>
+    </Operation>
+  </Body>
+</Message>
+Response:
+<?xml version="1.0" encoding="UTF-8"?>
+<Message>
+  <Version>1.0</Version>
+  <Token>977F4181A561D345D3961373C012EAC0</Token>
+  <From>
+    <Address>
+      <Sys>UTCS</Sys>
+      <SubSys/>
+      <Instance/>
+    </Address>
+  </From>
+  <To>
+    <Address>
+      <Sys>TICP</Sys>
+      <SubSys/>
+      <Instance/>
+    </Address>
+  </To>
+  <Type> Response </Type>
+  <Seq>20140829084311000012</Seq>
+  <Body>
+    <Operation order="1" name="Set">
+      <TSCCmd>
+<TemporaryControlPlan>
+<CrossID>10001</CrossID>
+<CycleLen>150</CycleLen>
+<CoordStageNo>1</CoordStageNo>
+<OffSet>30</OffSet>
+<StagePlanNo>1</StagePlanNo>
+<PlanNo>1</PlanNo>
+<StageNoList>
+<SeqNo>1</SeqNo>
+<StageNo>1</StageNo>
+<StageTime>60</StageTime>
+</StageNoList>
+<StageNoList>
+<SeqNo>2</SeqNo>
+<StageNo>3</StageNo>
+<StageTime>50</StageTime>
+</StageNoList>
+<StageNoList>
+<SeqNo>3</SeqNo>
+<StageNo>2</StageNo>
+<StageTime>40</StageTime>
+</StageNoList>
+</TemporaryControlPlan>
+</TSCCmd>
+    </Operation>
+  </Body>
+</Message>
+
+响应错误信息
+注：所有指令的错误响应如下
+Response 错误应答:
+<?xml version="1.0" encoding="UTF-8"?>
+<Message>
+  <Version>1.0</Version>
+  <Token>977F4181A561D345D3961373C012EAC0</Token>
+  <From>
+    <Address>
+      <Sys>UTCS</Sys>
+      <SubSys/>
+      <Instance/>
+    </Address>
+  </From>
+  <To>
+    <Address>
+      <Sys>TICP</Sys>
+      <SubSys/>
+      <Instance/>
+    </Address>
+  </To>
+  <Type>RESPONSE</Type>
+  <Seq>20140829084311000002</Seq>
+  <Body>
+  <Operation order="1" name="Set/Set/Notify/Subscribe/Unsubscribe/Login/Logout/Other">
+      <SDO_Error >
+<ErrObj> DetParam(对象节点名称) </ErrObj>
+<ErrType> SDE_Failure </ErrType>
+<ErrDesc>操作命令错误</ErrDesc>
+</SDO_Error>
+    </Operation>
+  </Body>
+</Message>
+ErrType错误码：
+1 SDE_Version 版本号错误
+2 SDE_Token 无效令牌，会话错误
+3 SDE_Address 地址错误
+4 SDE_MsgType 数据包类型错误
+5 SDE_OperName 操作命令错误
+6 SDE_UserName 用户名错误
+7 SDE_Pwd 口令错误
+8 SDE_NotAllow 操作不允许
+9 SDE_Failure 操作失败
+10 SDE_Unknown 其他未知错误
+
+
+
+B
+B
+附
+录  B
+（规范性附录）
+交通信号控制系统数据对象定义
+B.1
+配置参数数据对象
+B.1.1
+系统参数（SysInfo）
+系统参数对象的具体信息见表B.1。
+表B.1
+系统参数
+序号
+元素名
+说明
+1
+2
+3
+4
+5
+SysName
+系统名称
+版本号
+SysVersion
+Supplier
+供应商
+RegionIDList
+SignalControlerIDList
+区域编号列表。包含至少一个区域号<RegionID>
+信号机设备号列表。包含至少一个信号机设备号
+<SignalControlerID>
+B.1.2
+区域参数（RegionParam）
+区域参数对象的具体信息见表B.2。
+表B.2
+区域参数
+序号
+元素名
+说明
+1
+2
+3
+4
+RegionID
+区域编号。全局唯一，取值 6位行政区划代码+3位数字
+区域名称
+RegionName
+SubRegionIDList
+CrossIDList
+子区编号列表。包含子区编号<SubRegionID>，可为空
+路口编号列表。包含至少一个路口编号<CrossID>
+B.1.3
+子区参数  (SubRegionParam)
+子区参数对象的具体信息见表B.3。
+表B.3
+子区参数
+序号
+元素名
+说明
+1
+2
+3
+SubRegionID
+子区编号。全局唯一，取值区域编号+2位数字
+子区名称
+SubRegionName
+CrossIDList
+路口编号列表。包含至少一个路口编号<CrossID>
+B.1.4
+路口参数（CrossParam）
+路口参数对象的具体信息见表B.4。
+
+
+
+
+ 
+
+表B.4
+路口参数
+序号
+元素名
+说明
+1
+2
+3
+4
+5
+6
+7
+CrossID
+路口编号。全局唯一，取值区域编号+5位数字
+路口名称
+CrossName
+Feature
+路口特征，取值见表  B.5
+IsKey
+是否关键路口。取值 1：是，0：不是
+检测器编号列表
+DetIDList
+DetID
+检测器编号
+LaneNoList
+车道序号列表。包含至少一个车道序号<LaneNo>，车道序号
+从 1开始在单个路口中唯一
+8
+PhaseNoList
+StageNoList
+PlanNoList
+相位序号列表。包含至少一个相位序号 <PhaseNo>，相位序
+号从 1开始在单个路口中唯一
+9
+阶段序号列表。包含至少一个阶段序号<StageNo>，阶段序号
+从 1开始在单个路口中唯一
+10
+配时方案序号列表。包含至少一个配时方案序号<PlanNo>，
+配时方案序号从 1开始在单个路口中唯一
+表B.5
+路口特征取值表
+序号
+1
+值
+说明
+00
+11
+21
+31
+32
+33
+34
+41
+42
+51
+99
+环形交叉口
+2
+匝道、出入口
+3
+路段（只有二个方向的路口）
+T形路口
+4
+5
+Y形路口
+6
+错位 T形路口
+错位 Y形路口
+十字形路口
+斜交路口
+7
+8
+9
+10
+11
+多路路口
+其他
+注：路口特征参见GB 14886-2006的4.2。
+B.1.5
+信号机（SignalControler）
+信号机对象的具体信息见表B.6。
+表B.6
+信号机
+序号
+元素名
+说明
+1
+SignalControlerID
+信号机设备的编号。取值  12位交通管理部门机构代码（见
+GA/T 380-2012）+5位数字
+供应商
+2
+3
+Supplier
+Type
+规格型号
+
+
+
+
+ 
+
+表B.6（续）
+序号
+元素名
+说明
+4
+5
+CrossIDList
+路口编号列表。包含至少一个路口编号<CrossID>
+LampGroupNoList
+信号灯组序号列表。包含至少一个灯组序号<LampGroupNo>
+B.1.6
+信号灯组（LampGroup）
+信号灯组对象具体信息见表B.7。
+表B.7
+信号灯组
+序号
+元素名
+SignalControlerID
+LampGroupNo
+Direction
+说明
+1
+2
+3
+4
+信号机设备编号
+Type
+表B.8
+方向取值表
+序号
+值
+0
+说明
+1
+2
+3
+4
+5
+6
+7
+8
+北
+1
+东北
+东
+2
+3
+东南
+南
+4
+5
+西南
+西
+6
+7
+西北
+表B.9
+信号灯组类型取值表
+序号
+1
+值
+10
+11
+12
+13
+14
+21
+22
+23
+31
+99
+说明
+机动车主灯（大灯，非箭头灯，一般的红黄绿）
+机动车直行箭头灯
+机动车左转箭头灯
+机动车右转箭头灯
+机动车掉头箭头灯
+非机动车灯
+2
+3
+4
+5
+6
+7
+直行非机动车灯
+左转非机动车灯
+行人灯
+8
+9
+10
+其他
+B.1.7
+检测器参数（DetParam）
+检测器参数对象的具体信息见表B.10。
+
+
+信号灯组序号。从 1开始，取值  2位数字
+信号灯组所在方向。取值见表  B.8
+信号灯组类型。取值见表  B.9
+
+
+ 
+
+表B.10
+检测器参数
+序号
+元素名
+说明
+1
+2
+3
+4
+DetID
+检测器编号。全局唯一，取值路口编号+2位顺序号
+距停车线距离。单位(cm)
+Distance
+CrossID
+路口编号
+LaneNoList
+车道序号列表。至少包含一个车道序号<LaneNo>，车道序号
+从 1开始，在单个路口中唯一
+B.1.8
+车道参数（LaneParam）
+车道参数对象的具体信息见表B.11。
+表B.11
+车道参数
+序号
+元素名
+说明
+1
+2
+3
+CrossID
+LaneNo
+Direction
+路口编号
+车道序号。从 1开始，取值  2位数字
+进口车道所在的方向。取值见表  B.8，注意四岔路口不管其
+形状如何只取“北、东、南、西”，超过四岔的路口先确定“北、
+东、南、西”，再确定其它方向
+4
+5
+6
+Attribute
+Movement
+Feature
+车道属性。取值见表  B.12
+车道交通流向。取值见表  B.13
+车道特性。取值见表  B.14
+表B.12
+车道属性表
+序号
+值
+1
+说明
+1
+2
+3
+进口
+出口
+其他
+2
+9
+表B.13
+车道流向取值表
+
+
+
+
+ 
+
+表B.14
+车道特征取值表
+序号
+值
+1
+说明
+1
+2
+3
+4
+机动车车道
+2
+非机动车车道
+机非混合车道
+其他
+3
+9
+B.1.9
+相位参数（PhaseParam）
+相位参数对象的具体信息见表B.15。
+表B.15
+相位参数
+序号
+元素名
+说明
+1
+2
+3
+4
+5
+6
+CrossID
+PhaseNo
+路口编号
+相位序号。从 1开始，取值  2位数字
+PhaseName
+Feature
+相位名称
+相位特征。取值 1：关键，0：非关键，9：其他
+车道序号列表。至少包含一个车道序号<LaneNo>
+相位放行人行道所在的方向列表。至少包含一个放行人行道
+方向<Direction>，取值见表 B.8，如果有同方向分段式放行，
+可在所在方向后追加一位来描述放行段
+LaneNoList
+PedDirList
+B.1.10
+阶段参数（StageParam）
+阶段参数对象的具体信息见表B.16。
+表B.16
+阶段参数
+序号
+元素名
+说明
+1
+2
+3
+4
+5
+6
+7
+8
+9
+CrossID
+StageNo
+路口编号
+阶段序号。从 1开始，取值  2位数字
+阶段名称
+StageName
+Feature
+特征。取值 0：一般，1：感应
+绿灯时间。单位（s）
+Green
+RedYellow
+Yellow
+红黄时间。单位（s）
+黄灯时间。单位（s）
+AllRed
+全红时间。单位（s）
+PhaseNoList
+放行相位序号列表。包含至少一个相位序号<PhaseNo>
+B.1.11
+配时方案参数（PlanParam）
+配时方案参数对象的具体信息见表B.17。
+
+
+
+
+ 
+
+表B.17
+配时方案参数
+序号
+元素名
+说明
+1
+2
+3
+4
+5
+6
+CrossID
+PlanNo
+路口编号
+方案序号。从 1开始，取值  3位数字
+周期长度。单位（s）
+协调相位号
+CycleLen
+CoordPhaseNo
+OffSet
+协调阶段差。单位（s）
+StageNoList
+放行阶段序号列表。包含至少一个阶段序号<StageNo>
+B.2
+运行信息数据对象
+B.2.1
+系统状态（SysState）
+系统状态对象的具体信息见表B.18。
+表B.18
+系统状态
+序号
+元素名
+说明
+1
+Value
+系统运行状态。取值见表  B.19
+表B.19
+状态取值表
+序号
+值
+说明
+1
+2
+3
+Online
+Offline
+Error
+正常在线
+脱机、断线
+异常故障
+B.2.2
+区域状态（RegionState）
+区域状态对象的具体信息见表B.20。
+表B.20
+区域状态
+序号
+元素名
+说明
+1
+2
+RegionID
+区域编号
+Value
+运行状态。取值见表  B.19
+B.2.3
+路口状态（CrossState）
+路口状态对象的具体信息见表B.21。
+表B.21
+路口状态
+序号
+元素名
+说明
+1
+2
+CrossID
+Value
+路口编号
+运行状态。取值见表  B.19
+B.2.4
+信号机故障（SignalControlerError）
+
+
+
+
+ 
+
+信号机故障对象的具体信息见表B.22。
+表B.22
+信号机故障
+序号
+元素名
+SignalControlerID
+ErrorType
+说明
+1
+2
+3
+信号机编号
+故障类型。取值见表  B.23
+故障描述
+ErrorDesc
+4
+OccerTime
+发生时间。格式 YYYY-MM-DD hh:mm:ss
+表B.23
+信号机故障类型
+序号
+值
+1
+说明
+1
+2
+3
+4
+5
+6
+灯输出故障
+2
+电源故障
+时钟故障
+运行故障
+方案错误
+其他错误
+3
+4
+5
+9
+B.2.5
+路口控制方式（CrossControlMode）
+路口控制方式对象的具体信息见表B.24。
+表B.24
+路口控制方式
+序号
+元素名
+说明
+说明
+1
+2
+CrossID
+Value
+路口编号
+控制方式。取值见表  B.25
+表B.25
+控制方式取值表
+序号
+1
+值
+11
+12
+13
+21
+22
+23
+31
+41
+51
+52
+53
+55
+54
+特殊控制-关灯
+2
+特殊控制-全红
+3
+特殊控制-全部黄闪
+单点多时段定时控制
+单点感应控制
+4
+5
+6
+单点自适应控制
+线协调控制
+7
+8
+区域协调控制
+9
+干预控制-手动控制
+干预控制-锁定阶段控制
+干预控制-指定方案
+干预控制-中心方案
+干预控制-锁定交通流向
+10
+11
+12
+13
+
+
+注：01～99中未使用值作为预留的控制方式。
+
+
+ 
+
+B.2.6
+路口周期信息（CrossCycle）
+路口周期信息
+序号
+元素名
+说明
+1
+2
+3
+CrossID
+路口编号
+StartTime
+周期开始时间。格式 YYYY-MM-DD hh:mm:ss
+上周期长度。单位（s）
+LastCycleLen
+B.2.7
+路口阶段（CrossStage）
+路口阶段对象的具体信息见表B.27。
+表B.27
+路口阶段
+序号
+元素名
+说明
+1
+2
+3
+4
+5
+CrossID
+路口编号
+LastStageNo
+LastStageLen
+CurStageNo
+CurStageLen
+上个阶段序号
+上个阶段长度。单位（s）
+当前阶段序号
+当前阶段长度。单位（s）
+B.2.8
+路口相位灯态（CrossPhaseLampStatus）
+路口相位灯态对象的具体信息见表B.28。
+表B.28
+路口相位灯态
+序号
+元素名
+说明
+1
+2
+CrossID
+路口编号
+PhaseLampStatusList
+相位灯态列表。至少包含                  1个相位灯态对象
+<PhaseLampStatus>，PhaseLampStatus见表   B.29
+表B.29
+相位灯态
+序号
+元素名
+PhaseNo
+说明
+说明
+1
+2
+相位序号
+LampStatus
+灯态。取值见表  B.30
+表B.30
+灯态取值表
+序号
+值
+11
+21
+22
+23
+31
+1
+2
+3
+4
+5
+灭灯
+红灯
+黄灯
+绿灯
+红黄   
+
+
+路口周期信息对象的具体信息见表B.26。
+表B.26
+
+
+ 
+
+B.2.9
+路口控制方案（CrossPlan）
+路口控制方案对象的具体信息见表B.31。
+表B.31
+路口控制方案
+序号
+元素名
+说明
+1
+2
+3
+CrossID
+路口编号
+ControlMode
+PlanNo
+控制方式。取值见表  B.25
+控制方案序号
+B.2.10
+路口交通流数据（CrossTrafficData）
+路口交通流数据对象的具体信息见表B.32。
+表B.32
+路口交通流数据
+序号
+元素名
+说明
+1
+2
+3
+4
+CrossID
+路口编号
+EndTime
+Interval
+DataList
+统计截止时间。格式 YYYY-MM-DD hh:mm:ss
+时间间隔。单位(s)
+车道交通流数据列表。至少包含 1个车道交通流数据<Data>，
+Data见表   B.33
+表B.33
+车道交通流数据
+序号
+1
+元素名
+说明
+Data
+交通流数据
+2
+LaneNo
+车道编号
+3
+Volume
+交通流量。单位(辆/h)
+平均车长。单位（m）
+当量小汽车。单位(pcu/h)
+平均车头间距。单位(m/辆)
+平均车头时距。单位(s/辆)
+平均速度。单位(km/h)
+饱和度
+4
+AvgVehLen
+Pcu
+5
+6
+HeadDistance
+HeadTime
+Speed
+7
+8
+9
+Saturation
+Density
+10
+11
+12
+密度。单位（辆/km）
+平均排队长度（m）
+QueueLength
+Occupancy
+占有率。百分率，取值  0~100
+B.3
+控制命令数据对象
+B.3.1
+配置参数及运行信息通知、查询命令（TSCCmd）
+配置参数及运行信息通知、查询命令对象的具体信息见表B.34。
+
+
+
+
+ 
+
+表B.34
+通知、查询命令
+序号
+元素名
+说明
+1
+2
+3
+ObjName
+查询对象的名称
+ID
+查询对象的编号。为空时指全部对象
+No
+索引号。具体对象的属性所对应的序号，可为空
+B.3.2
+锁定交通流向（LockFlowDirection）
+锁定交通流向的具体信息见表B.35。
+表B.35
+锁定交通流向
+序号
+元素名
+说明
+1
+2
+3
+CrossID
+Type
+路口编号
+交通流类型。取值 0：行人，1：机动车，2：非机动车
+进口方向。交通流类型为  0（行人）时表示人行横道所在方
+向，取值见表  B.8
+Entrance
+4
+Exit
+出口方向。交通流类型为  0（行人）时表示人行横道所在方
+向，取值见表  B.8
+5
+6
+StartTime
+Duration
+开始时间
+锁定时间。单位（s），0表示持续锁定
+B.3.3
+解锁交通流向（UnLockFlowDirection）
+解锁交通流向的具体信息见表B.36。
+表B.36
+解锁交通流向
+序号
+元素名
+说明
+1
+2
+3
+CrossID
+Type
+路口编号
+交通流类型。取值 0：行人，1：机动车，2：非机动车
+进口方向。交通流类型为  0（行人）时表示人行横道所在方
+向，取值见表  B.8
+Entrance
+4
+Exit
+出口方向。交通流类型为  0（行人）时表示人行横道所在方
+向，取值见表  B.8
+B.3.4
+路口周期、阶段、相位灯态、交通流数据上传设置（CrossCycleStageReport）
+路口周期、阶段、相位灯态、交通流数据上传设置对象的具体信息见表B.37。
+表B.37
+路口周期、阶段、相位灯态、交通流数据上传设置
+序号
+属性名
+说明
+1
+Cmd
+命令。取值 Start:开始主动上传，Stop:停止主动上传
+2
+3
+Type
+上传数据类型。取值见表  B.38
+CrossIDList
+路口编号列表。至少包含 1个路口编号<CrossID>
+
+
+
+
+ 
+
+表B.38
+上传数据类型
+序号
+值
+说明
+1
+2
+3
+4
+CrossCycle
+路口周期
+CrossStage
+路口阶段
+CrossPhaseLampStatus
+CrossTrafficData
+路口相位灯态
+路口交通流数据
+_________________________________
+
+
+
+
+
+
+基于GA/T 1049.2-2013扩展协议
+
+
+
+
+
+
+
+
+
+PAGE   \* MERGEFORMATiii
+
+PAGE   \* MERGEFORMAT235
+
+
+增加绿闪
+增加绿闪
+
+ PAGE iii
+
+ PAGE 235
+
+
+

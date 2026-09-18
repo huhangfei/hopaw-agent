@@ -1,4 +1,6 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
-  <rect width="100" height="100" rx="20" fill="#D97757"/>
-  <path d="M30 25 L70 50 L30 75 Z" fill="white"/>
+  <!-- Anthropic 品牌色背景 -->
+  <rect width="100" height="100" rx="20" fill="#CC785C"/>
+  <!-- Anthropic 标志性"A"造型：两条相交的弧线形成山形 -->
+  <path d="M30 75 L46 35 L54 35 L70 75 L60 75 L55.5 65 L44.5 65 L40 75 Z M47 56 L53 56 L50 48 Z" fill="white"/>
 </svg>

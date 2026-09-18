@@ -1,47 +1,36 @@
 package com.agent.hopaw.infra.service;
 
 import com.agent.hopaw.infra.executor.IAgentExecutor;
-import com.agent.hopaw.infra.model.dto.UserRequest;
-import com.agent.hopaw.infra.model.entity.Agent;
-import com.agent.hopaw.infra.tool.AgentTool;
+import com.agent.hopaw.infra.model.dto.AgentExecutorParams;
 
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
 import java.util.function.Consumer;
-import java.util.stream.Collectors;
+import java.util.function.Function;
 
 public interface IAgentExecutorService {
-    void addToolStopHook(Long agentId, String userId, String callId, Consumer<String> hook);
+    void addToolStopHook(String sessionId, String callId, Consumer<String> hook);
 
-    void sendToolRunningContent(Long agentId, String userId, String callId, Object resultPartial);
+    void sendToolRunningContent(String sessionId, String callId, Object resultPartial);
+    void toolApprovalComplete(String sessionId, String callId, Boolean allowed);
+    void stopTool(String sessionId, String callId);
 
-    void stopTool(Long agentId, String userId, String callId);
-
-    boolean toolIsCancelled(Long agentId, String userId, String callId);
+    boolean toolIsCancelled(String sessionId, String callId);
 
     void clearAndStopAgentExecutorByAiModel(Long aiModelId);
 
-    void stopAgentExecutor(Long agentId, String userId);
+    void stopAgentExecutor(String sessionId);
 
-    void stopAndRemoveAgentExecutor(Long agentId, String userId);
+    void stopAndRemoveAgentExecutor(String sessionId);
 
-    boolean isAgentExecutorRunning(Long agentId, String userId);
+    boolean isAgentExecutorRunning(String sessionId);
 
-    IAgentExecutor getAgentExecutor(UserRequest userRequest);
+    IAgentExecutor getAgentExecutor(String sessionId);
 
-    IAgentExecutor createAgentExecutor(UserRequest userRequest);
+    /**
+     * 公共执行器创建方法，由各业务服务（聊天/任务）生成参数和系统提示词后调用
+     * @param params 执行器参数
+     * @param systemMessageProvider 系统提示词生成器，参数为 agentId
+     * @return
+     */
+    IAgentExecutor createAgentExecutor(AgentExecutorParams params, Function<Long, String> systemMessageProvider);
 
-    String getSystemMessage(Agent agent, String userId, List<AgentTool> selectedTools, List<String> skillNames);
-
-    default String getToolKeywords(List<AgentTool> selectedTools) {
-        return selectedTools.stream().map(AgentTool::getKeyword).collect(Collectors.joining(","));
-    }
-
-    default List<String> parseToolNames(String toolsStr) {
-        if (toolsStr == null || toolsStr.isEmpty()) {
-            return new ArrayList<>();
-        }
-        return Arrays.asList(toolsStr.split(","));
-    }
 }

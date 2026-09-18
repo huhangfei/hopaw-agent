@@ -1,101 +1,158 @@
 package com.agent.hopaw.infra.service;
 
-import com.agent.hopaw.infra.executor.IAgentExecutor;
 import com.agent.hopaw.infra.mapper.AgentMapper;
-import com.agent.hopaw.infra.mapper.ChatMemoryMapper;
-import com.agent.hopaw.infra.model.dto.UserRequest;
+import com.agent.hopaw.infra.model.dto.ToolSetInfo;
 import com.agent.hopaw.infra.model.entity.Agent;
+import com.agent.hopaw.infra.tool.IAgentToolService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 
+import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
+import java.util.stream.Collectors;
 
 @Service
 public class AgentService implements IAgentService {
     private final static Logger logger = LoggerFactory.getLogger(AgentService.class);
     private final AgentMapper agentMapper;
-    private final ChatMemoryMapper chatMemoryMapper;
-    private final IAgentExecutorService agentExecutorService;
-
-    public AgentService(AgentMapper agentMapper, ChatMemoryMapper chatMemoryMapper, IAgentExecutorService agentExecutorService) {
+    private final IAgentToolService agentToolService;
+    public AgentService(AgentMapper agentMapper, IAgentToolService agentToolService) {
         this.agentMapper = agentMapper;
-        this.chatMemoryMapper = chatMemoryMapper;
-        this.agentExecutorService = agentExecutorService;
+        this.agentToolService = agentToolService;
     }
 
+    @Override
     public List<Agent> getAllAgents() {
         return agentMapper.findAll();
     }
-
+    @Override
     public Agent getAgentById(Long id) {
         return agentMapper.findById(id);
     }
+    @Override
+    public List<Agent> getAgentByIds(List<Long> ids) {
+        if(ids==null || ids.isEmpty()){
+            return new ArrayList<>(0);
+        }
+        return agentMapper.findByIds(ids);
+    }
 
-    public Agent createAgent(String name, String description, String tools, Integer maxMemoryRecords, Integer maxToolInvocations, Long aiModelId, Boolean enableThinking, Boolean vectorToolSearch, Integer vectorToolSearchMaxResults, String userId) {
-        Agent agent = new Agent(name, description, tools, maxMemoryRecords, maxToolInvocations, enableThinking);
-        agent.setAiModelId(aiModelId);
-        agent.setEnableThinking(enableThinking);
-        agent.setVectorToolSearch(vectorToolSearch != null ? vectorToolSearch : true);
-        agent.setVectorToolSearchMaxResults(vectorToolSearchMaxResults != null ? vectorToolSearchMaxResults : 5);
-        agent.setUserId(userId);
+    @Override
+    public Agent createAgent(Agent agent) {
+        if (agent.getMaxMemoryTokens() == null) {
+            agent.setMaxMemoryTokens(Agent.DEFAULT_MAX_MEMORY_TOKENS);
+        }
+        if (agent.getMaxToolInvocations() == null) {
+            agent.setMaxToolInvocations(10);
+        }
+        if (agent.getVectorToolSearch() == null) {
+            agent.setVectorToolSearch(true);
+        }
+        if (agent.getVectorToolSearchMaxResults() == null) {
+            agent.setVectorToolSearchMaxResults(5);
+        }
         agentMapper.insert(agent);
         return agent;
     }
 
 
+    @Override
     public void deleteAgent(Long id, String userId) {
+        Agent existing = agentMapper.findById(id);
+        if (existing == null) {
+            throw new RuntimeException("智能体不存在");
+        }
+        // 删除接口需校验创建人：仅智能体创建人可删除
+        if (userId == null || !userId.equals(existing.getUserId())) {
+            throw new RuntimeException("无权删除该智能体：仅创建人可删除");
+        }
         agentMapper.deleteById(id);
-        chatMemoryMapper.deleteByAgentId(id);
-        agentExecutorService.stopAndRemoveAgentExecutor(id, userId);
     }
 
-    public void updateAgent(String userId, Long id, String name, String description, String tools, Integer maxMemoryRecords, Integer maxToolInvocations, Long aiModelId, Boolean enableThinking, Boolean vectorToolSearch, Integer vectorToolSearchMaxResults) {
-        Agent agent = agentMapper.findById(id);
-        if (agent != null) {
-            agent.setName(name);
-            agent.setDescription(description);
-            agent.setTools(tools);
-            agent.setMaxMemoryRecords(maxMemoryRecords);
-            agent.setMaxToolInvocations(maxToolInvocations);
-            agent.setAiModelId(aiModelId);
-            if (enableThinking != null) {
-                agent.setEnableThinking(enableThinking);
+    @Override
+    public void updateAgent(Agent agent) {
+        Agent existing = agentMapper.findById(agent.getId());
+        if (existing != null) {
+            existing.setName(agent.getName());
+            existing.setDescription(agent.getDescription());
+            existing.setTools(agent.getTools());
+            existing.setMaxMemoryTokens(agent.getMaxMemoryTokens() != null ? agent.getMaxMemoryTokens() : Agent.DEFAULT_MAX_MEMORY_TOKENS);
+            existing.setMaxToolInvocations(agent.getMaxToolInvocations());
+            existing.setAiModelId(agent.getAiModelId());
+            if (agent.getEnableThinking() != null) {
+                existing.setEnableThinking(agent.getEnableThinking());
             }
-            agent.setVectorToolSearch(vectorToolSearch != null ? vectorToolSearch : true);
-            agent.setVectorToolSearchMaxResults(vectorToolSearchMaxResults != null ? vectorToolSearchMaxResults : 5);
-            agentMapper.update(agent);
-            agentExecutorService.stopAndRemoveAgentExecutor(id, userId);
+            existing.setTemperature(agent.getTemperature());
+            existing.setReasoningEffort(agent.getReasoningEffort() != null && !agent.getReasoningEffort().isEmpty()
+                    ? agent.getReasoningEffort() : existing.getReasoningEffort());
+            existing.setVectorToolSearch(agent.getVectorToolSearch() != null ? agent.getVectorToolSearch() : true);
+            existing.setVectorToolSearchMaxResults(agent.getVectorToolSearchMaxResults() != null ? agent.getVectorToolSearchMaxResults() : 5);
+            existing.setEnableAllTools(agent.getEnableAllTools());
+            existing.setAvatar(agent.getAvatar());
+            agentMapper.update(existing);
         }
     }
 
-
+    @Override
     public void updateThinking(Long id, Boolean enabled, String userId) {
         Agent agent = agentMapper.findById(id);
         if (agent != null) {
             agent.setEnableThinking(enabled);
             agentMapper.update(agent);
-            agentExecutorService.stopAndRemoveAgentExecutor(id, userId);
         }
 
 
     }
-    public boolean isAgentExecutorRunning(Long agentId, String userId) {
-        return agentExecutorService.isAgentExecutorRunning(agentId, userId);
+
+    @Override
+    public List<Agent> getAgentsPage(String userId, String keyword, int page, int size) {
+        // 智能体数据不分用户，查询不过滤用户
+        int offset = (page - 1) * size;
+        return agentMapper.findByUserIdWithKeyword(null, keyword, offset, size);
     }
 
-    public void stopAgentExecutor(Long agentId, String userId) {
-        agentExecutorService.stopAndRemoveAgentExecutor(agentId, userId);
+    @Override
+    public int countAgents(String userId, String keyword) {
+        // 智能体数据不分用户，统计不过滤用户
+        return agentMapper.countByUserIdWithKeyword(null, keyword);
     }
 
-
-    public IAgentExecutor getAgentExecutor(UserRequest userRequest){
-        Agent agent = agentMapper.findById(userRequest.getAgentId());
-        if(agent==null){
-            return null;
+    @Override
+    public List<ToolSetInfo> getToolSetFromAgent(Agent agent,String ... appendTools){
+        List<String> appendToolNames=new ArrayList<>();
+        if(appendTools!=null){
+            for (String appendTool : appendTools) {
+                appendToolNames.add(appendTool);
+            }
         }
-        userRequest.setAgent(agent);
-        return agentExecutorService.getAgentExecutor(userRequest);
+        return getToolSetFromAgent(agent,appendToolNames);
     }
+    public List<ToolSetInfo> getToolSetFromAgent(Agent agent,List<String> appendTools){
+        List<String> selectedToolNames;
+        if (agent.getTools() != null && !agent.getTools().isEmpty()) {
+            selectedToolNames=Arrays.stream(agent.getTools().split(",")).collect(Collectors.toList());
+        } else {
+            selectedToolNames = new ArrayList<>();
+        }
+        List<ToolSetInfo> selectedTools;
+        if(appendTools==null){
+            appendTools=new ArrayList<>();
+        }
+        List<String> finalAppendTools = appendTools;
+        if (Boolean.TRUE.equals(agent.getEnableAllTools())) {
+            //启用所有,此时选中的是要排除的
+            selectedTools = agentToolService.getToolSets().stream()
+                    .filter(t -> !selectedToolNames.contains(t.getName()) || finalAppendTools.contains(t.getName()))
+                    .collect(Collectors.toList());
+        } else {
+            //启用所有,此时选中的是要使用的
+            selectedTools = agentToolService.getToolSets().stream()
+                    .filter(t -> selectedToolNames.contains(t.getName()) || finalAppendTools.contains(t.getName()))
+                    .collect(Collectors.toList());
 
+        }
+        return selectedTools;
+    }
 }

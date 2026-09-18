@@ -1,0 +1,240 @@
+var SETTINGS_KEYS = [
+    'memory_prompt', 'taskRecordsArrangeTimeoutHour', 'taskRecordsClearTimeoutDay',
+    'chat_memory_tool_result_max_length', 'memory_ai_model_id',
+    'vector_store_path', 'vector_store_profile', 'vector_flush_scheduler_interval',
+    'vector_flush_threshold', 'vector_flush_interval_ms',
+    'promptIncludeUserProfile', 'promptIncludeTaskRecords', 'promptIncludeTaskRecordsMaxCount'
+];
+
+function onSettingsLoaded() {
+    document.getElementById('memoryPrompt').value = settingsCache['memory_prompt'] || '';
+    document.getElementById('taskRecordsArrangeTimeoutHour').value = settingsCache['taskRecordsArrangeTimeoutHour'] || '48';
+    document.getElementById('taskRecordsClearTimeoutDay').value = settingsCache['taskRecordsClearTimeoutDay'] || '7';
+    document.getElementById('chatMemoryToolResultMaxLength').value = settingsCache['chat_memory_tool_result_max_length'] || '5120';
+    document.getElementById('vectorStorePath').value = settingsCache['vector_store_path'] || '';
+    document.getElementById('vectorStoreProfile').value = settingsCache['vector_store_profile'] || 'precision';
+    document.getElementById('vectorFlushSchedulerInterval').value = settingsCache['vector_flush_scheduler_interval'] || '10';
+    document.getElementById('vectorFlushThreshold').value = settingsCache['vector_flush_threshold'] || '10';
+    document.getElementById('vectorFlushIntervalMs').value = settingsCache['vector_flush_interval_ms'] || '10000';
+
+    document.getElementById('promptIncludeUserProfile').checked = settingsCache['promptIncludeUserProfile'] !== 'false';
+    document.getElementById('promptIncludeTaskRecords').checked = settingsCache['promptIncludeTaskRecords'] !== 'false';
+    document.getElementById('promptIncludeTaskRecordsMaxCount').value = settingsCache['promptIncludeTaskRecordsMaxCount'] || '5';
+
+    // 根据开关状态显示/隐藏最大条数输入框
+    toggleTaskRecordsMaxCountGroup();
+
+    // 先加载提供商列表，串行回填已选模型
+    loadProviders().then(function() {
+        var savedModelId = settingsCache['memory_ai_model_id'];
+        if (savedModelId) {
+            selectModelById(savedModelId);
+        }
+    });
+
+    // 任务状态独立加载
+    loadMemoryTaskStatus();
+}
+
+function loadProviders() {
+    var select = document.getElementById('memoryProviderSelect');
+    return fetch('/api/providers')
+        .then(function(r) { return r.json(); })
+        .then(function(providers) {
+            select.innerHTML = '<option value="">选择提供商</option>';
+            (providers || []).forEach(function(p) {
+                if (!p.apiKey) return;
+                var opt = document.createElement('option');
+                opt.value = p.id;
+                opt.textContent = p.name;
+                select.appendChild(opt);
+            });
+        })
+        .catch(function(e) {
+            console.error('加载提供商列表失败:', e);
+        });
+}
+
+function setupCascading() {
+    var providerSelect = document.getElementById('memoryProviderSelect');
+    var modelSelect = document.getElementById('memoryModelSelect');
+
+    providerSelect.addEventListener('change', function() {
+        var providerId = this.value;
+        modelSelect.innerHTML = '<option value="">选择模型</option>';
+        modelSelect.disabled = !providerId;
+        if (!providerId) return;
+
+        fetch('/api/providers/' + providerId + '/models')
+            .then(function(r) { return r.json(); })
+            .then(function(models) {
+                (models || []).forEach(function(m) {
+                    var opt = document.createElement('option');
+                    opt.value = m.id;
+                    opt.textContent = m.modelAlias || m.modelName;
+                    modelSelect.appendChild(opt);
+                });
+            });
+    });
+}
+
+function selectModelById(modelId) {
+    fetch('/api/models/' + modelId)
+        .then(function(r) { return r.json(); })
+        .then(function(model) {
+            if (!model || !model.providerId) return;
+            var providerSelect = document.getElementById('memoryProviderSelect');
+            var modelSelect = document.getElementById('memoryModelSelect');
+
+            // 同步设置 provider
+            providerSelect.value = model.providerId;
+
+            // 串行加载该 provider 的模型列表，加载完成后再回填
+            return fetch('/api/providers/' + model.providerId + '/models')
+                .then(function(r) { return r.json(); })
+                .then(function(models) {
+                    modelSelect.innerHTML = '<option value="">选择模型</option>';
+                    modelSelect.disabled = false;
+                    (models || []).forEach(function(m) {
+                        var opt = document.createElement('option');
+                        opt.value = m.id;
+                        opt.textContent = m.modelAlias || m.modelName;
+                        modelSelect.appendChild(opt);
+                    });
+                    modelSelect.value = modelId;
+                });
+        })
+        .catch(function(e) {
+            console.error('加载模型信息失败:', e);
+        });
+}
+
+function saveSettings() {
+    var modelId = document.getElementById('memoryModelSelect').value;
+    var prompt = document.getElementById('memoryPrompt').value.trim();
+    var arrangeTimeoutHour = document.getElementById('taskRecordsArrangeTimeoutHour').value.trim();
+    var clearTimeoutDay = document.getElementById('taskRecordsClearTimeoutDay').value.trim();
+    var toolResultMaxLength = document.getElementById('chatMemoryToolResultMaxLength').value.trim() || '5120';
+    var includeUserProfile = document.getElementById('promptIncludeUserProfile').checked;
+    var includeTaskRecords = document.getElementById('promptIncludeTaskRecords').checked;
+    var maxCount = document.getElementById('promptIncludeTaskRecordsMaxCount').value.trim() || '0';
+
+    var saves = [];
+    saves.push(saveConfig('memory_ai_model_id', modelId, '记忆整理使用模型'));
+    saves.push(saveConfig('memory_prompt', prompt, '记忆整理提示词'));
+    saves.push(saveConfig('taskRecordsArrangeTimeoutHour', arrangeTimeoutHour, '近期任务记忆过期时间（单位：小时，用于整理记忆时限制时限）'));
+    saves.push(saveConfig('taskRecordsClearTimeoutDay', clearTimeoutDay, '任务记忆过期归档时间（单位：天，过期后从记忆库中删除）'));
+    saves.push(saveConfig('chat_memory_tool_result_max_length', toolResultMaxLength, '工具调用结果入库截断长度（单位：字符）'));
+    saves.push(saveConfig('promptIncludeUserProfile', includeUserProfile ? 'true' : 'false', '提示词带入用户画像'));
+    saves.push(saveConfig('promptIncludeTaskRecords', includeTaskRecords ? 'true' : 'false', '提示词带入近期任务记录'));
+    saves.push(saveConfig('promptIncludeTaskRecordsMaxCount', maxCount, '最大带入条数'));
+
+    Promise.all(saves).then(function(results) {
+        var allOk = results.every(function(r) { return r; });
+        if (allOk) {
+            showToast('设置保存成功', 'success');
+        } else {
+            showToast('部分设置保存失败', 'error');
+        }
+    });
+}
+
+function loadMemoryTaskStatus() {
+    fetch('/api/scheduled-tasks/type/longTermMemory')
+        .then(function(r) { return r.json(); })
+        .then(function(resp) {
+            if (resp.msg !== 'success' || !resp.data) {
+                setTaskStatusUI('error', '获取失败');
+                return;
+            }
+            var running = resp.data.running;
+            var task = resp.data.task;
+            setTaskStatusUI(running, running ? '运行中' : '已关闭', task.id, task.enabled);
+        })
+        .catch(function() {
+            setTaskStatusUI('error', '获取失败');
+        });
+}
+
+function setTaskStatusUI(running, label, taskId, enabled) {
+    var badge = document.getElementById('memoryTaskStatus');
+    var btn = document.getElementById('memoryTaskToggleBtn');
+    badge.className = 'task-status-badge ' + (running ? 'running' : 'stopped');
+    badge.textContent = label;
+    if (taskId) {
+        btn.style.display = '';
+        btn.textContent = running ? '禁用' : '启用';
+        btn.className = 'btn-toggle-task' + (running ? ' running' : '');
+        btn._taskId = taskId;
+        btn._newEnabled = running ? 0 : 1;
+    } else {
+        btn.style.display = 'none';
+    }
+}
+
+function toggleMemoryTask() {
+    var btn = document.getElementById('memoryTaskToggleBtn');
+    var taskId = btn._taskId;
+    var newEnabled = btn._newEnabled;
+    var action = newEnabled === 1 ? '启用' : '禁用';
+
+    showConfirm('确定要' + action + '记忆整理定时任务吗？').then(function(confirmed) {
+        if (!confirmed) return;
+        fetch('/api/scheduled-tasks/' + taskId + '/enabled', {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ enabled: newEnabled })
+        })
+        .then(function(r) { return r.json(); })
+        .then(function(resp) {
+            if (resp.msg === 'success') {
+                showToast(action + '成功', 'success');
+                loadMemoryTaskStatus();
+            } else {
+                showToast(action + '失败', 'error');
+            }
+        })
+        .catch(function() {
+            showToast(action + '失败', 'error');
+        });
+    });
+}
+
+function saveVectorStoreSettings() {
+    var vectorStorePath = document.getElementById('vectorStorePath').value.trim();
+    var vectorStoreProfile = document.getElementById('vectorStoreProfile').value;
+    var flushSchedulerInterval = document.getElementById('vectorFlushSchedulerInterval').value.trim();
+    var flushThreshold = document.getElementById('vectorFlushThreshold').value.trim();
+    var flushIntervalMs = document.getElementById('vectorFlushIntervalMs').value.trim();
+
+    var saves = [];
+    saves.push(saveConfig('vector_store_path', vectorStorePath, '向量持久化路径'));
+    saves.push(saveConfig('vector_store_profile', vectorStoreProfile, '向量存储预设'));
+    saves.push(saveConfig('vector_flush_scheduler_interval', flushSchedulerInterval, '定时落盘任务执行间隔（秒）'));
+    saves.push(saveConfig('vector_flush_threshold', flushThreshold, '触发落盘的写入次数阈值'));
+    saves.push(saveConfig('vector_flush_interval_ms', flushIntervalMs, '落盘时间间隔（毫秒）'));
+
+    Promise.all(saves).then(function(results) {
+        var allOk = results.every(function(r) { return r; });
+        if (allOk) {
+            showToast('向量存储设置保存成功', 'success');
+        } else {
+            showToast('部分设置保存失败', 'error');
+        }
+    });
+}
+
+// 初始化
+setupCascading();
+
+// 显示/隐藏最大条数输入框
+function toggleTaskRecordsMaxCountGroup() {
+    var checked = document.getElementById('promptIncludeTaskRecords').checked;
+    var group = document.getElementById('taskRecordsMaxCountGroup');
+    if (group) {
+        group.style.display = checked ? '' : 'none';
+    }
+}
+
+// 监听开关变化
+document.getElementById('promptIncludeTaskRecords').addEventListener('change', toggleTaskRecordsMaxCountGroup);

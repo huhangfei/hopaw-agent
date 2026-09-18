@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<body>
+<div th:fragment="cap-tabs(activeTab)" class="cap-tabs">
+    <a class="cap-tab" th:classappend="${activeTab == 'agents' ? 'active' : ''}" href="/agents">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+            <rect x="3" y="7" width="18" height="13" rx="2"/>
+            <circle cx="8" cy="12" r="1.5" fill="currentColor"/>
+            <circle cx="16" cy="12" r="1.5" fill="currentColor"/>
+            <path d="M12 18h.01"/>
+            <line x1="9" y1="4" x2="15" y2="4"/>
+            <circle cx="12" cy="3" r="1" fill="currentColor"/>
+        </svg>
+        <span>智能体</span>
+    </a>
+    <a class="cap-tab" th:classappend="${activeTab == 'models' ? 'active' : ''}" href="/models">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+            <rect x="2" y="2" width="9" height="9" rx="2"/>
+            <rect x="13" y="2" width="9" height="9" rx="2"/>
+            <rect x="2" y="13" width="9" height="9" rx="2"/>
+            <rect x="13" y="13" width="9" height="9" rx="2"/>
+        </svg>
+        <span>模型管理</span>
+    </a>
+    <a class="cap-tab" th:classappend="${activeTab == 'tools' ? 'active' : ''}" href="/tools">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/>
+        </svg>
+        <span>工具管理</span>
+    </a>
+    <a class="cap-tab" th:classappend="${activeTab == 'prompts' ? 'active' : ''}" href="/prompts">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M12 20h9"/>
+            <path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/>
+        </svg>
+        <span>提示词管理</span>
+    </a>
+    <a class="cap-tab" th:classappend="${activeTab == 'skills' ? 'active' : ''}" href="/skills">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M13 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"/>
+            <polyline points="13 2 13 9 20 9"/>
+            <line x1="16" y1="13" x2="8" y2="13"/>
+            <line x1="16" y1="17" x2="8" y2="17"/>
+            <polyline points="10 9 9 9 8 9"/>
+        </svg>
+        <span>技能管理</span>
+    </a>
+    <a class="cap-tab" th:classappend="${activeTab == 'mcp' ? 'active' : ''}" href="/mcp">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/>
+            <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/>
+        </svg>
+        <span>MCP工具</span>
+    </a>
+    <a class="cap-tab" th:classappend="${activeTab == 'memory-manage' ? 'active' : ''}" href="/memory-manage">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M9 2.5C6.5 2.5 4.5 4.5 4.5 7c0 2.3 1.3 4.2 3.2 5.1.3.1.5.4.5.7V15h2v1.5h-1.5V18h6.6v-1.5H13.8V15h2v-2.2c0-.3.2-.6.5-.7 1.9-.9 3.2-2.8 3.2-5.1 0-2.5-2-4.5-4.5-4.5H9z" fill="currentColor" fill-opacity="0.15"/>
+            <path d="M9 18v2c0 .6.4 1 1 1h4c.6 0 1-.4 1-1v-2"/>
+        </svg>
+        <span>记忆管理</span>
+    </a>
+</div>
+</body>
+</html>

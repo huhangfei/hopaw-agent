@@ -5,6 +5,8 @@ public class SysConfig {
     private String configKey;
     private String configValue;
     private String description;
+    /** 是否加密存储：1=加密（{AES}密文），0/null=明文。读取时按此标记决定是否解密 */
+    private Integer isEncrypted;
     private String createTime;
     private String updateTime;
 
@@ -46,6 +48,14 @@ public class SysConfig {
 
     public void setDescription(String description) {
         this.description = description;
+    }
+
+    public Integer getIsEncrypted() {
+        return isEncrypted;
+    }
+
+    public void setIsEncrypted(Integer isEncrypted) {
+        this.isEncrypted = isEncrypted;
     }
 
     public String getCreateTime() {

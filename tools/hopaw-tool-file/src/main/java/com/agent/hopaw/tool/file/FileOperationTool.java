@@ -1,5 +1,6 @@
 package com.agent.hopaw.tool.file;
 
+import com.agent.hopaw.infra.tool.ToolSecurityLevel;
 import dev.langchain4j.agent.tool.P;
 import dev.langchain4j.agent.tool.Tool;
 import com.agent.hopaw.infra.model.dto.ToolConfigItem;
@@ -14,17 +15,14 @@ import org.springframework.beans.factory.annotation.Autowired;
 import java.io.BufferedReader;
 import java.io.BufferedWriter;
 import java.io.File;
-import java.io.FileReader;
-import java.io.FileWriter;
 import java.io.IOException;
-import java.nio.ByteBuffer;
-import java.nio.channels.FileChannel;
+import java.io.OutputStreamWriter;
+import java.io.FileOutputStream;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.StandardCopyOption;
-import java.nio.file.StandardOpenOption;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.LinkedHashMap;
@@ -43,6 +41,8 @@ public class FileOperationTool implements AgentTool {
     private static final String CONFIG_KEY_MAX_RESULTS = "maxResults";
     private static final int DEFAULT_MAX_THREADS = 4;
     private static final int DEFAULT_MAX_RESULTS = 10;
+    private static final int DEFAULT_LIST_MAX_DEPTH = 3;
+    private static final int DEFAULT_LIST_MAX_RESULTS = 1000;
 
     @Autowired
     private ISysConfigService sysConfigService;
@@ -88,8 +88,12 @@ public class FileOperationTool implements AgentTool {
         }
     }
 
-    @Tool(value = {"读取文本文件内容", "文件读取"})
-    public String readFile(@P(description = "文件路径") String filePath) {
+    @ToolSecurityLevel(ToolSecurityLevel.Level.SAFE)
+    @Tool(value = {"读取文件", "读取文本文件内容", "文件读取"})
+    public String readFile(
+            @P(description = "文件路径") String filePath,
+            @P(description = "编码格式，如 UTF-8、GBK、ISO-8859-1 等，默认 UTF-8", required = false) String encoding,
+            @P(description = "最大返回行数，默认 2000 行，超出部分截断并提示", required = false) Integer maxLines) {
         try {
             Path path = Paths.get(filePath).toAbsolutePath().normalize();
             if (!Files.exists(path)) {
@@ -99,27 +103,49 @@ public class FileOperationTool implements AgentTool {
                 return "错误: 路径不是文件: " + filePath;
             }
 
+            String charset = (encoding != null && !encoding.isBlank()) ? encoding.trim() : "UTF-8";
+            int lineLimit = (maxLines != null && maxLines > 0) ? maxLines : 2000;
+
             StringBuilder content = new StringBuilder();
-            try (BufferedReader reader = new BufferedReader(new FileReader(path.toFile()))) {
+            int lineCount = 0;
+            boolean truncated = false;
+
+            try (BufferedReader reader = Files.newBufferedReader(path, java.nio.charset.Charset.forName(charset))) {
                 String line;
                 while ((line = reader.readLine()) != null) {
-                    content.append(line).append("\n");
+                    lineCount++;
+                    if (lineCount <= lineLimit) {
+                        content.append(line).append("\n");
+                    } else {
+                        truncated = true;
+                        break;
+                    }
                 }
             }
 
             String result = content.toString();
-            return result.isEmpty() ? "(空文件)" : result;
+            if (result.isEmpty()) {
+                return "(空文件)";
+            }
+            if (truncated) {
+                result += "\n...(已截断，共读取前 " + lineLimit + " 行)";
+            }
+            return result;
+        } catch (java.nio.charset.UnsupportedCharsetException e) {
+            return "错误: 不支持的编码格式: " + encoding;
         } catch (IOException e) {
             log.error("读取文件失败: {}", filePath, e);
             return "错误: 读取文件失败 - " + e.getMessage();
         }
     }
 
-    @Tool(value = {"按行读取文本文件内容，返回带行号的结果", "文件读取"})
+    @ToolSecurityLevel(ToolSecurityLevel.Level.SAFE)
+    @Tool(value = {"按行读取文件", "按行读取文本文件内容，返回带行号的结果", "文件读取"})
     public String readFileByLine(
             @P(description = "文件路径") String filePath,
             @P(description = "起始行号(从1开始)，为空表示从头开始", required = false) Integer startLine,
-            @P(description = "结束行号，为空表示读到最后", required = false) Integer endLine) {
+            @P(description = "结束行号，为空表示读到最后", required = false) Integer endLine,
+            @P(description = "编码格式，如 UTF-8、GBK、ISO-8859-1 等，默认 UTF-8", required = false) String encoding) {
         try {
             Path path = Paths.get(filePath).toAbsolutePath().normalize();
             if (!Files.exists(path)) {
@@ -136,10 +162,12 @@ public class FileOperationTool implements AgentTool {
                 return "错误: 起始行号不能大于结束行号";
             }
 
+            String charset = (encoding != null && !encoding.isBlank()) ? encoding.trim() : "UTF-8";
+
             StringBuilder result = new StringBuilder();
             int currentLine = 0;
 
-            try (BufferedReader reader = new BufferedReader(new FileReader(path.toFile()))) {
+            try (BufferedReader reader = Files.newBufferedReader(path, java.nio.charset.Charset.forName(charset))) {
                 String line;
                 while ((line = reader.readLine()) != null) {
                     currentLine++;
@@ -157,16 +185,20 @@ public class FileOperationTool implements AgentTool {
             }
 
             return result.toString();
+        } catch (java.nio.charset.UnsupportedCharsetException e) {
+            return "错误: 不支持的编码格式: " + encoding;
         } catch (IOException e) {
             log.error("按行读取文件失败: {}", filePath, e);
             return "错误: 读取文件失败 - " + e.getMessage();
         }
     }
 
-    @Tool(value = {"写入内容到文本文件，会覆盖原文件", "文件写入"})
+    @ToolSecurityLevel(ToolSecurityLevel.Level.PARAM_REQUIRE_APPROVAL)
+    @Tool(value = {"写入文件", "写入内容到文本文件，会覆盖原文件", "文件写入"})
     public String writeFile(
             @P(description = "文件路径") String filePath,
-            @P(description = "要写入的内容") String content) {
+            @P(description = "要写入的内容") String content,
+            @P(description = "编码格式，如 UTF-8、GBK 等，默认 UTF-8", required = false) String encoding) {
         try {
             Path path = Paths.get(filePath).toAbsolutePath().normalize();
 
@@ -177,21 +209,27 @@ public class FileOperationTool implements AgentTool {
                 }
             }
 
-            try (BufferedWriter writer = new BufferedWriter(new FileWriter(path.toFile()))) {
+            String charset = (encoding != null && !encoding.isBlank()) ? encoding.trim() : "UTF-8";
+            try (BufferedWriter writer = new BufferedWriter(
+                    new OutputStreamWriter(new FileOutputStream(path.toFile()), java.nio.charset.Charset.forName(charset)))) {
                 writer.write(content);
             }
 
-            return "成功写入文件: " + filePath;
+            return "成功写入文件: " + filePath + " (编码: " + charset + ")";
+        } catch (java.nio.charset.UnsupportedCharsetException e) {
+            return "错误: 不支持的编码格式: " + encoding;
         } catch (IOException e) {
             log.error("写入文件失败: {}", filePath, e);
             return "错误: 写入文件失败 - " + e.getMessage();
         }
     }
 
-    @Tool(value = {"追加内容到文本文件末尾", "文件写入"})
+    @ToolSecurityLevel(ToolSecurityLevel.Level.PARAM_REQUIRE_APPROVAL)
+    @Tool(value = {"追加文件", "追加内容到文本文件末尾", "文件写入"})
     public String appendFile(
             @P(description = "文件路径") String filePath,
-            @P(description = "要追加的内容") String content) {
+            @P(description = "要追加的内容") String content,
+            @P(description = "编码格式，如 UTF-8、GBK 等，默认 UTF-8", required = false) String encoding) {
         try {
             Path path = Paths.get(filePath).toAbsolutePath().normalize();
 
@@ -202,22 +240,28 @@ public class FileOperationTool implements AgentTool {
                 }
             }
 
-            try (BufferedWriter writer = new BufferedWriter(new FileWriter(path.toFile(), true))) {
+            String charset = (encoding != null && !encoding.isBlank()) ? encoding.trim() : "UTF-8";
+            try (BufferedWriter writer = new BufferedWriter(
+                    new OutputStreamWriter(new FileOutputStream(path.toFile(), true), java.nio.charset.Charset.forName(charset)))) {
                 writer.write(content);
                 writer.newLine();
             }
 
-            return "成功追加内容到文件: " + filePath;
+            return "成功追加内容到文件: " + filePath + " (编码: " + charset + ")";
+        } catch (java.nio.charset.UnsupportedCharsetException e) {
+            return "错误: 不支持的编码格式: " + encoding;
         } catch (IOException e) {
             log.error("追加文件内容失败: {}", filePath, e);
             return "错误: 追加文件内容失败 - " + e.getMessage();
         }
     }
 
-    @Tool(value = {"按行写入内容到文本文件，会覆盖原文件", "文件写入"})
+    @ToolSecurityLevel(ToolSecurityLevel.Level.PARAM_REQUIRE_APPROVAL)
+    @Tool(value = {"按行写入文件", "按行写入内容到文本文件，会覆盖原文件", "文件写入"})
     public String writeFileByLine(
             @P(description = "文件路径") String filePath,
-            @P(description = "要写入的行内容列表，每行一个元素，用逗号分隔") String lines) {
+            @P(description = "要写入的行内容列表，每行一个元素，用逗号分隔") String lines,
+            @P(description = "编码格式，如 UTF-8、GBK 等，默认 UTF-8", required = false) String encoding) {
         try {
             Path path = Paths.get(filePath).toAbsolutePath().normalize();
 
@@ -229,33 +273,41 @@ public class FileOperationTool implements AgentTool {
             }
 
             String[] lineArray = lines.split(",");
+            String charset = (encoding != null && !encoding.isBlank()) ? encoding.trim() : "UTF-8";
 
-            try (BufferedWriter writer = new BufferedWriter(new FileWriter(path.toFile()))) {
+            try (BufferedWriter writer = new BufferedWriter(
+                    new OutputStreamWriter(new FileOutputStream(path.toFile()), java.nio.charset.Charset.forName(charset)))) {
                 for (String line : lineArray) {
                     writer.write(line.trim());
                     writer.newLine();
                 }
             }
 
-            return "成功写入 " + lineArray.length + " 行到文件: " + filePath;
+            return "成功写入 " + lineArray.length + " 行到文件: " + filePath + " (编码: " + charset + ")";
+        } catch (java.nio.charset.UnsupportedCharsetException e) {
+            return "错误: 不支持的编码格式: " + encoding;
         } catch (IOException e) {
             log.error("按行写入文件失败: {}", filePath, e);
             return "错误: 写入文件失败 - " + e.getMessage();
         }
     }
 
-    @Tool(value = {"在指定位置插入行到文本文件", "文件写入"})
+    @ToolSecurityLevel(ToolSecurityLevel.Level.PARAM_REQUIRE_APPROVAL)
+    @Tool(value = {"插入行", "在指定位置插入行到文本文件", "文件写入"})
     public String insertLine(
             @P(description = "文件路径") String filePath,
             @P(description = "要插入的内容") String content,
-            @P(description = "插入位置行号(从1开始)，0表示在文件开头插入") Integer lineNumber) {
+            @P(description = "插入位置行号(从1开始)，0表示在文件开头插入") Integer lineNumber,
+            @P(description = "编码格式，如 UTF-8、GBK 等，默认 UTF-8", required = false) String encoding) {
         try {
             Path path = Paths.get(filePath).toAbsolutePath().normalize();
             if (!Files.exists(path)) {
                 return "错误: 文件不存在: " + filePath;
             }
 
-            List<String> allLines = Files.readAllLines(path);
+            String charset = (encoding != null && !encoding.isBlank()) ? encoding.trim() : "UTF-8";
+            java.nio.charset.Charset charsetObj = java.nio.charset.Charset.forName(charset);
+            List<String> allLines = Files.readAllLines(path, charsetObj);
 
             int insertPos = lineNumber != null && lineNumber > 0 ? lineNumber - 1 : 0;
             if (insertPos > allLines.size()) {
@@ -264,16 +316,110 @@ public class FileOperationTool implements AgentTool {
 
             allLines.add(insertPos, content);
 
-            Files.write(path, allLines);
+            Files.write(path, allLines, charsetObj);
 
-            return "成功在第 " + (insertPos + 1) + " 行插入内容";
+            return "成功在第 " + (insertPos + 1) + " 行插入内容 (编码: " + charset + ")";
+        } catch (java.nio.charset.UnsupportedCharsetException e) {
+            return "错误: 不支持的编码格式: " + encoding;
         } catch (IOException e) {
             log.error("插入行失败: {}", filePath, e);
             return "错误: 插入行失败 - " + e.getMessage();
         }
     }
 
-    @Tool(value = {"删除指定文件", "文件删除"})
+    @ToolSecurityLevel(ToolSecurityLevel.Level.PARAM_REQUIRE_APPROVAL)
+    @Tool(value = {"替换文件内容", "在指定行范围内将匹配内容替换为新内容（支持普通文本与正则）", "文件写入"})
+    public String replaceInLines(
+            @P(description = "文件路径") String filePath,
+            @P(description = "要查找的内容：普通文本或正则表达式（由 isRegex 参数决定）") String searchText,
+            @P(description = "替换后的内容，正则模式下可用 $1、$2 引用捕获组") String replacement,
+            @P(description = "起始行号(从1开始)，为空表示从第1行开始", required = false) Integer startLine,
+            @P(description = "结束行号，为空表示到最后一行", required = false) Integer endLine,
+            @P(description = "是否使用正则表达式匹配，默认否", required = false) Boolean isRegex,
+            @P(description = "编码格式，如 UTF-8、GBK 等，默认 UTF-8", required = false) String encoding) {
+        try {
+            Path path = Paths.get(filePath).toAbsolutePath().normalize();
+            if (!Files.exists(path)) {
+                return "错误: 文件不存在: " + filePath;
+            }
+            if (!Files.isRegularFile(path)) {
+                return "错误: 路径不是文件: " + filePath;
+            }
+            if (searchText == null || searchText.isEmpty()) {
+                return "错误: 查找内容不能为空";
+            }
+
+            int start = startLine != null && startLine > 0 ? startLine : 1;
+            int end = endLine != null && endLine > 0 ? endLine : Integer.MAX_VALUE;
+            if (start > end) {
+                return "错误: 起始行号不能大于结束行号";
+            }
+
+            String charset = (encoding != null && !encoding.isBlank()) ? encoding.trim() : "UTF-8";
+            java.nio.charset.Charset charsetObj = java.nio.charset.Charset.forName(charset);
+            List<String> allLines = Files.readAllLines(path, charsetObj);
+            boolean useRegex = isRegex != null && isRegex;
+            Pattern regexPattern = null;
+            if (useRegex) {
+                try {
+                    regexPattern = Pattern.compile(searchText);
+                } catch (Exception e) {
+                    return "错误: 无效的正则表达式 - " + e.getMessage();
+                }
+            }
+
+            int replacedCount = 0;
+            List<String> changedLines = new ArrayList<>();
+            for (int i = 0; i < allLines.size(); i++) {
+                int lineNo = i + 1;
+                String line = allLines.get(i);
+                if (lineNo < start || lineNo > end) {
+                    continue;
+                }
+                String newLine;
+                if (useRegex) {
+                    newLine = regexPattern.matcher(line).replaceAll(replacement == null ? "" : replacement);
+                } else {
+                    newLine = line.replace(searchText, replacement == null ? "" : replacement);
+                }
+                if (!newLine.equals(line)) {
+                    replacedCount++;
+                    if (changedLines.size() < 20) {
+                        // 记录前20处变更明细，避免超大结果
+                        changedLines.add(String.format("%6d: %s%n     -> %s", lineNo, truncateLine(line, new String[]{searchText}), truncateLine(newLine, new String[]{replacement == null ? "" : replacement})));
+                    }
+                }
+                allLines.set(i, newLine);
+            }
+
+            if (replacedCount == 0) {
+                return "未找到匹配内容，文件未修改。行范围: " + start + (end == Integer.MAX_VALUE ? " 至末尾" : " 至 " + end);
+            }
+
+            Files.write(path, allLines, charsetObj);
+
+            StringBuilder result = new StringBuilder();
+            result.append("成功替换 ").append(replacedCount).append(" 行，文件: ").append(filePath).append(" (编码: ").append(charset).append(")\n");
+            if (!changedLines.isEmpty()) {
+                result.append("变更明细（最多显示20行）:\n");
+                for (String cl : changedLines) {
+                    result.append(cl).append("\n");
+                }
+                if (replacedCount > changedLines.size()) {
+                    result.append("... 其余 ").append(replacedCount - changedLines.size()).append(" 行变更省略\n");
+                }
+            }
+            return result.toString();
+        } catch (java.nio.charset.UnsupportedCharsetException e) {
+            return "错误: 不支持的编码格式: " + encoding;
+        } catch (IOException e) {
+            log.error("替换文件内容失败: {}", filePath, e);
+            return "错误: 替换文件内容失败 - " + e.getMessage();
+        }
+    }
+
+    @ToolSecurityLevel(ToolSecurityLevel.Level.ALL_REQUIRE_APPROVAL)
+    @Tool(value = {"删除文件", "删除指定文件", "文件删除"})
     public String deleteFile(@P(description = "文件路径") String filePath) {
         try {
             Path path = Paths.get(filePath).toAbsolutePath().normalize();
@@ -295,7 +441,8 @@ public class FileOperationTool implements AgentTool {
         }
     }
 
-    @Tool(value = {"删除指定目录", "文件删除"})
+    @ToolSecurityLevel(ToolSecurityLevel.Level.ALL_REQUIRE_APPROVAL)
+    @Tool(value = {"删除目录", "删除指定目录", "文件删除"})
     public String deleteDirectory(
             @P(description = "目录路径") String dirPath,
             @P(description = "是否递归删除子目录和文件", required = false) Boolean recursive) {
@@ -313,15 +460,19 @@ public class FileOperationTool implements AgentTool {
             boolean rec = recursive != null && recursive;
 
             if (rec) {
-                Files.walk(path)
-                        .sorted((a, b) -> b.compareTo(a))
-                        .forEach(p -> {
-                            try {
-                                Files.delete(p);
-                            } catch (IOException e) {
-                                log.error("删除失败: {}", p, e);
-                            }
-                        });
+                // 先在关闭 walk 句柄后收集全部路径再删除：未关闭的 walk 会持有目录句柄导致 Windows 下删除失败
+                List<Path> pathsToDelete;
+                try (java.util.stream.Stream<Path> walk = Files.walk(path)) {
+                    pathsToDelete = walk.sorted((a, b) -> b.compareTo(a))
+                            .collect(java.util.stream.Collectors.toList());
+                }
+                for (Path p : pathsToDelete) {
+                    try {
+                        Files.delete(p);
+                    } catch (IOException e) {
+                        log.error("删除失败: {}", p, e);
+                    }
+                }
                 return "成功递归删除目录: " + dirPath;
             } else {
                 if (isDirectoryEmpty(path)) {
@@ -337,7 +488,8 @@ public class FileOperationTool implements AgentTool {
         }
     }
 
-    @Tool(value = {"移动或重命名文件", "文件移动"})
+    @ToolSecurityLevel(ToolSecurityLevel.Level.PARAM_REQUIRE_APPROVAL)
+    @Tool(value = {"移动文件", "移动或重命名文件", "文件移动"})
     public String moveFile(
             @P(description = "源文件路径") String sourcePath,
             @P(description = "目标路径或新文件名") String destinationPath) {
@@ -365,7 +517,8 @@ public class FileOperationTool implements AgentTool {
         }
     }
 
-    @Tool(value = {"复制文件", "文件复制"})
+    @ToolSecurityLevel(ToolSecurityLevel.Level.PARAM_REQUIRE_APPROVAL)
+    @Tool(value = {"复制文件", "复制文件", "文件复制"})
     public String copyFile(
             @P(description = "源文件路径") String sourcePath,
             @P(description = "目标路径") String destinationPath) {
@@ -393,7 +546,8 @@ public class FileOperationTool implements AgentTool {
         }
     }
 
-    @Tool(value = {"复制目录", "文件复制"})
+    @ToolSecurityLevel(ToolSecurityLevel.Level.PARAM_REQUIRE_APPROVAL)
+    @Tool(value = {"复制目录", "复制目录", "文件复制"})
     public String copyDirectory(
             @P(description = "源目录路径") String sourcePath,
             @P(description = "目标目录路径") String destinationPath) {
@@ -413,18 +567,20 @@ public class FileOperationTool implements AgentTool {
                 Files.createDirectories(destination);
             }
 
-            Files.walk(source).forEach(sourceFile -> {
-                try {
-                    Path targetFile = destination.resolve(source.relativize(sourceFile));
-                    if (Files.isDirectory(sourceFile)) {
-                        Files.createDirectories(targetFile);
-                    } else {
-                        Files.copy(sourceFile, targetFile, StandardCopyOption.REPLACE_EXISTING);
+            try (java.util.stream.Stream<Path> walk = Files.walk(source)) {
+                walk.forEach(sourceFile -> {
+                    try {
+                        Path targetFile = destination.resolve(source.relativize(sourceFile));
+                        if (Files.isDirectory(sourceFile)) {
+                            Files.createDirectories(targetFile);
+                        } else {
+                            Files.copy(sourceFile, targetFile, StandardCopyOption.REPLACE_EXISTING);
+                        }
+                    } catch (IOException e) {
+                        log.error("复制目录中的文件失败: {}", sourceFile, e);
                     }
-                } catch (IOException e) {
-                    log.error("复制目录中的文件失败: {}", sourceFile, e);
-                }
-            });
+                });
+            }
 
             return "成功复制目录: " + sourcePath + " -> " + destinationPath;
         } catch (IOException e) {
@@ -433,7 +589,8 @@ public class FileOperationTool implements AgentTool {
         }
     }
 
-    @Tool(value = {"获取文件或目录信息", "文件信息"})
+    @ToolSecurityLevel(ToolSecurityLevel.Level.SAFE)
+    @Tool(value = {"获取文件信息", "获取文件或目录信息", "文件信息"})
     public String getFileInfo(@P(description = "文件或目录路径") String pathStr) {
         try {
             Path path = Paths.get(pathStr).toAbsolutePath().normalize();
@@ -466,10 +623,13 @@ public class FileOperationTool implements AgentTool {
         }
     }
 
-    @Tool(value = {"列出目录内容", "文件列表"})
+    @ToolSecurityLevel(ToolSecurityLevel.Level.SAFE)
+    @Tool(value = {"列出目录", "列出目录内容", "文件列表"})
     public String listDirectory(
             @P(description = "目录路径") String dirPath,
-            @P(description = "是否递归列出子目录", required = false) Boolean recursive) {
+            @P(description = "是否递归列出子目录", required = false) Boolean recursive,
+            @P(description = "最大递归层级，默认3层，达到最大层级不再向下递归", required = false) Integer maxDepth,
+            @P(description = "最大返回条数，默认1000条，达到最大限制即停止", required = false) Integer maxResults) {
         try {
             Path path = Paths.get(dirPath).toAbsolutePath().normalize();
 
@@ -481,52 +641,78 @@ public class FileOperationTool implements AgentTool {
                 return "错误: 路径不是目录: " + dirPath;
             }
 
-            StringBuilder result = new StringBuilder();
+            int depthLimit = maxDepth != null && maxDepth > 0 ? maxDepth : DEFAULT_LIST_MAX_DEPTH;
+            int resultLimit = maxResults != null && maxResults > 0 ? maxResults : DEFAULT_LIST_MAX_RESULTS;
             boolean rec = recursive != null && recursive;
+            int count = 0;
+            boolean stoppedByLimit = false;
+
+            StringBuilder result = new StringBuilder();
 
             if (rec) {
-                Files.walk(path).forEach(p -> {
-                    try {
-                        String prefix = "";
-                        int depth = path.relativize(p).getNameCount() - 1;
-                        for (int i = 0; i < depth; i++) {
-                            prefix += "  ";
+                try (java.util.stream.Stream<Path> walk = Files.walk(path, depthLimit)) {
+                    java.util.Iterator<Path> iterator = walk.iterator();
+                    while (iterator.hasNext() && !stoppedByLimit) {
+                        Path p = iterator.next();
+                        if (count >= resultLimit) {
+                            stoppedByLimit = true;
+                            break;
                         }
+                        try {
+                            String prefix = "";
+                            int depth = path.relativize(p).getNameCount() - 1;
+                            for (int i = 0; i < depth; i++) {
+                                prefix += "  ";
+                            }
 
-                        String name = p.getFileName().toString();
-                        if (Files.isDirectory(p)) {
-                            result.append(prefix).append("[DIR] ").append(name).append("\n");
-                        } else {
-                            result.append(prefix).append("[FILE] ").append(name);
-                            result.append(" (").append(formatFileSize(Files.size(p))).append(")\n");
+                            String name = p.getFileName().toString();
+                            if (Files.isDirectory(p)) {
+                                result.append(prefix).append("[DIR] ").append(name).append("\n");
+                            } else {
+                                result.append(prefix).append("[FILE] ").append(name);
+                                result.append(" (").append(formatFileSize(Files.size(p))).append(")\n");
+                            }
+                            count++;
+                        } catch (IOException e) {
+                            log.error("遍历目录失败: {}", p, e);
                         }
-                    } catch (IOException e) {
-                        log.error("遍历目录失败: {}", p, e);
                     }
-                });
+                }
             } else {
                 File dir = path.toFile();
                 File[] files = dir.listFiles();
                 if (files != null) {
                     for (File f : files) {
+                        if (count >= resultLimit) {
+                            stoppedByLimit = true;
+                            break;
+                        }
                         if (f.isDirectory()) {
                             result.append("[DIR] ").append(f.getName()).append("\n");
                         } else {
                             result.append("[FILE] ").append(f.getName());
-                            result.append(" (").append(formatFileSize(f.length())).append(")\n");
+                            result.append(" (").append(formatFileSize(f.length())).append("\n");
                         }
+                        count++;
                     }
                 }
             }
 
-            return result.length() == 0 ? "目录为空" : result.toString();
+            if (result.length() == 0) {
+                return "目录为空";
+            }
+            if (stoppedByLimit) {
+                result.append("(已达到最大返回条数限制，已停止)");
+            }
+            return result.toString();
         } catch (IOException e) {
             log.error("列出目录失败: {}", dirPath, e);
             return "错误: 列出目录失败 - " + e.getMessage();
         }
     }
 
-    @Tool(value = {"创建目录", "文件操作"})
+    @ToolSecurityLevel(ToolSecurityLevel.Level.PARAM_REQUIRE_APPROVAL)
+    @Tool(value = {"创建目录", "创建目录", "文件操作"})
     public String createDirectory(
             @P(description = "目录路径") String dirPath,
             @P(description = "是否创建父目录", required = false) Boolean createParent) {
@@ -552,7 +738,8 @@ public class FileOperationTool implements AgentTool {
         }
     }
 
-    @Tool(value = {"在文件或目录中高性能搜索关键词，支持多关键词、正则、多线程并行处理", "文件搜索"})
+    @ToolSecurityLevel(ToolSecurityLevel.Level.SAFE)
+    @Tool(value = {"搜索文件", "在文件或目录中高性能搜索关键词，支持多关键词、正则、多线程并行处理", "文件搜索"})
     public String searchInFiles(
             @P(description = "搜索关键词，多个关键词用逗号、空格或分号分隔") String keywords,
             @P(description = "文件或目录路径") String targetPath,
@@ -579,7 +766,9 @@ public class FileOperationTool implements AgentTool {
 
             List<Path> files = new ArrayList<>();
             if (Files.isDirectory(path)) {
-                Files.walk(path).filter(Files::isRegularFile).forEach(files::add);
+                try (java.util.stream.Stream<Path> walk = Files.walk(path)) {
+                    walk.filter(Files::isRegularFile).forEach(files::add);
+                }
             } else {
                 files.add(path);
             }
@@ -630,7 +819,8 @@ public class FileOperationTool implements AgentTool {
                     }
                 }
             } finally {
-                executor.shutdown();
+                // shutdownNow：中断仍在执行的搜索任务，尽快释放文件句柄
+                executor.shutdownNow();
             }
 
             if (resultsByFile.isEmpty()) {
@@ -685,8 +875,10 @@ public class FileOperationTool implements AgentTool {
     public List<ToolConfigItem> getConfigItems() {
         return List.of(
                 new ToolConfigItem("maxThreads", "最大线程数", "文件搜索时的最大并行线程数（1-32），控制同时搜索多个文件的并发度", ToolConfigItem.ConfigType.TEXT_SINGLE)
+                        .sensitive(false)
                         .validation(new ValidationRule().required().value(1L, 32L)),
                 new ToolConfigItem("maxResults", "最大搜索条数", "单次搜索返回的最大匹配行数，0表示不限制（0-1000）", ToolConfigItem.ConfigType.TEXT_SINGLE)
+                        .sensitive(false)
                         .validation(new ValidationRule().required().value(0L, 1000L))
         );
     }
@@ -819,53 +1011,58 @@ public class FileOperationTool implements AgentTool {
         public List<LineMatch> call() throws Exception {
             List<LineMatch> results = new ArrayList<>();
             long start = System.currentTimeMillis();
-            try (FileChannel channel = FileChannel.open(file, StandardOpenOption.READ)) {
-                long size = channel.size();
-                if (size == 0) return results;
-                if (size > Integer.MAX_VALUE - 8) {
-                    size = Integer.MAX_VALUE - 8;
-                }
-                ByteBuffer buf = channel.map(FileChannel.MapMode.READ_ONLY, 0, size);
-                byte[] lineBuffer = new byte[8192];
-                int lineLen = 0;
-                long lineNumber = 1;
+            // 使用堆内字节数组读取：内存映射(MappedByteBuffer)在 Windows 下会锁文件直到 GC，
+            // 导致搜索过的文件长时间"未释放"，无法删除/移动
+            byte[] data = Files.readAllBytes(file);
+            int size = data.length;
+            if (size == 0) {
+                recordStats(start, results);
+                return results;
+            }
+            byte[] lineBuffer = new byte[8192];
+            int lineLen = 0;
+            long lineNumber = 1;
 
-                for (int i = 0; i < size; i++) {
-                    byte b = buf.get(i);
-                    if (b == '\n') {
+            for (int i = 0; i < size; i++) {
+                byte b = data[i];
+                if (b == '\n') {
+                    if (pattern.matches(lineBuffer, 0, lineLen)) {
+                        results.add(new LineMatch(lineNumber,
+                                new String(lineBuffer, 0, lineLen, StandardCharsets.UTF_8)));
+                    }
+                    lineLen = 0;
+                    lineNumber++;
+                } else if (b == '\r') {
+                    if (i + 1 < size && data[i + 1] == '\n') {
                         if (pattern.matches(lineBuffer, 0, lineLen)) {
                             results.add(new LineMatch(lineNumber,
                                     new String(lineBuffer, 0, lineLen, StandardCharsets.UTF_8)));
                         }
-                        lineLen = 0;
-                        lineNumber++;
-                    } else if (b == '\r') {
-                        if (i + 1 < size && buf.get(i + 1) == '\n') {
-                            if (pattern.matches(lineBuffer, 0, lineLen)) {
-                                results.add(new LineMatch(lineNumber,
-                                        new String(lineBuffer, 0, lineLen, StandardCharsets.UTF_8)));
-                            }
-                            i++;
-                        } else {
-                            if (pattern.matches(lineBuffer, 0, lineLen)) {
-                                results.add(new LineMatch(lineNumber,
-                                        new String(lineBuffer, 0, lineLen, StandardCharsets.UTF_8)));
-                            }
-                        }
-                        lineLen = 0;
-                        lineNumber++;
+                        i++;
                     } else {
-                        if (lineLen == lineBuffer.length) {
-                            lineBuffer = Arrays.copyOf(lineBuffer, lineBuffer.length * 2);
+                        if (pattern.matches(lineBuffer, 0, lineLen)) {
+                            results.add(new LineMatch(lineNumber,
+                                    new String(lineBuffer, 0, lineLen, StandardCharsets.UTF_8)));
                         }
-                        lineBuffer[lineLen++] = b;
                     }
-                }
-                if (lineLen > 0 && pattern.matches(lineBuffer, 0, lineLen)) {
-                    results.add(new LineMatch(lineNumber,
-                            new String(lineBuffer, 0, lineLen, StandardCharsets.UTF_8)));
+                    lineLen = 0;
+                    lineNumber++;
+                } else {
+                    if (lineLen == lineBuffer.length) {
+                        lineBuffer = Arrays.copyOf(lineBuffer, lineBuffer.length * 2);
+                    }
+                    lineBuffer[lineLen++] = b;
                 }
             }
+            if (lineLen > 0 && pattern.matches(lineBuffer, 0, lineLen)) {
+                results.add(new LineMatch(lineNumber,
+                        new String(lineBuffer, 0, lineLen, StandardCharsets.UTF_8)));
+            }
+            recordStats(start, results);
+            return results;
+        }
+
+        private void recordStats(long start, List<LineMatch> results) {
             long elapsed = System.currentTimeMillis() - start;
             synchronized (stats) {
                 stats.totalLines += results.size();
@@ -873,7 +1070,6 @@ public class FileOperationTool implements AgentTool {
                     stats.elapsedMs = elapsed;
                 }
             }
-            return results;
         }
     }
 

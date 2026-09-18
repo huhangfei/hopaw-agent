@@ -1,0 +1,50 @@
+package com.agent.hopaw.infra.constant;
+
+/**
+ * 智能体执行业务类型枚举
+ */
+public enum AgentExecutorBizTypeEnum {
+    Chat("chat", "聊天", AiModelCallSourceEnum.Chat),
+    WorkflowTaskChat("workflowTaskChat", "工作流任务", AiModelCallSourceEnum.WorkflowTaskChat),
+    ProjectChat("projectChat", "项目管理", AiModelCallSourceEnum.ProjectChat);
+    private String value;
+    private String description;
+    private AiModelCallSourceEnum aiModelCallSourceEnum;
+    AgentExecutorBizTypeEnum(String value, String description, AiModelCallSourceEnum aiModelCallSourceEnum) {
+        this.value = value;
+        this.description = description;
+        this.aiModelCallSourceEnum = aiModelCallSourceEnum;
+    }
+
+    public String getValue() {
+        return value;
+    }
+    public String getDescription() {
+        return description;
+    }
+    public AiModelCallSourceEnum getAiModelCallSourceEnum() {
+        return aiModelCallSourceEnum;
+    }
+    public static AgentExecutorBizTypeEnum getByValue(String value) {
+        for (AgentExecutorBizTypeEnum agentExecutorBizTypeEnum : AgentExecutorBizTypeEnum.values()) {
+            if (agentExecutorBizTypeEnum.value.equals(value)) {
+                return agentExecutorBizTypeEnum;
+            }
+        }
+        return null;
+    }
+
+    /** 按模型调用来源（AiModelCallSourceEnum.value）反查业务类型：供 TokenUsageEvent 等仅携带 source 的事件映射 */
+    public static AgentExecutorBizTypeEnum getByAiModelCallSource(String source) {
+        if (source == null) {
+            return null;
+        }
+        for (AgentExecutorBizTypeEnum item : AgentExecutorBizTypeEnum.values()) {
+            if (source.equals(item.aiModelCallSourceEnum.getValue())) {
+                return item;
+            }
+        }
+        return null;
+    }
+
+}

@@ -1,0 +1,186 @@
+package com.agent.hopaw.infra.model.entity;
+
+import java.time.LocalDateTime;
+
+/**
+ * 附件实体
+ */
+public class Attachment {
+    private Long id;
+    /** 原始文件名 */
+    private String originalName;
+    /** 存储文件名（UUID + 扩展名） */
+    private String storageName;
+    /** 文件访问URL */
+    private String url;
+    /** 文件类型：image, video, audio, pdf, text, markdown, file */
+    private String fileType;
+    /** 文件扩展名，如 .png .txt */
+    private String fileExtension;
+    /** 文件大小（字节） */
+    private Long fileSize;
+    /** MIME类型 */
+    private String mimeType;
+    /** 附件来源，取值见 {@link com.agent.hopaw.infra.constant.AttachmentSourceEnum}：upload(附件上传), chat(会话文件), agentTool(智能体工具) */
+    private String source;
+    /** 关联业务ID（可选，如任务ID、项目ID） */
+    private Long bizId;
+    /** 标签（多个用逗号分隔） */
+    private String tags;
+    /** 备注 */
+    private String remark;
+    /** 用户ID */
+    private String userId;
+    /** 存储路径（相对路径，如 2026-08-12/xxx.png） */
+    private String storagePath;
+    /** 源文件访问URL（图片压缩前的原始文件；非图片或未压缩时与 url 相同） */
+    private String sourceUrl;
+    /** 源文件存储路径（相对路径；非图片或未压缩时与 storagePath 相同） */
+    private String sourceStoragePath;
+    private LocalDateTime createTime;
+    private LocalDateTime updateTime;
+
+    public Long getId() {
+        return id;
+    }
+
+    public void setId(Long id) {
+        this.id = id;
+    }
+
+    public String getOriginalName() {
+        return originalName;
+    }
+
+    public void setOriginalName(String originalName) {
+        this.originalName = originalName;
+    }
+
+    public String getStorageName() {
+        return storageName;
+    }
+
+    public void setStorageName(String storageName) {
+        this.storageName = storageName;
+    }
+
+    public String getUrl() {
+        return url;
+    }
+
+    public void setUrl(String url) {
+        this.url = url;
+    }
+
+    public String getFileType() {
+        return fileType;
+    }
+
+    public void setFileType(String fileType) {
+        this.fileType = fileType;
+    }
+
+    public String getFileExtension() {
+        return fileExtension;
+    }
+
+    public void setFileExtension(String fileExtension) {
+        this.fileExtension = fileExtension;
+    }
+
+    public Long getFileSize() {
+        return fileSize;
+    }
+
+    public void setFileSize(Long fileSize) {
+        this.fileSize = fileSize;
+    }
+
+    public String getMimeType() {
+        return mimeType;
+    }
+
+    public void setMimeType(String mimeType) {
+        this.mimeType = mimeType;
+    }
+
+    public String getSource() {
+        return source;
+    }
+
+    public void setSource(String source) {
+        this.source = source;
+    }
+
+    public Long getBizId() {
+        return bizId;
+    }
+
+    public void setBizId(Long bizId) {
+        this.bizId = bizId;
+    }
+
+    public String getTags() {
+        return tags;
+    }
+
+    public void setTags(String tags) {
+        this.tags = tags;
+    }
+
+    public String getRemark() {
+        return remark;
+    }
+
+    public void setRemark(String remark) {
+        this.remark = remark;
+    }
+
+    public String getUserId() {
+        return userId;
+    }
+
+    public void setUserId(String userId) {
+        this.userId = userId;
+    }
+
+    public String getStoragePath() {
+        return storagePath;
+    }
+
+    public void setStoragePath(String storagePath) {
+        this.storagePath = storagePath;
+    }
+
+    public String getSourceUrl() {
+        return sourceUrl;
+    }
+
+    public void setSourceUrl(String sourceUrl) {
+        this.sourceUrl = sourceUrl;
+    }
+
+    public String getSourceStoragePath() {
+        return sourceStoragePath;
+    }
+
+    public void setSourceStoragePath(String sourceStoragePath) {
+        this.sourceStoragePath = sourceStoragePath;
+    }
+
+    public LocalDateTime getCreateTime() {
+        return createTime;
+    }
+
+    public void setCreateTime(LocalDateTime createTime) {
+        this.createTime = createTime;
+    }
+
+    public LocalDateTime getUpdateTime() {
+        return updateTime;
+    }
+
+    public void setUpdateTime(LocalDateTime updateTime) {
+        this.updateTime = updateTime;
+    }
+}

@@ -1,37 +1,31 @@
 package com.agent.hopaw.infra.service;
 
+import com.agent.hopaw.infra.event.ConfigChangeEvent;
 import com.agent.hopaw.infra.mapper.SysConfigMapper;
 import com.agent.hopaw.infra.model.entity.SysConfig;
 import com.agent.hopaw.infra.util.AesEncryptionUtil;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 
-import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
+
 
 @Service
 public class SysConfigService implements ISysConfigService {
 
-    private static final Set<String> SENSITIVE_KEYS = new HashSet<>();
-
-
-
     private final SysConfigMapper sysConfigMapper;
+    private final ApplicationEventPublisher eventPublisher;
 
-    public SysConfigService(SysConfigMapper sysConfigMapper) {
+    public SysConfigService(SysConfigMapper sysConfigMapper, ApplicationEventPublisher eventPublisher) {
         this.sysConfigMapper = sysConfigMapper;
-    }
-    @Override
-    public void setSensitiveKeys(String... keys){
-        SENSITIVE_KEYS.addAll(Set.of(keys));
+        this.eventPublisher = eventPublisher;
     }
     @Override
     public List<SysConfig> getAll() {
         List<SysConfig> configs = sysConfigMapper.findAll();
         for (SysConfig config : configs) {
-            if (SENSITIVE_KEYS.contains(config.getConfigKey())) {
-                config.setConfigValue(AesEncryptionUtil.decrypt(config.getConfigValue()));
-            }
+            decryptIfNeeded(config);
         }
         return configs;
     }
@@ -39,9 +33,7 @@ public class SysConfigService implements ISysConfigService {
     @Override
     public SysConfig getByKey(String key) {
         SysConfig config = sysConfigMapper.findByKey(key);
-        if (config != null && SENSITIVE_KEYS.contains(key)) {
-            config.setConfigValue(AesEncryptionUtil.decrypt(config.getConfigValue()));
-        }
+        decryptIfNeeded(config);
         return config;
     }
 
@@ -52,9 +44,7 @@ public class SysConfigService implements ISysConfigService {
         }
         List<SysConfig> configs = sysConfigMapper.findByKeys(keys);
         for (SysConfig config : configs) {
-            if (SENSITIVE_KEYS.contains(config.getConfigKey())) {
-                config.setConfigValue(AesEncryptionUtil.decrypt(config.getConfigValue()));
-            }
+            decryptIfNeeded(config);
         }
         return configs;
     }
@@ -72,26 +62,41 @@ public class SysConfigService implements ISysConfigService {
     }
 
     @Override
-    public int save(SysConfig sysConfig) {
-        String plainValue = sysConfig.getConfigValue();
-        if (SENSITIVE_KEYS.contains(sysConfig.getConfigKey())) {
-            sysConfig.setConfigValue(AesEncryptionUtil.encrypt(plainValue));
-        }
-        int result = sysConfigMapper.insert(sysConfig);
-        sysConfig.setConfigValue(plainValue);
-        return result;
+    public int insert(SysConfig sysConfig) {
+        return insert(sysConfig, false);
     }
 
     @Override
     public int update(SysConfig sysConfig) {
+        return update(sysConfig, false);
+    }
+
+    @Override
+    public int insert(SysConfig sysConfig, boolean encrypt) {
         String plainValue = sysConfig.getConfigValue();
-        if (SENSITIVE_KEYS.contains(sysConfig.getConfigKey())) {
+        sysConfig.setIsEncrypted(encrypt ? 1 : 0);
+        if (encrypt) {
+            sysConfig.setConfigValue(AesEncryptionUtil.encrypt(plainValue));
+        }
+        int result = sysConfigMapper.insert(sysConfig);
+        sysConfig.setConfigValue(plainValue);
+        eventPublisher.publishEvent(new ConfigChangeEvent(Set.of(sysConfig.getConfigKey())));
+        return result;
+    }
+
+    @Override
+    public int update(SysConfig sysConfig, boolean encrypt) {
+        String plainValue = sysConfig.getConfigValue();
+        sysConfig.setIsEncrypted(encrypt ? 1 : 0);
+        if (encrypt) {
             sysConfig.setConfigValue(AesEncryptionUtil.encrypt(plainValue));
         }
         int result = sysConfigMapper.update(sysConfig);
         sysConfig.setConfigValue(plainValue);
+        eventPublisher.publishEvent(new ConfigChangeEvent(Set.of(sysConfig.getConfigKey())));
         return result;
     }
+
     @Override
     public int deleteById(Long id) {
         return sysConfigMapper.deleteById(id);
@@ -99,5 +104,14 @@ public class SysConfigService implements ISysConfigService {
     @Override
     public int deleteByKey(String key) {
         return sysConfigMapper.deleteByKey(key);
+    }
+
+    /**
+     * 按记录自身的 is_encrypted 标记决定是否解密（对未加密记录原样返回）
+     */
+    private void decryptIfNeeded(SysConfig config) {
+        if (config != null && config.getIsEncrypted() != null && config.getIsEncrypted() == 1) {
+            config.setConfigValue(AesEncryptionUtil.decrypt(config.getConfigValue()));
+        }
     }
 }

@@ -32,19 +32,37 @@ public class AiModelController {
         List<AiModelProvider> providers = aiModelProviderService.findAll();
         model.addAttribute("providers", providers);
         model.addAttribute("defaultAiModelExtParamsJson", aiModelService.getDefaultAiModelExtParamsJson());
+        model.addAttribute("activeTab", "models");
         return "models";
     }
 
     @GetMapping("/api/providers")
     @ResponseBody
     public List<AiModelProvider> getProviders() {
-        return aiModelProviderService.findAll();
+        List<AiModelProvider> providers = aiModelProviderService.findAll();
+        providers.forEach(this::maskApiKey);
+        return providers;
     }
 
     @GetMapping("/api/providers/{id}")
     @ResponseBody
     public AiModelProvider getProvider(@PathVariable Long id) {
-        return aiModelProviderService.findById(id);
+        AiModelProvider provider = aiModelProviderService.findById(id);
+        if (provider != null) {
+            maskApiKey(provider);
+        }
+        return provider;
+    }
+
+    private void maskApiKey(AiModelProvider provider) {
+        String key = provider.getApiKey();
+        if (key == null || key.isEmpty()) {
+            provider.setApiKey("");
+        } else if (key.length() > 8) {
+            provider.setApiKey(key.substring(0, 4) + "****" + key.substring(key.length() - 4));
+        } else {
+            provider.setApiKey("****");
+        }
     }
 
     @PostMapping("/api/providers")
@@ -63,10 +81,14 @@ public class AiModelController {
         if (existing != null) {
             aiModelProvider.setType(existing.getType());
             if ("builtin".equals(existing.getType())) {
-                // 内置提供商不能修改 sdkName
                 aiModelProvider.setSdkName(existing.getSdkName());
             } else {
                 validateCustomSdkName(aiModelProvider);
+            }
+            // 前端传回的apiKey是脱敏值，不更新；仅当显式传入明文密钥时才更新
+            String incomingKey = aiModelProvider.getApiKey();
+            if (incomingKey == null || incomingKey.isEmpty() || incomingKey.contains("****")) {
+                aiModelProvider.setApiKey(null);
             }
         }
         aiModelProvider.setId(id);
@@ -85,8 +107,8 @@ public class AiModelController {
         if (sdkName == null || sdkName.isBlank()) {
             throw new IllegalArgumentException("自定义提供商必须指定 sdkName");
         }
-        if (!"openai".equals(sdkName) && !"anthropic".equals(sdkName)) {
-            throw new IllegalArgumentException("自定义提供商的 sdkName 只能为 'openai' 或 'anthropic'");
+        if (!"openai".equals(sdkName) && !"anthropic".equals(sdkName) && !"ollama".equals(sdkName)) {
+            throw new IllegalArgumentException("自定义提供商的 sdkName 只能为 'openai'、'anthropic' 或 'ollama'");
         }
     }
 
@@ -115,6 +137,8 @@ public class AiModelController {
     @PostMapping("/api/models")
     @ResponseBody
     public AiModel createModel(@RequestBody AiModel aiModel) {
+        validateModelAlias(aiModel);
+        validateMaxContextTokens(aiModel);
         aiModelService.insert(aiModel);
         return aiModel;
     }
@@ -122,10 +146,26 @@ public class AiModelController {
     @PutMapping("/api/models/{id}")
     @ResponseBody
     public AiModel updateModel(@PathVariable Long id, @RequestBody AiModel aiModel) {
+        validateModelAlias(aiModel);
+        validateMaxContextTokens(aiModel);
         aiModel.setId(id);
         aiModelService.update(aiModel);
         agentExecutorService.clearAndStopAgentExecutorByAiModel(aiModel.getId());
         return aiModel;
+    }
+
+    /** 模型别名为必填字段 */
+    private void validateModelAlias(AiModel aiModel) {
+        if (aiModel.getModelAlias() == null || aiModel.getModelAlias().isBlank()) {
+            throw new IllegalArgumentException("模型别名不能为空");
+        }
+    }
+
+    /** 最大上下文为必填字段（字节） */
+    private void validateMaxContextTokens(AiModel aiModel) {
+        if (aiModel.getMaxContextTokens() == null || aiModel.getMaxContextTokens() <= 0) {
+            throw new IllegalArgumentException("最大上下文不能为空");
+        }
     }
 
     @PostMapping("/api/models/{id}/test")

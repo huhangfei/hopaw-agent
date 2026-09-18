@@ -8,10 +8,12 @@
 <body>
 <div layout:fragment="pageTitle">🤖 HoPaw - Token 用量统计</div>
 
-<main layout:fragment="content" class="usage-container">
-    <div class="usage-header">
-        <h2>Token 用量统计</h2>
-    </div>
+<div class="cap-page" layout:fragment="content">
+    <div th:replace="~{fragments/op-tabs :: op-tabs(${activeTab})}"></div>
+    <main class="usage-container">
+        <div class="usage-header">
+            <h2>Token 用量统计</h2>
+        </div>
 
     <div class="filter-card">
         <div class="filter-row">
@@ -27,7 +29,8 @@
                 <label for="filterUser">用户</label>
                 <select id="filterUser">
                     <option value="">全部</option>
-                    <option value="user1">user1</option>
+                    <option th:each="acc : ${accounts}" th:value="${acc.userId}"
+                            th:text="${(acc.nickname != null and not #strings.isEmpty(acc.nickname)) ? acc.nickname + ' (' + acc.userId + ')' : acc.userId}"></option>
                 </select>
             </div>
             <div class="filter-group">
@@ -45,11 +48,14 @@
                 <label for="filterSource">来源</label>
                 <select id="filterSource">
                     <option value="">全部</option>
-                    <option value="chat">会话</option>
-                    <option value="model-test">模型测试</option>
-                    <option value="memory-organize">记忆整理</option>
-                    <option value="agentTask">智能体定时任务</option>
+                    <option th:each="src : ${callSources}"
+                            th:value="${src.value}"
+                            th:text="${src.description}"></option>
                 </select>
+            </div>
+            <div class="filter-group">
+                <label for="filterSessionId">会话ID</label>
+                <input type="text" id="filterSessionId" placeholder="会话ID">
             </div>
             <button class="btn-query" onclick="queryData()">查询</button>
         </div>
@@ -113,16 +119,19 @@
         <button class="page-btn" id="nextPage" onclick="goPage(currentPage + 1)">下一页</button>
     </div>
 </main>
+</div>
 
 <th:block layout:fragment="extraCss">
+    <link rel="stylesheet" th:href="@{/css/page/cap-tabs.css}">
     <link rel="stylesheet" th:href="@{/css/page/token-usage.css}">
 </th:block>
 
 <th:block layout:fragment="extraScripts">
     <script th:inline="javascript">
         var AGENTS = /*[[${agents}]]*/ [];
+        var SOURCE_MAP = /*[[${sourceMap}]]*/ {};
     </script>
-    <script th:src="@{/js/token-usage.js}"></script>
+    <script th:src="@{/js/page/token-usage.js}"></script>
     <script th:src="@{/js/chart.umd.min.js}"></script>
 </th:block>
 </body>

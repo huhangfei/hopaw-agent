@@ -1,6 +1,7 @@
 package com.agent.hopaw.controller;
 
 import com.agent.hopaw.infra.model.dto.*;
+import com.agent.hopaw.infra.model.entity.SysConfig;
 import com.agent.hopaw.infra.service.ISysConfigService;
 import com.agent.hopaw.infra.tool.IAgentToolService;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -38,6 +39,8 @@ public class AgentToolController {
     @GetMapping
     public String toolsPage(Model model) {
         model.addAttribute("toolSets", IAgentToolService.getToolSets());
+        model.addAttribute("activePage", "tools");
+        model.addAttribute("activeTab", "tools");
         return "tools";
     }
 
@@ -60,6 +63,14 @@ public class AgentToolController {
                 for (ToolConfigItem configItem : tool.getAgentTool().getConfigItems()) {
                     String key = prefix + configItem.getKey();
                     sysConfigService.deleteByKey(key);
+                    // MAP 结构：同步删除各组散键（主体键:mapKey:子配置key）
+                    if (configItem.getStructure() == ToolConfigItem.ConfigStructure.MAP) {
+                        for (SysConfig config : sysConfigService.getAll()) {
+                            if (config.getConfigKey().startsWith(key + ":")) {
+                                sysConfigService.deleteByKey(config.getConfigKey());
+                            }
+                        }
+                    }
                 }
             }
             return ResponseBean.success("插件卸载成功");
@@ -138,7 +149,25 @@ public class AgentToolController {
             return ResponseBean.fail("文件为空");
         }
         try {
-            PluginInstallResult result = IAgentToolService.installPluginFromBytes(file.getBytes());
+            String originalFilename = file.getOriginalFilename();
+            PluginInstallResult result;
+
+            // 根据文件扩展名自动判断类型
+            if (originalFilename != null && originalFilename.toLowerCase().endsWith(".jar")) {
+                // JAR文件：用原始文件名创建临时文件，安装时以原始文件名写入 plugins/ 目录
+                String safeName = originalFilename.replaceAll("[\\\\/:*?\"<>|]", "_");
+                java.nio.file.Path tempJar = java.nio.file.Files.createTempFile("plugin-install-", "-" + safeName);
+                try {
+                    file.transferTo(tempJar.toFile());
+                    result = IAgentToolService.installPluginFromJarFile(tempJar, safeName);
+                } finally {
+                    java.nio.file.Files.deleteIfExists(tempJar);
+                }
+            } else {
+                // ZIP文件或其他：使用原有的ZIP安装逻辑
+                result = IAgentToolService.installPluginFromBytes(file.getBytes());
+            }
+
             return ResponseBean.success(result);
         } catch (IllegalArgumentException e) {
             return ResponseBean.fail(e.getMessage());

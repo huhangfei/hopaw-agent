@@ -7,24 +7,29 @@
         <result property="configKey" column="config_key"/>
         <result property="configValue" column="config_value"/>
         <result property="description" column="description"/>
+        <result property="isEncrypted" column="is_encrypted"/>
         <result property="createTime" column="create_time"/>
         <result property="updateTime" column="update_time"/>
     </resultMap>
 
+    <sql id="allColumns">
+        id, config_key, config_value, description, is_encrypted, create_time, update_time
+    </sql>
+
     <select id="findAll" resultMap="SysConfigResultMap">
-        SELECT id, config_key, config_value, description, create_time, update_time
+        SELECT <include refid="allColumns"/>
         FROM sys_config
         ORDER BY id DESC
     </select>
 
     <select id="findByKey" resultMap="SysConfigResultMap">
-        SELECT id, config_key, config_value, description, create_time, update_time
+        SELECT <include refid="allColumns"/>
         FROM sys_config
         WHERE config_key = #{key}
     </select>
 
     <select id="findByKeys" resultMap="SysConfigResultMap">
-        SELECT id, config_key, config_value, description, create_time, update_time
+        SELECT <include refid="allColumns"/>
         FROM sys_config
         WHERE config_key IN
         <foreach collection="keys" item="key" open="(" separator="," close=")">
@@ -33,8 +38,8 @@
     </select>
 
     <insert id="insert" parameterType="com.agent.hopaw.infra.model.entity.SysConfig">
-        INSERT INTO sys_config (config_key, config_value, description)
-        VALUES (#{configKey}, #{configValue}, #{description})
+        INSERT INTO sys_config (config_key, config_value, description, is_encrypted)
+        VALUES (#{configKey}, #{configValue}, #{description}, #{isEncrypted})
         <selectKey resultType="long" keyProperty="id" order="AFTER">
             SELECT last_insert_rowid()
         </selectKey>
@@ -44,6 +49,7 @@
         UPDATE sys_config
         SET config_value = #{configValue},
             description = #{description},
+            is_encrypted = #{isEncrypted},
             update_time = datetime('now', 'localtime')
         WHERE config_key = #{configKey}
     </update>

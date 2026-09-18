@@ -1,0 +1,1164 @@
+/* ========== 任务详情独立页面样式 ========== */
+body {
+    margin: 0;
+    background: #f5f6fa;
+    color: #333;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+}
+
+.task-detail-container {
+    padding: 20px;
+    width: 100%;
+    max-width: 1600px;
+    margin: 0 auto;
+    box-sizing: border-box;
+}
+
+.task-detail-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 12px;
+    margin-bottom: 20px;
+}
+
+.task-detail-header-left {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex-wrap: wrap;
+    min-width: 0;
+}
+
+.task-detail-header h2 {
+    font-size: 22px;
+    color: #333;
+    margin: 0;
+    word-break: break-word;
+}
+
+.task-detail-close-btn {
+    background: transparent;
+    border: none;
+    color: #999;
+    cursor: pointer;
+    padding: 6px;
+    border-radius: 6px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background 0.2s, color 0.2s;
+    flex-shrink: 0;
+}
+
+.task-detail-close-btn:hover {
+    background: #f0f0f0;
+    color: #333;
+}
+
+/* 头部操作按钮组（编辑/删除/关闭） */
+.task-detail-header-actions {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    flex-shrink: 0;
+}
+
+.task-detail-header-btn {
+    background: transparent;
+    border: none;
+    color: #999;
+    cursor: pointer;
+    padding: 6px;
+    border-radius: 6px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background 0.2s, color 0.2s;
+}
+
+.task-detail-header-btn.btn-header-edit:hover {
+    background: #eef2ff;
+    color: #4f46e5;
+}
+
+.task-detail-header-btn.btn-header-delete:hover {
+    background: #fef2f2;
+    color: #ef4444;
+}
+
+/* ========== 状态标签 ========== */
+.task-status-tag {
+    display: inline-block;
+    padding: 2px 10px;
+    border-radius: 12px;
+    font-size: 12px;
+    font-weight: 500;
+    color: #fff;
+    background: #6b7280;
+    white-space: nowrap;
+}
+
+.task-status-tag.status-pending { background: #6b7280; }
+.task-status-tag.status-pending_execution { background: #f59e0b; }
+.task-status-tag.status-processing { background: #3b82f6; }
+.task-status-tag.status-pending_acceptance { background: #8b5cf6; }
+.task-status-tag.status-completed { background: #10b981; }
+.task-status-tag.status-failed { background: #ef4444; }
+.task-status-tag.status-rejected { background: #ef4444; }
+.task-status-tag.status-closed { background: #9ca3af; }
+
+/* ========== 区块 ========== */
+.task-detail-section {
+    background: #fff;
+    border-radius: 8px;
+    padding: 16px;
+    margin-bottom: 20px;
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.05);
+}
+
+.task-detail-section-title {
+    font-size: 15px;
+    font-weight: 600;
+    color: #333;
+    margin: 0 0 12px 0;
+}
+
+/* ========== 基本信息 ========== */
+.task-detail-info-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: 12px;
+}
+
+.task-detail-info-item {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.task-detail-info-item .info-label {
+    font-size: 12px;
+    color: #999;
+}
+
+.task-detail-info-item .info-value {
+    font-size: 14px;
+    color: #333;
+    word-break: break-word;
+}
+
+/* 任务创建者标签：智能体创建（绿色机器人图标）/ 用户创建（橙色人形图标） */
+.task-creator-tag {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 13px;
+}
+
+.task-creator-tag .creator-icon {
+    flex-shrink: 0;
+}
+
+.task-creator-tag.creator-agent {
+    color: #10b981;
+}
+
+.task-creator-tag.creator-user {
+    color: #f59e0b;
+}
+
+/* ========== 前置任务展示 ========== */
+.task-detail-preconditions .task-detail-section-title {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+/* 标题旁的满足度汇总：全部满足为绿色，否则橙色 */
+.precondition-summary {
+    font-size: 12px;
+    font-weight: 500;
+    color: #d97706;
+    background: #fef3c7;
+    border: 1px solid #fde68a;
+    border-radius: 10px;
+    padding: 2px 10px;
+}
+
+.precondition-summary.all-satisfied {
+    color: #059669;
+    background: #d1fae5;
+    border-color: #a7f3d0;
+}
+
+.precondition-list {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+/* 单条前置任务卡片：左侧彩条按满足与否着色 */
+.pc-item {
+    border: 1px solid #e5e7eb;
+    border-left: 4px solid #d1d5db;
+    border-radius: 8px;
+    padding: 10px 14px;
+    background: #fafafa;
+}
+
+.pc-item-satisfied {
+    border-left-color: #10b981;
+    background: #f0fdf9;
+}
+
+.pc-item-unsatisfied {
+    border-left-color: #ef4444;
+    background: #fef7f7;
+}
+
+.pc-item-head {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+
+.pc-task-link {
+    font-size: 14px;
+    font-weight: 500;
+    color: #4f46e5;
+    text-decoration: none;
+    word-break: break-word;
+}
+
+.pc-task-link:hover {
+    text-decoration: underline;
+}
+
+/* 前置任务当前状态徽标 */
+.pc-status-tag {
+    font-size: 11px;
+    color: #fff;
+    border-radius: 4px;
+    padding: 2px 8px;
+    flex-shrink: 0;
+}
+
+.pc-status-deleted {
+    background: #9ca3af;
+}
+
+/* 是否满足徽标 */
+.pc-satisfied-badge {
+    font-size: 12px;
+    font-weight: 600;
+    border-radius: 4px;
+    padding: 2px 10px;
+    margin-left: auto;
+    flex-shrink: 0;
+}
+
+.pc-satisfied-yes {
+    color: #059669;
+    background: #d1fae5;
+    border: 1px solid #a7f3d0;
+}
+
+.pc-satisfied-no {
+    color: #dc2626;
+    background: #fee2e2;
+    border: 1px solid #fecaca;
+}
+
+/* 要求状态标签组 */
+.pc-item-required {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex-wrap: wrap;
+    margin-top: 8px;
+}
+
+.pc-required-label {
+    font-size: 12px;
+    color: #999;
+}
+
+.pc-required-tag {
+    font-size: 12px;
+    color: #6b7280;
+    background: #f3f4f6;
+    border: 1px solid #e5e7eb;
+    border-radius: 4px;
+    padding: 1px 8px;
+}
+
+/* 命中当前状态的标签高亮 */
+.pc-required-hit {
+    color: #059669;
+    background: #d1fae5;
+    border-color: #6ee7b7;
+    font-weight: 600;
+}
+
+.pc-required-none {
+    font-size: 12px;
+    color: #bbb;
+}
+
+/* ========== 驳回/失败原因（突出显示） ========== */
+.task-detail-reject-reason {
+    background: #fef2f2;
+    border: 1px solid #fecaca;
+    border-left: 4px solid #ef4444;
+    border-radius: 8px;
+    padding: 12px 16px;
+    margin-bottom: 20px;
+}
+
+.task-detail-reject-reason .reject-reason-title {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 13px;
+    font-weight: 600;
+    color: #dc2626;
+    margin-bottom: 6px;
+}
+
+.task-detail-reject-reason .reject-reason-title svg {
+    width: 15px;
+    height: 15px;
+    flex-shrink: 0;
+}
+
+.task-detail-reject-reason .reject-reason-text {
+    font-size: 14px;
+    color: #7f1d1d;
+    line-height: 1.6;
+    word-break: break-word;
+    white-space: pre-wrap;
+}
+
+/* 失败原因下方操作提示 */
+.task-detail-reject-reason .reject-reason-tip {
+    display: flex;
+    align-items: flex-start;
+    gap: 6px;
+    margin-top: 10px;
+    padding-top: 10px;
+    border-top: 1px dashed rgba(239, 68, 68, 0.35);
+    font-size: 13px;
+    color: #b45309;
+    line-height: 1.6;
+}
+
+.task-detail-reject-reason .reject-reason-tip svg {
+    width: 15px;
+    height: 15px;
+    flex-shrink: 0;
+    margin-top: 2px;
+}
+
+/* 会话行：清空历史按钮 */
+.task-session-row .task-session-clear {
+    background: none;
+    border: none;
+    cursor: pointer;
+    font-size: 12px;
+    color: #ef4444;
+    padding: 2px 4px;
+    white-space: nowrap;
+}
+
+.task-session-row .task-session-clear:hover {
+    color: #dc2626;
+    text-decoration: underline;
+}
+
+/* ========== 会话记录面板：列表与执行指示器合并为同一容器 ========== */
+.task-session-panel {
+    border: 1px solid #e5e7eb;
+    border-radius: 8px;
+    background: #fafafa;
+    overflow: hidden;
+}
+
+.task-detail-sessions {
+    display: flex;
+    flex-direction: column;
+}
+
+/* ========== 执行中指示行（面板底部一行，与列表同容器） ========== */
+.task-session-running {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 9px 12px;
+    background: rgba(59, 130, 246, 0.07);
+    border-top: 1px solid rgba(59, 130, 246, 0.35);
+    overflow: hidden;
+    /* 呼吸光圈动画：突出执行中状态 */
+    animation: running-pulse 1.6s ease-in-out infinite;
+}
+
+@keyframes running-pulse {
+    0%, 100% { box-shadow: inset 0 0 0 0 rgba(59, 130, 246, 0); }
+    50% { box-shadow: inset 0 0 12px 0 rgba(59, 130, 246, 0.15); }
+}
+
+.task-session-running .running-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: #3b82f6;
+    flex-shrink: 0;
+    animation: dot-blink 1s ease-in-out infinite;
+}
+
+@keyframes dot-blink {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.25; }
+}
+
+.task-session-running .running-label {
+    color: #3b82f6;
+    font-size: 12px;
+    font-weight: 600;
+    white-space: nowrap;
+    flex-shrink: 0;
+}
+
+/* 打字机文本：块级两行高度，超出隐藏，JS 滚动到底部保证最新内容可见 */
+.task-session-running .running-ticker {
+    flex: 1;
+    min-width: 0;
+    font-size: 12px;
+    line-height: 1.5;
+    color: #888;
+    display: block;
+    overflow: hidden;
+    max-height: 36px;
+    word-break: break-all;
+}
+
+/* 打字机光标：行内元素跟随文字流（位于最后文字后面） */
+.task-session-running .running-cursor {
+    display: inline-block;
+    width: 2px;
+    height: 13px;
+    background: #3b82f6;
+    vertical-align: -2px;
+    margin-left: 1px;
+    animation: cursor-blink 0.8s step-end infinite;
+}
+
+@keyframes cursor-blink {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0; }
+}
+
+body.dark-theme .task-session-panel {
+    background: #1a1a2e;
+    border-color: #2d2d44;
+}
+
+body.dark-theme .task-session-row {
+    border-bottom-color: #2d2d44;
+}
+
+body.dark-theme .task-session-running {
+    background: rgba(59, 130, 246, 0.12);
+    border-top-color: rgba(139, 163, 255, 0.35);
+}
+
+body.dark-theme .task-session-running .running-label {
+    color: #8ba3ff;
+}
+
+body.dark-theme .task-session-running .running-cursor {
+    background: #8ba3ff;
+}
+
+body.dark-theme .task-session-running .running-ticker {
+    color: #c0c0c0;
+}
+
+/* ========== 执行时段胶囊 ========== */
+.time-range-value {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    align-items: flex-start;
+}
+
+.time-range-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 3px 12px;
+    border-radius: 14px;
+    font-size: 14px;
+    font-weight: 600;
+    color: #667eea;
+    background: #eef0ff;
+    border: 1px solid #d8dcff;
+    font-variant-numeric: tabular-nums;
+    letter-spacing: 0.5px;
+    line-height: 1.4;
+}
+
+.time-range-sub {
+    font-size: 11px;
+    color: #aaa;
+    padding-left: 2px;
+}
+
+/* ========== 任务内容（Markdown 渲染，元素样式见 md-content.css） ========== */
+.task-detail-content {
+    color: #333;
+}
+
+.task-detail-content.empty {
+    color: #999;
+}
+
+/* ========== 会话列表 ========== */
+.task-detail-sessions {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.task-session-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 10px 12px;
+    border: none;
+    border-radius: 0;
+    background: transparent;
+    border-bottom: 1px solid #e5e7eb;
+    gap: 10px;
+}
+
+.task-session-row:last-child {
+    border-bottom: none;
+}
+
+.task-session-info {
+    font-size: 13px;
+    color: #666;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    flex: 1;
+}
+
+.task-session-link {
+    color: #667eea;
+    text-decoration: none;
+    font-size: 13px;
+    white-space: nowrap;
+    flex-shrink: 0;
+}
+
+.task-session-link:hover {
+    text-decoration: underline;
+}
+
+/* ========== 评论 ========== */
+.task-detail-comments {
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+    margin-bottom: 12px;
+}
+
+.comment-item {
+    padding: 10px 0 10px 10px;
+    border-bottom: 1px solid #eee;
+    border-left: 3px solid transparent;
+}
+
+.comment-item:last-child {
+    border-bottom: none;
+}
+
+/* 智能体评论：左侧高亮色条 + 标签色 */
+.comment-item-agent {
+    border-left-color: #8ba3ff;
+}
+.comment-item-agent .comment-item-user {
+    color: #5a78ff;
+}
+
+/* 总结评论：左侧橙色色条 + 徽章 */
+.comment-item-summary {
+    border-left-color: #f59e0b;
+}
+
+.comment-summary-badge {
+    font-size: 11px;
+    padding: 1px 8px;
+    border-radius: 10px;
+    background: #fef3c7;
+    color: #b45309;
+    border: 1px solid #fcd34d;
+    flex-shrink: 0;
+    line-height: 1.5;
+}
+
+/* 评论头部：名称居左，时间+总结徽标紧凑靠右 */
+.comment-item-header {
+    display: flex;
+    align-items: center;
+    margin-bottom: 4px;
+    gap: 6px;
+}
+
+.comment-item-user {
+    font-size: 13px;
+    font-weight: 600;
+    color: #333;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.comment-item-time {
+    font-size: 11px;
+    color: #aaa;
+    margin-left: auto;
+    flex-shrink: 0;
+}
+
+.comment-item-header .comment-summary-badge {
+    margin-left: 0;
+    flex-shrink: 0;
+}
+
+/* 评论操作按钮（改类型/删除）：默认隐藏，悬浮评论时显示 */
+.comment-item-actions {
+    display: inline-flex;
+    gap: 4px;
+    flex-shrink: 0;
+    opacity: 0;
+    transition: opacity 0.2s;
+}
+
+.comment-item:hover .comment-item-actions {
+    opacity: 1;
+}
+
+.comment-action-btn {
+    width: 22px;
+    height: 22px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border: none;
+    border-radius: 4px;
+    background: transparent;
+    color: #999;
+    font-size: 13px;
+    line-height: 1;
+    cursor: pointer;
+    padding: 0;
+    transition: all 0.2s;
+}
+
+.comment-btn-type:hover {
+    color: #f59e0b;
+    background: #fef3c7;
+}
+
+.comment-btn-delete:hover {
+    color: #ef4444;
+    background: #fee2e2;
+}
+
+.comment-item-content {
+    font-size: 13px;
+    color: #555;
+    line-height: 1.6;
+    white-space: pre-wrap;
+    word-break: break-word;
+}
+
+.task-comment-input-wrap {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+/* 评论类型连体切换按钮：默认 / 总结 */
+.comment-type-toggle {
+    display: inline-flex;
+    align-self: flex-start;
+    border: 1px solid #d1d5db;
+    border-radius: 8px;
+    overflow: hidden;
+}
+
+.comment-type-btn {
+    padding: 5px 18px;
+    font-size: 13px;
+    border: none;
+    background: #f3f4f6;
+    color: #666;
+    cursor: pointer;
+    transition: background 0.15s, color 0.15s;
+    font-family: inherit;
+}
+
+.comment-type-btn + .comment-type-btn {
+    border-left: 1px solid #d1d5db;
+}
+
+.comment-type-btn.active {
+    background: #667eea;
+    color: #fff;
+}
+
+.task-comment-input-row {
+    display: flex;
+    gap: 8px;
+    align-items: stretch;
+}
+
+.task-comment-input {
+    flex: 1;
+    padding: 10px 12px;
+    border: 1px solid #d1d5db;
+    border-radius: 8px;
+    font-size: 14px;
+    color: #1f2937;
+    background: #fff;
+    outline: none;
+    transition: border-color 0.2s, box-shadow 0.2s;
+    resize: vertical;
+    font-family: inherit;
+    min-height: 40px;
+}
+
+.task-comment-input:focus {
+    border-color: #667eea;
+    box-shadow: 0 0 0 2px rgba(102, 126, 234, 0.15);
+}
+
+/* 发表评论按钮：与输入框等高 */
+.task-comment-input-wrap .task-action-btn {
+    align-self: stretch;
+    padding: 0 18px;
+    line-height: 1.2;
+}
+
+/* ========== 操作按钮 ========== */
+.task-detail-actions {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+
+.task-detail-actions:empty {
+    display: none;
+}
+
+.task-action-btn {
+    padding: 8px 16px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 14px;
+    border: none;
+    transition: opacity 0.2s, background 0.2s;
+    white-space: nowrap;
+}
+
+.task-action-btn:hover {
+    opacity: 0.85;
+}
+
+.task-action-btn.btn-primary {
+    background: #667eea;
+    color: #fff;
+}
+
+.task-action-btn.btn-success {
+    background: #10b981;
+    color: #fff;
+}
+
+.task-action-btn.btn-warning {
+    background: #f59e0b;
+    color: #fff;
+}
+
+.task-action-btn.btn-danger {
+    background: #ef4444;
+    color: #fff;
+}
+
+.task-action-btn.btn-secondary {
+    background: #e5e7eb;
+    color: #333;
+}
+
+/* ========== 加载/空状态 ========== */
+.task-detail-loading,
+.task-detail-empty {
+    color: #999;
+    font-size: 13px;
+    padding: 12px 0;
+    text-align: center;
+}
+
+/* ==================== Dark Theme ==================== */
+body.dark-theme {
+    background: #1a1a2e;
+    color: #e0e0e0;
+}
+
+/* 前置任务展示（暗色） */
+body.dark-theme .precondition-summary {
+    color: #fbbf24;
+    background: rgba(251, 191, 36, 0.12);
+    border-color: rgba(251, 191, 36, 0.35);
+}
+
+body.dark-theme .precondition-summary.all-satisfied {
+    color: #34d399;
+    background: rgba(52, 211, 153, 0.12);
+    border-color: rgba(52, 211, 153, 0.35);
+}
+
+body.dark-theme .pc-item {
+    border-color: #2d2d44;
+    border-left-color: #3d3d6b;
+    background: #16213e;
+}
+
+body.dark-theme .pc-item-satisfied {
+    border-left-color: #10b981;
+    background: rgba(16, 185, 129, 0.08);
+}
+
+body.dark-theme .pc-item-unsatisfied {
+    border-left-color: #ef4444;
+    background: rgba(239, 68, 68, 0.08);
+}
+
+body.dark-theme .pc-task-link {
+    color: #8ba3ff;
+}
+
+body.dark-theme .pc-required-label {
+    color: #888;
+}
+
+body.dark-theme .pc-required-tag {
+    color: #c0c0c0;
+    background: #2d2d44;
+    border-color: #3d3d6b;
+}
+
+body.dark-theme .pc-required-hit {
+    color: #34d399;
+    background: rgba(52, 211, 153, 0.15);
+    border-color: rgba(52, 211, 153, 0.45);
+}
+
+body.dark-theme .pc-satisfied-yes {
+    color: #34d399;
+    background: rgba(52, 211, 153, 0.12);
+    border-color: rgba(52, 211, 153, 0.4);
+}
+
+body.dark-theme .pc-satisfied-no {
+    color: #f87171;
+    background: rgba(239, 68, 68, 0.12);
+    border-color: rgba(239, 68, 68, 0.4);
+}
+
+body.dark-theme .pc-required-none {
+    color: #666;
+}
+
+body.dark-theme .task-detail-header h2 {
+    color: #e0e0e0;
+}
+
+body.dark-theme .task-detail-close-btn {
+    color: #888;
+}
+
+body.dark-theme .task-detail-close-btn:hover {
+    background: #2d2d44;
+    color: #e0e0e0;
+}
+
+body.dark-theme .task-detail-header-btn {
+    color: #888;
+}
+
+body.dark-theme .task-detail-header-btn.btn-header-edit:hover {
+    background: #2d2d44;
+    color: #8ba3ff;
+}
+
+body.dark-theme .task-detail-header-btn.btn-header-delete:hover {
+    background: #3d2d44;
+    color: #f87171;
+}
+
+body.dark-theme .task-detail-section {
+    background: #16213e;
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.3);
+}
+
+body.dark-theme .task-detail-section-title {
+    color: #e0e0e0;
+}
+
+body.dark-theme .task-detail-info-item .info-label {
+    color: #888;
+}
+
+body.dark-theme .task-detail-info-item .info-value {
+    color: #c0c0c0;
+}
+
+body.dark-theme .task-creator-tag.creator-agent {
+    color: #34d399;
+}
+
+body.dark-theme .task-creator-tag.creator-user {
+    color: #fbbf24;
+}
+
+/* ========== Token 用量统计模块（参考会话右下角统计样式） ========== */
+.task-detail-token-section .task-detail-section-title {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+
+/* 可折叠标题：点击切换图表展开/折叠，折叠时仅显示汇总值 */
+.token-section-toggle {
+    cursor: pointer;
+    user-select: none;
+}
+
+.token-section-toggle:hover {
+    color: #667eea;
+}
+
+.token-toggle-label {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    flex-shrink: 0;
+}
+
+/* 折叠状态：去掉标题底部外边距，标题行与汇总值垂直居中对齐且无多余空隙 */
+.task-detail-token-section .task-detail-section-title.token-section-collapsed {
+    margin-bottom: 0;
+    align-items: center;
+}
+
+.token-toggle-arrow {
+    display: inline-block;
+    width: 14px;
+    color: #999;
+    font-size: 12px;
+    transition: transform 0.2s;
+    flex-shrink: 0;
+}
+
+body.dark-theme .token-section-toggle:hover {
+    color: #8ba3ff;
+}
+
+.token-stats-summary {
+    font-size: 12px;
+    font-weight: 400;
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+
+.token-stats-summary .ts-in { color: #2196F3; }
+.token-stats-summary .ts-out { color: #4CAF50; }
+.token-stats-summary .ts-total { color: #666; }
+.token-stats-summary .ts-count {
+    color: #667eea;
+    background: rgba(102, 126, 234, 0.08);
+    border: 1px solid rgba(102, 126, 234, 0.25);
+    padding: 1px 8px;
+    border-radius: 10px;
+    white-space: nowrap;
+}
+
+body.dark-theme .token-stats-summary .ts-total { color: #c0c0c0; }
+
+.token-chart-wrap {
+    background: #fafbfc;
+    border: 1px solid #eee;
+    border-radius: 8px;
+    padding: 12px;
+    height: 180px;
+    position: relative;
+}
+
+.token-chart-empty {
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #999;
+    font-size: 12px;
+}
+
+body.dark-theme .token-chart-wrap {
+    background: #1a1a2e;
+    border-color: #2d2d44;
+}
+
+body.dark-theme .token-chart-empty {
+    color: #888;
+}
+
+body.dark-theme .task-detail-reject-reason {
+    background: rgba(239, 68, 68, 0.1);
+    border-color: rgba(239, 68, 68, 0.3);
+    border-left-color: #ef4444;
+}
+
+body.dark-theme .task-detail-reject-reason .reject-reason-title {
+    color: #f87171;
+}
+
+body.dark-theme .task-detail-reject-reason .reject-reason-text {
+    color: #fca5a5;
+}
+
+body.dark-theme .task-detail-reject-reason .reject-reason-tip {
+    border-top-color: rgba(239, 68, 68, 0.35);
+    color: #fbbf24;
+}
+
+body.dark-theme .task-session-row .task-session-clear {
+    color: #f87171;
+}
+
+body.dark-theme .task-session-row .task-session-clear:hover {
+    color: #ef4444;
+}
+
+body.dark-theme .time-range-badge {
+    color: #8ba3ff;
+    background: #2d3358;
+    border-color: #3d4180;
+}
+
+body.dark-theme .time-range-sub {
+    color: #666;
+}
+
+body.dark-theme .task-detail-content {
+    color: #c0c0c0;
+}
+
+body.dark-theme .task-detail-content.empty {
+    color: #888;
+}
+
+body.dark-theme .task-session-info {
+    color: #888;
+}
+
+body.dark-theme .task-session-link {
+    color: #8ba3ff;
+}
+
+body.dark-theme .comment-item {
+    border-bottom-color: #2d2d44;
+}
+
+body.dark-theme .comment-item-user {
+    color: #e0e0e0;
+}
+
+body.dark-theme .comment-item-agent .comment-item-user {
+    color: #8ba3ff;
+}
+
+body.dark-theme .comment-type-toggle {
+    border-color: #3d3d6b;
+}
+
+body.dark-theme .comment-type-btn {
+    background: #2d2d44;
+    color: #c0c0c0;
+}
+
+body.dark-theme .comment-type-btn + .comment-type-btn {
+    border-left-color: #3d3d6b;
+}
+
+body.dark-theme .comment-type-btn.active {
+    background: #8ba3ff;
+    color: #1a1a2e;
+}
+
+body.dark-theme .comment-summary-badge {
+    background: #3a2a10;
+    color: #fbbf24;
+    border-color: #6b4e12;
+}
+
+/* 暗色主题：评论操作按钮 */
+body.dark-theme .comment-action-btn {
+    color: #888;
+}
+
+body.dark-theme .comment-btn-type:hover {
+    color: #fbbf24;
+    background: #3a2a10;
+}
+
+body.dark-theme .comment-btn-delete:hover {
+    color: #f87171;
+    background: #3d1f1f;
+}
+
+body.dark-theme .comment-item-content {
+    color: #c0c0c0;
+}
+
+body.dark-theme .task-comment-input {
+    background: #2d2d44;
+    border-color: #3d3d6b;
+    color: #e0e0e0;
+}
+
+body.dark-theme .task-comment-input:focus {
+    border-color: #8ba3ff;
+    box-shadow: 0 0 0 2px rgba(139, 163, 255, 0.15);
+}
+
+body.dark-theme .task-action-btn.btn-secondary {
+    background: #2d2d44;
+    color: #c0c0c0;
+}
+
+body.dark-theme .task-detail-loading,
+body.dark-theme .task-detail-empty {
+    color: #888;
+}

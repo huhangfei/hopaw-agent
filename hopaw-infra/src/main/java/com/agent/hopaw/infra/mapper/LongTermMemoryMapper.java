@@ -1,6 +1,5 @@
 package com.agent.hopaw.infra.mapper;
 
-import com.agent.hopaw.infra.constant.LongTermMemoryTypeEnum;
 import com.agent.hopaw.infra.model.entity.LongTermMemory;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
@@ -11,12 +10,13 @@ import java.util.List;
 @Mapper
 public interface LongTermMemoryMapper {
 
-    List<LongTermMemory> findByAgentIdAndUserId(@Param("agentId") Long agentId, @Param("userId") String userId);
-
     List<LongTermMemory> findByParentId(@Param("parentId") Long parentId);
 
-    List<LongTermMemory> findByAgentIdAndUserIdAndMemoryTypeAndTime(@Param("agentId") Long agentId, @Param("userId") String userId, @Param("memoryType") String memoryType, @Param("beginDateTime") LocalDateTime beginDateTime);
-    List<LongTermMemory> findByAgentIdAndUserIdAndMemoryTypeAndEndDateTime(@Param("agentId") Long agentId, @Param("userId") String userId, @Param("memoryType") String memoryType, @Param("endDateTime") LocalDateTime endDateTime);
+    List<LongTermMemory> findBySessionIdAndUserIdAndMemoryTypeAndTime(@Param("sessionId") String sessionId, @Param("userId") String userId, @Param("memoryType") String memoryType, @Param("beginDateTime") LocalDateTime beginDateTime);
+
+    List<LongTermMemory> findBySessionIdAndUserIdAndMemoryTypeAndTimeWithLimit(@Param("sessionId") String sessionId, @Param("userId") String userId, @Param("memoryType") String memoryType, @Param("beginDateTime") LocalDateTime beginDateTime, @Param("maxResults") Integer maxResults);
+
+    List<LongTermMemory> findBySessionIdAndUserIdAndMemoryTypeAndEndDateTime(@Param("sessionId") String sessionId, @Param("userId") String userId, @Param("memoryType") String memoryType, @Param("endDateTime") LocalDateTime endDateTime);
 
     List<LongTermMemory> findByUserIdAndMemoryType(@Param("userId") String userId, @Param("memoryType") String memoryType);
 
@@ -28,7 +28,18 @@ public interface LongTermMemoryMapper {
 
     int deleteById(@Param("id") Long id);
 
+    List<LongTermMemory> findByUserId(@Param("userId") String userId);
+
+    int deleteByUserId(@Param("userId") String userId);
+
+    List<LongTermMemory> findAll();
+
     int updateParentId(@Param("id") Long id, @Param("parentId") Long parentId);
 
-    int deleteByAgentIdAndUserIdAndMemoryTypeAndEndDateTime(@Param("agentId") Long agentId, @Param("userId") String userId, @Param("memoryType") String memoryType, @Param("endDateTime") LocalDateTime endDateTime);
+    int deleteBySessionIdAndUserIdAndMemoryTypeAndEndDateTime(@Param("sessionId") String sessionId, @Param("userId") String userId, @Param("memoryType") String memoryType, @Param("endDateTime") LocalDateTime endDateTime);
+
+    /**
+     * 查询在指定截止时间之前的会话+用户+类型记忆，仅用于过期清理时获取 embeddingId 同步清理向量库
+     */
+    List<LongTermMemory> findExpiredBySessionIdAndUserIdAndMemoryTypeAndEndDateTime(@Param("sessionId") String sessionId, @Param("userId") String userId, @Param("memoryType") String memoryType, @Param("endDateTime") LocalDateTime endDateTime);
 }

@@ -1,0 +1,16 @@
+<th:block th:fragment="content" xmlns:th="http://www.thymeleaf.org">
+<div class="settings-panel active" id="tab-pluginStore">
+    <div class="settings-form">
+        <div class="form-group">
+            <label>插件商店源地址</label>
+            <div id="pluginSourceList">
+            </div>
+            <button class="btn-add-key" onclick="addPluginSource()">+ 添加源地址</button>
+            <p class="form-hint">添加多个插件商店源地址，多个源将按顺序查询</p>
+        </div>
+        <div class="settings-actions">
+            <button class="btn-save-settings" onclick="savePluginStoreSettings()">保存设置</button>
+        </div>
+    </div>
+</div>
+</th:block>

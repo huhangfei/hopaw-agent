@@ -1,5 +1,6 @@
 package com.agent.hopaw.tool.baidusearch;
 
+import com.agent.hopaw.infra.tool.ToolSecurityLevel;
 import com.agent.hopaw.infra.model.dto.OptionItem;
 import com.agent.hopaw.infra.model.dto.ToolConfigItem;
 import com.agent.hopaw.infra.model.dto.ValidationRule;
@@ -18,6 +19,9 @@ import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
 
+/**
+ * @author hhf
+ */
 public class BaiduSearchTool implements AgentTool {
     private static final String CONFIG_KEY_API_KEYS = "apiKeys";
     private static final String CONFIG_KEY_EDITION = "edition";
@@ -33,7 +37,8 @@ public class BaiduSearchTool implements AgentTool {
     @Autowired
     private ISysConfigService sysConfigService;
 
-    @Tool(value = {"搜索查询互联网最新网络信息，返回相关的网页标题和摘要内容。", "新闻、军事、财经、时事、天气、资料"})
+    @ToolSecurityLevel(ToolSecurityLevel.Level.SAFE)
+    @Tool(value = {"百度搜索", "搜索查询互联网最新网络信息，返回相关的网页标题和摘要内容。", "新闻、军事、财经、时事、天气、资料"})
     public String baiduSearch(@P(description = "搜索关键词") String query, @P(description = "最大数，默认5", required = false) Integer maxResults, @P(description = "超时时间（毫秒），默认10000毫秒", required = false) Integer timeout) {
         if (query == null || query.trim().isEmpty()) {
             return "错误: 搜索关键词不能为空";
@@ -52,7 +57,7 @@ public class BaiduSearchTool implements AgentTool {
         int to = timeout != null ? timeout : TIMEOUT_MS;
 
         try {
-            String result = QianFanWebSearchUtil.search(apiKey, query, mr, to, edition);
+            String result = com.agent.hopaw.tool.baidusearch.QianFanWebSearchUtil.search(apiKey, query, mr, to, edition);
             if (result != null) {
                 return result;
             }
@@ -69,12 +74,12 @@ public class BaiduSearchTool implements AgentTool {
 
     @Override
     public String getDescription() {
-        return "百度搜索网页信息，返回相关的网页标题和摘要内容";
+        return "百度搜索网页信息，返回相关的网页标题和摘要内容。请到：https://console.bce.baidu.com/ai-search/resource/manage 申请key";
     }
 
     @Override
     public String getIcon() {
-        return "web-search-tool.svg";
+        return "baidu-search-tool.svg";
     }
 
     @Override
@@ -90,14 +95,13 @@ public class BaiduSearchTool implements AgentTool {
                 new ToolConfigItem("edition", "搜索版本", "选择搜索版本", ToolConfigItem.ConfigType.SELECT,
                         new OptionItem("standard", "完整版"),
                         new OptionItem("lite", "轻量版"))
+                        .sensitive(false)
                         .validation(new ValidationRule().required())
         );
     }
 
     @Override
     public void asyncInit() {
-        String prefix = getConfigPrefix();
-        sysConfigService.setSensitiveKeys(prefix + CONFIG_KEY_API_KEYS);
         reloadConfig();
     }
 
@@ -136,7 +140,9 @@ public class BaiduSearchTool implements AgentTool {
     }
 
     private String selectKey(List<String> keys) {
-        if (keys.isEmpty()) return null;
+        if (keys.isEmpty()) {
+            return null;
+        }
         int index = keyIndex.getAndUpdate(i -> (i + 1) % keys.size());
         return keys.get(index);
     }

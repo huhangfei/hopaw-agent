@@ -1,45 +1,65 @@
 package com.agent.hopaw.infra.executor;
 
 
-import com.agent.hopaw.infra.memory.SQLiteChatMemoryStore;
-import com.agent.hopaw.infra.model.entity.*;
+import com.agent.hopaw.infra.constant.AiModelCallSourceEnum;
+import com.agent.hopaw.infra.constant.ChatMemoryStatusEnum;
+import com.agent.hopaw.infra.event.AgentMessageEvent;
+import com.agent.hopaw.infra.event.ChatHistoryEvent;
+import com.agent.hopaw.infra.exception.ToolCallRejectedException;
+import com.agent.hopaw.infra.memory.IChatMemoryService;
+import com.agent.hopaw.infra.memory.MultimodalTokenCountEstimator;
 import com.agent.hopaw.infra.model.dto.*;
+import com.agent.hopaw.infra.model.entity.*;
+import com.agent.hopaw.infra.service.AiModelService;
+import com.agent.hopaw.infra.service.IChatModelListenerProvider;
+import com.agent.hopaw.infra.service.IChatSessionService;
 import com.agent.hopaw.infra.tool.AgentTool;
-import com.agent.hopaw.infra.storage.ChatHistoryStore;
-import com.agent.hopaw.infra.util.InvocationParametersWrapper;
+import com.agent.hopaw.infra.tool.ToolSecurityLevel;
+import com.agent.hopaw.infra.util.*;
 import com.alibaba.fastjson2.JSON;
-import dev.langchain4j.data.message.*;
+import dev.langchain4j.agent.tool.ToolExecutionRequest;
+import dev.langchain4j.data.message.Content;
+import dev.langchain4j.data.message.TextContent;
+import dev.langchain4j.data.message.ToolExecutionResultMessage;
 import dev.langchain4j.invocation.InvocationParameters;
-import dev.langchain4j.memory.chat.MessageWindowChatMemory;
+import dev.langchain4j.mcp.McpToolProvider;
+import dev.langchain4j.mcp.client.DefaultMcpClient;
+import dev.langchain4j.mcp.client.McpClient;
+import dev.langchain4j.mcp.client.transport.McpTransport;
+import dev.langchain4j.mcp.client.transport.http.StreamableHttpMcpTransport;
+import dev.langchain4j.mcp.client.transport.stdio.StdioMcpTransport;
+import dev.langchain4j.memory.chat.TokenWindowChatMemory;
 import dev.langchain4j.model.chat.ChatModel;
 import dev.langchain4j.model.chat.StreamingChatModel;
+import dev.langchain4j.model.chat.listener.ChatModelListener;
+import dev.langchain4j.model.chat.request.ChatRequestParameters;
+import dev.langchain4j.model.chat.request.DefaultChatRequestParameters;
 import dev.langchain4j.model.chat.response.ChatResponse;
 import dev.langchain4j.model.chat.response.PartialThinking;
 import dev.langchain4j.model.chat.response.PartialToolCall;
 import dev.langchain4j.model.embedding.EmbeddingModel;
 import dev.langchain4j.service.AiServices;
 import dev.langchain4j.service.TokenStream;
-import dev.langchain4j.service.tool.BeforeToolExecution;
-import dev.langchain4j.service.tool.ToolExecution;
+import dev.langchain4j.service.tool.ToolErrorHandlerResult;
+import dev.langchain4j.service.tool.ToolProvider;
 import dev.langchain4j.service.tool.search.vector.VectorToolSearchStrategy;
 import dev.langchain4j.store.memory.chat.InMemoryChatMemoryStore;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.context.ApplicationEventPublisher;
+import org.springframework.util.StringUtils;
 
+import java.time.LocalDateTime;
 import java.util.*;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.LinkedBlockingQueue;
-import java.util.concurrent.ThreadFactory;
-import java.util.concurrent.ThreadPoolExecutor;
-import java.util.concurrent.TimeUnit;
+import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.Consumer;
 import java.util.function.Function;
+import java.util.stream.Collectors;
 
 public class AgentExecutor implements IAgentExecutor {
     private final Logger logger = LoggerFactory.getLogger(AgentExecutor.class);
-    
+
     /**
      * 工具执行线程池的 ThreadFactory，静态常量复用
      */
@@ -54,226 +74,341 @@ public class AgentExecutor implements IAgentExecutor {
             return thread;
         }
     };
-    
-    private final Agent agent;
+
+    private final Long agentId;
     private final String userId;
     private final String sessionId;
-    private final ChatAgentAssistant chatAgentAssistant;
-    private final ChatAgentAssistant streamingChatAgentAssistant;
+    private final Long aiModelId;
     private final AgentMessageHandler agentMessageHandler;
     private final AtomicBoolean cancelTask = new AtomicBoolean(false);
-    private final ChatHistoryStore chatHistoryStore;
-    private final SQLiteChatMemoryStore memoryStore;
+    private final IChatMemoryService memoryStore;
     private final java.util.concurrent.ConcurrentMap<String, AtomicBoolean> toolCancelInvocations = new ConcurrentHashMap<>();
     private final java.util.concurrent.ConcurrentMap<String, CountDownLatch> toolCancelLatch = new ConcurrentHashMap<>();
-    private final java.util.concurrent.ConcurrentMap<String,Consumer<String>> toolStopHooks = new ConcurrentHashMap<>();
+    private final java.util.concurrent.ConcurrentMap<String, Consumer<String>> toolStopHooks = new ConcurrentHashMap<>();
+    private final java.util.concurrent.ConcurrentMap<String, PendingResponse<Boolean>> toolApprovalLocks = new ConcurrentHashMap<>();
+    private final java.util.concurrent.ConcurrentMap<String, String> toolNameByCallIdMap = new ConcurrentHashMap<>();
+    /**
+     * 本执行器生命周期内已开始的工具调用次数（工具开始执行时递增，供统计展示）
+     */
+    private final java.util.concurrent.atomic.AtomicInteger executedToolCount = new java.util.concurrent.atomic.AtomicInteger(0);
+    private final Map<String, ToolInfo> toolInfoMap = new HashMap<>();
     private final ChatMemoryId memoryId;
     private final EmbeddingModel embeddingModel;
     private final ThreadPoolExecutor toolExecutor;
-    private String requestId;
+    private final AiModelService aiModelService;
     private CountDownLatch taskLatch = new CountDownLatch(0);
-    public AgentExecutor(String sessionId,Agent agent, String userId,
-                         ChatModel chatModel,
-                         StreamingChatModel streamingModel,
-                         List<AgentTool> selectedTools,
-                         SQLiteChatMemoryStore memoryStore,
+    /**
+     * 可重置看门狗：当前任务等待的最后活动截止时间戳（毫秒），收到消息/工具调用等活动时重置
+     */
+    private final java.util.concurrent.atomic.AtomicLong watchdogDeadlineMs = new java.util.concurrent.atomic.AtomicLong(0);
+    /**
+     * 看门狗超时时长（毫秒），0 表示未启用
+     */
+    private volatile long watchdogTimeoutMs = 0;
+    /**
+     * 本次任务开始时间（毫秒级时间戳），0 表示未开始
+     */
+    private volatile long startTimeMs = 0;
+    private String requestId;
+    private final IChatSessionService chatSessionService;
+    private final AgentExecutorParams agentExecutorParams;
+    private final List<McpClient> mcpClients = new ArrayList<>();
+    private final Function<Long, String> systemMessageProvider;
+    private final IChatModelListenerProvider chatModelListenerProvider;
+
+    public AgentExecutor(AgentExecutorParams agentExecutorParams,
+                         IChatMemoryService memoryStore,
                          EmbeddingModel embeddingModel,
-                         Function<Agent, String> systemMessageProvider,
-                         ChatHistoryStore chatHistoryStore) {
-        this.chatHistoryStore = chatHistoryStore;
-        this.agent = agent;
-        this.userId = userId;
-        this.sessionId = sessionId;
+                         Function<Long, String> systemMessageProvider,
+                         AiModelService aiModelService,
+                         IChatModelListenerProvider chatModelListenerProvider,
+                         ApplicationEventPublisher eventPublisher,
+                         IChatSessionService chatSessionService) {
+        this.agentExecutorParams = agentExecutorParams;
+        this.agentId = agentExecutorParams.getAgentId();
+        this.userId = agentExecutorParams.getUserId();
+        this.aiModelId = agentExecutorParams.getAiModelId();
+        this.sessionId = agentExecutorParams.getSessionId();
+        this.requestId = agentExecutorParams.getRequestId();
+
+        this.chatSessionService = chatSessionService;
+        this.chatModelListenerProvider = chatModelListenerProvider;
+        this.aiModelService = aiModelService;
         this.memoryStore = memoryStore;
         this.embeddingModel = embeddingModel;
-        this.agentMessageHandler = new AgentMessageHandler(this.sessionId);
-        this.memoryId = new ChatMemoryId(agent.getId(), userId);
-        int maxMemoryRecords = agent.getMaxMemoryRecords() != null ? agent.getMaxMemoryRecords() : 20;
-        int maxToolInvocations = agent.getMaxToolInvocations() != null ? agent.getMaxToolInvocations() : 10;
+        this.systemMessageProvider = systemMessageProvider;
 
+        this.memoryId = new ChatMemoryId(sessionId, this.requestId, agentId, userId);
         // 创建工具执行线程池
         this.toolExecutor = createToolExecutor();
-
-        MessageWindowChatMemory.Builder memoryBuilder = MessageWindowChatMemory.builder()
-                .id(memoryId)
-                .maxMessages(maxMemoryRecords)
-                .chatMemoryStore(memoryStore != null ? memoryStore : new InMemoryChatMemoryStore());
-        var aiBuilder = AiServices
-                .builder(ChatAgentAssistant.class)
-                .systemMessageProvider(chatMemoryId -> systemMessageProvider.apply(agent))
-                .chatMemory(memoryBuilder.build())
-                .executeToolsConcurrently(toolExecutor);
-                ;
-        if (selectedTools != null && agent.getVectorToolSearch() != null && agent.getVectorToolSearch()) {
-            int maxResults = agent.getVectorToolSearchMaxResults() != null ? agent.getVectorToolSearchMaxResults() : 10;
-            aiBuilder.toolSearchStrategy(
-                    VectorToolSearchStrategy
-                            .builder()
-                            .embeddingModel(embeddingModel)
-                            .maxResults(maxResults).build()
-            );
-        }
-        if (!selectedTools.isEmpty()) {
-            if(maxToolInvocations>0){
-                aiBuilder.maxSequentialToolsInvocations(maxToolInvocations);
+        this.agentMessageHandler = new AgentMessageHandler(this.sessionId, this.requestId, eventPublisher);
+        for (ToolSetInfo toolSet : agentExecutorParams.getToolSets()) {
+            for (ToolInfo tool : toolSet.getTools()) {
+                toolInfoMap.put(tool.getName(), tool);
             }
-            aiBuilder.tools(selectedTools.toArray());
         }
-        if (chatModel != null) {
-            this.chatAgentAssistant = aiBuilder.chatModel(chatModel).build();
-        }else {
-            this.chatAgentAssistant =null;
-        }
-        if (streamingModel != null) {
-            this.streamingChatAgentAssistant = aiBuilder.streamingChatModel(streamingModel).build();
-        }else {
-            this.streamingChatAgentAssistant =null;
-        }
+        ToolInfo toolInfo = new ToolInfo(AgentTool.TOOL_SEARCH_TOOL_NAME, AgentTool.TOOL_SEARCH_TOOL_DESCRIPTION, new ArrayList<>(0));
+        toolInfo.setDescriptions(Arrays.asList(AgentTool.TOOL_SEARCH_TOOL_DESCRIPTION));
+        toolInfoMap.put(AgentTool.TOOL_SEARCH_TOOL_NAME, toolInfo);
     }
 
     @Override
-    public Agent getAgent() {
-        return agent;
+    public Long getAgentId() {
+        return agentId;
+    }
+
+    @Override
+    public String getSessionId() {
+        return sessionId;
     }
 
     @Override
     public String getUserId() {
         return userId;
     }
+
+    @Override
+    public Long getAiModelId() {
+        return aiModelId;
+    }
+
+    private List<String> getToolDescriptions(String toolName) {
+        ToolInfo toolInfo = toolInfoMap.get(toolName);
+        if (toolInfo == null || toolInfo.getDescriptions() == null || toolInfo.getDescriptions().isEmpty()) {
+            return new ArrayList<>();
+        }
+        return toolInfo.getDescriptions();
+    }
+
     @Override
     public void stop() {
+
+        //拒绝所有审批
+        toolApprovalLocks.values().forEach(x -> {
+            x.complete(false);
+        });
         //停止所有工具
         toolCancelInvocations.values().forEach(atomicBoolean -> atomicBoolean.set(true));
         toolStopHooks.entrySet().forEach(entry -> {
-            AiToolCallMessageInfo stopping = AiToolCallMessageInfo.stopping(sessionId, requestId, entry.getKey());
-            agentMessageHandler.getMessageConsumer().accept(JSON.toJSONString(stopping));
-            entry.getValue().accept(entry.getKey());
+            String callId = entry.getKey();
+            String toolName = toolNameByCallIdMap.get(callId);
+            List<String> toolDescriptions = toolName == null ? new ArrayList<>() : getToolDescriptions(toolName);
+            AiToolCallMessageInfo stopping = AiToolCallMessageInfo.stopping(sessionId, requestId, callId, toolDescriptions);
+            agentMessageHandler.sendMessageToChannel(stopping);
+            entry.getValue().accept(callId);
         });
-        toolCancelLatch.values().forEach(countDownLatch -> {
-            try {
-                countDownLatch.await(5, java.util.concurrent.TimeUnit.SECONDS);
-            } catch (InterruptedException e) {
-                logger.error("Tool cancellation latch await interrupted", e);
-            }
-        });
+        //工具取消 latch 立即放行，不再逐个等待工具自然结束（工具已收到取消标记与停止钩子）
+        toolCancelLatch.values().forEach(countDownLatch -> countDownLatch.countDown());
+
         //停止任务
         cancelTask.set(true);
+        //立即唤醒 execute() 的等待循环，使其进入 finally 清理并发送 task-done，
+        //不再等待任务自然结束（模型静默时 taskLatch 可能长时间不 countDown）
+        taskLatch.countDown();
 
-        try {
-            taskLatch.await(60, java.util.concurrent.TimeUnit.SECONDS);
-        } catch (Exception ex) {
-            logger.error("Task latch await interrupted", ex);
-        }
-        if (!running()) {
-            agentMessageHandler.done();
-        }
+        //立即通知前端会话已停止
+//        agentMessageHandler.done();
 
-        // 关闭工具执行线程池，释放资源
+        // 关闭工具执行线程池，释放资源（工具已收到取消标记，直接中断）
         if (toolExecutor != null && !toolExecutor.isShutdown()) {
-            toolExecutor.shutdown();
+            toolExecutor.shutdownNow();
+        }
+
+        // 关闭 MCP 客户端连接
+        for (McpClient client : mcpClients) {
             try {
-                if (!toolExecutor.awaitTermination(10, TimeUnit.SECONDS)) {
-                    toolExecutor.shutdownNow();
-                    logger.warn("Tool executor force shutdown");
-                } else {
-                    logger.info("Tool executor shutdown gracefully");
-                }
-            } catch (InterruptedException e) {
-                toolExecutor.shutdownNow();
-                Thread.currentThread().interrupt();
+                client.close();
+                logger.info("MCP client closed: {}", client);
+            } catch (Exception e) {
+                logger.error("Failed to close MCP client: {}", e.getMessage());
             }
         }
+        mcpClients.clear();
     }
+
     @Override
-    public void addToolStopHook(String callId, Consumer<String> hook){
+    public void addToolStopHook(String callId, Consumer<String> hook) {
         toolStopHooks.put(callId, hook);
-        AiToolCallMessageInfo stoppable = AiToolCallMessageInfo.stoppable(sessionId, requestId, callId);
-        agentMessageHandler.getMessageConsumer().accept(JSON.toJSONString(stoppable));
+        String toolName = toolNameByCallIdMap.get(callId);
+        List<String> toolDescriptions = toolName == null ? new ArrayList<>() : getToolDescriptions(toolName);
+        AiToolCallMessageInfo stoppable = AiToolCallMessageInfo.stoppable(sessionId, requestId, callId, toolDescriptions);
+        agentMessageHandler.sendMessageToChannel(stoppable);
     }
+
     @Override
     public void stopTool(String callId) {
         //停止工具
-        if(toolCancelInvocations.containsKey(callId)){
+        if (toolCancelInvocations.containsKey(callId)) {
             toolCancelInvocations.get(callId).set(true);
         }
-        if(toolStopHooks.containsKey(callId)) {
+        if (toolStopHooks.containsKey(callId)) {
             Consumer<String> hook = toolStopHooks.get(callId);
-            AiToolCallMessageInfo stopping = AiToolCallMessageInfo.stopping(sessionId, requestId, callId);
-            agentMessageHandler.getMessageConsumer().accept(JSON.toJSONString(stopping));
+            String toolName = toolNameByCallIdMap.get(callId);
+            List<String> toolDescriptions = toolName == null ? new ArrayList<>() : getToolDescriptions(toolName);
+            AiToolCallMessageInfo stopping = AiToolCallMessageInfo.stopping(sessionId, requestId, callId, toolDescriptions);
+            agentMessageHandler.sendMessageToChannel(stopping);
             hook.accept(callId);
         }
     }
+
     @Override
     public boolean toolHaveCall(String callId) {
         return toolCancelInvocations.containsKey(callId);
     }
+
     @Override
     public boolean toolIsCancelled(String callId) {
         return toolCancelInvocations.containsKey(callId) && toolCancelInvocations.get(callId).get();
     }
+
     @Override
-    public void sendToolRunningContent(String callId, Object resultPartial){
-        AiToolCallMessageInfo aiToolCallMessageInfo = AiToolCallMessageInfo.running(sessionId, requestId, callId, resultPartial);
-        agentMessageHandler.getMessageConsumer().accept(JSON.toJSONString(aiToolCallMessageInfo));
+    public void sendToolRunningContent(String callId, Object resultPartial) {
+        resetWatchdog();
+        String toolName = toolNameByCallIdMap.get(callId);
+        List<String> toolDescriptions = toolName == null ? new ArrayList<>() : getToolDescriptions(toolName);
+        AiToolCallMessageInfo aiToolCallMessageInfo = AiToolCallMessageInfo.running(sessionId, requestId, callId, resultPartial, toolDescriptions);
+        agentMessageHandler.sendMessageToChannel(aiToolCallMessageInfo);
     }
-    @Override
-    public boolean running() {
-        return taskLatch.getCount() > 0;
+
+    private void sendToolApprovalMessage(String sessionId, String callId, String toolName, Object arguments) {
+        List<String> toolDescriptions = getToolDescriptions(toolName);
+        AiToolCallMessageInfo aiToolCallMessageInfo = AiToolCallMessageInfo.approval(sessionId, requestId, callId, toolName, arguments, toolDescriptions);
+        agentMessageHandler.sendMessageToChannel(aiToolCallMessageInfo);
     }
+
     @Override
-    public String execute(UserRequest userRequest) {
+    public void toolApprovalComplete(String callId, Boolean allowed) {
+        resetWatchdog();
+        String approvalId = callId;
+        if (toolApprovalLocks.containsKey(approvalId)) {
+            toolApprovalLocks.get(approvalId).complete(allowed);
+        }
+    }
+
+    private void sendFirstState() {
         try {
-            List<Content> contents=new ArrayList<>();
-            contents.add(new TextContent(userRequest.getMessage()));
-            this.requestId = UUID.randomUUID().toString();
-            this.memoryStore.orphanCleanup(memoryId);
-            if (chatAgentAssistant == null) {
-                return getSimulatedResponse();
-            }
-            InvocationParametersWrapper invocationParametersWrapper = InvocationParametersWrapper.create()
-                    .setUserId(userId)
-                    .setAgentId(agent.getId())
-                    .setSessionId(sessionId)
-                    .setRequestId(requestId);
-            return chatAgentAssistant.chat(contents, invocationParametersWrapper.getParameters());
+            AiMessageBaseInfo message = new AiMessageBaseInfo("received");
+            message.sessionId(sessionId);
+            message.setRequestId(requestId);
+            message.setContent("已收到消息，开始处理");
+            agentMessageHandler.sendMessageToChannel(message);
         } catch (Exception e) {
-            return getSimulatedResponse() + "\n(注: " + e.getMessage() + ")";
+            logger.error("sendFirstState error", e);
         }
     }
 
     @Override
-    public void executeStreaming(UserRequest userRequest, Consumer<String> messageConsumer) {
+    public boolean running() {
+        return taskLatch.getCount() > 0;
+    }
+
+    /**
+     * 重置看门狗截止时间：收到消息、流式内容、思考内容、工具调用/执行/过程通知等活动时调用，
+     * 保证只要任务持续有进展就不会因固定超时被误判结束
+     */
+    private void resetWatchdog() {
+        long timeoutMs = watchdogTimeoutMs;
+        if (timeoutMs > 0) {
+            watchdogDeadlineMs.set(System.currentTimeMillis() + timeoutMs);
+        }
+    }
+
+    /**
+     * 查询看门狗剩余等待时间（秒，向上取整）；
+     * 执行器未运行或未启用看门狗时返回 0
+     */
+    @Override
+    public long getWatchdogRemainingSeconds() {
+        if (!running()) {
+            return 0;
+        }
+        long remaining = watchdogDeadlineMs.get() - System.currentTimeMillis();
+        return Math.max(0, (remaining + 999) / 1000);
+    }
+
+    /**
+     * 查询本次任务已运行时长（秒，向上取整）；
+     * 执行器未运行或未记录开始时间时返回 0
+     */
+    @Override
+    public long getElapsedSeconds() {
+        if (!running() || startTimeMs <= 0) {
+            return 0;
+        }
+        long elapsed = System.currentTimeMillis() - startTimeMs;
+        return Math.max(0, (elapsed + 999) / 1000);
+    }
+
+    /**
+     * 手动延长看门狗截止时间（秒）：用于任务仍在进行但即将超时时用户主动续时。
+     * 原子累加截止时间，等待循环下一轮即感知到新的剩余时间；返回延长后的剩余秒数
+     */
+    @Override
+    public long extendWatchdog(long seconds) {
+        if (!running() || seconds <= 0) {
+            return getWatchdogRemainingSeconds();
+        }
+        long newDeadline = watchdogDeadlineMs.addAndGet(seconds * 1000L);
+        long remaining = newDeadline - System.currentTimeMillis();
+        return Math.max(0, (remaining + 999) / 1000);
+    }
+
+    @Override
+    public int getExecutedToolCount() {
+        return executedToolCount.get();
+    }
+
+    @Override
+    public int getMaxToolInvocations() {
+        return agentExecutorParams.getMaxToolInvocations() != null ? agentExecutorParams.getMaxToolInvocations() : 0;
+    }
+
+    @Override
+    public AgentExecutorResult execute(List<Content> contents) {
+        return execute(contents, 360L);
+    }
+
+    @Override
+    public AgentExecutorResult execute(List<Content> contents, long timeout) {
         try {
-            List<Content> contents = new ArrayList<>();
-            contents.add(new TextContent(userRequest.getMessage()));
-            this.requestId = UUID.randomUUID().toString();
+            // 启用可重置看门狗：超时时间在有活动（消息/工具调用/过程通知）时会顺延
+            this.watchdogTimeoutMs = timeout * 1000L;
+            resetWatchdog();
+            // 记录本次任务开始时间（毫秒级时间戳），供前端展示已运行时长
+            this.startTimeMs = System.currentTimeMillis();
+            sendFirstState();
+            saveChatSession(contents);
             this.memoryStore.orphanCleanup(memoryId);
-            List<ChatHistory> chatHistoryList = convertToChatHistory(contents);
-            for (ChatHistory chatHistory : chatHistoryList) {
-                chatHistory.setUserId(userId);
-            }
-            chatHistoryStore.saveChatHistoryBatch(chatHistoryList);
             this.cancelTask.set(false);
             this.taskLatch = new CountDownLatch(1);
-            agentMessageHandler.setMessageConsumer(messageConsumer);
-            agentMessageHandler.setChatHistoryConsumer(chatHistory -> chatHistoryStore.saveChatHistory(chatHistory));
+
 
             InvocationParametersWrapper invocationParametersWrapper = InvocationParametersWrapper.create()
                     .setUserId(userId)
-                    .setAgentId(agent.getId())
+                    .setAgentId(agentId)
                     .setSessionId(sessionId)
                     .setRequestId(requestId);
-            TokenStream tokenStream = streamingChatAgentAssistant.streamingChat(contents, invocationParametersWrapper.getParameters())
+
+            ChatAgentAssistant chatAgentAssistant = createChatAgentAssistant();
+            DefaultChatRequestParameters.Builder<?> builder = ChatRequestParameters.builder();
+            if(agentExecutorParams.getTemperature()!=null){
+                builder.temperature(agentExecutorParams.getTemperature());
+            }
+            ChatRequestParameters chatRequestParameters =builder.build();
+
+            TokenStream tokenStream = chatAgentAssistant.streamingChat(contents,chatRequestParameters ,invocationParametersWrapper.getParameters())
                     .onError(e -> {
+                        logger.error("Streaming chat error: {}", e.getMessage(), e);
                         agentMessageHandler.onErrorHandler(e);
                         taskLatch.countDown();
                     }).onCompleteResponse(response -> {
                         agentMessageHandler.onCompleteResponseHandler(response);
                         taskLatch.countDown();
                     }).onPartialResponseWithContext((r, ctx) -> {
+                        resetWatchdog();
                         if (cancelTask.get()) {
                             agentMessageHandler.partialResponseHandler(r.text());
-                            agentMessageHandler.done();
+//                            agentMessageHandler.done();
                             ctx.streamingHandle().cancel(); // ✅ 真正中断：关闭流、停止LLM、省token
                             taskLatch.countDown();
                             return;
@@ -281,9 +416,10 @@ public class AgentExecutor implements IAgentExecutor {
                         agentMessageHandler.partialResponseHandler(r.text());
                     })
                     .onPartialThinkingWithContext((thinking, ctx) -> {
+                        resetWatchdog();
                         if (cancelTask.get()) {
                             agentMessageHandler.thinkingHandler(thinking);
-                            agentMessageHandler.done();
+//                            agentMessageHandler.done();
                             ctx.streamingHandle().cancel(); // ✅ 真正中断：关闭流、停止LLM、省token
                             taskLatch.countDown();
                             return;
@@ -291,91 +427,495 @@ public class AgentExecutor implements IAgentExecutor {
                         agentMessageHandler.thinkingHandler(thinking);
                     })
                     .onPartialToolCallWithContext((toolCall, ctx) -> {
-                        if(!toolCancelInvocations.containsKey(toolCall.id())){
+                        resetWatchdog();
+                        if (!toolCancelInvocations.containsKey(toolCall.id())) {
                             toolCancelInvocations.put(toolCall.id(), new AtomicBoolean(false));
                             toolCancelLatch.put(toolCall.id(), new CountDownLatch(1));
                         }
+                        toolNameByCallIdMap.put(toolCall.id(), toolCall.name());
                         //logger.info("Tool call: {}", toolCall.toString());
                         agentMessageHandler.partialToolExecutionHandler(toolCall);
                         //工具或任务停止
                         if (toolCancelInvocations.get(toolCall.id()).get() || cancelTask.get()) {
-                            if(toolCancelLatch.containsKey(toolCall.id())){
+                            if (toolCancelLatch.containsKey(toolCall.id())) {
                                 toolCancelLatch.get(toolCall.id()).countDown();
                             }
                             ctx.streamingHandle().cancel(); // ✅ 真正中断：关闭流、停止LLM、省token
-                            agentMessageHandler.done();
+                            agentMessageHandler.toolCallHandler(AiToolCallMessageInfo.STATUS_EXECUTED, toolCall.id(), toolCall.name(), null, "用户取消了工具调用");
                             taskLatch.countDown();
                             return;
                         }
                     })
                     .beforeToolExecution(toolExecution -> {
-                        toolExecution.invocationContext().invocationParameters().put("toolCallId", toolExecution.request().id());
-                        // 任务开始
-                        agentMessageHandler.beforeToolExecutionHandler(toolExecution);
+                        resetWatchdog();
+                        String toolCallId = toolExecution.request().id();
+                        String toolName = toolExecution.request().name();
+                        String arguments = toolExecution.request().arguments();
+
+                        if (toolCallId == null) {
+                            return;
+                        }
+
+                        ToolInfo toolInfo = toolInfoMap.getOrDefault(toolName, null);
+                        ToolSecurityLevel.Level toolLevel = toolInfo == null ? ToolSecurityLevel.Level.ALL_REQUIRE_APPROVAL : toolInfo.getSecurityLevel();
+
+                        InvocationParameters invocationParameters = toolExecution.invocationContext().invocationParameters();
+                        invocationParameters.put("toolCallId", toolCallId);
+                        //拦截执行
+                        boolean allowed = false;
+                        if (toolName.equals(AgentTool.TOOL_SEARCH_TOOL_NAME) || ToolSecurityLevel.Level.SAFE.equals(toolLevel)) {
+                            allowed = true;
+                        } else if ("auto".equals(agentExecutorParams.getToolCallPermission())) {
+                            //完全自动
+                            allowed = true;
+                        } else if ("smart_call".equals(agentExecutorParams.getToolCallPermission())) {
+                            if (ToolSecurityLevel.Level.PARAM_REQUIRE_APPROVAL.equals(toolLevel)) {
+                                String result = analyzeToolCall(toolInfo, arguments);
+                                if (result != null && result.contains("否")) {
+                                    allowed = true;
+                                }
+                            }
+                        } else {
+                        }
+                        ToolExecutionRequest toolCallInfo = toolExecution.request();
+                        if (!allowed) {
+                            //需要审批
+                            String approvalId = toolCallId;
+                            // 这个对象会阻塞工具的进一步执行，直到被外部完成
+                            PendingResponse<Boolean> pending = new PendingResponse<>(approvalId);
+                            toolApprovalLocks.put(approvalId, pending);
+                            //审批开始
+                            agentMessageHandler.toolCallHandler(AiToolCallMessageInfo.STATUS_APPROVAL, toolCallInfo.id(), toolCallInfo.name(), toolCallInfo.arguments(), null);
+                            //审批结果
+                            allowed = pending.blockingGet();
+                        }
+                        if (allowed) {
+                            // 任务开始
+                            executedToolCount.incrementAndGet();
+                            agentMessageHandler.toolCallHandler(AiToolCallMessageInfo.STATUS_STARTING, toolCallInfo.id(), toolCallInfo.name(), toolCallInfo.arguments(), null);
+                        } else {
+                            //拒绝执行
+                            agentMessageHandler.toolCallHandler(AiToolCallMessageInfo.STATUS_REJECTED, toolCallInfo.id(), toolCallInfo.name(), toolCallInfo.arguments(), "用户拒绝了工具调用");
+                            throw new ToolCallRejectedException("用户拒绝了工具调用");
+                        }
                     })
                     .onToolExecuted(toolExecution -> {
+                        resetWatchdog();
+                        ToolExecutionRequest toolExecutionRequest = toolExecution.request();
                         //任务完成
-                        if(toolCancelLatch.containsKey(toolExecution.request().id())){
-                            toolCancelLatch.get(toolExecution.request().id()).countDown();
+                        if (toolCancelLatch.containsKey(toolExecutionRequest.id())) {
+                            toolCancelLatch.get(toolExecutionRequest.id()).countDown();
                         }
-                        if(toolStopHooks.containsKey(toolExecution.request().id())){
-                            toolStopHooks.remove(toolExecution.request().id());
+                        if (toolStopHooks.containsKey(toolExecutionRequest.id())) {
+                            toolStopHooks.remove(toolExecutionRequest.id());
                         }
-                        if(toolCancelInvocations.containsKey(toolExecution.request().id())){
-                            toolCancelInvocations.remove(toolExecution.request().id());
+                        if (toolCancelInvocations.containsKey(toolExecutionRequest.id())) {
+                            toolCancelInvocations.remove(toolExecutionRequest.id());
                         }
-                        agentMessageHandler.toolExecutionHandler(toolExecution);
+                        toolNameByCallIdMap.remove(toolExecutionRequest.id());
+                        //工具执行完成：多模态结果（含图片等）调用 result() 会抛异常，使用安全提取
+                        agentMessageHandler.toolCallHandler(AiToolCallMessageInfo.STATUS_EXECUTED, toolExecutionRequest.id(), toolExecutionRequest.name(), toolExecutionRequest.arguments(), MultimodalMessageUtils.toolResultText(toolExecution));
                     });
             tokenStream.start();
-
-            taskLatch.await(600, java.util.concurrent.TimeUnit.SECONDS);
-            agentMessageHandler.taskDone();
-            toolCancelLatch.clear();
-            toolCancelInvocations.clear();
+            // 可重置看门狗等待：活动会重置截止时间，仅在持续无活动超过超时时间时结束
+            while (taskLatch.getCount() > 0) {
+                long remainingMs = watchdogDeadlineMs.get() - System.currentTimeMillis();
+                if (remainingMs <= 0) {
+                    logger.warn("执行器等待超时（{}秒内无任何活动），sessionId: {}", timeout, sessionId);
+                    break;
+                }
+                if (taskLatch.await(remainingMs, TimeUnit.MILLISECONDS)) {
+                    break;
+                }
+            }
         } catch (Exception e) {
-            logger.error("\n(注: 流式响应失败: " + e.getMessage() + ")\n可以尝试清理对话或强停试试。", e);
+            logger.error("\n(注: 流式响应失败: " + e.getMessage() + ")\n可以尝试清理对话后重新发送。", e);
+            agentMessageHandler.onErrorHandler(e);
+        } finally {
             cancelTask.set(true);
             toolCancelLatch.values().forEach(latch -> latch.countDown());
+            toolCancelLatch.clear();
             toolCancelInvocations.clear();
             toolStopHooks.clear();
+            toolApprovalLocks.clear();
+            toolNameByCallIdMap.clear();
             taskLatch.countDown();
-            agentMessageHandler.onErrorHandler(e);
+            agentMessageHandler.taskDone();
+            updateMemoryStateToDone();
+            return new AgentExecutorResult(!agentMessageHandler.isError(), agentMessageHandler.getCurrentErrorMessage());
         }
     }
 
-    private String getSimulatedResponse() {
-        return agent.getName() + ": \n这是一个模拟响应，因为API密钥未配置或请求失败。";
+    private void updateMemoryStateToDone() {
+        try {
+            this.memoryStore.updateStatusBySessionIdAndRequestId(sessionId, requestId, ChatMemoryStatusEnum.DEFAULT, ChatMemoryStatusEnum.TASK_DONE);
+        } catch (Exception ex) {
+            logger.error("Error updating memory state to done", ex);
+        }
     }
 
-    private List<ChatHistory> convertToChatHistory(List<Content> contents) {
-        List<ChatHistory> chatHistoryList = new ArrayList<ChatHistory>();
-        //todo:等支持多种消息类型后完善存储
-        for (Content content : contents) {
-            if (content instanceof TextContent) {
-                ChatHistory userChat = new ChatHistory(agent.getId(), "user", "text", ((TextContent) content).text());
-                userChat.setSessionId(sessionId);
-                chatHistoryList.add(userChat);
-            } else if (content instanceof ImageContent) {
-                ChatHistory userChat = new ChatHistory(agent.getId(), "user", "image", "[一张图片]");
-                userChat.setSessionId(sessionId);
-                chatHistoryList.add(userChat);
-            } else if (content instanceof VideoContent) {
-                ChatHistory userChat = new ChatHistory(agent.getId(), "user", "video", "[一段视频]");
-                userChat.setSessionId(sessionId);
-                chatHistoryList.add(userChat);
-            } else if (content instanceof AudioContent) {
-                ChatHistory userChat = new ChatHistory(agent.getId(), "user", "audio", "[一段音频]");
-                userChat.setSessionId(sessionId);
-                chatHistoryList.add(userChat);
-            } else if (content instanceof PdfFileContent) {
-                ChatHistory userChat = new ChatHistory(agent.getId(), "user", "pdf", "[一个PDF文件]");
-                userChat.setSessionId(sessionId);
-                chatHistoryList.add(userChat);
+    private String analyzeUserIntent(List<Content> contents) {
+        try {
+            ChatModelListener chatModelListener = chatModelListenerProvider.getChatModelListener(AiModelCallSourceEnum.ChatAnalyzeUserIntent, sessionId, userId, agentId, requestId, agentExecutorParams.getExtParams());
+
+            InvocationParametersWrapper invocationParametersWrapper = InvocationParametersWrapper.create()
+                    .setUserId(userId)
+                    .setAgentId(agentId)
+                    .setRequestId(requestId)
+                    .setSessionId(sessionId);
+            ChatModel chatModel = aiModelService.createChatModel(agentExecutorParams.getAiModelId(), false, null, chatModelListener);
+
+            ChatAgentAssistant assistant = AiServices.builder(ChatAgentAssistant.class)
+                    .chatModel(chatModel)
+                    .systemMessageProvider(chatMemoryId -> "你只需要通过用户输入的内容来分析用户意图，不需要为用户的提问给出答案，直接返回给我一个15字以内的简要说明，不要带人称和句号。")
+                    .build();
+            ChatRequestParameters chatRequestParameters = ChatRequestParameters.builder()
+                    .temperature(0.1)
+                    .build();
+            String result = assistant.analyze(contents, chatRequestParameters, invocationParametersWrapper.getParameters());
+            return result;
+        } catch (Exception ex) {
+            logger.error("Error analyzing user intent", ex);
+            return null;
+        }
+    }
+
+    private String analyzeToolCall(ToolInfo toolInfo, String arguments) {
+        try {
+            ChatModelListener chatModelListener = chatModelListenerProvider.getChatModelListener(AiModelCallSourceEnum.ChatToolCallCheck, sessionId, userId, agentId, requestId, agentExecutorParams.getExtParams());
+            String systemMessage = "你只是一个工具调用安全检查员，你需要判断用户提交到调用是否需要人工介入？只需要返回给用户：是或否";
+
+            List<Content> contents = new ArrayList<>();
+            contents.add(new TextContent("现在我要调用函数" + toolInfo.getName() + ",这个函数的作用是" + toolInfo.getDescription()));
+
+            if (StringUtils.hasLength(arguments)) {
+                contents.add(new TextContent("参数是:" + arguments));
+            }
+            InvocationParametersWrapper invocationParametersWrapper = InvocationParametersWrapper.create()
+                    .setUserId(userId)
+                    .setAgentId(agentId)
+                    .setRequestId(requestId)
+                    .setSessionId(sessionId);
+            ChatModel chatModel = aiModelService.createChatModel(agentExecutorParams.getAiModelId(), false,null, chatModelListener);
+
+            String finalSystemMessage = systemMessage;
+            ChatAgentAssistant assistant = AiServices.builder(ChatAgentAssistant.class)
+                    .chatModel(chatModel)
+                    .systemMessageProvider(chatMemoryId -> finalSystemMessage)
+                    .build();
+            ChatRequestParameters chatRequestParameters = ChatRequestParameters.builder()
+                    .temperature(0.1)
+                    .build();
+            String result = assistant.analyze(contents, chatRequestParameters, invocationParametersWrapper.getParameters());
+            return result;
+        } catch (Exception ex) {
+            logger.error("Error analyzing user intent", ex);
+            return null;
+        }
+    }
+
+    private ChatAgentAssistant createChatAgentAssistant() {
+        // 窗口记忆按 Token 限制：超预算时从最早消息开始淘汰，淘汰数据由存储层转入长时记忆整理
+        // 使用多模态估算器：OpenAiTokenCountEstimator 遇到图片消息会抛 Unknown content type 异常
+        TokenWindowChatMemory.Builder memoryBuilder = TokenWindowChatMemory.builder()
+                .id(memoryId)
+                .alwaysKeepSystemMessageFirst(true)
+                .maxTokens(agentExecutorParams.getMaxMemoryTokens() != null ? agentExecutorParams.getMaxMemoryTokens() : Agent.DEFAULT_MAX_MEMORY_TOKENS,
+                        new MultimodalTokenCountEstimator("gpt-4o"))
+                .chatMemoryStore(memoryStore != null ? memoryStore : new InMemoryChatMemoryStore());
+        var aiBuilder = AiServices
+                .builder(ChatAgentAssistant.class)
+                .systemMessageProvider(chatMemoryId -> systemMessageProvider.apply(agentId))
+                .chatMemory(memoryBuilder.build())
+                .executeToolsConcurrently(toolExecutor)
+                // 幻觉工具处理：不抛异常，而是把"工具不存在"作为工具执行结果返回给大模型，引导其改用正确工具
+                .hallucinatedToolNameStrategy(request -> {
+                    logger.warn("Hallucinated tool call detected: tool={}, requestId={}, sessionId={}",
+                            request.name(), requestId, sessionId);
+                    return ToolExecutionResultMessage.from(request,
+                            "工具 " + request.name() + " 不存在。请勿调用不存在的工具，只能使用本次会话中提供的可用工具列表里的工具。");
+                })
+                // 工具参数错误处理：参数解析/类型转换失败（如布尔参数传成字符串）时，不终止会话，
+                // 把错误信息作为工具执行结果返回给大模型，引导其修正参数后重试
+                .toolArgumentsErrorHandler((throwable, context) -> {
+                    logger.warn("Tool arguments error: tool={}, requestId={}, sessionId={}, error={}",
+                            context.toolExecutionRequest().name(), requestId, sessionId, throwable.getMessage());
+                    agentMessageHandler.toolCallHandler(AiToolCallMessageInfo.STATUS_EXECUTED,
+                            context.toolExecutionRequest().id(), context.toolExecutionRequest().name(),
+                            context.toolExecutionRequest().arguments(),
+                            "工具调用参数错误：" + throwable.getMessage());
+                    return ToolErrorHandlerResult.text(
+                            "工具调用参数错误：" + throwable.getMessage() + "。请检查参数类型（布尔、数字等不要以字符串形式传入），修正参数后重新调用该工具。");
+                })
+                // 工具执行异常处理：工具内部抛出的异常同样不终止会话，作为结果返回给大模型自行处理
+                .toolExecutionErrorHandler((throwable, context) -> {
+                    logger.warn("Tool execution error: tool={}, requestId={}, sessionId={}, error={}",
+                            context.toolExecutionRequest().name(), requestId, sessionId, throwable.getMessage());
+                    agentMessageHandler.toolCallHandler(AiToolCallMessageInfo.STATUS_EXECUTED,
+                            context.toolExecutionRequest().id(), context.toolExecutionRequest().name(),
+                            context.toolExecutionRequest().arguments(),
+                            "工具执行异常：" + throwable.getMessage());
+                    return ToolErrorHandlerResult.text(
+                            "工具执行异常：" + throwable.getMessage() + "。请根据异常信息调整调用方式或修正后重试。");
+                });
+        List<AgentTool> selectedTools = agentExecutorParams.getToolSets().stream().map(x -> x.getAgentTool()).collect(Collectors.toList());
+        if(selectedTools != null && !selectedTools.isEmpty()){
+            if (agentExecutorParams.getVectorToolSearch() != null && agentExecutorParams.getVectorToolSearch()) {
+                int maxResults = agentExecutorParams.getVectorToolSearchMaxResults() != null ? agentExecutorParams.getVectorToolSearchMaxResults() : 20;
+                aiBuilder.toolSearchStrategy(
+                        VectorToolSearchStrategy
+                                .builder()
+                                .embeddingModel(embeddingModel)
+                                .maxResults(maxResults)
+                                .build()
+                );
+            }
+            int maxToolInvocations = agentExecutorParams.getMaxToolInvocations() != null ? agentExecutorParams.getMaxToolInvocations() : 0;
+            if (maxToolInvocations > 0) {
+                aiBuilder.maxToolCallingRoundTrips(maxToolInvocations);
+            }
+            aiBuilder.tools(selectedTools.toArray());
+        }
+
+
+
+        // MCP 工具集成：为每个已启用的 MCP 服务器创建客户端并注册
+        List<McpServerConfig> mcpConfigs = agentExecutorParams.getMcpServerConfigs();
+        if (mcpConfigs != null && !mcpConfigs.isEmpty()) {
+            List<McpClient> clients = new ArrayList<>();
+            for (McpServerConfig config : mcpConfigs) {
+                long startMs = System.currentTimeMillis();
+                try {
+                    McpTransport transport = buildMcpTransport(config);
+                    logger.info("MCP client initializing: name={}, type={}, url/cmd={}",
+                            config.getName(),
+                            config.getTransportType(),
+                            "http".equalsIgnoreCase(config.getTransportType()) ? config.getUrl() : config.getCommand());
+                    McpClient mcpClient = DefaultMcpClient.builder()
+                            .key(config.getName())
+                            .transport(transport)
+                            .toolExecutionTimeout(java.time.Duration.ofSeconds(30))
+                            .toolExecutionTimeoutErrorMessage("MCP 工具执行超时（30s）")
+                            .build();
+                    clients.add(mcpClient);
+                    logger.info("MCP client created: name={}, elapsed={}ms", config.getName(), System.currentTimeMillis() - startMs);
+                } catch (Exception e) {
+                    logger.error("Failed to create MCP client for {}: {}, elapsed={}ms", config.getName(), e.getMessage(), System.currentTimeMillis() - startMs, e);
+                }
+            }
+            if (!clients.isEmpty()) {
+                ToolProvider toolProvider = McpToolProvider.builder()
+                        .mcpClients(clients)
+                        .failIfOneServerFails(false)
+                        .build();
+                aiBuilder.toolProvider(toolProvider);
+                mcpClients.addAll(clients);
+                logger.info("MCP toolProvider registered with {} client(s)", clients.size());
             } else {
-                logger.info("用户消息 user[{}] agent[{}]: {}", userId, agent.getId(), "未知");
+                logger.warn("MCP configs found but no client was created, proceeding without MCP tools");
             }
         }
-        return chatHistoryList;
+        ChatModelListener chatModelListener = chatModelListenerProvider.getChatModelListener(agentExecutorParams.getBizType().getAiModelCallSourceEnum(), sessionId, userId, agentId, requestId, agentExecutorParams.getExtParams());
+        StreamingChatModel streamingModel = aiModelService.createStreamingChatModel(agentExecutorParams.getAiModelId(), agentExecutorParams.getEnableThinking(),agentExecutorParams.getReasoningEffort(), chatModelListener);
+        return aiBuilder.streamingChatModel(streamingModel).build();
+    }
+
+    /**
+     * 根据 MCP 配置构建对应的传输层。
+     *
+     * <p>对于 HTTP 类型，支持从 {@code extParams}（JSON）读取以下可选字段：
+     * <ul>
+     *   <li>{@code headers}        : Map&lt;String,String&gt; 自定义请求头</li>
+     *   <li>{@code timeoutSeconds} : Number 连接超时（秒）</li>
+     *   <li>{@code logRequests}    : Boolean 打印请求</li>
+     *   <li>{@code logResponses}   : Boolean 打印响应</li>
+     *   <li>{@code followRedirects}: Boolean 跟随 3xx 重定向</li>
+     *   <li>{@code httpVersion1_1} : Boolean 强制 HTTP/1.1</li>
+     *   <li>{@code subsidiaryChannel}: Boolean 启用附属 SSE 通道</li>
+     * </ul>
+     *
+     * <p>对于 STDIO 类型，支持：
+     * <ul>
+     *   <li>{@code env}        : Map&lt;String,String&gt; 子进程环境变量</li>
+     *   <li>{@code logEvents}  : Boolean 打印流量</li>
+     * </ul>
+     */
+    private McpTransport buildMcpTransport(McpServerConfig config) {
+        String transportType = config.getTransportType();
+        // 解析扩展参数
+        com.alibaba.fastjson2.JSONObject ext = null;
+        if (config.getExtParams() != null && !config.getExtParams().isBlank()) {
+            try {
+                ext = JSON.parseObject(config.getExtParams());
+            } catch (Exception e) {
+                logger.warn("Failed to parse extParams for MCP '{}', ignoring: {}", config.getName(), e.getMessage());
+            }
+        }
+
+        if ("http".equalsIgnoreCase(transportType)) {
+            StreamableHttpMcpTransport.Builder builder = StreamableHttpMcpTransport.builder()
+                    .url(config.getUrl())
+                    .timeout(java.time.Duration.ofSeconds(15)); // 默认 15 秒，防止 build() 无限阻塞
+
+            if (ext != null) {
+                // 自定义请求头
+                com.alibaba.fastjson2.JSONObject headers = ext.getJSONObject("headers");
+                if (headers != null && !headers.isEmpty()) {
+                    Map<String, String> headerMap = new LinkedHashMap<>();
+                    for (String key : headers.keySet()) {
+                        headerMap.put(key, headers.getString(key));
+                    }
+                    builder.customHeaders(headerMap);
+                }
+                // 连接超时（覆盖默认值）
+                Long timeoutSeconds = ext.getLong("timeoutSeconds");
+                if (timeoutSeconds != null && timeoutSeconds > 0) {
+                    builder.timeout(java.time.Duration.ofSeconds(timeoutSeconds));
+                }
+                // 日志开关
+                Boolean logRequests = ext.getBoolean("logRequests");
+                if (logRequests != null) {
+                    builder.logRequests(logRequests);
+                }
+                Boolean logResponses = ext.getBoolean("logResponses");
+                if (logResponses != null) {
+                    builder.logResponses(logResponses);
+                }
+                // 跟随重定向
+                Boolean followRedirects = ext.getBoolean("followRedirects");
+                if (followRedirects != null) {
+                    builder.followRedirects(followRedirects);
+                }
+                // 强制 HTTP/1.1
+                Boolean httpVersion1_1 = ext.getBoolean("httpVersion1_1");
+                if (Boolean.TRUE.equals(httpVersion1_1)) {
+                    builder.setHttpVersion1_1();
+                }
+                // 附属 SSE 通道
+                Boolean subsidiaryChannel = ext.getBoolean("subsidiaryChannel");
+                if (subsidiaryChannel != null) {
+                    builder.subsidiaryChannel(subsidiaryChannel);
+                }
+            }
+
+            return builder.build();
+        } else {
+            // 默认使用 stdio
+            List<String> commandParts = parseCommand(config.getCommand());
+            StdioMcpTransport.Builder builder = StdioMcpTransport.builder()
+                    .command(commandParts);
+
+            if (ext != null) {
+                // 环境变量
+                com.alibaba.fastjson2.JSONObject env = ext.getJSONObject("env");
+                if (env != null && !env.isEmpty()) {
+                    Map<String, String> envMap = new LinkedHashMap<>();
+                    for (String key : env.keySet()) {
+                        envMap.put(key, env.getString(key));
+                    }
+                    builder.environment(envMap);
+                }
+                // 日志开关
+                Boolean logEvents = ext.getBoolean("logEvents");
+                if (logEvents != null) {
+                    builder.logEvents(logEvents);
+                }
+            }
+
+            return builder.build();
+        }
+    }
+
+    /**
+     * 解析命令行字符串为命令参数列表
+     */
+    private List<String> parseCommand(String command) {
+        if (command == null || command.isBlank()) {
+            return Collections.emptyList();
+        }
+        List<String> parts = new ArrayList<>();
+        StringBuilder current = new StringBuilder();
+        boolean inQuotes = false;
+        for (char c : command.toCharArray()) {
+            if (c == '"') {
+                inQuotes = !inQuotes;
+            } else if (c == ' ' && !inQuotes) {
+                if (current.length() > 0) {
+                    parts.add(current.toString());
+                    current.setLength(0);
+                }
+            } else {
+                current.append(c);
+            }
+        }
+        if (current.length() > 0) {
+            parts.add(current.toString());
+        }
+        return parts;
+    }
+
+    private void saveChatSession(List<Content> contents) {
+        boolean sendSessionTitle = false;
+        ChatSession chatSession = chatSessionService.getSessionBySessionId(sessionId);
+        if (chatSession == null) {
+            chatSession = new ChatSession();
+            // 优先使用外部传入的会话标题（任务/项目场景传任务名称、项目名称），否则从用户输入分析
+            String userIntent = agentExecutorParams.getSessionTitle();
+            boolean fromParam = userIntent != null && !userIntent.isBlank();
+            if (!fromParam) {
+                userIntent = analyzeUserIntent(contents);
+            }
+            if (userIntent == null) {
+                userIntent = "新聊天";
+            } else {
+                sendSessionTitle = true;
+            }
+            chatSession.setSessionId(sessionId);
+            chatSession.setAgentId(agentId);
+            chatSession.setUserId(userId);
+            chatSession.setTitle(userIntent);
+            chatSession.setEnableThinking(agentExecutorParams.getEnableThinking());
+            chatSession.setThinkingLevel(agentExecutorParams.getReasoningEffort());
+            chatSession.setAiModelId(agentExecutorParams.getAiModelId());
+            chatSession.setSkillNames(String.join(",", agentExecutorParams.getSkillNames() == null ? new ArrayList<>() : agentExecutorParams.getSkillNames()));
+            chatSession.setLastUpdateTime(LocalDateTime.now());
+            chatSession.setCreateTime(LocalDateTime.now());
+            chatSession.setToolCallPermission(agentExecutorParams.getToolCallPermission());
+            chatSession.setBizType(agentExecutorParams.getBizType().getValue());
+            chatSessionService.insertSession(chatSession);
+            agentMessageHandler.sendMessageToChannel(AiMessageBaseInfo.sessionTitle(sessionId, requestId, userIntent, agentExecutorParams.getBizType()));
+        } else {
+            // 占位标题（旧默认“新聊天”或前端预创建会话的默认“新会话”）时分析用户意图/使用外部标题
+            if ("新聊天".equals(chatSession.getTitle()) || "新会话".equals(chatSession.getTitle())) {
+                // 优先使用外部传入的会话标题（任务/项目场景传任务名称、项目名称），否则从用户输入分析
+                String paramTitle = agentExecutorParams.getSessionTitle();
+                if (paramTitle != null && !paramTitle.isBlank()) {
+                    chatSession.setTitle(paramTitle);
+                    sendSessionTitle = true;
+                } else {
+                    String userIntent = analyzeUserIntent(contents);
+                    if (userIntent != null) {
+                        chatSession.setTitle(userIntent);
+                        sendSessionTitle = true;
+                    }
+                }
+            }
+            chatSession.setSessionId(sessionId);
+            chatSession.setAgentId(agentId);
+            chatSession.setUserId(userId);
+            chatSession.setEnableThinking(agentExecutorParams.getEnableThinking());
+            chatSession.setThinkingLevel(agentExecutorParams.getReasoningEffort());
+            chatSession.setAiModelId(agentExecutorParams.getAiModelId());
+            chatSession.setSkillNames(String.join(",", agentExecutorParams.getSkillNames() == null ? new ArrayList<>() : agentExecutorParams.getSkillNames()));
+            chatSession.setLastUpdateTime(LocalDateTime.now());
+            chatSession.setToolCallPermission(agentExecutorParams.getToolCallPermission());
+            // bizType 不参与 update：来源一旦确定不可修改，保持 INSERT 时写入的值
+            chatSessionService.updateSession(chatSession);
+        }
+        if (sendSessionTitle) {
+            agentMessageHandler.sendMessageToChannel(AiMessageBaseInfo.sessionTitle(sessionId, requestId, chatSession.getTitle(), agentExecutorParams.getBizType()));
+        }
+
     }
 
     /**
@@ -407,119 +947,149 @@ public class AgentExecutor implements IAgentExecutor {
      */
     public class AgentMessageHandler {
         private final String sessionId;
+        private final String requestId;
         private String lastMessageType = "";
         private String currentMessageType = "";
+        /**
+         * 当前流式消息编号：消息类型切换时生成，随片段推送并在消息结束时入库，前端按编号定位元素追加片段
+         */
+        private String currentMessageNo = "";
         private StringBuilder messageBuilder = new StringBuilder();
         private StringBuilder thinkingBuilder = new StringBuilder();
-        private AiToolCallMessageInfo aiToolCallMessageInfo;
-        private Consumer<String> messageConsumer;
-        private Consumer<ChatHistory> chatHistoryConsumer;
-        private String requestId;
+        private final ApplicationEventPublisher eventPublisher;
+        private final Consumer<ChatHistory> chatHistoryConsumer;
 
-        public AgentMessageHandler(String sessionId) {
+        public boolean isError() {
+            return isError;
+        }
+
+        private boolean isError=false;
+        private String currentErrorMessage= "";
+        public AgentMessageHandler(String sessionId,
+                                   String requestId,
+                                   ApplicationEventPublisher eventPublisher) {
             this.sessionId = sessionId;
-        }
-
-        public Consumer<String> getMessageConsumer() {
-            return messageConsumer;
-        }
-
-        public void setMessageConsumer(Consumer<String> messageConsumer) {
-            this.messageConsumer = messageConsumer == null ? (r) -> {
-            } : messageConsumer;
-        }
-        public void setRequestId(String requestId) {
             this.requestId = requestId;
+            this.eventPublisher = eventPublisher;
+            this.chatHistoryConsumer = chatHistory -> {
+                eventPublisher.publishEvent(new ChatHistoryEvent(chatHistory));
+            };
         }
 
-        public void setChatHistoryConsumer(Consumer<ChatHistory> chatHistoryConsumer) {
-            this.chatHistoryConsumer = chatHistoryConsumer == null ? (h) -> {
-            } : chatHistoryConsumer;
+        public String getCurrentMessageType() {
+            return currentMessageType;
         }
 
-        public void done() {
-            Map<String, Object> data = new HashMap<>(3);
-            data.put("type", "done");
-            data.put("sessionId", sessionId);
-            data.put("requestId", requestId);
-            messageConsumer.accept(JSON.toJSONString(data));
-            messageTypeChangedChatHistoryHandler("done");
+        public String getCurrentErrorMessage() {
+            return currentErrorMessage;
         }
+
+        public void sendMessageToChannel(AiMessageBaseInfo message) {
+            // 消息附带会话业务类型，供推送端区分：项目/任务会话推送给所有在线用户
+            if (message != null && agentExecutorParams.getBizType() != null) {
+                message.setBizType(agentExecutorParams.getBizType());
+            }
+            eventPublisher.publishEvent(new AgentMessageEvent(userId, agentId, message));
+        }
+
         public void taskDone() {
-            Map<String, Object> data = new HashMap<>(3);
-            data.put("type", "task-done");
-            data.put("sessionId", sessionId);
-            data.put("requestId", requestId);
-            messageConsumer.accept(JSON.toJSONString(data));
+            //先结算流式消息（全量补发+入库），再发结束信号，保证前端先收到全量内容再做收尾清理
             messageTypeChangedChatHistoryHandler("task-done");
+            AiMessageBaseInfo aiMessageBaseInfo = AiMessageBaseInfo.taskDone(sessionId, requestId);
+            //携带本次任务运行总时长（毫秒），供执行统计消费方计算每秒Token等指标
+            aiMessageBaseInfo.setElapsedMs(startTimeMs > 0 ? System.currentTimeMillis() - startTimeMs : 0L);
+            sendMessageToChannel(aiMessageBaseInfo);
         }
 
         private void onErrorHandler(Throwable ex) {
-            //发送
-            Map<String, Object> data = new HashMap<>(3);
-            data.put("type", "error");
-            data.put("content", "发生异常：" + ex.getMessage());
-            data.put("sessionId", sessionId);
-            data.put("requestId", requestId);
-            messageConsumer.accept(JSON.toJSONString(data));
-            messageTypeChangedChatHistoryHandler("error");
+            String message = "";
+            String type = "error";
+            if (ex instanceof ToolCallRejectedException) {
+                message = ex.getMessage();
+                type = "warn";
+            } else {
+                message = "发生异常：" + ex.getMessage();
+                isError=true;
+                currentErrorMessage=message;
+            }
+            AiMessageBaseInfo info = AiMessageBaseInfo.build(type, sessionId, requestId).content(message);
+            sendMessageToChannel(info);
+            messageTypeChangedChatHistoryHandler(type);
+            // error/warn 类型消息独立入库，刷新页面后可重新渲染
+            ChatHistory errorChat = new ChatHistory(agentId, "agent", type, message);
+            errorChat.setSessionId(sessionId);
+            errorChat.setUserId(userId);
+            errorChat.setMessageNo(UuidUtil.generateSimpleUUID());
+            chatHistoryConsumer.accept(errorChat);
         }
 
         private void onCompleteResponseHandler(ChatResponse response) {
             //发送
-            done();
+            //taskDone();
         }
 
+
         private void partialToolExecutionHandler(PartialToolCall toolCall) {
-            this.aiToolCallMessageInfo = AiToolCallMessageInfo.preparing(sessionId,requestId,
+            List<String> toolDescriptions = getToolDescriptions(toolCall.name());
+            AiToolCallMessageInfo toolCallMessageInfo = AiToolCallMessageInfo.preparing(sessionId, requestId,
                     toolCall.id(),
                     toolCall.name(),
                     toolCall.partialArguments(),
-                    toolCall.index()
+                    toolCall.index(),
+                    toolDescriptions
             );
-            messageTypeChangedChatHistoryHandler("tool_call_preparing");
+            messageTypeChangedChatHistoryHandler(AiToolCallMessageInfo.TYPE_TOOL_CALL + "_" + toolCallMessageInfo.getStatus());
+            sendToolCallHistoryEventAndToChannel(toolCallMessageInfo, messageTypeChanged());
         }
 
-        private void beforeToolExecutionHandler(BeforeToolExecution toolExecution) {
-
-            this.aiToolCallMessageInfo = AiToolCallMessageInfo.starting(sessionId,requestId,
-                    toolExecution.request().id(),
-                    toolExecution.request().name(),
-                    JSON.parseObject(toolExecution.request().arguments())
+        public void toolCallHandler(String status, String id, String toolName, String arguments, Object result) {
+            List<String> toolDescriptions = getToolDescriptions(toolName);
+            AiToolCallMessageInfo toolCallMessageInfo = AiToolCallMessageInfo.build(status, sessionId, requestId,
+                    id,
+                    toolName,
+                    parseToolArgumentsSafely(arguments),
+                    result,
+                    toolDescriptions
             );
-            messageTypeChangedChatHistoryHandler("tool_call_start");
+            messageTypeChangedChatHistoryHandler(AiToolCallMessageInfo.TYPE_TOOL_CALL + "_" + status);
+            sendToolCallHistoryEventAndToChannel(toolCallMessageInfo, true);
         }
 
-        private void toolExecutionHandler(ToolExecution toolExecution) {
-
-            this.aiToolCallMessageInfo = AiToolCallMessageInfo.executed(sessionId,requestId,
-                    toolExecution.request().id(),
-                    toolExecution.request().name(),
-                    JSON.parseObject(toolExecution.request().arguments()),
-                    toolExecution.result()
-            );
-            messageTypeChangedChatHistoryHandler("tool_call_end");
+        /**
+         * 解析工具调用参数 JSON：参数由模型流式生成，可能不完整或非法。
+         * 解析失败时不抛异常，返回包含失败原因与原始参数文本的兜底 Map，保证消息链路不断。
+         */
+        private Object parseToolArgumentsSafely(String arguments) {
+            if (arguments == null || arguments.isBlank()) {
+                return new com.alibaba.fastjson2.JSONObject();
+            }
+            try {
+                return JSON.parseObject(arguments);
+            } catch (Exception e) {
+                com.alibaba.fastjson2.JSONObject fallback = new com.alibaba.fastjson2.JSONObject();
+                fallback.put("parseError", "工具调用参数不是合法的完整 JSON：" + e.getMessage());
+                fallback.put("rawArguments", arguments);
+                return fallback;
+            }
         }
 
         private void thinkingHandler(PartialThinking thinking) {
             messageTypeChangedChatHistoryHandler("thinking");
             thinkingBuilder.append(thinking.text());
-            //发送
-            AiThinkingMessageInfo aiThinkingMessageInfo = AiThinkingMessageInfo.partial(sessionId,requestId,thinking.text());
-            messageConsumer.accept(JSON.toJSONString(aiThinkingMessageInfo));
-
+            //发送增量片段：前端按消息编号追加渲染，降低传输量；消息结束时统一补发全量
+            AiThinkingMessageInfo aiThinkingMessageInfo = AiThinkingMessageInfo.partial(sessionId, requestId, thinking.text());
+            aiThinkingMessageInfo.setMessageNo(currentMessageNo);
+            sendMessageToChannel(aiThinkingMessageInfo);
 
         }
 
         private void partialResponseHandler(String partialResponse) {
             messageTypeChangedChatHistoryHandler("message");
             messageBuilder.append(partialResponse);
-            //发送
-            Map<String, Object> data = new HashMap<>(3);
-            data.put("type", "chunk");
-            data.put("content", partialResponse);
-            data.put("responseId", sessionId);
-            messageConsumer.accept(JSON.toJSONString(data));
+            //发送增量片段：前端按消息编号追加渲染，降低传输量；消息结束时统一补发全量
+            AiMessageBaseInfo chunk = AiMessageBaseInfo.chunkPartial(sessionId, requestId, partialResponse);
+            chunk.setMessageNo(currentMessageNo);
+            sendMessageToChannel(chunk);
         }
 
         private boolean messageTypeChanged() {
@@ -528,60 +1098,72 @@ public class AgentExecutor implements IAgentExecutor {
         }
 
         /**
-         * 处理历史消息
+         * 处理消息类型切换：
+         * 1. 结算上一段流式消息：补发一条全量内容（status=done，中途进入页面/刷新可凭此补全），并携带消息编号入库；
+         * 2. 为新一段流式消息生成新的消息编号。
          *
          * @param currentMessageType
          */
         private void messageTypeChangedChatHistoryHandler(String currentMessageType) {
             this.currentMessageType = currentMessageType;
-
             if (messageTypeChanged()) {
                 //需要处理上个类型的消息
                 if (lastMessageType.equals("message")) {
-                    ChatHistory textChat = new ChatHistory(agent.getId(), "agent", "text", messageBuilder.toString());
+                    //全量补发：前端按消息编号覆盖渲染该条消息，保证中途进入/刷新场景内容完整
+                    AiMessageBaseInfo chunkDone = AiMessageBaseInfo.chunkDone(sessionId, requestId, messageBuilder.toString());
+                    chunkDone.setMessageNo(currentMessageNo);
+                    sendMessageToChannel(chunkDone);
+                    ChatHistory textChat = new ChatHistory(agentId, "agent", "text", messageBuilder.toString());
                     textChat.setSessionId(sessionId);
+                    textChat.setMessageNo(currentMessageNo);
                     chatHistoryConsumer.accept(textChat);
                     messageBuilder = new StringBuilder(100);
                 } else if (lastMessageType.equals("thinking")) {
-
-                    //发送
-                    AiThinkingMessageInfo aiThinkingMessageInfo = AiThinkingMessageInfo.done(sessionId,requestId, "");
+                    //全量补发：done 状态携带完整思考内容（历史版本 content 为空串，前端只能靠累计片段）
+                    AiThinkingMessageInfo aiThinkingMessageInfo = AiThinkingMessageInfo.done(sessionId, requestId, thinkingBuilder.toString());
                     aiThinkingMessageInfo.setSessionId(sessionId);
-                    messageConsumer.accept(JSON.toJSONString(aiThinkingMessageInfo));
-
-                    ChatHistory textChat = new ChatHistory(agent.getId(), "agent", "thinking", thinkingBuilder.toString());
+                    aiThinkingMessageInfo.setMessageNo(currentMessageNo);
+                    sendMessageToChannel(aiThinkingMessageInfo);
+                    ChatHistory textChat = new ChatHistory(agentId, "agent", "thinking", thinkingBuilder.toString());
                     textChat.setSessionId(sessionId);
+                    textChat.setMessageNo(currentMessageNo);
                     chatHistoryConsumer.accept(textChat);
                     thinkingBuilder = new StringBuilder(100);
                 }
+                //为新一段流式消息生成新编号（每次切换消息类型时重新编号）
+                currentMessageNo = UuidUtil.generateSimpleUUID();
                 lastMessageType = currentMessageType;
             }
-            //开始调用 和 结束调用
-            if (currentMessageType.startsWith("tool_call")) {
-                messageConsumer.accept(JSON.toJSONString(aiToolCallMessageInfo));
-                if (currentMessageType.equals("tool_call_start") || currentMessageType.equals("tool_call_end")) {
-                    //入库
-                    ChatHistory toolChat = new ChatHistory(
-                            agent.getId(), "agent", "tool_call",
-                            aiToolCallMessageInfo.getToolCallId(), aiToolCallMessageInfo.getToolName(),
-                            (aiToolCallMessageInfo.getArguments()!=null? aiToolCallMessageInfo.getArguments().toString():null), aiToolCallMessageInfo.getResult() != null ? (String) aiToolCallMessageInfo.getResult() : null
-                    );
-                    toolChat.setToolCallStatus(currentMessageType);
-                    toolChat.setSessionId(sessionId);
-                    chatHistoryConsumer.accept(toolChat);
-                }
+
+        }
+
+        private void sendToolCallHistoryEventAndToChannel(AiToolCallMessageInfo callMessageInfo, boolean addHistory) {
+            sendMessageToChannel(callMessageInfo);
+            if (addHistory) {
+                ChatHistory toolChat = new ChatHistory(
+                        agentId, "agent", AiToolCallMessageInfo.TYPE_TOOL_CALL,
+                        callMessageInfo.getToolCallId(),
+                        callMessageInfo.getToolName(),
+                        (callMessageInfo.getArguments() != null ? callMessageInfo.getArguments().toString() : null),
+                        callMessageInfo.getResult() != null ? (String) callMessageInfo.getResult() : null
+                );
+                toolChat.setToolCallStatus(callMessageInfo.getStatus());
+                toolChat.setSessionId(callMessageInfo.getSessionId());
+                //携带请求编号：供执行统计按请求维度统计工具执行次数
+                toolChat.setRequestId(requestId);
+                toolChat.setMessageNo(Md5Util.md5(callMessageInfo.getSessionId() + callMessageInfo.getToolCallId()));
+                chatHistoryConsumer.accept(toolChat);
             }
+            //入库
+
         }
     }
 
     public interface ChatAgentAssistant {
-        String chat(@dev.langchain4j.service.UserMessage List<Content> contents,
-                    // ChatRequestParameters requestParameters, // 模型参数
-                    InvocationParameters invocationParameters);
+        String analyze(@dev.langchain4j.service.UserMessage List<Content> contents,
+                       ChatRequestParameters chatRequestParameters, InvocationParameters invocationParameters);
 
-        TokenStream streamingChat(@dev.langchain4j.service.UserMessage List<Content> contents,
-                                  // ChatRequestParameters requestParameters, // 模型参数
+        TokenStream streamingChat(@dev.langchain4j.service.UserMessage List<Content> contents,ChatRequestParameters requestParameters, // 模型参数
                                   InvocationParameters invocationParameters);
     }
-
 }

@@ -1,0 +1,717 @@
+let currentProviderId = null;
+let currentModelId = null;
+let currentProviderData = null;
+let currentProviderType = null;
+
+document.addEventListener('DOMContentLoaded', function() {
+    loadModelCounts();
+});
+
+function loadModelCounts() {
+    fetch('/api/models/all')
+        .then(response => response.json())
+        .then(data => {
+            document.querySelectorAll('.model-count-value').forEach(el => {
+                const providerId = el.getAttribute('data-provider-id');
+                const count = data[providerId] ? data[providerId].length : 0;
+                el.textContent = count + ' 个模型';
+            });
+        })
+        .catch(error => {
+            console.error('加载模型数量失败:', error);
+        });
+}
+
+function selectProvider(btn) {
+    const element = btn.closest('.provider-card');
+
+    currentProviderId = element.getAttribute('data-id');
+    currentProviderData = {
+        name: element.querySelector('.provider-name').textContent,
+        code: element.querySelector('.provider-code').textContent
+    };
+
+    document.getElementById('modelsModalTitle').textContent = currentProviderData.name + ' - 模型列表';
+    Modal.open('modelsModal');
+
+    loadModels();
+}
+
+function closeModelsModal() {
+    Modal.close('modelsModal');
+}
+
+function loadModels() {
+    if (!currentProviderId) return;
+
+    fetch('/api/providers/' + currentProviderId + '/models')
+        .then(response => response.json())
+        .then(models => {
+            const tbody = document.getElementById('modelsTableBody');
+            const emptyState = document.getElementById('modelsEmptyState');
+            const table = document.getElementById('modelsTable');
+
+            if (models.length === 0) {
+                table.style.display = 'none';
+                emptyState.style.display = 'block';
+            } else {
+                table.style.display = 'table';
+                emptyState.style.display = 'none';
+
+                tbody.innerHTML = models.map(model => {
+                    const capabilities = model.capabilities ? model.capabilities.split(',').map(cap => {
+                        const capNames = {text: '文本', image: '图片', audio: '音频', video: '视频', document: '文档'};
+                        return '<span class="capability-tag">' + (capNames[cap] || cap) + '</span>';
+                    }).join('') : '';
+
+                    const verified = model.verified ? '<span class="verified-yes">已验证</span>' : '<span class="verified-no">未验证</span>';
+
+                    return '<tr>' +
+                        '<td>' + model.modelName + '</td>' +
+                        '<td>' + (model.modelAlias || model.modelName) + '</td>' +
+                        '<td>' + capabilities + '</td>' +
+                        '<td>' + verified + '</td>' +
+                        '<td>' + (model.createTime || '') + '</td>' +
+                        '<td>' +
+                            '<button class="btn-icon btn-test-model" onclick="testModel(' + model.id + ')" title="检测能力">' +
+                                '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M19.07 4.93a10 10 0 0 0-14.14 0l1.41 1.41a8 8 0 0 1 11.32 0l1.41-1.41z"/><path d="M17.66 7.34a6 6 0 0 0-8.48 0l1.41 1.41a4 4 0 0 1 5.66 0l1.41-1.41z"/><path d="M12 10a2 2 0 1 0 0 4 2 2 0 0 0 0-4z"/></svg>' +
+                            '</button>' +
+                            '<button class="btn-icon btn-edit-model" onclick="showEditModelModal(' + model.id + ')" title="编辑">' +
+                                '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/></svg>' +
+                            '</button>' +
+                            '<button class="btn-icon btn-delete-model" onclick="deleteModel(' + model.id + ')" title="删除">' +
+                                '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/></svg>' +
+                            '</button>' +
+                        '</td>' +
+                    '</tr>';
+                }).join('');
+            }
+        })
+        .catch(error => {
+            console.error('加载模型列表失败:', error);
+        });
+}
+
+function showAddProviderModal() {
+    currentProviderId = null;
+    currentProviderType = 'custom';
+    document.getElementById('providerModalTitle').textContent = '添加提供商';
+    document.getElementById('providerForm').reset();
+    document.getElementById('providerId').value = '';
+    document.getElementById('providerSdkNameGroup').style.display = 'block';
+    document.getElementById('providerSdkName').required = true;
+    document.getElementById('providerSdkName').disabled = false;
+    document.getElementById('providerSdkName').value = '';
+    resetExtParams('provider');
+    Modal.open('providerModal');
+}
+
+function showEditProviderModal(id) {
+    currentProviderId = id;
+    document.getElementById('providerModalTitle').textContent = '编辑提供商';
+
+    // 清理上一次弹框的临时状态，待接口数据返回后重新装配
+    resetExtParams('provider');
+
+    fetch('/api/providers/' + id)
+        .then(response => response.json())
+        .then(provider => {
+            document.getElementById('providerId').value = provider.id;
+            document.getElementById('providerName').value = provider.name;
+            document.getElementById('providerCode').value = provider.provider;
+            document.getElementById('providerUrl').value = provider.url || '';
+            document.getElementById('providerApiKey').value = provider.apiKey || '';
+            document.getElementById('providerIcon').value = provider.icon || '';
+
+            // 内置提供商隐藏 sdkName 选项（值不可变）
+            currentProviderType = provider.type;
+            if (provider.type === 'builtin') {
+                document.getElementById('providerSdkNameGroup').style.display = 'none';
+                document.getElementById('providerSdkName').required = false;
+            } else {
+                document.getElementById('providerSdkNameGroup').style.display = 'block';
+                document.getElementById('providerSdkName').required = true;
+                document.getElementById('providerSdkName').value = provider.sdkName || '';
+            }
+
+            // 扩展参数：按接口数据装配表单与 JSON 视图，回到表单视图
+            loadExtParams('provider', provider.extParams);
+            showExtParamsView('provider', 'form');
+            Modal.open('providerModal');
+        })
+        .catch(error => {
+            console.error('获取提供商信息失败:', error);
+            showToast('获取提供商信息失败', 'error');
+        });
+}
+
+function closeProviderModal() {
+    Modal.close('providerModal');
+    currentProviderType = null;
+    // 关闭时清理扩展参数临时状态
+    resetExtParams('provider');
+}
+
+function submitProvider() {
+    const name = document.getElementById('providerName').value.trim();
+    const provider = document.getElementById('providerCode').value.trim();
+    const providerUrl = document.getElementById('providerUrl').value.trim();
+    const isBuiltin = currentProviderType === 'builtin';
+
+    if (!name || !provider) {
+        showToast('请填写必填字段', 'error');
+        return;
+    }
+    if (!isBuiltin && !document.getElementById('providerSdkName').value) {
+        showToast('请选择 API 兼容类型', 'error');
+        return;
+    }
+
+    const data = {
+        name: name,
+        provider: provider,
+        url: providerUrl,
+        apiKey: document.getElementById('providerApiKey').value.trim(),
+        icon: document.getElementById('providerIcon').value.trim(),
+        extParams: getExtParamsJson('provider')
+    };
+    if (!isBuiltin) {
+        data.sdkName = document.getElementById('providerSdkName').value;
+    }
+
+    let url, method;
+    if (currentProviderId) {
+        url = '/api/providers/' + currentProviderId;
+        method = 'PUT';
+        data.id = currentProviderId;
+    } else {
+        url = '/api/providers';
+        method = 'POST';
+    }
+
+    fetch(url, {
+        method: method,
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(data)
+    })
+    .then(response => {
+        if (response.ok) {
+            showToast(currentProviderId ? '更新成功' : '添加成功', 'success');
+            closeProviderModal();
+            setTimeout(function() { location.reload(); }, 800);
+        } else {
+            response.json().then(function(err) {
+                showToast(err.message || '操作失败', 'error');
+            }).catch(function() {
+                showToast('操作失败', 'error');
+            });
+        }
+    })
+    .catch(error => {
+        console.error('请求失败:', error);
+        showToast('请求失败', 'error');
+    });
+}
+
+function deleteProvider(id) {
+    showConfirm('确定要删除此提供商及其所有模型吗？').then(function(confirmed) {
+        if (!confirmed) return;
+
+        fetch('/api/providers/' + id, {
+            method: 'DELETE'
+        })
+        .then(response => {
+            if (response.ok) {
+                showToast('删除成功', 'success');
+                location.reload();
+            } else {
+                showToast('删除失败', 'error');
+            }
+        })
+        .catch(error => {
+            console.error('删除失败:', error);
+            showToast('删除失败', 'error');
+        });
+    });
+}
+
+function showAddModelModal() {
+    if (!currentProviderId) {
+        showToast('请先选择一个提供商', 'error');
+        return;
+    }
+
+    currentModelId = null;
+    document.getElementById('modelModalTitle').textContent = '添加模型';
+    document.getElementById('modelForm').reset();
+    document.getElementById('modelId').value = '';
+    document.getElementById('modelProviderId').value = currentProviderId;
+    document.getElementById('modelCapabilitiesDisplay').innerHTML = '<span class="capability-hint">保存后将自动检测</span>';
+    document.getElementById('modelVerifiedDisplay').innerHTML = '<span class="capability-hint">保存后将自动验证</span>';
+    // 扩展参数：清理临时状态，表单恢复默认并回到表单视图
+    resetExtParams('model');
+    document.getElementById('modelSupportThinking').checked = true;
+    document.querySelectorAll('input[name="modelSupportedThinkingLevels"]').forEach(function(cb) {
+        cb.checked = (cb.value === 'low' || cb.value === 'high' || cb.value === 'max');
+    });
+    document.getElementById('modelThinkingLevelsGroup').style.display = '';
+    updateModelReasoningEffortOptions();
+    applyModelThinkingConstraint();
+    document.getElementById('modelForm_reasoningEffort').value = 'high';
+    Modal.open('modelModal');
+}
+
+function showEditModelModal(id) {
+    currentModelId = id;
+    document.getElementById('modelModalTitle').textContent = '编辑模型';
+
+    // 清理上一次弹框的临时状态，待接口数据返回后重新装配
+    resetExtParams('model');
+
+    fetch('/api/models/' + id)
+        .then(response => response.json())
+        .then(model => {
+            document.getElementById('modelId').value = model.id;
+            document.getElementById('modelProviderId').value = model.providerId;
+            document.getElementById('modelName').value = model.modelName;
+            document.getElementById('modelAlias').value = model.modelAlias || model.modelName;
+            // 回填最大上下文（字节）；存量数据可能为 null 或 0，回退为空由必填校验兜底
+            document.getElementById('modelMaxContextTokens').value =
+                (model.maxContextTokens !== null && model.maxContextTokens !== undefined && model.maxContextTokens > 0)
+                    ? model.maxContextTokens : '';
+
+            // 显示模型能力（只读）
+            const capNames = {text: '文本', image: '图片', audio: '音频', video: '视频', document: '文档'};
+            if (model.capabilities) {
+                const caps = model.capabilities.split(',');
+                const html = caps.map(c => '<span class="capability-tag">' + (capNames[c] || c) + '</span>').join('');
+                document.getElementById('modelCapabilitiesDisplay').innerHTML = html;
+            } else {
+                document.getElementById('modelCapabilitiesDisplay').innerHTML = '<span class="capability-hint">无</span>';
+            }
+
+            // 显示验证状态（只读）
+            const verifiedHtml = model.verified
+                ? '<span class="verified-yes">已验证</span>'
+                : '<span class="verified-no">未验证</span>';
+            document.getElementById('modelVerifiedDisplay').innerHTML = verifiedHtml;
+
+            // 思考能力支持字段
+            var supportThinking = model.supportThinking === true || model.supportThinking === 1;
+            document.getElementById('modelSupportThinking').checked = supportThinking;
+            document.getElementById('modelThinkingLevelsGroup').style.display = supportThinking ? '' : 'none';
+            // 勾选已保存的思考等级
+            document.querySelectorAll('input[name="modelSupportedThinkingLevels"]').forEach(function(cb) { cb.checked = false; });
+            if (model.supportedThinkingLevels) {
+                var levels = model.supportedThinkingLevels.split(',');
+                levels.forEach(function(level) {
+                    var cb = document.querySelector('input[name="modelSupportedThinkingLevels"][value="' + level.trim() + '"]');
+                    if (cb) cb.checked = true;
+                });
+            }
+            updateModelReasoningEffortOptions();
+            // 扩展参数：按接口数据装配表单与 JSON 视图，回到表单视图
+            loadExtParams('model', model.extParams);
+            showExtParamsView('model', 'form');
+            // 根据思考能力约束（不支持时禁用相关字段并从参数中剔除）
+            applyModelThinkingConstraint();
+            Modal.open('modelModal');
+        })
+        .catch(error => {
+            console.error('获取模型信息失败:', error);
+            showToast('获取模型信息失败', 'error');
+        });
+}
+
+function closeModelModal() {
+    Modal.close('modelModal');
+    currentModelId = null;
+    // 关闭时清理扩展参数临时状态
+    resetExtParams('model');
+}
+
+/* ========== 保存模型 loading 遮罩 ========== */
+var MODEL_SAVING_OVERLAY_ID = 'modelSavingOverlay';
+
+/** 显示全屏遮罩：保存后端会自动检测能力并验证模型，耗时较长 */
+function showModelSavingOverlay(text, hint) {
+    hideModelSavingOverlay();
+    var overlay = document.createElement('div');
+    overlay.id = MODEL_SAVING_OVERLAY_ID;
+    overlay.className = 'model-saving-overlay';
+    overlay.innerHTML =
+        '<div class="model-saving-card">' +
+            '<div class="model-saving-spinner"></div>' +
+            '<div class="model-saving-text">' + (text || '正在保存模型…') + '</div>' +
+            '<div class="model-saving-hint">' + (hint || '保存后将自动检测能力并验证模型，可能需要一些时间') + '</div>' +
+        '</div>';
+    document.body.appendChild(overlay);
+}
+
+/** 移除遮罩 */
+function hideModelSavingOverlay() {
+    var overlay = document.getElementById(MODEL_SAVING_OVERLAY_ID);
+    if (overlay) {
+        overlay.remove();
+    }
+}
+
+/** 快捷填充最大上下文（单位：字节） */
+function fillContextSize(value) {
+    document.getElementById('modelMaxContextTokens').value = value;
+}
+
+function submitModel() {
+    const modelName = document.getElementById('modelName').value.trim();
+    const modelAlias = document.getElementById('modelAlias').value.trim();
+    const maxContextTokens = document.getElementById('modelMaxContextTokens').value.trim();
+
+    if (!modelName) {
+        showToast('请输入模型名称', 'error');
+        return;
+    }
+    if (!modelAlias) {
+        showToast('请输入模型别名', 'error');
+        return;
+    }
+    if (!maxContextTokens || parseInt(maxContextTokens) <= 0) {
+        showToast('请输入最大上下文（字节）', 'error');
+        return;
+    }
+
+    const data = {
+        providerId: parseInt(document.getElementById('modelProviderId').value),
+        modelName: modelName,
+        modelAlias: modelAlias,
+        maxContextTokens: parseInt(maxContextTokens),
+        extParams: getExtParamsJson('model'),
+        supportThinking: document.getElementById('modelSupportThinking').checked,
+        supportedThinkingLevels: getSelectedThinkingLevels()
+    };
+
+    let url, method;
+    if (currentModelId) {
+        url = '/api/models/' + currentModelId;
+        method = 'PUT';
+        data.id = currentModelId;
+    } else {
+        url = '/api/models';
+        method = 'POST';
+    }
+
+    showModelSavingOverlay();
+    fetch(url, {
+        method: method,
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(data)
+    })
+    .then(response => {
+        if (response.ok) {
+            showToast(currentModelId ? '更新成功' : '添加成功', 'success');
+            closeModelModal();
+            loadModels();
+            loadModelCounts();
+        } else {
+            response.json().then(function(err) {
+                showToast(err.message || '操作失败', 'error');
+            }).catch(function() {
+                showToast('操作失败', 'error');
+            });
+        }
+    })
+    .catch(error => {
+        console.error('请求失败:', error);
+        showToast('请求失败', 'error');
+    })
+    .finally(function() {
+        hideModelSavingOverlay();
+    });
+}
+
+function testModel(id) {
+    showModelSavingOverlay('正在检测模型能力…', '将测试文本与图片能力，可能需要一些时间');
+
+    fetch('/api/models/' + id + '/test', {
+        method: 'POST'
+    })
+    .then(response => response.json())
+    .then(result => {
+        showToast(result.message || '检测完成', result.verified ? 'success' : 'warning');
+        loadModels();
+    })
+    .catch(error => {
+        console.error('检测失败:', error);
+        showToast('检测请求失败', 'error');
+    })
+    .finally(function() {
+        hideModelSavingOverlay();
+    });
+}
+
+function deleteModel(id) {
+    showConfirm('确定要删除此模型吗？').then(function(confirmed) {
+        if (!confirmed) return;
+
+        fetch('/api/models/' + id, {
+            method: 'DELETE'
+        })
+        .then(response => {
+            if (response.ok) {
+                showToast('删除成功', 'success');
+                loadModels();
+                loadModelCounts();
+            } else {
+                showToast('删除失败', 'error');
+            }
+        })
+        .catch(error => {
+            console.error('删除失败:', error);
+            showToast('删除失败', 'error');
+        });
+    });
+}
+
+// ==================== 扩展参数（JSON/表单双视图，单一数据源） ====================
+
+// 模型扩展参数字段集：包含思考联动字段，与 supportThinking/supportedThinkingLevels 联动
+var MODEL_EXT_PARAMS_KEYS = [
+    { key: 'enableThinking', type: 'boolean', defaultTrue: true },
+    { key: 'temperature', type: 'number' },
+    { key: 'timeoutSeconds', type: 'number' },
+    { key: 'reasoningEffort', type: 'text' },
+    { key: 'thinkingBudgetTokens', type: 'number' },
+    { key: 'outputMaxTokens', type: 'number' },
+    { key: 'thinkingContentKey', type: 'text' },
+    { key: 'sendThinking', type: 'boolean', defaultTrue: true },
+    { key: 'returnThinking', type: 'boolean', defaultTrue: true },
+    { key: 'logRequests', type: 'boolean' },
+    { key: 'logResponses', type: 'boolean' },
+    { key: 'accumulateToolCallId', type: 'boolean', defaultTrue: true },
+    { key: 'strictTools', type: 'boolean', defaultTrue: true },
+    { key: 'useMaxCompletionTokens', type: 'boolean' },
+    { key: 'parallelToolCalls', type: 'boolean', defaultTrue: true }
+];
+
+// 提供商扩展参数字段集：独立一套，仅通用参数，无思考联动字段
+var PROVIDER_EXT_PARAMS_KEYS = [
+    { key: 'temperature', type: 'number' },
+    { key: 'timeoutSeconds', type: 'number' },
+    { key: 'outputMaxTokens', type: 'number' },
+    { key: 'useMaxCompletionTokens', type: 'boolean' },
+    { key: 'accumulateToolCallId', type: 'boolean', defaultTrue: true },
+    { key: 'strictTools', type: 'boolean', defaultTrue: true },
+    { key: 'parallelToolCalls', type: 'boolean', defaultTrue: true },
+    { key: 'logRequests', type: 'boolean' },
+    { key: 'logResponses', type: 'boolean' }
+];
+
+/** 按弹框目标返回对应的字段集 */
+function getExtParamsKeys(target) {
+    return target === 'provider' ? PROVIDER_EXT_PARAMS_KEYS : MODEL_EXT_PARAMS_KEYS;
+}
+
+// 单一数据源：JSON 视图与表单视图都是它的渲染结果
+var extParamsState = { provider: {}, model: {} };
+
+/** 编辑打开：接口返回的 extParams JSON 字符串 → state → 渲染表单与 JSON 视图 */
+function loadExtParams(target, jsonStr) {
+    var obj = {};
+    if (jsonStr && jsonStr.trim()) {
+        try {
+            obj = JSON.parse(jsonStr);
+        } catch (e) {
+            console.warn('扩展参数 JSON 解析失败，按空数据处理', e);
+        }
+    }
+    extParamsState[target] = obj;
+    renderExtParamsForm(target);
+    renderExtParamsJson(target);
+}
+
+/** 新增打开/关闭弹框：清理临时状态，恢复默认并回到表单视图 */
+function resetExtParams(target) {
+    extParamsState[target] = {};
+    renderExtParamsForm(target);
+    renderExtParamsJson(target);
+    showExtParamsView(target, 'form');
+}
+
+/** 渲染表单视图：state → 表单字段 */
+function renderExtParamsForm(target) {
+    var obj = extParamsState[target] || {};
+    getExtParamsKeys(target).forEach(function(def) {
+        var el = document.getElementById(target + 'Form_' + def.key);
+        if (!el) return;
+        var val = obj[def.key];
+        if (def.type === 'boolean') {
+            // 默认启用的开关缺省视为 true
+            el.checked = def.defaultTrue ? val !== false : val === true;
+        } else {
+            el.value = (val !== undefined && val !== null) ? val : '';
+        }
+    });
+}
+
+/** 渲染 JSON 视图：state → textarea */
+function renderExtParamsJson(target) {
+    var obj = extParamsState[target] || {};
+    var keys = Object.keys(obj);
+    document.getElementById(target + 'ExtParams').value = keys.length ? JSON.stringify(obj, null, 2) : '';
+}
+
+/** 视图切换（数据实时双向同步，仅切换显示） */
+function showExtParamsView(target, view) {
+    var jsonView = document.getElementById(target + 'ExtParamsJsonView');
+    var formView = document.getElementById(target + 'ExtParamsFormView');
+    var btns = jsonView.parentElement.querySelectorAll('.ext-params-toggle-btn');
+    btns.forEach(function(b) { b.classList.remove('active'); });
+    if (view === 'json') {
+        jsonView.classList.remove('hidden');
+        formView.classList.remove('active');
+        btns[0].classList.add('active');
+    } else {
+        jsonView.classList.add('hidden');
+        formView.classList.add('active');
+        btns[1].classList.add('active');
+    }
+}
+
+/** 采集表单 → state，并刷新 JSON 视图（表单输入时调用） */
+function collectExtParamsForm(target) {
+    var obj = {};
+    // 保留表单未覆盖的自定义参数
+    var keys = getExtParamsKeys(target);
+    var prev = extParamsState[target] || {};
+    Object.keys(prev).forEach(function(k) {
+        var known = keys.some(function(def) { return def.key === k; });
+        if (!known) {
+            obj[k] = prev[k];
+        }
+    });
+    keys.forEach(function(def) {
+        var el = document.getElementById(target + 'Form_' + def.key);
+        if (!el || el.disabled) return; // 被禁用字段（如不支持思考时）不采集
+        if (def.type === 'boolean') {
+            // 默认启用的开关显式写 true/false；默认关闭的仅勾选时写 true
+            if (def.defaultTrue) {
+                obj[def.key] = el.checked;
+            } else if (el.checked) {
+                obj[def.key] = true;
+            }
+        } else {
+            var v = el.value.trim();
+            if (v !== '') {
+                obj[def.key] = def.type === 'number' ? parseFloat(v) : v;
+            }
+        }
+    });
+    extParamsState[target] = obj;
+    renderExtParamsJson(target);
+}
+
+/** JSON 视图输入 → state，并刷新表单（JSON 非法时表单保持最后合法状态） */
+function onExtParamsJsonInput(target) {
+    var jsonStr = document.getElementById(target + 'ExtParams').value.trim();
+    if (!jsonStr) {
+        extParamsState[target] = {};
+        renderExtParamsForm(target);
+        return;
+    }
+    try {
+        extParamsState[target] = JSON.parse(jsonStr);
+        renderExtParamsForm(target);
+    } catch (e) {
+        // JSON 尚未输入完整，暂不同步表单
+    }
+}
+
+/** 保存时从 state 序列化；无有效参数返回 null */
+function getExtParamsJson(target) {
+    var obj = Object.assign({}, extParamsState[target] || {});
+    // 不支持思考的模型强制剔除思考相关参数
+    if (target === 'model' && !document.getElementById('modelSupportThinking').checked) {
+        delete obj.enableThinking;
+        delete obj.reasoningEffort;
+    }
+    return Object.keys(obj).length ? JSON.stringify(obj) : null;
+}
+
+// 表单视图输入监听（事件委托）：任何输入即时采集进 state 并同步 JSON 视图
+document.addEventListener('DOMContentLoaded', function() {
+    ['provider', 'model'].forEach(function(target) {
+        var formView = document.getElementById(target + 'ExtParamsFormView');
+        if (!formView) return;
+        formView.addEventListener('input', function() { collectExtParamsForm(target); });
+        formView.addEventListener('change', function() { collectExtParamsForm(target); });
+    });
+});
+
+// ==================== Thinking Support Fields ====================
+
+function getSelectedThinkingLevels() {
+    var levels = [];
+    document.querySelectorAll('input[name="modelSupportedThinkingLevels"]:checked').forEach(function(cb) {
+        levels.push(cb.value);
+    });
+    return levels.join(',');
+}
+
+function onModelSupportThinkingChange() {
+    var supported = document.getElementById('modelSupportThinking').checked;
+    document.getElementById('modelThinkingLevelsGroup').style.display = supported ? '' : 'none';
+
+    // 联动约束扩展参数字段（不支持思考时禁用并从参数中剔除）
+    applyModelThinkingConstraint();
+}
+
+function applyModelThinkingConstraint() {
+    var supported = document.getElementById('modelSupportThinking').checked;
+    var enableThinkingEl = document.getElementById('modelForm_enableThinking');
+    var reasoningEffortEl = document.getElementById('modelForm_reasoningEffort');
+    if (enableThinkingEl) {
+        enableThinkingEl.disabled = !supported;
+        if (!supported) {
+            enableThinkingEl.checked = false;
+        }
+    }
+    if (reasoningEffortEl) {
+        reasoningEffortEl.disabled = !supported;
+        if (!supported) {
+            reasoningEffortEl.value = '';
+        }
+    }
+    // 不支持思考时，从扩展参数中剔除思考相关字段并刷新 JSON 视图
+    if (!supported && extParamsState.model) {
+        delete extParamsState.model.enableThinking;
+        delete extParamsState.model.reasoningEffort;
+        renderExtParamsJson('model');
+    }
+    // 联动更新 reasoningEffort 下拉选项
+    updateModelReasoningEffortOptions();
+}
+
+var THINKING_LEVEL_LABELS = {
+    none: 'none（无）',
+    minimal: 'minimal（极轻）',
+    low: 'low（低）',
+    medium: 'medium（中）',
+    high: 'high（高）',
+    xhigh: 'xhigh（极高）',
+    max: 'max（最大）'
+};
+
+function updateModelReasoningEffortOptions() {
+    var datalist = document.getElementById('modelReasoningEffortOptions');
+    if (!datalist) return;
+    datalist.innerHTML = '';
+    document.querySelectorAll('input[name="modelSupportedThinkingLevels"]:checked').forEach(function(cb) {
+        var opt = document.createElement('option');
+        opt.value = cb.value;
+        opt.textContent = THINKING_LEVEL_LABELS[cb.value] || cb.value;
+        datalist.appendChild(opt);
+    });
+}

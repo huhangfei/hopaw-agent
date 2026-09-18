@@ -1,192 +1,183 @@
 package com.agent.hopaw.controller;
 
-import com.agent.hopaw.constant.DefaultUser;
-import com.agent.hopaw.infra.mapper.ChatHistoryMapper;
-import com.agent.hopaw.infra.mapper.ChatMemoryMapper;
-import com.agent.hopaw.infra.model.entity.Agent;
-import com.agent.hopaw.infra.model.entity.ChatHistory;
-import com.agent.hopaw.infra.model.entity.ChatSession;
-import com.agent.hopaw.infra.model.entity.TokenUsage;
+import com.agent.hopaw.infra.constant.ReasoningEffortEnum;
 import com.agent.hopaw.infra.model.dto.ResponseBean;
 import com.agent.hopaw.infra.model.dto.ToolSetInfo;
+import com.agent.hopaw.infra.model.entity.Agent;
+import com.agent.hopaw.infra.model.entity.AiModel;
 import com.agent.hopaw.infra.service.AgentService;
-import com.agent.hopaw.infra.service.ChatSessionService;
-import com.agent.hopaw.infra.service.IAgentExecutorService;
-import com.agent.hopaw.infra.service.ITokenUsageService;
+import com.agent.hopaw.infra.service.AiModelService;
 import com.agent.hopaw.infra.tool.IAgentToolService;
+import com.agent.hopaw.util.CurrentUser;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.ResponseBody;
-import org.springframework.web.bind.annotation.PutMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.WebDataBinder;
+import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
-import java.util.Collections;
+import javax.servlet.http.HttpServletRequest;
+import java.beans.PropertyEditorSupport;
+import java.io.File;
+import java.io.IOException;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.UUID;
 
 @Controller
 public class AgentController {
 
     private final AgentService agentService;
     private final IAgentToolService agentToolService;
-    private final ChatHistoryMapper chatHistoryMapper;
-    private final ChatMemoryMapper chatMemoryMapper;
-    private final IAgentExecutorService agentExecutorService;
-    private final ChatSessionService chatSessionService;
-    private final ITokenUsageService tokenUsageService;
+    private final AiModelService aiModelService;
 
     public AgentController(AgentService agentService, IAgentToolService agentToolService,
-                           ChatHistoryMapper chatHistoryMapper, ChatMemoryMapper chatMemoryMapper,
-                           IAgentExecutorService agentExecutorService,
-                           ChatSessionService chatSessionService,
-                           ITokenUsageService tokenUsageService) {
+                           AiModelService aiModelService) {
         this.agentService = agentService;
         this.agentToolService = agentToolService;
-        this.chatHistoryMapper = chatHistoryMapper;
-        this.chatMemoryMapper = chatMemoryMapper;
-        this.agentExecutorService = agentExecutorService;
-        this.chatSessionService = chatSessionService;
-        this.tokenUsageService = tokenUsageService;
+        this.aiModelService = aiModelService;
     }
 
-    @GetMapping("/")
-    public String index(@RequestParam(required = false) String sessionId,
-                       Model model) {
-        List<Agent> agents = agentService.getAllAgents();
-        model.addAttribute("agents", agents);
+    @GetMapping("/agents")
+    public String index(Model model) {
+        model.addAttribute("activePage", "agents");
+        model.addAttribute("activeTab", "agents");
+        return "agents";
+    }
 
-        List<ToolSetInfo> toolSets = agentToolService.getToolSets();
-        model.addAttribute("toolSets", toolSets);
-
-        List<ChatSession> sessions = chatSessionService.getSessionsByUserId(DefaultUser.USER);
-        model.addAttribute("sessions", sessions);
-
-        if (!sessions.isEmpty()) {
-            ChatSession selectedSession;
-            if (sessionId != null && !sessionId.isEmpty()) {
-                selectedSession = chatSessionService.getSessionBySessionId(sessionId);
-            } else {
-                selectedSession = sessions.get(0);
+    @InitBinder
+    public void initBinder(WebDataBinder binder) {
+        // 处理 tools 多选值：将 String[] 转为逗号分隔的字符串
+        binder.registerCustomEditor(String.class, "tools", new PropertyEditorSupport() {
+            @Override
+            public void setValue(Object value) {
+                if (value instanceof String[]) {
+                    super.setValue(String.join(",", (String[]) value));
+                } else {
+                    super.setValue(value);
+                }
             }
-
-            if (selectedSession != null) {
-                model.addAttribute("selectedSession", selectedSession);
-
-                List<ChatHistory> chatHistory = chatSessionService.getChatHistoryBySessionId(selectedSession.getSessionId(), 100);
-                Collections.reverse(chatHistory);
-                model.addAttribute("chatHistory", chatHistory);
-
-                TokenUsage summary = tokenUsageService.summary(null, null, DefaultUser.USER, selectedSession.getAgentId(), null, "chat");
-                model.addAttribute("tokenUsage", summary);
-
-                model.addAttribute("agentExecutorState", agentService.isAgentExecutorRunning(selectedSession.getAgentId(), DefaultUser.USER));
-            }
-        }
-
-        return "index";
+        });
     }
 
     @PostMapping("/agent/create")
-    public String createAgent(@RequestParam String name,
-                             @RequestParam String description,
-                             @RequestParam(required = false) String tools,
-                             @RequestParam(required = false, defaultValue = "20") Integer maxMemoryRecords,
-                             @RequestParam(required = false, defaultValue = "10") Integer maxToolInvocations,
-                             @RequestParam Long aiModelId,
-                             @RequestParam(required = false, defaultValue = "true") Boolean enableThinking,
-                             @RequestParam(required = false, defaultValue = "true") Boolean vectorToolSearch,
-                             @RequestParam(required = false, defaultValue = "5") Integer vectorToolSearchMaxResults) {
-        String toolsStr = tools != null ? tools : "";
-        agentService.createAgent(name, description, toolsStr, maxMemoryRecords, maxToolInvocations, aiModelId, enableThinking, vectorToolSearch, vectorToolSearchMaxResults, DefaultUser.USER);
+    public String createAgent(HttpServletRequest request, @ModelAttribute Agent agent) {
+        agent.setUserId(CurrentUser.require(request));
+        agentService.createAgent(agent);
         return "redirect:/";
     }
 
-    @PostMapping("/agent/delete")
-    public String deleteAgent(@RequestParam Long id) {
-        chatHistoryMapper.deleteByAgentId(id);
-        chatMemoryMapper.deleteByAgentId(id);
-        agentService.deleteAgent(id,DefaultUser.USER);
-        return "redirect:/";
-    }
-    @PostMapping("/agent/stop")
-    @ResponseBody
-    public ResponseBean stopAgent(@RequestParam Long id) {
-        agentService.stopAgentExecutor(id,DefaultUser.USER);
-        return ResponseBean.success();
-    }
-
-    @PostMapping("/agent/force-stop")
-    @ResponseBody
-    public ResponseBean forceStopAgent(@RequestParam Long id) {
-        agentExecutorService.stopAndRemoveAgentExecutor(id, DefaultUser.USER);
-        return ResponseBean.success();
-    }
-
-    @PostMapping("/agent/tool/stop")
-    @ResponseBody
-    public ResponseBean stopTool(@RequestParam Long agentId, @RequestParam String callId) {
-        agentExecutorService.stopTool(agentId, DefaultUser.USER, callId);
-        return ResponseBean.success();
-    }
-
-    @GetMapping("/api/agent/{id}/running")
-    @ResponseBody
-    public ResponseBean isRunning(@PathVariable Long id) {
-        boolean running = agentService.isAgentExecutorRunning(id, DefaultUser.USER);
-        return ResponseBean.success(running);
-    }
-
-    @GetMapping("/api/agents")
-    @ResponseBody
-    public ResponseBean listAgents() {
-        List<Agent> agents = agentService.getAllAgents();
-        return ResponseBean.success(agents);
-    }
-
-    @PutMapping("/api/agents/{id}/thinking")
-    @ResponseBody
-    public ResponseBean updateThinking(@PathVariable Long id, @RequestBody Map<String, Boolean> body) {
-        Boolean enabled = body.get("enabled");
-        if (enabled == null) {
-            return ResponseBean.fail("参数错误");
-        }
-        agentService.updateThinking(id, enabled,DefaultUser.USER);
-        return ResponseBean.success();
-    }
 
     @PostMapping("/agent/update")
-    public String updateAgent(@RequestParam Long id,
-                             @RequestParam String name,
-                             @RequestParam String description,
-                             @RequestParam(required = false) String tools,
-                             @RequestParam(required = false, defaultValue = "20") Integer maxMemoryRecords,
-                             @RequestParam(required = false, defaultValue = "10") Integer maxToolInvocations,
-                             @RequestParam Long aiModelId,
-                             @RequestParam(required = false) Boolean enableThinking,
-                             @RequestParam(required = false, defaultValue = "true") Boolean vectorToolSearch,
-                             @RequestParam(required = false, defaultValue = "5") Integer vectorToolSearchMaxResults) {
-        String toolsStr = tools != null ? tools : "";
-        agentService.updateAgent(DefaultUser.USER,id, name, description, toolsStr, maxMemoryRecords, maxToolInvocations, aiModelId, enableThinking, vectorToolSearch, vectorToolSearchMaxResults);
-        return "redirect:/?agentId=" + id;
+    public String updateAgent(HttpServletRequest request, @ModelAttribute Agent agent) {
+        agentService.updateAgent(agent);
+        return "redirect:/?agentId=" + agent.getId();
     }
 
-    @PostMapping("/chat")
-    public String chat(@RequestParam Long agentId,
-                      Model model) {
+    @GetMapping("/agent/modal/add")
+    public String addAgentModal(Model model) {
+        List<ToolSetInfo> toolSets = agentToolService.getToolSets();
+        model.addAttribute("toolSets", toolSets);
+        model.addAttribute("reasoningEfforts", ReasoningEffortEnum.values());
+        return "agent-form-fragments :: addAgentModal";
+    }
+
+    @GetMapping("/agent/modal/edit/{id}")
+    public String editAgentModal(@PathVariable Long id, Model model) {
+        Agent agent = agentService.getAgentById(id);
+        List<ToolSetInfo> toolSets = agentToolService.getToolSets();
+        if(agent.getAiModelId()!=null){
+            AiModel aiModel = aiModelService.findById(agent.getAiModelId());
+            if(aiModel!=null){
+                model.addAttribute("aiModelProviderId", aiModel.getProviderId());
+                model.addAttribute("aiModelId", aiModel.getId());
+            }
+        }
+        model.addAttribute("agent", agent);
+        model.addAttribute("toolSets", toolSets);
+        model.addAttribute("reasoningEfforts", ReasoningEffortEnum.values());
+        return "agent-form-fragments :: editAgentModal";
+    }
+
+    @GetMapping("/api/agents/page")
+    @ResponseBody
+    public ResponseBean getAgentsPage(HttpServletRequest request,
+                                      @RequestParam(required = false, defaultValue = "") String keyword,
+                                      @RequestParam(required = false, defaultValue = "1") int page,
+                                      @RequestParam(required = false, defaultValue = "10") int size) {
+        String currentUserId = CurrentUser.require(request);
+        List<Agent> list = agentService.getAgentsPage(currentUserId, keyword, page, size);
+        int total = agentService.countAgents(currentUserId, keyword);
+        Map<String, Object> result = new HashMap<>();
+        result.put("list", list);
+        result.put("total", total);
+        result.put("page", page);
+        result.put("size", size);
+        return ResponseBean.success(result);
+    }
+
+    @GetMapping("/api/agents/count")
+    @ResponseBody
+    public ResponseBean getAgentsCount(HttpServletRequest request) {
+        int total = agentService.countAgents(CurrentUser.require(request), null);
+        return ResponseBean.success(total);
+    }
+
+    @DeleteMapping("/api/agents/{id}")
+    @ResponseBody
+    public ResponseBean deleteAgent(HttpServletRequest request, @PathVariable Long id) {
+        String currentUserId = CurrentUser.require(request);
+        try {
+            int total = agentService.countAgents(currentUserId, null);
+            if (total <= 1) {
+                return ResponseBean.fail("必须保留至少一个智能体");
+            }
+            agentService.deleteAgent(id, currentUserId);
+            return ResponseBean.success();
+        } catch (Exception e) {
+            return ResponseBean.fail(e.getMessage());
+        }
+    }
+
+    @PostMapping("/api/agent/avatar")
+    @ResponseBody
+    public ResponseBean uploadAvatar(@RequestParam(value = "file", required = false) MultipartFile file,
+                                     @RequestParam("agentId") Long agentId,
+                                     @RequestParam(value = "clear", defaultValue = "false") boolean clear) {
         Agent agent = agentService.getAgentById(agentId);
-        return "redirect:/?agentId=" + agentId;
-    }
-
-
-
-    @GetMapping("/chat/clear")
-    public String clearChat(@RequestParam Long agentId) {
-        chatHistoryMapper.deleteByAgentId(agentId);
-        chatMemoryMapper.updateStatusByAgentId(agentId,2);
-        return "redirect:/?agentId=" + agentId;
+        if (agent == null) {
+            return ResponseBean.fail("智能体不存在");
+        }
+        if (clear) {
+            agent.setAvatar(null);
+            agentService.updateAgent(agent);
+            return ResponseBean.success("");
+        }
+        if (file == null || file.isEmpty()) {
+            return ResponseBean.fail("请选择文件");
+        }
+        String originalName = file.getOriginalFilename();
+        String ext = "";
+        if (originalName != null && originalName.contains(".")) {
+            ext = originalName.substring(originalName.lastIndexOf(".")).toLowerCase();
+        }
+        if (!".jpg".equals(ext) && !".jpeg".equals(ext) && !".png".equals(ext) && !".gif".equals(ext) && !".webp".equals(ext)) {
+            return ResponseBean.fail("仅支持 jpg/jpeg/png/gif/webp 格式");
+        }
+        String fileName = "agent_" + agentId + "_" + UUID.randomUUID().toString().replace("-", "") + ext;
+        File avatarDir = new File(System.getProperty("user.dir"), "avatars");
+        if (!avatarDir.exists()) {
+            avatarDir.mkdirs();
+        }
+        File dest = new File(avatarDir, fileName);
+        try {
+            file.transferTo(dest);
+        } catch (IOException e) {
+            return ResponseBean.fail("上传失败: " + e.getMessage());
+        }
+        String avatarUrl = "/avatars/" + fileName;
+        agent.setAvatar(avatarUrl);
+        agentService.updateAgent(agent);
+        return ResponseBean.success(avatarUrl);
     }
 }

@@ -1,8 +1,12 @@
 package com.agent.hopaw.infra.service;
 
+import com.agent.hopaw.infra.event.TokenUsageEvent;
 import com.agent.hopaw.infra.mapper.TokenUsageMapper;
 import com.agent.hopaw.infra.model.entity.TokenUsage;
+import org.springframework.context.event.EventListener;
+import org.springframework.core.annotation.Order;
 import org.springframework.stereotype.Service;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.HashMap;
 import java.util.List;
@@ -17,6 +21,23 @@ public class TokenUsageService implements ITokenUsageService {
         this.tokenUsageMapper = tokenUsageMapper;
     }
 
+    @EventListener
+    @Order(1)
+    public void onTokenUsageMessage(TokenUsageEvent message) {
+        TokenUsage tokenUsage = new TokenUsage();
+        tokenUsage.setAgentId(message.getAgentId());
+        tokenUsage.setModelName(message.getModelName());
+        tokenUsage.setInputTokens(message.getInputTokens());
+        tokenUsage.setOutputTokens(message.getOutputTokens());
+        tokenUsage.setTotalTokens(message.getTotalTokens());
+        tokenUsage.setUserId(message.getUserId());
+        tokenUsage.setSessionId(message.getSessionId());
+        tokenUsage.setRequestId(message.getRequestId());
+        tokenUsage.setSource(message.getSource());
+        tokenUsage.setCreateTime(message.getCreateTime() != null ? message.getCreateTime() : LocalDateTime.now());
+        tokenUsageMapper.insert(tokenUsage);
+    }
+
     public void save(TokenUsage tokenUsage) {
         if (tokenUsage.getCreateTime() == null) {
             tokenUsage.setCreateTime(LocalDateTime.now());
@@ -24,10 +45,10 @@ public class TokenUsageService implements ITokenUsageService {
         tokenUsageMapper.insert(tokenUsage);
     }
 
-    public Map<String, Object> queryPage(LocalDateTime startTime, LocalDateTime endTime, String userId, Long agentId, String modelName, String source, int page, int size) {
+    public Map<String, Object> queryPage(LocalDateTime startTime, LocalDateTime endTime, String userId, Long agentId, String modelName, String source, String sessionId, int page, int size) {
         int offset = (page - 1) * size;
-        List<TokenUsage> list = tokenUsageMapper.findByTimeRange(startTime, endTime, userId, agentId, modelName, source, size, offset);
-        long total = tokenUsageMapper.countByTimeRange(startTime, endTime, userId, agentId, modelName, source);
+        List<TokenUsage> list = tokenUsageMapper.findByTimeRange(startTime, endTime, userId, agentId, modelName, source, sessionId, size, offset);
+        long total = tokenUsageMapper.countByTimeRange(startTime, endTime, userId, agentId, modelName, source, sessionId);
 
         Map<String, Object> result = new HashMap<>();
         result.put("list", list);
@@ -37,14 +58,21 @@ public class TokenUsageService implements ITokenUsageService {
         return result;
     }
 
-    public TokenUsage summary(LocalDateTime startTime, LocalDateTime endTime, String userId, Long agentId, String modelName, String source) {
-        return tokenUsageMapper.summaryByTimeRange(startTime, endTime, userId, agentId, modelName, source);
+    public TokenUsage summary(LocalDateTime startTime, LocalDateTime endTime, String userId, Long agentId, String modelName, String source, String sessionId) {
+        return tokenUsageMapper.summaryByTimeRange(startTime, endTime, userId, agentId, modelName, source, sessionId);
     }
 
-    public List<Map<String, Object>> dailyStats(LocalDateTime startTime, LocalDateTime endTime, String userId, Long agentId, String modelName, String source) {
-        return tokenUsageMapper.dailyStatsByTimeRange(startTime, endTime, userId, agentId, modelName, source);
+    public List<Map<String, Object>> dailyStats(LocalDateTime startTime, LocalDateTime endTime, String userId, Long agentId, String modelName, String source, String sessionId) {
+        // create_time 以本地时区存储，直接按日期分组即可
+        return tokenUsageMapper.dailyStatsByTimeRange(startTime, endTime, userId, agentId, modelName, source, sessionId);
     }
-    public List<TokenUsage> findTodayByAgentUser(Long agentId, String userId, String source, Long minId, int limit) {
-        return tokenUsageMapper.findTodayByAgentUser(agentId, userId, source, minId, limit);
+
+    public List<TokenUsage> findTodayByAgentUser(Long agentId, String userId, String source, String sessionId, Long minId, int limit) {
+        // create_time 以本地时区存储，直接使用本地时区的当天区间
+        LocalDate today = LocalDate.now();
+        LocalDateTime startTime = today.atStartOfDay();
+        LocalDateTime endTime = today.plusDays(1).atStartOfDay();
+        return tokenUsageMapper.findTodayByAgentUser(agentId, userId, source, sessionId, minId, limit, startTime, endTime);
     }
+
 }

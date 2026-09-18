@@ -280,6 +280,118 @@
     background: #e53935;
 }
 
+/* MAP 映射组结构 */
+.config-map-input {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.map-group {
+    border: 1px solid #e0e0e0;
+    border-radius: 8px;
+    padding: 12px;
+    background: #f8f9ff;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.map-group-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.map-group-title {
+    font-weight: bold;
+    color: #667eea;
+    font-size: 14px;
+}
+
+.btn-remove-map-group {
+    padding: 4px 12px;
+    border: none;
+    border-radius: 6px;
+    background: #ff7961;
+    color: white;
+    font-size: 13px;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.btn-remove-map-group:hover {
+    background: #e53935;
+}
+
+.map-key-field {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.map-key-input {
+    font-weight: 600;
+}
+
+.map-values {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    border-top: 1px dashed #d0d0e0;
+    padding-top: 10px;
+}
+
+.map-value-item .config-label {
+    font-size: 13px;
+    font-weight: 600;
+}
+
+.map-value-item .config-hint {
+    font-size: 12px;
+}
+
+.btn-add-map-group {
+    padding: 8px 16px;
+    border: 1px dashed #667eea;
+    border-radius: 6px;
+    background: transparent;
+    color: #667eea;
+    font-size: 14px;
+    font-weight: bold;
+    cursor: pointer;
+    transition: all 0.2s;
+    align-self: flex-start;
+}
+
+.btn-add-map-group:hover {
+    background: #667eea;
+    color: white;
+}
+
+body.dark-theme .map-group {
+    background: #2d2d44;
+    border-color: #3d3d6b;
+}
+
+body.dark-theme .map-group-title {
+    color: #8ba3ff;
+}
+
+body.dark-theme .map-values {
+    border-top-color: #3d3d6b;
+}
+
+body.dark-theme .btn-add-map-group {
+    border-color: #8ba3ff;
+    color: #8ba3ff;
+}
+
+body.dark-theme .btn-add-map-group:hover {
+    background: #8ba3ff;
+    color: #1a1a2e;
+}
+
 body.dark-theme .tool-config-container {
     background: #1a1a2e;
 }

@@ -1,4 +1,8 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
-  <rect width="100" height="100" rx="20" fill="#FF4D4F"/>
-  <path d="M50 25 L55 45 L75 45 L60 55 L65 75 L50 65 L35 75 L40 55 L25 45 L45 45 Z" fill="white"/>
+  <!-- MiniMax 品牌色背景（亮蓝） -->
+  <rect width="100" height="100" rx="20" fill="#1976FF"/>
+  <!-- MiniMax 标志性"M"字形（粗体几何） -->
+  <g fill="white">
+    <path d="M22 72 L22 28 L34 28 L50 56 L66 28 L78 28 L78 72 L66 72 L66 46 L54 66 L46 66 L34 46 L34 72 Z"/>
+  </g>
 </svg>

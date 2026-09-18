@@ -1,0 +1,377 @@
+package com.agent.hopaw.infra.service;
+
+import com.agent.hopaw.infra.constant.AgentExecutorBizTypeEnum;
+import com.agent.hopaw.infra.executor.IAgentExecutor;
+import com.agent.hopaw.infra.memory.ILongTermMemoryService;
+import com.agent.hopaw.infra.model.dto.*;
+import com.agent.hopaw.infra.model.entity.Agent;
+import com.agent.hopaw.infra.model.entity.AiModel;
+import com.agent.hopaw.infra.model.entity.ChatSession;
+import com.agent.hopaw.infra.tool.AgentTool;
+import com.agent.hopaw.infra.util.UuidUtil;
+import dev.langchain4j.data.message.*;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.stereotype.Service;
+import org.springframework.util.StringUtils;
+
+import java.io.File;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.time.LocalDate;
+import java.time.format.DateTimeFormatter;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Base64;
+import java.util.List;
+import java.util.function.Function;
+import java.util.stream.Collectors;
+
+/**
+ * 聊天业务服务：负责生成聊天场景的执行器参数和系统提示词，并调用公共创建方法
+ */
+@Service
+public class ChatService implements IChatService {
+    private static final Logger logger = LoggerFactory.getLogger(ChatService.class);
+
+    private final IAgentService agentService;
+    private final IAvatarSettingsService avatarSettingsService;
+    private final ISkillService skillService;
+    private final ILongTermMemoryService longTermMemoryService;
+    private final ISysConfigService sysConfigService;
+    private final IMcpServerConfigService mcpServerConfigService;
+    private final IAgentExecutorService agentExecutorService;
+    private final IWorkflowTaskService workflowTaskService;
+    private final IChatSessionService chatSessionService;
+    private final IProjectIterateService projectIterateService;
+    private final IChatUserMessageService chatUserMessageService;
+    private final IAttachmentService attachmentService;
+    private final SessionTimeoutService sessionTimeoutService;
+    private final IAiModelService aiModelService;
+
+    public ChatService(IAgentService agentService, IAvatarSettingsService avatarSettingsService, ISkillService skillService, ILongTermMemoryService longTermMemoryService, ISysConfigService sysConfigService, IMcpServerConfigService mcpServerConfigService, IAgentExecutorService agentExecutorService, IWorkflowTaskService workflowTaskService, IChatSessionService chatSessionService, IProjectIterateService projectIterateService, IChatUserMessageService chatUserMessageService, IAttachmentService attachmentService, SessionTimeoutService sessionTimeoutService, IAiModelService aiModelService) {
+        this.agentService = agentService;
+        this.avatarSettingsService = avatarSettingsService;
+        this.skillService = skillService;
+        this.longTermMemoryService = longTermMemoryService;
+        this.sysConfigService = sysConfigService;
+        this.mcpServerConfigService = mcpServerConfigService;
+        this.agentExecutorService = agentExecutorService;
+        this.workflowTaskService = workflowTaskService;
+        this.chatSessionService = chatSessionService;
+        this.projectIterateService = projectIterateService;
+        this.chatUserMessageService = chatUserMessageService;
+        this.attachmentService = attachmentService;
+        this.sessionTimeoutService = sessionTimeoutService;
+        this.aiModelService = aiModelService;
+    }
+
+    @Override
+    public void handle(UserChatRequest userChatRequest) {
+        userChatRequest.setRequestId(UuidUtil.generateSimpleUUID());
+        AgentExecutorBizTypeEnum sessionBizType = resolveSessionBizType(userChatRequest);
+        userChatRequest.setSessionBizType(sessionBizType);
+        chatUserMessageService.sendMessage(userChatRequest);
+        // 任务会话：走工作流任务执行（复用任务会话上下文）
+        if (AgentExecutorBizTypeEnum.WorkflowTaskChat.getValue().equals(sessionBizType)) {
+            workflowTaskService.executeTask(userChatRequest);
+            return;
+        }
+        // 项目会话：重新唤起历史项目会话，由项目管理智能体处理用户消息
+        if (AgentExecutorBizTypeEnum.ProjectChat.getValue().equals(sessionBizType)) {
+            projectIterateService.executeProjectChat(userChatRequest);
+            return;
+        }
+
+        Agent agent = userChatRequest.getAgentId() != null ? agentService.getAgentById(userChatRequest.getAgentId()) : null;
+        if (agent == null) {
+            throw new RuntimeException("智能体不存在");
+        }
+        if (userChatRequest.getAiModelId() == null) {
+            throw new RuntimeException("智能体没有设置AI模型");
+        }
+        AvatarSettings avatarSettings = avatarSettingsService.getSettings(userChatRequest.getUserId(), agent.getId());
+        List<String> appendToolNames = new ArrayList<>();
+        if (!avatarSettings.isDisabled() && avatarSettings.getPersonaSetting() != null && !avatarSettings.getPersonaSetting().isEmpty()) {
+            appendToolNames.add(IAvatarSettingsService.TOOL_NAME);
+        }
+        List<ToolSetInfo> selectedTools = agentService.getToolSetFromAgent(agent, appendToolNames);
+        AgentExecutorParams agentExecutorParams = new AgentExecutorParams();
+        agentExecutorParams.setSessionId(userChatRequest.getSessionId());
+        agentExecutorParams.setRequestId(userChatRequest.getRequestId());
+        agentExecutorParams.setUserId(userChatRequest.getUserId());
+        agentExecutorParams.setAiModelId(userChatRequest.getAiModelId());
+        agentExecutorParams.setEnableThinking(userChatRequest.getEnableThinking());
+        // 创造力/思考努力程度：请求未指定时回退智能体配置，再为空则由模型扩展参数兜底
+        agentExecutorParams.setTemperature(userChatRequest.getTemperature() != null ? userChatRequest.getTemperature() : agent.getTemperature());
+        agentExecutorParams.setReasoningEffort(userChatRequest.getReasoningEffort() != null && !userChatRequest.getReasoningEffort().isEmpty() ? userChatRequest.getReasoningEffort() : agent.getReasoningEffort());
+        agentExecutorParams.setSkillNames(userChatRequest.getSkillNames());
+        agentExecutorParams.setToolCallPermission(userChatRequest.getToolCallPermission());
+        agentExecutorParams.setAgentId(agent.getId());
+        agentExecutorParams.setMaxMemoryTokens(agent.getMaxMemoryTokens() != null ? agent.getMaxMemoryTokens() : Agent.DEFAULT_MAX_MEMORY_TOKENS);
+        agentExecutorParams.setMaxToolInvocations(agent.getMaxToolInvocations() != null ? agent.getMaxToolInvocations() : 3);
+        agentExecutorParams.setVectorToolSearch(agent.getVectorToolSearch() != null ? agent.getVectorToolSearch() : false);
+        agentExecutorParams.setVectorToolSearchMaxResults(agent.getVectorToolSearchMaxResults() != null ? agent.getVectorToolSearchMaxResults() : 5);
+        agentExecutorParams.setToolSets(selectedTools);
+        // 加载已启用的 MCP 服务器配置
+        agentExecutorParams.setMcpServerConfigs(mcpServerConfigService.findEnabled());
+        agentExecutorParams.setBizType(AgentExecutorBizTypeEnum.Chat);
+        Function<Long, String> systemMessageProvider = aId -> {
+            return getChatSystemMessage(userChatRequest.getSessionId(), agent, userChatRequest.getUserId(), selectedTools, userChatRequest.getSkillNames(), avatarSettings);
+        };
+        IAgentExecutor agentExecutor = agentExecutorService.createAgentExecutor(agentExecutorParams, systemMessageProvider);
+        agentExecutor.execute(buildContents(userChatRequest), sessionTimeoutService.getChatTimeoutSeconds());
+    }
+
+    /**
+     * 解析会话业务类型：优先取请求显式传入的类型，否则按会话编号从会话表读取（来源在首次插入时确定）
+     */
+    private AgentExecutorBizTypeEnum resolveSessionBizType(UserChatRequest userChatRequest) {
+        if (userChatRequest.getSessionBizType() != null) {
+            return userChatRequest.getSessionBizType();
+        }
+        if (userChatRequest.getSessionId() != null) {
+            ChatSession session = chatSessionService.getSessionBySessionId(userChatRequest.getSessionId());
+            if (session != null && session.getBizType() != null) {
+                AgentExecutorBizTypeEnum value = AgentExecutorBizTypeEnum.getByValue(session.getBizType());
+                return value == null ? AgentExecutorBizTypeEnum.Chat : value;
+            }
+        }
+        return AgentExecutorBizTypeEnum.Chat;
+    }
+
+    /**
+     * 构建发送给大模型的内容列表，将图片文件转为 Base64 的 ImageContent
+     */
+    private List<Content> buildContents(UserChatRequest userChatRequest) {
+        List<Content> contents = new ArrayList<>();
+        contents.add(new TextContent(userChatRequest.getMessage()));
+        String[] capabilitiesArray = new String[0];
+        //判断模型是否支持图片 音频 视频
+        AiModel aiModel = aiModelService.findById(userChatRequest.getAiModelId());
+        if (aiModel != null) {
+            capabilitiesArray = aiModel.getCapabilitiesArray();
+        }
+        List<AttachmentFile> files = userChatRequest.getFiles();
+        if (files != null && !files.isEmpty()) {
+            for (AttachmentFile file : files) {
+                if (file.getId() == null) {
+                    continue;
+                }
+                Path filePath = attachmentService.getAbsolutePath(file.getId());
+                if (!Arrays.stream(capabilitiesArray).anyMatch(x -> x.equals(file.getType()))) {
+                    contents.add(new TextContent("附件：" + filePath.toString()));
+                    continue;
+                }
+                try {
+                    if (!Files.exists(filePath)) {
+                        logger.warn("图片文件不存在: {}", filePath);
+                        continue;
+                    }
+                    byte[] bytes = Files.readAllBytes(filePath);
+                    String base64 = Base64.getEncoder().encodeToString(bytes);
+                    String mimeType = getMimeType(filePath.toString());
+                    if ("image".equals(file.getType())) {
+                        contents.add(ImageContent.from(base64, mimeType));
+                    }else if("audio".equals(file.getType())){
+                        contents.add(AudioContent.from(base64, mimeType));
+                    }else if("video".equals(file.getType())){
+                        contents.add(VideoContent.from(base64, mimeType));
+                    }else{
+                        contents.add(new TextContent("附件：" + filePath.toString()));
+                    }
+                } catch (Exception e) {
+                    logger.error("图片转 Base64 失败: {} -> {}", file.getUrl(), e.getMessage());
+                }
+            }
+        }
+        return contents;
+    }
+
+    private String getMimeType(String fileName) {
+        String lower = fileName.toLowerCase();
+        // 图片
+        if (lower.endsWith(".png"))  return "image/png";
+        if (lower.endsWith(".jpg") || lower.endsWith(".jpeg")) return "image/jpeg";
+        if (lower.endsWith(".gif"))  return "image/gif";
+        if (lower.endsWith(".bmp"))  return "image/bmp";
+        if (lower.endsWith(".webp")) return "image/webp";
+        if (lower.endsWith(".svg"))  return "image/svg+xml";
+        if (lower.endsWith(".ico"))  return "image/x-icon";
+        if (lower.endsWith(".tiff") || lower.endsWith(".tif")) return "image/tiff";
+        // 视频
+        if (lower.endsWith(".mp4"))  return "video/mp4";
+        if (lower.endsWith(".webm")) return "video/webm";
+        if (lower.endsWith(".ogg"))  return "video/ogg";
+        if (lower.endsWith(".mov"))  return "video/quicktime";
+        if (lower.endsWith(".avi"))  return "video/x-msvideo";
+        if (lower.endsWith(".mkv"))  return "video/x-matroska";
+        if (lower.endsWith(".flv"))  return "video/x-flv";
+        if (lower.endsWith(".wmv"))  return "video/x-ms-wmv";
+        if (lower.endsWith(".m4v"))  return "video/x-m4v";
+        // 音频
+        if (lower.endsWith(".mp3"))  return "audio/mpeg";
+        if (lower.endsWith(".wav"))  return "audio/wav";
+        if (lower.endsWith(".flac")) return "audio/flac";
+        if (lower.endsWith(".aac"))  return "audio/aac";
+        if (lower.endsWith(".m4a"))  return "audio/mp4";
+        if (lower.endsWith(".ogg"))  return "audio/ogg";
+        if (lower.endsWith(".wma"))  return "audio/x-ms-wma";
+        if (lower.endsWith(".opus")) return "audio/opus";
+        // 文档
+        if (lower.endsWith(".pdf"))  return "application/pdf";
+        if (lower.endsWith(".doc"))  return "application/msword";
+        if (lower.endsWith(".docx")) return "application/vnd.openxmlformats-officedocument.wordprocessingml.document";
+        if (lower.endsWith(".xls"))  return "application/vnd.ms-excel";
+        if (lower.endsWith(".xlsx")) return "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet";
+        if (lower.endsWith(".ppt"))  return "application/vnd.ms-powerpoint";
+        if (lower.endsWith(".pptx")) return "application/vnd.openxmlformats-officedocument.presentationml.presentation";
+        // 文本
+        if (lower.endsWith(".txt"))  return "text/plain";
+        if (lower.endsWith(".csv"))  return "text/csv";
+        if (lower.endsWith(".html") || lower.endsWith(".htm")) return "text/html";
+        if (lower.endsWith(".xml"))  return "text/xml";
+        if (lower.endsWith(".json")) return "application/json";
+        if (lower.endsWith(".yaml") || lower.endsWith(".yml")) return "text/yaml";
+        if (lower.endsWith(".md"))   return "text/markdown";
+        if (lower.endsWith(".log"))  return "text/plain";
+        // 压缩包
+        if (lower.endsWith(".zip"))  return "application/zip";
+        if (lower.endsWith(".rar"))  return "application/vnd.rar";
+        if (lower.endsWith(".7z"))   return "application/x-7z-compressed";
+        if (lower.endsWith(".tar"))  return "application/x-tar";
+        if (lower.endsWith(".gz"))   return "application/gzip";
+        // 其他
+        if (lower.endsWith(".css"))  return "text/css";
+        if (lower.endsWith(".js"))   return "application/javascript";
+        if (lower.endsWith(".java")) return "text/x-java-source";
+        if (lower.endsWith(".py"))   return "text/x-python";
+        if (lower.endsWith(".sh"))   return "application/x-sh";
+        if (lower.endsWith(".sql"))  return "application/sql";
+        if (lower.endsWith(".apk"))  return "application/vnd.android.package-archive";
+        return "application/octet-stream";
+    }
+
+    /**
+     * 聊天系统提示词
+     *
+     * @param sessionId
+     * @param agent
+     * @param userId
+     * @param selectedTools
+     * @param skillNames
+     * @param avatarSettings
+     * @return
+     */
+    private String getChatSystemMessage(String sessionId, Agent agent, String userId, List<ToolSetInfo> selectedTools, List<String> skillNames, AvatarSettings avatarSettings) {
+        String systemMessage = "";
+        String customPrompt = sysConfigService.getValueByKey("system_prompt", null);
+        if (customPrompt != null && !customPrompt.isBlank()) {
+            systemMessage += customPrompt + "\n";
+        } else {
+            systemMessage += "你是一个智能助手，名字叫{agentName},主要能力{agentDescription},agentId是{agentId}。\n" +
+                    "记忆工具是你的核心工具，需要回忆什么信息时，先去调用记忆工具看看有没相关可用信息。用户画像记忆、任务记录记忆、过往的经验或总结都可以通过搜索用户记忆尝试查找。\n" +
+                    "在遇到需要用户提供信息的时候，不要猜，记忆中没有就问用户。\n" +
+                    "在判断有需要调用工具就去调用，遇到危险操作，立刻停止操作，询问用户。\n" +
+                    "你只能使用用户提供的工具，绝对不能调用不存在的工具。更不能编造工具。\n" +
+                    "如果需要写临时性的文件尽量写到{tempFilePath}目录，不要写到用户目录。\n" +
+                    "{tempFilePath}目录的下载地址是：/temp-file/文件名，可用于Markdown格式图片展示。\n" +
+                    "如果交付产物是上传的附件，将结果输出为Markdown格式：\n" +
+                    "1，图片类型：![文件名](下载地址)\n" +
+                    "2，其他类型：[attachment:附件ID:文件名:下载地址] \n";
+        }
+        String tempFilePath = System.getProperty("user.dir") + File.separator + "temp-file";
+        systemMessage = systemMessage.replace("{agentName}", agent.getName())
+                .replace("{agentDescription}", agent.getDescription())
+                .replace("{agentId}", agent.getId().toString())
+                .replace("{tempFilePath}", tempFilePath);
+        if (!avatarSettings.isDisabled()
+                && avatarSettings.getPersonaSetting() != null
+                && !avatarSettings.getPersonaSetting().isEmpty()) {
+            systemMessage += "你可以控制一个虚拟人和用户交互，人物的设定是：" + avatarSettings.getPersonaSetting() + "\n";
+            if (avatarSettings.isSoundEnabled() && avatarSettings.getTtsConfigId() != null && StringUtils.hasLength(avatarSettings.getTtsVoiceId())) {
+                systemMessage += "可以通过发送虚拟人消息向用户输出语音。\n";
+                if (avatarSettings.getTtsEmotions() != null && StringUtils.hasLength(avatarSettings.getTtsEmotions())) {
+                    systemMessage += "发送虚拟人消息支持的语音音色：" + avatarSettings.getTtsEmotions() + "。\n";
+                }
+            }
+        }
+        if (agent.getVectorToolSearch() != null && agent.getVectorToolSearch() && selectedTools != null && !selectedTools.isEmpty()) {
+            systemMessage += "当需要[" + getToolKeywords(selectedTools) + "]这些能力时，先使用" + AgentTool.TOOL_SEARCH_TOOL_NAME + "搜一下对应关键词，拿到工具详情再做决定使用。\n";
+        }
+        // 根据设置决定是否注入用户画像 / 任务记录作为系统提示词上下文
+        if (isPromptIncludeUserProfile() && userId != null && !userId.isEmpty()) {
+            String profile = longTermMemoryService.queryUserProfileMemoryContent(userId);
+            if (profile != null && !profile.isEmpty()) {
+                systemMessage += "\n----用户画像----\n" + profile;
+                logger.debug("系统提示词已注入用户画像（userId={}）", userId);
+            }
+        }
+        if (isPromptIncludeTaskRecords() && userId != null && !userId.isEmpty()) {
+            Integer maxCount = getTaskRecordsMaxCount();
+            String taskRecords = longTermMemoryService.queryUserTaskRecordsMemoryContent(sessionId, userId, true, maxCount);
+            if (taskRecords != null && !taskRecords.isEmpty()) {
+                systemMessage += "\n----近期任务记录----\n" + taskRecords;
+                logger.debug("系统提示词已注入近期任务记录（userId={}, maxCount={}）", userId, maxCount);
+            }
+        }
+        if (skillNames != null && !skillNames.isEmpty()) {
+            String skillContext = buildSkillContext(skillNames);
+            systemMessage += skillContext;
+        }
+        systemMessage = systemMessage + "\n今日日期：" + LocalDate.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd"));
+        return systemMessage;
+    }
+
+    /**
+     * 读取"提示词带入用户画像"设置（默认 true）
+     */
+    private boolean isPromptIncludeUserProfile() {
+        return Boolean.parseBoolean(sysConfigService.getValueByKey("promptIncludeUserProfile", "true"));
+    }
+
+    /**
+     * 读取"提示词带入近期任务记录"设置（默认 true）
+     */
+    private boolean isPromptIncludeTaskRecords() {
+        return Boolean.parseBoolean(sysConfigService.getValueByKey("promptIncludeTaskRecords", "true"));
+    }
+
+    /**
+     * 读取"最大带入条数"设置（默认 5）
+     */
+    private Integer getTaskRecordsMaxCount() {
+        String value = sysConfigService.getValueByKey("promptIncludeTaskRecordsMaxCount", "5");
+        try {
+            int count = Integer.parseInt(value);
+            return count > 0 ? count : null;
+        } catch (NumberFormatException e) {
+            return null;
+        }
+    }
+
+    private String buildSkillContext(List<String> skillNames) {
+        StringBuilder sb = new StringBuilder();
+        sb.append("你将使用以下技能完成任务，请严格遵循技能中定义的指令：\n\n");
+        for (String name : skillNames) {
+            SkillInfo skill = skillService.getSkill(name);
+            if (skill == null || skill.getContent() == null) {
+                continue;
+            }
+            String content = skill.getContent().trim();
+            sb.append("--- 技能: ").append(name).append(" ---\n");
+            sb.append(content);
+            if (!content.endsWith("\n")) {
+                sb.append("\n");
+            }
+            sb.append("--- 结束 ---\n\n");
+        }
+        return sb.toString();
+    }
+
+    private String getToolKeywords(List<ToolSetInfo> selectedTools) {
+        return selectedTools.stream().map(ToolSetInfo::getKeyword).collect(Collectors.joining(","));
+    }
+
+
+}

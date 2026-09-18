@@ -1,14 +1,23 @@
 package com.agent.hopaw.controller;
 
-import com.agent.hopaw.constant.DefaultUser;
+import com.agent.hopaw.infra.constant.AgentExecutorBizTypeEnum;
+import com.agent.hopaw.infra.constant.ChatMemoryStatusEnum;
+import com.agent.hopaw.infra.memory.IChatMemoryService;
 import com.agent.hopaw.infra.model.dto.ResponseBean;
 import com.agent.hopaw.infra.model.entity.ChatHistory;
 import com.agent.hopaw.infra.model.entity.ChatSession;
-import com.agent.hopaw.infra.model.entity.TokenUsage;
-import com.agent.hopaw.infra.service.ChatSessionService;
-import com.agent.hopaw.infra.service.ITokenUsageService;
+import com.agent.hopaw.infra.model.entity.RequestResponseLog;
+import com.agent.hopaw.infra.service.IAgentExecutorService;
+import com.agent.hopaw.infra.service.IChatHistoryService;
+import com.agent.hopaw.infra.service.IChatSessionService;
+import com.agent.hopaw.infra.service.IRequestResponseLogService;
+import com.agent.hopaw.infra.util.UuidUtil;
+import com.agent.hopaw.util.CurrentUser;
+import org.springframework.util.StringUtils;
 import org.springframework.web.bind.annotation.*;
 
+import javax.servlet.http.HttpServletRequest;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -17,22 +26,29 @@ import java.util.Map;
 @RequestMapping("/api/session")
 public class ChatSessionController {
 
-    private final ChatSessionService chatSessionService;
-    private final ITokenUsageService tokenUsageService;
-
-    public ChatSessionController(ChatSessionService chatSessionService,
-                                 ITokenUsageService tokenUsageService) {
+    private final IChatSessionService chatSessionService;
+    private final IAgentExecutorService agentExecutorService;
+    private final IChatHistoryService chatHistoryService;
+    private final IChatMemoryService chatMemoryService;
+    private final IRequestResponseLogService requestResponseLogService;
+    private final com.agent.hopaw.infra.tool.IAgentToolService agentToolService;
+    public ChatSessionController(IChatSessionService chatSessionService, IAgentExecutorService agentExecutorService, IChatHistoryService chatHistoryService, IChatMemoryService chatMemoryService, IRequestResponseLogService requestResponseLogService, com.agent.hopaw.infra.tool.IAgentToolService agentToolService) {
         this.chatSessionService = chatSessionService;
-        this.tokenUsageService = tokenUsageService;
+        this.agentExecutorService = agentExecutorService;
+        this.chatHistoryService = chatHistoryService;
+        this.chatMemoryService = chatMemoryService;
+        this.requestResponseLogService = requestResponseLogService;
+        this.agentToolService = agentToolService;
     }
 
     @GetMapping("/list")
-    public ResponseBean list(@RequestParam(required = false) Long agentId) {
-        List<ChatSession> sessions;
-        if (agentId != null) {
-            sessions = chatSessionService.getSessionsByUserIdAndAgentId(DefaultUser.USER, agentId);
-        } else {
-            sessions = chatSessionService.getSessionsByUserId(DefaultUser.USER);
+    public ResponseBean list(HttpServletRequest request, @RequestParam(required = false) Long agentId) {
+        String currentUserId = CurrentUser.require(request);
+        // 首页可见会话：自己的聊天会话 + 所有人的项目/工作流任务会话
+        List<ChatSession> sessions = chatSessionService.getVisibleSessions(currentUserId, agentId);
+        // 填充会话执行器实时运行状态，前端会话列表据此显示loading图标
+        if (sessions != null) {
+            sessions.forEach(s -> s.setRunning(agentExecutorService.isAgentExecutorRunning(s.getSessionId())));
         }
         return ResponseBean.success(sessions);
     }
@@ -52,25 +68,120 @@ public class ChatSessionController {
         return ResponseBean.success(history);
     }
 
-    @PostMapping("/create")
-    public ResponseBean create(@RequestParam Long agentId,
-                              @RequestParam(required = false) String title) {
-        String sessionTitle = title != null && !title.isEmpty() ? title : "新会话";
-        ChatSession session = chatSessionService.createSession(agentId, DefaultUser.USER, sessionTitle);
-        return ResponseBean.success(session);
+    /**
+     * 首页首次进入会话：加载最新一段会话历史（按时间倒序），供前端 JS 渲染
+     */
+    @GetMapping("/{sessionId}/history/latest")
+    public ResponseBean historyLatest(HttpServletRequest request,
+                                      @PathVariable String sessionId,
+                                      @RequestParam(defaultValue = "100") int limit) {
+        ChatSession session = chatSessionService.getSessionBySessionId(sessionId);
+        // 会话可见性：自己的会话，或所有人的项目/工作流任务会话
+        if (session == null || !isSessionVisibleToUser(session, CurrentUser.require(request))) {
+            return ResponseBean.fail("会话不存在");
+        }
+        if (limit < 1) limit = 100;
+        if (limit > 100) limit = 100;
+        // 多查一条判断是否还有更早数据
+        List<com.agent.hopaw.infra.model.dto.ChatHistoryVO> list =
+                chatHistoryService.findBySessionId(sessionId, limit + 1);
+        boolean hasMore = list.size() > limit;
+        if (hasMore) {
+            list = list.subList(0, limit);
+        }
+        // 工具名映射为描述（与向上翻页接口保持一致）
+        if (!list.isEmpty()) {
+            Map<String, String> toolNameAndDescriptionMap = agentToolService.getToolNameAndDescriptionMap();
+            list.forEach(chatHistoryVO -> {
+                if (chatHistoryVO.getToolName() != null) {
+                    chatHistoryVO.setToolName(toolNameAndDescriptionMap.get(chatHistoryVO.getToolName()));
+                }
+            });
+        }
+        Map<String, Object> result = new HashMap<>(2);
+        result.put("list", list);
+        result.put("hasMore", hasMore);
+        return ResponseBean.success(result);
     }
 
-    @PostMapping("/create-with-id")
-    public ResponseBean createWithId(@RequestParam Long agentId,
-                                    @RequestParam String sessionId,
-                                    @RequestParam(required = false) String title) {
-        String sessionTitle = title != null && !title.isEmpty() ? title : "新会话";
-        ChatSession existingSession = chatSessionService.getSessionBySessionId(sessionId);
-        if (existingSession != null) {
-            return ResponseBean.success(existingSession);
+    /**
+     * 会话对用户是否可见：自己的会话，或所有人的项目/工作流任务会话（兼容历史数据的旧版 biz_type 写法）
+     */
+    private boolean isSessionVisibleToUser(ChatSession session, String userId) {
+        if (userId.equals(session.getUserId())) {
+            return true;
         }
-        ChatSession session = chatSessionService.createSessionWithId(agentId, DefaultUser.USER, sessionTitle, sessionId);
-        return ResponseBean.success(session);
+        String bizType = session.getBizType();
+        return AgentExecutorBizTypeEnum.WorkflowTaskChat.getValue().equals(bizType)
+                || "workflow-task-chat".equals(bizType)
+                || AgentExecutorBizTypeEnum.ProjectChat.getValue().equals(bizType)
+                || "project-chat".equals(bizType);
+    }
+
+    /**
+     * 首页向上滚动加载更早消息：游标 (beforeTime, beforeId) 之前的会话历史（按时间倒序）
+     */
+    @GetMapping("/{sessionId}/history/before")
+    public ResponseBean historyBefore(HttpServletRequest request,
+                                      @PathVariable String sessionId,
+                                      @RequestParam String beforeTime,
+                                      @RequestParam Long beforeId,
+                                      @RequestParam(defaultValue = "50") int limit) {
+        // 会话归属校验：只能查看自己的会话历史
+        ChatSession session = chatSessionService.getSessionBySessionId(sessionId);
+        if (session == null || !CurrentUser.require(request).equals(session.getUserId())) {
+            return ResponseBean.fail("会话不存在");
+        }
+        java.time.LocalDateTime cursorTime;
+        try {
+            cursorTime = java.time.LocalDateTime.parse(beforeTime);
+        } catch (Exception e) {
+            return ResponseBean.fail("时间参数格式错误");
+        }
+        if (limit < 1) limit = 50;
+        if (limit > 100) limit = 100;
+        // 多查一条判断是否还有更早数据
+        List<com.agent.hopaw.infra.model.dto.ChatHistoryVO> list =
+                chatHistoryService.findBySessionIdBefore(sessionId, cursorTime, beforeId, limit + 1);
+        boolean hasMore = list.size() > limit;
+        if (hasMore) {
+            list = list.subList(0, limit);
+        }
+        // 工具名映射为描述（与首页服务端渲染保持一致）
+        if (!list.isEmpty()) {
+            Map<String, String> toolNameAndDescriptionMap = agentToolService.getToolNameAndDescriptionMap();
+            list.forEach(chatHistoryVO -> {
+                if (chatHistoryVO.getToolName() != null) {
+                    chatHistoryVO.setToolName(toolNameAndDescriptionMap.get(chatHistoryVO.getToolName()));
+                }
+            });
+        }
+        Map<String, Object> result = new HashMap<>(2);
+        result.put("list", list);
+        result.put("hasMore", hasMore);
+        return ResponseBean.success(result);
+    }
+
+    @PostMapping("/{sessionId}/stop")
+    @ResponseBody
+    public ResponseBean stopAgent(@PathVariable String sessionId) {
+        agentExecutorService.stopAgentExecutor(sessionId);
+        return ResponseBean.success();
+    }
+
+    @PostMapping("/create")
+    @ResponseBody
+    public ResponseBean create(HttpServletRequest request, @RequestBody ChatSession session) {
+        if(!StringUtils.hasLength(session.getTitle())){
+            session.setTitle("新会话");
+        }
+        session.setBizType(AgentExecutorBizTypeEnum.Chat.getValue());
+        session.setUserId(CurrentUser.require(request));
+        session.setSessionId(UuidUtil.generateSimpleUUID());
+        session.setCreateTime(java.time.LocalDateTime.now());
+        session.setLastUpdateTime(java.time.LocalDateTime.now());
+        chatSessionService.insertSession(session);
+        return ResponseBean.success(session.getSessionId());
     }
 
     @PostMapping("/update-title")
@@ -80,44 +191,283 @@ public class ChatSessionController {
         return ResponseBean.success();
     }
 
-    @PostMapping("/delete")
-    public ResponseBean delete(@RequestParam Long id) {
+    @DeleteMapping("/{id}")
+    public ResponseBean delete(@PathVariable Long id) {
+        ChatSession session = chatSessionService.getSessionById(id);
         chatSessionService.deleteSession(id);
+        chatHistoryService.deleteBySessionId(session.getSessionId());
+        chatMemoryService.clear(session.getSessionId());
         return ResponseBean.success();
     }
 
-    @PostMapping("/delete-by-session-id")
-    public ResponseBean deleteBySessionId(@RequestParam String sessionId) {
+    @DeleteMapping("/{sessionId}/delete-by-session-id")
+    public ResponseBean deleteBySessionId(@PathVariable String sessionId) {
         chatSessionService.deleteSessionBySessionId(sessionId);
+        chatHistoryService.deleteBySessionId(sessionId);
+        chatMemoryService.clear(sessionId);
         return ResponseBean.success();
     }
 
-    @GetMapping("/detail")
-    public ResponseBean detail(@RequestParam String sessionId) {
-        ChatSession session = chatSessionService.getSessionBySessionId(sessionId);
-        if (session == null) {
-            return ResponseBean.fail("会话不存在");
-        }
 
-        List<ChatHistory> history = chatSessionService.getChatHistoryBySessionId(sessionId, 100);
-        java.util.Collections.reverse(history);
+    @PostMapping("/{sessionId}/tool/stop")
+    @ResponseBody
+    public ResponseBean stopTool(@PathVariable String sessionId, @RequestParam String callId) {
+        agentExecutorService.stopTool(sessionId, callId);
+        return ResponseBean.success();
+    }
 
-        TokenUsage summary = tokenUsageService.summary(null, null, DefaultUser.USER, session.getAgentId(), null, "chat");
+    @PostMapping("/{sessionId}/tool/approval")
+    @ResponseBody
+    public ResponseBean approvalTool(@PathVariable String sessionId, @RequestParam String callId, @RequestParam Boolean allowed) {
+        agentExecutorService.toolApprovalComplete(sessionId, callId,allowed);
+        return ResponseBean.success();
+    }
 
-        Map<String, Object> result = new HashMap<>();
-        result.put("session", session);
-        result.put("history", history);
-        result.put("tokenUsage", summary);
+    @GetMapping("/{sessionId}/running")
+    @ResponseBody
+    public ResponseBean isRunning(@PathVariable String sessionId) {
+        boolean running = agentExecutorService.isAgentExecutorRunning(sessionId);
+        return ResponseBean.success(running);
+    }
+
+    /**
+     * 查询执行器可重置锁（看门狗）的剩余等待时间（秒）及已运行时长（秒）：
+     * 会话运行中时有活动会重置倒计时，用于前端运行中按钮的倒计时展示
+     */
+    @GetMapping("/{sessionId}/lock-remaining")
+    @ResponseBody
+    public ResponseBean lockRemaining(@PathVariable String sessionId) {
+        var executor = agentExecutorService.getAgentExecutor(sessionId);
+        Map<String, Object> result = new HashMap<>(4);
+        result.put("running", executor != null && executor.running());
+        result.put("remainingSeconds", executor != null ? executor.getWatchdogRemainingSeconds() : 0);
+        result.put("elapsedSeconds", executor != null ? executor.getElapsedSeconds() : 0);
         return ResponseBean.success(result);
     }
 
-    @PostMapping("/update-config")
-    public ResponseBean updateConfig(@RequestParam String sessionId,
-                                     @RequestParam Long agentId,
-                                     @RequestParam(required = false) Long aiModelId,
-                                     @RequestParam(required = false) Boolean enableThinking,
-                                     @RequestParam(required = false) String skills) {
-        chatSessionService.updateSessionConfig(sessionId, agentId, aiModelId, enableThinking, skills);
+    /**
+     * 手动延长执行器看门狗的超时时间（秒，默认60）：
+     * 用于任务仍在进行但即将超时时用户主动续时
+     */
+    @PostMapping("/{sessionId}/extend-watchdog")
+    @ResponseBody
+    public ResponseBean extendWatchdog(@PathVariable String sessionId,
+                                       @RequestParam(defaultValue = "60") long seconds) {
+        if (seconds < 1) {
+            seconds = 60;
+        }
+        if (seconds > 3600) {
+            seconds = 3600;
+        }
+        var executor = agentExecutorService.getAgentExecutor(sessionId);
+        Map<String, Object> result = new HashMap<>(4);
+        result.put("running", executor != null && executor.running());
+        result.put("remainingSeconds", executor != null ? executor.extendWatchdog(seconds) : 0);
+        return ResponseBean.success(result);
+    }
+
+    /**
+     * 会话清理设置页：分页查询当前用户的会话列表（含消息记录数量）
+     */
+    @GetMapping("/stats-page")
+    @ResponseBody
+    public ResponseBean statsPage(HttpServletRequest request,
+                                  @RequestParam(defaultValue = "1") int page,
+                                  @RequestParam(defaultValue = "20") int pageSize) {
+        if (pageSize < 1) pageSize = 20;
+        if (pageSize > 100) pageSize = 100;
+        String userId = CurrentUser.require(request);
+        return ResponseBean.success(chatSessionService.getSessionStatsPage(userId, page, pageSize));
+    }
+
+    /**
+     * 批量清理会话历史（聊天记录 + 记忆），会话本身保留
+     */
+    @PostMapping("/batch-clear")
+    @ResponseBody
+    public ResponseBean batchClear(@RequestBody Map<String, List<String>> body) {
+        List<String> sessionIds = body.get("sessionIds");
+        if (sessionIds == null || sessionIds.isEmpty()) {
+            return ResponseBean.fail("请选择要清理的会话");
+        }
+        int success = 0;
+        List<String> failed = new ArrayList<>();
+        for (String sessionId : sessionIds) {
+            try {
+                chatHistoryService.deleteBySessionId(sessionId);
+                chatMemoryService.clear(sessionId);
+                requestResponseLogService.deleteBySessionId(sessionId);
+                success++;
+            } catch (Exception e) {
+                failed.add(sessionId);
+            }
+        }
+        Map<String, Object> result = new HashMap<>(2);
+        result.put("success", success);
+        result.put("failed", failed);
+        return ResponseBean.success(result);
+    }
+
+    /**
+     * 批量删除会话：先清理历史（聊天记录 + 记忆 + 请求日志），再删除会话本身
+     */
+    @PostMapping("/batch-delete")
+    @ResponseBody
+    public ResponseBean batchDelete(@RequestBody Map<String, List<String>> body) {
+        List<String> sessionIds = body.get("sessionIds");
+        if (sessionIds == null || sessionIds.isEmpty()) {
+            return ResponseBean.fail("请选择要删除的会话");
+        }
+        int success = 0;
+        List<String> failed = new ArrayList<>();
+        for (String sessionId : sessionIds) {
+            try {
+                // 先清理历史与记忆
+                chatHistoryService.deleteBySessionId(sessionId);
+                chatMemoryService.clear(sessionId);
+                // 再删除会话
+                chatSessionService.deleteSessionBySessionId(sessionId);
+                success++;
+            } catch (Exception e) {
+                failed.add(sessionId);
+            }
+        }
+        Map<String, Object> result = new HashMap<>(2);
+        result.put("success", success);
+        result.put("failed", failed);
+        return ResponseBean.success(result);
+    }
+
+    /**
+     * 会话工具调用统计：会话累计调用总数、当前执行器已执行数量、执行器最大调用次数
+     */
+    @GetMapping("/{sessionId}/tool-stats")
+    @ResponseBody
+    public ResponseBean toolStats(@PathVariable String sessionId) {
+        Map<String, Object> stats = new HashMap<>(4);
+        // 统计1：该会话所有工具调用总数（含历史）
+        stats.put("sessionTotal", chatHistoryService.countToolCallsBySessionId(sessionId));
+        // 统计2/3：当前执行器的执行数量与上限（执行器不存在时为0/0）
+        var executor = agentExecutorService.getAgentExecutor(sessionId);
+        if (executor != null) {
+            stats.put("executedCount", executor.getExecutedToolCount());
+            stats.put("maxToolInvocations", executor.getMaxToolInvocations());
+        } else {
+            stats.put("executedCount", 0);
+            stats.put("maxToolInvocations", 0);
+        }
+        return ResponseBean.success(stats);
+    }
+
+    @PostMapping("/{sessionId}/clear")
+    @ResponseBody
+    public ResponseBean clearChat(@PathVariable String sessionId) {
+        chatHistoryService.deleteBySessionId(sessionId);
+        chatMemoryService.clear(sessionId);
+        requestResponseLogService.deleteBySessionId(sessionId);
         return ResponseBean.success();
+    }
+
+    /**
+     * 会话记忆列表：按会话编号查询 chat_memory，解析出各类型数据（system/user/ai/toolResult）
+     * 返回 memories 列表 + stats 统计（总记录数、各类型记录数、估算总 Token）
+     */
+    @GetMapping("/{sessionId}/memories")
+    @ResponseBody
+    public ResponseBean memories(HttpServletRequest request, @PathVariable String sessionId) {
+        ChatSession session = chatSessionService.getSessionBySessionId(sessionId);
+        // 会话可见性：自己的会话，或所有人的项目/工作流任务会话
+        if (session == null || !isSessionVisibleToUser(session, CurrentUser.require(request))) {
+            return ResponseBean.fail("会话不存在");
+        }
+        List<com.agent.hopaw.infra.model.dto.ChatMemoryVO> memories =
+                chatMemoryService.getChatMemoryVosBySessionId(sessionId);
+
+        // 统计：总记录数、各类型记录数、按多模态估算器口径估算总 Token
+        Map<String, Object> stats = new HashMap<>(8);
+        Map<String, Long> typeCounts = new HashMap<>(8);
+        int totalTokens = 0;
+        for (com.agent.hopaw.infra.model.dto.ChatMemoryVO vo : memories) {
+            String type = vo.getType() != null ? vo.getType() : "other";
+            typeCounts.merge(type, 1L, Long::sum);
+            // 与窗口记忆淘汰同口径的估算器：content/thinking/toolName/toolArguments 按文本估算
+            int tokens = MEMORY_TOKEN_ESTIMATOR.estimateTokenCountInText(nullToEmpty(vo.getContent()))
+                    + MEMORY_TOKEN_ESTIMATOR.estimateTokenCountInText(nullToEmpty(vo.getThinking()))
+                    + MEMORY_TOKEN_ESTIMATOR.estimateTokenCountInText(nullToEmpty(vo.getToolName()))
+                    + MEMORY_TOKEN_ESTIMATOR.estimateTokenCountInText(nullToEmpty(vo.getToolArguments()));
+            vo.setEstimatedTokens(tokens);
+            totalTokens += tokens;
+        }
+        stats.put("total", memories.size());
+        stats.put("typeCounts", typeCounts);
+        stats.put("estimatedTokens", totalTokens);
+
+        Map<String, Object> data = new HashMap<>(4);
+        data.put("memories", memories);
+        data.put("stats", stats);
+        return ResponseBean.success(data);
+    }
+
+    /** 记忆 Token 估算器：与 AgentExecutor 窗口记忆淘汰同口径（gpt-4o 编码），无状态可复用 */
+    private static final com.agent.hopaw.infra.memory.MultimodalTokenCountEstimator MEMORY_TOKEN_ESTIMATOR =
+            new com.agent.hopaw.infra.memory.MultimodalTokenCountEstimator("gpt-4o");
+
+    private static String nullToEmpty(String s) {
+        return s == null ? "" : s;
+    }
+
+    /**
+     * 请求日志列表：按会话编号（可选叠加请求编号）查询模型请求响应日志，
+     * 列表仅返回摘要信息，完整请求/响应 JSON 通过详情接口获取
+     */
+    @GetMapping("/{sessionId}/request-logs")
+    @ResponseBody
+    public ResponseBean requestLogs(HttpServletRequest request,
+                                    @PathVariable String sessionId,
+                                    @RequestParam(required = false) String requestId) {
+        ChatSession session = chatSessionService.getSessionBySessionId(sessionId);
+        if (session == null || !isSessionVisibleToUser(session, CurrentUser.require(request))) {
+            return ResponseBean.fail("会话不存在");
+        }
+        List<RequestResponseLog> logs = requestResponseLogService.findBySessionId(sessionId, requestId);
+        // 摘要列表不返回大字段（完整 JSON 走详情接口），减少传输量
+        for (RequestResponseLog log : logs) {
+            log.setRequestJson(null);
+            log.setResponseJson(null);
+            log.setErrorText(null);
+        }
+        return ResponseBean.success(logs);
+    }
+
+    /**
+     * 请求日志详情：返回完整请求/响应 JSON，用于排查单次模型调用细节
+     */
+    @GetMapping("/{sessionId}/request-logs/{id}")
+    @ResponseBody
+    public ResponseBean requestLogDetail(HttpServletRequest request,
+                                         @PathVariable String sessionId,
+                                         @PathVariable Long id) {
+        ChatSession session = chatSessionService.getSessionBySessionId(sessionId);
+        if (session == null || !isSessionVisibleToUser(session, CurrentUser.require(request))) {
+            return ResponseBean.fail("会话不存在");
+        }
+        RequestResponseLog log = requestResponseLogService.findById(id);
+        if (log == null || !sessionId.equals(log.getSessionId())) {
+            return ResponseBean.fail("日志不存在");
+        }
+        return ResponseBean.success(log);
+    }
+
+    /**
+     * 清理本会话全部请求日志
+     */
+    @DeleteMapping("/{sessionId}/request-logs")
+    @ResponseBody
+    public ResponseBean clearRequestLogs(HttpServletRequest request, @PathVariable String sessionId) {
+        ChatSession session = chatSessionService.getSessionBySessionId(sessionId);
+        if (session == null || !isSessionVisibleToUser(session, CurrentUser.require(request))) {
+            return ResponseBean.fail("会话不存在");
+        }
+        return ResponseBean.success(requestResponseLogService.deleteBySessionId(sessionId));
     }
 }

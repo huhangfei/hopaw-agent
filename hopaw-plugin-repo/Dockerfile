@@ -1,7 +1,7 @@
 # Dockerfile for hopaw-plugin-repo
 # 使用已构建的 JAR 文件
 
-FROM eclipse-temurin:17-jre-alpine
+FROM eclipse-temurin:17-jre
 
 # 设置标签信息
 LABEL maintainer="hopaw-agent"
@@ -13,13 +13,12 @@ ENV TZ=Asia/Shanghai
 RUN ln -snf /usr/share/zoneinfo/$TZ /etc/localtime && echo $TZ > /etc/timezone
 
 # 创建应用用户（安全最佳实践）
-RUN addgroup -S hopaw && adduser -S hopaw -G hopaw
+RUN groupadd -r hopaw && useradd -r -g hopaw hopaw
 
 # 设置工作目录
 WORKDIR /app
 
-# 创建必要的目录
-RUN mkdir -p /app/logs /app/plugin-packages /app/data /app/config
+# 创建必要的目�?RUN mkdir -p /app/logs /app/plugin-packages /app/data /app/config
 
 # 复制已构建的 JAR 文件
 COPY hopaw-plugin-repo-1.0.0.jar app.jar
@@ -41,8 +40,7 @@ ENV JAVA_OPTS="-Xms256m -Xmx256m \
     -Djava.security.egd=file:/dev/./urandom \
     -Duser.timezone=Asia/Shanghai"
 
-# 健康检查
-HEALTHCHECK --interval=30s --timeout=10s --start-period=40s --retries=3 \
+# 健康检�?HEALTHCHECK --interval=30s --timeout=10s --start-period=40s --retries=3 \
     CMD wget --no-verbose --tries=1 --spider http://localhost:8081/ || exit 1
 
 # 启动应用

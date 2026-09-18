@@ -5,6 +5,7 @@ import com.agent.hopaw.infra.model.dto.AiModelVO;
 import com.agent.hopaw.infra.model.dto.ModelCapabilityTestResult;
 import com.alibaba.fastjson2.JSON;
 import com.alibaba.fastjson2.JSONObject;
+import dev.langchain4j.data.message.AudioContent;
 import dev.langchain4j.data.message.ImageContent;
 import dev.langchain4j.data.message.TextContent;
 import dev.langchain4j.data.message.UserMessage;
@@ -41,9 +42,32 @@ public abstract class BaseChatModelFactory implements ChatModelFactory {
         return val != null ? (Boolean) val : true;
     }
 
+    /**
+     * 获取思考努力程度。
+     * 约束逻辑：若模型配置了 supportedThinkingLevels 且非空，则检查当前值是否在支持列表中，
+     * 不在列表中时回退到列表中的第一个值；未配置 supportedThinkingLevels 时不限制。
+     */
     public String getReasoningEffort(AiModelVO aiModelVO) {
         Object val = getExtParams(aiModelVO, "reasoningEffort");
-        return val != null ? (String) val : "medium";
+        String effort = val != null ? (String) val : "high";
+
+        // 模型级约束：检查 reasoningEffort 是否在支持的等级列表中
+        String supportedLevels = aiModelVO.getSupportedThinkingLevels();
+        if (supportedLevels != null && !supportedLevels.isEmpty()) {
+            String[] levels = supportedLevels.split(",");
+            boolean found = false;
+            for (String level : levels) {
+                if (level.trim().equals(effort)) {
+                    found = true;
+                    break;
+                }
+            }
+            if (!found && levels.length > 0) {
+                // 回退到支持列表中的第一个等级
+                effort = levels[0].trim();
+            }
+        }
+        return effort;
     }
 
     public Double getTemperature(AiModelVO aiModelVO) {
@@ -73,7 +97,82 @@ public abstract class BaseChatModelFactory implements ChatModelFactory {
     }
     public Boolean getAccumulateToolCallId(AiModelVO aiModelVO) {
         Object val = getExtParams(aiModelVO, "accumulateToolCallId");
+        return val != null ? (Boolean) val : true;
+    }
+
+    /**
+     * 获取是否启用严格工具 Schema（模型级 extParams 优先，缺省回退 provider 级，均未配置时默认启用）
+     */
+    public Boolean getStrictTools(AiModelVO aiModelVO) {
+        Object val = getExtParams(aiModelVO, "strictTools");
+        return val != null ? (Boolean) val : true;
+    }
+
+    /**
+     * 输出上限是否使用 max_completion_tokens 参数（模型级 extParams 优先，缺省回退 provider 级，默认 false 使用 max_tokens）。
+     * OpenAI o 系列推理模型/gpt-5 要求 max_completion_tokens；DeepSeek 等端点仅支持 max_tokens
+     */
+    public Boolean getUseMaxCompletionTokens(AiModelVO aiModelVO) {
+        Object val = getExtParams(aiModelVO, "useMaxCompletionTokens");
         return val != null ? (Boolean) val : false;
+    }
+
+    /**
+     * 是否允许并行工具调用（模型级 extParams 优先，缺省回退 provider 级，均未配置时默认允许）。
+     * OpenAI 系列映射为 parallelToolCalls；Anthropic 映射为反向语义 disableParallelToolUse
+     */
+    public Boolean getParallelToolCalls(AiModelVO aiModelVO) {
+        Object val = getExtParams(aiModelVO, "parallelToolCalls");
+        return val != null ? (Boolean) val : true;
+    }
+
+    /**
+     * 获取是否启用思考模式。
+     * 约束逻辑：若模型 supportThinking=false，则强制返回 false，忽略 extParams 和调用方参数。
+     */
+    public Boolean getEnableThinking(AiModelVO aiModelVO) {
+        // 模型级硬约束：不支持思考则直接关闭
+        if (aiModelVO.getSupportThinking() != null && !aiModelVO.getSupportThinking()) {
+            return false;
+        }
+        Object val = getExtParams(aiModelVO, "enableThinking");
+        return val != null ? (Boolean) val : true;
+    }
+
+    /**
+     * 强制应用模型思考能力约束：若模型 supportThinking=false，将 enableThinking 强制置为 false。
+     * 供子类在 resolve 参数后调用，确保无论调用方传何值都遵守模型级约束。
+     */
+    public Boolean constrainEnableThinking(AiModelVO aiModelVO, Boolean enableThinking) {
+        if (aiModelVO.getSupportThinking() != null && !aiModelVO.getSupportThinking()) {
+            return false;
+        }
+        return enableThinking;
+    }
+
+    /**
+     * 获取思考预算 token 数（模型级 extParams 优先，缺省回退 provider 级，均未配置时默认 2048）
+     * Anthropic 要求最低 1024，低于该值会被接口拒绝，故做下限保护
+     */
+    public Integer getThinkingBudgetTokens(AiModelVO aiModelVO) {
+        Object val = getExtParams(aiModelVO, "thinkingBudgetTokens");
+        if (val instanceof Number) {
+            int tokens = ((Number) val).intValue();
+            return Math.max(tokens, 1024);
+        }
+        return 2048;
+    }
+
+    /**
+     * 获取单次响应最大输出 token 数（模型级 extParams 优先，缺省回退 provider 级，均未配置时默认 128K）
+     */
+    public Integer getOutputMaxTokens(AiModelVO aiModelVO) {
+        Object val = getExtParams(aiModelVO, "outputMaxTokens");
+        if (val instanceof Number) {
+            int tokens = ((Number) val).intValue();
+            return Math.max(tokens, 1);
+        }
+        return 128 * 1024;
     }
 
     private Object getExtParams(AiModelVO aiModelVO, String paramName) {
@@ -129,6 +228,26 @@ public abstract class BaseChatModelFactory implements ChatModelFactory {
             logger.error("测试图片能力异常", e);
         }
 
+
+        try {
+            String audioBase64 = getAudioAsBase64();
+            if (!audioBase64.isEmpty()) {
+                ChatResponse chatResponse = chatModel.chat(UserMessage.from(
+                        TextContent.from("直接复述你听到的内容，不要多说其他的！"),
+                        AudioContent.from(audioBase64, "audio/wav")));
+                if (chatResponse.aiMessage().text().trim().equals("猫")) {
+                    modelCapabilities.add(ModelCapabilityEnum.AUDIO);
+                } else {
+                    errors.add("音频能力测试未通过：返回结果不符合预期");
+                }
+            } else {
+                errors.add("音频能力测试跳过：无法读取测试音频");
+            }
+        } catch (Exception e) {
+            errors.add("音频能力测试异常：" + e.getMessage());
+            logger.error("测试音频能力异常", e);
+        }
+
         boolean verified = !modelCapabilities.isEmpty();
         String message;
         if (verified) {
@@ -166,6 +285,26 @@ public abstract class BaseChatModelFactory implements ChatModelFactory {
             return java.util.Base64.getEncoder().encodeToString(imageBytes);
         } catch (Exception e) {
             logger.error("读取图片并转换为base64失败", e);
+            return "";
+        }
+    }
+    private String getAudioAsBase64() {
+        try {
+            // 读取资源目录下static/audios/audio.wav为base64
+            ClassLoader classLoader = getClass().getClassLoader();
+            java.io.InputStream inputStream = classLoader.getResourceAsStream("static/audios/audio.wav");
+            if (inputStream == null) {
+                logger.error("无法找到资源文件: static/audios/audio.wav");
+                return "";
+            }
+
+            byte[] bytes = inputStream.readAllBytes();
+            inputStream.close();
+
+            // 转换为base64字符串
+            return java.util.Base64.getEncoder().encodeToString(bytes);
+        } catch (Exception e) {
+            logger.error("读取音频并转换为base64失败", e);
             return "";
         }
     }

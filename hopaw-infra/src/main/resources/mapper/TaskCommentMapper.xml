@@ -1,0 +1,77 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.agent.hopaw.infra.mapper.TaskCommentMapper">
+
+    <resultMap id="TaskCommentResultMap" type="com.agent.hopaw.infra.model.entity.WorkflowTaskComment">
+        <id property="id" column="id"/>
+        <result property="taskId" column="task_id"/>
+        <result property="content" column="content"/>
+        <result property="userId" column="user_id"/>
+        <result property="commenterType" column="commenter_type"/>
+        <result property="commenterId" column="commenter_id"/>
+        <result property="commentType" column="comment_type"/>
+        <result property="createTime" column="create_time"/>
+        <result property="status" column="status"/>
+        <result property="commenterName" column="commenter_name"/>
+    </resultMap>
+
+    <sql id="allColumns">
+        c.id, c.task_id, c.content, c.user_id, c.commenter_type, c.commenter_id, c.comment_type, c.create_time, c.status,
+        CASE WHEN c.commenter_type = 'agent' THEN ag.name ELSE COALESCE(ac.nickname, ac.username) END AS commenter_name
+    </sql>
+
+    <insert id="insert" parameterType="com.agent.hopaw.infra.model.entity.WorkflowTaskComment">
+        INSERT INTO task_comments (task_id, content, user_id, commenter_type, commenter_id, comment_type, status, create_time)
+        VALUES (#{taskId}, #{content}, #{userId}, #{commenterType}, #{commenterId}, #{commentType}, #{status}, datetime('now','localtime'))
+        <selectKey resultType="long" keyProperty="id" order="AFTER">
+            SELECT last_insert_rowid()
+        </selectKey>
+    </insert>
+
+    <delete id="deleteById">
+        DELETE FROM task_comments WHERE id = #{id}
+    </delete>
+
+    <select id="findById" resultMap="TaskCommentResultMap">
+        SELECT <include refid="allColumns"/>
+        FROM task_comments c
+        LEFT JOIN agents ag ON c.commenter_type = 'agent' AND c.commenter_id = CAST(ag.id AS TEXT)
+        LEFT JOIN accounts ac ON (c.commenter_type IS NULL OR c.commenter_type != 'agent') AND c.commenter_id = ac.user_id
+        WHERE c.id = #{id}
+    </select>
+
+    <select id="findByTaskId" resultMap="TaskCommentResultMap">
+        SELECT <include refid="allColumns"/>
+        FROM task_comments c
+        LEFT JOIN agents ag ON c.commenter_type = 'agent' AND c.commenter_id = CAST(ag.id AS TEXT)
+        LEFT JOIN accounts ac ON (c.commenter_type IS NULL OR c.commenter_type != 'agent') AND c.commenter_id = ac.user_id
+        WHERE c.task_id = #{taskId}
+        ORDER BY c.create_time ASC
+    </select>
+
+    <select id="findByTaskIdAndStatus" resultMap="TaskCommentResultMap">
+        SELECT <include refid="allColumns"/>
+        FROM task_comments c
+        LEFT JOIN agents ag ON c.commenter_type = 'agent' AND c.commenter_id = CAST(ag.id AS TEXT)
+        LEFT JOIN accounts ac ON (c.commenter_type IS NULL OR c.commenter_type != 'agent') AND c.commenter_id = ac.user_id
+        WHERE c.task_id = #{taskId}
+          AND c.status = #{status}
+        ORDER BY c.create_time ASC
+    </select>
+
+    <update id="updateStatusByIds">
+        UPDATE task_comments
+        SET status = #{status}
+        WHERE id IN
+        <foreach collection="ids" item="id" open="(" separator="," close=")">
+            #{id}
+        </foreach>
+    </update>
+
+    <update id="updateCommentType">
+        UPDATE task_comments
+        SET comment_type = #{commentType}
+        WHERE id = #{id}
+    </update>
+
+</mapper>

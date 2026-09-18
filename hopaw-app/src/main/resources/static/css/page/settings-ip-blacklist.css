@@ -1,0 +1,82 @@
+.ipbl-toolbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 16px;
+}
+
+.ipbl-total {
+    font-size: 13px;
+    color: #999;
+}
+
+.ipbl-card {
+    background: #fff;
+    border-radius: 8px;
+    border: 1px solid #e5e7eb;
+    overflow: hidden;
+}
+
+.ipbl-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 13px;
+}
+
+.ipbl-table th {
+    background: #f9fafb;
+    padding: 10px 12px;
+    text-align: left;
+    font-weight: 500;
+    color: #666;
+    border-bottom: 1px solid #e5e7eb;
+}
+
+.ipbl-table td {
+    padding: 10px 12px;
+    border-bottom: 1px solid #f0f0f0;
+    color: #333;
+}
+
+.ipbl-table tr:hover td {
+    background: #f9fafb;
+}
+
+.ipbl-empty {
+    padding: 40px;
+    text-align: center;
+    color: #999;
+}
+
+.btn-text-danger {
+    background: none;
+    border: none;
+    color: #ef4444;
+    cursor: pointer;
+    font-size: 13px;
+    padding: 2px 6px;
+}
+
+.btn-text-danger:hover {
+    color: #dc2626;
+}
+
+body.dark-theme .ipbl-card {
+    background: #1e1e2e;
+    border-color: #313244;
+}
+
+body.dark-theme .ipbl-table th {
+    background: #181825;
+    border-color: #313244;
+    color: #a6adc8;
+}
+
+body.dark-theme .ipbl-table td {
+    border-color: #313244;
+    color: #cdd6f4;
+}
+
+body.dark-theme .ipbl-table tr:hover td {
+    background: #1e1e2e;
+}

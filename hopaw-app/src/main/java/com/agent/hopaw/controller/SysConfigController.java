@@ -2,7 +2,7 @@ package com.agent.hopaw.controller;
 
 import com.agent.hopaw.infra.model.dto.ResponseBean;
 import com.agent.hopaw.infra.model.entity.SysConfig;
-import com.agent.hopaw.infra.service.SysConfigService;
+import com.agent.hopaw.infra.service.ISysConfigService;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -11,16 +11,10 @@ import java.util.List;
 @RequestMapping("/api/config")
 public class SysConfigController {
 
-    private final SysConfigService sysConfigService;
+    private final ISysConfigService sysConfigService;
 
-    public SysConfigController(SysConfigService sysConfigService) {
+    public SysConfigController(ISysConfigService sysConfigService) {
         this.sysConfigService = sysConfigService;
-    }
-
-    @GetMapping
-    public ResponseBean getAll() {
-        List<SysConfig> list = sysConfigService.getAll();
-        return ResponseBean.success(list);
     }
 
     @GetMapping("/{key}")
@@ -32,6 +26,17 @@ public class SysConfigController {
         return ResponseBean.success(config);
     }
 
+    /**
+     * 按需批量查询：界面只查询当前页面用到的配置项，避免全量拉取
+     */
+    @PostMapping("/batch")
+    public ResponseBean getByKeys(@RequestBody List<String> keys) {
+        if (keys == null || keys.isEmpty()) {
+            return ResponseBean.success(List.of());
+        }
+        return ResponseBean.success(sysConfigService.getByKeys(keys));
+    }
+
     @PostMapping
     public ResponseBean create(@RequestBody SysConfig sysConfig) {
         if (sysConfig.getConfigKey() == null || sysConfig.getConfigKey().isBlank()) {
@@ -40,7 +45,7 @@ public class SysConfigController {
         if (sysConfigService.getByKey(sysConfig.getConfigKey()) != null) {
             return ResponseBean.fail("配置键已存在: " + sysConfig.getConfigKey());
         }
-        sysConfigService.save(sysConfig);
+        sysConfigService.insert(sysConfig, isEncryptRequested(sysConfig));
         return ResponseBean.success(sysConfig);
     }
 
@@ -51,8 +56,15 @@ public class SysConfigController {
             return ResponseBean.fail("配置不存在: " + key);
         }
         sysConfig.setConfigKey(key);
-        sysConfigService.update(sysConfig);
+        sysConfigService.update(sysConfig, isEncryptRequested(sysConfig));
         return ResponseBean.success(sysConfig);
+    }
+
+    /**
+     * 请求体 isEncrypted=1 表示要求加密保存
+     */
+    private boolean isEncryptRequested(SysConfig sysConfig) {
+        return sysConfig.getIsEncrypted() != null && sysConfig.getIsEncrypted() == 1;
     }
 
     @DeleteMapping("/{key}")

@@ -36,8 +36,8 @@
             <artifactId>jsoup</artifactId>
         </dependency>
         <dependency>
-            <groupId>com.microsoft.playwright</groupId>
-            <artifactId>playwright</artifactId>
+            <groupId>org.htmlunit</groupId>
+            <artifactId>htmlunit</artifactId>
         </dependency>
     </dependencies>
     <build>

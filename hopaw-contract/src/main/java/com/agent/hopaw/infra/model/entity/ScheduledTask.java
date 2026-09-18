@@ -18,6 +18,7 @@ public class ScheduledTask {
      * 智能体ID
      */
     private String agentId;
+    private String sessionId;
     /**
      * 是否是内置任务
      * 0: 否
@@ -61,4 +62,6 @@ public class ScheduledTask {
     public void setCreateTime(LocalDateTime createTime) { this.createTime = createTime; }
     public LocalDateTime getUpdateTime() { return updateTime; }
     public void setUpdateTime(LocalDateTime updateTime) { this.updateTime = updateTime; }
+    public String getSessionId() { return sessionId; }
+    public void setSessionId(String sessionId) { this.sessionId = sessionId; }
 }

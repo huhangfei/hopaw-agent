@@ -3,256 +3,272 @@
       xmlns:th="http://www.thymeleaf.org"
       layout:decorate="~{layouts/default}">
 <head>
-    <title>🤖 HoPaw - 你的智能小帮手</title>
+    <title>🤖 HoPaw</title>
 </head>
 <body>
-<div layout:fragment="pageTitle">🤖 HoPaw - 你的智能小帮手</div>
+<div layout:fragment="pageTitle">🤖 HoPaw - 会话</div>
 
 <div class="chat-wrapper" layout:fragment="content">
-
-    <aside class="session-sidebar">
-        <div class="session-sidebar-header">
-            <span class="session-sidebar-title">会话列表</span>
-            <button class="btn-new-session" onclick="createNewSession()" title="新建会话">
-                <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor"><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/></svg>
-            </button>
-        </div>
-        <div class="session-list" id="sessionList">
-            <div th:each="s : ${sessions}" class="session-item"
-                 th:attr="data-session-id=${s.sessionId}, data-agent-id=${s.agentId}"
-                 th:classappend="${selectedSession != null && selectedSession.sessionId == s.sessionId} ? 'active' : ''">
-                <div class="session-item-icon">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg>
-                </div>
-                <div class="session-item-content">
-                    <div class="session-item-title" th:text="${s.title}">会话</div>
-                    <div class="session-item-time"
-                         th:text="${s.lastUpdateTime != null ? #temporals.format(s.lastUpdateTime, 'MM-dd HH:mm') : ''}"></div>
-                </div>
-                <button class="session-item-delete" th:attr="onclick=|deleteSession('${s.sessionId}')|" title="删除会话">
-                    <svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor"><path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/></svg>
-                </button>
-            </div>
-            <div th:if="${#lists.isEmpty(sessions)}" class="session-list-empty">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" width="40" height="40"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg>
-                <p>暂无会话</p>
-                <p class="session-list-empty-hint">点击 + 新建会话开始对话</p>
-            </div>
-        </div>
-    </aside>
-
     <main class="chat-area">
-        <div th:if="${selectedSession != null}" class="chat-header">
-            <div class="chat-header-title">
-                <span class="chat-header-session-name" th:text="${selectedSession.title}">会话名称</span>
+        <div th:if="${selectedAgent == null}" class="chat-empty-state">
+            <div class="chat-empty-icon">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                    <rect x="3" y="3" width="18" height="18" rx="2"/>
+                    <path d="M9 9l6 6"/>
+                    <path d="M15 9l-6 6"/>
+                </svg>
             </div>
-            <div class="header-actions">
-                <button class="btn-stop-header" th:attr="onclick=|forceStopAgent('${selectedSession.agentId}')|" title="强停">
-                    <svg viewBox="0 0 24 24" fill="currentColor"><rect x="4" y="4" width="16" height="16" rx="2"/></svg>
-                    强停
+            <h3 class="chat-empty-title">暂无可用智能体</h3>
+            <p class="chat-empty-desc">请先前往智能体管理页面创建并启用智能体</p>
+            <a href="/agents" class="chat-empty-btn">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                    <line x1="12" y1="5" x2="12" y2="19"/>
+                    <line x1="5" y1="12" x2="19" y2="12"/>
+                </svg>
+                前往智能体管理
+            </a>
+        </div>
+        <div th:if="${selectedAgent != null}" class="chat-header">
+            <!-- 运行状态双色光晕背景层：左(已用时间)与右(超时时间)光晕在分界线相遇，分界线 = 已用/(已用+超时) -->
+            <div class="chat-header-glow" id="chatHeaderGlow" aria-hidden="true">
+                <div class="chat-header-glow-line"></div>
+            </div>
+            <div class="chat-header-title">
+                <span class="chat-header-desc" id="chat-header-desc" th:text="${currentSessionTitle}"></span>
+            </div>
+            <div class="chat-header-actions">
+                <!-- 运行状态计时器：已运行时长 + 看门狗剩余时间（运行中显示） -->
+                <div class="chat-header-timer" id="chatHeaderTimer"
+                     th:classappend="${agentExecutorState ? '' : 'hide'}">
+                    <span class="chat-header-timer-dot"></span>
+                    <span class="chat-header-timer-text">运行中 <span id="runningElapsed"></span></span>
+                    <span class="chat-header-timer-countdown" id="runningCountdown"></span>
+                </div>
+                <!-- 超时剩余60秒内显示：点击延长超时时间60秒 -->
+                <button class="btn-extend-timeout hide" id="btnExtendTimeout" onclick="extendSessionTimeout()"
+                        title="延长超时时间60秒">
+                    <svg viewBox="0 0 24 24" fill="currentColor" width="15" height="15">
+                        <!-- 沙漏：剩余时间 -->
+                        <g transform="translate(0.8,0.5) scale(0.78)">
+                            <path d="M5 2h14v3l-5.5 7L19 19v3H5v-3l5.5-7L5 5V2z"/>
+                        </g>
+                        <!-- 右下角加号：追加时间 -->
+                        <path d="M18.7 13.5h2v2.7h2.7v2h-2.7v2.7h-2v-2.7H16v-2h2.7v-2.7z"/>
+                    </svg>
                 </button>
                 <div class="header-dropdown">
                     <button class="btn-more" title="更多操作">
-                        <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor"><path d="M12 8c1.1 0 2-.9 2-2s-.9-2-2-2-2 .9-2 2 .9 2 2 2zm0 2c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2zm0 6c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2z"/></svg>
+                        <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor">
+                            <path d="M12 8c1.1 0 2-.9 2-2s-.9-2-2-2-2 .9-2 2 .9 2 2 2zm0 2c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2zm0 6c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2z"/>
+                        </svg>
                     </button>
-                    <div class="dropdown-menu"><div class="dropdown-menu-inner">
-                        <button class="dropdown-item" onclick="showAddModal()">
-                            <svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor"><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/></svg>
-                            添加Agent
-                        </button>
-                        <button class="dropdown-item" onclick="clearCurrentSessionHistory()">
-                            <svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor"><path d="M19.36 2.72l1.42 1.42-5.72 5.71c1.07 1.54 1.22 3.39.32 4.59L9.06 8.12c1.2-.9 3.05-.75 4.59.32l5.71-5.72zM5.93 17.57c-2.01-2.01-3.24-4.41-3.58-6.65l4.88-2.09 7.44 7.44-2.09 4.88c-2.24-.34-4.64-1.57-6.65-3.58z"/></svg>
-                            清空对话
-                        </button>
-                    </div></div>
-                </div>
-            </div>
-        </div>
-
-        <div class="chat-messages" id="chatMessages"
-             th:classappend="${selectedSession == null ? 'no-session' : ''}">
-            <div th:if="${selectedSession == null}" class="empty-chat-guide" id="emptyChatGuide">
-                <div class="empty-chat-guide-icon">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" width="64" height="64">
-                        <path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/>
-                        <line x1="9" y1="10" x2="15" y2="10"/>
-                        <line x1="12" y1="7" x2="12" y2="13"/>
-                    </svg>
-                </div>
-                <h3>选择Agent开始对话</h3>
-                <p>请先在下方选择一个Agent，然后发送消息开始对话</p>
-            </div>
-            <div th:if="${selectedSession != null and #lists.isEmpty(chatHistory)}" class="empty-chat-guide" id="emptyChatGuide">
-                <div class="empty-chat-guide-icon">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" width="64" height="64">
-                        <path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/>
-                        <line x1="9" y1="10" x2="15" y2="10"/>
-                        <line x1="12" y1="7" x2="12" y2="13"/>
-                    </svg>
-                </div>
-                <h3>开始新的对话</h3>
-                <p>在下方输入框中输入您的问题，我将为您提供智能协助</p>
-            </div>
-            <div th:each="chat : ${chatHistory}" th:if="${chat.messageType != 'tool_call'}" th:switch="${chat.messageType}"
-                 th:classappend="${chat.role == 'user' ? 'user' : 'agent'}" class="message">
-                <div th:case="'text'">
-                    <div class="message-label" th:text="${chat.role == 'user' ? '你' : selectedSession.title}"></div>
-                    <div th:text="${chat.content}" class="message-content"
-                         th:attr="data-is-agent=${chat.role == 'agent'}"></div>
-                    <div class="message-time"
-                         th:text="${chat.createTime.toLocalDate().equals(T(java.time.LocalDate).now()) ? #temporals.format(chat.createTime, 'HH:mm:ss') : #temporals.format(chat.createTime, 'yyyy-MM-dd HH:mm:ss')}"></div>
-                </div>
-                <div th:case="'thinking'">
-                    <div class="message-label" th:text="${selectedSession.title} + ' (思考)'"></div>
-                    <div th:text="${chat.content}" class="message-content thinking-content"></div>
-                    <div class="message-time"
-                         th:text="${chat.createTime.toLocalDate().equals(T(java.time.LocalDate).now()) ? #temporals.format(chat.createTime, 'HH:mm:ss') : #temporals.format(chat.createTime, 'yyyy-MM-dd HH:mm:ss')}"></div>
-                </div>
-                <div th:case="'tool_call'" class="tool-call-message-content">
-                    <div class="message-label" th:text="${selectedSession.title}"></div>
-                    <div class="tool-call-container-static">
-                        <div class="tool-call"
-                             th:attr="data-tool-call-id=${chat.toolCallId}, data-status=${chat.toolCallStatus == 'tool_call_start' ? 'starting' : (chat.toolCallStatus == 'tool_call_end' ? 'executed' : (chat.toolCallStatus == 'tool_call_failed' ? 'executed' : 'unknown'))}">
-                            <div class="tool-call-header">
-                                <span class="tool-call-icon" th:switch="${chat.toolCallStatus}"
-                                      th:classappend="${chat.toolCallStatus == 'tool_call_end' ? 'completed' : ''}">
-                                    <span th:case="'tool_call_start'">🔧</span>
-                                    <span th:case="'tool_call_end'">✅</span>
-                                    <span th:case="'tool_call_failed'">❌</span>
-                                    <span th:case="*">🔧</span>
-                                </span>
-                                <span class="tool-call-name" th:text="${chat.toolName}"></span>
-                                <span class="tool-call-status" th:switch="${chat.toolCallStatus}"
-                                      th:classappend="${chat.toolCallStatus == 'tool_call_end' ? 'completed' : ''}">
-                                    <span th:case="'tool_call_start'">执行中...</span>
-                                    <span th:case="'tool_call_end'" th:text="${chat.toolExecutionTime != null ? '执行完成(' + #numbers.formatDecimal(chat.toolExecutionTime / 1000.0, 1, 1) + 's)' : '执行完成'}">执行完成</span>
-                                    <span th:case="'tool_call_failed'">执行失败</span>
-                                    <span th:case="*" th:text="${chat.toolCallStatus}">执行完成</span>
-                                </span>
-                                <span th:if="${chat.toolCallStatus == 'tool_call_end' or chat.toolCallStatus == 'tool_call_failed'}"
-                                      class="tool-call-toggle">▼</span>
-                            </div>
-                            <div class="tool-call-body"
-                                 th:classappend="${chat.toolCallStatus == 'tool_call_start' ? '' : 'collapsed'}">
-                                <div class="tool-call-args" th:if="${chat.toolArguments}">
-                                    <div class="args-label">参数:</div>
-                                    <pre class="args-content" th:text="${chat.toolArguments}"></pre>
-                                </div>
-                                <div class="tool-call-result" th:if="${chat.content}">
-                                    <div class="result-label">结果:</div>
-                                    <pre class="result-content" th:text="${chat.content}"></pre>
-                                </div>
-                            </div>
+                    <div class="dropdown-menu">
+                        <div class="dropdown-menu-inner">
+                            <button class="dropdown-item" onclick="showAddAgentModal()">
+                                <svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor">
+                                    <path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/>
+                                </svg>
+                                添加 Agent
+                            </button>
+                            <button class="dropdown-item"
+                                    th:attr="onclick=|editCurrentAgent()|">
+                                <svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor">
+                                    <path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/>
+                                </svg>
+                                编辑 Agent
+                            </button>
+                            <button class="dropdown-item" onclick="showSessionMemoryModal()">
+                                <svg viewBox="0 0 24 24" width="14" height="14" fill="#f5a623">
+                                    <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 17.93c-3.95-.49-7-3.85-7-7.93 0-.62.08-1.21.21-1.79L9 15v1c0 1.1.9 2 2 2v1.93zm6.9-2.54c-.26-.81-1-1.39-1.9-1.39h-1v-3c0-.55-.45-1-1-1H8v-2h2c.55 0 1-.45 1-1V7h2c1.1 0 2-.9 2-2v-.41c2.93 1.19 5 4.06 5 7.41 0 2.08-.8 3.97-2.1 5.39z"/>
+                                </svg>
+                                会话记忆
+                            </button>
+                            <button class="dropdown-item" onclick="showRecentTasksModal()">
+                                <svg viewBox="0 0 24 24" width="14" height="14" fill="#9c27b0">
+                                    <path d="M19 3h-4.18C14.4 1.84 13.3 1 12 1c-1.3 0-2.4.84-2.82 2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-7 0c.55 0 1 .45 1 1s-.45 1-1 1-1-.45-1-1 .45-1 1-1zm2 14H7v-2h7v2zm3-4H7v-2h10v2zm0-4H7V7h10v2z"/>
+                                </svg>
+                                近期任务
+                            </button>
+                            <button class="dropdown-item" onclick="showRequestLogModal()">
+                                <svg viewBox="0 0 24 24" width="14" height="14" fill="#e53935">
+                                    <path d="M20 8h-2.81c-.45-.78-1.07-1.45-1.82-1.96L17 4.41 15.59 3l-2.17 2.17C12.96 5.06 12.49 5 12 5c-.49 0-.96.06-1.41.15L8.41 3 7 4.41l1.62 1.63C7.88 6.55 7.26 7.22 6.81 8H4v2h2.09c-.05.33-.09.66-.09 1v1H4v2h2v1c0 .34.04.67.09 1H4v2h2.81c1.04 1.79 2.97 3 5.19 3s4.15-1.21 5.19-3H20v-2h-2.09c.05-.33.09-.66.09-1v-1h2v-2h-2v-1c0-.34-.04-.67-.09-1H20V8zm-6 8h-4v-2h4v2zm0-4h-4v-2h4v2z"/>
+                                </svg>
+                                请求日志
+                            </button>
+                            <button class="dropdown-item" th:attr="onclick=|clearHistory('${currentSessionId}')|">
+                                <svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor">
+                                    <path d="M19.36 2.72l1.42 1.42-5.72 5.71c1.07 1.54 1.22 3.39.32 4.59L9.06 8.12c1.2-.9 3.05-.75 4.59.32l5.71-5.72zM5.93 17.57c-2.01-2.01-3.24-4.41-3.58-6.65l4.88-2.09 7.44 7.44-2.09 4.88c-2.24-.34-4.64-1.57-6.65-3.58z"/>
+                                </svg>
+                                清空对话
+                            </button>
+                            <button class="dropdown-item dropdown-item-danger" th:attr="onclick=|deleteSession('${currentSessionId}')|">
+                                <svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor">
+                                    <path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/>
+                                </svg>
+                                删除会话
+                            </button>
                         </div>
                     </div>
-                    <div class="message-time"
-                         th:text="${chat.createTime.toLocalDate().equals(T(java.time.LocalDate).now()) ? #temporals.format(chat.createTime, 'HH:mm:ss') : #temporals.format(chat.createTime, 'yyyy-MM-dd HH:mm:ss')}"></div>
                 </div>
             </div>
         </div>
-
-        <div th:if="${selectedSession == null}" class="empty-state">
+        <div th:if="${selectedAgent != null}" class="chat-messages-wrap">
+            <div class="chat-messages" id="chatMessages">
+            <!-- 消息区首次加载与向上翻页均由前端 JS 渲染（/api/session/{sessionId}/history/latest） -->
+            <div class="empty-state" id="chatHistoryEmptyState">
             <svg viewBox="0 0 24 24" fill="currentColor">
                 <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/>
             </svg>
-            <p>点击左下角 + 新建会话开始对话</p>
+            <p>有什么问题尽管问。</p>
         </div>
-
-        <div class="chat-input-area">
-            <form class="chat-form" id="chatForm">
-                <input type="hidden" name="sessionId" id="currentSessionId" th:value="${selectedSession?.sessionId}">
-                <div class="chat-config-bar">
-                    <button type="button" class="chat-config-btn" id="agentSelectBtn" th:attr="data-agent-id=${selectedSession?.agentId}">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 4-6 8-6s8 2 8 6"/></svg>
-                        <span id="agentSelectLabel">选择Agent</span>
-                        <svg class="config-arrow" viewBox="0 0 24 24" width="10" height="10" fill="currentColor"><path d="M7 10l5 5 5-5z"/></svg>
-                    </button>
-                    <div class="config-dropdown" id="agentDropdown">
-                        <div class="config-dropdown-list" id="agentDropdownList"></div>
-                    </div>
-
-                    <button type="button" class="chat-config-btn" id="modelSelectBtn">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
-                        <span id="modelSelectLabel">选择模型</span>
-                        <svg class="config-arrow" viewBox="0 0 24 24" width="10" height="10" fill="currentColor"><path d="M7 10l5 5 5-5z"/></svg>
-                    </button>
-                    <div class="config-dropdown" id="modelDropdown">
-                        <div class="model-two-level" id="modelDropdownContent">
-                            <div class="model-provider-list" id="modelProviderList"></div>
-                            <div class="model-list" id="modelList"></div>
+        </div>
+        <!-- 用户消息导航：每个圆点对应一组连续的用户消息，悬停预览、点击定位 -->
+        <div class="user-msg-nav" id="userMsgNav"></div>
+        </div>
+        <div th:if="${selectedAgent != null}" class="chat-input-area">
+            <form th:action="@{/chat}" method="post" class="chat-form" id="chatForm">
+                <input type="hidden" name="agentId" th:value="${selectedAgent.id}">
+                <div class="chat-input-wrapper" th:classappend="${agentExecutorState} ? 'disabled' : ''">
+                    <div class="file-preview-area" id="filePreviewArea"></div>
+                    <textarea name="message" id="messageInput" placeholder="输入消息..." required
+                              th:disabled="${agentExecutorState}" rows="2"></textarea>
+                    <div class="chat-input-tools">
+                        <select class="agent-select agent-select-toolbar" onchange="selectAgent(this)">
+                            <option th:each="a : ${agents}"
+                                    th:value="${a.id}"
+                                    th:text="${a.name}"
+                                    th:data-desc="${a.description}"
+                                    th:selected="${selectedAgentId == a.id}"></option>
+                        </select>
+                        <div class="model-dropdown" id="modelDropdown">
+                            <button type="button" class="chat-btn-model" id="modelSelectBtn">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14"
+                                     height="14">
+                                    <rect x="2" y="3" width="20" height="14" rx="2" ry="2"/>
+                                    <line x1="8" y1="21" x2="16" y2="21"/>
+                                    <line x1="12" y1="17" x2="12" y2="21"/>
+                                </svg>
+                                <span id="selectedModelName">模型</span>
+                            </button>
+                            <div class="model-dropdown-menu" id="modelDropdownMenu">
+                                <div class="model-dropdown-list" id="modelProviderList"></div>
+                            </div>
+                            <input type="hidden" id="selectedAiModelId" th:value="${selectedAiModelId}"/>
+                            <input type="hidden" id="currentSessionId" th:value="${currentSessionId}" />
                         </div>
-                    </div>
-
-                    <button type="button" class="chat-btn-deep" id="deepThinkBtn"
-                            th:attr="data-enabled=${selectedSession?.enableThinking != null ? selectedSession.enableThinking : true}"
-                            th:classappend="${selectedSession?.enableThinking != null && selectedSession.enableThinking ? 'active' : ''}">
-                        <svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg>
-                        深度思考
-                    </button>
-
-                    <div class="skills-dropdown" id="skillsDropdown">
-                        <button type="button" class="chat-btn-skill" id="skillSelectBtn">
-                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg>
-                            技能
+                        <div class="skills-dropdown" id="skillsDropdown">
+                            <button type="button" class="chat-btn-skill" id="skillSelectBtn">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14"
+                                     height="14">
+                                    <path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/>
+                                </svg>
+                                技能
+                            </button>
+                            <div class="skills-dropdown-menu" id="skillsDropdownMenu">
+                                <div class="skills-dropdown-list" id="skillsCheckboxList"></div>
+                            </div>
+                        </div>
+                        <button type="button" class="chat-btn-attach" id="uploadBtn" title="上传本地文件">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14">
+                                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                                <polyline points="17 8 12 3 7 8"/>
+                                <line x1="12" y1="3" x2="12" y2="15"/>
+                            </svg>
                         </button>
-                        <div class="skills-dropdown-menu" id="skillsDropdownMenu">
-                            <div class="skills-dropdown-list" id="skillsCheckboxList"></div>
+                        <button type="button" class="chat-btn-attach" id="attachFromListBtn" title="从附件选择">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14">
+                                <path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"/>
+                            </svg>
+                        </button>
+                        <input type="file" id="fileInput" style="display:none" multiple>
+                        <!-- 深度思考：仅图标；开启后悬停展开思考等级滑块（等级取自当前选中模型） -->
+                        <div class="thinking-dropdown" id="thinkingDropdown">
+                            <button type="button" class="chat-btn-deep" id="deepThinkBtn" title="深度思考"
+                                    th:attr="data-agent-id=${selectedAgent.id}, data-enabled=${selectedAgent.enableThinking}, data-default-level=${selectedAgent.reasoningEffort}"
+                                    th:classappend="${selectedAgent.enableThinking ? 'active' : ''}">
+                                <svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16">
+                                    <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/>
+                                </svg>
+                            </button>
+                            <div class="thinking-dropdown-menu" id="thinkingDropdownMenu">
+                                <div class="thinking-level-title">思考等级<span class="thinking-level-current" id="thinkingLevelCurrent"></span></div>
+                                <div class="thinking-level-track" id="thinkingLevelTrack"></div>
+                            </div>
                         </div>
+                        <div class="tool-permission-dropdown" id="toolPermissionDropdown">
+                            <button type="button" class="chat-btn-permission" id="toolPermissionBtn">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14">
+                                    <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+                                </svg>
+                                <span id="toolPermissionLabel">智能调用</span>
+                            </button>
+                            <div class="tool-permission-dropdown-menu" id="toolPermissionDropdownMenu">
+                                <div class="tool-permission-item user_control" data-value="user_control" onclick="selectToolPermission('user_control')">
+                                    <div class="tool-permission-item-main">
+                                        <span class="tool-permission-item-dot user_control"></span>
+                                        <span class="tool-permission-item-name">用户控制</span>
+                                        <span class="tool-permission-item-check" id="check_user_control">✓</span>
+                                    </div>
+                                    <div class="tool-permission-item-desc">除安全工具外，每次工具调用均需你确认后执行</div>
+                                </div>
+                                <div class="tool-permission-item smart_call" data-value="smart_call" onclick="selectToolPermission('smart_call')">
+                                    <div class="tool-permission-item-main">
+                                        <span class="tool-permission-item-dot smart_call"></span>
+                                        <span class="tool-permission-item-name">智能调用</span>
+                                        <span class="tool-permission-item-check" id="check_smart_call">✓</span>
+                                    </div>
+                                    <div class="tool-permission-item-desc">安全工具自动执行，其余智能判断风险，高风险才需确认</div>
+                                </div>
+                                <div class="tool-permission-item auto" data-value="auto" onclick="selectToolPermission('auto')">
+                                    <div class="tool-permission-item-main">
+                                        <span class="tool-permission-item-dot auto"></span>
+                                        <span class="tool-permission-item-name">完全自动</span>
+                                        <span class="tool-permission-item-check" id="check_auto">✓</span>
+                                    </div>
+                                    <div class="tool-permission-item-desc">所有工具调用直接执行，无需确认</div>
+                                </div>
+                            </div>
+                        </div>
+                        <!-- 发送 / 停止按钮合并到输入框右下角：运行中显示停止按钮，空闲显示发送按钮 -->
+                        <button type="submit" id="sendBtn" class="chat-form-send-button" title="发送"
+                                th:classappend="${agentExecutorState ? 'hide' : ''}">
+                            <svg viewBox="0 0 24 24" fill="currentColor" width="15" height="15">
+                                <path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/>
+                            </svg>
+                        </button>
+                        <button type="button" id="runningBtn" class="chat-form-running-btn" title="停止运行"
+                                th:classappend="${agentExecutorState ? '' : 'hide'}" onclick="stopCurrentSession()">
+                            <svg viewBox="0 0 24 24" fill="currentColor" width="13" height="13">
+                                <rect x="6" y="6" width="12" height="12" rx="2"/>
+                            </svg>
+                        </button>
                     </div>
                 </div>
-                <div class="chat-input-wrapper" id="chatInputWrapper">
-                    <textarea name="message" id="messageInput" placeholder="输入消息..." required rows="2"></textarea>
-                </div>
-                <button type="submit" id="sendBtn" class="chat-form-send-button">发送</button>
-                <button type="button" id="runningBtn" class="chat-form-running-btn hide" onclick="stopAgent()">
-                    <span class="chat-form-running-btn-dot"></span>
-                    运行中...
-                </button>
             </form>
         </div>
     </main>
-
     <aside class="tool-panel">
         <div class="tool-panel-section tool-panel-top">
-            <div class="tool-panel-title">工具执行列表</div>
-            <div class="tool-panel-body" id="toolExecList">
-                <div th:each="chat : ${chatHistory}" th:if="${chat.messageType == 'tool_call'}">
-                    <div class="tool-call-container-static">
-                        <div class="tool-call"
-                             th:attr="data-tool-call-id=${chat.toolCallId}, data-status=${chat.toolCallStatus == 'tool_call_start' ? 'starting' : (chat.toolCallStatus == 'tool_call_end' ? 'executed' : (chat.toolCallStatus == 'tool_call_failed' ? 'executed' : 'unknown'))}">
-                            <div class="tool-call-header">
-                                <span class="tool-call-icon" th:switch="${chat.toolCallStatus}"
-                                      th:classappend="${chat.toolCallStatus == 'tool_call_end' or chat.toolCallStatus == 'tool_call_failed' ? 'completed' : ''}">
-                                    <span th:case="'tool_call_start'">⚙</span>
-                                    <span th:case="'tool_call_end'">✅</span>
-                                    <span th:case="'tool_call_failed'">❌</span>
-                                    <span th:case="*">🔧</span>
-                                </span>
-                                <span class="tool-call-name" th:text="${chat.toolName}"></span>
-                                <span class="tool-call-status" th:switch="${chat.toolCallStatus}"
-                                      th:classappend="${chat.toolCallStatus == 'tool_call_end' or chat.toolCallStatus == 'tool_call_failed' ? 'completed' : ''}">
-                                    <span th:case="'tool_call_start'">执行中...</span>
-                                    <span th:case="'tool_call_end'" th:text="${chat.toolExecutionTime != null ? '已完成(' + #numbers.formatDecimal(chat.toolExecutionTime / 1000.0, 1, 1) + 's)' : '已完成'}">已完成</span>
-                                    <span th:case="'tool_call_failed'">执行失败</span>
-                                    <span th:case="*" th:text="${chat.toolCallStatus}">未知</span>
-                                </span>
-                                <span th:if="${chat.toolCallStatus == 'tool_call_end' or chat.toolCallStatus == 'tool_call_failed'}"
-                                      class="tool-call-toggle">▼</span>
-                            </div>
-                            <div class="tool-call-body"
-                                 th:classappend="${chat.toolCallStatus == 'tool_call_start' ? '' : 'collapsed'}">
-                                <div class="tool-call-args" th:if="${chat.toolArguments}">
-                                    <div class="args-label">参数:</div>
-                                    <pre class="args-content" th:text="${chat.toolArguments}"></pre>
-                                </div>
-                                <div class="tool-call-result" th:if="${chat.content}">
-                                    <div class="result-label">结果:</div>
-                                    <pre class="result-content" th:text="${chat.content}"></pre>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
+            <div class="tool-panel-title session-panel-title">
+                <span>会话列表</span>
+                <button class="btn-add-session" onclick="createNewSession()" title="新会话">
+                    <svg viewBox="0 0 24 24" fill="currentColor" width="14" height="14"><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/></svg>
+                </button>
+                <div class="session-type-filter" id="sessionTypeFilter">
+                    <span class="session-type-tab active" data-type="chat" onclick="filterSessionsByType('chat')">聊天</span>
+                    <span class="session-type-tab" data-type="project" onclick="filterSessionsByType('project')">项目</span>
+                    <span class="session-type-tab" data-type="task" onclick="filterSessionsByType('task')">任务</span>
                 </div>
+            </div>
+            <div class="tool-panel-body session-list-body" id="sessionList">
+            </div>
+        </div>
+        <div class="tool-panel-section tool-panel-mid">
+            <div class="tool-panel-title">工具执行列表
+                <span id="toolExecStats" style="font-size:11px;font-weight:400;margin-left:8px;float: right;" title="会话调用总数 / 执行器已执行 / 执行器上限"></span>
+            </div>
+            <!-- 工具执行列表由前端 JS 随消息历史一并渲染 -->
+            <div class="tool-panel-body" id="toolExecList">
             </div>
         </div>
         <div class="tool-panel-section tool-panel-bottom">
@@ -264,219 +280,209 @@
             </div>
         </div>
     </aside>
-</div>
-
-<div id="addAgentModal" class="modal-overlay">
-    <div class="modal">
-        <div class="modal-header">
-            <h3>添加新 Agent</h3>
-            <button class="modal-close" onclick="hideAddModal()">&times;</button>
+    <div class="avatar-widget" id="avatarWidget" th:if="${!avatarDisabled}">
+        <button type="button" class="avatar-minimize-btn" id="avatarMinimizeBtn" title="最小化" aria-label="最小化">
+            <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round">
+                <line x1="5" y1="12" x2="19" y2="12"/>
+            </svg>
+        </button>
+        <div class="avatar-bubble-stack" id="avatarBubbleStack" aria-live="polite"></div>
+        <div class="avatar-intimacy-card" id="avatarIntimacyCard" aria-hidden="true">
+            <div class="avatar-intimacy-icon" aria-hidden="true">
+                <svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor">
+                    <path d="M12 21s-7.5-4.6-9.5-9.2C1.1 8.3 3 5 6.3 5c1.9 0 3.3 1 3.7 2.2.4-1.2 1.8-2.2 3.7-2.2 3.3 0 5.2 3.3 3.8 6.8C19.5 16.4 12 21 12 21z"/>
+                </svg>
+            </div>
+            <div class="avatar-intimacy-body">
+                <div class="avatar-intimacy-row avatar-intimacy-level-row">
+                    <span class="avatar-intimacy-label">亲密度</span>
+                    <span class="avatar-intimacy-value">Lv.<span id="avatarIntimacyLevel">0</span> · <span id="avatarIntimacyTitle">陌生人</span></span>
+                </div>
+                <div class="avatar-intimacy-progress">
+                    <div class="avatar-intimacy-progress-bar" id="avatarIntimacyProgress" style="width:0%"></div>
+                </div>
+            </div>
+            <div class="avatar-intimacy-tail"></div>
         </div>
-        <div class="modal-body">
-            <form th:action="@{/agent/create}" method="post" class="modal-form" id="addAgentForm">
-                <div class="form-left">
-                    <div class="form-group">
-                        <label>名称 *</label>
-                        <input type="text" name="name" placeholder="输入 Agent 名称" required>
-                    </div>
-                    <div class="form-group">
-                        <label>描述 *</label>
-                        <textarea name="description" placeholder="输入 Agent 描述" required></textarea>
-                    </div>
-                    <div class="form-group">
-                        <label>模型 *</label>
-                        <div class="flex-container">
-                            <select id="addProviderSelect" class="model-select" required>
-                                <option value="">选择提供商</option>
-                            </select>
-                            <select name="aiModelId" id="addModelSelect" class="model-select" required>
-                                <option value="">选择模型</option>
-                            </select>
-                        </div>
-                    </div>
-                    <div class="form-row">
-                        <div class="form-group">
-                            <label>最大记忆</label>
-                            <input type="number" name="maxMemoryRecords" value="20" min="1" max="100" placeholder="20">
-                        </div>
-                        <div class="form-group">
-                            <label>最大工具调用</label>
-                            <input type="number" name="maxToolInvocations" value="10" min="1" max="50" placeholder="10">
-                        </div>
-                    </div>
-                    <div class="form-row">
-                        <div class="form-group">
-                            <div class="toggle-wrapper">
-                                <input type="hidden" name="enableThinking" id="addEnableThinking" value="true">
-                                <label class="toggle">
-                                    <input type="checkbox" checked
-                                           onchange="document.getElementById('addEnableThinking').value=this.checked?'true':'false'">
-                                    <span class="slider"></span>
-                                </label>
-                                <span class="toggle-label">启用思考（Thinking）</span>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="form-row">
-                        <div class="form-group">
-                            <div class="toggle-wrapper">
-                                <input type="hidden" name="vectorToolSearch" id="addVectorToolSearch" value="true">
-                                <label class="toggle">
-                                    <input type="checkbox" checked
-                                           onchange="document.getElementById('addVectorToolSearch').value=this.checked?'true':'false';document.getElementById('addVectorToolSearchResultsGroup').style.display=this.checked?'':'none'">
-                                    <span class="slider"></span>
-                                </label>
-                                <span class="toggle-label">启用搜索工具</span>
-                            </div>
-                        </div>
-                        <div class="form-group form-inline" id="addVectorToolSearchResultsGroup">
-                            <label>最大数量</label>
-                            <input type="number" name="vectorToolSearchMaxResults" value="10" min="1" max="500" placeholder="10">
-                        </div>
-                    </div>
-                </div>
-                <div class="form-right">
-                    <div class="form-group">
-                        <div class="tools-title-bar">
-                            <label>选择工具</label>
-                            <div>
-                                <button type="button" onclick="selectAllTools('#addToolsCheckboxes')">全选</button>
-                                <button type="button" onclick="deselectAllTools('#addToolsCheckboxes')">全不选</button>
-                            </div>
-                        </div>
-                        <div class="tools-list" id="addToolsCheckboxes">
-                            <div th:each="ts : ${toolSets}" class="tool-group-inline">
-                                <label><input type="checkbox" name="tools" th:value="${ts.groupName}">
-                                    <span th:text="${ts.groupName}"></span></label>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-                <div class="form-submit-row">
-                    <button type="submit" class="btn-primary">创建 Agent</button>
-                    <button type="button" class="btn-secondary" onclick="hideAddModal()">取消</button>
-                </div>
-            </form>
+        <canvas class="avatar-canvas" id="avatarCanvas" width="250" height="250"></canvas>
+        <button type="button" class="avatar-restore-btn" id="avatarRestoreBtn" title="展开" aria-label="展开">
+            <img th:src="@{/images/avatar.png}" alt="avatar"/>
+        </button>
+        <button type="button" class="avatar-settings-btn" id="avatarSettingsBtn" title="虚拟人设置" aria-label="虚拟人设置">
+            <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <circle cx="12" cy="12" r="3"/>
+                <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09a1.65 1.65 0 0 0-1-1.51 1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09a1.65 1.65 0 0 0 1.51-1 1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>
+            </svg>
+        </button>
+        <button type="button" class="avatar-change-model-btn" id="avatarChangeModelBtn" title="换装" aria-label="换装">
+            <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M20.38 3.46 16 2a4 4 0 0 1-8 0L3.62 3.46a2 2 0 0 0-1.34 2.23l.58 3.47a1 1 0 0 0 .99.84H6v10c0 1.1.9 2 2 2h8a2 2 0 0 0 2-2V10h2.15a1 1 0 0 0 .99-.84l.58-3.47a2 2 0 0 0-1.34-2.23z"/>
+            </svg>
+        </button>
+        <button type="button" class="avatar-tts-btn" id="avatarTtsToggleBtn" title="关闭语音播报" aria-label="语音播报开关">
+            <svg class="tts-icon-on" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M11 5 6 9H2v6h4l5 4V5z"/>
+                <path d="M15.54 8.46a5 5 0 0 1 0 7.07"/>
+                <path d="M19.07 4.93a10 10 0 0 1 0 14.14"/>
+            </svg>
+            <svg class="tts-icon-off" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M11 5 6 9H2v6h4l5 4V5z"/>
+                <line x1="22" y1="9" x2="16" y2="15"/>
+                <line x1="16" y1="9" x2="22" y2="15"/>
+            </svg>
+        </button>
+    </div>
+
+    <!-- 会话记忆列表弹框：长文本仅展示前20字符，点击详情查看全文 -->
+    <div class="modal-overlay" id="sessionMemoryModal">
+        <div class="modal modal-wide">
+            <div class="modal-header">
+                <h3>会话记忆</h3>
+                <button class="modal-close" onclick="hideSessionMemoryModal()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="session-memory-list" id="sessionMemoryList"></div>
+            </div>
+            <div class="modal-footer">
+                <!-- 底部统计：总记录数 / 各类型记录数 / 估算总Token -->
+                <div class="session-memory-stats" id="sessionMemoryStats"></div>
+                <button type="button" class="btn-cancel" onclick="hideSessionMemoryModal()">关闭</button>
+            </div>
         </div>
     </div>
-</div>
 
-<div id="editAgentModal" class="modal-overlay">
-    <div class="modal">
-        <div class="modal-header">
-            <h3>编辑 Agent</h3>
-            <button class="modal-close" onclick="hideEditModal()">&times;</button>
-        </div>
-        <div class="modal-body">
-            <form th:action="@{/agent/update}" method="post" class="modal-form" id="editAgentForm">
-                <input type="hidden" name="id" id="editAgentId">
-                <div class="form-left">
-                    <div class="form-group">
-                        <label>名称 *</label>
-                        <input type="text" name="name" id="editAgentName" required>
-                    </div>
-                    <div class="form-group">
-                        <label>描述 *</label>
-                        <textarea name="description" id="editAgentDescription" required></textarea>
-                    </div>
-                    <div class="form-group">
-                        <label>模型</label>
-                        <div class="flex-container">
-                            <select id="editProviderSelect" class="model-select" required>
-                                <option value="">选择提供商</option>
-                            </select>
-                            <select name="aiModelId" id="editModelSelect" class="model-select" required>
-                                <option value="">选择模型</option>
-                            </select>
-                        </div>
-                    </div>
-                    <div class="form-row">
-                        <div class="form-group">
-                            <label>最大记忆</label>
-                            <input type="number" name="maxMemoryRecords" id="editMaxMemoryRecords" min="1" max="100">
-                        </div>
-                        <div class="form-group">
-                            <label>最大工具调用</label>
-                            <input type="number" name="maxToolInvocations" id="editMaxToolInvocations" min="1" max="50">
-                        </div>
-                    </div>
-                    <div class="form-row">
-                        <div class="form-group">
-                            <div class="toggle-wrapper">
-                                <input type="hidden" name="enableThinking" id="editEnableThinking" value="true">
-                                <label class="toggle">
-                                    <input type="checkbox" id="editEnableThinkingCheckbox" checked
-                                           onchange="document.getElementById('editEnableThinking').value=this.checked?'true':'false'">
-                                    <span class="slider"></span>
-                                </label>
-                                <span class="toggle-label">启用思考（Thinking）</span>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="form-row">
-                        <div class="form-group">
-                            <div class="toggle-wrapper">
-                                <input type="hidden" name="vectorToolSearch" id="editVectorToolSearch" value="true">
-                                <label class="toggle">
-                                    <input type="checkbox" id="editVectorToolSearchCheckbox" checked
-                                           onchange="document.getElementById('editVectorToolSearch').value=this.checked?'true':'false';document.getElementById('editVectorToolSearchResultsGroup').style.display=this.checked?'':'none'">
-                                    <span class="slider"></span>
-                                </label>
-                                <span class="toggle-label">启用搜索工具</span>
-                            </div>
-                        </div>
-                        <div class="form-group form-inline" id="editVectorToolSearchResultsGroup">
-                            <label>最大数量</label>
-                            <input type="number" name="vectorToolSearchMaxResults" id="editVectorToolSearchMaxResults" min="1" max="500">
-                        </div>
-                    </div>
-                </div>
-                <div class="form-right">
-                    <div class="form-group">
-                        <div class="tools-title-bar">
-                            <label>选择工具</label>
-                            <div>
-                                <button type="button" onclick="selectAllTools('#editToolsCheckboxes')">全选</button>
-                                <button type="button" onclick="deselectAllTools('#editToolsCheckboxes')">全不选</button>
-                            </div>
-                        </div>
-                        <div class="tools-list" id="editToolsCheckboxes">
-                            <div th:each="ts : ${toolSets}" class="tool-group-inline">
-                                <label><input type="checkbox" name="tools" class="edit-tool-checkbox" th:value="${ts.groupName}">
-                                    <span th:text="${ts.groupName}"></span></label>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-                <div class="form-submit-row">
-                    <button type="submit" class="btn-primary">保存修改</button>
-                    <button type="button" class="btn-secondary" onclick="hideEditModal()">取消</button>
-                </div>
-            </form>
+    <!-- 会话记忆详情弹框 -->
+    <div class="modal-overlay" id="sessionMemoryDetailModal">
+        <div class="modal modal-wide">
+            <div class="modal-header">
+                <h3>记忆详情</h3>
+                <button class="modal-close" onclick="hideSessionMemoryDetailModal()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div id="sessionMemoryDetailBody"></div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn-cancel" onclick="hideSessionMemoryDetailModal()">关闭</button>
+            </div>
         </div>
     </div>
-</div>
 
-<script th:inline="javascript">
-/*<![CDATA[*/
-window.__hopawConfig = {
-    agents: [
-        /*[# th:each="a : ${agents}"]*/
-        {
-            id: /*[[${a.id}]]*/ 0,
-            name: /*[[${a.name}]]*/ '',
-            description: /*[[${a.description}]]*/ '',
-            aiModelId: /*[[${a.aiModelId}]]*/ null,
-            enableThinking: /*[[${a.enableThinking}]]*/ true
-        }/*[# th:if="${!aStat.last}"],[/]*/
-        /*[/]*/
-    ],
-    selectedSession: /*[[${selectedSession}]]*/ null,
-    chatHistory: /*[[${chatHistory}]]*/ [],
-    tokenUsage: /*[[${tokenUsage}]]*/ null
-};
-/*]]>*/
-</script>
+    <!-- 请求日志列表弹框：展示会话内所有模型请求/响应，可点击详情查看完整 JSON -->
+    <div class="modal-overlay" id="requestLogModal">
+        <div class="modal modal-wide">
+            <div class="modal-header">
+                <h3 id="requestLogTitle">请求日志</h3>
+                <button class="modal-close" onclick="hideRequestLogModal()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="request-log-list" id="requestLogList"></div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn-danger request-log-clear-btn" id="requestLogClearBtn"
+                        onclick="clearRequestLogs()">清理本会话日志</button>
+                <button type="button" class="btn-cancel" onclick="hideRequestLogModal()">关闭</button>
+            </div>
+        </div>
+    </div>
 
+    <!-- 请求日志详情弹框：完整请求/响应 JSON -->
+    <div class="modal-overlay" id="requestLogDetailModal">
+        <div class="modal modal-wide">
+            <div class="modal-header">
+                <h3>请求详情</h3>
+                <button class="modal-close" onclick="hideRequestLogDetailModal()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div id="requestLogDetailBody"></div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn-cancel" onclick="hideRequestLogDetailModal()">关闭</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 近期任务列表弹框 -->
+    <div class="modal-overlay" id="recentTasksModal">
+        <div class="modal modal-wide">
+            <div class="modal-header">
+                <h3>近期任务记录</h3>
+                <button class="modal-close" onclick="hideRecentTasksModal()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="recent-tasks-list" id="recentTasksList"></div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn-cancel" onclick="hideRecentTasksModal()">关闭</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 近期任务详情弹框 -->
+    <div class="modal-overlay" id="recentTaskDetailModal">
+        <div class="modal modal-wide">
+            <div class="modal-header">
+                <h3>任务详情</h3>
+                <button class="modal-close" onclick="hideRecentTaskDetailModal()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div id="recentTaskDetailBody"></div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn-cancel" onclick="hideRecentTaskDetailModal()">关闭</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 从附件选择弹框 -->
+    <div class="modal-overlay" id="attachSelectModal">
+        <div class="modal modal-attach-select">
+            <div class="modal-header">
+                <h3>从附件选择</h3>
+                <button class="modal-close" onclick="hideAttachSelectModal()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="attach-select-search">
+                    <input type="text" id="attachSelectKeyword" placeholder="搜索附件名称...">
+                    <button type="button" class="btn-search" onclick="searchAttachSelect()">搜索</button>
+                </div>
+                <div class="attach-select-grid" id="attachSelectGrid"></div>
+                <div class="attach-select-pagination" id="attachSelectPagination"></div>
+            </div>
+            <div class="modal-footer">
+                <span class="attach-select-count" id="attachSelectCount">已选 0 个</span>
+                <button type="button" class="btn-cancel" onclick="hideAttachSelectModal()">取消</button>
+                <button type="button" class="btn-primary" onclick="confirmAttachSelect()">确认选择</button>
+            </div>
+        </div>
+    </div>
+    </div>
+
+
+<th:block layout:fragment="extraCss">
+    <link rel="stylesheet" th:href="@{/css/nouislider.min.css}">
+    <link rel="stylesheet" th:href="@{/css/page/agent-form.css}">
+    <link rel="stylesheet" th:href="@{/css/page/index.css}">
+    <link rel="stylesheet" th:href="@{/css/page/avatar.css(v=20260603a)}" th:if="${!avatarDisabled}">
+</th:block>
+
+<th:block layout:fragment="extraScripts">
+    <script th:src="@{/js/nouislider.min.js}"></script>
+    <script th:src="@{/js/page/index.js}"></script>
+    <script th:src="@{/js/agents-modal.js}"></script>
+    <script th:src="@{/js/model-select.js}"></script>
+    <script th:src="@{/js/marked.min.js}"></script>
+    <script th:src="@{/js/chart.umd.min.js}"></script>
+
+    <script th:inline="javascript">
+        setCurrentAgentId(/*[[${selectedAgentId}]]*/ null);
+        var initialChatSessions = /*[[${chatSessions}]]*/ [];
+        var initialCurrentSessionId = /*[[${currentSessionId}]]*/ null;
+        var initialSelectedSkills = /*[[${selectedSkills}]]*/ '';
+        var initialToolCallPermission = /*[[${toolCallPermission}]]*/ 'smart_call';
+        var currentUserId = /*[[${currentUserId != null ? currentUserId : T(com.agent.hopaw.constant.DefaultUser).USER}]]*/ 'user1';
+    </script>
+    <script th:src="@{/js/avatar/live2d.js}" th:if="${!avatarDisabled}"></script>
+    <script th:src="@{/js/avatar/main.js(v=20260603a)}" th:if="${!avatarDisabled}"></script>
+</th:block>
 </body>
 </html>

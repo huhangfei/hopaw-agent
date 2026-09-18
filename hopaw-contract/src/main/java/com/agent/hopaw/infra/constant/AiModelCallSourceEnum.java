@@ -6,9 +6,14 @@ package com.agent.hopaw.infra.constant;
 
 public enum  AiModelCallSourceEnum {
     Chat("chat", "会话"),
-    ModelTEST("model-test", "模型测试"),
-    MEMORYORGANIZE("memory-organize", "记忆整理"),
-    AgentTask("agentTask", "智能体定时任务");
+    ChatToolCallCheck("chat-tool-call-check", "会话工具调用检测"),
+    ChatAnalyzeUserIntent("chat-analyze-user-intent", "会话分析用户意图"),
+    AvatarTask("avatar-task", "虚拟人任务"),
+    ModelTest("model-test", "模型测试"),
+    MemoryOrganize("memory-organize", "记忆整理"),
+    AgentTask("agent-task", "智能体定时任务"),
+    WorkflowTaskChat("workflow-task-chat", "工作流会话任务"), 
+    ProjectChat("project-chat", "项目管理会话");
 
     public String getValue() {
         return value;

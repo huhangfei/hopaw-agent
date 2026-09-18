@@ -19,28 +19,41 @@
     <modules>
         <module>hopaw-contract</module>
         <module>hopaw-infra</module>
-        <module>hopaw-biz</module>
+        <module>hopaw-avatar</module>
         <module>hopaw-app</module>
         <module>hopaw-plugin-repo</module>
         <module>tools/hopaw-tool-webpage</module>
+<!--        <module>tools/hopaw-tool-webpage-playwright</module>-->
         <module>tools/hopaw-tool-ssh</module>
         <module>tools/hopaw-tool-demo</module>
         <module>tools/hopaw-tool-dingtalk</module>
         <module>tools/hopaw-tool-baidusearch</module>
         <module>tools/hopaw-tool-file</module>
+        <module>tools/hopaw-tool-image</module>
+        <module>tools/hopaw-tool-aliyun-imagegen</module>
         <module>tools/hopaw-tool-command</module>
+        <module>tools/hopaw-tool-database</module>
+        <module>tools/hopaw-tool-wechat</module>
+        <module>tools/hopaw-tool-http</module>
+        <module>tools/hopaw-tool-qrcode</module>
     </modules>
 
     <properties>
         <java.version>17</java.version>
-        <langchain4j.version>1.14.0</langchain4j.version>
+        <langchain4j.version>1.19.0</langchain4j.version>
         <mybatis-spring-boot.version>2.3.2</mybatis-spring-boot.version>
         <sqlite-jdbc.version>3.44.1.0</sqlite-jdbc.version>
         <jsoup.version>1.17.2</jsoup.version>
         <playwright.version>1.40.0</playwright.version>
+        <htmlunit.version>5.5.0</htmlunit.version>
         <fastjson2.version>2.0.43</fastjson2.version>
         <jsch.version>2.28.0</jsch.version>
         <parent.version>1.0.0</parent.version>
+        <zip4j.version>2.11.5</zip4j.version>
+        <batik.version>1.17</batik.version>
+        <thumbnailator.version>0.4.20</thumbnailator.version>
+        <!-- 2.44.0：修复 JDK 24+ (JEP 486) Subject.getSubject 崩溃；2.50.0 起 groupId 改为 org.apache.artemis，不兼容 -->
+        <artemis.version>2.44.0</artemis.version>
     </properties>
 
     <dependencyManagement>
@@ -53,6 +66,11 @@
             <dependency>
                 <groupId>com.hopaw.agent</groupId>
                 <artifactId>hopaw-infra</artifactId>
+                <version>${parent.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.hopaw.agent</groupId>
+                <artifactId>hopaw-avatar</artifactId>
                 <version>${parent.version}</version>
             </dependency>
             <dependency>
@@ -98,6 +116,11 @@
             </dependency>
             <dependency>
                 <groupId>dev.langchain4j</groupId>
+                <artifactId>langchain4j-ollama</artifactId>
+                <version>${langchain4j.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>dev.langchain4j</groupId>
                 <artifactId>langchain4j-embeddings-bge-small-zh-v15</artifactId>
                 <version>1.14.0-beta24</version>
             </dependency>
@@ -105,6 +128,12 @@
             <dependency>
                 <groupId>dev.langchain4j</groupId>
                 <artifactId>langchain4j-community-jvector</artifactId>
+                <version>1.14.0-beta24</version>
+            </dependency>
+
+            <dependency>
+                <groupId>dev.langchain4j</groupId>
+                <artifactId>langchain4j-mcp</artifactId>
                 <version>1.14.0-beta24</version>
             </dependency>
 
@@ -124,9 +153,9 @@
                 <version>${jsoup.version}</version>
             </dependency>
             <dependency>
-                <groupId>com.microsoft.playwright</groupId>
-                <artifactId>playwright</artifactId>
-                <version>${playwright.version}</version>
+                <groupId>org.htmlunit</groupId>
+                <artifactId>htmlunit</artifactId>
+                <version>${htmlunit.version}</version>
             </dependency>
             <dependency>
                 <groupId>com.alibaba.fastjson2</groupId>
@@ -137,6 +166,31 @@
                 <groupId>com.github.mwiede</groupId>
                 <artifactId>jsch</artifactId>
                 <version>${jsch.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>net.lingala.zip4j</groupId>
+                <artifactId>zip4j</artifactId>
+                <version>${zip4j.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.apache.xmlgraphics</groupId>
+                <artifactId>batik-transcoder</artifactId>
+                <version>${batik.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.apache.xmlgraphics</groupId>
+                <artifactId>batik-codec</artifactId>
+                <version>${batik.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>net.coobird</groupId>
+                <artifactId>thumbnailator</artifactId>
+                <version>${thumbnailator.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.microsoft.playwright</groupId>
+                <artifactId>playwright</artifactId>
+                <version>${playwright.version}</version>
             </dependency>
         </dependencies>
     </dependencyManagement>

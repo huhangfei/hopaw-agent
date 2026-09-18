@@ -7,7 +7,15 @@ public class ChatHistory {
     private Long agentId;
     private String sessionId;
     private String role;
+    /**
+     * 消息类型：text、attachment
+     */
     private String messageType;
+    /**
+     * 消息内容：
+     * 文本类型格式：内容
+     * 附件类型格式：file.getType() + "," + file.getId() + "," + file.getOriginalName() + "," + file.getUrl();
+     */
     private String content;
     private String toolCallId;
     private String toolName;
@@ -15,6 +23,10 @@ public class ChatHistory {
     private String toolCallStatus;
     private Long toolExecutionTime;
     private String userId;
+    /** 消息编号：流式消息（text/thinking）开始时生成，前端按编号定位消息元素并续接追加片段 */
+    private String messageNo;
+    /** 请求编号：用户消息关联的请求，前端 bug 图标按编号查询请求响应日志 */
+    private String requestId;
     private LocalDateTime createTime;
 
     public ChatHistory() {}
@@ -139,6 +151,22 @@ public class ChatHistory {
 
     public void setUserId(String userId) {
         this.userId = userId;
+    }
+
+    public String getMessageNo() {
+        return messageNo;
+    }
+
+    public void setMessageNo(String messageNo) {
+        this.messageNo = messageNo;
+    }
+
+    public String getRequestId() {
+        return requestId;
+    }
+
+    public void setRequestId(String requestId) {
+        this.requestId = requestId;
     }
 
     public LocalDateTime getCreateTime() {

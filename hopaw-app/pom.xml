@@ -15,9 +15,12 @@
     <dependencies>
         <dependency>
             <groupId>com.hopaw.agent</groupId>
-            <artifactId>hopaw-biz</artifactId>
+            <artifactId>hopaw-infra</artifactId>
         </dependency>
-
+        <dependency>
+            <groupId>com.hopaw.agent</groupId>
+            <artifactId>hopaw-avatar</artifactId>
+        </dependency>
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-web</artifactId>
@@ -55,6 +58,19 @@
             <artifactId>spring-boot-starter-test</artifactId>
             <scope>test</scope>
         </dependency>
+        <dependency>
+            <groupId>net.lingala.zip4j</groupId>
+            <artifactId>zip4j</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-artemis</artifactId>
+        </dependency>
+
+        <dependency>
+            <groupId>org.apache.activemq</groupId>
+            <artifactId>artemis-server</artifactId>
+        </dependency>
     </dependencies>
 
     <build>
@@ -62,6 +78,11 @@
             <plugin>
                 <groupId>org.springframework.boot</groupId>
                 <artifactId>spring-boot-maven-plugin</artifactId>
+                <configuration>
+                    <!-- exec 后缀产出可执行 fat jar（本地 run.bat 使用）；
+                         原始普通 jar hopaw-app-1.0.0.jar 保留，供 Docker 分包部署使用 -->
+                    <classifier>exec</classifier>
+                </configuration>
             </plugin>
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>

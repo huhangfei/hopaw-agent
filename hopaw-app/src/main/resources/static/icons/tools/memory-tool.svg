@@ -1,8 +1,8 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
-  <circle cx="50" cy="50" r="45" fill="#14B8A6"/>
-  <rect x="28" y="25" width="44" height="50" rx="4" fill="white"/>
-  <path d="M28 35 L50 52 L72 35" stroke="#14B8A6" stroke-width="3" fill="none"/>
-  <path d="M35 45 L45 55 L65 40" stroke="#14B8A6" stroke-width="3" fill="none" stroke-linecap="round"/>
-  <circle cx="70" cy="30" r="10" fill="#14B8A6"/>
-  <path d="M66 30 L70 34 L74 26" stroke="white" stroke-width="2" fill="none" stroke-linecap="round"/>
+  <circle cx="50" cy="50" r="45" fill="#F59E0B"/>
+  <path d="M50 28 C42 28 36 33 35 40 C30 41 27 47 29 53 C26 57 27 64 32 67 C34 71 40 72 45 70 C47 72 53 72 55 70 C60 72 66 71 68 67 C73 64 74 57 71 53 C73 47 70 41 65 40 C64 33 58 28 50 28 Z" fill="white"/>
+  <path d="M50 35 C50 35 50 65 50 65" stroke="#F59E0B" stroke-width="2" fill="none" stroke-linecap="round"/>
+  <path d="M42 42 C45 42 47 44 47 47 M58 42 C55 42 53 44 53 47 M42 55 C45 55 47 57 47 60 M58 55 C55 55 53 57 53 60" stroke="#F59E0B" stroke-width="2" fill="none" stroke-linecap="round" opacity="0.7"/>
+  <circle cx="50" cy="50" r="2.5" fill="#F59E0B"/>
+  <path d="M44 30 C42 26 44 24 47 25 M56 30 C58 26 56 24 53 25" stroke="white" stroke-width="2" fill="none" stroke-linecap="round"/>
 </svg>

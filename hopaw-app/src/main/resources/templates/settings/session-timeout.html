@@ -1,0 +1,22 @@
+<th:block th:fragment="content" xmlns:th="http://www.thymeleaf.org">
+<div class="settings-panel active" id="tab-session-timeout">
+    <p class="workflow-pool-tip">会话执行超时：执行器看门狗超时时间，持续无活动（无消息、无工具调用）超过该时长才会中断会话。修改保存后立即生效（下次执行按新配置），进行中的会话仍按启动时的超时时间执行。</p>
+    <div class="settings-form">
+        <div class="form-group">
+            <label for="chatTimeoutSeconds">普通聊天会话超时（秒） <span class="pool-default-tip">（默认 360）</span></label>
+            <input type="number" id="chatTimeoutSeconds" class="settings-input" min="30" max="86400" placeholder="360">
+        </div>
+        <div class="form-group">
+            <label for="projectTimeoutSeconds">项目会话超时（秒） <span class="pool-default-tip">（默认 360，项目自动迭代与项目会话共用）</span></label>
+            <input type="number" id="projectTimeoutSeconds" class="settings-input" min="30" max="86400" placeholder="360">
+        </div>
+        <div class="form-group">
+            <label for="workflowTaskTimeoutSeconds">工作流任务会话超时（秒） <span class="pool-default-tip">（默认 360）</span></label>
+            <input type="number" id="workflowTaskTimeoutSeconds" class="settings-input" min="30" max="86400" placeholder="360">
+        </div>
+        <div class="settings-actions">
+            <button class="btn-save-settings" onclick="saveSessionTimeoutSettings()">保存设置</button>
+        </div>
+    </div>
+</div>
+</th:block>

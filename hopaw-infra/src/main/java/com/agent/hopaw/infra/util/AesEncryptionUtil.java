@@ -2,6 +2,7 @@ package com.agent.hopaw.infra.util;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
 import javax.annotation.PostConstruct;
@@ -34,16 +35,31 @@ public class AesEncryptionUtil {
 
     private static SecretKey secretKey;
 
-    private final Path keyPath;
+    /** 实例密钥：通过 new AesEncryptionUtil(keyBytes) 指定（如备份导入时使用压缩包内旧密钥） */
+    private final SecretKey instanceKey;
+
+    private Path keyPath;
+
+    @Value("${hopaw.encryption.key.path:}")
+    private String configuredKeyPath;
 
     public AesEncryptionUtil() {
-        String home = System.getProperty("user.home");
-        this.keyPath = Paths.get(home, ".hopaw", "encryption.key");
+        this.instanceKey = null;
+    }
+
+    /**
+     * 使用外部指定的密钥构造实例（不触发 @PostConstruct，不影响本机静态密钥）。
+     * 用于备份导入等场景：用备份包内的旧密钥解密历史密文。
+     */
+    public AesEncryptionUtil(byte[] keyBytes) {
+        this.keyPath = resolveKeyPath();
+        this.instanceKey = new SecretKeySpec(keyBytes, ALGORITHM);
     }
 
     @PostConstruct
     public void init() {
         try {
+            this.keyPath = resolveKeyPath();
             File keyFile = keyPath.toFile();
             if (keyFile.exists()) {
                 secretKey = loadKey(keyFile);
@@ -56,6 +72,44 @@ public class AesEncryptionUtil {
         } catch (Exception e) {
             throw new RuntimeException("初始化加密密钥失败", e);
         }
+    }
+
+    /**
+     * 解析密钥路径：优先使用配置项，未配置则使用默认路径 ~/.hopaw/encryption.key
+     */
+    private Path resolveKeyPath() {
+        if (configuredKeyPath != null && !configuredKeyPath.isBlank()) {
+            Path configured = Paths.get(configuredKeyPath);
+            if (!configured.isAbsolute()) {
+                configured = Paths.get(System.getProperty("user.dir"), configuredKeyPath);
+            }
+            log.info("使用配置的加密密钥路径: {}", configured);
+            return configured;
+        }
+        return Paths.get(System.getProperty("user.home"), ".hopaw", "encryption.key");
+    }
+
+    /**
+     * 重新加载磁盘上的密钥（用于导入备份后使新密钥立即生效）
+     */
+    public void reload() {
+        try {
+            File keyFile = keyPath.toFile();
+            if (!keyFile.exists()) {
+                throw new IllegalStateException("密钥文件不存在: " + keyPath);
+            }
+            secretKey = loadKey(keyFile);
+            log.info("已重新加载加密密钥: {}", keyPath);
+        } catch (Exception e) {
+            throw new RuntimeException("重新加载密钥失败", e);
+        }
+    }
+
+    /**
+     * 返回当前密钥文件路径
+     */
+    public String getKeyPath() {
+        return keyPath.toString();
     }
 
     private SecretKey generateKey() throws Exception {
@@ -89,9 +143,49 @@ public class AesEncryptionUtil {
     }
 
     /**
-     * 加密明文，返回带前缀的 Base64 密文
+     * 判断值是否为 {AES} 密文格式
+     */
+    public static boolean isEncrypted(String value) {
+        return value != null && value.startsWith(ENCRYPTED_PREFIX);
+    }
+
+    /**
+     * 加密明文，返回带前缀的 Base64 密文（使用本机密钥）
      */
     public static String encrypt(String plainText) {
+        return doEncrypt(plainText, secretKey);
+    }
+
+    /**
+     * 解密密文，如果未加密则原文返回（使用本机密钥）
+     */
+    public static String decrypt(String cipherText) {
+        return doDecrypt(cipherText, secretKey);
+    }
+
+    /**
+     * 使用实例密钥加密（配合 new AesEncryptionUtil(byte[] keyBytes) 使用）
+     */
+    public String encryptWith(String plainText) {
+        requireInstanceKey();
+        return doEncrypt(plainText, instanceKey);
+    }
+
+    /**
+     * 使用实例密钥解密（配合 new AesEncryptionUtil(byte[] keyBytes) 使用）
+     */
+    public String decryptWith(String cipherText) {
+        requireInstanceKey();
+        return doDecrypt(cipherText, instanceKey);
+    }
+
+    private void requireInstanceKey() {
+        if (instanceKey == null) {
+            throw new IllegalStateException("未指定实例密钥，请使用 AesEncryptionUtil(byte[] keyBytes) 构造");
+        }
+    }
+
+    private static String doEncrypt(String plainText, SecretKey key) {
         if (plainText == null || plainText.isBlank()) {
             return plainText;
         }
@@ -105,7 +199,7 @@ public class AesEncryptionUtil {
 
             Cipher cipher = Cipher.getInstance(TRANSFORMATION);
             GCMParameterSpec spec = new GCMParameterSpec(GCM_TAG_LENGTH, iv);
-            cipher.init(Cipher.ENCRYPT_MODE, secretKey, spec);
+            cipher.init(Cipher.ENCRYPT_MODE, key, spec);
 
             byte[] cipherText = cipher.doFinal(plainText.getBytes(java.nio.charset.StandardCharsets.UTF_8));
 
@@ -119,10 +213,7 @@ public class AesEncryptionUtil {
         }
     }
 
-    /**
-     * 解密密文，如果未加密则原文返回
-     */
-    public static String decrypt(String cipherText) {
+    private static String doDecrypt(String cipherText, SecretKey key) {
         if (cipherText == null || cipherText.isBlank()) {
             return cipherText;
         }
@@ -140,7 +231,7 @@ public class AesEncryptionUtil {
 
             Cipher cipher = Cipher.getInstance(TRANSFORMATION);
             GCMParameterSpec spec = new GCMParameterSpec(GCM_TAG_LENGTH, iv);
-            cipher.init(Cipher.DECRYPT_MODE, secretKey, spec);
+            cipher.init(Cipher.DECRYPT_MODE, key, spec);
 
             byte[] plainText = cipher.doFinal(encrypted);
             return new String(plainText, java.nio.charset.StandardCharsets.UTF_8);

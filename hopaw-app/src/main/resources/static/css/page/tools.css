@@ -6,7 +6,8 @@
 
 /* ===== Left panel ===== */
 .tools-list-panel {
-    width: 300px;
+    width: 20%;
+    min-width: 300px;
     background: #fafafa;
     border-right: 1px solid #e0e0e0;
     display: flex;
@@ -343,7 +344,7 @@
 }
 
 .detail-param-table tbody tr:hover {
-    background: #f8f9fa;
+    background: #9da8b24f;
 }
 
 .dp-name {
@@ -431,6 +432,20 @@
     font-size: 11px;
     color: #bbb;
     font-weight: 400;
+}
+
+/* ===== 左侧列表"可配置"标签 ===== */
+.tool-list-config-tag {
+    display: inline-block;
+    font-size: 11px;
+    padding: 1px 8px;
+    border-radius: 10px;
+    margin-left: 4px;
+    color: #3a9e6f;
+    background: #3a9e6f15;
+    font-weight: 500;
+    line-height: 1.6;
+    vertical-align: middle;
 }
 
 /* ===== 详情面板元信息栏 ===== */
@@ -645,6 +660,11 @@ body.dark-theme .tool-list-source-badge {
 
 body.dark-theme .tool-list-version {
     color: #888;
+}
+
+body.dark-theme .tool-list-config-tag {
+    color: #6fbf94;
+    background: #6fbf9415;
 }
 
 body.dark-theme .tools-list-empty {

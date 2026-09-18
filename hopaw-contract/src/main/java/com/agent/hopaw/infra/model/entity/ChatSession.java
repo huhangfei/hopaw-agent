@@ -13,9 +13,25 @@ public class ChatSession {
     private String skills;
     private LocalDateTime createTime;
     private LocalDateTime lastUpdateTime;
-
+    private Boolean enableThinking;
+    private String skillNames;
+    private Long aiModelId;
+    private String toolCallPermission;
+    /** 业务类型：task / null */
+    private String bizType;
+    /** 思考等级：none/minimal/low/medium/high/xhigh/max */
+    private String thinkingLevel;
+    /** 会话执行器是否正在运行（非持久化字段，由接口实时计算） */
+    private Boolean running;
     public ChatSession() {}
 
+    public ChatSession(String sessionId, String userId, String title) {
+        this.sessionId = sessionId;
+        this.userId = userId;
+        this.title = title;
+        this.createTime = LocalDateTime.now();
+        this.lastUpdateTime = LocalDateTime.now();
+    }
     public ChatSession(String sessionId, Long agentId, String userId, String title) {
         this.sessionId = sessionId;
         this.agentId = agentId;
@@ -103,5 +119,61 @@ public class ChatSession {
 
     public void setLastUpdateTime(LocalDateTime lastUpdateTime) {
         this.lastUpdateTime = lastUpdateTime;
+    }
+
+    public Boolean getEnableThinking() {
+        return enableThinking;
+    }
+
+    public void setEnableThinking(Boolean enableThinking) {
+        this.enableThinking = enableThinking;
+    }
+
+    public String getSkillNames() {
+        return skillNames;
+    }
+
+    public void setSkillNames(String skillNames) {
+        this.skillNames = skillNames;
+    }
+
+    public Long getAiModelId() {
+        return aiModelId;
+    }
+
+    public void setAiModelId(Long aiModelId) {
+        this.aiModelId = aiModelId;
+    }
+
+    public String getToolCallPermission() {
+        return toolCallPermission;
+    }
+
+    public void setToolCallPermission(String toolCallPermission) {
+        this.toolCallPermission = toolCallPermission;
+    }
+
+    public String getBizType() {
+        return bizType;
+    }
+
+    public void setBizType(String bizType) {
+        this.bizType = bizType;
+    }
+
+    public String getThinkingLevel() {
+        return thinkingLevel;
+    }
+
+    public void setThinkingLevel(String thinkingLevel) {
+        this.thinkingLevel = thinkingLevel;
+    }
+
+    public Boolean getRunning() {
+        return running;
+    }
+
+    public void setRunning(Boolean running) {
+        this.running = running;
     }
 }

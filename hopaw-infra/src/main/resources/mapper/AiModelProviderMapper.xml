@@ -41,7 +41,7 @@
             provider = #{provider},
             type = #{type},
             url = #{url},
-            api_key = #{apiKey},
+            api_key = COALESCE(NULLIF(#{apiKey}, ''), api_key),
             icon = #{icon},
             sdk_name = #{sdkName},
             ext_params = #{extParams}

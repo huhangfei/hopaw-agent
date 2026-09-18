@@ -5,7 +5,9 @@ var Modal = (function() {
         if (initialized) return;
         initialized = true;
 
-        document.addEventListener('click', function(e) {
+        // 用 mousedown 而非 click：click 的 target 取决于 mouseup 位置，
+        // 在窗体内按下并拖到遮罩释放会误触发关闭。mousedown 的 target 即按下位置。
+        document.addEventListener('mousedown', function(e) {
             if (e.target.matches('.modal-overlay.active')) {
                 e.target.classList.remove('active');
             }

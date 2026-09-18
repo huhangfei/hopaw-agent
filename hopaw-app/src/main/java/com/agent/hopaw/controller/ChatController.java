@@ -1,0 +1,102 @@
+package com.agent.hopaw.controller;
+
+import com.agent.hopaw.avatar.service.AvatarSettingsService;
+import com.agent.hopaw.infra.model.dto.ToolSetInfo;
+import com.agent.hopaw.infra.model.entity.Agent;
+import com.agent.hopaw.infra.model.entity.ChatSession;
+import com.agent.hopaw.infra.service.AgentService;
+import com.agent.hopaw.infra.service.IAgentExecutorService;
+import com.agent.hopaw.infra.service.IChatSessionService;
+import com.agent.hopaw.infra.tool.IAgentToolService;
+import com.agent.hopaw.infra.util.UuidUtil;
+import com.agent.hopaw.util.CurrentUser;
+import org.springframework.stereotype.Controller;
+import org.springframework.ui.Model;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+
+import javax.servlet.http.HttpServletRequest;
+import java.util.List;
+
+@Controller
+public class ChatController {
+
+    private final IChatSessionService chatSessionService;
+    private final AgentService agentService;
+    private final IAgentToolService agentToolService;
+    private final IAgentExecutorService agentExecutorService;
+    private final AvatarSettingsService avatarSettingsService;
+
+    public ChatController(IChatSessionService chatSessionService, AgentService agentService, IAgentToolService agentToolService,
+                          IAgentExecutorService agentExecutorService,
+                          AvatarSettingsService avatarSettingsService) {
+        this.chatSessionService = chatSessionService;
+        this.agentService = agentService;
+        this.agentToolService = agentToolService;
+        this.agentExecutorService = agentExecutorService;
+        this.avatarSettingsService = avatarSettingsService;
+    }
+
+    @GetMapping("/")
+    public String index(@RequestParam(required = false) String sessionId, Model model, HttpServletRequest request) {
+        String currentUserId = CurrentUser.require(request);
+        model.addAttribute("currentUserId", currentUserId);
+        model.addAttribute("agentExecutorState", false);
+
+        // 首页可见会话：自己的聊天会话 + 所有人的项目/工作流任务会话
+        List<ChatSession> chatSessions = chatSessionService.getVisibleSessions(currentUserId, null);
+        // 填充会话执行器实时运行状态，首页会话列表据此显示loading图标
+        chatSessions.forEach(s -> s.setRunning(agentExecutorService.isAgentExecutorRunning(s.getSessionId())));
+        model.addAttribute("chatSessions", chatSessions);
+        List<Agent> agents = agentService.getAgentsPage(currentUserId, null, 0, 100);
+        model.addAttribute("agents", agents);
+        if(sessionId == null && !chatSessions.isEmpty()){
+            // 从已有会话列表中找自己最后更新的一条作为默认选中
+            sessionId = chatSessions.stream()
+                    .filter(s -> currentUserId.equals(s.getUserId()))
+                    .findFirst()
+                    .map(ChatSession::getSessionId)
+                    .orElse(null);
+        }
+        Agent selectedAgent=null;
+        Long aiModelId=null;
+        Boolean enableThinking=true;
+        String selectedSkills = "";
+        String toolCallPermission = "smart_call";
+        // 消息区头部显示会话标题：会话未落库（如新建未发送消息）时默认“新会话”
+        String currentSessionTitle = "新会话";
+        if(sessionId != null){
+            ChatSession session = chatSessionService.getSessionBySessionId(sessionId);
+            if(session != null){
+                model.addAttribute("agentExecutorState", agentExecutorService.isAgentExecutorRunning(session.getSessionId()));
+                selectedAgent=agents.stream().filter(agent -> agent.getId().equals(session.getAgentId())).findFirst().orElse(null);
+                aiModelId=session.getAiModelId();
+                enableThinking=session.getEnableThinking();
+                selectedSkills=session.getSkillNames();
+                toolCallPermission = session.getToolCallPermission();
+                if(session.getTitle() != null && !session.getTitle().isBlank()){
+                    currentSessionTitle = session.getTitle();
+                }
+            }
+        }
+        if(selectedAgent==null && !agents.isEmpty()){
+            selectedAgent=agents.get(0);
+        }
+        if(selectedAgent!=null && aiModelId == null){
+            aiModelId=selectedAgent.getAiModelId();
+        }
+        model.addAttribute("selectedAgent", selectedAgent);
+        model.addAttribute("selectedAgentId", selectedAgent != null ? selectedAgent.getId() : null);
+        model.addAttribute("selectedSkills", selectedSkills);
+        model.addAttribute("selectedAiModelId", aiModelId);
+        model.addAttribute("enableThinking", enableThinking);
+        model.addAttribute("toolCallPermission", toolCallPermission);
+        model.addAttribute("currentSessionId", sessionId==null? UuidUtil.generateSimpleUUID() :sessionId);
+        model.addAttribute("currentSessionTitle", currentSessionTitle);
+        model.addAttribute("avatarDisabled",selectedAgent != null ? avatarSettingsService.isAvatarDisabled(currentUserId,  selectedAgent.getId()) : true);
+        List<ToolSetInfo> toolSets = agentToolService.getToolSets();
+        model.addAttribute("toolSets", toolSets);
+        return "index";
+    }
+
+}

@@ -1,0 +1,241 @@
+package com.agent.hopaw.avatar.service;
+
+import com.agent.hopaw.avatar.entity.AgentAvatarConfig;
+import com.agent.hopaw.avatar.mapper.AvatarConfigMapper;
+import com.agent.hopaw.infra.constant.TtsEmotionEnum;
+import com.agent.hopaw.infra.model.entity.TtsConfig;
+import com.agent.hopaw.infra.service.ITtsService;
+import com.agent.hopaw.infra.service.TtsConfigService;
+import com.agent.hopaw.infra.service.TtsServiceFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.stereotype.Service;
+
+import java.util.ArrayList;
+import java.util.Base64;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Set;
+import java.util.UUID;
+import java.util.function.BiConsumer;
+import java.util.function.Consumer;
+
+/**
+ * 虚拟人 TTS 聚合服务，负责根据 agent 配置查找 TTS 音色、根据全局配置获取厂商凭证，合成语音。
+ */
+@Service
+public class TtsService {
+
+    private static final Logger logger = LoggerFactory.getLogger(TtsService.class);
+
+    /** 内置强断句符（句子结束）；英文句点由 isSentenceEnd 做小数点保护（后接空白或位于末尾才断句） */
+    private static final String DEFAULT_STRONG_DELIMITERS = "。！？!?；;…\n\r~.";
+    /** 内置次级断句符（逗号等，用于超长段回退切分） */
+    private static final String DEFAULT_SECONDARY_DELIMITERS = "，,、：:";
+
+    private final TtsConfigService ttsConfigService;
+    private final AvatarConfigMapper avatarConfigMapper;
+    private final TtsServiceFactory ttsServiceFactory;
+
+    public TtsService(TtsConfigService ttsConfigService,
+                      AvatarConfigMapper avatarConfigMapper,
+                      TtsServiceFactory ttsServiceFactory) {
+        this.ttsConfigService = ttsConfigService;
+        this.avatarConfigMapper = avatarConfigMapper;
+        this.ttsServiceFactory = ttsServiceFactory;
+    }
+
+    /**
+     * 按断句标点切分文本后逐段合成，每段合成完成即通过回调返回，供调用方顺序推送到前端。
+     * 整段文本一次合成耗时过长，分段后首段可更早送达播放。
+     * 所有分段属于同一组（groupId），前端按组顺序播放，避免多组并发串段。
+     * @param userId 用户 ID
+     * @param agentId 智能体 ID
+     * @param text 文本内容
+     * @param emotion 标准情感枚举（可为 null）
+     * @param onSegment 分段回调：(groupId, base64 音频, 分段文本)；TTS 未启用或配置缺失时不回调
+     * @param onGroupComplete 本组所有分段推送完毕回调：(groupId)；保证每个请求都触发一次
+     */
+    public void synthesizeSegmented(String userId, Long agentId, String text, TtsEmotionEnum emotion,
+                                    TriConsumer<String, String, String> onSegment,
+                                    Consumer<String> onGroupComplete) {
+        String groupId = UUID.randomUUID().toString();
+        try {
+            // 1. 查询 agent 的 TTS 配置
+            AgentAvatarConfig agentConfig = avatarConfigMapper.findByUserAndAgent(userId, agentId);
+            if (agentConfig == null || !Boolean.TRUE.equals(agentConfig.getTtsEnabled())) {
+                onGroupComplete.accept(groupId);
+                return;
+            }
+            Long ttsConfigId = agentConfig.getTtsConfigId();
+            String voiceId = agentConfig.getTtsVoiceId();
+            if (ttsConfigId == null) {
+                logger.warn("TTS: agent {} 未配置 TTS 配置主键", agentId);
+                onGroupComplete.accept(groupId);
+                return;
+            }
+            if (voiceId == null || voiceId.isEmpty()) {
+                logger.warn("TTS: agent {} 未配置音色", agentId);
+                onGroupComplete.accept(groupId);
+                return;
+            }
+
+            // 2. 查询全局 TTS 厂商配置（TtsConfigService 返回已解密的 configJson）
+            TtsConfig ttsConfig = ttsConfigService.findById(ttsConfigId);
+            if (ttsConfig == null || ttsConfig.getEnabled() == null || ttsConfig.getEnabled() != 1) {
+                logger.warn("TTS: 配置 id={} 未启用或不存在", ttsConfigId);
+                onGroupComplete.accept(groupId);
+                return;
+            }
+            String vendorCode = ttsConfig.getVendorCode();
+
+            // 3. 获取厂商实现
+            ITtsService service = ttsServiceFactory.getService(vendorCode);
+            if (service == null) {
+                logger.warn("TTS 厂商未注册: {}", vendorCode);
+                onGroupComplete.accept(groupId);
+                return;
+            }
+
+            // 4. 根据配置决定是否分段
+            boolean segmentEnabled = !Boolean.FALSE.equals(agentConfig.getTtsSegmentEnabled());
+            List<String> segments;
+            if (segmentEnabled) {
+                segments = splitIntoSegments(text, agentConfig.getTtsSegmentDelimiters());
+            } else {
+                segments = new ArrayList<>();
+                if (text != null && !text.isBlank()) {
+                    segments.add(text.trim());
+                }
+            }
+
+            // 5. 逐段合成并回调，单段失败不影响后续段
+            for (String segment : segments) {
+                try {
+                    byte[] audio = service.synthesize(ttsConfig.getConfigJson(), voiceId, segment, emotion);
+                    if (audio != null && audio.length > 0) {
+                        onSegment.accept(groupId, Base64.getEncoder().encodeToString(audio), segment);
+                    }
+                } catch (Exception e) {
+                    logger.warn("TTS 分段合成失败（跳过该段）: segment={} err={}", segment, e.getMessage());
+                }
+            }
+        } catch (Exception e) {
+            logger.error("TTS 合成失败: {}", e.getMessage(), e);
+        } finally {
+            // 6. 保证每个请求都触发完成回调，无论正常结束还是异常
+            onGroupComplete.accept(groupId);
+        }
+    }
+
+    /** 三参数回调接口 */
+    @FunctionalInterface
+    public interface TriConsumer<A, B, C> {
+        void accept(A a, B b, C c);
+    }
+
+    /** 单段最小字符数：过短的分段向后合并，避免产生大量极小的合成请求 */
+    private static final int MIN_SEGMENT_CHARS = 10;
+    /** 单段最大字符数：无强断句时超长段在最近的次级标点（逗号等）处断开，避免单段合成过久 */
+    private static final int MAX_SEGMENT_CHARS = 150;
+
+    /**
+     * 按断句标点切分文本。
+     * @param text 待切分文本
+     * @param customDelimiters 用户自定义分隔符字符串（每个字符都是强断句符，替换内置强断句符），为 null 时使用内置默认值；次级断句符始终使用内置默认
+     */
+    static List<String> splitIntoSegments(String text, String customDelimiters) {
+        List<String> segments = new ArrayList<>();
+        if (text == null || text.isBlank()) {
+            return segments;
+        }
+
+        // 构建强断句符和次级断句符集合
+        Set<Character> strongChars = new HashSet<>();
+        Set<Character> secondaryChars = new HashSet<>();
+        // 次级断句符始终使用内置默认，仅用于超长段回退切分，不受自定义配置影响
+        for (char c : DEFAULT_SECONDARY_DELIMITERS.toCharArray()) {
+            secondaryChars.add(c);
+        }
+        if (customDelimiters != null && !customDelimiters.isEmpty()) {
+            // 用户自定义：所有字符均作为强断句符（替换内置强断句符）
+            for (char c : customDelimiters.toCharArray()) {
+                strongChars.add(c);
+            }
+        } else {
+            // 内置默认
+            for (char c : DEFAULT_STRONG_DELIMITERS.toCharArray()) {
+                strongChars.add(c);
+            }
+        }
+
+        int len = text.length();
+        StringBuilder buf = new StringBuilder();
+        int lastSecondaryIdx = -1;
+        for (int i = 0; i < len; i++) {
+            char c = text.charAt(i);
+            buf.append(c);
+            if (secondaryChars.contains(c)) {
+                lastSecondaryIdx = buf.length() - 1;
+            }
+            if (isSentenceEnd(text, i, strongChars)) {
+                addSegment(segments, buf);
+                lastSecondaryIdx = -1;
+            } else if (buf.length() >= MAX_SEGMENT_CHARS) {
+                if (lastSecondaryIdx > 0) {
+                    String tail = buf.substring(lastSecondaryIdx + 1);
+                    buf.setLength(lastSecondaryIdx + 1);
+                    addSegment(segments, buf);
+                    buf.append(tail);
+                    lastSecondaryIdx = -1;
+                } else {
+                    addSegment(segments, buf);
+                    lastSecondaryIdx = -1;
+                }
+            }
+        }
+        addSegment(segments, buf);
+        return mergeShortSegments(segments);
+    }
+
+    private static boolean isSentenceEnd(String text, int i, Set<Character> strongChars) {
+        char c = text.charAt(i);
+        if (strongChars.contains(c)) {
+            // 英文句点仅在后接空白或位于末尾时视为断句（避免小数点误切）
+            if (c == '.') {
+                return i + 1 >= text.length() || Character.isWhitespace(text.charAt(i + 1));
+            }
+            return true;
+        }
+        return false;
+    }
+
+    private static void addSegment(List<String> segments, StringBuilder buf) {
+        String s = buf.toString().trim();
+        if (!s.isEmpty()) {
+            segments.add(s);
+        }
+        buf.setLength(0);
+    }
+
+    /** 累计不足最小长度的相邻分段向后合并，最后一段过短并入前一段 */
+    private static List<String> mergeShortSegments(List<String> segments) {
+        List<String> merged = new ArrayList<>();
+        StringBuilder pending = new StringBuilder();
+        for (String segment : segments) {
+            pending.append(segment);
+            if (pending.length() >= MIN_SEGMENT_CHARS) {
+                merged.add(pending.toString());
+                pending.setLength(0);
+            }
+        }
+        if (pending.length() > 0) {
+            if (!merged.isEmpty() && pending.length() < MIN_SEGMENT_CHARS) {
+                merged.set(merged.size() - 1, merged.get(merged.size() - 1) + pending);
+            } else {
+                merged.add(pending.toString());
+            }
+        }
+        return merged;
+    }
+}

@@ -1,5 +1,6 @@
 package com.agent.hopaw.tool.command;
 
+import com.agent.hopaw.infra.tool.ToolSecurityLevel;
 import com.agent.hopaw.infra.service.IAgentExecutorService;
 import com.agent.hopaw.infra.util.InvocationParametersWrapper;
 import dev.langchain4j.agent.tool.P;
@@ -28,19 +29,20 @@ public class CommandExecutorTool implements AgentTool {
     private static final int TIMEOUT_SECONDS = 30;
     private static final int MAX_OUTPUT_LINES = 500;
 
-    @Tool("获取本地操作系统的名称，例如 Windows 10 或 Ubuntu 20.04")
+    @ToolSecurityLevel(ToolSecurityLevel.Level.SAFE)
+    @Tool(value = {"获取操作系统名称", "获取本地操作系统的名称，例如 Windows 10 或 Ubuntu 20.04"})
     public String getOsName() {
         return System.getProperty("os.name");
     }
 
-    @Tool("执行本地系统命令并返回输出结果。支持 Windows 和 Unix/Linux/macOS 系统。使用前最好先获取操作系统类型，" +
+    @ToolSecurityLevel(ToolSecurityLevel.Level.ALL_REQUIRE_APPROVAL)
+    @Tool(value = {"执行命令", "执行本地系统命令并返回输出结果。支持 Windows 和 Unix/Linux/macOS 系统。使用前最好先获取操作系统类型，" +
             "以确保命令在目标系统上执行。" +
-            "请谨慎使用，避免执行危险命令如格式化磁盘、删除系统文件等。")
+            "请谨慎使用，避免执行危险命令如格式化磁盘、删除系统文件等。"})
     public String executeCommand(@P(description = "要执行的命令") String command, @P(description = "超时时间（秒）", required = false) Integer timeout, InvocationParameters invocationParameters) {
         InvocationParametersWrapper invocationParametersWrapper = InvocationParametersWrapper.create(invocationParameters);
         String toolCallId = invocationParametersWrapper.getToolCallId();
-        String userId = invocationParametersWrapper.getUserId();
-        Long agentId = invocationParametersWrapper.getAgentId();
+        String sessionId =  invocationParametersWrapper.getSessionId();
         logger.info("Executing command: {} with toolCallId: {}", command, toolCallId);
         if (command == null || command.trim().isEmpty()) {
             return "错误: 命令不能为空";
@@ -61,7 +63,7 @@ public class CommandExecutorTool implements AgentTool {
             processBuilder.redirectErrorStream(true);
             Process process = processBuilder.start();
 
-            agentExecutorService.addToolStopHook(agentId, userId, toolCallId, (callId) -> {
+            agentExecutorService.addToolStopHook(sessionId, toolCallId, (callId) -> {
                 try {
                     ProcessHandle processHandle = process.toHandle();
                     processHandle.descendants()
@@ -79,7 +81,7 @@ public class CommandExecutorTool implements AgentTool {
                     int lineCount = 0;
                     try {
                         while ((line = reader.readLine()) != null) {
-                            if (agentExecutorService.toolIsCancelled(agentId, userId, toolCallId)) {
+                            if (agentExecutorService.toolIsCancelled(sessionId, toolCallId)) {
                                 output.append("错误: 命令执行被用户取消");
                                 break;
                             }
@@ -87,7 +89,7 @@ public class CommandExecutorTool implements AgentTool {
                                 output.append("\n... (输出已截断，超过 ").append(MAX_OUTPUT_LINES).append(" 行)");
                                 break;
                             }
-                            agentExecutorService.sendToolRunningContent(agentId, userId, toolCallId, line + "\n");
+                            agentExecutorService.sendToolRunningContent(sessionId, toolCallId, line + "\n");
                             output.append(line).append("\n");
                             lineCount++;
                         }

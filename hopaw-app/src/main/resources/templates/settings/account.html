@@ -1,0 +1,53 @@
+<th:block th:fragment="content" xmlns:th="http://www.thymeleaf.org">
+<div class="settings-panel active" id="tab-account">
+    <div class="settings-row">
+        <div class="settings-form">
+            <h3>基本信息</h3>
+
+            <div class="form-group">
+                <label>用户编号</label>
+                <input type="text" class="settings-input" th:value="${currentAccount.userId}" disabled style="background:#f5f5f5;color:#999;">
+            </div>
+
+            <div class="form-group">
+                <label for="accountUsername">用户名称</label>
+                <input type="text" id="accountUsername" class="settings-input" th:value="${currentAccount.username}" placeholder="请输入用户名称">
+            </div>
+
+            <div class="form-group">
+                <label for="accountNickname">用户昵称</label>
+                <input type="text" id="accountNickname" class="settings-input" th:value="${currentAccount.nickname}" placeholder="请输入用户昵称">
+            </div>
+
+            <div class="settings-actions">
+                <button class="btn-save-settings" onclick="saveAccountInfo()">保存信息</button>
+            </div>
+        </div>
+
+        <div class="settings-form">
+            <h3>登录密码</h3>
+
+            <div class="form-group">
+                <label>启用登录密码</label>
+                <div class="toggle-wrapper">
+                    <label class="toggle">
+                        <input type="checkbox" id="accountPasswordEnabled" th:checked="${currentAccount.passwordEnabled != null and currentAccount.passwordEnabled == 1}" onchange="onAccountPwdToggle()">
+                        <span class="slider"></span>
+                    </label>
+                    <span class="toggle-label" id="accountPwdEnabledLabel" th:text="${currentAccount.passwordEnabled != null and currentAccount.passwordEnabled == 1} ? '已启用' : '未启用'">未启用</span>
+                </div>
+            </div>
+
+            <div class="form-group" id="accountPwdGroup" th:style="${currentAccount.passwordEnabled != null and currentAccount.passwordEnabled == 1} ? '' : 'display:none'">
+                <label for="accountPassword">登录密码</label>
+                <input type="password" id="accountPassword" class="settings-input" placeholder="请输入新密码" maxlength="64">
+                <p class="form-hint">留空则不修改密码，输入新密码将覆盖旧密码</p>
+            </div>
+
+            <div class="settings-actions">
+                <button class="btn-save-settings" onclick="saveAccountPassword()">保存密码设置</button>
+            </div>
+        </div>
+    </div>
+</div>
+</th:block>

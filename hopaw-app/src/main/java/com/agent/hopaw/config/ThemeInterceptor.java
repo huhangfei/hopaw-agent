@@ -1,13 +1,18 @@
 package com.agent.hopaw.config;
 
-import javax.servlet.http.Cookie;
-import javax.servlet.http.HttpServletRequest;
-import javax.servlet.http.HttpServletResponse;
+import com.agent.hopaw.infra.model.entity.Account;
+import com.agent.hopaw.infra.service.AccountService;
+import com.agent.hopaw.util.AccountAvatar;
+import com.agent.hopaw.util.CurrentUser;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
 import org.springframework.web.servlet.HandlerInterceptor;
 import org.springframework.web.servlet.ModelAndView;
+
+import javax.servlet.http.Cookie;
+import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
 
 @Component
 public class ThemeInterceptor implements HandlerInterceptor {
@@ -19,6 +24,15 @@ public class ThemeInterceptor implements HandlerInterceptor {
     public static final String THEME_REQUEST_ATTRIBUTE = "_currentTheme";
     public static final String THEME_DARK = "dark";
     public static final String THEME_LIGHT = "light";
+
+    public static final String MENU_COLLAPSED_COOKIE = "menuCollapsed";
+    public static final String MENU_COLLAPSED_MODEL_KEY = "menuCollapsed";
+
+    private final AccountService accountService;
+
+    public ThemeInterceptor(AccountService accountService) {
+        this.accountService = accountService;
+    }
 
     @Override
     public boolean preHandle(HttpServletRequest request, HttpServletResponse response, Object handler) throws Exception {
@@ -37,23 +51,53 @@ public class ThemeInterceptor implements HandlerInterceptor {
             }
             modelAndView.addObject(THEME_MODEL_ATTRIBUTE, theme);
             modelAndView.addObject("activePage", resolveActivePage(request));
+            modelAndView.addObject(MENU_COLLAPSED_MODEL_KEY, isMenuCollapsed(request));
+
+            // 注入当前登录用户信息供布局使用
+            String userId = CurrentUser.fromSession(request);
+            if (userId != null) {
+                modelAndView.addObject("currentUserId", userId);
+                Account account = accountService.getByUserId(userId);
+                String nickname = account != null ? account.getNickname() : null;
+                String displayName = (nickname != null && !nickname.isEmpty())
+                        ? nickname
+                        : (account != null && account.getUsername() != null && !account.getUsername().isEmpty()
+                            ? account.getUsername()
+                            : userId);
+                modelAndView.addObject("currentNickname", displayName);
+                modelAndView.addObject("currentInitial", AccountAvatar.initial(displayName));
+            }
             logger.debug("ThemeInterceptor postHandle: modelAndView={}, theme={}", modelAndView.getViewName(), theme);
         }
     }
 
     private String resolveActivePage(HttpServletRequest request) {
         String path = request.getRequestURI();
+        if(path.startsWith("/settings")){return "settings";}
+        if (path.startsWith("/tasks-board")) { return "tasks-board"; }
+        if (path.startsWith("/tool-config")) { return "tools"; }
         switch (path) {
             case "/":               return "index";
             case "/models":         return "models";
             case "/memory-manage":  return "memory-manage";
-            case "/vector-history": return "vector-history";
+            case "/memory-history": return "memory-history";
             case "/tools":          return "tools";
             case "/tools/plugin-store":   return "tools";
-            case "/tasks":          return "tasks";
             case "/token-usage":    return "token-usage";
             case "/settings":       return "settings";
             case "/skills":         return "skills";
+            case "/mcp":            return "mcp";
+            case "/accounts":       return "accounts";
+            case "/agents":         return "agents";
+            case "/attachments":    return "attachments";
+            case "/projects":       return "projects";
+            case "/prompts":       return "prompts";
+            case "/login":          return "login";
+            case "/session-clean":          return "session-clean";
+            case "/scheduled-tasks":          return "scheduled-tasks";
+            case "/ip-blacklist":          return "ip-blacklist";
+            case "/login-log":          return "login-log";
+            case "/avatar-rank":          return "avatar-rank";
             default:                return "";
         }
     }
@@ -70,5 +114,17 @@ public class ThemeInterceptor implements HandlerInterceptor {
         }
         logger.debug("No theme cookie found, returning default: light");
         return THEME_LIGHT;
+    }
+
+    private boolean isMenuCollapsed(HttpServletRequest request) {
+        Cookie[] cookies = request.getCookies();
+        if (cookies != null) {
+            for (Cookie cookie : cookies) {
+                if (MENU_COLLAPSED_COOKIE.equals(cookie.getName())) {
+                    return "true".equals(cookie.getValue());
+                }
+            }
+        }
+        return false;
     }
 }

@@ -2,7 +2,6 @@ package com.agent.hopaw.infra.service;
 
 import com.agent.hopaw.infra.constant.AiModelCallSourceEnum;
 import com.agent.hopaw.infra.mapper.AiModelMapper;
-import com.agent.hopaw.infra.monitor.LangChain4jMonitor;
 import com.agent.hopaw.infra.model.entity.*;
 import com.agent.hopaw.infra.model.dto.*;
 import com.agent.hopaw.infra.chat.ChatModelFactory;
@@ -24,48 +23,50 @@ public class AiModelService implements IAiModelService {
     private static final Logger log = LoggerFactory.getLogger(AiModelService.class);
     private final AiModelMapper aiModelMapper;
     private final AiModelProviderService aiModelProviderService;
+    private final IChatModelListenerProvider chatModelListenerProvider;
 
     private final Map<String, ChatModelFactory> factories = new HashMap<>();
-    private final TokenUsageService tokenUsageService;
-    public AiModelService(AiModelMapper aiModelMapper, AiModelProviderService aiModelProviderService, List<ChatModelFactory> factoryList, TokenUsageService tokenUsageService) {
+    public AiModelService(AiModelMapper aiModelMapper, AiModelProviderService aiModelProviderService, List<ChatModelFactory> factoryList, IChatModelListenerProvider chatModelListenerProvider) {
         this.aiModelMapper = aiModelMapper;
         this.aiModelProviderService = aiModelProviderService;
-        this.tokenUsageService = tokenUsageService;
+        this.chatModelListenerProvider = chatModelListenerProvider;
         for (ChatModelFactory factory : factoryList) {
             factories.put(factory.getProviderName().toLowerCase(), factory);
         }
     }
+    @Override
     public AiModel findById(Long id) {
         AiModel aiModel = aiModelMapper.findById(id);
         return aiModel;
     }
 
-
+    @Override
     public List<AiModel> findByProviderId(Long providerId) {
         return aiModelMapper.findByProviderId(providerId);
     }
-
+    @Override
     public int insert(AiModel aiModel) {
         testAndSetCapabilities(aiModel);
         return aiModelMapper.insert(aiModel);
     }
-
+    @Override
     public int update(AiModel aiModel) {
         testAndSetCapabilities(aiModel);
         return aiModelMapper.update(aiModel);
     }
-
+    @Override
     public int deleteById(Long id) {
         return aiModelMapper.deleteById(id);
     }
-
+    @Override
     public ModelCapabilityTestResult testModel(Long id) {
         AiModel aiModel = aiModelMapper.findById(id);
         if (aiModel == null) {
             throw new IllegalArgumentException("模型不存在: " + id);
         }
         ModelCapabilityTestResult result = testAndSetCapabilities(aiModel);
-        aiModelMapper.update(aiModel);
+        // 仅更新 capabilities 和 verified，避免其他字段为 null 触发约束
+        aiModelMapper.updateTestResult(id, aiModel.getCapabilities(), aiModel.getVerified());
         return result;
     }
 
@@ -88,7 +89,8 @@ public class AiModelService implements IAiModelService {
             org.springframework.beans.BeanUtils.copyProperties(aiModel, aiModelVO);
             aiModelVO.setAiModelProvider(provider);
             ChatModelFactory factory = factories.get(aiModelVO.getAiModelProvider().getSdkName().toLowerCase());
-            ChatModel chatModel = factory.createChatModel(aiModelVO, false, new LangChain4jMonitor(AiModelCallSourceEnum.ModelTEST).setTokenUsageService(tokenUsageService));
+            ChatModelListener chatModelListener = chatModelListenerProvider.getChatModelListener(AiModelCallSourceEnum.ModelTest, null, null, null, null);
+            ChatModel chatModel = factory.createChatModel(aiModelVO, false,null, chatModelListener);
             ModelCapabilityTestResult result = factory.testModelCapability(chatModel);
 
             log.info("模型能力测试结果 [{}]: {}", aiModel.getModelName(), result.getMessage());
@@ -108,7 +110,7 @@ public class AiModelService implements IAiModelService {
             return new ModelCapabilityTestResult(false, java.util.Collections.emptyList(), "测试异常：" + e.getMessage());
         }
     }
-
+    @Override
     public AiModelVO findAiModelVOById(Long id) {
         AiModel aiModel = aiModelMapper.findById(id);
         if (aiModel == null) {
@@ -125,26 +127,32 @@ public class AiModelService implements IAiModelService {
         return aiModelVO;
     }
 
-    public ChatModel createChatModel(Long aiModelId,boolean enableThinking, ChatModelListener langChain4jMonitor) {
+    @Override
+    public ChatModel createChatModel(Long aiModelId,boolean enableThinking, String reasoningEffort, ChatModelListener chatModelListener) {
         AiModelVO aiModelVO = findAiModelVOById(aiModelId);
         ChatModelFactory chatModelFactory = factories.get(aiModelVO.getAiModelProvider().getSdkName().toLowerCase());
-        return chatModelFactory.createChatModel(aiModelVO, enableThinking, langChain4jMonitor);
+        return chatModelFactory.createChatModel(aiModelVO, enableThinking, reasoningEffort, chatModelListener);
     }
 
-    public StreamingChatModel createStreamingChatModel(Long aiModelId,boolean enableThinking, ChatModelListener langChain4jMonitor) {
+    @Override
+    public StreamingChatModel createStreamingChatModel(Long aiModelId,boolean enableThinking, String reasoningEffort, ChatModelListener chatModelListener) {
         AiModelVO aiModelVO = findAiModelVOById(aiModelId);
         ChatModelFactory chatModelFactory = factories.get(aiModelVO.getAiModelProvider().getSdkName().toLowerCase());
-        return chatModelFactory.createStreamingChatModel(aiModelVO, enableThinking, langChain4jMonitor);
+        return chatModelFactory.createStreamingChatModel(aiModelVO, enableThinking, reasoningEffort, chatModelListener);
     }
 
+    @Override
     public Map<String, ChatModelFactory> getAllFactories() {
         return new HashMap<>(factories);
     }
 
 
-
+    @Override
     public String getDefaultAiModelExtParamsJson(){
         AiModelExtParams aiModelExtParams = new AiModelExtParams("reasoning_content", true, true, "high", 0.5, 30L, false, false,false);
+        aiModelExtParams.setEnableThinking(true);
+        aiModelExtParams.setStrictTools(true);
+        aiModelExtParams.setParallelToolCalls(true);
         return JSON.toJSONString(aiModelExtParams);
     }
 

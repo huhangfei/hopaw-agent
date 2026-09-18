@@ -8,7 +8,7 @@ import org.springframework.web.bind.annotation.*;
 import java.util.List;
 
 @RestController
-@RequestMapping("/api/tasks")
+@RequestMapping("/api/scheduled-tasks")
 public class ScheduledTaskController {
 
     private final ScheduledTaskService scheduledTaskService;

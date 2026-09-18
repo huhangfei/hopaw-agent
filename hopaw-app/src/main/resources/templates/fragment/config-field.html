@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<!--
+  基础配置输入渲染片段（供 tool-config.html 复用）
+  参数：
+    item        - ToolConfigItem 配置项定义
+    val         - 当前值
+    namePrefix  - 表单元素 name（多行/复选类型以此为前缀加行号/选项号）
+    errKey      - 校验错误提示 div 对应的 key（error-{errKey}）
+-->
+<th:block th:fragment="basicField(item, val, namePrefix, errKey)">
+    <div th:switch="${item.type.name()}">
+        <input th:case="'TEXT_SINGLE'"
+               type="text"
+               th:name="${namePrefix}"
+               th:value="${val}"
+               th:required="${item.validation != null && item.validation.required}"
+               th:minlength="${item.validation != null ? item.validation.minLength : null}"
+               th:maxlength="${item.validation != null ? item.validation.maxLength : null}"
+               th:pattern="${item.validation != null ? item.validation.regex : null}"
+               th:title="${item.validation != null ? item.validation.regexMessage : null}"
+               class="config-input"
+               th:data-key="${errKey}">
+
+        <textarea th:case="'TEXT_AREA'"
+                  th:name="${namePrefix}"
+                  class="config-textarea"
+                  th:required="${item.validation != null && item.validation.required}"
+                  th:minlength="${item.validation != null ? item.validation.minLength : null}"
+                  th:maxlength="${item.validation != null ? item.validation.maxLength : null}"
+                  th:data-key="${errKey}"
+                  th:text="${val}"></textarea>
+
+        <div th:case="'TEXT_MULTI'" class="config-multi-input" th:data-key="${errKey}" th:data-name-prefix="${namePrefix}">
+            <th:block th:with="savedValues=${val != null && !val.isEmpty() ? val.split(',') : {''}}">
+                <div th:each="value, stat : ${savedValues}" class="multi-input-row">
+                    <input type="text"
+                           th:name="|${namePrefix}_${stat.index}|"
+                           th:value="${value}"
+                           th:minlength="${item.validation != null ? item.validation.minLength : null}"
+                           th:maxlength="${item.validation != null ? item.validation.maxLength : null}"
+                           th:pattern="${item.validation != null ? item.validation.regex : null}"
+                           th:title="${item.validation != null ? item.validation.regexMessage : null}"
+                           class="config-input multi-input-field">
+                    <button type="button" class="btn-remove-row" onclick="removeMultiRow(this)" th:if="${stat.index > 0}">-</button>
+                    <button type="button" class="btn-add-row" onclick="addMultiRow(this)" th:if="${stat.last}">+</button>
+                </div>
+            </th:block>
+        </div>
+
+        <input th:case="'TEXT_PASSWORD'"
+               type="password"
+               th:name="${namePrefix}"
+               th:value="${val}"
+               th:required="${item.validation != null && item.validation.required}"
+               th:minlength="${item.validation != null ? item.validation.minLength : null}"
+               th:maxlength="${item.validation != null ? item.validation.maxLength : null}"
+               th:pattern="${item.validation != null ? item.validation.regex : null}"
+               th:title="${item.validation != null ? item.validation.regexMessage : null}"
+               class="config-input"
+               th:data-key="${errKey}">
+
+        <div th:case="'TEXT_PASSWORD_MULTI'" class="config-multi-input" th:data-key="${errKey}" th:data-name-prefix="${namePrefix}">
+            <th:block th:with="savedValues=${val != null && !val.isEmpty() ? val.split(',') : {''}}">
+                <div th:each="value, stat : ${savedValues}" class="multi-input-row">
+                    <input type="password"
+                           th:name="|${namePrefix}_${stat.index}|"
+                           th:value="${value}"
+                           th:minlength="${item.validation != null ? item.validation.minLength : null}"
+                           th:maxlength="${item.validation != null ? item.validation.maxLength : null}"
+                           th:pattern="${item.validation != null ? item.validation.regex : null}"
+                           th:title="${item.validation != null ? item.validation.regexMessage : null}"
+                           class="config-input multi-input-field">
+                    <button type="button" class="btn-remove-row" onclick="removeMultiRow(this)" th:if="${stat.index > 0}">-</button>
+                    <button type="button" class="btn-add-row" onclick="addMultiRow(this)" th:if="${stat.last}">+</button>
+                </div>
+            </th:block>
+        </div>
+
+        <select th:case="'SELECT'"
+                th:name="${namePrefix}"
+                class="config-select"
+                th:required="${item.validation != null && item.validation.required}"
+                th:data-key="${errKey}">
+            <option th:each="option : ${item.options}"
+                    th:value="${option.value}"
+                    th:text="${option.label}"
+                    th:selected="${val == option.value}"></option>
+        </select>
+
+        <select th:case="'SELECT_MULTI'"
+                th:name="|${namePrefix}[]|"
+                multiple
+                class="config-select config-select-multi"
+                th:data-key="${errKey}">
+            <option th:each="option : ${item.options}"
+                    th:value="${option.value}"
+                    th:text="${option.label}"
+                    th:selected="${#strings.contains(#strings.toString(val), option.value)}"></option>
+        </select>
+
+        <div th:case="'RADIO'" class="config-radio-group" th:data-key="${errKey}">
+            <div th:each="option, optionStat : ${item.options}" class="config-radio-item">
+                <input type="radio"
+                       th:id="|${namePrefix}_${optionStat.index}|"
+                       th:name="${namePrefix}"
+                       th:value="${option.value}"
+                       th:checked="${val == option.value}"
+                       th:required="${item.validation != null && item.validation.required}">
+                <label th:for="|${namePrefix}_${optionStat.index}|"
+                       th:text="${option.label}"></label>
+            </div>
+        </div>
+
+        <div th:case="'CHECKBOX'" class="config-checkbox-group" th:data-key="${errKey}">
+            <div th:each="option, optionStat : ${item.options}" class="config-checkbox-item">
+                <input type="checkbox"
+                       th:id="|${namePrefix}_${optionStat.index}|"
+                       th:name="|${namePrefix}_${optionStat.index}|"
+                       th:value="${option.value}"
+                       th:checked="${#strings.contains(#strings.toString(val), option.value)}">
+                <label th:for="|${namePrefix}_${optionStat.index}|"
+                       th:text="${option.label}"></label>
+            </div>
+        </div>
+    </div>
+</th:block>
+</html>

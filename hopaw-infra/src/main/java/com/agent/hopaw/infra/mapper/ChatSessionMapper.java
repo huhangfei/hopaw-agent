@@ -12,7 +12,16 @@ public interface ChatSessionMapper {
 
     List<ChatSession> findByUserId(@Param("userId") String userId);
 
+    /** 分页查询用户会话（按最后更新时间倒序） */
+    List<ChatSession> findPageByUserId(@Param("userId") String userId, @Param("offset") int offset, @Param("limit") int limit);
+
+    /** 用户的会话总数 */
+    int countByUserId(@Param("userId") String userId);
+
     List<ChatSession> findByUserIdAndAgentId(@Param("userId") String userId, @Param("agentId") Long agentId);
+
+    /** 首页可见会话：用户自己的聊天会话 + 所有人的项目/工作流任务会话（兼容新旧 biz_type 值） */
+    List<ChatSession> findVisibleSessions(@Param("userId") String userId, @Param("agentId") Long agentId);
 
     ChatSession findById(@Param("id") Long id);
 
@@ -35,4 +44,6 @@ public interface ChatSessionMapper {
     int deleteBySessionId(@Param("sessionId") String sessionId);
 
     int deleteByAgentId(@Param("agentId") Long agentId);
+
+    int updateBizType(@Param("sessionId") String sessionId, @Param("bizType") String bizType);
 }

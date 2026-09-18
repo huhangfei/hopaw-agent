@@ -1,0 +1,140 @@
+<th:block th:fragment="content" xmlns:th="http://www.thymeleaf.org">
+<div class="settings-panel active" id="tab-tts">
+    <div class="settings-form">
+        <div class="tts-list-header">
+            <h3>TTS 语音配置</h3>
+            <button class="btn-add-tts" onclick="showTtsForm()">+ 添加配置</button>
+        </div>
+
+        <div class="tts-table-wrap">
+            <table class="tts-table" id="ttsTable">
+                <thead>
+                    <tr>
+                        <th>配置名称</th>
+                        <th>厂商</th>
+                        <th>编号</th>
+                        <th>配置</th>
+                        <th style="width:80px;">状态</th>
+                        <th style="width:80px;">音色数</th>
+                        <th style="width:230px;">操作</th>
+                    </tr>
+                </thead>
+                <tbody id="ttsTableBody">
+                    <tr id="ttsEmptyRow">
+                        <td colspan="6" class="tts-empty">暂无 TTS 配置，点击"添加配置"开始</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <div class="tts-form" id="ttsEditForm" style="display:none;">
+            <div class="tts-form-divider"></div>
+            <h4 class="tts-form-title" id="ttsFormTitle">添加 TTS 配置</h4>
+            <input type="hidden" id="ttsEditId">
+
+            <div class="form-group">
+                <label for="ttsVendorSelect">TTS 厂商</label>
+                <select id="ttsVendorSelect" class="settings-input" onchange="onTtsVendorChange()">
+                    <option value="">选择厂商</option>
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label for="ttsConfigName">配置名称</label>
+                <input type="text" id="ttsConfigName" class="settings-input" maxlength="50" placeholder="例如：生产环境、测试账号A">
+                <p class="form-hint">自定义名称，方便区分同厂商的多条配置</p>
+            </div>
+
+            <div class="form-group">
+                <label for="ttsConfigJson">厂商配置（JSON）</label>
+                <textarea id="ttsConfigJson" class="settings-input tts-json-input" rows="6" placeholder='{"appId":"xxx","accessToken":"xxx"}'></textarea>
+                <p class="form-hint" id="ttsConfigHint">请先选择厂商</p>
+            </div>
+
+            <div class="form-group">
+                <label class="switch-row">
+                    <span class="switch-label">启用</span>
+                    <label class="switch">
+                        <input type="checkbox" id="ttsEnabled" checked>
+                        <span class="slider"></span>
+                    </label>
+                </label>
+            </div>
+
+            <div class="tts-form-actions">
+                <button class="btn-save-settings" onclick="saveTtsForm()">保存</button>
+                <button class="btn-cancel" onclick="hideTtsForm()">取消</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 渠道音色管理弹框 -->
+    <div class="modal-overlay tts-voice-overlay" id="ttsVoiceModal" style="display:none;">
+        <div class="tts-voice-modal">
+            <div class="tts-voice-header">
+                <h4 class="tts-voice-title" id="ttsVoiceTitle">渠道音色</h4>
+                <button class="tts-voice-close" onclick="hideTtsVoiceModal()">&times;</button>
+            </div>
+            <p class="tts-voice-hint">该渠道独立维护音色列表，增删改不影响其他配置</p>
+            <div class="tts-voice-toolbar">
+                <button class="btn-tts-voice-add" onclick="addTtsVoiceRow()">+ 新增音色</button>
+                <button class="btn-tts-voice-reset" onclick="resetTtsVoices()">重置为默认音色</button>
+                <span class="tts-voice-count" id="ttsVoiceCount"></span>
+            </div>
+            <div class="tts-voice-table-wrap">
+                <table class="tts-voice-table">
+                    <thead>
+                        <tr>
+                            <th style="width:150px;">音色ID</th>
+                            <th style="width:170px;">名称</th>
+                            <th style="width:90px;">语言</th>
+                            <th style="width:80px;">性别</th>
+                            <th>情感(逗号分隔)</th>
+                            <th style="width:60px;">操作</th>
+                        </tr>
+                    </thead>
+                    <tbody id="ttsVoiceTableBody"></tbody>
+                </table>
+            </div>
+            <div class="tts-voice-actions">
+                <button class="btn-save-settings" onclick="saveTtsVoices()">保存音色</button>
+                <button class="btn-cancel" onclick="hideTtsVoiceModal()">关闭</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 渠道测试弹框 -->
+    <div class="modal-overlay tts-test-overlay" id="ttsTestModal" style="display:none;">
+        <div class="tts-test-modal">
+            <div class="tts-voice-header">
+                <h4 class="tts-voice-title" id="ttsTestTitle">渠道测试</h4>
+                <button class="tts-voice-close" onclick="hideTtsTestModal()">&times;</button>
+            </div>
+            <p class="tts-voice-hint">左侧选择音色，右侧输入文本试听该渠道的合成效果</p>
+            <div class="tts-test-body">
+                <div class="tts-test-left">
+                    <div class="tts-test-voice-list" id="ttsTestVoiceList"></div>
+                </div>
+                <div class="tts-test-right">
+                    <div class="tts-test-emotion-bar" id="ttsTestEmotionBar" style="display:none;">
+                        <label>情感风格：</label>
+                        <div class="tts-test-emotion-list" id="ttsTestEmotionList"></div>
+                    </div>
+                    <textarea id="ttsTestText" class="settings-input tts-test-textarea" rows="8"
+                              placeholder="输入要合成的测试文本，支持长文本..."></textarea>
+                    <div class="tts-test-actions">
+                        <button class="btn-save-settings" id="ttsTestGenBtn" onclick="generateTtsTestAudio()">生成语音</button>
+                    </div>
+                    <div class="tts-test-player" id="ttsTestPlayer" style="display:none;">
+                        <audio id="ttsTestAudio" controls></audio>
+                        <div class="tts-test-player-bar">
+                            <span class="tts-test-player-info" id="ttsTestAudioInfo"></span>
+                            <button class="btn-tts-test-replay" onclick="replayTtsTestAudio()">&#x21bb; 重播</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+</th:block>

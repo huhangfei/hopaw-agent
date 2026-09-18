@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>任务详情 - HoPaw</title>
+    <link rel="stylesheet" th:href="@{/css/site.css}">
+    <link rel="stylesheet" th:href="@{/css/form.css}">
+    <link rel="stylesheet" th:href="@{/css/modal.css}">
+    <link rel="stylesheet" th:href="@{/css/confirm-dialog.css}">
+    <link rel="stylesheet" th:href="@{/css/toast.css}">
+    <link rel="stylesheet" th:href="@{/css/dark-theme.css}">
+    <link rel="stylesheet" th:href="@{/css/page/tasks-board.css}">
+    <link rel="stylesheet" th:href="@{/css/task-modal.css}">
+    <link rel="stylesheet" th:href="@{/css/md-content.css}">
+    <link rel="stylesheet" th:href="@{/css/page/task-detail.css}">
+</head>
+<body th:class="${currentTheme == 'dark' ? 'dark-theme' : ''}">
+<div class="task-detail-container">
+    <div class="task-detail-header">
+        <div class="task-detail-header-left">
+            <h2 id="taskDetailTitle">加载中...</h2>
+            <span class="task-status-tag" id="taskDetailStatus">-</span>
+        </div>
+        <div class="task-detail-header-actions">
+            <button class="task-detail-header-btn btn-header-edit" id="btnEditTask" title="编辑任务" style="display: none;" onclick="editCurrentTask()">
+                <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
+                    <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
+                </svg>
+            </button>
+            <button class="task-detail-header-btn btn-header-delete" id="btnDeleteTask" title="删除任务" onclick="deleteCurrentTask()">
+                <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <polyline points="3 6 5 6 21 6"/>
+                    <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
+                </svg>
+            </button>
+            <button class="task-detail-close-btn" onclick="window.close()" title="关闭">
+                <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <line x1="18" y1="6" x2="6" y2="18"/>
+                    <line x1="6" y1="6" x2="18" y2="18"/>
+                </svg>
+            </button>
+        </div>
+    </div>
+
+    <div class="task-detail-section task-detail-info">
+        <div class="task-detail-info-grid" id="taskDetailInfo"></div>
+    </div>
+
+    <!-- 驳回/失败原因：突出显示区域，无原因时隐藏 -->
+    <div class="task-detail-reject-reason" id="taskDetailRejectReason" style="display: none;">
+        <div class="reject-reason-title">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/>
+                <line x1="12" y1="9" x2="12" y2="13"/>
+                <line x1="12" y1="17" x2="12.01" y2="17"/>
+            </svg>
+            <span id="taskDetailRejectReasonLabel">驳回/失败原因</span>
+        </div>
+        <div class="reject-reason-text" id="taskDetailRejectReasonText"></div>
+        <div class="reject-reason-tip" id="taskDetailRejectReasonTip" style="display: none;">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <circle cx="12" cy="12" r="10"/>
+                <line x1="12" y1="8" x2="12" y2="12"/>
+                <line x1="12" y1="16" x2="12.01" y2="16"/>
+            </svg>
+            <span>如果会话重复出现错误，请前往「会话记录」点击「清空历史」清除上下文后重试。</span>
+        </div>
+    </div>
+
+    <!-- 前置任务：展示关联的前置任务、当前状态及是否满足要求；无前置任务时隐藏 -->
+    <div class="task-detail-section task-detail-preconditions" id="taskDetailPreconditions" style="display: none;">
+        <h3 class="task-detail-section-title">
+            前置任务
+            <span class="precondition-summary" id="taskDetailPreconditionSummary"></span>
+        </div>
+        <div class="precondition-list" id="taskDetailPreconditionList"></div>
+    </div>
+
+    <div class="task-detail-section">
+        <h3 class="task-detail-section-title">任务内容</h3>
+        <div class="task-detail-content md-content" id="taskDetailContent"></div>
+    </div>
+
+    <div class="task-detail-section">
+        <h3 class="task-detail-section-title">会话记录</h3>
+        <div class="task-session-panel">
+            <div class="task-detail-sessions" id="taskDetailSessions"></div>
+            <!-- 会话执行中指示器：订阅 WebSocket 收到本任务会话消息时显示（与列表同容器） -->
+            <div class="task-session-running" id="taskSessionRunning" style="display: none;">
+                <span class="running-dot"></span>
+                <span class="running-label">执行中</span>
+                <span class="running-ticker" id="taskSessionTicker"><span id="taskSessionTickerText"></span><span class="running-cursor"></span></span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Token 用量统计（默认折叠，仅显示汇总值，点击标题展开图表） -->
+    <div class="task-detail-section task-detail-token-section">
+        <h3 class="task-detail-section-title token-section-toggle token-section-collapsed" id="taskTokenToggle" onclick="toggleTaskTokenSection()" title="点击展开/折叠">
+            <span class="token-toggle-label">
+                <span class="token-toggle-arrow" id="taskTokenArrow">▸</span>
+                Token 用量
+            </span>
+            <span class="token-stats-summary" id="taskTokenSummary"></span>
+        </h3>
+        <div class="token-chart-wrap" id="taskTokenChart" style="display: none;"></div>
+    </div>
+
+    <div class="task-detail-section">
+        <h3 class="task-detail-section-title">评论</h3>
+        <div class="task-detail-comments" id="taskDetailComments"></div>
+        <div class="task-comment-input-wrap">
+            <div class="comment-type-toggle" id="commentTypeToggle">
+                <button type="button" class="comment-type-btn active" data-type="default" onclick="switchCommentType('default', event)">普通</button>
+                <button type="button" class="comment-type-btn" data-type="summary" onclick="switchCommentType('summary', event)">总结</button>
+            </div>
+            <div class="task-comment-input-row">
+                <textarea id="taskCommentInput" class="task-comment-input" rows="2" placeholder="输入评论..."></textarea>
+                <button class="task-action-btn btn-primary" onclick="addComment()">发表评论</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="task-detail-section task-detail-actions" id="taskDetailActions"></div>
+</div>
+
+<!-- 新建/编辑任务模态框（公共组件，与任务看板/项目详情页共用） -->
+<div th:replace="~{fragment/task-modal :: taskModal}"></div>
+
+<div id="toast-container" class="toast-container"></div>
+
+<script th:src="@{/js/common.js}"></script>
+<script th:src="@{/js/toast.js}"></script>
+<script th:src="@{/js/chart.umd.min.js}"></script>
+<script th:src="@{/js/marked.min.js}"></script>
+<script th:src="@{/js/modal.js}"></script>
+<script th:src="@{/js/confirm-dialog.js}"></script>
+<script th:src="@{/js/notice.js}"></script>
+<!-- 任务弹框公共脚本（编辑/删除前置依赖：需在页面脚本之前加载） -->
+<script th:src="@{/js/page/task-modal.js}"></script>
+<script th:src="@{/js/page/task-detail.js}"></script>
+</body>
+</html>

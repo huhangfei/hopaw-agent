@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+      xmlns:th="http://www.thymeleaf.org"
+      layout:decorate="~{layouts/default}">
+<head>
+    <title>提示词管理 - HoPaw</title>
+</head>
+<body>
+<div layout:fragment="pageTitle">🤖 HoPaw - 提示词管理</div>
+
+<div class="cap-page" layout:fragment="content">
+    <div th:replace="~{fragments/cap-tabs :: cap-tabs(${activeTab})}"></div>
+    <div class="prompts-container">
+        <div class="prompts-header">
+            <h2>提示词管理</h2>
+            <div class="prompts-actions">
+                <div class="prompts-search">
+                    <input type="text" id="promptKeyword" placeholder="搜索提示词...">
+                    <select id="promptTagFilter">
+                        <option value="">全部标签</option>
+                    </select>
+                    <select id="promptSortBy">
+                        <option value="heat">按热度</option>
+                        <option value="createTime">按创建时间</option>
+                    </select>
+                </div>
+                <button class="btn-primary" onclick="showPromptModal()">+ 新建提示词</button>
+            </div>
+        </div>
+
+        <div class="prompts-grid" id="promptsGrid"></div>
+        <div class="prompts-pagination" id="promptsPagination"></div>
+    </div>
+
+    <!-- 新建/编辑弹框 -->
+    <div class="modal-overlay" id="promptModal">
+        <div class="modal">
+            <div class="modal-header">
+                <h3 id="promptModalTitle">新建提示词</h3>
+                <button class="modal-close" onclick="hidePromptModal()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <input type="hidden" id="promptEditId">
+                <div class="form-group">
+                    <label>名称</label>
+                    <input type="text" id="promptName" placeholder="提示词名称" maxlength="50">
+                </div>
+                <div class="form-group">
+                    <label>内容</label>
+                    <textarea id="promptContent" placeholder="提示词内容" rows="6"></textarea>
+                </div>
+                <div class="form-group">
+                    <label>标签 <span class="form-hint">多个标签用逗号分隔</span></label>
+                    <input type="text" id="promptTags" placeholder="如: 翻译,写作,编程">
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn-cancel" onclick="hidePromptModal()">取消</button>
+                <button class="btn-primary" onclick="savePrompt()">保存</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<th:block layout:fragment="extraCss">
+    <link rel="stylesheet" th:href="@{/css/page/cap-tabs.css}">
+    <link rel="stylesheet" th:href="@{/css/page/prompts.css}">
+</th:block>
+
+<th:block layout:fragment="extraScripts">
+    <script th:src="@{/js/page/prompts.js}"></script>
+</th:block>
+</body>
+</html>

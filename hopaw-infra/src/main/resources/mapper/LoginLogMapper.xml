@@ -1,0 +1,77 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.agent.hopaw.infra.mapper.LoginLogMapper">
+
+    <resultMap id="LoginLogResultMap" type="com.agent.hopaw.infra.model.entity.LoginLog">
+        <id property="id" column="id"/>
+        <result property="userId" column="user_id"/>
+        <result property="username" column="username"/>
+        <result property="ip" column="ip"/>
+        <result property="result" column="result"/>
+        <result property="failReason" column="fail_reason"/>
+        <result property="createTime" column="create_time"/>
+    </resultMap>
+
+    <insert id="insert" parameterType="com.agent.hopaw.infra.model.entity.LoginLog">
+        INSERT INTO login_log (user_id, username, ip, result, fail_reason)
+        VALUES (#{userId}, #{username}, #{ip}, #{result}, #{failReason})
+        <selectKey resultType="long" keyProperty="id" order="AFTER">
+            SELECT last_insert_rowid()
+        </selectKey>
+    </insert>
+
+    <select id="findPage" resultMap="LoginLogResultMap">
+        SELECT id, user_id, username, ip, result, fail_reason, create_time
+        FROM login_log
+        <where>
+            <if test="userId != null and userId != ''">
+                AND user_id = #{userId}
+            </if>
+            <if test="ip != null and ip != ''">
+                AND ip = #{ip}
+            </if>
+            <if test="result != null and result != ''">
+                AND result = #{result}
+            </if>
+        </where>
+        ORDER BY id DESC
+        LIMIT #{size} OFFSET #{offset}
+    </select>
+
+    <select id="countPage" resultType="int">
+        SELECT COUNT(1)
+        FROM login_log
+        <where>
+            <if test="userId != null and userId != ''">
+                AND user_id = #{userId}
+            </if>
+            <if test="ip != null and ip != ''">
+                AND ip = #{ip}
+            </if>
+            <if test="result != null and result != ''">
+                AND result = #{result}
+            </if>
+        </where>
+    </select>
+
+    <select id="findRecentByUser" resultMap="LoginLogResultMap">
+        SELECT id, user_id, username, ip, result, fail_reason, create_time
+        FROM login_log
+        WHERE user_id = #{userId}
+        ORDER BY id DESC
+        LIMIT #{limit}
+    </select>
+
+    <select id="findRecentByIp" resultMap="LoginLogResultMap">
+        SELECT id, user_id, username, ip, result, fail_reason, create_time
+        FROM login_log
+        WHERE ip = #{ip}
+        ORDER BY id DESC
+        LIMIT #{limit}
+    </select>
+
+    <delete id="deleteAll">
+        DELETE FROM login_log
+    </delete>
+
+</mapper>

@@ -11,3 +11,36 @@ body.dark-theme .vector-history-content,
 body.dark-theme .skills-content {
     background: #1a1a2e;
 }
+
+/* ===== Global Scrollbar Dark Theme ===== */
+/* 浏览器默认滚动条轨道为白色，暗色模式下过亮，统一覆盖为暗色 */
+body.dark-theme {
+    color-scheme: dark;
+}
+
+body.dark-theme::-webkit-scrollbar,
+body.dark-theme ::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+}
+
+body.dark-theme::-webkit-scrollbar-track,
+body.dark-theme ::-webkit-scrollbar-track {
+    background: #16213e;
+}
+
+body.dark-theme::-webkit-scrollbar-thumb,
+body.dark-theme ::-webkit-scrollbar-thumb {
+    background: #2d2d44;
+    border-radius: 4px;
+}
+
+body.dark-theme::-webkit-scrollbar-thumb:hover,
+body.dark-theme ::-webkit-scrollbar-thumb:hover {
+    background: #3d3d6b;
+}
+
+body.dark-theme::-webkit-scrollbar-corner,
+body.dark-theme ::-webkit-scrollbar-corner {
+    background: #16213e;
+}

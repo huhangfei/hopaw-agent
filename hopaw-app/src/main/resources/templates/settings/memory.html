@@ -1,0 +1,125 @@
+<th:block th:fragment="content" xmlns:th="http://www.thymeleaf.org">
+<div class="settings-panel active" id="tab-memory">
+    <div class="settings-row">
+        <div class="settings-form">
+            <div class="form-group">
+                <label>定时任务状态</label>
+                <div class="task-status-row">
+                    <span class="task-status-badge" id="memoryTaskStatus">检测中...</span>
+                    <button class="btn-toggle-task" id="memoryTaskToggleBtn" onclick="toggleMemoryTask()">启用</button>
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label>记忆整理使用模型</label>
+                <div class="flex-container">
+                    <select id="memoryProviderSelect" class="model-select">
+                        <option value="">选择提供商</option>
+                    </select>
+                    <select id="memoryModelSelect" class="model-select">
+                        <option value="">选择模型</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label for="memoryPrompt">记忆整理提示词</label>
+                <textarea id="memoryPrompt" class="memory-prompt-input" rows="8" placeholder="自定义记忆整理的提示词，留空则使用默认提示词"></textarea>
+            </div>
+
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="taskRecordsArrangeTimeoutHour">近期任务记忆过期时间（单位：小时，用于整理记忆时限制时限）</label>
+                    <input type="number" id="taskRecordsArrangeTimeoutHour" class="settings-input" min="1" placeholder="48">
+                </div>
+                <div class="form-group">
+                    <label for="taskRecordsClearTimeoutDay">任务记忆过期归档时间（单位：天，过期后从记忆库中删除）</label>
+                    <input type="number" id="taskRecordsClearTimeoutDay" class="settings-input" min="1" placeholder="7">
+                </div>
+            <div class="form-group">
+                <label for="chatMemoryToolResultMaxLength">工具结果入库截断长度（单位：字符，超长内容入库前截断）</label>
+                <input type="number" id="chatMemoryToolResultMaxLength" class="settings-input" min="100" placeholder="5120">
+            </div>
+            </div>
+            <div class="form-group">
+                <label>提示词带入用户画像</label>
+                <div class="toggle-wrapper">
+                    <label class="toggle">
+                        <input type="checkbox" id="promptIncludeUserProfile" checked>
+                        <span class="slider"></span>
+                    </label>
+                    <span class="toggle-label" id="promptIncludeUserProfileLabel">已启用</span>
+                </div>
+                <p class="form-hint">开启后，创建执行器时会将用户画像记忆作为系统提示词上下文注入，让 LLM 了解用户偏好。</p>
+            </div>
+
+            <div class="form-group">
+                <label>提示词带入近期任务记录</label>
+                <div class="toggle-wrapper">
+                    <label class="toggle">
+                        <input type="checkbox" id="promptIncludeTaskRecords" checked>
+                        <span class="slider"></span>
+                    </label>
+                    <span class="toggle-label" id="promptIncludeTaskRecordsLabel">已启用</span>
+                </div>
+                <p class="form-hint">开启后，创建执行器时会将近期任务记录（受过期时间限制）作为系统提示词上下文注入，让 LLM 了解用户近期任务上下文。</p>
+            </div>
+
+            <div class="form-group" id="taskRecordsMaxCountGroup">
+                <label for="promptIncludeTaskRecordsMaxCount">最大带入条数</label>
+                <input type="number" id="promptIncludeTaskRecordsMaxCount" class="settings-input" min="0" placeholder="5">
+                <p class="form-hint">限制带入系统提示词的最大任务记录条数，0 表示不限制（受过期时间内的所有记录）。</p>
+            </div>
+
+            <div class="settings-actions">
+                <button class="btn-save-settings" onclick="saveSettings()">保存设置</button>
+            </div>
+        </div>
+
+        <div class="settings-form">
+            <div class="restart-notice">
+                <p>向量存储设置修改后需重启应用使配置生效。</p>
+            </div>
+
+            <div class="form-group">
+                <label for="vectorStorePath">向量持久化路径</label>
+                <input type="text" id="vectorStorePath" class="settings-input" placeholder="./vector_store">
+                <p class="form-hint">向量索引文件的存储目录，默认 ./vector_store</p>
+            </div>
+
+            <div class="form-group">
+                <label>向量存储预设</label>
+                <select id="vectorStoreProfile" class="settings-input">
+                    <option value="precision">精准 - 默认，召回率最优，构建较慢</option>
+                    <option value="stable">稳定 - 均衡精度与性能</option>
+                    <option value="speed">极速 - 构建最快，内存更省</option>
+                </select>
+                <p class="form-hint">精准：maxDegree=32, 速度慢但搜索准。极速：maxDegree=8, 快但召回有所下降</p>
+            </div>
+
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="vectorFlushSchedulerInterval">定时落盘任务执行间隔（单位：秒）</label>
+                    <input type="number" id="vectorFlushSchedulerInterval" class="settings-input" min="5" placeholder="10">
+                    <p class="form-hint">后台定时任务检查并落盘的间隔，建议 5~60 秒</p>
+                </div>
+                <div class="form-group">
+                    <label for="vectorFlushThreshold">触发落盘的写入次数阈值</label>
+                    <input type="number" id="vectorFlushThreshold" class="settings-input" min="1" placeholder="10">
+                    <p class="form-hint">累计写入操作达到此次数后立即落盘</p>
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label for="vectorFlushIntervalMs">落盘时间间隔（单位：毫秒）</label>
+                <input type="number" id="vectorFlushIntervalMs" class="settings-input" min="1000" placeholder="10000">
+                <p class="form-hint">距上次落盘超过此时长则立即落盘，建议 5000~60000 毫秒</p>
+            </div>
+
+            <div class="settings-actions">
+                <button class="btn-save-settings" onclick="saveVectorStoreSettings()">保存设置</button>
+            </div>
+        </div>
+    </div>
+</div>
+</th:block>

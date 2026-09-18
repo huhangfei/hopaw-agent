@@ -1,0 +1,161 @@
+/* ========== 附件预览公共样式（独立预览页 + 各页面复用） ========== */
+
+/* ========== 独立预览页布局 ========== */
+.attachment-preview-container {
+    padding: 18px;
+    width: 100%;
+    margin: 0 auto;
+    box-sizing: border-box;
+}
+
+.attachment-preview-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 16px;
+    padding-bottom: 12px;
+    border-bottom: 1px solid #e5e7eb;
+}
+
+.attachment-preview-header-left {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    min-width: 0;
+    flex: 1;
+}
+
+.attachment-preview-header .preview-file-icon {
+    font-size: 24px;
+    flex-shrink: 0;
+}
+
+.attachment-preview-header h2 {
+    font-size: 18px;
+    color: #333;
+    margin: 0;
+    word-break: break-word;
+    min-width: 0;
+}
+
+.preview-close-btn {
+    background: transparent;
+    border: none;
+    color: #999;
+    cursor: pointer;
+    padding: 6px;
+    border-radius: 6px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background 0.2s, color 0.2s;
+    flex-shrink: 0;
+}
+
+.preview-close-btn:hover {
+    background: #f0f0f0;
+    color: #333;
+}
+
+/* 错误提示 */
+.preview-error {
+    text-align: center;
+    padding: 60px 20px;
+    color: #9ca3af;
+    font-size: 15px;
+}
+
+/* 附件元信息 */
+.preview-info-wrap {
+    margin-bottom: 16px;
+}
+
+.preview-info {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px 16px;
+    padding: 10px 14px;
+    background: #f9fafb;
+    border-radius: 8px;
+    border: 1px solid #f0f0f0;
+}
+
+.preview-info .info-item {
+    font-size: 13px;
+    color: #666;
+}
+
+.preview-info .preview-download {
+    margin-left: auto;
+    color: #4f46e5;
+    text-decoration: none;
+    font-size: 13px;
+    cursor: pointer;
+}
+
+.preview-info .preview-download:hover {
+    text-decoration: underline;
+}
+
+.preview-info .preview-download-source {
+    margin-left: 0;
+    padding-left: 12px;
+    border-left: 1px solid #e0e0e0;
+    color: #059669;
+}
+
+body.dark-theme .preview-info .preview-download-source {
+    border-left-color: #3d3d5c;
+    color: #34d399;
+}
+
+/* 预览主体 iframe */
+.preview-body-iframe {
+    width: 100%;
+    height: calc(100vh - 160px);
+    min-height: 400px;
+    border: 1px solid #e5e7eb;
+    border-radius: 8px;
+    background: #fff;
+}
+
+/* ========== 暗色主题适配 ========== */
+body.dark-theme .attachment-preview-header {
+    border-bottom-color: #2d2d44;
+}
+
+body.dark-theme .attachment-preview-header h2 {
+    color: #e0e0e0;
+}
+
+body.dark-theme .preview-close-btn {
+    color: #888;
+}
+
+body.dark-theme .preview-close-btn:hover {
+    background: #2d2d44;
+    color: #e0e0e0;
+}
+
+body.dark-theme .preview-error {
+    color: #888;
+}
+
+body.dark-theme .preview-info {
+    background: #16213e;
+    border-color: #2d2d44;
+}
+
+body.dark-theme .preview-info .info-item {
+    color: #888;
+}
+
+body.dark-theme .preview-info .preview-download {
+    color: #818cf8;
+}
+
+body.dark-theme .preview-body-iframe {
+    border-color: #2d2d44;
+    background: #16213e;
+}

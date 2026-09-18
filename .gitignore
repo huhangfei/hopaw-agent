@@ -20,6 +20,7 @@ logs/
 *.nar
 *.ear
 *.zip
+*.tar
 *.tar.gz
 *.rar
 
@@ -28,9 +29,10 @@ hs_err_pid*
 
 #DB
 agent.db
+agent.db-wal
+agent.db-shm
 
 #config
-application-dev.properties
 /.deepseek/
 /.claude/
 
@@ -43,3 +45,14 @@ vector_store.metadata
 /plugin-packages/
 /plugin-repo.db
 /skills/
+/exports/
+/uploads/
+/attachments/
+/project-spaces/
+/.mimocode/
+/.trae/
+
+.cookies.tmp
+/temp-file/
+
+avatars/

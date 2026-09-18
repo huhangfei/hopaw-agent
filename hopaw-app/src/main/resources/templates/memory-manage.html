@@ -8,42 +8,61 @@
 <body>
 <div layout:fragment="pageTitle">🤖 HoPaw - 记忆管理</div>
 
-<main layout:fragment="content" class="memory-manage-container">
-    <div class="toolbar">
-        <div class="toolbar-group">
-            <label>智能体</label>
-            <select id="agentSelect">
-                <option value="">请选择智能体</option>
-                <option th:each="agent : ${agents}" th:value="${agent.id}" th:text="${agent.name}"></option>
-            </select>
+<div class="cap-page" layout:fragment="content">
+    <div th:replace="~{fragments/cap-tabs :: cap-tabs(${activeTab})}"></div>
+    <main class="memory-manage-container">
+        <div class="toolbar">
+            <button class="btn btn-primary" onclick="loadTree()">
+                <svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor" style="margin-right:4px"><path d="M17.65 6.35C16.2 4.9 14.21 4 12 4c-4.42 0-7.99 3.58-7.99 8s3.57 8 7.99 8c3.73 0 6.84-2.55 7.73-6h-2.08c-.82 2.33-3.04 4-5.65 4-3.31 0-6-2.69-6-6s2.69-6 6-6c1.66 0 3.14.69 4.22 1.78L13 11h7V4l-2.35 2.35z"/></svg>
+                刷新
+            </button>
+            <div class="toolbar-divider"></div>
+            <button class="btn btn-success" onclick="exportMemories()">
+                <svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor" style="margin-right:4px"><path d="M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z"/></svg>
+                导出所有记忆
+            </button>
+            <button class="btn btn-info" onclick="document.getElementById('importFileInput').click()">
+                <svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor" style="margin-right:4px"><path d="M9 16h6v-6h4l-7-7-7 7h4v6zm-4 2h14v2H5v-2z"/></svg>
+                导入记忆
+            </button>
+            <input type="file" id="importFileInput" accept=".zip" style="display:none" onchange="importMemories(this)">
+            <div class="toolbar-divider"></div>
+            <button class="btn btn-danger" onclick="clearAllMemories()">
+                <svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor" style="margin-right:4px"><path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/></svg>
+                清空所有记忆
+            </button>
+            <button class="btn btn-warning" id="deleteSelectedBtn" onclick="deleteSelectedMemories()" style="display:none">
+                <svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor" style="margin-right:4px"><path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/></svg>
+                删除选中 (<span id="selectedCount">0</span>)
+            </button>
         </div>
-        <button class="btn btn-primary" onclick="loadTree()">查询</button>
-    </div>
-    <div class="memory-panels">
-        <div class="tree-panel">
-            <div class="panel-header">
-                记忆树
-                <button class="btn btn-sm btn-primary" onclick="addRootMemory()">+ 添加记忆</button>
+        <div class="memory-panels">
+            <div class="tree-panel">
+                <div class="panel-header">
+                    记忆树
+                    <button class="btn btn-sm btn-primary" onclick="addRootMemory()">+ 添加记忆</button>
+                </div>
+                <div class="tree-container" id="treeContainer">
+                    <div class="empty-state">暂无记忆数据</div>
+                </div>
             </div>
-            <div class="tree-container" id="treeContainer">
-                <div class="empty-state">请选择智能体并点击查询</div>
+            <div class="editor-panel">
+                <div class="panel-header">记忆详情</div>
+                <div class="editor-content" id="editorContent">
+                    <div class="empty-state">请在左侧选择一条记忆</div>
+                </div>
             </div>
         </div>
-        <div class="editor-panel">
-            <div class="panel-header">记忆详情</div>
-            <div class="editor-content" id="editorContent">
-                <div class="empty-state">请在左侧选择一条记忆</div>
-            </div>
-        </div>
-    </div>
-</main>
+    </main>
+</div>
 
 <th:block layout:fragment="extraCss">
+    <link rel="stylesheet" th:href="@{/css/page/cap-tabs.css}">
     <link rel="stylesheet" th:href="@{/css/page/memory-manage.css}">
 </th:block>
 
 <th:block layout:fragment="extraScripts">
-    <script th:src="@{/js/memory-manage.js}"></script>
+    <script th:src="@{/js/page/memory-manage.js}"></script>
 </th:block>
 </body>
 </html>

@@ -1,0 +1,31 @@
+<th:block th:fragment="content" xmlns:th="http://www.thymeleaf.org">
+<div class="settings-panel active" id="tab-image-upload">
+    <p class="workflow-pool-tip">图片上传压缩：开启后，上传 jpg/jpeg/png/bmp 图片时按文件大小分档压缩（压缩图转为 JPEG，PNG 透明背景将填充为白色）；压缩后的图片作为附件文件，原图保留在源文件地址。小于所有分档最小大小的图片、gif/webp/svg 及其他类型附件不压缩。修改保存后立即生效。</p>
+    <div class="settings-form">
+        <div class="form-group">
+            <label>开启图片压缩</label>
+            <div class="switch-row">
+                <label class="switch">
+                    <input type="checkbox" id="imageCompressEnabled">
+                    <span class="slider"></span>
+                </label>
+                <span class="switch-label" id="imageCompressEnabledLabel">关闭</span>
+            </div>
+        </div>
+        <div class="form-group">
+            <label>压缩分档设置 <span class="pool-default-tip">（文件大小达到"最小大小"时按对应质量压缩，取满足条件的最大档；文件小于所有档位时不压缩）</span></label>
+            <div class="image-tier-header">
+                <span>最小大小（KB）</span>
+                <span>压缩质量</span>
+                <span></span>
+            </div>
+            <div id="imageCompressTiers"></div>
+            <button type="button" class="btn-add-key" onclick="addCompressTier()">+ 添加分档</button>
+            <p class="form-hint">示例：分档 100KB→80%、512KB→60%、1024KB→40% 时，600KB 的图片按 60% 质量压缩。</p>
+        </div>
+        <div class="settings-actions">
+            <button class="btn-save-settings" onclick="saveImageUploadSettings()">保存设置</button>
+        </div>
+    </div>
+</div>
+</th:block>

@@ -1,6 +1,6 @@
 /* ========== Form Styles ========== */
 .form-group {
-    margin-bottom: 20px;
+    margin-bottom: 6px;
 }
 
 .form-group label {
@@ -15,13 +15,16 @@
 .form-group input[type="number"],
 .form-group input[type="url"],
 .form-group input[type="password"],
+.form-group input[type="datetime-local"],
+.form-group input[type="date"],
+.form-group input[type="time"],
 .form-group textarea,
 .form-group select {
     width: 100%;
-    padding: 10px 14px;
+    padding: 8px 10px;
     border: 1px solid #d1d5db;
     border-radius: 8px;
-    font-size: 14px;
+    font-size: 12px;
     color: #1f2937;
     background-color: #fff;
     outline: none;
@@ -46,7 +49,7 @@
 
 .form-group textarea {
     resize: vertical;
-    min-height: 80px;
+    min-height: 60px;
     font-family: inherit;
     background-image: none;
     padding-right: 14px;
@@ -92,16 +95,72 @@
     flex: 1;
 }
 
+/* ========== 时段输入框 ========== */
+.time-range-input {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.time-range-input input[type="time"] {
+    flex: 1;
+    min-width: 0;
+}
+
+.time-range-sep {
+    flex-shrink: 0;
+    color: #9ca3af;
+    font-size: 14px;
+    font-weight: 600;
+}
+
+/* ========== Model Select (cascading provider/model selectors) ========== */
+.model-select {
+    flex: 1;
+    min-width: 0;
+    width: 100%;
+    padding: 10px 14px;
+    border: 1px solid #d1d5db;
+    border-radius: 8px;
+    font-size: 14px;
+    color: #1f2937;
+    background-color: #fff;
+    outline: none;
+    transition: border-color 0.2s, box-shadow 0.2s;
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%236b7280' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 12px center;
+    background-size: 16px;
+    padding-right: 40px;
+    box-sizing: border-box;
+}
+.model-select:focus {
+    border-color: #6366f1;
+    box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.15);
+}
+.model-select:hover {
+    border-color: #9ca3af;
+}
+.model-select:disabled {
+    background-color: #f3f4f6;
+    color: #9ca3af;
+    cursor: not-allowed;
+    opacity: 0.7;
+}
+
 /* ========== Toggle 开关 ========== */
 .toggle-wrapper {
     display: flex;
     align-items: center;
     gap: 12px;
+    min-height: 40px;
 }
 
-.form-group:has(.toggle-wrapper) {
-    display: flex;
-    align-items: center;
+.form-group:has(.toggle-wrapper) > label {
+    margin-bottom: 6px;
 }
 
 .toggle-wrapper .toggle {
@@ -192,6 +251,78 @@
     min-width: 0;
 }
 
+/* 内联下拉（思考努力程度）：label 在左，select 占满剩余宽度 */
+.form-group.form-inline > select {
+    flex: 1;
+    min-width: 0;
+}
+
+/* ========== Temperature 滑块 ========== */
+.temp-slider-header {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    margin-bottom: 6px;
+}
+
+.temp-slider-header label {
+    margin-bottom: 0;
+}
+
+.temp-slider-value {
+    font-size: 13px;
+    font-weight: 600;
+    color: #6366f1;
+}
+
+.temp-slider {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.temp-slider-bound {
+    font-size: 12px;
+    color: #9ca3af;
+    flex-shrink: 0;
+    white-space: nowrap;
+}
+
+.temp-slider input[type="range"] {
+    flex: 1;
+    min-width: 0;
+    -webkit-appearance: none;
+    appearance: none;
+    height: 6px;
+    border-radius: 3px;
+    background: linear-gradient(to right, #c7d2fe, #818cf8);
+    outline: none;
+    cursor: pointer;
+    margin: 0;
+}
+
+.temp-slider input[type="range"]::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    background: #6366f1;
+    border: 2px solid #fff;
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.2);
+    cursor: pointer;
+}
+
+.temp-slider input[type="range"]::-moz-range-thumb {
+    width: 14px;
+    height: 14px;
+    border-radius: 50%;
+    background: #6366f1;
+    border: 2px solid #fff;
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.2);
+    cursor: pointer;
+}
+
 /* ==================== Dark Theme ==================== */
 body.dark-theme .form-group label {
     color: #b0b0b0;
@@ -201,6 +332,9 @@ body.dark-theme .form-group input[type="text"],
 body.dark-theme .form-group input[type="number"],
 body.dark-theme .form-group input[type="url"],
 body.dark-theme .form-group input[type="password"],
+body.dark-theme .form-group input[type="datetime-local"],
+body.dark-theme .form-group input[type="date"],
+body.dark-theme .form-group input[type="time"],
 body.dark-theme .form-group textarea,
 body.dark-theme .form-group select {
     background-color: #2d2d44;
@@ -239,6 +373,10 @@ body.dark-theme .form-group .hint {
     color: #888;
 }
 
+body.dark-theme .time-range-sep {
+    color: #888;
+}
+
 body.dark-theme .toggle-label {
     color: #c0c0c0;
 }
@@ -251,4 +389,50 @@ body.dark-theme .form-group textarea:disabled {
 
 body.dark-theme .form-group.form-inline > label {
     color: #b0b0b0;
+}
+
+/* Dark theme for temp slider */
+body.dark-theme .temp-slider-value {
+    color: #8ba3ff;
+}
+
+body.dark-theme .temp-slider-bound {
+    color: #888;
+}
+
+body.dark-theme .temp-slider input[type="range"] {
+    background: linear-gradient(to right, #3d3d6b, #8ba3ff);
+}
+
+body.dark-theme .temp-slider input[type="range"]::-webkit-slider-thumb {
+    background: #8ba3ff;
+    border-color: #16213e;
+}
+
+body.dark-theme .temp-slider input[type="range"]::-moz-range-thumb {
+    background: #8ba3ff;
+    border-color: #16213e;
+}
+
+/* Dark theme for .model-select */
+body.dark-theme .model-select {
+    background-color: #2d2d44;
+    border-color: #3d3d6b;
+    color: #e0e0e0;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%23888' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 12px center;
+    background-size: 16px;
+    padding-right: 40px;
+}
+body.dark-theme .model-select:focus {
+    border-color: #8ba3ff;
+    box-shadow: 0 0 0 3px rgba(139, 163, 255, 0.15);
+}
+body.dark-theme .model-select:hover {
+    border-color: #8ba3ff;
+}
+body.dark-theme .model-select:disabled {
+    background-color: #1e3a5f;
+    color: #888;
 }

@@ -1,0 +1,154 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.agent.hopaw.infra.mapper.ProjectMapper">
+
+    <resultMap id="ProjectResultMap" type="com.agent.hopaw.infra.model.entity.Project">
+        <id property="id" column="id"/>
+        <result property="name" column="name"/>
+        <result property="description" column="description"/>
+        <result property="status" column="status"/>
+        <result property="userId" column="user_id"/>
+        <result property="spaceDir" column="space_dir"/>
+        <result property="agentId" column="agent_id"/>
+        <result property="autoIterate" column="auto_iterate"/>
+        <result property="iteratePrompt" column="iterate_prompt"/>
+        <result property="sessionId" column="session_id"/>
+        <result property="notifyChannels" column="notify_channels"/>
+        <result property="notifyEvents" column="notify_events"/>
+        <result property="minFrequency" column="min_frequency"/>
+        <result property="lastIterateTime" column="last_iterate_time"/>
+        <result property="createTime" column="create_time"/>
+        <result property="updateTime" column="update_time"/>
+    </resultMap>
+
+    <sql id="allColumns">
+        id, name, description, status, user_id, space_dir, agent_id, auto_iterate, iterate_prompt, session_id, notify_channels, notify_events, min_frequency, last_iterate_time, create_time, update_time
+    </sql>
+
+    <insert id="insert" parameterType="com.agent.hopaw.infra.model.entity.Project">
+        INSERT INTO projects (name, description, status, user_id, agent_id, auto_iterate, iterate_prompt, notify_channels, notify_events, min_frequency, create_time, update_time)
+        VALUES (#{name}, #{description}, #{status}, #{userId}, #{agentId}, #{autoIterate}, #{iteratePrompt}, #{notifyChannels}, #{notifyEvents}, #{minFrequency}, datetime('now','localtime'), datetime('now','localtime'))
+        <selectKey resultType="long" keyProperty="id" order="AFTER">
+            SELECT last_insert_rowid()
+        </selectKey>
+    </insert>
+
+    <update id="update" parameterType="com.agent.hopaw.infra.model.entity.Project">
+        UPDATE projects
+        SET name = #{name},
+            description = COALESCE(#{description}, description),
+            status = COALESCE(#{status}, status),
+            agent_id = COALESCE(#{agentId}, agent_id),
+            auto_iterate = COALESCE(#{autoIterate}, auto_iterate),
+            iterate_prompt = COALESCE(#{iteratePrompt}, iterate_prompt),
+            notify_channels = COALESCE(#{notifyChannels}, notify_channels),
+            notify_events = COALESCE(#{notifyEvents}, notify_events),
+            min_frequency = COALESCE(#{minFrequency}, min_frequency),
+            update_time = datetime('now','localtime')
+        WHERE id = #{id}
+    </update>
+
+    <update id="updateStatus">
+        UPDATE projects
+        SET status = #{status},
+            update_time = datetime('now','localtime')
+        WHERE id = #{id}
+    </update>
+
+    <update id="updateSpaceDir">
+        UPDATE projects
+        SET space_dir = #{spaceDir},
+            update_time = datetime('now','localtime')
+        WHERE id = #{id}
+    </update>
+
+    <delete id="deleteById">
+        DELETE FROM projects WHERE id = #{id}
+    </delete>
+
+    <select id="findById" resultMap="ProjectResultMap">
+        SELECT <include refid="allColumns"/>
+        FROM projects
+        WHERE id = #{id}
+    </select>
+
+    <select id="findByUserIdWithFilters" resultMap="ProjectResultMap">
+        SELECT p.id, p.name, p.description, p.status, p.user_id, p.space_dir, p.agent_id, p.auto_iterate, p.iterate_prompt, p.session_id, p.create_time, p.update_time
+        FROM projects p
+        <where>
+            <!-- userId为空时不按用户过滤（智能体工具场景，跨用户共享协作） -->
+            <if test="userId != null and userId != ''">
+                p.user_id = #{userId}
+            </if>
+            <if test="keyword != null and keyword != ''">
+                AND (p.name LIKE CONCAT('%', #{keyword}, '%') OR p.description LIKE CONCAT('%', #{keyword}, '%'))
+            </if>
+            <if test="status != null and status != ''">
+                AND p.status = #{status}
+            </if>
+        </where>
+        ORDER BY p.id DESC
+        LIMIT #{size} OFFSET #{offset}
+    </select>
+
+    <select id="countByUserIdWithFilters" resultType="int">
+        SELECT COUNT(*)
+        FROM projects
+        <where>
+            <!-- userId为空时不按用户过滤（智能体工具场景） -->
+            <if test="userId != null and userId != ''">
+                user_id = #{userId}
+            </if>
+            <if test="keyword != null and keyword != ''">
+                AND (name LIKE CONCAT('%', #{keyword}, '%') OR description LIKE CONCAT('%', #{keyword}, '%'))
+            </if>
+            <if test="status != null and status != ''">
+                AND status = #{status}
+            </if>
+        </where>
+    </select>
+
+    <select id="findByUserId" resultMap="ProjectResultMap">
+        SELECT <include refid="allColumns"/>
+        FROM projects
+        <where>
+            <!-- userId为空时不按用户过滤（项目数据不分用户） -->
+            <if test="userId != null and userId != ''">
+                user_id = #{userId}
+            </if>
+        </where>
+        ORDER BY id DESC
+    </select>
+
+    <update id="updateSessionId">
+        UPDATE projects
+        SET session_id = #{sessionId},
+            update_time = datetime('now','localtime')
+        WHERE id = #{id}
+    </update>
+
+    <update id="updateLastIterateTime">
+        UPDATE projects
+        SET last_iterate_time = datetime('now','localtime'),
+            update_time = datetime('now','localtime')
+        WHERE id = #{id}
+    </update>
+
+    <!-- 查询启用自动迭代的进行中项目（已配置项目管理智能体） -->
+    <select id="findAutoIterateProjects" resultMap="ProjectResultMap">
+        SELECT <include refid="allColumns"/>
+        FROM projects
+        WHERE agent_id IS NOT NULL
+          AND auto_iterate = 1
+          AND status = 'in_progress'
+        ORDER BY id ASC
+    </select>
+
+    <select id="findBySessionId" resultMap="ProjectResultMap">
+        SELECT <include refid="allColumns"/>
+        FROM projects
+        WHERE session_id = #{sessionId}
+        LIMIT 1
+    </select>
+
+</mapper>

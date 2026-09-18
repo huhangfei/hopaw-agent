@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+      xmlns:th="http://www.thymeleaf.org"
+      layout:decorate="~{layouts/default}">
+<head>
+    <title>任务看板 - HoPaw</title>
+</head>
+<body>
+<div layout:fragment="pageTitle">🤖 HoPaw - 任务看板</div>
+
+<main layout:fragment="content" class="tasks-board-container">
+    <div class="tasks-board-header">
+        <h2>任务看板</h2>
+        <div class="tasks-board-filters">
+            <select id="boardProjectFilter" class="board-filter-select" onchange="doSearch()">
+                <option value="">全部项目</option>
+            </select>
+            <select id="boardAgentFilter" class="board-filter-select" onchange="doSearch()">
+                <option value="">全部智能体</option>
+            </select>
+            <button type="button" class="btn-board-refresh" id="boardRefreshBtn" onclick="manualRefreshBoard()" title="刷新看板">
+                <svg class="refresh-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
+                <span class="refresh-label">刷新</span>
+            </button>
+            <span class="board-refresh-countdown" id="refreshCountdown" title="每 5 秒自动刷新看板">5s 后刷新</span>
+        </div>
+        <button class="btn-add-task" onclick="showAddTaskModal()">
+            <svg viewBox="0 0 24 24" fill="currentColor"><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/></svg>
+            新建任务
+        </button>
+        <div class="view-switch" id="viewSwitch">
+            <button type="button" class="view-switch-btn active" id="viewBtnBoard" onclick="switchView('board')" title="看板视图">
+                <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="5" height="18" rx="1"/><rect x="10" y="3" width="5" height="12" rx="1"/><rect x="17" y="3" width="4" height="8" rx="1"/></svg>
+                看板
+            </button>
+            <button type="button" class="view-switch-btn" id="viewBtnTable" onclick="switchView('table')" title="列表视图">
+                <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>
+                列表
+            </button>
+            <button type="button" class="view-switch-btn" id="viewBtnGraph" onclick="switchView('graph')" title="画布视图：项目任务依赖关系图">
+                <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="5" cy="6" r="2.5"/><circle cx="19" cy="6" r="2.5"/><circle cx="12" cy="18" r="2.5"/><line x1="7.2" y1="7.2" x2="16.8" y2="16.8"/><line x1="7.2" y1="7.2" x2="16.8" y2="7.2"/><line x1="14" y1="15.6" x2="16.8" y2="7.2"/></svg>
+                画布
+            </button>
+        </div>
+    </div>
+
+    <div class="tasks-board-columns" id="tasksBoardColumns"></div>
+
+    <!-- 列表视图：按创建时间倒序分页展示所有任务 -->
+    <div class="tasks-table-view" id="tasksTableView" style="display:none;">
+        <div class="tasks-table-wrapper">
+            <table class="tasks-table">
+                <thead>
+                    <tr>
+                        <th>任务</th>
+                        <th>状态</th>
+                        <th>智能体</th>
+                        <th>所属项目</th>
+                        <th>创建者</th>
+                        <th>开始时间</th>
+                        <th>创建时间</th>
+                        <th class="th-actions">操作</th>
+                    </tr>
+                </thead>
+                <tbody id="tasksTableBody"></tbody>
+            </table>
+        </div>
+        <div class="table-pagination" id="tablePagination"></div>
+    </div>
+
+    <!-- 画布视图：项目任务依赖关系图（LogicFlow 无限画布，可拖拽/缩放） -->
+    <div class="tasks-graph-view" id="tasksGraphView" style="display:none;">
+        <div class="graph-toolbar">
+            <span class="graph-toolbar-label">画布视图按依赖层级自动布局，任务节点可拖拽，空白处拖拽平移，Ctrl+滚轮缩放</span>
+            <button type="button" class="graph-tool-btn" onclick="graphZoom(0.2)" title="放大">
+                <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/><line x1="11" y1="8" x2="11" y2="14"/><line x1="8" y1="11" x2="14" y2="11"/></svg>
+            </button>
+            <button type="button" class="graph-tool-btn" onclick="graphZoom(-0.2)" title="缩小">
+                <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/><line x1="8" y1="11" x2="14" y2="11"/></svg>
+            </button>
+            <button type="button" class="graph-tool-btn" onclick="graphResetLayout()" title="重置为自动布局">重排</button>
+        </div>
+        <div class="graph-canvas-wrap" id="graphCanvasWrap">
+            <div id="graphCanvas"></div>
+            <div class="graph-empty-tip" id="graphEmptyTip" style="display:none;"></div>
+        </div>
+    </div>
+
+    <!-- 新建/编辑任务模态框（公共组件，与项目详情页共用） -->
+    <div th:replace="~{fragment/task-modal :: taskModal}"></div>
+</main>
+
+<th:block layout:fragment="extraCss">
+    <link rel="stylesheet" th:href="@{/css/task-modal.css}">
+    <link rel="stylesheet" th:href="@{/css/page/tasks-board.css}">
+    <link rel="stylesheet" th:href="@{/css/lib/logicflow.css}">
+</th:block>
+
+<th:block layout:fragment="extraScripts">
+    <script th:src="@{/js/notice.js}"></script>
+    <script th:src="@{/js/lib/logicflow.min.js}"></script>
+    <script th:src="@{/js/page/task-modal.js}"></script>
+    <script th:src="@{/js/page/tasks-board.js}"></script>
+</th:block>
+</body>
+</html>

@@ -11,10 +11,12 @@ import java.nio.file.*;
 import java.util.*;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
+import java.util.zip.ZipEntry;
 import java.util.zip.ZipInputStream;
+import java.util.zip.ZipOutputStream;
 
 @Service
-public class SkillService {
+public class SkillService implements ISkillService {
 
     private static final Logger log = LoggerFactory.getLogger(SkillService.class);
     private static final String SKILL_MD = "SKILL.md";
@@ -26,11 +28,13 @@ public class SkillService {
         this.sysConfigService = sysConfigService;
     }
 
-    private Path getSkillDir() {
-        String dir = sysConfigService.getValueByKey(CONFIG_KEY_SKILL_DIR, "skills");
+    @Override
+    public Path getSkillDir() {
+        String dir = sysConfigService.getValueByKey(SkillService.CONFIG_KEY_SKILL_DIR, "skills");
         return Paths.get(dir).toAbsolutePath().normalize();
     }
 
+    @Override
     public List<SkillInfo> listSkills() {
         Path skillDir = getSkillDir();
         if (!Files.isDirectory(skillDir)) {
@@ -49,6 +53,7 @@ public class SkillService {
         }
     }
 
+    @Override
     public SkillInfo getSkill(String folderName) {
         Path skillDir = getSkillDir().resolve(folderName);
         if (!Files.isDirectory(skillDir)) {
@@ -57,6 +62,7 @@ public class SkillService {
         return readSkillFromDir(skillDir);
     }
 
+    @Override
     public SkillInfo createSkill(SkillInfo skillInfo) {
         if (skillInfo.getVersion() == null || skillInfo.getVersion().isBlank()) {
             skillInfo.setVersion("1.0.0");
@@ -79,6 +85,7 @@ public class SkillService {
         }
     }
 
+    @Override
     public SkillInfo updateSkill(String folderName, SkillInfo skillInfo) {
         if (skillInfo.getVersion() == null || skillInfo.getVersion().isBlank()) {
             skillInfo.setVersion("1.0.0");
@@ -96,6 +103,7 @@ public class SkillService {
         }
     }
 
+    @Override
     public void deleteSkill(String folderName) {
         Path skillDir = getSkillDir().resolve(folderName);
         if (!Files.isDirectory(skillDir)) {
@@ -118,8 +126,9 @@ public class SkillService {
         }
     }
 
-    private SkillInfo readSkillFromDir(Path skillDir) {
-        Path skillMd = skillDir.resolve(SKILL_MD);
+    @Override
+    public SkillInfo readSkillFromDir(Path skillDir) {
+        Path skillMd = skillDir.resolve(SkillService.SKILL_MD);
         if (!Files.isRegularFile(skillMd)) {
             return null;
         }
@@ -130,7 +139,7 @@ public class SkillService {
             info.setContent(content);
             return info;
         } catch (IOException e) {
-            log.warn("Failed to read SKILL.md from: {}", skillDir, e);
+            SkillService.log.warn("Failed to read SKILL.md from: {}", skillDir, e);
             return null;
         }
     }
@@ -234,8 +243,11 @@ public class SkillService {
     private int countLeadingSpaces(String line) {
         int count = 0;
         for (char c : line.toCharArray()) {
-            if (c == ' ') count++;
-            else break;
+            if (c == ' ') {
+                count++;
+            } else {
+                break;
+            }
         }
         return count;
     }
@@ -629,5 +641,35 @@ public class SkillService {
             slug = slug.substring(0, 50).replaceAll("-$", "");
         }
         return slug;
+    }
+
+    @Override
+    public byte[] exportSkill(String folderName) {
+        Path skillDir = getSkillDir().resolve(folderName);
+        if (!Files.isDirectory(skillDir)) {
+            throw new RuntimeException("技能不存在: " + folderName);
+        }
+        try (ByteArrayOutputStream baos = new ByteArrayOutputStream();
+             ZipOutputStream zos = new ZipOutputStream(baos, java.nio.charset.StandardCharsets.UTF_8)) {
+            try (Stream<Path> paths = Files.walk(skillDir)) {
+                paths.filter(Files::isRegularFile).forEach(file -> {
+                    try {
+                        String relativePath = skillDir.relativize(file).toString().replace('\\', '/');
+                        ZipEntry entry = new ZipEntry(folderName + "/" + relativePath);
+                        zos.putNextEntry(entry);
+                        Files.copy(file, zos);
+                        zos.closeEntry();
+                    } catch (IOException e) {
+                        throw new UncheckedIOException(e);
+                    }
+                });
+            }
+            zos.finish();
+            return baos.toByteArray();
+        } catch (UncheckedIOException e) {
+            throw new RuntimeException("导出技能失败: " + e.getCause().getMessage());
+        } catch (IOException e) {
+            throw new RuntimeException("导出技能失败: " + e.getMessage());
+        }
     }
 }

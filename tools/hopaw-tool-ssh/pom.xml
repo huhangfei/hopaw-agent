@@ -14,7 +14,7 @@
         <maven.install.skip>true</maven.install.skip>
     </properties>
     <artifactId>hopaw-tool-ssh</artifactId>
-    <version>1.0.0</version>
+    <version>1.0.2</version>
     <dependencies>
         <dependency>
             <groupId>com.hopaw.agent</groupId>
@@ -24,6 +24,11 @@
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter</artifactId>
+            <scope>provided</scope>
+        </dependency>
+        <dependency>
+            <groupId>com.alibaba.fastjson2</groupId>
+            <artifactId>fastjson2</artifactId>
             <scope>provided</scope>
         </dependency>
         <dependency>

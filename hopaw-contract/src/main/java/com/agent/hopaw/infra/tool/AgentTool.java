@@ -5,6 +5,8 @@ import com.agent.hopaw.infra.model.dto.ToolConfigItem;
 import java.util.List;
 
 public interface AgentTool {
+    public static final String TOOL_SEARCH_TOOL_NAME = "tool_search_tool";
+    public static final String TOOL_SEARCH_TOOL_DESCRIPTION = "查询工具箱";
     public static final String DEFAULT_ICON="agent-tool.svg";
     String getName();
     String getDescription();
