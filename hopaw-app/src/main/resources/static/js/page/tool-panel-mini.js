@@ -555,6 +555,20 @@
         };
     }
 
+    /* 包装消息区工具图标的定位入口：简易模式时先自动展开面板再定位 */
+    if (typeof window.scrollToToolCall === 'function') {
+        var _origScrollToToolCall = window.scrollToToolCall;
+        window.scrollToToolCall = function (el) {
+            if (miniMode && !switching) {
+                window.toggleToolPanelMini(false);
+                /* 等面板展开动画完成后列表才可见，再执行定位/展开/高亮 */
+                setTimeout(function () { _origScrollToToolCall(el); }, 520);
+                return;
+            }
+            _origScrollToToolCall(el);
+        };
+    }
+
     function syncMiniToken() {
         if (!miniMode) return;
 
