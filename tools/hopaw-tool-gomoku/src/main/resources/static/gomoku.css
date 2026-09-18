@@ -1,0 +1,204 @@
+/* 五子棋工具插件样式：并排实时棋盘面板（挂在通用槽位 #plugin-slot） */
+
+.plugin-gomoku-panel {
+    box-sizing: border-box;
+    display: none; /* 默认隐藏，仅本插件激活时显示（避免多插件面板同时出现） */
+    flex-direction: column;
+    height: 100%;
+    min-height: 0;
+    padding: 12px;
+    background: var(--color-background-secondary, #fff);
+    border-left: 1px solid var(--color-border-tertiary, rgba(0, 0, 0, 0.12));
+}
+
+.plugin-gomoku-header {
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    margin-bottom: 10px;
+}
+
+.plugin-gomoku-title {
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--color-text-primary, #222);
+}
+
+.plugin-gomoku-status {
+    font-size: 11px;
+    color: var(--color-text-tertiary, #888);
+    padding: 2px 8px;
+    border-radius: 10px;
+    background: var(--color-background-tertiary, #f1f1f1);
+}
+
+.plugin-gomoku-status.active {
+    color: #185fa5;
+    background: #e6f1fb;
+}
+
+.plugin-gomoku-status.win {
+    color: #1a9e8f;
+    background: #e6f7f4;
+}
+
+.plugin-gomoku-status.lose {
+    color: #d94545;
+    background: #fdecec;
+}
+
+.plugin-gomoku-status.draw {
+    color: #d9840b;
+    background: #fdf3e3;
+}
+
+.plugin-gomoku-actions {
+    flex-shrink: 0;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.plugin-gomoku-btn {
+    flex-shrink: 0;
+    width: 24px;
+    height: 24px;
+    padding: 0;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border: none;
+    border-radius: 6px;
+    background: #f0f2f5;
+    color: #888;
+    cursor: pointer;
+    transition: background .18s ease, color .18s ease;
+}
+.plugin-gomoku-btn:hover {
+    background: #667eea;
+    color: #fff;
+}
+.plugin-gomoku-btn.plugin-gomoku-close:hover {
+    background: #ff5252;
+    color: #fff;
+}
+
+.plugin-gomoku-board-wrap {
+    flex: 1;
+    min-height: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: auto;
+}
+
+.plugin-gomoku-board {
+    display: grid;
+    gap: 1px;
+    background: #d9a06b;
+    padding: 8px;
+    border-radius: 8px;
+    border: 1px solid #c08a52;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.08);
+    user-select: none;
+}
+
+.plugin-gomoku-cell {
+    width: 32px;
+    height: 32px;
+    padding: 0;
+    border: none;
+    background: #f0c897;
+    border-radius: 2px;
+    cursor: pointer;
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background .12s ease;
+}
+.plugin-gomoku-cell:hover {
+    background: #f6d8b0;
+}
+.plugin-gomoku-cell:disabled {
+    cursor: default;
+}
+
+/* 棋子 */
+.plugin-gomoku-piece {
+    width: 82%;
+    height: 82%;
+    border-radius: 50%;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.35);
+    animation: gomokuPop .2s cubic-bezier(.34, 1.56, .64, 1);
+}
+.plugin-gomoku-piece.black {
+    background: radial-gradient(circle at 35% 30%, #4a4a4a, #111);
+}
+.plugin-gomoku-piece.white {
+    background: radial-gradient(circle at 35% 30%, #ffffff, #d0d0d0);
+}
+/* 最后一手标记 */
+.plugin-gomoku-piece.last::after {
+    content: '';
+    position: absolute;
+    inset: 30%;
+    border-radius: 50%;
+    background: #ff4d4d;
+}
+.plugin-gomoku-piece.white.last::after {
+    background: #e53935;
+}
+
+@keyframes gomokuPop {
+    from { transform: scale(.3); opacity: .4; }
+    to { transform: scale(1); opacity: 1; }
+}
+
+/* 激活态：会话区与棋盘对称平分（chat-area 保持 flex:1 不变，避免宽度跳变） */
+.chat-wrapper.gomoku-active #plugin-slot {
+    display: flex;
+    flex: 1 1 0;
+    height: 100%;
+    min-width: 0;
+    transition: flex-grow 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.chat-wrapper.gomoku-active .plugin-gomoku-panel {
+    display: flex;
+}
+
+.chat-wrapper.gomoku-active .chat-area {
+    flex: 1 1 0;
+    min-width: 0;
+}
+
+/* 暗色主题适配 */
+body.dark-theme .plugin-gomoku-panel {
+    background: #232637;
+    border-left-color: rgba(255, 255, 255, 0.12);
+}
+body.dark-theme .plugin-gomoku-board {
+    background: #8a5a33;
+    border-color: #6f4526;
+}
+body.dark-theme .plugin-gomoku-cell {
+    background: #b5824d;
+}
+body.dark-theme .plugin-gomoku-cell:hover {
+    background: #c8935f;
+}
+body.dark-theme .plugin-gomoku-btn {
+    background: #2a2e42;
+    color: #8ea2ff;
+}
+body.dark-theme .plugin-gomoku-btn:hover {
+    background: #667eea;
+    color: #fff;
+}
+body.dark-theme .plugin-gomoku-btn.plugin-gomoku-close:hover {
+    background: #ff5252;
+    color: #fff;
+}

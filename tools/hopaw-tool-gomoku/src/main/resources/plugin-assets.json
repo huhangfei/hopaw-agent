@@ -1,0 +1,25 @@
+{
+  "assets": [
+    {
+      "id": "gomoku-css",
+      "type": "css",
+      "path": "static/gomoku.css",
+      "pages": ["index"]
+    },
+    {
+      "id": "gomoku-js",
+      "type": "js",
+      "path": "static/gomoku.js",
+      "pages": ["index"],
+      "position": "body-end"
+    },
+    {
+      "id": "gomoku-html",
+      "type": "html",
+      "path": "static/gomoku.html",
+      "pages": ["index"],
+      "mount": "#plugin-slot",
+      "mode": "append"
+    }
+  ]
+}

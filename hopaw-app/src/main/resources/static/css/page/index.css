@@ -208,6 +208,14 @@
     min-height: 0;
 }
 
+/* 插件前端注入通用挂载槽位：默认隐藏，由具体插件激活时展开（各插件用自身类名控制，如 canvas-active / gomoku-active） */
+#plugin-slot {
+    display: none;
+    flex: 0 0 0;
+    overflow: hidden;
+    min-width: 0;
+}
+
 .tool-panel {
     width: 28%;
     min-width: 280px;
