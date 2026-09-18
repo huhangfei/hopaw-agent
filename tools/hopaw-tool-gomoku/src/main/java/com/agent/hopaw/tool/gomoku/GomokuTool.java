@@ -4,9 +4,11 @@ import com.agent.hopaw.infra.service.IPluginResultStore;
 import com.agent.hopaw.infra.service.IWebSocketBridgeService;
 import com.agent.hopaw.infra.tool.AgentTool;
 import com.agent.hopaw.infra.tool.ToolSecurityLevel;
+import com.agent.hopaw.infra.util.InvocationParametersWrapper;
 import com.alibaba.fastjson2.JSON;
 import dev.langchain4j.agent.tool.P;
 import dev.langchain4j.agent.tool.Tool;
+import dev.langchain4j.invocation.InvocationParameters;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -59,8 +61,8 @@ public class GomokuTool implements AgentTool {
     /** 对局表：gameId → Game。 */
     private final Map<String, Game> games = new ConcurrentHashMap<>();
 
-    /** requestId → gameId，用于 waitUserMove 拿到用户落子后定位对局。 */
-    private final Map<String, String> requestGameMap = new ConcurrentHashMap<>();
+    /** sessionId → 当前等待用户落子的 requestId（LLM 落子时提前生成，按会话隔离）。 */
+    private final Map<String, String> sessionMoveRequestMap = new ConcurrentHashMap<>();
 
     /** 最近一次创建的对局 id（供 gameId 缺省回退）。 */
     private volatile String lastGameId;
@@ -117,7 +119,8 @@ public class GomokuTool implements AgentTool {
     public String placePiece(
             @P("横坐标(列)，从0开始") Integer x,
             @P("纵坐标(行)，从0开始") Integer y,
-            @P(value = "对局ID，不传则操作最近一局", required = false) String gameId) {
+            @P(value = "对局ID，不传则操作最近一局", required = false) String gameId,
+            InvocationParameters invocationParameters) {
         Game game = resolveGame(gameId);
         if (game == null) {
             return "错误: 未找到进行中的对局，请先调用 gomoku_startGame 开局。";
@@ -136,7 +139,17 @@ public class GomokuTool implements AgentTool {
         }
 
         game.place(x, y, Game.PIECE_LLM);
-        sendCommand("place", game.getId(), null, buildPlacePayload(x, y, Game.PIECE_LLM, game));
+
+        String pendingRequestId = null;
+        if (!game.finished()) {
+            // LLM 落子后轮到用户：提前生成 requestId 并注册槽位，下发到前端，
+            // 用户落子时直接提交该 requestId；waitUserMove 复用同一 requestId 等待。
+            pendingRequestId = UUID.randomUUID().toString();
+            pluginResultStore.register(pendingRequestId, userIdOf(invocationParameters));
+            sessionMoveRequestMap.put(sessionKeyOf(invocationParameters), pendingRequestId);
+        }
+
+        sendCommand("place", game.getId(), pendingRequestId, buildPlacePayload(x, y, Game.PIECE_LLM, game, pendingRequestId));
 
         if (game.finished()) {
             return game.statusText() + "\n\n" + renderBoard(game);
@@ -148,7 +161,8 @@ public class GomokuTool implements AgentTool {
     @ToolSecurityLevel(ToolSecurityLevel.Level.SAFE)
     @Tool(name = "gomoku_waitUserMove", value = {"等待用户落子", "阻塞等待用户在棋盘上点击落子，返回用户落子位置与落子后的棋盘状态"})
     public String waitUserMove(
-            @P(value = "对局ID，不传则操作最近一局", required = false) String gameId) {
+            @P(value = "对局ID，不传则操作最近一局", required = false) String gameId,
+            InvocationParameters invocationParameters) {
         Game game = resolveGame(gameId);
         if (game == null) {
             return "错误: 未找到进行中的对局，请先调用 gomoku_startGame 开局。";
@@ -157,16 +171,20 @@ public class GomokuTool implements AgentTool {
             return "对局已结束（" + game.statusText() + "），如需再来一局请调用 gomoku_startGame。";
         }
 
-        String requestId = UUID.randomUUID().toString();
-        requestGameMap.put(requestId, game.getId());
-        // 下发等待指令，前端进入「等待用户点击」状态，并携带超时秒数用于倒计时展示
-        Map<String, Object> waitPayload = new HashMap<>();
-        waitPayload.put("timeout", USER_MOVE_TIMEOUT_SECONDS);
-        sendCommand("request-move", game.getId(), requestId, waitPayload);
+        // 优先复用 LLM 落子（placePiece）时提前生成的 requestId；若缺失（如直接调用）则兜底新建
+        String sessionKey = sessionKeyOf(invocationParameters);
+        String requestId = sessionMoveRequestMap.remove(sessionKey);
+        if (requestId == null) {
+            requestId = UUID.randomUUID().toString();
+            pluginResultStore.register(requestId, userIdOf(invocationParameters));
+            // 兜底下发 request-move 指令，让前端进入等待状态
+            Map<String, Object> waitPayload = new HashMap<>();
+            waitPayload.put("timeout", USER_MOVE_TIMEOUT_SECONDS);
+            sendCommand("request-move", game.getId(), requestId, waitPayload);
+        }
 
         // 阻塞等待前端回传用户落子坐标（形如 "x,y"）
         String move = pluginResultStore.await(requestId, USER_MOVE_TIMEOUT_SECONDS);
-        requestGameMap.remove(requestId);
         if (move == null || move.trim().isEmpty()) {
             return "等待用户落子超时，用户可能已离开或前端棋盘未打开。可再次调用 gomoku_waitUserMove 继续等待，或调用 gomoku_closeGame 结束。";
         }
@@ -301,13 +319,39 @@ public class GomokuTool implements AgentTool {
         return payload;
     }
 
-    private Map<String, Object> buildPlacePayload(int x, int y, int piece, Game game) {
+    private Map<String, Object> buildPlacePayload(int x, int y, int piece, Game game, String pendingRequestId) {
         Map<String, Object> payload = new HashMap<>();
         payload.put("x", x);
         payload.put("y", y);
         payload.put("piece", piece);
         payload.put("status", game.status);
+        if (pendingRequestId != null) {
+            payload.put("pendingRequestId", pendingRequestId);
+            payload.put("timeout", USER_MOVE_TIMEOUT_SECONDS);
+        }
         return payload;
+    }
+
+    /** 从 InvocationParameters 提取 userId（用于结果回传校验），可能为 null。 */
+    private String userIdOf(InvocationParameters invocationParameters) {
+        if (invocationParameters == null) {
+            return null;
+        }
+        return InvocationParametersWrapper.create(invocationParameters).getUserId();
+    }
+
+    /** 从 InvocationParameters 提取 sessionId（会话标识，用于区分会话），可能为 null。 */
+    private String sessionIdOf(InvocationParameters invocationParameters) {
+        if (invocationParameters == null) {
+            return null;
+        }
+        return InvocationParametersWrapper.create(invocationParameters).getSessionId();
+    }
+
+    /** 以 sessionId 作为缓存 key（区分会话），null 时用空串兜底。 */
+    private String sessionKeyOf(InvocationParameters invocationParameters) {
+        String sid = sessionIdOf(invocationParameters);
+        return sid == null ? "" : sid;
     }
 
     /**

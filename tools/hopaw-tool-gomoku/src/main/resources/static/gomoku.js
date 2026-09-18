@@ -88,8 +88,8 @@
         cells = [];
         boardState = [];
         boardEl.innerHTML = '';
-        boardEl.style.gridTemplateColumns = 'repeat(' + n + ', 32px)';
-        boardEl.style.gridTemplateRows = 'repeat(' + n + ', 32px)';
+        boardEl.style.gridTemplateColumns = 'repeat(' + n + ', 1fr)';
+        boardEl.style.gridTemplateRows = 'repeat(' + n + ', 1fr)';
 
         for (var r = 0; r < n; r++) {
             boardState[r] = [];
@@ -209,7 +209,16 @@
         } else if (status === 3) {
             setStatus('和棋', 'draw');
         } else {
-            setStatus('你的回合(黑)', 'active');
+            // 对局继续，LLM 已落子，轮到用户：若带了 pendingRequestId 则进入等待状态
+            if (payload.pendingRequestId) {
+                waiting = true;
+                pendingRequestId = payload.pendingRequestId;
+                setStatus('轮到你落子(白)', 'active');
+                var timeoutSec = payload.timeout || 60;
+                startTimer(timeoutSec);
+            } else {
+                setStatus('你的回合(黑)', 'active');
+            }
         }
     }
 
