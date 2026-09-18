@@ -1219,13 +1219,19 @@ var LAppDefine = {
             if (dragMode === "y") {
                 widget.style.transition = ""; /* 恢复 CSS 过渡 */
                 if (isMoved) {
-                    suppressClick = true; /* 拖动结束抑制本次 click，避免误触恢复 */
+                    /* 拖动：仅移位，保存吸附 Y 位置 */
+                    suppressClick = true;
                     try {
                         var b = parseFloat(widget.style.bottom);
                         if (!isNaN(b)) {
                             localStorage.setItem(LAppDefine.MINIMIZED_Y_STORAGE_KEY, String(Math.round(b)));
                         }
                     } catch (err) {}
+                } else {
+                    /* 未拖动：松手即展开。不依赖恢复按钮的 click——hover 时球体会滑出，
+                       click 可能落在按钮外而丢失，导致点了却缩回去 */
+                    suppressClick = true;
+                    exitMinimized();
                 }
             } else {
                 if (pointerId !== null && widget.releasePointerCapture) {

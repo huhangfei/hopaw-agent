@@ -603,10 +603,12 @@ body.dark-theme .mini-type-tab.active {
 body.dark-theme .mini-session-bubble {
     background: #262a3e;
     color: #aeb6d3;
+    border-color: #3a3f55; /* 暗色下基础气泡加可见描边，避免与面板背景融为一体 */
 }
 body.dark-theme .mini-session-bubble.active {
     background: linear-gradient(135deg, #6a84f2, #4f66d8);
     color: #fff;
+    border-color: #8ea2ff;
 }
 body.dark-theme .mini-session-bubble.mini-type-project { background: #1d3a36; color: #52c9b8; }
 body.dark-theme .mini-session-bubble.mini-type-task { background: #3c301f; color: #eab54d; }
