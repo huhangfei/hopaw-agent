@@ -95,7 +95,7 @@ public class GomokuTool implements AgentTool {
     // =====================================================================
 
     @ToolSecurityLevel(ToolSecurityLevel.Level.SAFE)
-    @Tool(value = {"开始五子棋对局", "在浏览器前端打开五子棋棋盘开始对局，你执黑先手，返回棋盘与规则"})
+    @Tool(name = "gomoku_startGame", value = {"开始五子棋对局", "在浏览器前端打开五子棋棋盘开始对局，你执黑先手，返回棋盘与规则"})
     public String startGame(
             @P(value = "棋盘边长(9-19)，默认15，值越小对局越快", required = false) Integer boardSize) {
         int size = normalizeSize(boardSize);
@@ -108,22 +108,22 @@ public class GomokuTool implements AgentTool {
         return "五子棋对局已开始（gameId=" + gameId + "），棋盘 " + size + "x" + size
                 + "，你执黑(X)先手，用户执白(O)。\n"
                 + "规则：横/竖/斜任意方向连成 5 子即胜。\n"
-                + "请先用 placePiece(x, y) 落下你的第一枚黑子（坐标从 0 开始，范围 0~" + (size - 1) + "）。\n\n"
+                + "请先用 gomoku_placePiece(x, y) 落下你的第一枚黑子（坐标从 0 开始，范围 0~" + (size - 1) + "）。\n\n"
                 + renderBoard(game);
     }
 
     @ToolSecurityLevel(ToolSecurityLevel.Level.SAFE)
-    @Tool(value = {"五子棋落子", "你在指定坐标落下一枚黑子，返回落子后的棋盘与是否分出胜负"})
+    @Tool(name = "gomoku_placePiece", value = {"五子棋落子", "你在指定坐标落下一枚黑子，返回落子后的棋盘与是否分出胜负"})
     public String placePiece(
             @P("横坐标(列)，从0开始") Integer x,
             @P("纵坐标(行)，从0开始") Integer y,
             @P(value = "对局ID，不传则操作最近一局", required = false) String gameId) {
         Game game = resolveGame(gameId);
         if (game == null) {
-            return "错误: 未找到进行中的对局，请先调用 startGame 开局。";
+            return "错误: 未找到进行中的对局，请先调用 gomoku_startGame 开局。";
         }
         if (!game.playing()) {
-            return "对局已结束（" + game.statusText() + "），如需再来一局请调用 startGame。";
+            return "对局已结束（" + game.statusText() + "），如需再来一局请调用 gomoku_startGame。";
         }
         if (x == null || y == null) {
             return "错误: 落子坐标 x、y 不能为空。";
@@ -141,20 +141,20 @@ public class GomokuTool implements AgentTool {
         if (game.finished()) {
             return game.statusText() + "\n\n" + renderBoard(game);
         }
-        return "你已在 (" + x + "," + y + ") 落子，轮到用户，请调用 waitUserMove 等待用户落子。\n\n"
+        return "你已在 (" + x + "," + y + ") 落子，轮到用户，请调用 gomoku_waitUserMove 等待用户落子。\n\n"
                 + renderBoard(game);
     }
 
     @ToolSecurityLevel(ToolSecurityLevel.Level.SAFE)
-    @Tool(value = {"等待用户落子", "阻塞等待用户在棋盘上点击落子，返回用户落子位置与落子后的棋盘状态"})
+    @Tool(name = "gomoku_waitUserMove", value = {"等待用户落子", "阻塞等待用户在棋盘上点击落子，返回用户落子位置与落子后的棋盘状态"})
     public String waitUserMove(
             @P(value = "对局ID，不传则操作最近一局", required = false) String gameId) {
         Game game = resolveGame(gameId);
         if (game == null) {
-            return "错误: 未找到进行中的对局，请先调用 startGame 开局。";
+            return "错误: 未找到进行中的对局，请先调用 gomoku_startGame 开局。";
         }
         if (!game.playing()) {
-            return "对局已结束（" + game.statusText() + "），如需再来一局请调用 startGame。";
+            return "对局已结束（" + game.statusText() + "），如需再来一局请调用 gomoku_startGame。";
         }
 
         String requestId = UUID.randomUUID().toString();
@@ -168,7 +168,7 @@ public class GomokuTool implements AgentTool {
         String move = pluginResultStore.await(requestId, USER_MOVE_TIMEOUT_SECONDS);
         requestGameMap.remove(requestId);
         if (move == null || move.trim().isEmpty()) {
-            return "等待用户落子超时，用户可能已离开或前端棋盘未打开。可再次调用 waitUserMove 继续等待，或调用 closeGame 结束。";
+            return "等待用户落子超时，用户可能已离开或前端棋盘未打开。可再次调用 gomoku_waitUserMove 继续等待，或调用 gomoku_closeGame 结束。";
         }
 
         int[] coord = parseCoord(move);
@@ -180,7 +180,7 @@ public class GomokuTool implements AgentTool {
             return "错误: 用户落子坐标越界（" + move + "）。";
         }
         if (game.board[y][x] != 0) {
-            return "错误: 用户落子位置已被占用（" + move + "），请再次调用 waitUserMove 等待有效落子。";
+            return "错误: 用户落子位置已被占用（" + move + "），请再次调用 gomoku_waitUserMove 等待有效落子。";
         }
 
         game.place(x, y, Game.PIECE_USER);
@@ -188,23 +188,23 @@ public class GomokuTool implements AgentTool {
         if (game.finished()) {
             return game.statusText() + "\n\n" + renderBoard(game);
         }
-        return "用户已在 (" + x + "," + y + ") 落子，轮到你，请调用 placePiece 落子。\n\n"
+        return "用户已在 (" + x + "," + y + ") 落子，轮到你，请调用 gomoku_placePiece 落子。\n\n"
                 + renderBoard(game);
     }
 
     @ToolSecurityLevel(ToolSecurityLevel.Level.SAFE)
-    @Tool(value = {"查看五子棋棋盘", "返回当前棋盘状态，用于需要回顾棋局时"})
+    @Tool(name = "gomoku_getBoard", value = {"查看五子棋棋盘", "返回当前棋盘状态，用于需要回顾棋局时"})
     public String getBoard(
             @P(value = "对局ID，不传则操作最近一局", required = false) String gameId) {
         Game game = resolveGame(gameId);
         if (game == null) {
-            return "错误: 未找到进行中的对局，请先调用 startGame 开局。";
+            return "错误: 未找到进行中的对局，请先调用 gomoku_startGame 开局。";
         }
         return renderBoard(game);
     }
 
     @ToolSecurityLevel(ToolSecurityLevel.Level.SAFE)
-    @Tool(value = {"结束五子棋对局", "结束当前对局并关闭前端棋盘"})
+    @Tool(name = "gomoku_closeGame", value = {"结束五子棋对局", "结束当前对局并关闭前端棋盘"})
     public String closeGame(
             @P(value = "对局ID，不传则操作最近一局", required = false) String gameId) {
         Game game = resolveGame(gameId);
