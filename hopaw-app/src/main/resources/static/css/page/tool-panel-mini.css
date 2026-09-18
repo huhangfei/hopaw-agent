@@ -58,9 +58,9 @@
 }
 
 /* ============================================================
-   迷你窄条布局
+   迷你窄条布局（tp-mini-bar：仅指迷你条自身，区别于面板状态类 tool-panel-mini）
    ============================================================ */
-.tool-panel-mini {
+.tp-mini-bar {
     display: flex;
     flex-direction: column;
     align-items: center;
@@ -73,11 +73,11 @@
     transform: translateX(12px);
     transition: opacity .26s ease .12s, transform .3s cubic-bezier(.22, 1, .36, 1) .12s;
 }
-.tool-panel-mini.visible {
+.tp-mini-bar.visible {
     opacity: 1;
     transform: translateX(0);
 }
-.tool-panel-mini.hide {
+.tp-mini-bar.hide {
     display: none;
 }
 
@@ -582,7 +582,7 @@
 /* ============================================================
    深色主题适配
    ============================================================ */
-body.dark-theme .tool-panel-mini {
+body.dark-theme .tp-mini-bar {
     background: transparent;
 }
 body.dark-theme .mini-icon-btn {
@@ -618,7 +618,6 @@ body.dark-theme .mini-session-bubble.active {
     color: #fff;
 }
 body.dark-theme .mini-session-bubble.mini-type-project { background: #1d3a36; color: #52c9b8; }
-body.dark-theme .mini-session-bubble.mini-type-task { background: #3c3category01f; }
 body.dark-theme .mini-session-bubble.mini-type-task { background: #3c301f; color: #eab54d; }
 body.dark-theme .mini-session-bubble.running::before {
     border-color: #1b1e2e;
