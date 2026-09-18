@@ -8,6 +8,7 @@
  *   - window.PluginHook.onCommand(handler)  监听后端下发指令（handler(cmd)）
  *   - window.PluginHook.register(toolName, handler) 按工具名订阅（handler(cmd)）
  *   - window.PluginHook.report(requestId, value) 上报结果（string 透传）
+ *   - window.PluginHook.callTool(toolName, params) 调用插件通用 invoke API（传 Map 返回 Map）
  */
 (function () {
     'use strict';
@@ -69,6 +70,19 @@
                 credentials: 'same-origin',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ requestId: requestId, value: value })
+            }).then(function (r) { return r.json(); });
+        },
+        /**
+         * 调用插件通用 invoke API（POST /api/plugins/{toolName}/invoke）。
+         * 向后端插件发送或获取数据：params 为对象，返回插件 invoke 的结果对象（Promise）。
+         * 工具不存在时后端返回 404（success=false）；插件异常返回 500。
+         */
+        callTool: function (toolName, params) {
+            return fetch('/api/plugins/' + encodeURIComponent(toolName) + '/invoke', {
+                method: 'POST',
+                credentials: 'same-origin',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(params || {})
             }).then(function (r) { return r.json(); });
         }
     };

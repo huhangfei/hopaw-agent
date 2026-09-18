@@ -243,6 +243,40 @@ public class GomokuTool implements AgentTool {
     // 内部逻辑
     // =====================================================================
 
+    /**
+     * 插件公共调用入口示范：客户端可经统一 API（POST /api/plugins/gomoku/invoke）
+     * 直接查询对局状态，无需 LLM 参与对话。
+     *
+     * <p>参数：{action: "state"|"list"（默认 state）, gameId: 可选，缺省最近一局}。</p>
+     */
+    @Override
+    public Map<String, Object> invoke(Map<String, Object> params) {
+        Map<String, Object> result = new HashMap<>();
+        String action = params == null ? "state" : String.valueOf(params.getOrDefault("action", "state"));
+
+        if ("list".equals(action)) {
+            result.put("success", true);
+            result.put("games", new java.util.ArrayList<>(games.keySet()));
+            result.put("lastGameId", lastGameId == null ? "" : lastGameId);
+            return result;
+        }
+
+        Object gameIdRaw = params == null ? null : params.get("gameId");
+        Game game = resolveGame(gameIdRaw == null ? null : String.valueOf(gameIdRaw));
+        if (game == null) {
+            result.put("success", false);
+            result.put("message", "无进行中的对局");
+            return result;
+        }
+        result.put("success", true);
+        result.put("gameId", game.getId());
+        result.put("size", game.size);
+        result.put("status", game.status);
+        result.put("statusText", game.statusText());
+        result.put("board", game.board);
+        return result;
+    }
+
     private int normalizeSize(Integer boardSize) {
         if (boardSize == null) {
             return DEFAULT_BOARD_SIZE;

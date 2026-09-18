@@ -3,6 +3,7 @@ package com.agent.hopaw.infra.tool;
 import com.agent.hopaw.infra.model.dto.ToolConfigItem;
 
 import java.util.List;
+import java.util.Map;
 
 public interface AgentTool {
     public static final String TOOL_SEARCH_TOOL_NAME = "tool_search_tool";
@@ -64,5 +65,20 @@ public interface AgentTool {
      */
     default void onConfigChanged() {
         return;
+    }
+
+    /**
+     * 插件公共调用入口：客户端可通过统一 API（{@code POST /api/plugins/{toolName}/invoke}）
+     * 直接调用插件，向前端插件发送数据或从插件获取数据。
+     *
+     * <p>默认实现返回「不支持」，现有插件无需改动即兼容；需要此能力的插件按需覆盖。</p>
+     *
+     * @param params 客户端传入的参数（JSON 对象反序列化为 Map，可能为空）
+     * @return 返回给客户端的结果（序列化为 JSON 对象返回）
+     */
+    default Map<String, Object> invoke(Map<String, Object> params) {
+        return Map.of(
+                "success", false,
+                "message", "工具 " + getName() + " 不支持 invoke 调用");
     }
 }
