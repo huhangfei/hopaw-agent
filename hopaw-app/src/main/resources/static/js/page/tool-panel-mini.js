@@ -296,9 +296,8 @@
     }
 
     /* ============================================================
-     * 工具执行迷你视图：状态甜甜圈 + 图标气泡
+     * 工具执行迷你视图：状态甜甜圈 + 图标气泡（增量同步，不整体重建）
      * ============================================================ */
-    var lastToolSig = null;
 
     function collectToolCalls() {
         var list = byId('toolExecList');
@@ -322,11 +321,19 @@
         if (!miniList || !miniMode) return;
         var calls = collectToolCalls();
 
-        var sig = calls.map(function (c) { return c.id + ':' + c.status; }).join(',');
-        if (sig !== lastToolSig) {
-            lastToolSig = sig;
-            miniList.innerHTML = '';
-            if (calls.length === 0) {
+        /* 记录同步前是否贴底：贴底则同步后跟随滚动到最新，用户上翻查看时不打扰 */
+        var stickToBottom = miniList.scrollHeight - miniList.scrollTop - miniList.clientHeight < 24;
+
+        /* 增量同步：只新增/移除/原位更新，绝不整体重建（避免所有气泡重播入场动画导致闪烁） */
+        var existing = {};
+        Array.prototype.forEach.call(miniList.querySelectorAll('.mini-tool-bubble'), function (b) {
+            existing[b.getAttribute('data-tool-call-id')] = b;
+        });
+
+        var emptyEl = miniList.querySelector('.mini-session-empty');
+        if (calls.length === 0) {
+            if (!emptyEl) {
+                miniList.innerHTML = '';
                 var empty = document.createElement('div');
                 empty.className = 'mini-session-empty';
                 empty.style.width = '30px';
@@ -335,14 +342,40 @@
                 empty.textContent = '空';
                 empty.title = '暂无工具执行';
                 miniList.appendChild(empty);
-            } else {
-                calls.forEach(function (c, idx) {
-                    miniList.appendChild(buildToolBubble(c, idx));
-                });
             }
-            updateMiniToolStats(calls);
         } else {
-            updateMiniToolStats(calls);
+            if (emptyEl) emptyEl.remove();
+            var callIds = {};
+            calls.forEach(function (c, idx) {
+                callIds[c.id] = true;
+                var b = existing[c.id];
+                if (b) {
+                    updateToolBubble(b, c);
+                } else {
+                    miniList.appendChild(buildToolBubble(c, idx)); /* 仅新气泡播放入场动画 */
+                }
+            });
+            Object.keys(existing).forEach(function (id) {
+                if (!callIds[id] && existing[id].parentNode) existing[id].remove();
+            });
+        }
+        updateMiniToolStats(calls);
+
+        if (stickToBottom) miniList.scrollTop = miniList.scrollHeight;
+    }
+
+    /* 原位更新气泡：状态/图标变化不重建节点，不重播入场动画 */
+    function updateToolBubble(b, c) {
+        if (b.getAttribute('data-status') !== (c.status || '')) {
+            b.setAttribute('data-status', c.status || '');
+        }
+        if (b.getAttribute('data-tool-name') !== c.name) {
+            b.setAttribute('data-tool-name', c.name);
+            var icon = b.querySelector('.mini-tool-icon');
+            if (icon) {
+                icon.innerHTML = '';
+                try { renderToolInlineIconContent(icon, c.name); } catch (e) { icon.textContent = '🔧'; }
+            }
         }
     }
 
@@ -352,6 +385,7 @@
         b.className = 'mini-tool-bubble';
         b.style.animationDelay = Math.min(idx * 25, 200) + 'ms';
         b.setAttribute('data-tool-call-id', c.id);
+        b.setAttribute('data-tool-name', c.name);
         b.setAttribute('data-status', c.status || '');
         var icon = document.createElement('span');
         icon.className = 'mini-tool-icon';
@@ -731,7 +765,7 @@
         syncScheduled = true;
         requestAnimationFrame(function () {
             syncScheduled = false;
-            if (!miniMode) { lastSessionSig = null; lastToolSig = null; return; }
+            if (!miniMode) { lastSessionSig = null; return; }
             syncMiniSessions();
             syncMiniTools();
             checkPopoverAnchor();
