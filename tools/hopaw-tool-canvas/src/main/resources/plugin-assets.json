@@ -18,7 +18,7 @@
       "type": "html",
       "path": "static/canvas.html",
       "pages": ["index"],
-      "mount": "#plugin-slot-canvas",
+      "mount": "#plugin-slot",
       "mode": "append"
     }
   ]

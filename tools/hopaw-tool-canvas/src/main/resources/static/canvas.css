@@ -1,5 +1,5 @@
-/* 画布工具插件样式：并排实时画布面板（挂在 #plugin-slot-canvas） */
-#plugin-slot-canvas {
+/* 画布工具插件样式：并排实时画布面板（挂在通用槽位 #plugin-slot） */
+#plugin-slot {
     display: none;
     flex: 0 0 0;
     overflow: hidden;
