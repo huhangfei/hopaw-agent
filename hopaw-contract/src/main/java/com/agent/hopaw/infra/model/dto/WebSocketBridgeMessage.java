@@ -15,6 +15,9 @@ public class WebSocketBridgeMessage implements Serializable {
     /** 用户编号，作为 JMSXGroupID 实现按用户串行消费 */
     private String userId;
 
+    /** 目标会话编号（聊天会话隔离）：插件指令按 sessionId 定向下发，null 表示按 userId 或广播 */
+    private String targetSessionId;
+
     /** JSON 序列化的原始事件数据 */
     private String payload;
 
@@ -45,6 +48,14 @@ public class WebSocketBridgeMessage implements Serializable {
 
     public void setUserId(String userId) {
         this.userId = userId;
+    }
+
+    public String getTargetSessionId() {
+        return targetSessionId;
+    }
+
+    public void setTargetSessionId(String targetSessionId) {
+        this.targetSessionId = targetSessionId;
     }
 
     public String getPayload() {

@@ -26,45 +26,52 @@ public class WebSocketBridgeService implements IWebSocketBridgeService {
 
     @Override
     public void sendTokenUsage(String userId, String payload) {
-        send(QUEUE_TOKEN_USAGE, "token_usage", userId, payload);
+        send(QUEUE_TOKEN_USAGE, "token_usage", userId, null, payload);
     }
 
     @Override
     public void sendAgentMessage(String userId, String payload) {
-        send(QUEUE_AGENT_MESSAGE, "agent_message", userId, payload);
+        send(QUEUE_AGENT_MESSAGE, "agent_message", userId, null, payload);
     }
 
     @Override
     public void sendGlobalNotice(String userId, String payload) {
-        send(QUEUE_GLOBAL_NOTICE, "global_notice", userId, payload);
+        send(QUEUE_GLOBAL_NOTICE, "global_notice", userId, null, payload);
     }
 
     @Override
     public void sendAvatarEvent(String userId, String payload) {
-        send(QUEUE_AVATAR_EVENT, "avatar_event", userId, payload);
+        send(QUEUE_AVATAR_EVENT, "avatar_event", userId, null, payload);
     }
 
     @Override
-    public boolean sendPluginCommand(String userId, String payload) {
-        return send(QUEUE_PLUGIN, "plugin_command", userId, payload);
+    public boolean sendPluginCommand(String userId, String sessionId, String payload) {
+        return send(QUEUE_PLUGIN, "plugin_command", userId, sessionId, payload);
     }
 
     /**
      * @return true=已成功投递到 Artemis 队列；false=投递失败
      */
-    private boolean send(String queue, String eventType, String userId, String payload) {
+    private boolean send(String queue, String eventType, String userId, String targetSessionId, String payload) {
         try {
             WebSocketBridgeMessage msg = new WebSocketBridgeMessage(eventType, userId, payload);
+            msg.setTargetSessionId(targetSessionId);
+            // JMSXGroupID 保证同组消息按序消费：优先按会话分组（插件指令与会话强相关），否则按用户
+            String groupId = targetSessionId != null && !targetSessionId.isEmpty()
+                    ? "session_" + targetSessionId
+                    : (userId != null ? "user_" + userId : null);
+            String effectiveGroup = groupId;
             jmsTemplate.send(queue, session -> {
                 javax.jms.TextMessage textMsg = session.createTextMessage(JSON.toJSONString(msg));
-                if (userId != null) {
-                    textMsg.setStringProperty("JMSXGroupID", "user_" + userId);
+                if (effectiveGroup != null) {
+                    textMsg.setStringProperty("JMSXGroupID", effectiveGroup);
                 }
                 return textMsg;
             });
             return true;
         } catch (Exception e) {
-            WebSocketBridgeService.log.error("发送消息到 Artemis 队列失败: queue={}, userId={}, error={} {}", queue, userId, e.getMessage(), e);
+            WebSocketBridgeService.log.error("发送消息到 Artemis 队列失败: queue={}, userId={}, sessionId={}, error={} {}",
+                    queue, userId, targetSessionId, e.getMessage(), e);
             return false;
         }
     }

@@ -107,14 +107,15 @@ public class GomokuTool implements AgentTool {
     @ToolSecurityLevel(ToolSecurityLevel.Level.SAFE)
     @Tool(name = "gomoku_startGame", value = {"开始五子棋对局", "在浏览器前端打开五子棋棋盘开始对局，你执黑先手，返回棋盘与规则"})
     public String startGame(
-            @P(value = "棋盘边长(9-19)，默认15，值越小对局越快", required = false) Integer boardSize) {
+            @P(value = "棋盘边长(9-19)，默认15，值越小对局越快", required = false) Integer boardSize,
+            InvocationParameters invocationParameters) {
         int size = normalizeSize(boardSize);
         String gameId = UUID.randomUUID().toString();
         Game game = new Game(size);
         games.put(gameId, game);
         lastGameId = gameId;
 
-        sendCommand("start", gameId, null, buildStartPayload(size));
+        sendCommand("start", gameId, null, buildStartPayload(size), invocationParameters);
         return "五子棋对局已开始（gameId=" + gameId + "），棋盘 " + size + "x" + size
                 + "，你执黑(X)先手，用户执白(O)。\n"
                 + "规则：横/竖/斜任意方向连成 5 子即胜。\n"
@@ -161,7 +162,7 @@ public class GomokuTool implements AgentTool {
                     new PendingMove(pendingRequestId, future));
         }
 
-        sendCommand("place", game.getId(), pendingRequestId, buildPlacePayload(x, y, Game.PIECE_LLM, game, pendingRequestId));
+        sendCommand("place", game.getId(), pendingRequestId, buildPlacePayload(x, y, Game.PIECE_LLM, game, pendingRequestId), invocationParameters);
 
         if (game.finished()) {
             return game.statusText() + "\n\n" + renderBoard(game);
@@ -197,7 +198,7 @@ public class GomokuTool implements AgentTool {
             // 兜底下发 request-move 指令，让前端进入等待状态
             Map<String, Object> waitPayload = new HashMap<>();
             waitPayload.put("timeout", USER_MOVE_TIMEOUT_SECONDS);
-            sendCommand("request-move", game.getId(), requestId, waitPayload);
+            sendCommand("request-move", game.getId(), requestId, waitPayload, invocationParameters);
         }
 
         // 阻塞等待前端回传（"x,y"，或 RESTART/CLOSE 控制指令）。
@@ -239,7 +240,7 @@ public class GomokuTool implements AgentTool {
 
         game.place(x, y, Game.PIECE_USER);
         // 用户落子同步到前端（本地已预渲染，幂等），并携带最新胜负状态
-        sendCommand("place", game.getId(), null, buildPlacePayload(x, y, Game.PIECE_USER, game, null));
+        sendCommand("place", game.getId(), null, buildPlacePayload(x, y, Game.PIECE_USER, game, null), invocationParameters);
 
         if (game.finished()) {
             return game.statusText() + "\n\n" + renderBoard(game);
@@ -262,13 +263,14 @@ public class GomokuTool implements AgentTool {
     @ToolSecurityLevel(ToolSecurityLevel.Level.SAFE)
     @Tool(name = "gomoku_closeGame", value = {"结束五子棋对局", "结束当前对局并关闭前端棋盘"})
     public String closeGame(
-            @P(value = "对局ID，不传则操作最近一局", required = false) String gameId) {
+            @P(value = "对局ID，不传则操作最近一局", required = false) String gameId,
+            InvocationParameters invocationParameters) {
         Game game = resolveGame(gameId);
         if (game == null) {
             return "当前无进行中的对局。";
         }
         removeGame(game);
-        sendCommand("close", game.getId(), null, null);
+        sendCommand("close", game.getId(), null, null, invocationParameters);
         return "五子棋对局已结束，棋盘已关闭。";
     }
 
@@ -449,10 +451,13 @@ public class GomokuTool implements AgentTool {
     }
 
     /**
-     * 下发指令到前端插件（通过 /ws/plugin 下行通道，userId 为空时广播）。
+     * 下发指令到前端插件（通过 /ws/plugin 下行通道）。
+     * 按会话隔离：sessionId 非空时指令仅推给注册了该会话的前端连接；
+     * sessionId 为空时退化为按 userId 定向或广播。
      * gameId 放入 cmd，前端据此识别当前对局。
      */
-    private void sendCommand(String action, String gameId, String requestId, Map<String, Object> payload) {
+    private void sendCommand(String action, String gameId, String requestId, Map<String, Object> payload,
+                             InvocationParameters invocationParameters) {
         Map<String, Object> cmd = new HashMap<>();
         cmd.put("toolName", TOOL_NAME);
         cmd.put("action", action);
@@ -460,7 +465,8 @@ public class GomokuTool implements AgentTool {
         cmd.put("requestId", requestId);
         cmd.put("payload", payload);
         try {
-            webSocketBridgeService.sendPluginCommand(null, JSON.toJSONString(cmd));
+            webSocketBridgeService.sendPluginCommand(userIdOf(invocationParameters),
+                    sessionIdOf(invocationParameters), JSON.toJSONString(cmd));
         } catch (Exception e) {
             logger.error("GomokuTool: failed to send plugin command action={}", action, e);
         }

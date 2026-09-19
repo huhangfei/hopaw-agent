@@ -28,6 +28,14 @@
             return;
         }
 
+        ws.onopen = function () {
+            // 会话注册：声明本连接所属的聊天会话，后端插件指令按 sessionId 定向下发（会话隔离）。
+            // 会话切换是整页跳转（/?sessionId=...），新页面会重新连接并注册，无需运行中重注册。
+            var sid = window.currentSessionId;
+            if (sid) {
+                try { ws.send(JSON.stringify({ type: 'register', sessionId: String(sid) })); } catch (e) { /* 忽略 */ }
+            }
+        };
         ws.onmessage = function (ev) {
             var cmd;
             try { cmd = JSON.parse(ev.data); } catch (e) { return; }
