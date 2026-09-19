@@ -15,7 +15,6 @@
     flex-shrink: 0;
     display: flex;
     align-items: center;
-    justify-content: space-between;
     gap: 8px;
     margin-bottom: 10px;
 }
@@ -59,6 +58,8 @@
     display: inline-flex;
     align-items: center;
     gap: 6px;
+    /* 固定吸右：倒计时出现/消失（hidden 切换）时按钮不跳位 */
+    margin-left: auto;
 }
 
 .plugin-gomoku-btn {
@@ -76,13 +77,18 @@
     cursor: pointer;
     transition: background .18s ease, color .18s ease;
 }
-.plugin-gomoku-btn:hover {
+.plugin-gomoku-btn:not(:disabled):hover {
     background: #667eea;
     color: #fff;
 }
 .plugin-gomoku-btn.plugin-gomoku-close:hover {
     background: #ff5252;
     color: #fff;
+}
+/* 禁用态（如非等待落子时的「重新开始」） */
+.plugin-gomoku-btn:disabled {
+    opacity: .4;
+    cursor: not-allowed;
 }
 
 .plugin-gomoku-board-wrap {
@@ -94,13 +100,14 @@
     overflow: auto;
 }
 
+/* 倒计时：内联在头部（status 与按钮之间），不独立占行、不挤压棋盘。
+   注意：不可设置 display 属性，否则会覆盖 [hidden] 的 UA 样式导致隐藏失效 */
 .plugin-gomoku-timer {
     flex-shrink: 0;
-    text-align: center;
-    font-size: 12px;
+    font-size: 11px;
     font-variant-numeric: tabular-nums;
     color: var(--color-text-tertiary, #888);
-    padding: 4px 0 8px;
+    white-space: nowrap;
 }
 .plugin-gomoku-timer .plugin-gomoku-timer-num {
     font-weight: 600;
@@ -183,11 +190,20 @@
     transition: flex-grow 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
+/* 关键：plugin-loader 注入 HTML 时会包一层无样式的 wrapper div（#plugin-slot 的直接子元素），
+   #plugin-slot 是 flex 容器而 wrapper 不是 flex 项、宽度由内容收缩，面板的 flex:1 写在
+   非 flex 的 wrapper 里无从生效。wrapper 必须先撑满槽位，面板才能真正占满。 */
+.chat-wrapper.gomoku-active #plugin-slot > [data-plugin-id="gomoku-html"] {
+    display: flex;
+    flex: 1 1 0;
+    min-width: 0;
+    min-height: 0;
+}
+
 .chat-wrapper.gomoku-active .plugin-gomoku-panel {
     display: flex;
-    /* 关键：面板必须撑满槽位宽度。面板内容（棋盘）是 JS 按像素算出来的固定宽，
-       若面板宽度由内容决定，boardWrap.clientWidth 会测到棋盘自身宽度（自引用循环），
-       首次测量又发生在槽位展开瞬间，得到极小值导致棋盘永久偏窄。 */
+    /* 面板撑满 wrapper（wrapper 已撑满槽位）。面板内容（棋盘）是 JS 按像素算出来的固定宽，
+       若面板宽度由内容决定，boardWrap.clientWidth 会测到棋盘自身宽度（自引用循环）。 */
     flex: 1 1 0;
     min-width: 0;
 }
@@ -216,7 +232,7 @@ body.dark-theme .plugin-gomoku-btn {
     background: #2a2e42;
     color: #8ea2ff;
 }
-body.dark-theme .plugin-gomoku-btn:hover {
+body.dark-theme .plugin-gomoku-btn:not(:disabled):hover {
     background: #667eea;
     color: #fff;
 }

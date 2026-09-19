@@ -2,8 +2,11 @@
     <div class="plugin-gomoku-header">
         <span class="plugin-gomoku-title">五子棋</span>
         <span class="plugin-gomoku-status" data-gomoku-status>待命</span>
+        <!-- 倒计时放在头部内（内联），避免独立占行把棋盘往下挤压 -->
+        <span class="plugin-gomoku-timer" data-gomoku-timer hidden></span>
         <span class="plugin-gomoku-actions">
-            <button type="button" class="plugin-gomoku-btn" data-gomoku-restart title="重新开始" aria-label="重新开始">
+            <!-- 重新开始仅在等待用户落子时可用（此时才有阻塞的 waitUserMove 可被唤醒） -->
+            <button type="button" class="plugin-gomoku-btn" data-gomoku-restart title="重新开始（等待你落子时可用）" aria-label="重新开始" disabled>
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="14" height="14">
                     <polyline points="23 4 23 10 17 10"/>
                     <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/>
@@ -17,7 +20,6 @@
             </button>
         </span>
     </div>
-    <div class="plugin-gomoku-timer" data-gomoku-timer hidden></div>
     <div class="plugin-gomoku-board-wrap">
         <div class="plugin-gomoku-board" data-gomoku-board></div>
     </div>

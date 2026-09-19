@@ -9,6 +9,9 @@
  *
  * 棋子标识：piece=1 为 LLM(黑/X)，piece=2 为用户(白/O)。
  * 用户落子回传格式："x,y"。
+ * 控制指令回传（经当前等待槽位，由后端 gomoku_waitUserMove 识别并转为对 LLM 的提示）：
+ *   - "RESTART"  等待落子时用户点了「重新开始」（前端清盘，等 LLM 重新 startGame）
+ *   - "CLOSE"    用户点了「关闭棋盘」(X)（随时可点；非等待态另经 invoke close 删除后端对局）
  *
  * 状态缓存：对局状态会持久化到 localStorage（key 带插件专属命名空间，避免与其他插件冲突），
  * 刷新页面后自动恢复棋盘、棋子、布局与等待落子状态。
@@ -37,6 +40,7 @@
     var pendingRequestId = null; // 当前等待落子对应的 requestId
     var currentGameId = null;
     var lastMove = null;      // {x,y} 最后一手，用于高亮
+    var closedGameId = null;  // 用户点 X 关闭的对局 id：忽略其迟到指令，防止面板被重新弹开
 
     // 侧边栏状态记录（用于关闭时恢复）
     var panelMiniAtStart = false;
@@ -56,6 +60,12 @@
         statusEl.textContent = text;
         statusEl.className = 'plugin-gomoku-status';
         if (cls) statusEl.classList.add(cls);
+    }
+
+    /** 统一维护等待态：同步「重新开始」按钮可用性（仅等待用户落子时可重开）。 */
+    function setWaiting(v) {
+        waiting = v;
+        if (restartBtn) restartBtn.disabled = !v;
     }
 
     function isToolPanelMini() {
@@ -89,7 +99,7 @@
         }
         panelMiniForced = null;
         active = false;
-        waiting = false;
+        setWaiting(false);
         pendingRequestId = null;
     }
 
@@ -311,7 +321,7 @@
 
         // 恢复等待落子状态 + 倒计时（仅当尚未过期）
         if (saved.waiting && saved.pendingRequestId) {
-            waiting = true;
+            setWaiting(true);
             pendingRequestId = saved.pendingRequestId;
             setStatus('轮到你落子(白)', 'active');
             if (saved.timerDeadline && saved.timerDeadline > Date.now()) {
@@ -323,7 +333,7 @@
                 stopTimer();
             }
         } else {
-            waiting = false;
+            setWaiting(false);
             pendingRequestId = null;
             setStatus('对局进行中');
         }
@@ -340,7 +350,7 @@
 
         // 本地先渲染用户棋子，等待后端确认（后端会再下发 place 同步，幂等）
         renderPiece(x, y, 2);
-        waiting = false;
+        setWaiting(false);
         stopTimer();
         setStatus('等待对方', 'active');
 
@@ -356,8 +366,12 @@
         var n = (payload && payload.size) ? payload.size : 15;
         n = Math.max(9, Math.min(19, n));
         openPanel();
+        // 新对局：清掉旧对局可能残留的等待状态
+        setWaiting(false);
+        pendingRequestId = null;
         buildBoard(n);
-        setStatus('你的回合(黑)', 'active');
+        // LLM 执黑先手，开局即轮到对方（黑）落子
+        setStatus('等待对方落子(黑)', 'active');
         saveState();
     }
 
@@ -373,22 +387,24 @@
         } else if (status === 3) {
             setStatus('和棋', 'draw');
         } else {
-            // 对局继续，LLM 已落子，轮到用户：若带了 pendingRequestId 则进入等待状态
+            // 对局继续：LLM 已落子则带 pendingRequestId 进入等待；无则说明是用户落子的
+            // 后端确认同步（本地已预渲染），轮到对方（黑）
             if (payload.pendingRequestId) {
-                waiting = true;
+                setWaiting(true);
                 pendingRequestId = payload.pendingRequestId;
                 setStatus('轮到你落子(白)', 'active');
                 var timeoutSec = payload.timeout || 60;
                 startTimer(timeoutSec);
             } else {
-                setStatus('你的回合(黑)', 'active');
+                setWaiting(false);
+                setStatus('等待对方落子(黑)', 'active');
             }
         }
         saveState();
     }
 
     function handleRequestMove(requestId, payload) {
-        waiting = true;
+        setWaiting(true);
         pendingRequestId = requestId;
         setStatus('轮到你落子(白)', 'active');
         var timeoutSec = (payload && payload.timeout) ? payload.timeout : 60;
@@ -398,17 +414,25 @@
 
     function handleCommand(cmd) {
         if (!cmd || cmd.toolName !== 'gomoku') return;
-        currentGameId = cmd.gameId || currentGameId;
+
+        // 用户已点 X 关闭的对局：忽略其迟到/残留指令（在途 place、超时后的 request-move 等），
+        // 防止把刚收起的面板重新弹开；新对局（start，新 gameId）不受影响
+        if (closedGameId && cmd.gameId && cmd.gameId === closedGameId && cmd.action !== 'start') return;
 
         if (cmd.action === 'start') {
+            closedGameId = null;
+            currentGameId = cmd.gameId || null;
             handleStart(cmd.payload);
         } else if (cmd.action === 'place') {
+            currentGameId = cmd.gameId || currentGameId;
             if (!active) { openPanel(); }
             handlePlace(cmd.payload);
         } else if (cmd.action === 'request-move') {
+            currentGameId = cmd.gameId || currentGameId;
             if (!active) { openPanel(); }
             handleRequestMove(cmd.requestId, cmd.payload);
         } else if (cmd.action === 'close') {
+            currentGameId = cmd.gameId || currentGameId;
             if (active) closePanel();
             stopTimer();
             setStatus('待命');
@@ -418,20 +442,38 @@
 
     function onClose() {
         if (!active) return;
+        var rid = (waiting && pendingRequestId) ? pendingRequestId : null;
         closePanel();
         stopTimer();
         setStatus('待命');
         clearState();
+        closedGameId = currentGameId || null;
+        if (rid && window.PluginHook) {
+            // 等待落子中：上报 CLOSE 立即唤醒 gomoku_waitUserMove，由后端移除对局并告知 LLM
+            window.PluginHook.report(rid, 'CLOSE');
+        } else if (window.PluginHook) {
+            // 非等待态：无阻塞的工具调用可唤醒，直接经 invoke 通道删除后端对局，
+            // LLM 后续落子会得到「未找到对局」
+            window.PluginHook.callTool('gomoku', { action: 'close' });
+        }
     }
 
     function onRestart() {
-        // 仅清空本地棋盘并回到待命；重新开局由 LLM 调用 startGame 触发
+        // 仅等待用户落子时可重开（按钮亦仅在此时可用）：此时后端 gomoku_waitUserMove
+        // 正阻塞（或即将阻塞）在当前等待槽位上，上报 RESTART 让其返回「用户要求重新开始」
+        if (!waiting || !pendingRequestId) return;
+        var rid = pendingRequestId;
+        pendingRequestId = null;
+        setWaiting(false);
         if (boardEl && size > 0) {
-            buildBoard(size);
+            buildBoard(size); // 清空本地棋盘，等待 LLM 调用 startGame 重新开局
         }
         stopTimer();
-        setStatus('待命');
+        setStatus('等待重新开局', 'active');
         clearState();
+        if (window.PluginHook) {
+            window.PluginHook.report(rid, 'RESTART');
+        }
     }
 
     function bindButtons() {

@@ -16,7 +16,9 @@ import org.springframework.beans.factory.annotation.Autowired;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.TimeUnit;
 
 /**
  * 五子棋工具插件后端门面。
@@ -52,6 +54,12 @@ public class GomokuTool implements AgentTool {
     /** 等待用户落子的默认超时（秒）。倒计时同步给前端，需与 await 保持一致。 */
     private static final long USER_MOVE_TIMEOUT_SECONDS = 300L;
 
+    /** 前端控制指令：等待落子期间用户点击「重新开始」按钮时上报。 */
+    private static final String MOVE_RESTART = "RESTART";
+
+    /** 前端控制指令：用户点击「关闭棋盘」(X) 按钮时上报。 */
+    private static final String MOVE_CLOSE = "CLOSE";
+
     @Autowired
     private IWebSocketBridgeService webSocketBridgeService;
 
@@ -61,8 +69,8 @@ public class GomokuTool implements AgentTool {
     /** 对局表：gameId → Game。 */
     private final Map<String, Game> games = new ConcurrentHashMap<>();
 
-    /** sessionId → 当前等待用户落子的 requestId（LLM 落子时提前生成，按会话隔离）。 */
-    private final Map<String, String> sessionMoveRequestMap = new ConcurrentHashMap<>();
+    /** sessionId → 当前等待用户落子的槽位（LLM 落子时提前生成，按会话隔离）。 */
+    private final Map<String, PendingMove> sessionMoveRequestMap = new ConcurrentHashMap<>();
 
     /** 最近一次创建的对局 id（供 gameId 缺省回退）。 */
     private volatile String lastGameId;
@@ -143,10 +151,14 @@ public class GomokuTool implements AgentTool {
         String pendingRequestId = null;
         if (!game.finished()) {
             // LLM 落子后轮到用户：提前生成 requestId 并注册槽位，下发到前端，
-            // 用户落子时直接提交该 requestId；waitUserMove 复用同一 requestId 等待。
+            // 用户落子时直接提交该 requestId；waitUserMove 复用同一槽位等待。
+            // 关键：必须持有 register 返回的 future —— 用户可能在 waitUserMove 被调用前就已落子，
+            // 而 complete() 在上报时会把槽位从暂存服务移除，届时再按 requestId await 会查不到槽位误判超时。
             pendingRequestId = UUID.randomUUID().toString();
-            pluginResultStore.register(pendingRequestId, userIdOf(invocationParameters));
-            sessionMoveRequestMap.put(sessionKeyOf(invocationParameters), pendingRequestId);
+            CompletableFuture<String> future =
+                    pluginResultStore.register(pendingRequestId, userIdOf(invocationParameters));
+            sessionMoveRequestMap.put(sessionKeyOf(invocationParameters),
+                    new PendingMove(pendingRequestId, future));
         }
 
         sendCommand("place", game.getId(), pendingRequestId, buildPlacePayload(x, y, Game.PIECE_LLM, game, pendingRequestId));
@@ -159,7 +171,7 @@ public class GomokuTool implements AgentTool {
     }
 
     @ToolSecurityLevel(ToolSecurityLevel.Level.SAFE)
-    @Tool(name = "gomoku_waitUserMove", value = {"等待用户落子", "阻塞等待用户在棋盘上点击落子，返回用户落子位置与落子后的棋盘状态"})
+    @Tool(name = "gomoku_waitUserMove", value = {"等待用户落子", "阻塞等待用户在棋盘上点击落子，返回用户落子位置与落子后的棋盘状态；若用户点击重新开始或关闭棋盘，会返回相应提示"})
     public String waitUserMove(
             @P(value = "对局ID，不传则操作最近一局", required = false) String gameId,
             InvocationParameters invocationParameters) {
@@ -171,22 +183,46 @@ public class GomokuTool implements AgentTool {
             return "对局已结束（" + game.statusText() + "），如需再来一局请调用 gomoku_startGame。";
         }
 
-        // 优先复用 LLM 落子（placePiece）时提前生成的 requestId；若缺失（如直接调用）则兜底新建
+        // 优先复用 LLM 落子（placePiece）时提前生成的等待槽位；若缺失（如直接调用）则兜底新建
         String sessionKey = sessionKeyOf(invocationParameters);
-        String requestId = sessionMoveRequestMap.remove(sessionKey);
-        if (requestId == null) {
+        PendingMove pendingMove = sessionMoveRequestMap.remove(sessionKey);
+        String requestId;
+        CompletableFuture<String> future;
+        if (pendingMove != null) {
+            requestId = pendingMove.requestId;
+            future = pendingMove.future;
+        } else {
             requestId = UUID.randomUUID().toString();
-            pluginResultStore.register(requestId, userIdOf(invocationParameters));
+            future = pluginResultStore.register(requestId, userIdOf(invocationParameters));
             // 兜底下发 request-move 指令，让前端进入等待状态
             Map<String, Object> waitPayload = new HashMap<>();
             waitPayload.put("timeout", USER_MOVE_TIMEOUT_SECONDS);
             sendCommand("request-move", game.getId(), requestId, waitPayload);
         }
 
-        // 阻塞等待前端回传用户落子坐标（形如 "x,y"）
-        String move = pluginResultStore.await(requestId, USER_MOVE_TIMEOUT_SECONDS);
+        // 阻塞等待前端回传（"x,y"，或 RESTART/CLOSE 控制指令）。
+        // 注意：直接用 future.get 而非 pluginResultStore.await —— 用户若在本次调用前已落子，
+        // complete() 早已把槽位从暂存服务移除，await 会因查不到槽位而误判为超时
+        String move = null;
+        try {
+            move = future.get(USER_MOVE_TIMEOUT_SECONDS, TimeUnit.SECONDS);
+        } catch (Exception e) {
+            // 超时/中断：清理暂存槽位，避免泄漏
+            pluginResultStore.cancel(requestId);
+        }
         if (move == null || move.trim().isEmpty()) {
             return "等待用户落子超时，用户可能已离开或前端棋盘未打开。可再次调用 gomoku_waitUserMove 继续等待，或调用 gomoku_closeGame 结束。";
+        }
+
+        // 前端控制指令：等待落子期间用户点击「重新开始」/「关闭棋盘」
+        String control = move.trim();
+        if (MOVE_RESTART.equals(control)) {
+            removeGame(game);
+            return "用户点击了「重新开始」按钮，要求重新开局，旧对局已废弃。请调用 gomoku_startGame 开始新对局（可询问用户棋盘大小）。";
+        }
+        if (MOVE_CLOSE.equals(control)) {
+            removeGame(game);
+            return "用户已关闭棋盘，对局已结束。请停止落子等对局操作，等待用户下一步指示。";
         }
 
         int[] coord = parseCoord(move);
@@ -231,10 +267,7 @@ public class GomokuTool implements AgentTool {
         if (game == null) {
             return "当前无进行中的对局。";
         }
-        games.remove(game.getId());
-        if (game.getId().equals(lastGameId)) {
-            lastGameId = null;
-        }
+        removeGame(game);
         sendCommand("close", game.getId(), null, null);
         return "五子棋对局已结束，棋盘已关闭。";
     }
@@ -247,12 +280,29 @@ public class GomokuTool implements AgentTool {
      * 插件公共调用入口示范：客户端可经统一 API（POST /api/plugins/gomoku/invoke）
      * 直接查询对局状态，无需 LLM 参与对话。
      *
-     * <p>参数：{action: "state"|"list"（默认 state）, gameId: 可选，缺省最近一局}。</p>
+     * <p>参数：{action: "state"|"list"|"close"（默认 state）, gameId: 可选，缺省最近一局}。
+     * "close" 供前端在用户点击 X 关闭棋盘时主动结束对局（等待落子期间由 report 通道
+     * 唤醒 waitUserMove 并移除对局；非等待态无阻塞的工具调用，由此兜底删除，
+     * 使 LLM 后续落子得到「未找到对局」提醒）。</p>
      */
     @Override
     public Map<String, Object> invoke(Map<String, Object> params) {
         Map<String, Object> result = new HashMap<>();
         String action = params == null ? "state" : String.valueOf(params.getOrDefault("action", "state"));
+
+        if ("close".equals(action)) {
+            Object closeIdRaw = params.get("gameId");
+            Game game = resolveGame(closeIdRaw == null ? null : String.valueOf(closeIdRaw));
+            if (game != null) {
+                removeGame(game);
+                result.put("success", true);
+                result.put("message", "对局已结束");
+            } else {
+                result.put("success", true);
+                result.put("message", "无进行中的对局");
+            }
+            return result;
+        }
 
         if ("list".equals(action)) {
             result.put("success", true);
@@ -292,6 +342,14 @@ public class GomokuTool implements AgentTool {
             return games.get(lastGameId);
         }
         return null;
+    }
+
+    /** 移除对局并清理 lastGameId 兜底引用。 */
+    private void removeGame(Game game) {
+        games.remove(game.getId());
+        if (game.getId().equals(lastGameId)) {
+            lastGameId = null;
+        }
     }
 
     /** 解析 "x,y" 为 int[]{x,y}，非法返回 null。 */
@@ -405,6 +463,22 @@ public class GomokuTool implements AgentTool {
             webSocketBridgeService.sendPluginCommand(null, JSON.toJSONString(cmd));
         } catch (Exception e) {
             logger.error("GomokuTool: failed to send plugin command action={}", action, e);
+        }
+    }
+
+    /**
+     * 一次等待用户落子的槽位：requestId + register 返回的 future。
+     *
+     * <p>持有 future 而非之后按 requestId 再查暂存服务，是因为用户可能在 waitUserMove
+     * 被调用前就已完成落子上报，届时暂存服务中的槽位已被 complete() 移除。</p>
+     */
+    private static final class PendingMove {
+        final String requestId;
+        final CompletableFuture<String> future;
+
+        PendingMove(String requestId, CompletableFuture<String> future) {
+            this.requestId = requestId;
+            this.future = future;
         }
     }
 
