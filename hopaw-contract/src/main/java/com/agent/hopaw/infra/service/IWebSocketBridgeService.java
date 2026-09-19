@@ -17,7 +17,9 @@ public interface IWebSocketBridgeService {
 
     /**
      * 下发插件前端指令（后端 @Tool → 前端插件 JS）。
+     *
+     * @return true=已成功投递到消息队列；false=投递失败（桥接异常，前端不会收到）
      */
-    void sendPluginCommand(String userId, String payload);
+    boolean sendPluginCommand(String userId, String payload);
 
 }

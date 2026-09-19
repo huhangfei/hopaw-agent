@@ -18,5 +18,48 @@
             </button>
         </span>
     </div>
-    <canvas class="plugin-canvas-board" width="640" height="480"></canvas>
+    <div class="plugin-canvas-body">
+        <canvas class="plugin-canvas-board" width="800" height="800"></canvas>
+        <div class="plugin-canvas-penbar" data-canvas-penbar>
+            <button type="button" class="plugin-canvas-btn active" data-canvas-pen title="画笔（点击开启/关闭自由绘制）" aria-label="画笔">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="14" height="14">
+                    <path d="M12 19l7-7 3 3-7 7-3-3z"/>
+                    <path d="M18 13l-1.5-7.5L2 2l3.5 14.5L13 18l5-5z"/>
+                    <path d="M2 2l7.586 7.586"/>
+                    <circle cx="11" cy="11" r="2"/>
+                </svg>
+            </button>
+            <span class="plugin-canvas-penbar-divider"></span>
+            <span class="plugin-canvas-penbar-label">颜色</span>
+            <span class="plugin-canvas-swatches">
+                <button type="button" class="plugin-canvas-swatch active" data-swatch data-color="#1f2328" style="background:#1f2328" title="黑色"></button>
+                <button type="button" class="plugin-canvas-swatch" data-swatch data-color="#e74c3c" style="background:#e74c3c" title="红色"></button>
+                <button type="button" class="plugin-canvas-swatch" data-swatch data-color="#3498db" style="background:#3498db" title="蓝色"></button>
+                <button type="button" class="plugin-canvas-swatch" data-swatch data-color="#2ecc71" style="background:#2ecc71" title="绿色"></button>
+                <button type="button" class="plugin-canvas-swatch" data-swatch data-color="#f39c12" style="background:#f39c12" title="橙色"></button>
+                <label class="plugin-canvas-custom-color" title="自定义颜色">
+                    <input type="color" data-canvas-color value="#1f2328">
+                </label>
+            </span>
+            <span class="plugin-canvas-penbar-divider"></span>
+            <span class="plugin-canvas-penbar-label">粗细</span>
+            <span class="plugin-canvas-width-wrap">
+                <input type="range" class="plugin-canvas-width-range" data-canvas-width min="1" max="24" step="1" value="3" title="画笔粗细">
+            </span>
+            <span class="plugin-canvas-width-value" data-canvas-width-value>3</span>
+            <span class="plugin-canvas-penbar-spacer"></span>
+            <button type="button" class="plugin-canvas-btn" data-canvas-undo title="撤销上一笔" aria-label="撤销">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="14" height="14">
+                    <polyline points="9 14 4 9 9 4"/>
+                    <path d="M20 20v-7a4 4 0 0 0-4-4H4"/>
+                </svg>
+            </button>
+            <button type="button" class="plugin-canvas-btn plugin-canvas-close" data-canvas-clear title="清空画布" aria-label="清空画布">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="14" height="14">
+                    <polyline points="3 6 5 6 21 6"/>
+                    <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>
+                </svg>
+            </button>
+        </div>
+    </div>
 </div>

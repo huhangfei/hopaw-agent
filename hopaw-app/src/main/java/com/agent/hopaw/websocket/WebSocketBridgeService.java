@@ -45,11 +45,14 @@ public class WebSocketBridgeService implements IWebSocketBridgeService {
     }
 
     @Override
-    public void sendPluginCommand(String userId, String payload) {
-        send(QUEUE_PLUGIN, "plugin_command", userId, payload);
+    public boolean sendPluginCommand(String userId, String payload) {
+        return send(QUEUE_PLUGIN, "plugin_command", userId, payload);
     }
 
-    private void send(String queue, String eventType, String userId, String payload) {
+    /**
+     * @return true=已成功投递到 Artemis 队列；false=投递失败
+     */
+    private boolean send(String queue, String eventType, String userId, String payload) {
         try {
             WebSocketBridgeMessage msg = new WebSocketBridgeMessage(eventType, userId, payload);
             jmsTemplate.send(queue, session -> {
@@ -59,8 +62,10 @@ public class WebSocketBridgeService implements IWebSocketBridgeService {
                 }
                 return textMsg;
             });
+            return true;
         } catch (Exception e) {
             WebSocketBridgeService.log.error("发送消息到 Artemis 队列失败: queue={}, userId={}, error={} {}", queue, userId, e.getMessage(), e);
+            return false;
         }
     }
 }

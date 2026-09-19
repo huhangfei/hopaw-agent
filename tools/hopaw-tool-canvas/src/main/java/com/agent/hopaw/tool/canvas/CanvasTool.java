@@ -40,6 +40,14 @@ public class CanvasTool implements AgentTool {
 
     private static final String TOOL_NAME = "canvas";
 
+    /**
+     * 画布逻辑尺寸（坐标系范围），需与前端 canvas.html 中
+     * .plugin-canvas-board 的 width/height 保持一致。
+     * 告知 LLM 该范围，避免绘制坐标越界或挤在角落。
+     */
+    private static final int CANVAS_WIDTH = 800;
+    private static final int CANVAS_HEIGHT = 800;
+
     @Autowired
     private IWebSocketBridgeService webSocketBridgeService;
 
@@ -72,25 +80,38 @@ public class CanvasTool implements AgentTool {
     }
 
     @ToolSecurityLevel(ToolSecurityLevel.Level.SAFE)
-    @Tool(value = {"开始画布绘制", "在浏览器前端收缩会话区并新建一个并排的实时画布，返回确认信息"})
+    @Tool(value = {"开始画布绘制", "在浏览器前端收缩会话区并新建一个并排的实时画布，返回确认信息（含画布尺寸与坐标系说明）"})
     public String drawCanvas(
             @P("绘制说明，例如要绘制的内容主题") String description) {
-        sendCommand("start", description == null ? "" : description, null);
-        return "画布已就绪，可通过 appendDraw 下发绘制命令。";
+        boolean ok = sendCommand("start", description == null ? "" : description, null);
+        if (!ok) {
+            return "错误: 画布启动指令下发失败（WebSocket 桥接异常），请稍后重试或告知用户刷新页面。";
+        }
+        return "画布已就绪。画布尺寸 " + CANVAS_WIDTH + "x" + CANVAS_HEIGHT + " 像素"
+                + "（坐标系原点在左上角，x 向右、y 向下），请把 appendDraw 的所有坐标控制在该范围内。"
+                + "注意：你无法直接查看画布图像（图片不支持作为工具结果回传），画布上可能已有用户手绘内容，"
+                + "布局不确定时可询问用户或优先从空白位置开始绘制。";
     }
 
     @ToolSecurityLevel(ToolSecurityLevel.Level.SAFE)
     @Tool(value = {"追加画布绘制命令", "向浏览器前端实时画布下发绘制命令，支持 JSON 描述图形"})
-    public String appendDraw(
-            @P("绘制命令，JSON 字符串。支持的 type 及参数：" +
+    public String appendCanvasDraw(
+            @P("绘制命令，JSON 字符串，可以是单个命令对象，也可以是多个命令对象组成的数组（按顺序执行）。" +
+              "画布尺寸 " + CANVAS_WIDTH + "x" + CANVAS_HEIGHT +
+              " 像素，坐标系原点在左上角（x 向右、y 向下），所有坐标请控制在该范围内。" +
+              "支持的 type 及参数：" +
               "clear(清空，无参数)；" +
               "rect(矩形，x,y,w,h,color)；" +
               "circle(圆形，x,y,r,color)；" +
               "line(线段，x1,y1,x2,y2,w,color)；" +
               "polygon(多边形，points 为 [[x,y],[x,y],...] 坐标数组，color 填充色，可选 stroke/strokeColor/lineWidth 描边，可选 fill=false 仅描边)；" +
               "text(文字，text,x,y,size,color)。" +
-              "示例：{\"type\":\"polygon\",\"points\":[[10,10],[60,10],[35,60]],\"color\":\"#4f66d8\"}") String command) {
-        sendCommand("draw", command, null);
+              "示例（单命令）：{\"type\":\"polygon\",\"points\":[[10,10],[60,10],[35,60]],\"color\":\"#4f66d8\"}；" +
+              "示例（数组，一次画多个图形）：[{\"type\":\"circle\",\"x\":400,\"y\":280,\"r\":100,\"color\":\"#2f9e44\"},{\"type\":\"text\",\"text\":\"你好\",\"x\":400,\"y\":280,\"size\":24,\"color\":\"#000\"}]") String command) {
+        boolean ok = sendCommand("draw", command, null);
+        if (!ok) {
+            return "错误: 绘制命令下发失败（WebSocket 桥接异常），本次命令未生效，请稍后重试。";
+        }
         return "绘制命令已下发。";
     }
 
@@ -172,17 +193,23 @@ public class CanvasTool implements AgentTool {
 
     /**
      * 下发指令到前端插件（通过 /ws/plugin 下行通道，userId 为空时广播）。
+     *
+     * @return true=已成功投递到消息队列；false=投递失败（前端不会收到）
      */
-    private void sendCommand(String action, String payload, String requestId) {
+    private boolean sendCommand(String action, String payload, String requestId) {
         Map<String, Object> cmd = new HashMap<>();
         cmd.put("toolName", TOOL_NAME);
         cmd.put("action", action);
         cmd.put("payload", payload);
         cmd.put("requestId", requestId);
         try {
-            webSocketBridgeService.sendPluginCommand(null, JSON.toJSONString(cmd));
+            boolean ok = webSocketBridgeService.sendPluginCommand(null, JSON.toJSONString(cmd));
+            logger.info("CanvasTool: send command action={} payloadLen={} delivered={}", action,
+                    payload == null ? 0 : payload.length(), ok);
+            return ok;
         } catch (Exception e) {
             logger.error("CanvasTool: failed to send plugin command action={}", action, e);
+            return false;
         }
     }
 }

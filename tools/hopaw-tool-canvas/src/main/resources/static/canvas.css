@@ -5,6 +5,7 @@
     box-sizing: border-box;
     display: none; /* 默认隐藏，仅本插件激活时显示（避免多插件面板同时出现） */
     flex-direction: column;
+    width: 100%;   /* 填满 #plugin-slot 宽度，页面伸缩时跟随 */
     height: 100%;
     min-height: 0;
     padding: 12px;
@@ -72,13 +73,160 @@
 }
 
 .plugin-canvas-board {
-    flex: 1;
+    flex: 0 1 auto;
     min-height: 0;
-    width: 100%;
+    min-width: 0;
+    max-width: 100%;  /* 容器不足时等比缩小，坐标由 JS 换算 */
+    max-height: 100%;
     border: 1px solid var(--color-border-tertiary, rgba(0, 0, 0, 0.12));
     border-radius: 8px;
     background: #fff;
+    cursor: default;
+}
+/* 画笔模式：十字光标提示可绘制 */
+.plugin-canvas-board.pen-mode {
     cursor: crosshair;
+    touch-action: none; /* 触屏绘制时不滚动页面 */
+    /* 画笔开启态背景：点阵网格，一眼可辨识；仅在 CSS 层，不进像素缓冲（导出仍是干净白底） */
+    background-color: #fdfdff;
+    background-image: radial-gradient(circle, rgba(102, 126, 234, 0.28) 1px, transparent 1.5px);
+    background-size: 18px 18px;
+    background-position: 9px 9px;
+    box-shadow: 0 0 0 2px rgba(102, 126, 234, 0.45);
+}
+
+/* ==================== 画布主体：画布（居中）+ 右侧竖排工具栏 ==================== */
+.plugin-canvas-body {
+    flex: 1;
+    min-height: 0;
+    min-width: 0;
+    display: flex;
+    align-items: center;          /* 画布垂直居中 */
+    justify-content: center;      /* 画布水平居中 */
+    gap: 8px;
+}
+
+/* ==================== 画笔工具条（右侧竖排，常驻显示） ==================== */
+.plugin-canvas-penbar {
+    flex-shrink: 0;
+    align-self: stretch; /* 高度随画布区域撑满 */
+    width: 56px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 6px;
+    background: var(--color-background-tertiary, #f5f6fa);
+    border: 1px solid var(--color-border-tertiary, rgba(0, 0, 0, 0.08));
+    border-radius: 8px;
+    overflow-y: auto;
+    overflow-x: hidden;
+}
+.plugin-canvas-penbar-label {
+    font-size: 11px;
+    color: var(--color-text-tertiary, #888);
+    white-space: nowrap;
+}
+.plugin-canvas-penbar-spacer {
+    flex: 1;
+}
+.plugin-canvas-penbar-divider {
+    width: 28px;
+    height: 1px;
+    flex-shrink: 0;
+    background: var(--color-border-tertiary, rgba(0, 0, 0, 0.12));
+}
+
+/* 画笔按钮激活态 */
+.plugin-canvas-btn.active {
+    background: #667eea;
+    color: #fff;
+}
+
+/* 颜色预设色板（竖排） */
+.plugin-canvas-swatches {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+}
+.plugin-canvas-swatch {
+    width: 18px;
+    height: 18px;
+    flex-shrink: 0;
+    padding: 0;
+    border: 2px solid #fff;
+    border-radius: 50%;
+    box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.15);
+    cursor: pointer;
+    transition: box-shadow .15s ease, transform .15s ease;
+}
+.plugin-canvas-swatch:hover {
+    transform: scale(1.12);
+}
+.plugin-canvas-swatch.active {
+    box-shadow: 0 0 0 2px #667eea;
+}
+.plugin-canvas-custom-color {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 18px;
+    height: 18px;
+    flex-shrink: 0;
+    border-radius: 50%;
+    overflow: hidden;
+    cursor: pointer;
+    background: conic-gradient(#e74c3c, #f39c12, #2ecc71, #3498db, #9b59b6, #e74c3c);
+    box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.15);
+}
+.plugin-canvas-custom-color input[type="color"] {
+    width: 26px;
+    height: 26px;
+    margin: 0;
+    padding: 0;
+    border: none;
+    cursor: pointer;
+    opacity: 0;
+}
+
+/* 粗细滑杆（旋转 90° 实现竖向拖动） */
+.plugin-canvas-width-wrap {
+    width: 24px;
+    height: 84px;
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+.plugin-canvas-width-range {
+    width: 80px;
+    margin: 0;
+    accent-color: #667eea;
+    cursor: pointer;
+    transform: rotate(-90deg);
+}
+.plugin-canvas-width-value {
+    min-width: 18px;
+    text-align: center;
+    font-size: 11px;
+    color: var(--color-text-primary, #222);
+    font-variant-numeric: tabular-nums;
+}
+
+/* 暗色主题：画笔工具条 */
+body.dark-theme .plugin-canvas-penbar {
+    background: #2a2e42;
+    border-color: rgba(255, 255, 255, 0.12);
+}
+body.dark-theme .plugin-canvas-penbar-label {
+    color: #8ea2ff;
+}
+body.dark-theme .plugin-canvas-swatch {
+    border-color: #232637;
+}
+body.dark-theme .plugin-canvas-width-value {
+    color: #e8eaf6;
 }
 
 /* 画布激活时：会话区与画布对称平分空间，插件槽位撑满高度。
@@ -110,6 +258,15 @@ body.dark-theme .plugin-canvas-board {
     background: #1b1d2b;
     border-color: rgba(255, 255, 255, 0.12);
 }
+body.dark-theme .plugin-canvas-board.pen-mode {
+    /* 暗色下点阵几乎不可见（截图实测），改用连续网格线保证辨识度 */
+    background-color: #1e2033;
+    background-image:
+        linear-gradient(rgba(142, 162, 255, 0.14) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(142, 162, 255, 0.14) 1px, transparent 1px);
+    background-size: 24px 24px;
+    box-shadow: 0 0 0 2px rgba(142, 162, 255, 0.5);
+}
 body.dark-theme .plugin-canvas-btn {
     background: #2a2e42;
     color: #8ea2ff;
@@ -117,6 +274,12 @@ body.dark-theme .plugin-canvas-btn {
 body.dark-theme .plugin-canvas-btn:hover {
     background: #667eea;
     color: #fff;
+}
+/* 暗色下上面这条 body.dark-theme .plugin-canvas-btn 会盖掉通用 .active 高亮，需单独提升 */
+body.dark-theme .plugin-canvas-btn.active {
+    background: #667eea;
+    color: #fff;
+    box-shadow: 0 0 0 2px rgba(142, 162, 255, 0.45);
 }
 body.dark-theme .plugin-canvas-btn.plugin-canvas-close:hover {
     background: #ff5252;
