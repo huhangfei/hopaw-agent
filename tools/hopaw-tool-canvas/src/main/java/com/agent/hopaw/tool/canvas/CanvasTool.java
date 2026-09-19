@@ -71,7 +71,7 @@ public class CanvasTool implements AgentTool {
 
     @Override
     public String getIcon() {
-        return "agent-tool.svg";
+        return "canvas-tool.svg";
     }
 
     @Override

@@ -92,7 +92,7 @@ public class GomokuTool implements AgentTool {
 
     @Override
     public String getIcon() {
-        return "agent-tool.svg";
+        return "gomoku-tool.svg";
     }
 
     @Override

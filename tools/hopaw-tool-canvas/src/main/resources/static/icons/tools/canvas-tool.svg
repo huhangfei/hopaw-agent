@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
+  <!-- Canvas Tool Icon：画板 + 彩色笔画 + 画笔 -->
+  <circle cx="50" cy="50" r="45" fill="#6366F1"/>
+  <rect x="22" y="24" width="48" height="52" rx="5" fill="white"/>
+  <path d="M29 42 C36 34 42 40 48 33" stroke="#3B82F6" stroke-width="4" fill="none" stroke-linecap="round"/>
+  <path d="M29 57 C35 46 39 62 45 51 C49 43 53 53 62 44" stroke="#EF4444" stroke-width="4" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M29 66 L41 66" stroke="#10B981" stroke-width="4" stroke-linecap="round"/>
+  <!-- 画笔（斜置，笔尖搭在画板右下角） -->
+  <g transform="rotate(45 70 62)">
+    <rect x="58" y="58" width="26" height="9" rx="2" fill="#F59E0B"/>
+    <rect x="56" y="58" width="4" height="9" rx="1.5" fill="#F472B6"/>
+    <path d="M84 58 L90 62.5 L84 67 Z" fill="#FCD34D"/>
+    <path d="M88.2 61.2 L90 62.5 L88.2 63.8 Z" fill="#1F2937"/>
+  </g>
+</svg>

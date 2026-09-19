@@ -1,0 +1,25 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
+  <!-- Gomoku Tool Icon：木质棋盘 + 黑白棋子（黑方斜三连） -->
+  <circle cx="50" cy="50" r="45" fill="#D97706"/>
+  <rect x="22" y="22" width="56" height="56" rx="5" fill="#FDE68A"/>
+  <g stroke="#B45309" stroke-width="1.6">
+    <line x1="30" y1="30" x2="70" y2="30"/>
+    <line x1="30" y1="40" x2="70" y2="40"/>
+    <line x1="30" y1="50" x2="70" y2="50"/>
+    <line x1="30" y1="60" x2="70" y2="60"/>
+    <line x1="30" y1="70" x2="70" y2="70"/>
+    <line x1="30" y1="30" x2="30" y2="70"/>
+    <line x1="40" y1="30" x2="40" y2="70"/>
+    <line x1="50" y1="30" x2="50" y2="70"/>
+    <line x1="60" y1="30" x2="60" y2="70"/>
+    <line x1="70" y1="30" x2="70" y2="70"/>
+  </g>
+  <!-- 黑方斜三连 -->
+  <circle cx="40" cy="40" r="4.6" fill="#1F2937"/>
+  <circle cx="50" cy="50" r="4.6" fill="#1F2937"/>
+  <circle cx="60" cy="60" r="4.6" fill="#1F2937"/>
+  <!-- 白方拦截子 -->
+  <circle cx="60" cy="40" r="4.6" fill="#FFFFFF" stroke="#9CA3AF" stroke-width="0.8"/>
+  <circle cx="40" cy="60" r="4.6" fill="#FFFFFF" stroke="#9CA3AF" stroke-width="0.8"/>
+  <circle cx="70" cy="50" r="4.6" fill="#FFFFFF" stroke="#9CA3AF" stroke-width="0.8"/>
+</svg>
