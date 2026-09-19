@@ -284,6 +284,50 @@ var LAppDefine = {
             }, 500);
         }
 
+        /**
+         * 气泡超出视口时动态压缩内容宽/高，把关闭按钮拉回可视区域。
+         * 场景1：气泡以虚拟人为中心对齐，max-width 420 超过 widget 宽 250，
+         *        两边各悬出约 85px，而 widget 距屏幕右缘仅 20px —— 长文本气泡
+         *        撑满宽度时，右上角关闭按钮必然被推出屏幕右侧（点击落空）。
+         * 场景2：长文本语音消息气泡很高，或虚拟人被拖到屏幕中下部时，
+         *        向上生长的可用空间不足，气泡顶部连同按钮被顶出屏幕上方。
+         * 仅靠 CSS 的 max-height 兜不住（无法感知 widget 在视口中的位置），需 JS 测量。
+         */
+        function clampBubbleToViewport(el) {
+            try {
+                if (!el || el._removing) return;
+                var content = el.querySelector(".avatar-bubble-content");
+                if (!content) return;
+                var vw = window.innerWidth;
+                var rect = el.getBoundingClientRect();
+                // 水平：右侧溢出则压缩内容宽度（气泡在栈内居中对齐，左右对称收缩，
+                // 需压缩 2 倍溢出量才能把右缘收回；变窄会让气泡变高，再走垂直处理）
+                if (rect.right > vw - 8) {
+                    var shrinkW = (rect.right - (vw - 8)) * 2;
+                    var curW = content.getBoundingClientRect().width;
+                    content.style.maxWidth = Math.max(160, Math.floor(curW - shrinkW)) + "px";
+                    rect = el.getBoundingClientRect();
+                }
+                // 垂直：顶部出屏则压缩内容高度，让按钮回到视口内
+                if (rect.top < 8) {
+                    var overflow = 8 - rect.top;
+                    var cur = content.getBoundingClientRect().height;
+                    var target = Math.max(72, Math.floor(cur - overflow));
+                    content.style.maxHeight = target + "px";
+                }
+            } catch (_) {}
+        }
+
+        /**
+         * 调度 clamp：进场动画（scale 0.9→1，250ms）进行中 getBoundingClientRect
+         * 量到的是缩小态的假尺寸，必须等动画结束后再测量，否则判断失准。
+         */
+        function scheduleClamp(el) {
+            setTimeout(function () {
+                clampBubbleToViewport(el);
+            }, 320);
+        }
+
         var api = {
             show: function (text, duration) {
                 if (!text) return;
@@ -295,6 +339,7 @@ var LAppDefine = {
                 requestAnimationFrame(function () {
                     el.classList.add("visible");
                 });
+                scheduleClamp(el);
                 var ms = typeof duration === "number" && duration > 0
                     ? duration
                     : LAppDefine.BUBBLE_DEFAULT_DURATION;
@@ -311,6 +356,7 @@ var LAppDefine = {
                 requestAnimationFrame(function () {
                     el.classList.add("visible");
                 });
+                scheduleClamp(el);
             },
             hideAll: function () {
                 // 复制数组，因为 removeBubble 会修改 bubbles
@@ -318,9 +364,18 @@ var LAppDefine = {
                 for (var i = 0; i < all.length; i++) {
                     removeBubble(all[i]);
                 }
+            },
+            clampAll: function () {
+                for (var i = 0; i < bubbles.length; i++) {
+                    clampBubbleToViewport(bubbles[i]);
+                }
             }
         };
         widget._avatarBubble = api;
+        // 窗口尺寸变化后，已显示的气泡可能再次超出视口，重新压缩
+        window.addEventListener("resize", function () {
+            api.clampAll();
+        });
         return api;
     }
 
@@ -768,6 +823,10 @@ var LAppDefine = {
     var ttsPlayingGroupId = null;   // 当前正在播放的 groupId
     var ttsCurrentSegmentPlaying = false; // 当前组内是否正在播放某一段
     var ttsCurrentAudio = null;     // 当前正在播放的音频对象（用于关闭播报时停止播放）
+    // group_complete 丢失兜底：每段音频到达后刷新该组定时器，
+    // 超时仍没等到 group_complete（WS 推送失败/掉线等）就自动标记 ready，避免队列永久卡住
+    var TTS_GROUP_COMPLETE_FALLBACK_MS = 10000;
+    var ttsGroupCompleteTimers = {}; // groupId → 超时定时器
 
     /** 关闭播报时：清空 TTS 分组队列并停止当前正在播放的段 */
     function stopTtsPlaybackAndClearQueues() {
@@ -780,11 +839,30 @@ var LAppDefine = {
             } catch (_) {}
             ttsCurrentAudio = null;
         }
+        for (var tid in ttsGroupCompleteTimers) {
+            try { clearTimeout(ttsGroupCompleteTimers[tid]); } catch (_) {}
+        }
+        ttsGroupCompleteTimers = {};
         ttsGroupQueues = {};
         ttsGroupReady = {};
         ttsGroupOrder.length = 0;
         ttsPlayingGroupId = null;
         ttsCurrentSegmentPlaying = false;
+    }
+
+    /** 为某组挂/刷新 group_complete 兜底定时器 */
+    function armGroupCompleteFallback(gid) {
+        if (ttsGroupCompleteTimers[gid]) {
+            clearTimeout(ttsGroupCompleteTimers[gid]);
+        }
+        ttsGroupCompleteTimers[gid] = setTimeout(function () {
+            delete ttsGroupCompleteTimers[gid];
+            if (ttsGroupQueues[gid] && !ttsGroupReady[gid]) {
+                console.warn("TTS group_complete 超时未收到，兜底放行该组:", gid);
+                ttsGroupReady[gid] = true;
+                tryPlayNextTtsGroup();
+            }
+        }, TTS_GROUP_COMPLETE_FALLBACK_MS);
     }
 
     function handleTtsAudio(data) {
@@ -797,12 +875,18 @@ var LAppDefine = {
             ttsGroupOrder.push(gid);
         }
         ttsGroupQueues[gid].push({ audio: data.audio, text: data.text || '' });
+        armGroupCompleteFallback(gid);
         tryPlayNextTtsGroup();
     }
 
     function handleTtsGroupComplete(data) {
         if (!data.groupId) return;
-        ttsGroupReady[data.groupId] = true;
+        var gid = data.groupId;
+        if (ttsGroupCompleteTimers[gid]) {
+            clearTimeout(ttsGroupCompleteTimers[gid]);
+            delete ttsGroupCompleteTimers[gid];
+        }
+        ttsGroupReady[gid] = true;
         tryPlayNextTtsGroup();
     }
 
@@ -859,6 +943,10 @@ var LAppDefine = {
     function cleanupTtsGroup(gid) {
         delete ttsGroupQueues[gid];
         delete ttsGroupReady[gid];
+        if (ttsGroupCompleteTimers[gid]) {
+            clearTimeout(ttsGroupCompleteTimers[gid]);
+            delete ttsGroupCompleteTimers[gid];
+        }
         var idx = ttsGroupOrder.indexOf(gid);
         if (idx >= 0) ttsGroupOrder.splice(idx, 1);
     }
@@ -1159,6 +1247,12 @@ var LAppDefine = {
             if (e.target.closest && e.target.closest("#" + LAppDefine.TTS_TOGGLE_BTN_ID)) {
                 return;
             }
+            /* 气泡（含关闭按钮）内点击不启动拖拽：
+               若在此处 setPointerCapture，当前及后续指针事件会被 retarget 到 widget，
+               关闭按钮自身的 pointerdown/click 监听将永远收不到事件，表现为"点击无反应" */
+            if (e.target.closest && e.target.closest(".avatar-bubble")) {
+                return;
+            }
             /* 缩小态（吸附小球）也允许拖动：仅改变吸附 Y 位置 */
             var minimizedDrag = isMinimized();
             if (!minimizedDrag && !LAppDefine.IS_DRAGABLE) return;
@@ -1242,6 +1336,10 @@ var LAppDefine = {
                 }
                 if (isMoved) {
                     widget._savePosition();
+                    // 拖动后气泡可能被顶出视口，重新压缩确保关闭按钮可见可点
+                    if (widget._avatarBubble && widget._avatarBubble.clampAll) {
+                        try { widget._avatarBubble.clampAll(); } catch (_) {}
+                    }
                 }
             }
             pointerId = null;

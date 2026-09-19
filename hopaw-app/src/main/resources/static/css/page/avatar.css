@@ -280,11 +280,24 @@
 .avatar-bubble.dismissible {
     white-space: normal;
     max-width: 420px;
+    /* 长文本限高：防止气泡过高把绝对定位在顶部的关闭按钮顶出屏幕外
+       （配合 main.js 中 clampBubbleToViewport 动态压缩，双保险） */
+    max-height: 45vh;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
     padding: 10px 32px 10px 14px;
     pointer-events: auto;
     text-align: left;
     line-height: 22px;
     box-shadow: 0 6px 20px rgba(0, 0, 0, 0.16), 0 0 0 1px rgba(0, 0, 0, 0.06);
+}
+
+/* 可关闭气泡内容超长时内部滚动，关闭按钮始终固定在气泡右上角可见 */
+.avatar-bubble.dismissible .avatar-bubble-content {
+    overflow-y: auto;
+    min-height: 0;
+    text-overflow: clip;
 }
 
 .avatar-bubble-close {
