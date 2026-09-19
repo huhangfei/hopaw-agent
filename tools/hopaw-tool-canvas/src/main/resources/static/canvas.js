@@ -402,6 +402,33 @@
         if (window.PluginHook) {
             window.PluginHook.onCommand(handleCommand);
         }
+        // 打开插槽面板（无画布时先初始化）：供「工具执行列表」上的插槽按钮调用
+        window.openCanvasSlot = function () {
+            if (!active) {
+                initCanvas();
+                shrinkChatArea();
+            }
+        };
+        // 通过渲染 hook 在展开/历史工具项名称后追加「打开插槽」按钮
+        // 名字匹配：工具集名 canvas（覆盖当前所有方法名/描述）+ 历史工具名 appendDraw（改名前的旧记录）
+        if (window.PluginHook && window.PluginHook.registerToolRenderHook) {
+            window.PluginHook.registerToolRenderHook('afterRender', ['canvas', 'appendDraw'], function (ctx) {
+                if (!ctx || !ctx.header || ctx.header.querySelector('.tool-call-slot-btn')) return;
+                var btn = document.createElement('button');
+                btn.type = 'button';
+                btn.className = 'tool-call-slot-btn';
+                btn.title = '打开画布插槽';
+                btn.innerHTML = '<svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18"/><path d="M9 21V9"/></svg>';
+                btn.addEventListener('click', function (e) {
+                    e.stopPropagation();
+                    e.preventDefault();
+                    if (typeof window.openCanvasSlot === 'function') window.openCanvasSlot();
+                });
+                var nameEl = ctx.header.querySelector('.tool-call-name');
+                if (nameEl) nameEl.parentNode.insertBefore(btn, nameEl.nextSibling);
+                else ctx.header.appendChild(btn);
+            });
+        }
         // 画笔默认选中
         setPenEnabled(true);
         // 画笔事件

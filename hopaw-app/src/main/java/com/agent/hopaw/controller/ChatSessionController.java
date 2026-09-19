@@ -90,11 +90,12 @@ public class ChatSessionController {
             list = list.subList(0, limit);
         }
         // 工具名映射为描述（与向上翻页接口保持一致）
+        // 映射不到时回退原始工具名（工具改名/下线后的历史记录），避免前端显示空名并让渲染 hook 无从匹配
         if (!list.isEmpty()) {
             Map<String, String> toolNameAndDescriptionMap = agentToolService.getToolNameAndDescriptionMap();
             list.forEach(chatHistoryVO -> {
                 if (chatHistoryVO.getToolName() != null) {
-                    chatHistoryVO.setToolName(toolNameAndDescriptionMap.get(chatHistoryVO.getToolName()));
+                    chatHistoryVO.setToolName(toolNameAndDescriptionMap.getOrDefault(chatHistoryVO.getToolName(), chatHistoryVO.getToolName()));
                 }
             });
         }
@@ -148,11 +149,12 @@ public class ChatSessionController {
             list = list.subList(0, limit);
         }
         // 工具名映射为描述（与首页服务端渲染保持一致）
+        // 映射不到时回退原始工具名（工具改名/下线后的历史记录），避免前端显示空名并让渲染 hook 无从匹配
         if (!list.isEmpty()) {
             Map<String, String> toolNameAndDescriptionMap = agentToolService.getToolNameAndDescriptionMap();
             list.forEach(chatHistoryVO -> {
                 if (chatHistoryVO.getToolName() != null) {
-                    chatHistoryVO.setToolName(toolNameAndDescriptionMap.get(chatHistoryVO.getToolName()));
+                    chatHistoryVO.setToolName(toolNameAndDescriptionMap.getOrDefault(chatHistoryVO.getToolName(), chatHistoryVO.getToolName()));
                 }
             });
         }

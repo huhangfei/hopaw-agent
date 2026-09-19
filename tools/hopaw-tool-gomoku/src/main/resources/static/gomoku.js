@@ -489,6 +489,39 @@
         if (window.PluginHook) {
             window.PluginHook.onCommand(handleCommand);
         }
+        // 打开插槽面板（无对局时先建空棋盘）：供「工具执行列表」上的插槽按钮调用
+        window.openGomokuSlot = function () {
+            if (!active) {
+                openPanel();
+                var hasStones = false;
+                for (var r = 0; r < boardState.length && !hasStones; r++) {
+                    for (var c = 0; c < boardState[r].length; c++) {
+                        if (boardState[r][c]) { hasStones = true; break; }
+                    }
+                }
+                // 没有历史对局：先建一张空棋盘；有对局（含刷新恢复的）只展开面板
+                if (!hasStones && cells.length === 0) buildBoard(15);
+            }
+        };
+        // 通过渲染 hook 在展开模式工具项名称后追加「打开插槽」按钮
+        if (window.PluginHook && window.PluginHook.registerToolRenderHook) {
+            window.PluginHook.registerToolRenderHook('afterRender', 'gomoku', function (ctx) {
+                if (!ctx || !ctx.header || ctx.header.querySelector('.tool-call-slot-btn')) return;
+                var btn = document.createElement('button');
+                btn.type = 'button';
+                btn.className = 'tool-call-slot-btn';
+                btn.title = '打开五子棋插槽';
+                btn.innerHTML = '<svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18"/><path d="M9 21V9"/></svg>';
+                btn.addEventListener('click', function (e) {
+                    e.stopPropagation();
+                    e.preventDefault();
+                    if (typeof window.openGomokuSlot === 'function') window.openGomokuSlot();
+                });
+                var nameEl = ctx.header.querySelector('.tool-call-name');
+                if (nameEl) nameEl.parentNode.insertBefore(btn, nameEl.nextSibling);
+                else ctx.header.appendChild(btn);
+            });
+        }
         // 刷新后恢复上次未结束的对局
         restoreState();
     }

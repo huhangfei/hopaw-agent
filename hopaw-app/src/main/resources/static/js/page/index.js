@@ -230,7 +230,9 @@ function getAgentTurnContainer(messagesDiv) {
 
 /** 关闭当前回合：用户消息等非 agent 内容出现时调用，后续 agent 消息将开新盒子 */
 function closeAgentTurn() {
+    var prev = currentAgentTurn;
     currentAgentTurn = null;
+    if (prev) { dispatchPluginHook('turn:closed', { element: prev }); }
 }
 
 /** 构造 agent 回合大盒子（含头部智能体名称标签） */
@@ -241,6 +243,7 @@ function buildAgentTurnBox(agentName) {
     header.className = 'message-label agent-turn-label';
     header.textContent = agentName || 'Agent';
     box.appendChild(header);
+    dispatchPluginHook('turn:created', { element: box, agentName: agentName || 'Agent' });
     return box;
 }
 
@@ -369,6 +372,8 @@ function handleTaskStats(data) {
         '<span class="agent-turn-stats-item"><span class="agent-turn-stats-label">工具</span><span class="agent-turn-stats-value">' + Number(data.toolCallCount || 0) + ' 次</span><span class="agent-turn-stats-sub">' + formatTaskElapsed(data.toolElapsedMs) + '</span></span>' +
         '<span class="agent-turn-stats-item"><span class="agent-turn-stats-label">Tokens</span><span class="agent-turn-stats-value">' + formatTokenCount(totalTokens) + '</span><span class="agent-turn-stats-sub">入 ' + formatTokenCount(inputTokens) + ' / 出 ' + formatTokenCount(outputTokens) + '</span></span>' +
         '<span class="agent-turn-stats-item"><span class="agent-turn-stats-label">速度</span><span class="agent-turn-stats-value">' + (tps > 0 ? tps.toFixed(1) + ' tk/s' : '-') + '</span></span>';
+    // 通用 hook：任务执行统计已渲染（插件可追加自定义统计项，注意幂等）
+    dispatchPluginHook('stats:task', { data: data, turnBox: turnBox, statsEl: statsEl, footer: footer });
 }
 
 /** 复制回合盒子内全部内容：按顺序拼接思考/文本/错误/警告等各小节 */
@@ -511,6 +516,7 @@ function loadInitialHistory() {
             messagesDiv.scrollTop = messagesDiv.scrollHeight;
             var toolExecList = document.getElementById('toolExecList');
             if (toolExecList) toolExecList.scrollTop = toolExecList.scrollHeight;
+            dispatchPluginHook('history:loaded', { list: list, messagesDiv: messagesDiv, sessionId: currentSessionId });
         })
         .catch(function(e) {
             console.error('加载会话历史失败:', e);
@@ -688,6 +694,7 @@ function prependHistoryMessages(list) {
     if (toolExecList && toolFragment.childNodes.length > 0) {
         toolExecList.insertBefore(toolFragment, toolExecList.firstChild);
     }
+    dispatchPluginHook('history:prepend', { list: list, messagesDiv: messagesDiv });
 }
 
 /** ISO 时间字符串（LocalDateTime 序列化格式），用于游标传递 */
@@ -706,6 +713,13 @@ function buildHistoryMessageNode(chat) {
     // 流式消息编号：与实时推送的 messageNo 对应，页面刷新后可凭编号续接追加片段
     if (chat.messageNo) {
         div.setAttribute('data-message-no', chat.messageNo);
+    }
+
+    // 通用 hook：历史节点渲染前。插件返回 false 即跳过默认内容渲染，只保留带 data-msg-id 的空壳
+    // （向上翻页游标、分页锚点仍可用），随后 history:node 会让插件自行填充内容。
+    if (!dispatchPluginHook('history:before-node', { chat: chat, element: div })) {
+        dispatchPluginHook('history:node', { chat: chat, element: div, retrofit: false });
+        return div;
     }
 
     var isAgent = chat.role === 'user' ? false : true;
@@ -818,11 +832,39 @@ function buildToolCallStaticNode(chat) {
     var status = chat.toolCallStatus;
     var finished = status === 'executed' || status === 'rejected' || status === 'failed';
 
+    // 渲染前 hook：插件可拦截（返回 false 时仅保留带 data 属性的空容器，由插件接管填充）
+    var hookCtx = {
+        phase: 'static',
+        event: 'staticRender',
+        status: status,
+        toolCallId: chat.toolCallId,
+        toolName: chat.toolName,
+        toolSetName: resolveToolSetName(chat.toolName),
+        chat: chat,
+        element: null,
+        header: null,
+        body: null
+    };
+    if (dispatchToolRenderHook('beforeStaticRender', hookCtx) === false) {
+        var takeoverContainer = document.createElement('div');
+        takeoverContainer.className = 'tool-call-container-static';
+        var takeoverCall = document.createElement('div');
+        takeoverCall.className = 'tool-call';
+        takeoverCall.setAttribute('data-tool-call-id', chat.toolCallId || '');
+        takeoverCall.setAttribute('data-tool-name', chat.toolName || '');
+        takeoverCall.setAttribute('data-status', status || '');
+        takeoverContainer.appendChild(takeoverCall);
+        hookCtx.element = takeoverContainer;
+        dispatchToolRenderHook('afterStaticRender', hookCtx);
+        return takeoverContainer;
+    }
+
     var container = document.createElement('div');
     container.className = 'tool-call-container-static';
     var callDiv = document.createElement('div');
     callDiv.className = 'tool-call';
     callDiv.setAttribute('data-tool-call-id', chat.toolCallId);
+    callDiv.setAttribute('data-tool-name', chat.toolName || '');
     callDiv.setAttribute('data-status', status);
 
     var header = document.createElement('div');
@@ -903,6 +945,13 @@ function buildToolCallStaticNode(chat) {
         callDiv.appendChild(footer);
     }
     container.appendChild(callDiv);
+
+    // 渲染后 hook：插件可基于 element 追加自定义 DOM
+    hookCtx.element = container;
+    hookCtx.header = callDiv.querySelector('.tool-call-header');
+    hookCtx.body = callDiv.querySelector('.tool-call-body');
+    dispatchToolRenderHook('afterStaticRender', hookCtx);
+
     return container;
 }
 
@@ -1237,6 +1286,11 @@ function flushWsMessageQueue() {
 function dispatchWsMessage(data) {
     var requestId = data.requestId;
 
+    // 通用 hook：下行消息统一入口。插件可接管自定义消息类型（返回 false 即跳过内置处理）
+    if (!dispatchPluginHook('ws:message', { data: data, type: data.type })) {
+        return;
+    }
+
     // 会话隔离：后端按用户广播，非当前会话的运行事件（任务/项目会话后台运行）不更新当前界面；
     // session-title 仍需更新左侧会话列表标题；received/error/task-done 维护会话列表的运行loading图标
     if (data.sessionId && data.sessionId !== currentSessionId) {
@@ -1260,6 +1314,7 @@ function dispatchWsMessage(data) {
         // 会话开始运行即禁用输入区（覆盖任务看板/项目迭代/其他标签页触发的运行，
         // 本地 sendMessage 的禁用是幂等的）
         disableInput();
+        dispatchPluginHook('message:received', { data: data, sessionId: data.sessionId || currentSessionId });
     } else if (data.type === 'user_message') {
         // 用户消息回显：后端入库后推送（含任务/项目会话广播），统一渲染到消息列表
         handleUserMessageEcho(data);
@@ -1284,6 +1339,7 @@ function dispatchWsMessage(data) {
             msgState.currentStreamingMessage = null;
         }
         enableInput();
+        dispatchPluginHook('message:done', { data: data, requestId: requestId });
     } else if (data.type === 'task-stats') {
         // 任务执行统计（task-done 后推送）：追加到回合盒子 footer 时间的左侧
         handleTaskStats(data);
@@ -1305,8 +1361,9 @@ function connectWebSocket() {
 
     ws.onopen = function() {
         console.log('WebSocket 连接已建立');
+        dispatchPluginHook('ws:open', {});
     };
-
+    
     ws.onmessage = function(event) {
         // 所有消息（原始文本）统一入队，解析与分发统一由定时器批量完成，避免高频消息逐条处理的时间损耗
         enqueueWsMessage(event.data);
@@ -1314,6 +1371,7 @@ function connectWebSocket() {
     
     ws.onclose = function() {
         console.log('WebSocket 连接已关闭');
+        dispatchPluginHook('ws:close', {});
         setTimeout(function() {
             connectWebSocket();
         }, 3000);
@@ -1327,6 +1385,21 @@ function connectWebSocket() {
 function handleToolCall(data, requestId) {
     var messagesDiv = document.getElementById('chatMessages');
     var toolExecList = document.getElementById('toolExecList');
+
+    // 渲染前 hook：插件可拦截（返回 false 接管默认渲染）或仅观察
+    var hookCtx = {
+        phase: 'live',
+        event: data.status,
+        status: data.status,
+        toolCallId: data.toolCallId,
+        toolName: data.toolName,
+        toolSetName: resolveToolSetName(data.toolName),
+        data: data,
+        element: null,
+        header: null,
+        body: null
+    };
+    if (dispatchToolRenderHook('beforeRender', hookCtx) === false) return;
 
     var msgState = streamingMessages[requestId];
     if (!msgState) {
@@ -1357,6 +1430,7 @@ function handleToolCall(data, requestId) {
         toolCallDiv = document.createElement('div');
         toolCallDiv.className = 'tool-call';
         toolCallDiv.setAttribute('data-tool-call-id', data.toolCallId);
+        toolCallDiv.setAttribute('data-tool-name', data.toolName || '');
         toolCallContainer.appendChild(toolCallDiv);
 
         var toolCallHeader = document.createElement('div');
@@ -1607,6 +1681,13 @@ function handleToolCall(data, requestId) {
     if (data.status !== 'running') {
         messagesDiv.scrollTop = messagesDiv.scrollHeight;
     }
+
+    // 渲染后 hook：插件可基于 element/header/body 追加自定义按钮等 DOM
+    hookCtx.element = toolCallDiv;
+    hookCtx.header = toolCallDiv.querySelector('.tool-call-header');
+    hookCtx.body = toolCallDiv.querySelector('.tool-call-body');
+    dispatchToolRenderHook('afterRender', hookCtx);
+
     if (toolExecList) toolExecList.scrollTop = toolExecList.scrollHeight;
 }
 
@@ -1620,7 +1701,104 @@ var toolIconMapLoaded = false;
 /** 工具名 → { toolSetName, hasConfigItems } 映射，用于工具执行列表显示配置按钮 */
 var toolConfigMap = {};
 
-/** 加载工具集列表并建立 工具名→图标 / 工具名→配置信息 映射 */
+/** 工具方法名/描述 → 工具集名映射，用于渲染 hook 按工具集归一过滤 */
+var toolOwnerSetMap = {};
+
+/** 解析某工具名/描述所属的工具集名，未识别返回 '' */
+function resolveToolSetName(name) {
+    return (name && toolOwnerSetMap[name]) || '';
+}
+
+/**
+ * 分发工具执行列表渲染 hook 到插件侧（plugin-hook.js）。
+ * 未加载插件门面或无 hook 时默认放行；任一插件返回 false 表示接管默认渲染。
+ */
+function dispatchToolRenderHook(phase, ctx) {
+    try {
+        if (window.PluginHook && typeof window.PluginHook.dispatchToolRenderHook === 'function') {
+            return window.PluginHook.dispatchToolRenderHook(phase, ctx);
+        }
+    } catch (e) {
+        console.error('[tool-render-hook]', phase, e);
+    }
+    return true;
+}
+
+/**
+ * 分发「页面生命周期」hook 到插件侧（plugin-hook.js 的通用 hook 总线）。
+ * 未加载插件门面、或没有任何插件注册该 hook 时返回 true（默认放行）；
+ * 可取消 hook（message:before-send / ws:message / history:before-node）
+ * 被任一插件返回 false 时返回 false，调用方据此跳过默认行为。
+ * 可用 hook 名称见 plugin-hook.js 头部 HOOK_CATALOG，或控制台 PluginHook.hooks()。
+ */
+function dispatchPluginHook(name, ctx) {
+    try {
+        if (window.PluginHook && typeof window.PluginHook.dispatchHook === 'function') {
+            return window.PluginHook.dispatchHook(name, ctx);
+        }
+    } catch (e) {
+        console.error('[plugin-hook]', name, e);
+    }
+    return true;
+}
+
+/**
+ * 存量节点补挂（retrofit）：插件 JS 由 plugin-loader 异步注入，晚于历史列表渲染，
+ * hook 注册时页面可能已渲染出工具调用节点。本函数扫描全部已存在的 .tool-call 节点，
+ * 逐个补发对应 phase 的 after hook（afterRender / afterStaticRender），让晚注册的 hook 也能生效。
+ * 注意：补挂 ctx 中 data/chat 为 null，且依赖插件 hook 自身幂等（重复触发不得重复插入 DOM）。
+ */
+function applyToolRenderHooksToExisting() {
+    var nodes = document.querySelectorAll('.tool-call[data-tool-call-id]');
+    Array.prototype.forEach.call(nodes, function(div) {
+        var isStatic = !!(div.closest && div.closest('.tool-call-container-static'));
+        var toolName = div.getAttribute('data-tool-name') || '';
+        var ctx = {
+            phase: isStatic ? 'static' : 'live',
+            event: 'retrofit',
+            status: div.getAttribute('data-status'),
+            toolCallId: div.getAttribute('data-tool-call-id'),
+            toolName: toolName,
+            toolSetName: resolveToolSetName(toolName),
+            data: null,
+            chat: null,
+            element: isStatic ? div.parentNode : div,
+            header: div.querySelector('.tool-call-header'),
+            body: div.querySelector('.tool-call-body')
+        };
+        dispatchToolRenderHook(isStatic ? 'afterStaticRender' : 'afterRender', ctx);
+    });
+}
+
+/** 渲染 hook 注册表变化 / 工具集名映射就绪时补挂存量节点 */
+document.addEventListener('toolrenderhooks:updated', function() {
+    try { applyToolRenderHooksToExisting(); } catch (e) {
+        console.error('[tool-render-hook] retrofit failed:', e);
+    }
+});
+
+/**
+ * 历史消息节点补挂（retrofit）：插件 JS 异步注入，注册 history:node 时页面历史往往已渲染完毕。
+ * 对已存在的全部历史消息节点（.message[data-msg-id]，含实时渲染出的 agent 消息）补发一次
+ * history:node（ctx.chat 为 null，retrofit=true）；要求插件 handler 幂等。
+ */
+function applyHistoryNodeHooksToExisting() {
+    var nodes = document.querySelectorAll('#chatMessages .message[data-msg-id]');
+    Array.prototype.forEach.call(nodes, function(el) {
+        dispatchPluginHook('history:node', { chat: null, element: el, retrofit: true });
+    });
+}
+
+/** 通用 hook 注册表变化：对支持存量补挂的 hook 补发一次 */
+document.addEventListener('pluginhooks:updated', function(e) {
+    var name = e && e.detail && e.detail.name;
+    if (name !== 'history:node') return;
+    try { applyHistoryNodeHooksToExisting(); } catch (err) {
+        console.error('[plugin-hook] history:node retrofit failed:', err);
+    }
+});
+
+/** 加载工具集列表并建立 工具名→图标 / 工具名→配置信息 / 工具名→工具集名 映射 */
 function loadToolIconMap() {
     return fetch('/tools/api/list')
         .then(function(r) { return r.json(); })
@@ -1633,11 +1811,13 @@ function loadToolIconMap() {
                     (toolSet.tools || []).forEach(function(tool) {
                         if (!tool || !tool.name) return;
                         if (icon) toolIconMap[tool.name] = icon;
+                        if (setName) toolOwnerSetMap[tool.name] = setName;
                         if (hasConfig && setName) {
                             toolConfigMap[tool.name] = { toolSetName: setName, hasConfigItems: true };
                         }
                         if (tool.descriptions && tool.descriptions.length > 0 && tool.descriptions[0]) {
                             if (icon) toolIconMap[tool.descriptions[0]] = icon;
+                            if (setName) toolOwnerSetMap[tool.descriptions[0]] = setName;
                             if (hasConfig && setName) {
                                 toolConfigMap[tool.descriptions[0]] = { toolSetName: setName, hasConfigItems: true };
                             }
@@ -1646,6 +1826,8 @@ function loadToolIconMap() {
                 });
             }
             toolIconMapLoaded = true;
+            // 工具集名映射就绪：通知补挂（此前注册的 hook 可能因映射为空而未匹配上）
+            try { document.dispatchEvent(new CustomEvent('toolrenderhooks:updated')); } catch (e) { /* 忽略 */ }
         })
         .catch(function(e) {
             console.error('加载工具集图标映射失败:', e);
@@ -1841,6 +2023,7 @@ function handleUserMessageEcho(data) {
         emptyState.classList.add('hide');
     }
     messagesDiv.scrollTop = messagesDiv.scrollHeight;
+    dispatchPluginHook('message:user-echo', { data: data, element: messagesDiv, messagesDiv: messagesDiv });
 }
 
 function showLoadingMessage() {
@@ -1930,6 +2113,15 @@ function handleThinking(data, requestId) {
             }
         }
         messagesDiv.scrollTop = messagesDiv.scrollHeight;
+        // 通用 hook：思考流片段渲染完成（element=思考小节容器，contentEl=内容区）
+        dispatchPluginHook('stream:thinking', {
+            requestId: requestId,
+            messageNo: data.messageNo,
+            status: data.status,
+            content: msgState.thinkingContent,
+            element: thinkingSection,
+            contentEl: msgState.thinkingDiv
+        });
         if (data.status === 'done' && msgState.currentStreamingMessage && msgState.lastMessageType === 'thinking') {
             // 思考完成：自动收起为两行
             setThinkingExpanded(thinkingSection, false);
@@ -2007,6 +2199,16 @@ function handleStreamingChunk(data, requestId) {
     // 记录原始内容：整盒复制时使用原始 Markdown 而非渲染后的文本
     contentDiv.setAttribute('data-raw-content', msgState.streamingMarkdownContent);
 
+    // 通用 hook：智能体文本流片段渲染完成（element=消息节点，contentEl=内容区）
+    dispatchPluginHook('stream:text', {
+        requestId: requestId,
+        messageNo: data.messageNo,
+        status: data.status,
+        content: msgState.streamingMarkdownContent,
+        element: messageDiv,
+        contentEl: contentDiv
+    });
+
     messagesDiv.scrollTop = messagesDiv.scrollHeight;
 }
 
@@ -2036,6 +2238,7 @@ function handleStreamingError(errorMessage, requestId) {
     appendToAgentTurn(turn, errorDiv);
     touchAgentTurnFooter(turn, formatMessageTime(new Date()));
     messagesDiv.scrollTop = messagesDiv.scrollHeight;
+    dispatchPluginHook('message:error', { requestId: requestId, message: errorMessage, element: errorDiv, contentEl: contentDiv });
     enableInput();
 }
 function handleStreamingWarn(warnMessage, requestId) {
@@ -2064,6 +2267,7 @@ function handleStreamingWarn(warnMessage, requestId) {
     appendToAgentTurn(turn, warnDiv);
     touchAgentTurnFooter(turn, formatMessageTime(new Date()));
     messagesDiv.scrollTop = messagesDiv.scrollHeight;
+    dispatchPluginHook('message:warn', { requestId: requestId, message: warnMessage, element: warnDiv, contentEl: contentDiv });
     enableInput();
 }
 
@@ -2115,7 +2319,19 @@ function sendMessage() {
             if(emptyState){
                 emptyState.classList.add("hide");
             }
+            // 通用 hook：发送前。插件可直接修改 payload；返回 false 取消本次发送（默认行为不执行）
+            if (!dispatchPluginHook('message:before-send', {
+                sessionId: currentSessionId,
+                agentId: currentAgentId,
+                modelId: currentModelId,
+                message: message,
+                payload: payload
+            })) {
+                enableInput();
+                return;
+            }
             ws.send(JSON.stringify(payload));
+            dispatchPluginHook('message:sent', { sessionId: currentSessionId, payload: payload });
         })
         .catch(function(err) {
             showToast('检查运行状态失败: ' + err.message, 'error');
@@ -2134,6 +2350,7 @@ function disableInput() {
     if (runningBtn) runningBtn.classList.remove('hide');
     if (headerTimer) headerTimer.classList.remove('hide');
     startLockCountdown(false);
+    dispatchPluginHook('input:locked', {});
 }
 
 function enableInput() {
@@ -2149,6 +2366,7 @@ function enableInput() {
     if (headerTimer) headerTimer.classList.add('hide');
     stopLockCountdown();
     if (input) input.focus();
+    dispatchPluginHook('input:unlocked', {});
 }
 
 // ===== 执行器可重置锁（看门狗）剩余时间倒计时 =====
@@ -2798,6 +3016,8 @@ function handleTokenUsageMessage(data) {
     tokenDailyStats.outputTokens += entry.outputTokens || 0;
     tokenDailyStats.totalTokens += entry.totalTokens || 0;
     updateTokenTitle(tokenDailyStats.inputTokens, tokenDailyStats.outputTokens, tokenDailyStats.totalTokens);
+    // 通用 hook：Token 用量到达（已并入图表数据）
+    dispatchPluginHook('stats:token', { data: data, entry: entry, chartData: tokenChartData, dailyStats: tokenDailyStats });
 }
 
 function loadTokenUsage(minId) {
@@ -3438,6 +3658,7 @@ function selectModel(modelId, modelName) {
         menu.style.display = ''; // 重置内联样式
         menu.style.visibility = '';
     }
+    dispatchPluginHook('model:changed', { modelId: currentModelId, modelName: modelName, model: thinkingModelById[currentModelId] });
 }
 
 /**
@@ -3821,6 +4042,7 @@ function renderSessionList(sessions) {
     if (activeItem) {
         activeItem.scrollIntoView({ block: 'nearest' });
     }
+    dispatchPluginHook('session:list', { sessions: filtered, listEl: container, filterType: sessionTypeFilter });
 }
 
 function updateSessionTitle(sessionId, newTitle, bizType) {
@@ -3831,6 +4053,8 @@ function updateSessionTitle(sessionId, newTitle, bizType) {
             headerDesc.textContent = newTitle || '未命名会话';
         }
     }
+    // 通用 hook：会话标题更新（通知型）
+    dispatchPluginHook('session:title', { sessionId: sessionId, title: newTitle, bizType: bizType });
 
     var container = document.getElementById('sessionList');
     if (!container) return;
@@ -4716,3 +4940,15 @@ function getAttachIcon(ext) {
     if (e === 'mp4' || e === 'avi' || e === 'mov') return '🎬';
     return '📄';
 }
+
+/* ================= 插件侧「页面就绪」通知 =================
+ * 本文件（index.js）先于 plugin-hook.js 与各插件 JS 执行，这里注册独立的 load 监听
+ * （晚于上面的 window.onload 赋值触发），通知插件侧页面初始化完成。
+ * 插件侧：PluginHook.registerHook('app:ready', function (ctx) { ... })
+ */
+window.addEventListener('load', function() {
+    dispatchPluginHook('app:ready', {
+        sessionId: currentSessionId,
+        agentId: currentAgentId
+    });
+});

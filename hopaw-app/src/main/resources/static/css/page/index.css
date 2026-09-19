@@ -2388,6 +2388,38 @@ body.dark-theme .model-tag-cap {
 .tool-call-stop-btn svg {
     display: block;
 }
+/* 插件通过渲染 hook 注入的「打开插槽」按钮 */
+.tool-call-slot-btn {
+    background: #f0f0f0;
+    color: #666;
+    border: none;
+    width: 20px;
+    height: 20px;
+    border-radius: 4px;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    margin-left: 6px;
+    flex-shrink: 0;
+    padding: 0;
+    transition: background 0.15s, color 0.15s;
+}
+.tool-call-slot-btn:hover {
+    background: #667eea;
+    color: #fff;
+}
+.tool-call-slot-btn svg {
+    display: block;
+}
+body.dark-theme .tool-call-slot-btn {
+    background: #333;
+    color: #aaa;
+}
+body.dark-theme .tool-call-slot-btn:hover {
+    background: #667eea;
+    color: #fff;
+}
 .tool-call-toggle {
     margin-left: 4px;
     cursor: pointer;
