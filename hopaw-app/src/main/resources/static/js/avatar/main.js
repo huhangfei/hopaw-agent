@@ -237,6 +237,9 @@ var LAppDefine = {
                 var onClose = function (e) {
                     try { e.stopPropagation(); e.preventDefault(); } catch (_) {}
                     dismissUserClosed();
+                    // 用户主动关闭消息：同步停止语音播报并清空待播队列，
+                    // 避免长文本语音在关掉气泡后仍长时间播放（与 TTS 合成成败无关，关闭永远立即生效）
+                    try { stopTtsPlaybackAndClearQueues(); } catch (_) {}
                     removeBubble(el);
                 };
                 closeBtn.addEventListener("pointerdown", onClose);
