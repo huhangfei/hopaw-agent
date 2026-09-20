@@ -4,9 +4,9 @@
 }
 
 .config-modal {
-    width: 780px;
-    max-width: 95vw;
-    height: 85vh;
+    width: min(1200px, 92vw);
+    max-width: 92vw;
+    height: 88vh;
     max-height: 90vh;
     overflow: hidden;
 }
