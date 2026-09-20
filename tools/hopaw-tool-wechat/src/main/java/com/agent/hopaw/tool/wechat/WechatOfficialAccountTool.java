@@ -6,7 +6,7 @@ import com.agent.hopaw.infra.model.dto.ValidationRule;
 import com.agent.hopaw.infra.model.entity.SysConfig;
 import com.agent.hopaw.infra.service.ISysConfigService;
 import com.agent.hopaw.infra.tool.ToolSecurityLevel;
-import com.agent.hopaw.infra.tool.AgentTool;
+import com.agent.hopaw.infra.tool.AbstractAgentTool;
 import com.alibaba.fastjson2.JSON;
 import com.alibaba.fastjson2.JSONArray;
 import com.alibaba.fastjson2.JSONObject;
@@ -35,7 +35,7 @@ import java.util.Map;
  * 草稿箱（新增/查询/修改/删除）、素材（封面图片、正文图片、素材列表）、发布（发布草稿/状态/列表/删除）。</p>
  * <p>使用前提：已认证的非个人主体公众号；服务器 IP 需加入公众号 IP 白名单。</p>
  */
-public class WechatOfficialAccountTool implements AgentTool {
+public class WechatOfficialAccountTool extends AbstractAgentTool {
 
     private static final Logger log = LoggerFactory.getLogger(WechatOfficialAccountTool.class);
 

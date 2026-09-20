@@ -1,7 +1,7 @@
 package com.agent.hopaw.tool.http;
 
 import com.agent.hopaw.infra.tool.ToolSecurityLevel;
-import com.agent.hopaw.infra.tool.AgentTool;
+import com.agent.hopaw.infra.tool.AbstractAgentTool;
 import dev.langchain4j.agent.tool.P;
 import dev.langchain4j.agent.tool.Tool;
 import org.slf4j.Logger;
@@ -23,7 +23,7 @@ import java.util.stream.Collectors;
  * HTTP请求工具集
  * 支持GET/POST/PUT/DELETE/PATCH/HEAD/OPTIONS等常见HTTP方法，用于接口调用测试
  */
-public class HttpTool implements AgentTool {
+public class HttpTool extends AbstractAgentTool {
 
     private static final Logger log = LoggerFactory.getLogger(HttpTool.class);
 

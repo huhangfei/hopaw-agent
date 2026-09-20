@@ -8,7 +8,7 @@ import dev.langchain4j.agent.tool.Tool;
 import dev.langchain4j.invocation.InvocationParameters;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import com.agent.hopaw.infra.tool.AgentTool;
+import com.agent.hopaw.infra.tool.AbstractAgentTool;
 import org.springframework.beans.factory.annotation.Autowired;
 
 import java.io.BufferedReader;
@@ -20,7 +20,7 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 
-public class CommandExecutorTool implements AgentTool {
+public class CommandExecutorTool extends AbstractAgentTool {
 
     @Autowired
     private IAgentExecutorService agentExecutorService;

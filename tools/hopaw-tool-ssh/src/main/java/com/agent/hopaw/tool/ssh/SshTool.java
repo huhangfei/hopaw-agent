@@ -16,7 +16,7 @@ import dev.langchain4j.agent.tool.Tool;
 import dev.langchain4j.invocation.InvocationParameters;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import com.agent.hopaw.infra.tool.AgentTool;
+import com.agent.hopaw.infra.tool.AbstractAgentTool;
 import org.springframework.beans.factory.annotation.Autowired;
 
 import java.util.Collections;
@@ -34,7 +34,7 @@ import java.util.concurrent.atomic.AtomicReference;
  * 注意：作为插件使用时，不要加 @Component 注解，由插件加载器实例化并通过 @Autowired 注入依赖
  * @author hhf
  */
-public class SshTool implements AgentTool {
+public class SshTool extends AbstractAgentTool {
     private static final Logger logger = LoggerFactory.getLogger(SshTool.class);
     private static final Map<String, Session> SESSION_CACHE = new ConcurrentHashMap<>();
 

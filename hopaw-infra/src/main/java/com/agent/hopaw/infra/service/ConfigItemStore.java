@@ -315,6 +315,32 @@ public class ConfigItemStore {
     }
 
     /**
+     * 按前缀清理配置：删除所有以该前缀开头的配置键（含历史遗留/已移除配置项的散键）。
+     *
+     * <p>插件工具的配置键挂在插件根下（{@code plugin.<id>.tool.<工具集名>.…}），
+     * 因此插件卸载时用 {@code plugin.<id>.} 一个前缀即可扫清「插件级 + 全部工具级」配置，
+     * 无需逐个工具集枚举。</p>
+     *
+     * @param prefix 配置键前缀
+     * @return 实际删除的键数量
+     */
+    public int deleteByPrefix(String prefix) {
+        if (prefix == null || prefix.isEmpty()) {
+            return 0;
+        }
+        List<String> matched = new ArrayList<>();
+        for (SysConfig config : sysConfigService.getAll()) {
+            if (config.getConfigKey() != null && config.getConfigKey().startsWith(prefix)) {
+                matched.add(config.getConfigKey());
+            }
+        }
+        for (String key : matched) {
+            sysConfigService.deleteByKey(key);
+        }
+        return matched.size();
+    }
+
+    /**
      * 按前缀清理一个配置主体的全部键：
      * 逐个删除声明的配置项键，MAP 结构项额外清理历史散键（{@code <key>:<mapKey>:<子配置key>}）。
      *

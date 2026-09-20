@@ -10,7 +10,7 @@ import dev.langchain4j.agent.tool.Tool;
 import dev.langchain4j.data.message.Content;
 import dev.langchain4j.data.message.ImageContent;
 import dev.langchain4j.data.message.TextContent;
-import com.agent.hopaw.infra.tool.AgentTool;
+import com.agent.hopaw.infra.tool.AbstractAgentTool;
 import org.apache.batik.transcoder.TranscoderInput;
 import org.apache.batik.transcoder.TranscoderOutput;
 import org.apache.batik.transcoder.image.ImageTranscoder;
@@ -46,7 +46,7 @@ import java.util.Locale;
  * 图片操作工具集
  * 支持读取图片为base64、SVG代码渲染保存为图片、缩放、压缩、旋转、裁剪、格式转换等图片操作
  */
-public class ImageOperationTool implements AgentTool {
+public class ImageOperationTool extends AbstractAgentTool {
 
     private static final Logger log = LoggerFactory.getLogger(ImageOperationTool.class);
 

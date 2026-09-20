@@ -4,7 +4,7 @@ import com.agent.hopaw.infra.tool.ToolSecurityLevel;
 import com.agent.hopaw.infra.model.dto.ToolConfigItem;
 import com.agent.hopaw.infra.model.dto.ValidationRule;
 import com.agent.hopaw.infra.service.ISysConfigService;
-import com.agent.hopaw.infra.tool.AgentTool;
+import com.agent.hopaw.infra.tool.AbstractAgentTool;
 import dev.langchain4j.agent.tool.P;
 import dev.langchain4j.agent.tool.Tool;
 import org.slf4j.Logger;
@@ -26,7 +26,7 @@ import java.util.Base64;
 import java.util.List;
 import java.util.Properties;
 
-public class DingTalkTool implements AgentTool {
+public class DingTalkTool extends AbstractAgentTool {
 
     private static final Logger logger = LoggerFactory.getLogger(DingTalkTool.class);
     private static final String ENV_WEBHOOK_URL = "DINGTALK_WEBHOOK_URL";

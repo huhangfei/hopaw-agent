@@ -1,7 +1,7 @@
 package com.agent.hopaw.tool.qrcode;
 
 import com.agent.hopaw.infra.tool.ToolSecurityLevel;
-import com.agent.hopaw.infra.tool.AgentTool;
+import com.agent.hopaw.infra.tool.AbstractAgentTool;
 import com.google.zxing.BarcodeFormat;
 import com.google.zxing.BinaryBitmap;
 import com.google.zxing.DecodeHintType;
@@ -35,7 +35,7 @@ import java.util.Map;
  * 二维码工具集
  * 支持生成二维码图片和解析二维码图片内容
  */
-public class QrCodeTool implements AgentTool {
+public class QrCodeTool extends AbstractAgentTool {
 
     private static final Logger log = LoggerFactory.getLogger(QrCodeTool.class);
 

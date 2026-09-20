@@ -16,6 +16,7 @@
         <a href="/tools" class="btn-back">← 返回工具列表</a>
         <h2 th:text="|${config.toolName} 配置|"></h2>
         <p class="config-desc" th:text="${config.toolDescription}"></p>
+        <p class="config-prefix-hint" th:text="|配置键前缀：${config.configPrefix}*|"></p>
     </div>
 
     <form th:action="@{|/tool-config/${toolName}|}" method="post" class="config-form" id="configForm" onsubmit="return validateForm(event)">

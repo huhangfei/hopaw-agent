@@ -2,7 +2,7 @@ package com.agent.hopaw.tool.webpage;
 
 import com.agent.hopaw.infra.tool.ToolSecurityLevel;
 import dev.langchain4j.agent.tool.P;
-import com.agent.hopaw.infra.tool.AgentTool;
+import com.agent.hopaw.infra.tool.AbstractAgentTool;
 import dev.langchain4j.agent.tool.Tool;
 import org.jsoup.Jsoup;
 import org.jsoup.safety.Safelist;
@@ -18,7 +18,7 @@ import org.htmlunit.html.HtmlPage;
  * 基于 HtmlUnit（GUI-Less 浏览器）实现，无需下载浏览器，支持 JS 渲染，
  * 相比 Playwright 轻量得多，启动即用。
  */
-public class WebPageTool implements AgentTool {
+public class WebPageTool extends AbstractAgentTool {
 
     private final Logger logger = LoggerFactory.getLogger(WebPageTool.class);
 

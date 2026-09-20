@@ -2,7 +2,7 @@ package com.agent.hopaw.tool.webpage;
 
 import com.agent.hopaw.infra.tool.ToolSecurityLevel;
 import dev.langchain4j.agent.tool.P;
-import com.agent.hopaw.infra.tool.AgentTool;
+import com.agent.hopaw.infra.tool.AbstractAgentTool;
 import dev.langchain4j.agent.tool.Tool;
 import org.jsoup.Jsoup;
 import org.jsoup.safety.Safelist;
@@ -25,7 +25,7 @@ import java.util.concurrent.Executors;
  * 注意：作为插件使用时，不要加 @Component 注解，由插件加载器实例化
  * Playwright 采用异步初始化策略，在插件加载后立即后台初始化，避免首次调用时等待时间过长
  */
-public class WebPagePlaywrightTool implements AgentTool {
+public class WebPagePlaywrightTool extends AbstractAgentTool {
 
     private final Logger logger = LoggerFactory.getLogger(WebPagePlaywrightTool.class);
     

@@ -80,6 +80,9 @@ public interface AgentPlugin {
 
     /**
      * 声明插件级配置项（前缀由框架统一计算为 plugin.&lt;id&gt;.），用于多工具共享的公共配置。
+     *
+     * <p>本插件各工具集的配置项也挂在该前缀之下（{@code plugin.&lt;id&gt;.tool.&lt;工具集名&gt;.&lt;key&gt;}），
+     * 因此卸载插件时可按 {@code plugin.&lt;id&gt;.} 一个前缀扫清全部配置。</p>
      */
     default List<ToolConfigItem> getConfigItems() {
         return List.of();

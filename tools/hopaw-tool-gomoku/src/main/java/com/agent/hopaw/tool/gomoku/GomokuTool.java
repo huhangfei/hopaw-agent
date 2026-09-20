@@ -2,7 +2,7 @@ package com.agent.hopaw.tool.gomoku;
 
 import com.agent.hopaw.infra.service.IPluginResultStore;
 import com.agent.hopaw.infra.service.IWebSocketBridgeService;
-import com.agent.hopaw.infra.tool.AgentTool;
+import com.agent.hopaw.infra.tool.AbstractAgentTool;
 import com.agent.hopaw.infra.tool.ToolSecurityLevel;
 import com.agent.hopaw.infra.util.InvocationParametersWrapper;
 import com.alibaba.fastjson2.JSON;
@@ -38,7 +38,7 @@ import java.util.concurrent.TimeUnit;
  * <p>对局隔离：以 gameId 为键；@Tool 拿不到 userId，故各方法接受可选 gameId 参数，
  * 为空时回退到最近一次创建的对局（单会话通常仅一局活跃）。</p>
  */
-public class GomokuTool implements AgentTool {
+public class GomokuTool extends AbstractAgentTool {
 
     private static final Logger logger = LoggerFactory.getLogger(GomokuTool.class);
 

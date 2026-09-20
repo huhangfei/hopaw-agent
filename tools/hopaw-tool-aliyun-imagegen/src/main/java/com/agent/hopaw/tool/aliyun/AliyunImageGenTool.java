@@ -3,7 +3,7 @@ package com.agent.hopaw.tool.aliyun;
 import com.agent.hopaw.infra.model.dto.ToolConfigItem;
 import com.agent.hopaw.infra.model.dto.ValidationRule;
 import com.agent.hopaw.infra.service.ISysConfigService;
-import com.agent.hopaw.infra.tool.AgentTool;
+import com.agent.hopaw.infra.tool.AbstractAgentTool;
 import com.agent.hopaw.infra.tool.ToolSecurityLevel;
 import com.alibaba.fastjson2.JSON;
 import com.alibaba.fastjson2.JSONArray;
@@ -33,7 +33,7 @@ import java.util.List;
  * 基于通义万相 qwen-image 系列模型，通过文字描述生成图片。
  * 调用多模态生成接口（multimodal-generation/generation），下载生成的 PNG 图片并作为图片内容返回给大模型。
  */
-public class AliyunImageGenTool implements AgentTool {
+public class AliyunImageGenTool extends AbstractAgentTool {
 
     private static final Logger log = LoggerFactory.getLogger(AliyunImageGenTool.class);
 

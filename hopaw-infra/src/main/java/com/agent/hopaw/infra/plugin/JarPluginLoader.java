@@ -26,7 +26,7 @@ import com.agent.hopaw.infra.tool.AgentTool;
  * <ol>
  *   <li>扫描 JAR 内的 AgentPlugin 实现，未提供则拒绝安装（纯前端插件也应提供空工具的 AgentPlugin）；</li>
  *   <li>实例化插件 → autowireBean → 插件 {@code asyncInit()}（构建插件级共享资源）；</li>
- *   <li>调用插件 {@code getTools()} 取 0..N 个工具实例 → 逐个 autowireBean → 逐个 {@code asyncInit()}；</li>
+ *   <li>调用插件 {@code getTools()} 取 0..N 个工具实例 → 逐个 autowireBean → 注入宿主 pluginId → 逐个 {@code asyncInit()}；</li>
  *   <li>以 pluginId 为键注册；同 pluginId 已存在则拒绝（升级走覆盖安装）。</li>
  * </ol>
  *

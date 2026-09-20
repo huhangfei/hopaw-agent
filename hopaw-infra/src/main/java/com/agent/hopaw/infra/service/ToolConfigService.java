@@ -35,6 +35,9 @@ public class ToolConfigService {
         Map<String, Object> result = new HashMap<>();
         result.put("toolName", tool.getName());
         result.put("toolDescription", tool.getDescription());
+        // 配置键前缀：插件工具为 plugin.<pluginId>.tool.<工具集名>.，内置工具为 tool.<工具集名>.
+        result.put("configPrefix", tool.getConfigPrefix());
+        result.put("pluginId", tool.getPluginId());
         result.put("configItems", configItems);
         ConfigItemStore.Loaded loaded = configItemStore.load(tool.getConfigPrefix(), configItems);
         result.put("values", loaded.values());

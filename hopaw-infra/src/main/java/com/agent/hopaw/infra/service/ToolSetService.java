@@ -126,7 +126,9 @@ public class ToolSetService implements IToolSetService {
     }
 
     /**
-     * 工具级配置变更分发：{@code tool.<工具集名>.} 前缀命中则触发对应工具的 {@code onConfigChanged()}。
+     * 工具级配置变更分发：命中工具的配置键前缀则触发其 {@code onConfigChanged()}。
+     * 插件工具前缀为 {@code plugin.<pluginId>.tool.<工具集名>.}，内置工具为 {@code tool.<工具集名>.}
+     * （插件级配置由 {@link PluginConfigService#onConfigChange} 分发）。
      */
     @EventListener
     public void onConfigChange(ConfigChangeEvent event) {

@@ -7,7 +7,7 @@ import com.agent.hopaw.infra.model.dto.ToolConfigItem;
 import com.agent.hopaw.infra.model.dto.ValidationRule;
 import com.agent.hopaw.infra.model.entity.SysConfig;
 import com.agent.hopaw.infra.service.ISysConfigService;
-import com.agent.hopaw.infra.tool.AgentTool;
+import com.agent.hopaw.infra.tool.AbstractAgentTool;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -34,7 +34,7 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.regex.Pattern;
 
-public class FileOperationTool implements AgentTool {
+public class FileOperationTool extends AbstractAgentTool {
 
     private static final Logger log = LoggerFactory.getLogger(FileOperationTool.class);
     private static final String CONFIG_KEY_MAX_THREADS = "maxThreads";

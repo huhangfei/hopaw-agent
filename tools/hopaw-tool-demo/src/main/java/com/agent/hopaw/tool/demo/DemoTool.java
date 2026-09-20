@@ -7,7 +7,7 @@ import com.agent.hopaw.infra.model.dto.ValidationRule;
 import com.agent.hopaw.infra.model.entity.SysConfig;
 import com.agent.hopaw.infra.service.ISysConfigService;
 import com.agent.hopaw.infra.tool.ToolSecurityLevel;
-import com.agent.hopaw.infra.tool.AgentTool;
+import com.agent.hopaw.infra.tool.AbstractAgentTool;
 import com.alibaba.fastjson2.JSON;
 import com.alibaba.fastjson2.TypeReference;
 import dev.langchain4j.agent.tool.P;
@@ -23,7 +23,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
-public class DemoTool implements AgentTool {
+public class DemoTool extends AbstractAgentTool {
 
     private static final Logger logger = LoggerFactory.getLogger(DemoTool.class);
 

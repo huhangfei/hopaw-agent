@@ -6,7 +6,7 @@ import com.agent.hopaw.infra.model.dto.ToolConfigItem;
 import com.agent.hopaw.infra.model.dto.ValidationRule;
 import com.agent.hopaw.infra.model.entity.SysConfig;
 import com.agent.hopaw.infra.service.ISysConfigService;
-import com.agent.hopaw.infra.tool.AgentTool;
+import com.agent.hopaw.infra.tool.AbstractAgentTool;
 import dev.langchain4j.agent.tool.P;
 import dev.langchain4j.agent.tool.Tool;
 import org.slf4j.Logger;
@@ -22,7 +22,7 @@ import java.util.stream.Collectors;
 /**
  * @author hhf
  */
-public class BaiduSearchTool implements AgentTool {
+public class BaiduSearchTool extends AbstractAgentTool {
     private static final String CONFIG_KEY_API_KEYS = "apiKeys";
     private static final String CONFIG_KEY_EDITION = "edition";
     private static final Logger log = LoggerFactory.getLogger(BaiduSearchTool.class);

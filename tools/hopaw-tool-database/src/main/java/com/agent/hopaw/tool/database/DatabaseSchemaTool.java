@@ -1,7 +1,7 @@
 package com.agent.hopaw.tool.database;
 
 import com.agent.hopaw.infra.service.IPluginConfigService;
-import com.agent.hopaw.infra.tool.AgentTool;
+import com.agent.hopaw.infra.tool.AbstractAgentTool;
 import com.agent.hopaw.infra.tool.ToolSecurityLevel;
 import dev.langchain4j.agent.tool.P;
 import dev.langchain4j.agent.tool.Tool;
@@ -25,7 +25,7 @@ import java.util.Map;
  * <p>属于 database 插件（{@link DatabasePlugin}）的第二个工具集。驱动状态由插件级共享资源
  * {@link JdbcDriverRegistry} 持有，因此这里加载的驱动对 {@link DatabaseQueryTool} 立即可见。</p>
  */
-public class DatabaseSchemaTool implements AgentTool {
+public class DatabaseSchemaTool extends AbstractAgentTool {
 
     private static final Logger log = LoggerFactory.getLogger(DatabaseSchemaTool.class);
 

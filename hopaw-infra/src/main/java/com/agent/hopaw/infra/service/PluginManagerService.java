@@ -123,24 +123,35 @@ public class PluginManagerService implements IAgentPluginService {
             log.warn("unloadPlugin: plugin not found: {}", pluginId);
             return false;
         }
-        // 卸载前先取出清理所需的配置定义（卸载后 classloader 关闭、实例不可再用）
-        List<AgentTool> tools = new ArrayList<>(entry.getTools());
-        List<ToolConfigItem> pluginConfigItems = entry.getPlugin().getConfigItems();
+        // 卸载前先取出清理所需的配置定义与前缀：卸载会关闭 classloader，
+        // 之后再去调插件类实例上的 getConfigPrefix()/getConfigItems() 不再可靠
+        List<ToolConfigItem> pluginConfigItems = List.copyOf(entry.getPlugin().getConfigItems());
+        List<ToolConfigCleanup> toolCleanups = new ArrayList<>();
+        for (AgentTool tool : entry.getTools()) {
+            toolCleanups.add(new ToolConfigCleanup(tool.getConfigPrefix(), List.copyOf(tool.getConfigItems())));
+        }
 
         boolean result = jarPluginLoader.unloadAndDeletePlugin(entry.getJarFileName());
         if (result) {
             if (cleanConfig) {
-                // 插件级配置 + 该插件下所有工具集的工具级配置（含 MAP 散键）
+                // 插件级配置（含 MAP 散键）
                 configItemStore.deleteAll(PluginConfigService.prefix(pluginId), pluginConfigItems);
-                for (AgentTool tool : tools) {
-                    configItemStore.deleteAll(tool.getConfigPrefix(), tool.getConfigItems());
+                // 各工具集配置：键已挂在 plugin.<id>.tool.<工具集名>. 下，逐个按声明项清理
+                for (ToolConfigCleanup cleanup : toolCleanups) {
+                    configItemStore.deleteAll(cleanup.prefix(), cleanup.configItems());
                 }
-                log.info("Cleaned config of plugin [{}]: {} plugin-level items, {} tool sets",
-                        pluginId, pluginConfigItems.size(), tools.size());
+                // 兜底：插件根前缀扫一遍，覆盖已从代码中移除的历史配置项，保证 plugin.<id>.* 无残留
+                int swept = configItemStore.deleteByPrefix(PluginConfigService.prefix(pluginId));
+                log.info("Cleaned config of plugin [{}]: {} plugin-level items, {} tool sets, {} keys swept by prefix",
+                        pluginId, pluginConfigItems.size(), toolCleanups.size(), swept);
             }
             pluginStateService.remove(pluginId);
         }
         return result;
+    }
+
+    /** 卸载清理留痕：前缀 + 配置项定义，避免卸载后依赖插件类实例计算。 */
+    private record ToolConfigCleanup(String prefix, List<ToolConfigItem> configItems) {
     }
 
     @Override

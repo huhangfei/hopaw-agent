@@ -2,7 +2,7 @@ package com.agent.hopaw.tool.canvas;
 
 import com.agent.hopaw.infra.service.IPluginResultStore;
 import com.agent.hopaw.infra.service.IWebSocketBridgeService;
-import com.agent.hopaw.infra.tool.AgentTool;
+import com.agent.hopaw.infra.tool.AbstractAgentTool;
 import com.agent.hopaw.infra.tool.ToolSecurityLevel;
 import com.agent.hopaw.infra.util.InvocationParametersWrapper;
 import com.alibaba.fastjson2.JSON;
@@ -36,7 +36,7 @@ import java.util.UUID;
  *   <li>{@code closeCanvas} —— 结束会话，前端还原布局并关闭插件。</li>
  * </ul>
  */
-public class CanvasTool implements AgentTool {
+public class CanvasTool extends AbstractAgentTool {
 
     private static final Logger logger = LoggerFactory.getLogger(CanvasTool.class);
 

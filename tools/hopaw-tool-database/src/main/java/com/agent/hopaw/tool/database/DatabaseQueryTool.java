@@ -1,7 +1,7 @@
 package com.agent.hopaw.tool.database;
 
 import com.agent.hopaw.infra.service.IPluginConfigService;
-import com.agent.hopaw.infra.tool.AgentTool;
+import com.agent.hopaw.infra.tool.AbstractAgentTool;
 import com.agent.hopaw.infra.tool.ToolSecurityLevel;
 import dev.langchain4j.agent.tool.P;
 import dev.langchain4j.agent.tool.Tool;
@@ -25,7 +25,7 @@ import java.util.Date;
  * {@link DatabaseSchemaTool} 共用插件级共享资源 {@link JdbcDriverRegistry}
  * 与插件级配置（默认连接信息）。</p>
  */
-public class DatabaseQueryTool implements AgentTool {
+public class DatabaseQueryTool extends AbstractAgentTool {
 
     private static final Logger log = LoggerFactory.getLogger(DatabaseQueryTool.class);
 
