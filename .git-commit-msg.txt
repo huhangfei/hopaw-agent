@@ -1,7 +1,0 @@
-配置保存提示中文化 + 方法数分色统计 + 插件列表关键词 + Tab 排序
-
-- 配置校验提示改为中文：新增 getChineseValidationMessage，替换浏览器原生英文 validationMessage（必填/长度/格式/数值范围）
-- 工具列表方法数分开统计：ToolSetInfo 新增 enabledToolCount/disabledToolCount，列表与详情角标显示"X 可用 / Y 禁用"（禁用为 0 时不显示），方法开关切换后 JS 实时刷新计数
-- 插件管理页手风琴头部计数同步分开统计并在切换后实时刷新
-- 插件列表项显示关键词标签（keyword 按逗号/分号拆分，含暗色主题样式）
-- 插件管理移到运维管理 Tab 第一位
