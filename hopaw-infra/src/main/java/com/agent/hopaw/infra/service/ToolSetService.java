@@ -6,6 +6,7 @@ import com.agent.hopaw.infra.model.dto.ToolInfo;
 import com.agent.hopaw.infra.model.dto.ToolParamInfo;
 import com.agent.hopaw.infra.model.dto.ToolSetInfo;
 import com.agent.hopaw.infra.plugin.AgentPlugin;
+import com.agent.hopaw.infra.plugin.PluginIconResolver;
 import com.agent.hopaw.infra.plugin.PluginRegistry;
 import com.agent.hopaw.infra.tool.AgentTool;
 import com.agent.hopaw.infra.tool.ToolSecurityLevel;

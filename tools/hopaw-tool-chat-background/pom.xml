@@ -11,19 +11,17 @@
     </parent>
 
     <groupId>com.hopaw.agent</groupId>
-    <artifactId>hopaw-tool-database</artifactId>
+    <artifactId>hopaw-tool-chat-background</artifactId>
     <version>1.0.0</version>
     <packaging>jar</packaging>
 
-    <name>hopaw-tool-database</name>
-    <description>通用数据库操作插件工具，不内置驱动，从本地路径动态加载 JDBC 驱动 JAR</description>
-
+    <name>hopaw-tool-chat-background</name>
+    <description>会话背景色纯前端插件：不提供任何 AgentTool，仅通过 plugin-assets.json 在沙箱容器中注入设置面板，为会话页设置背景色</description>
     <properties>
         <maven.install.skip>true</maven.install.skip>
     </properties>
 
     <dependencies>
-        <!-- 契约层 -->
         <dependency>
             <groupId>com.hopaw.agent</groupId>
             <artifactId>hopaw-contract</artifactId>
@@ -44,6 +42,11 @@
             <artifactId>spring-beans</artifactId>
             <scope>provided</scope>
         </dependency>
+        <dependency>
+            <groupId>com.alibaba.fastjson2</groupId>
+            <artifactId>fastjson2</artifactId>
+            <scope>provided</scope>
+        </dependency>
     </dependencies>
 
     <build>
@@ -54,10 +57,11 @@
                 <artifactId>maven-compiler-plugin</artifactId>
                 <version>3.11.0</version>
             </plugin>
+            <!-- shade 打包，保留 plugin-assets.json 与 static/ 资源在 JAR 根 -->
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-shade-plugin</artifactId>
-                <version>3.5.1</version>
+                <version>3.6.0</version>
                 <executions>
                     <execution>
                         <phase>package</phase>

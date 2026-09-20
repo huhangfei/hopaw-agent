@@ -8,6 +8,7 @@ import com.agent.hopaw.infra.model.dto.PluginUpdateInfo;
 import com.agent.hopaw.infra.model.dto.ToolConfigItem;
 import com.agent.hopaw.infra.plugin.AgentPlugin;
 import com.agent.hopaw.infra.plugin.JarPluginLoader;
+import com.agent.hopaw.infra.plugin.PluginIconResolver;
 import com.agent.hopaw.infra.plugin.PluginRegistry;
 import com.agent.hopaw.infra.tool.AgentTool;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -86,6 +87,8 @@ public class PluginManagerService implements IAgentPluginService {
     private PluginDescriptor toDescriptor(PluginRegistry.PluginEntry entry) {
         AgentPlugin plugin = entry.getPlugin();
         PluginDescriptor descriptor = PluginDescriptor.of(plugin);
+        // 插件图标从 JAR 内联出来下发（plugin.getIcon() 只是 JAR 内文件名，浏览器无法直接请求）
+        descriptor.setIcon(PluginIconResolver.resolvePluginIcon(entry, plugin.getIcon()));
         List<AgentTool> tools = entry.getTools();
         descriptor.setToolSetNames(tools.stream().map(AgentTool::getName).toArray(String[]::new));
         descriptor.setToolCount(tools.size());

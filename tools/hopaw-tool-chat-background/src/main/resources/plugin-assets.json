@@ -1,0 +1,33 @@
+{
+  "assets": [
+    {
+      "id": "chat-background-html",
+      "type": "html",
+      "path": "static/chat-background.html",
+      "pages": ["index"],
+      "mount": "body",
+      "mode": "append",
+      "priority": 1000,
+      "sandbox": true,
+      "sandboxApis": ["ui.resize", "theme.setBackground", "theme.getBackground"]
+    },
+    {
+      "id": "chat-background-css",
+      "type": "css",
+      "path": "static/chat-background.css",
+      "pages": ["index"],
+      "priority": 1000,
+      "sandbox": true,
+      "sandboxApis": ["ui.resize", "theme.setBackground", "theme.getBackground"]
+    },
+    {
+      "id": "chat-background-js",
+      "type": "js",
+      "path": "static/chat-background.js",
+      "pages": ["index"],
+      "priority": 1000,
+      "sandbox": true,
+      "sandboxApis": ["ui.resize", "theme.setBackground", "theme.getBackground"]
+    }
+  ]
+}

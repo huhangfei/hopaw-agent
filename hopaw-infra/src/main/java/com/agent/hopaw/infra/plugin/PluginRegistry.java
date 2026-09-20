@@ -256,6 +256,17 @@ public class PluginRegistry {
                             pages.add(String.valueOf(p));
                         }
                     }
+                    // sandbox 声明：纯前端插件默认应在沙箱容器内运行（Q3 安全策略）
+                    boolean sandbox = node.getBooleanValue("sandbox");
+                    List<String> sandboxApis = new ArrayList<>();
+                    if (node.getJSONArray("sandboxApis") != null) {
+                        for (Object api : node.getJSONArray("sandboxApis")) {
+                            sandboxApis.add(String.valueOf(api));
+                        }
+                    }
+                    if (sandbox && (node.getString("mount") == null || node.getString("mount").isBlank())) {
+                        logger.warn("Sandbox asset [{}] in {} 未声明 mount 容器，前端将拒绝注入", node.getString("id"), jarFileName);
+                    }
                     result.add(new PluginAsset(
                             node.getString("id"),
                             plugin.getId(),
@@ -267,7 +278,9 @@ public class PluginRegistry {
                             node.getIntValue("priority", 1000),
                             node.getString("mount"),
                             node.getString("mode") != null ? node.getString("mode") : "append",
-                            version
+                            version,
+                            sandbox,
+                            sandboxApis
                     ));
                 }
                 if (!result.isEmpty()) {

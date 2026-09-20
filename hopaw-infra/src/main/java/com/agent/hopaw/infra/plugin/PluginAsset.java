@@ -43,8 +43,25 @@ public class PluginAsset {
     /** 缓存失效版本号（取 JAR lastModified 的 hex）。 */
     private final String version;
 
+    /**
+     * 是否以「沙箱容器」方式注入（plugin-assets.json 的 {@code sandbox} 声明，默认 false）。
+     *
+     * <p>为 true 时，本插件的 css/js/html **不会**注入宿主页面全局作用域，而是被装进一个
+     * {@code <iframe sandbox="allow-scripts">} 容器（挂在 {@link #mount} 指定的选择器内）。
+     * iframe 与宿主不同源，插件脚本拿不到宿主 DOM，只能通过
+     * {@code postMessage} 调用宿主白名单能力（见 {@link #sandboxApis}）。</p>
+     */
+    private final boolean sandbox;
+
+    /**
+     * 沙箱插件申请调用的宿主能力白名单（仅在 {@link #sandbox} 为 true 时有意义）。
+     * 宿主会与自身内置能力表取交集，未声明或未在白名单内的调用一律拒绝。
+     */
+    private final List<String> sandboxApis;
+
     public PluginAsset(String id, String plugin, String type, String path, List<String> pages,
-                       String position, boolean defer, int priority, String mount, String mode, String version) {
+                       String position, boolean defer, int priority, String mount, String mode, String version,
+                       boolean sandbox, List<String> sandboxApis) {
         this.id = id;
         this.plugin = plugin;
         this.type = type;
@@ -56,6 +73,8 @@ public class PluginAsset {
         this.mount = mount;
         this.mode = mode;
         this.version = version;
+        this.sandbox = sandbox;
+        this.sandboxApis = sandboxApis == null ? List.of() : List.copyOf(sandboxApis);
     }
 
     /**
@@ -126,5 +145,13 @@ public class PluginAsset {
 
     public String getVersion() {
         return version;
+    }
+
+    public boolean isSandbox() {
+        return sandbox;
+    }
+
+    public List<String> getSandboxApis() {
+        return sandboxApis;
     }
 }

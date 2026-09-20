@@ -14,10 +14,14 @@ import org.springframework.web.multipart.MultipartFile;
 
 import javax.annotation.PostConstruct;
 import javax.servlet.http.HttpServletRequest;
+import java.io.ByteArrayInputStream;
 import java.io.IOException;
+import java.io.InputStream;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.*;
 import java.security.MessageDigest;
 import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipInputStream;
 
@@ -34,6 +38,9 @@ public class PluginRepoService {
 
     /** 仓库唯一接受的清单版本 */
     private static final int MANIFEST_VERSION = 2;
+
+    /** 插件图标文件名（JAR 内）→ 内联 SVG 内容 的缓存；值为空串表示"确认取不到"，避免重复解包。 */
+    private final Map<String, String> iconCache = new ConcurrentHashMap<>();
 
     private final PluginRepoProperties properties;
     private final ObjectMapper objectMapper;
@@ -146,7 +153,8 @@ public class PluginRepoService {
                 result.setId(pluginId);
                 result.setName(displayName(newest));
                 result.setDescription(newest.getDescription());
-                result.setIcon(newest.getIcon());
+                // 清单里只有图标文件名，仓库侧没有该静态资源目录，故就地解包最新版 ZIP 内联出 SVG
+                result.setIcon(resolveIconFromPackage(findPackageZip(pluginId, newest.getVersion()), newest.getIcon()));
                 result.setKeyword(newest.getKeyword());
                 result.setVersions(versions);
                 pluginMap.put(pluginId, result);
@@ -233,7 +241,9 @@ public class PluginRepoService {
             result.setId(manifest.getId());
             result.setName(displayName(manifest));
             result.setDescription(manifest.getDescription());
-            result.setIcon(manifest.getIcon());
+            // 清单里只有图标文件名，仓库侧没有该静态资源目录，故就地解包 JAR 内联出 SVG；取不到则退回文件名
+            String inlinedIcon = readIconFromJar(jarBytes, manifest.getIcon());
+            result.setIcon(inlinedIcon != null ? inlinedIcon : manifest.getIcon());
             result.setKeyword(manifest.getKeyword());
             result.setVersions(Collections.singletonList(PluginRepoResult.VersionEntry.from(manifest,
                     buildDownloadUrl(pluginId, version))));
@@ -286,6 +296,88 @@ public class PluginRepoService {
         }
 
         log.info("Deleted plugin: [{}] v{}", safePluginName, safeVersion);
+    }
+
+    // ==================== 插件图标（内联 SVG） ====================
+
+    /** 定位某插件某版本目录下的插件包 ZIP（找不到返回 null）。 */
+    private Path findPackageZip(String pluginId, String version) {
+        Path versionDir = packagesDir.resolve(sanitizeName(pluginId)).resolve(sanitizeName(version));
+        if (!Files.isDirectory(versionDir)) {
+            return null;
+        }
+        try (DirectoryStream<Path> stream = Files.newDirectoryStream(versionDir, "*.zip")) {
+            for (Path zip : stream) {
+                return zip;
+            }
+        } catch (IOException e) {
+            log.warn("读取插件包目录失败：{}", versionDir, e);
+        }
+        return null;
+    }
+
+    /**
+     * 从插件包 ZIP 中取出插件 JAR，再从中读出图标并内联为 SVG 代码。
+     *
+     * <p>返回值永远是可直接交给前端渲染的字符串：解析成功为 {@code <svg .../>}，
+     * 失败时退回清单里的图标文件名（前端此时按 {@code /icons/tools/xxx} 兜底，取不到就显示占位图）。</p>
+     */
+    private String resolveIconFromPackage(Path packageZip, String iconName) {
+        if (isBlank(iconName) || iconName.startsWith("<svg") || packageZip == null) {
+            return iconName;
+        }
+        String cacheKey = packageZip + "|" + iconName;
+        String cached = iconCache.get(cacheKey);
+        if (cached != null) {
+            return cached.isEmpty() ? iconName : cached;
+        }
+
+        String svg = null;
+        try (InputStream fis = Files.newInputStream(packageZip);
+             ZipInputStream zis = new ZipInputStream(fis)) {
+            ZipEntry entry;
+            while ((entry = zis.getNextEntry()) != null) {
+                if (entry.getName().endsWith(".jar")) {
+                    svg = readIconFromJar(zis.readAllBytes(), iconName);
+                    break;
+                }
+                zis.closeEntry();
+            }
+        } catch (Exception e) {
+            log.warn("从插件包解析图标失败：{} ({})", packageZip, e.getMessage());
+        }
+
+        iconCache.put(cacheKey, svg == null ? "" : svg);
+        return svg == null ? iconName : svg;
+    }
+
+    /**
+     * 从 JAR 字节中读取图标内容：优先 {@code static/icons/plugins/}，回退 {@code static/icons/tools/}。
+     *
+     * @return SVG 文本；未找到返回 {@code null}
+     */
+    private String readIconFromJar(byte[] jarBytes, String iconName) {
+        if (jarBytes == null || isBlank(iconName) || iconName.startsWith("<svg")) {
+            return iconName;
+        }
+        String[] candidates = {
+                "static/icons/plugins/" + iconName,
+                "static/icons/tools/" + iconName
+        };
+        try (ZipInputStream zis = new ZipInputStream(new ByteArrayInputStream(jarBytes))) {
+            ZipEntry entry;
+            while ((entry = zis.getNextEntry()) != null) {
+                for (String candidate : candidates) {
+                    if (candidate.equals(entry.getName())) {
+                        return new String(zis.readAllBytes(), StandardCharsets.UTF_8);
+                    }
+                }
+                zis.closeEntry();
+            }
+        } catch (Exception e) {
+            log.warn("读取插件图标失败：{} ({})", iconName, e.getMessage());
+        }
+        return null;
     }
 
     // ==================== v2 清单校验 ====================

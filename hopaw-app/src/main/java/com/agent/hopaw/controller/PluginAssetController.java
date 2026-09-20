@@ -70,6 +70,9 @@ public class PluginAssetController {
             item.put("priority", a.getPriority());
             item.put("mount", a.getMount() == null ? "" : a.getMount());
             item.put("mode", a.getMode());
+            // 沙箱声明：前端据此把资源装进 iframe 容器，并通过白名单能力与宿主通信
+            item.put("sandbox", a.isSandbox());
+            item.put("sandboxApis", a.getSandboxApis());
             result.add(item);
         }
         return result;
