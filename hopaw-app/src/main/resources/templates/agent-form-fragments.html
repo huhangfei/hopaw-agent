@@ -126,24 +126,28 @@
                             勾选该智能体可以使用的工具
                         </div>
                         <div class="checkbox-group">
-                            <label th:each="ts : ${toolSets}" class="checkbox-item">
-                                <div class="tool-item-row">
-                                    <input type="checkbox" name="tools" th:value="${ts.name}">
-                                    <div class="tool-item-icon">
-                                        <th:block th:if="${ts.iconIsSvgCode()}">
-                                            <span th:utext="${ts.icon}"></span>
-                                        </th:block>
-                                        <th:block th:unless="${ts.iconIsSvgCode()}">
-                                            <img th:src="@{/icons/tools/__${ts.icon}__}" alt="icon"
-                                                 onerror="this.style.display='none'">
-                                        </th:block>
-                                    </div>
-                                    <span class="tool-item-name" th:text="${ts.name}"></span>
-                                    <span class="tool-item-count"
-                                          th:text="${#lists.size(ts.tools)} + ' 个方法'"></span>
+                            <!-- 按插件分组（一级），插件下为其工具集（二级） -->
+                            <div th:each="p : ${plugins}" class="tool-group">
+                                <div class="tool-group-header">
+                                    <span class="tool-group-name" th:text="${p.name}"></span>
+                                    <span class="tool-group-version" th:if="${p.version != null and !p.version.isEmpty()}"
+                                          th:text="|v${p.version}|"></span>
+                                    <span class="tool-group-badge badge-disabled" th:unless="${p.enabled}">插件已禁用</span>
                                 </div>
-                                <span class="tool-item-desc" th:text="${ts.description}"></span>
-                            </label>
+                                <th:block th:if="${p.enabled}">
+                                    <th:block th:replace="~{fragment/tool-checkbox :: toolSetLabels(${pluginToolSets.get(p.id)}, '')}"/>
+                                </th:block>
+                                <th:block th:unless="${p.enabled}">
+                                    <th:block th:replace="~{fragment/tool-checkbox :: unavailableToolSetLabels(${p.toolSetNames}, true)}"/>
+                                </th:block>
+                            </div>
+                            <!-- 内置工具：无插件父节点 -->
+                            <div class="tool-group" th:if="${not #lists.isEmpty(builtinToolSets)}">
+                                <div class="tool-group-header">
+                                    <span class="tool-group-name">内置工具</span>
+                                </div>
+                                <th:block th:replace="~{fragment/tool-checkbox :: toolSetLabels(${builtinToolSets}, '')}"/>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -303,26 +307,78 @@
                             勾选该智能体可以使用的工具
                         </div>
                         <div class="checkbox-group" id="editToolListFragment">
-                            <label th:each="ts : ${toolSets}" class="checkbox-item">
-                                <div class="tool-item-row">
-                                    <input type="checkbox" name="tools" th:value="${ts.name}"
-                                           class="edit-tool-checkbox-fragment"
-                                           th:checked="${agent.tools != null and #strings.contains(agent.tools, ts.name)}">
-                                    <div class="tool-item-icon">
-                                        <th:block th:if="${ts.iconIsSvgCode()}">
-                                            <span th:utext="${ts.icon}"></span>
-                                        </th:block>
-                                        <th:block th:unless="${ts.iconIsSvgCode()}">
-                                            <img th:src="@{/icons/tools/__${ts.icon}__}" alt="icon"
-                                                 onerror="this.style.display='none'">
-                                        </th:block>
-                                    </div>
-                                    <span class="tool-item-name" th:text="${ts.name}"></span>
-                                    <span class="tool-item-count"
-                                          th:text="${#lists.size(ts.tools)} + ' 个方法'"></span>
+                            <!-- 按插件分组（一级），插件下为其工具集（二级） -->
+                            <div th:each="p : ${plugins}" class="tool-group">
+                                <div class="tool-group-header">
+                                    <span class="tool-group-name" th:text="${p.name}"></span>
+                                    <span class="tool-group-version" th:if="${p.version != null and !p.version.isEmpty()}"
+                                          th:text="|v${p.version}|"></span>
+                                    <span class="tool-group-badge badge-disabled" th:unless="${p.enabled}">插件已禁用</span>
                                 </div>
-                                <span class="tool-item-desc" th:text="${ts.description}"></span>
-                            </label>
+                                <th:block th:if="${p.enabled}">
+                                    <label th:each="ts : ${pluginToolSets.get(p.id)}" class="checkbox-item">
+                                        <div class="tool-item-row">
+                                            <input type="checkbox" name="tools" th:value="${ts.name}"
+                                                   class="edit-tool-checkbox-fragment"
+                                                   th:checked="${agent.tools != null and #strings.contains(agent.tools, ts.name)}">
+                                            <div class="tool-item-icon">
+                                                <th:block th:if="${ts.iconIsSvgCode()}">
+                                                    <span th:utext="${ts.icon}"></span>
+                                                </th:block>
+                                                <th:block th:unless="${ts.iconIsSvgCode()}">
+                                                    <img th:src="@{/icons/tools/__${ts.icon}__}" alt="icon"
+                                                         onerror="this.style.display='none'">
+                                                </th:block>
+                                            </div>
+                                            <span class="tool-item-name" th:text="${ts.name}"></span>
+                                            <span class="tool-item-count"
+                                                  th:text="${#lists.size(ts.tools)} + ' 个方法'"></span>
+                                        </div>
+                                        <span class="tool-item-desc" th:text="${ts.description}"></span>
+                                    </label>
+                                </th:block>
+                                <!-- 插件已禁用：仍保留勾选状态（重新启用后即恢复），但标明当前不可用 -->
+                                <th:block th:unless="${p.enabled}">
+                                    <label th:each="tsName : ${p.toolSetNames}" class="checkbox-item checkbox-item-unavailable">
+                                        <div class="tool-item-row">
+                                            <input type="checkbox" name="tools" th:value="${tsName}"
+                                                   class="edit-tool-checkbox-fragment"
+                                                   th:checked="${agent.tools != null and #strings.contains(agent.tools, tsName)}">
+                                            <div class="tool-item-icon">
+                                                <span class="tool-item-icon-placeholder">🚫</span>
+                                            </div>
+                                            <span class="tool-item-name" th:text="${tsName}"></span>
+                                            <span class="tool-item-count warn-text">插件已禁用，暂不可用</span>
+                                        </div>
+                                    </label>
+                                </th:block>
+                            </div>
+                            <!-- 内置工具：无插件父节点 -->
+                            <div class="tool-group" th:if="${not #lists.isEmpty(builtinToolSets)}">
+                                <div class="tool-group-header">
+                                    <span class="tool-group-name">内置工具</span>
+                                </div>
+                                <label th:each="ts : ${builtinToolSets}" class="checkbox-item">
+                                    <div class="tool-item-row">
+                                        <input type="checkbox" name="tools" th:value="${ts.name}"
+                                               class="edit-tool-checkbox-fragment"
+                                               th:checked="${agent.tools != null and #strings.contains(agent.tools, ts.name)}">
+                                        <div class="tool-item-icon">
+                                            <th:block th:if="${ts.iconIsSvgCode()}">
+                                                <span th:utext="${ts.icon}"></span>
+                                            </th:block>
+                                            <th:block th:unless="${ts.iconIsSvgCode()}">
+                                                <img th:src="@{/icons/tools/__${ts.icon}__}" alt="icon"
+                                                     onerror="this.style.display='none'">
+                                            </th:block>
+                                        </div>
+                                        <span class="tool-item-name" th:text="${ts.name}"></span>
+                                        <span class="tool-item-count"
+                                              th:text="${#lists.size(ts.tools)} + ' 个方法'"></span>
+                                    </div>
+                                    <span class="tool-item-desc" th:text="${ts.description}"></span>
+                                </label>
+                            </div>
                         </div>
                     </div>
                 </div>

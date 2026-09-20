@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<!--
+  智能体表单里的工具集勾选片段（addAgentModal / editAgentModal 共用）
+  参数：
+    toolSets      - 工具集列表
+    checkboxClass - 附加到 checkbox 上的样式类（编辑表单需要，新增表单传空字符串）
+-->
+<th:block th:fragment="toolSetLabels(toolSets, checkboxClass)">
+    <label th:each="ts : ${toolSets}" class="checkbox-item">
+        <div class="tool-item-row">
+            <input type="checkbox" name="tools" th:value="${ts.name}"
+                   th:classappend="${#strings.isEmpty(checkboxClass) ? null : checkboxClass}">
+            <div class="tool-item-icon">
+                <th:block th:if="${ts.iconIsSvgCode()}">
+                    <span th:utext="${ts.icon}"></span>
+                </th:block>
+                <th:block th:unless="${ts.iconIsSvgCode()}">
+                    <img th:src="@{/icons/tools/__${ts.icon}__}" alt="icon"
+                         onerror="this.style.display='none'">
+                </th:block>
+            </div>
+            <span class="tool-item-name" th:text="${ts.name}"></span>
+            <span class="tool-item-count"
+                  th:text="${#lists.size(ts.tools)} + ' 个方法'"></span>
+        </div>
+        <span class="tool-item-desc" th:text="${ts.description}"></span>
+    </label>
+</th:block>
+
+<!--
+  禁用插件下的工具集行：只有工具集名 + 不可用提示。
+  参数：
+    toolSetNames - 插件声明的工具集名数组
+    disableInput - true 表示不可勾选（新增智能体时无意义的绑定）
+-->
+<th:block th:fragment="unavailableToolSetLabels(toolSetNames, disableInput)">
+    <label th:each="tsName : ${toolSetNames}" class="checkbox-item checkbox-item-unavailable">
+        <div class="tool-item-row">
+            <input type="checkbox" name="tools" th:value="${tsName}" th:disabled="${disableInput}">
+            <div class="tool-item-icon">
+                <span class="tool-item-icon-placeholder">🚫</span>
+            </div>
+            <span class="tool-item-name" th:text="${tsName}"></span>
+            <span class="tool-item-count warn-text">插件已禁用，暂不可用</span>
+        </div>
+    </label>
+</th:block>
+</html>

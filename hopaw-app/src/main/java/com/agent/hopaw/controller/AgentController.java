@@ -1,14 +1,17 @@
 package com.agent.hopaw.controller;
 
 import com.agent.hopaw.infra.constant.ReasoningEffortEnum;
+import com.agent.hopaw.infra.model.dto.PluginDescriptor;
 import com.agent.hopaw.infra.model.dto.ResponseBean;
 import com.agent.hopaw.infra.model.dto.ToolSetInfo;
 import com.agent.hopaw.infra.model.entity.Agent;
 import com.agent.hopaw.infra.model.entity.AiModel;
 import com.agent.hopaw.infra.service.AgentService;
 import com.agent.hopaw.infra.service.AiModelService;
+import com.agent.hopaw.infra.service.IAgentPluginService;
 import com.agent.hopaw.infra.service.IToolSetService;
 import com.agent.hopaw.util.CurrentUser;
+import com.agent.hopaw.util.ToolSetViewUtil;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.WebDataBinder;
@@ -30,12 +33,14 @@ public class AgentController {
     private final AgentService agentService;
     private final IToolSetService agentToolService;
     private final AiModelService aiModelService;
+    private final IAgentPluginService pluginService;
 
     public AgentController(AgentService agentService, IToolSetService agentToolService,
-                           AiModelService aiModelService) {
+                           AiModelService aiModelService, IAgentPluginService pluginService) {
         this.agentService = agentService;
         this.agentToolService = agentToolService;
         this.aiModelService = aiModelService;
+        this.pluginService = pluginService;
     }
 
     @GetMapping("/agents")
@@ -77,7 +82,11 @@ public class AgentController {
     @GetMapping("/agent/modal/add")
     public String addAgentModal(Model model) {
         List<ToolSetInfo> toolSets = agentToolService.getToolSets();
+        List<PluginDescriptor> plugins = pluginService.getPlugins();
         model.addAttribute("toolSets", toolSets);
+        model.addAttribute("plugins", plugins);
+        model.addAttribute("pluginToolSets", ToolSetViewUtil.byPlugin(toolSets, plugins));
+        model.addAttribute("builtinToolSets", ToolSetViewUtil.builtin(toolSets));
         model.addAttribute("reasoningEfforts", ReasoningEffortEnum.values());
         return "agent-form-fragments :: addAgentModal";
     }
@@ -93,8 +102,12 @@ public class AgentController {
                 model.addAttribute("aiModelId", aiModel.getId());
             }
         }
+        List<PluginDescriptor> plugins = pluginService.getPlugins();
         model.addAttribute("agent", agent);
         model.addAttribute("toolSets", toolSets);
+        model.addAttribute("plugins", plugins);
+        model.addAttribute("pluginToolSets", ToolSetViewUtil.byPlugin(toolSets, plugins));
+        model.addAttribute("builtinToolSets", ToolSetViewUtil.builtin(toolSets));
         model.addAttribute("reasoningEfforts", ReasoningEffortEnum.values());
         return "agent-form-fragments :: editAgentModal";
     }

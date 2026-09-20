@@ -31,6 +31,18 @@
     font-size: 14px;
 }
 
+/* 插件级配置页：提示配置键前缀（plugin.<id>.*） */
+.config-prefix-hint {
+    margin-top: 6px;
+    color: #aaa;
+    font-size: 12px;
+    font-family: 'Consolas', 'Courier New', monospace;
+}
+
+body.dark-theme .config-prefix-hint {
+    color: #888;
+}
+
 .config-form {
     background: white;
     border-radius: 8px;

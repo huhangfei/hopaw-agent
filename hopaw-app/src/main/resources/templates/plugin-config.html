@@ -3,22 +3,23 @@
       xmlns:th="http://www.thymeleaf.org"
       layout:decorate="~{layouts/default}">
 <head>
-    <title>工具配置 - HoPaw</title>
+    <title>插件配置 - HoPaw</title>
 </head>
 <body>
-<div layout:fragment="pageTitle">🤖 HoPaw - 工具配置</div>
+<div layout:fragment="pageTitle">🤖 HoPaw - 插件配置</div>
 
 <div class="tool-config-container" layout:fragment="content">
     <div th:if="${success}" class="toast-success" th:text="${success}"></div>
     <div th:if="${error}" class="toast-error" th:text="${error}"></div>
 
     <div class="config-header">
-        <a href="/tools" class="btn-back">← 返回工具列表</a>
-        <h2 th:text="|${config.toolName} 配置|"></h2>
-        <p class="config-desc" th:text="${config.toolDescription}"></p>
+        <a href="/tools" class="btn-back">← 返回插件列表</a>
+        <h2 th:text="|${config.pluginName} 插件配置|"></h2>
+        <p class="config-desc" th:text="${config.pluginDescription}"></p>
+        <p class="config-prefix-hint" th:text="|配置键前缀：plugin.${pluginId}.*|"></p>
     </div>
 
-    <form th:action="@{|/tool-config/${toolName}|}" method="post" class="config-form" id="configForm" onsubmit="return validateForm(event)">
+    <form th:action="@{|/plugins/config/${pluginId}|}" method="post" class="config-form" id="configForm" onsubmit="return validateForm(event)">
         <div th:replace="~{fragment/config-form :: configItems(${config})}"></div>
     </form>
 </div>

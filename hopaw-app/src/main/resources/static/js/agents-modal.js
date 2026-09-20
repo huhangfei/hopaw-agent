@@ -129,13 +129,14 @@ function onAgentModelSelectChange(mode) {
 
 function selectAllTools(containerSelector) {
     document.querySelectorAll(containerSelector + ' input[type="checkbox"]').forEach(function(cb) {
-        cb.checked = true;
+        // 插件被禁用的工具集不可选（禁用项不参与全选）
+        if (!cb.disabled) cb.checked = true;
     });
 }
 
 function deselectAllTools(containerSelector) {
     document.querySelectorAll(containerSelector + ' input[type="checkbox"]').forEach(function(cb) {
-        cb.checked = false;
+        if (!cb.disabled) cb.checked = false;
     });
 }
 

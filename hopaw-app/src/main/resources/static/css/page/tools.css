@@ -827,3 +827,442 @@ body.dark-theme .btn-config {
 body.dark-theme .btn-config:hover {
     background: #4d4d7b;
 }
+
+/* ==================== 两级结构：插件（一级）→ 工具集（二级） ==================== */
+
+/* ----- 左栏 Tab 栏 ----- */
+.tools-tab-bar {
+    display: flex;
+    gap: 6px;
+    margin-top: 12px;
+}
+
+.tools-tab {
+    flex: 1;
+    padding: 6px 10px;
+    font-size: 12px;
+    font-weight: 500;
+    color: #666;
+    background: #fff;
+    border: 1px solid #e0e0e0;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.tools-tab:hover {
+    border-color: #667eea;
+    color: #667eea;
+}
+
+.tools-tab.active {
+    color: #fff;
+    background: #667eea;
+    border-color: #667eea;
+}
+
+/* ----- 插件分组 ----- */
+.tool-plugin-group {
+    margin-bottom: 4px;
+}
+
+.tool-plugin-group.filtered-hidden {
+    display: none;
+}
+
+.tool-plugin-header {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 16px;
+    cursor: pointer;
+    border-left: 3px solid transparent;
+    transition: background 0.15s, border-color 0.15s;
+}
+
+.tool-plugin-header:hover {
+    background: #f0f0f0;
+}
+
+.tool-plugin-header.active {
+    background: #eef1fe;
+    border-left-color: #667eea;
+}
+
+.tool-plugin-header.has-active-child {
+    background: #f5f7ff;
+}
+
+.tool-plugin-icon {
+    width: 28px;
+    height: 28px;
+    border-radius: 7px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+
+.tool-plugin-icon img,
+.tool-plugin-icon svg {
+    width: 28px;
+    height: 28px;
+    border-radius: 7px;
+}
+
+.plugin-icon-fallback {
+    font-size: 18px;
+    line-height: 1;
+}
+
+.tool-plugin-info {
+    flex: 1;
+    min-width: 0;
+}
+
+.tool-plugin-name {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 13px;
+    font-weight: 700;
+    color: #333;
+}
+
+.tool-plugin-meta {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-top: 2px;
+    font-size: 11px;
+    color: #aaa;
+}
+
+.tool-plugin-badge {
+    display: inline-block;
+    padding: 1px 8px;
+    border-radius: 10px;
+    font-size: 11px;
+    font-weight: 500;
+    line-height: 1.6;
+}
+
+.badge-disabled {
+    color: #e53935;
+    background: #fff0f0;
+}
+
+/* ----- 插件下的工具集（缩进） ----- */
+.tool-plugin-children {
+    padding-left: 10px;
+}
+
+.tool-list-child {
+    padding: 10px 16px 10px 20px;
+}
+
+.tool-list-child .tool-list-icon {
+    width: 26px;
+    height: 26px;
+    border-radius: 6px;
+}
+
+.tool-list-child .tool-list-icon img,
+.tool-list-child .tool-list-icon svg {
+    width: 26px;
+    height: 26px;
+    border-radius: 6px;
+}
+
+.tool-list-item.is-disabled {
+    cursor: default;
+    opacity: 0.55;
+}
+
+.tool-list-item.is-disabled:hover {
+    background: transparent;
+}
+
+.tool-plugin-empty {
+    padding: 8px 20px 12px;
+    font-size: 12px;
+    color: #bbb;
+}
+
+/* ----- 右栏：插件详情 ----- */
+.plugin-detail {
+    display: none;
+    padding: 24px;
+}
+
+.plugin-detail.active {
+    display: block;
+}
+
+.plugin-actions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 14px 20px;
+    background: white;
+    border-radius: 10px;
+    margin-bottom: 16px;
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.06);
+}
+
+.btn-toggle-plugin {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 5px 14px;
+    font-size: 12px;
+    font-weight: 500;
+    color: #e8913a;
+    background: #fff;
+    border: 1px solid #ffd9b0;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.btn-toggle-plugin:hover {
+    background: #e8913a;
+    color: #fff;
+    border-color: #e8913a;
+}
+
+.btn-toggle-plugin.is-off {
+    color: #2e7d32;
+    border-color: #c8e6c9;
+}
+
+.btn-toggle-plugin.is-off:hover {
+    background: #2e7d32;
+    color: #fff;
+    border-color: #2e7d32;
+}
+
+.btn-toggle-plugin:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+.btn-back-to-plugin {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 5px 14px;
+    font-size: 12px;
+    font-weight: 500;
+    color: #666;
+    background: #fff;
+    border: 1px solid #e0e0e0;
+    border-radius: 8px;
+    cursor: pointer;
+    margin-left: auto;
+    transition: all 0.2s;
+}
+
+.btn-back-to-plugin:hover {
+    background: #667eea;
+    color: #fff;
+    border-color: #667eea;
+}
+
+/* ----- 插件详情内的工具集概览 ----- */
+.plugin-toolset-list {
+    background: white;
+    border-radius: 12px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+    overflow: hidden;
+}
+
+.plugin-toolset-title {
+    padding: 14px 20px 8px;
+    font-size: 13px;
+    font-weight: 600;
+    color: #888;
+}
+
+.plugin-toolset-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 14px 20px;
+    border-top: 1px solid #f0f0f0;
+    cursor: pointer;
+    transition: background 0.15s;
+}
+
+.plugin-toolset-row:hover {
+    background: #f8f9ff;
+}
+
+.plugin-toolset-icon {
+    width: 30px;
+    height: 30px;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+
+.plugin-toolset-icon img,
+.plugin-toolset-icon svg {
+    width: 30px;
+    height: 30px;
+    border-radius: 8px;
+}
+
+.plugin-toolset-info {
+    flex: 1;
+    min-width: 0;
+}
+
+.plugin-toolset-name {
+    font-size: 14px;
+    font-weight: 600;
+    color: #333;
+    font-family: 'Consolas', 'Courier New', monospace;
+}
+
+.plugin-toolset-desc {
+    margin-top: 2px;
+    font-size: 12px;
+    color: #999;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.plugin-toolset-count {
+    font-size: 12px;
+    color: #bbb;
+    white-space: nowrap;
+    flex-shrink: 0;
+}
+
+.plugin-toolset-empty {
+    padding: 40px 20px;
+    text-align: center;
+    color: #bbb;
+    font-size: 14px;
+    background: white;
+    border-radius: 12px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+}
+
+/* ----- 两级结构深色主题 ----- */
+body.dark-theme .tools-tab {
+    background: #1e3a5f;
+    border-color: #3d3d6b;
+    color: #c0c0c0;
+}
+
+body.dark-theme .tools-tab:hover {
+    border-color: #8ba3ff;
+    color: #8ba3ff;
+}
+
+body.dark-theme .tools-tab.active {
+    background: #667eea;
+    color: #fff;
+    border-color: #667eea;
+}
+
+body.dark-theme .tool-plugin-header:hover {
+    background: #1e3a5f;
+}
+
+body.dark-theme .tool-plugin-header.active {
+    background: #24406b;
+}
+
+body.dark-theme .tool-plugin-header.has-active-child {
+    background: #1c3355;
+}
+
+body.dark-theme .tool-plugin-name {
+    color: #e0e0e0;
+}
+
+body.dark-theme .tool-plugin-meta {
+    color: #888;
+}
+
+body.dark-theme .badge-disabled {
+    color: #ff7961;
+    background: rgba(229, 57, 53, 0.2);
+}
+
+body.dark-theme .tool-plugin-empty {
+    color: #888;
+}
+
+body.dark-theme .plugin-actions {
+    background: #1e3a5f;
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.2);
+}
+
+body.dark-theme .btn-toggle-plugin {
+    background: #1e3a5f;
+    color: #ffb74d;
+    border-color: rgba(255, 183, 77, 0.3);
+}
+
+body.dark-theme .btn-toggle-plugin:hover {
+    background: #ffb74d;
+    color: #1e3a5f;
+}
+
+body.dark-theme .btn-toggle-plugin.is-off {
+    color: #66bb6a;
+    border-color: rgba(102, 187, 106, 0.3);
+}
+
+body.dark-theme .btn-toggle-plugin.is-off:hover {
+    background: #66bb6a;
+    color: #fff;
+}
+
+body.dark-theme .btn-back-to-plugin {
+    background: #1e3a5f;
+    color: #c0c0c0;
+    border-color: #3d3d6b;
+}
+
+body.dark-theme .plugin-toolset-list {
+    background: #1e3a5f;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+}
+
+body.dark-theme .plugin-toolset-title {
+    color: #999;
+}
+
+body.dark-theme .plugin-toolset-row {
+    border-top-color: #3d3d6b;
+}
+
+body.dark-theme .plugin-toolset-row:hover {
+    background: #2d2d44;
+}
+
+body.dark-theme .plugin-toolset-name {
+    color: #8ba3ff;
+}
+
+body.dark-theme .plugin-toolset-desc {
+    color: #999;
+}
+
+body.dark-theme .plugin-toolset-count {
+    color: #888;
+}
+
+body.dark-theme .plugin-toolset-empty {
+    background: #1e3a5f;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+    color: #888;
+}

@@ -411,7 +411,7 @@ function doInstallOrUpgrade() {
         'installing': '正在安装插件...'
     };
 
-    fetch('/tools/api/install-upgrade', {
+    fetch('/plugins/api/install-upgrade', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(updateInfo)

@@ -1,9 +1,12 @@
 package com.agent.hopaw.controller;
 
+import com.agent.hopaw.infra.model.dto.PluginDescriptor;
 import com.agent.hopaw.infra.model.dto.ResponseBean;
+import com.agent.hopaw.infra.model.dto.ToolSetInfo;
 import com.agent.hopaw.infra.service.IAgentPluginService;
 import com.agent.hopaw.infra.service.IToolSetService;
 import com.agent.hopaw.infra.tool.AgentTool;
+import com.agent.hopaw.util.ToolSetViewUtil;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -32,11 +35,15 @@ public class AgentToolController {
         this.pluginService = pluginService;
     }
 
-    /** 工具管理页：内置工具 + 各插件的工具集。 */
+    /** 工具管理页：插件（一级）+ 其工具集（二级），内置工具单独一个 Tab。 */
     @GetMapping
     public String toolsPage(Model model) {
-        model.addAttribute("toolSets", toolSetService.getToolSets());
-        model.addAttribute("plugins", pluginService.getPlugins());
+        List<ToolSetInfo> toolSets = toolSetService.getToolSets();
+        List<PluginDescriptor> plugins = pluginService.getPlugins();
+        model.addAttribute("toolSets", toolSets);
+        model.addAttribute("plugins", plugins);
+        model.addAttribute("pluginToolSets", ToolSetViewUtil.byPlugin(toolSets, plugins));
+        model.addAttribute("builtinToolSets", ToolSetViewUtil.builtin(toolSets));
         model.addAttribute("activePage", "tools");
         model.addAttribute("activeTab", "tools");
         return "tools";

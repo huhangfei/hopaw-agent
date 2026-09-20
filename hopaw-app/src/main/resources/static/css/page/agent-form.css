@@ -229,3 +229,94 @@ body.dark-theme .checkbox-item:has(input:checked) .tool-item-count {
 body.dark-theme .modal-form .form-right {
     border-left-color: #3d3d6b;
 }
+
+/* ===== 工具选择：按插件分组（插件 → 工具集，两级） ===== */
+.tool-group {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin-bottom: 14px;
+}
+
+.tool-group-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 2px 2px 0;
+}
+
+.tool-group-name {
+    font-size: 12px;
+    font-weight: 700;
+    color: #667eea;
+    letter-spacing: 0.2px;
+}
+
+.tool-group-version {
+    font-size: 11px;
+    color: #aaa;
+}
+
+.tool-group-badge,
+.badge-disabled {
+    display: inline-block;
+    padding: 1px 8px;
+    border-radius: 10px;
+    font-size: 11px;
+    font-weight: 500;
+    line-height: 1.6;
+    color: #e53935;
+    background: #fff0f0;
+}
+
+/* 插件已禁用：工具集行不可用（编辑态仍可保留原有勾选） */
+.checkbox-item-unavailable {
+    background: #fffafa;
+    border-color: #ffcdd2;
+}
+
+.checkbox-item-unavailable:hover {
+    background: #fffafa;
+    border-color: #ffcdd2;
+}
+
+.checkbox-item-unavailable .tool-item-icon {
+    opacity: 0.7;
+}
+
+.tool-item-icon-placeholder {
+    font-size: 14px;
+    line-height: 1;
+}
+
+.warn-text {
+    color: #e53935;
+}
+
+body.dark-theme .tool-group-name {
+    color: #8ba3ff;
+}
+
+body.dark-theme .tool-group-version {
+    color: #888;
+}
+
+body.dark-theme .tool-group-badge,
+body.dark-theme .badge-disabled {
+    color: #ff7961;
+    background: rgba(229, 57, 53, 0.2);
+}
+
+body.dark-theme .checkbox-item-unavailable {
+    background: #2b2029;
+    border-color: rgba(255, 121, 97, 0.3);
+}
+
+body.dark-theme .checkbox-item-unavailable:hover {
+    background: #2b2029;
+    border-color: rgba(255, 121, 97, 0.3);
+}
+
+body.dark-theme .warn-text {
+    color: #ff7961;
+}
