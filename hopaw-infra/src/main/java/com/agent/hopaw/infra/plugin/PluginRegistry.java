@@ -264,8 +264,9 @@ public class PluginRegistry {
                             sandboxApis.add(String.valueOf(api));
                         }
                     }
-                    if (sandbox && (node.getString("mount") == null || node.getString("mount").isBlank())) {
-                        logger.warn("Sandbox asset [{}] in {} 未声明 mount 容器，前端将拒绝注入", node.getString("id"), jarFileName);
+                    if (sandbox && "html".equals(type) && (node.getString("mount") == null || node.getString("mount").isBlank())) {
+                        // 仅沙箱 html 资产必须声明 mount（决定容器挂载点）；css/js 由前端聚合进 iframe，忽略 mount
+                        logger.warn("Sandbox asset [{}] in {} 是 html 但未声明 mount 容器，前端将拒绝注入", node.getString("id"), jarFileName);
                     }
                     result.add(new PluginAsset(
                             node.getString("id"),

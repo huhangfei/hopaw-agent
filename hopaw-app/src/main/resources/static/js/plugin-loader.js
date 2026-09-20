@@ -219,9 +219,15 @@
         if (!assets || !assets.length) { return Promise.resolve(); }
 
         var pluginId = assets[0].plugin || '';
-        var mountSel = assets[0].mount;
+        // 沙箱组以 html 资产声明的 mount 为容器挂载点（css/js 忽略 mount），避免顺序变化导致整组被跳过
+        var mountSource = null;
+        for (var i = 0; i < assets.length; i++) {
+            if (assets[i].type === 'html' && assets[i].mount) { mountSource = assets[i]; break; }
+        }
+        if (!mountSource) { mountSource = assets[0]; }
+        var mountSel = mountSource.mount;
         if (!mountSel) {
-            console.warn('[plugin-loader] sandbox plugin without mount, skipped:', pluginId);
+            console.warn('[plugin-loader] sandbox plugin without html mount, skipped:', pluginId);
             return Promise.resolve();
         }
         var slot = document.querySelector(mountSel);
