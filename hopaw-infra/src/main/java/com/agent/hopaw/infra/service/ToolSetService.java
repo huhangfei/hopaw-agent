@@ -159,10 +159,8 @@ public class ToolSetService implements IToolSetService {
             toolSetInfo.setPluginId(entry.getPluginId());
             toolSetInfo.setPluginName(entry.getPluginName());
             if (!AgentTool.DEFAULT_ICON.equals(toolSetInfo.getIcon())) {
-                String iconContent = entry.getCachedResource("static/icons/tools/" + toolSetInfo.getIcon());
-                if (iconContent != null && !iconContent.isEmpty()) {
-                    toolSetInfo.setIcon(iconContent);
-                }
+                // 优先 tools/ 回退 plugins/（工具未声明图标时回退插件图标）；读不到原样返回文件名，不引入回归
+                toolSetInfo.setIcon(PluginIconResolver.resolveToolIcon(entry, toolSetInfo.getIcon()));
             }
             result.add(toolSetInfo);
         }
