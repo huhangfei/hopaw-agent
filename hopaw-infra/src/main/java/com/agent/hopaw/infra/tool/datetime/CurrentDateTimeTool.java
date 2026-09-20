@@ -10,14 +10,14 @@ import org.springframework.stereotype.Service;
 public class CurrentDateTimeTool implements AgentTool {
 
     @ToolSecurityLevel(ToolSecurityLevel.Level.SAFE)
-    @Tool(value = {"获取当前时间", "获取当前日期和时间"})
+    @Tool(name = "currentDateTime_getCurrentTime", value = {"获取当前时间", "获取当前日期和时间"})
     public String getCurrentTime() {
         return java.time.LocalDateTime.now().toString();
     }
 
     @Override
     public String getName() {
-        return "getCurrentTime";
+        return "currentDateTime";
     }
 
     @Override

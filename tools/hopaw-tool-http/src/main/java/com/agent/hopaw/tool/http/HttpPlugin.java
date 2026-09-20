@@ -14,7 +14,7 @@ public class HttpPlugin extends AbstractAgentPlugin {
 
     @Override
     public String getId() {
-        return "httpTool";
+        return "http";
     }
 
     @Override

@@ -44,7 +44,7 @@ public class QrCodeTool implements AgentTool {
 
     @Override
     public String getName() {
-        return "qrCodeTool";
+        return "qrCode";
     }
 
     @Override
@@ -53,7 +53,7 @@ public class QrCodeTool implements AgentTool {
     }
 
     @ToolSecurityLevel(ToolSecurityLevel.Level.PARAM_REQUIRE_APPROVAL)
-    @Tool(name = "qrCodeTool_generateQrCode", value = {"生成二维码", "将文本或链接生成二维码图片，保存到指定路径"})
+    @Tool(name = "qrCode_generate", value = {"生成二维码", "将文本或链接生成二维码图片，保存到指定路径"})
     public String generateQrCode(
             @P(description = "要编码的文本或链接") String content,
             @P(description = "保存路径，如 /path/to/qr.png，不传则返回Base64") String savePath,
@@ -98,7 +98,7 @@ public class QrCodeTool implements AgentTool {
     }
 
     @ToolSecurityLevel(ToolSecurityLevel.Level.SAFE)
-    @Tool(name = "qrCodeTool_parseQrCode", value = {"解析二维码", "解析二维码图片文件，返回编码的文本内容"})
+    @Tool(name = "qrCode_parse", value = {"解析二维码", "解析二维码图片文件，返回编码的文本内容"})
     public String parseQrCode(
             @P(description = "二维码图片文件路径") String filePath) {
         try {
@@ -136,7 +136,7 @@ public class QrCodeTool implements AgentTool {
     }
 
     @ToolSecurityLevel(ToolSecurityLevel.Level.SAFE)
-    @Tool(name = "qrCodeTool_parseQrCodeFromBase64", value = {"解析二维码Base64", "解析Base64编码的二维码图片，返回编码的文本内容"})
+    @Tool(name = "qrCode_parseFromBase64", value = {"解析二维码Base64", "解析Base64编码的二维码图片，返回编码的文本内容"})
     public String parseQrCodeFromBase64(
             @P(description = "Base64编码的图片数据（支持data:image/png;base64,前缀或纯Base64）") String base64Data) {
         try {

@@ -21,7 +21,7 @@ import java.util.List;
  * 智能体工具集工具：查询当前系统中所有可用的智能体工具集与工具明细，
  * 便于智能体在执行前了解自身可用的能力清单（含工具名称、描述、参数与安全级别）。
  */
-@Component("agentToolSetTool")
+@Component("agentToolSet")
 public class AgentToolSetTool implements AgentTool {
 
     private final IToolSetService toolSetService;
@@ -34,7 +34,7 @@ public class AgentToolSetTool implements AgentTool {
 
     @Override
     public String getName() {
-        return "agentToolSetTool";
+        return "agentToolSet";
     }
 
     @Override
@@ -56,7 +56,7 @@ public class AgentToolSetTool implements AgentTool {
      * 查询所有智能体工具集（含每个工具集下的工具名称、描述与安全级别）。
      */
     @ToolSecurityLevel(ToolSecurityLevel.Level.SAFE)
-    @Tool(value = {"获取所有智能体工具", "查询当前系统中所有可用的智能体工具集及各工具集内的工具清单（名称、描述、安全级别）"},searchBehavior = SearchBehavior.ALWAYS_VISIBLE)
+    @Tool(name = "agentToolSet_listAll", value = {"获取所有智能体工具", "查询当前系统中所有可用的智能体工具集及各工具集内的工具清单（名称、描述、安全级别）"},searchBehavior = SearchBehavior.ALWAYS_VISIBLE)
     public String getAllAgentTools(InvocationParameters invocationParameters) {
         InvocationParametersWrapper wrapper=InvocationParametersWrapper.create(invocationParameters);
         Agent agent = agentService.getAgentById(wrapper.getAgentId());
@@ -91,8 +91,8 @@ public class AgentToolSetTool implements AgentTool {
      * 按工具集名称查询单个工具集详情（含工具参数明细）。
      */
     @ToolSecurityLevel(ToolSecurityLevel.Level.SAFE)
-    @Tool(value = {"查询智能体工具集详情", "按工具集名称查询该工具集的详细信息和工具参数明细"})
-    public String findAgentToolSetDetail(@P(value = "工具集名称，例如 projectTool、workflowTaskTool") String toolSetName,
+    @Tool(name = "agentToolSet_getDetail", value = {"查询智能体工具集详情", "按工具集名称查询该工具集的详细信息和工具参数明细"})
+    public String findAgentToolSetDetail(@P(value = "工具集名称，例如 project、workflowTask") String toolSetName,
                                          InvocationParameters invocationParameters) {
         List<ToolSetInfo> toolSets = toolSetService.getToolSets();
         if (toolSets == null || toolSets.isEmpty()) {
@@ -143,8 +143,8 @@ public class AgentToolSetTool implements AgentTool {
      * 按工具名称查询单个工具详情（跨工具集检索首个匹配的工具）。
      */
     @ToolSecurityLevel(ToolSecurityLevel.Level.SAFE)
-    @Tool(value = {"查询智能体工具详情", "按工具名称查询该工具的详细信息和参数明细，并返回该工具所属的工具集"})
-    public String findAgentToolDetailByName(@P(value = "工具名称，例如 readImage、generateImage") String toolName) {
+    @Tool(name = "agentToolSet_findTool", value = {"查询智能体工具详情", "按工具名称查询该工具的详细信息和参数明细，并返回该工具所属的工具集"})
+    public String findAgentToolDetailByName(@P(value = "工具名称，例如 file_read、ssh_connect、agentTask_create") String toolName) {
         if (toolName == null || toolName.trim().isEmpty()) {
             return "失败：工具名称不能为空，可先调用「获取所有智能体工具」获取工具清单";
         }

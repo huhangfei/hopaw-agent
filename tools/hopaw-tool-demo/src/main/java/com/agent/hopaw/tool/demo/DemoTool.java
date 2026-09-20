@@ -34,7 +34,7 @@ public class DemoTool implements AgentTool {
 
     @Override
     public String getName() {
-        return "demoPluginTool";
+        return "demo";
     }
 
     @Override
@@ -48,7 +48,7 @@ public class DemoTool implements AgentTool {
     }
 
     @ToolSecurityLevel(ToolSecurityLevel.Level.SAFE)
-    @Tool(name = "demoPluginTool_querySystemStatus", value = {"查询系统状态", "查询当前系统状态信息，包括JVM内存、磁盘空间、系统时间等"})
+    @Tool(name = "demo_querySystemStatus", value = {"查询系统状态", "查询当前系统状态信息，包括JVM内存、磁盘空间、系统时间等"})
     public String querySystemStatus() {
         StringBuilder sb = new StringBuilder();
         Runtime runtime = Runtime.getRuntime();
@@ -77,7 +77,7 @@ public class DemoTool implements AgentTool {
     }
 
     @ToolSecurityLevel(ToolSecurityLevel.Level.SAFE)
-    @Tool(name = "demoPluginTool_querySystemProperty", value = {"查询系统属性", "查询指定JVM系统属性值，如java.version、os.name等"})
+    @Tool(name = "demo_querySystemProperty", value = {"查询系统属性", "查询指定JVM系统属性值，如java.version、os.name等"})
     public String querySystemProperty(
             @P("系统属性名，如java.version、os.name、user.dir") String key) {
         String value = System.getProperty(key);
@@ -109,7 +109,7 @@ public class DemoTool implements AgentTool {
     }
 
     @ToolSecurityLevel(ToolSecurityLevel.Level.SAFE)
-    @Tool(name = "demoPluginTool_queryDemoAccounts", value = {"查询演示账号", "查询映射组结构配置的多组演示账号信息（每组含API密钥、密码、级别）"})
+    @Tool(name = "demo_queryAccounts", value = {"查询演示账号", "查询映射组结构配置的多组演示账号信息（每组含API密钥、密码、级别）"})
     public String queryDemoAccounts() {
         String prefix = getConfigPrefix();
         SysConfig listConfig = sysConfigService.getByKey(prefix + CONFIG_KEY_ACCOUNTS);

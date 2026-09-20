@@ -16,7 +16,7 @@
 (function () {
     'use strict';
 
-    var PLUGIN = (window.__HOPAW_SANDBOX__ && window.__HOPAW_SANDBOX__.plugin) || 'chat-background';
+    var PLUGIN = (window.__HOPAW_SANDBOX__ && window.__HOPAW_SANDBOX__.plugin) || 'chatBackground';
 
     /** 沙箱容器尺寸：收起 = 圆钮大小；展开 = 设置面板大小（宿主会做上限裁剪） */
     var COLLAPSED = { width: 48, height: 48 };

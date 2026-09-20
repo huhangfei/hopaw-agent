@@ -18,7 +18,7 @@ import java.util.List;
  * 智能体记忆工具，所有工具都是不需要通过搜索就永远可见的
  * @author hhf
  */
-@Component("memoryTool")
+@Component("memory")
 public class MemoryTool implements AgentTool {
 
     private final ILongTermMemoryService longTermMemoryProvider;
@@ -29,7 +29,7 @@ public class MemoryTool implements AgentTool {
 
     @Override
     public String getName() {
-        return "memoryTool";
+        return "memory";
     }
 
     @Override
@@ -48,7 +48,7 @@ public class MemoryTool implements AgentTool {
     }
 
     @ToolSecurityLevel(ToolSecurityLevel.Level.PARAM_REQUIRE_APPROVAL)
-    @Tool(value = {"保存用户记忆", "保存用户记忆,如果有记忆Id则为更新，如果记忆Id不存在则为新增。"},searchBehavior = SearchBehavior.ALWAYS_VISIBLE)
+    @Tool(name = "memory_save", value = {"保存用户记忆", "保存用户记忆,如果有记忆Id则为更新，如果记忆Id不存在则为新增。"},searchBehavior = SearchBehavior.ALWAYS_VISIBLE)
     public String saveUserMemory(@P(description = "记忆类型:userProfile、taskRecords、empiricalKnowledge") String memoryType,
                                  @P(description = "记忆概要") String summary,
                                  @P(description = "记忆内容") String memory,
@@ -60,7 +60,7 @@ public class MemoryTool implements AgentTool {
     }
 
     @ToolSecurityLevel(ToolSecurityLevel.Level.SAFE)
-    @Tool(value = {"搜索用户记忆", "语义搜索历史记忆，根据查询关键词查找最相关的记忆内容"},searchBehavior = SearchBehavior.ALWAYS_VISIBLE)
+    @Tool(name = "memory_search", value = {"搜索用户记忆", "语义搜索历史记忆，根据查询关键词查找最相关的记忆内容"},searchBehavior = SearchBehavior.ALWAYS_VISIBLE)
     public String searchUserMemory(@P(description = "搜索查询关键词") String query,
                                    @P(description = "最大返回结果数量，默认10", required = false) Integer maxResults,
                                    InvocationParameters invocationParameters) {
@@ -88,27 +88,27 @@ public class MemoryTool implements AgentTool {
     }
 
     @ToolSecurityLevel(ToolSecurityLevel.Level.SAFE)
-    @Tool(value = {"获取用户画像记忆"},searchBehavior = SearchBehavior.ALWAYS_VISIBLE)
+    @Tool(name = "memory_getUserProfile", value = {"获取用户画像记忆"},searchBehavior = SearchBehavior.ALWAYS_VISIBLE)
     public String getUserProfileMemory(InvocationParameters invocationParameters){
         InvocationParametersWrapper invocationParametersWrapper = InvocationParametersWrapper.create(invocationParameters);
         String memory = longTermMemoryProvider.queryUserProfileMemoryContent(invocationParametersWrapper.getUserId());
         return memory;
     }
     @ToolSecurityLevel(ToolSecurityLevel.Level.SAFE)
-    @Tool(value = {"获取任务记录记忆", "获取用户近期任务记录记忆"},searchBehavior = SearchBehavior.ALWAYS_VISIBLE)
+    @Tool(name = "memory_getTaskRecords", value = {"获取任务记录记忆", "获取用户近期任务记录记忆"},searchBehavior = SearchBehavior.ALWAYS_VISIBLE)
     public String getUserTaskRecordsMemory(InvocationParameters invocationParameters){
         InvocationParametersWrapper invocationParametersWrapper = InvocationParametersWrapper.create(invocationParameters);
         String memory = longTermMemoryProvider.queryUserTaskRecordsMemoryContent(null, invocationParametersWrapper.getUserId(), false);
         return memory;
     }
     @ToolSecurityLevel(ToolSecurityLevel.Level.SAFE)
-    @Tool(value = {"获取用户记忆详情", "查询用户记忆内容，根据指定id获取"},searchBehavior = SearchBehavior.ALWAYS_VISIBLE)
+    @Tool(name = "memory_getById", value = {"获取用户记忆详情", "查询用户记忆内容，根据指定id获取"},searchBehavior = SearchBehavior.ALWAYS_VISIBLE)
     public String getUserMemoryById(@P(description="记忆Id")Long id){
         return longTermMemoryProvider.getMemoryContentById(id);
     }
 
     @ToolSecurityLevel(ToolSecurityLevel.Level.ALL_REQUIRE_APPROVAL)
-    @Tool(value = {"删除用户记忆","删除用户记忆内容，根据指定id删除"},searchBehavior = SearchBehavior.ALWAYS_VISIBLE)
+    @Tool(name = "memory_deleteById", value = {"删除用户记忆","删除用户记忆内容，根据指定id删除"},searchBehavior = SearchBehavior.ALWAYS_VISIBLE)
     public String deleteUserMemoryById(@P(description="记忆Id") Long id){
         longTermMemoryProvider.deleteMemory(id);
         return "成功";

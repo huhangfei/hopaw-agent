@@ -67,7 +67,7 @@ public class CanvasTool implements AgentTool {
     }
 
     @ToolSecurityLevel(ToolSecurityLevel.Level.SAFE)
-    @Tool(name = "canvas_drawCanvas", value = {"开始画布绘制", "在浏览器前端收缩会话区并新建一个并排的实时画布，返回确认信息（含画布尺寸与坐标系说明）"})
+    @Tool(name = "canvas_draw", value = {"开始画布绘制", "在浏览器前端收缩会话区并新建一个并排的实时画布，返回确认信息（含画布尺寸与坐标系说明）"})
     public String drawCanvas(
             @P("绘制说明，例如要绘制的内容主题") String description,
             InvocationParameters invocationParameters) {
@@ -82,7 +82,7 @@ public class CanvasTool implements AgentTool {
     }
 
     @ToolSecurityLevel(ToolSecurityLevel.Level.SAFE)
-    @Tool(name = "canvas_appendCanvasDraw", value = {"追加画布绘制命令", "向浏览器前端实时画布下发绘制命令，支持 JSON 描述图形"})
+    @Tool(name = "canvas_appendDraw", value = {"追加画布绘制命令", "向浏览器前端实时画布下发绘制命令，支持 JSON 描述图形"})
     public String appendCanvasDraw(
             @P("绘制命令，JSON 字符串，可以是单个命令对象，也可以是多个命令对象组成的数组（按顺序执行）。" +
               "画布尺寸 " + CANVAS_WIDTH + "x" + CANVAS_HEIGHT +
@@ -105,7 +105,7 @@ public class CanvasTool implements AgentTool {
     }
 
     @ToolSecurityLevel(ToolSecurityLevel.Level.SAFE)
-    @Tool(name = "canvas_getCanvasResult", value = {"获取当前画布结果", "获取当前画布内容为图片返回给大模型，不关闭画布插件，可继续追加绘制"})
+    @Tool(name = "canvas_getResult", value = {"获取当前画布结果", "获取当前画布内容为图片返回给大模型，不关闭画布插件，可继续追加绘制"})
     public List<Content> getCanvasResult(InvocationParameters invocationParameters) {
         String requestId = UUID.randomUUID().toString();
         // 先注册待回传槽位，再下发快照指令（前端回传 dataURL，不关闭插件）。
@@ -131,7 +131,7 @@ public class CanvasTool implements AgentTool {
     }
 
     @ToolSecurityLevel(ToolSecurityLevel.Level.SAFE)
-    @Tool(name = "canvas_closeCanvas", value = {"结束画布会话并关闭插件", "结束画布会话，前端还原布局并关闭画布插件"})
+    @Tool(name = "canvas_close", value = {"结束画布会话并关闭插件", "结束画布会话，前端还原布局并关闭画布插件"})
     public String closeCanvas(InvocationParameters invocationParameters) {
         sendCommand("close", null, null, invocationParameters);
         return "画布会话已结束，插件已关闭。";

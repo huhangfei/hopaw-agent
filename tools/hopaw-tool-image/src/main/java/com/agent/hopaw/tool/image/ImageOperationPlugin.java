@@ -14,7 +14,7 @@ public class ImageOperationPlugin extends AbstractAgentPlugin {
 
     @Override
     public String getId() {
-        return "imageOperation";
+        return "image";
     }
 
     @Override

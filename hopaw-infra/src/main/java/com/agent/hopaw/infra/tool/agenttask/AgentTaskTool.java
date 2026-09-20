@@ -13,7 +13,7 @@ import org.springframework.stereotype.Component;
 
 import java.time.format.DateTimeFormatter;
 import java.util.List;
-@Component("agentTaskTool")
+@Component("agentTask")
 public class AgentTaskTool implements AgentTool {
     private final IScheduledTaskService scheduledTaskService;
     public AgentTaskTool(IScheduledTaskService scheduledTaskService) {
@@ -21,7 +21,7 @@ public class AgentTaskTool implements AgentTool {
     }
     @Override
     public String getName() {
-        return "agentTaskTool";
+        return "agentTask";
     }
 
     @Override
@@ -40,7 +40,7 @@ public class AgentTaskTool implements AgentTool {
     }
 
     @ToolSecurityLevel(ToolSecurityLevel.Level.PARAM_REQUIRE_APPROVAL)
-    @Tool(value = {"创建代理任务", "创建定时执行的任务"})
+    @Tool(name = "agentTask_create", value = {"创建代理任务", "创建定时执行的任务"})
     public String createAgentTask(@P("任务的简要名称") String taskName, @P("任务的cron表达式(6位)") String cron, @P("任务具体要做的事情描述") String taskDescription, InvocationParameters invocationParameters) {
         InvocationParametersWrapper invocationParametersWrapper = InvocationParametersWrapper.create(invocationParameters);
         ScheduledTask agentTask = new ScheduledTask(taskName, "agentTask", cron, 1, taskDescription);
@@ -53,7 +53,7 @@ public class AgentTaskTool implements AgentTool {
     }
 
     @ToolSecurityLevel(ToolSecurityLevel.Level.SAFE)
-    @Tool(value = {"查询代理任务", "查询定时执行的任务"})
+    @Tool(name = "agentTask_list", value = {"查询代理任务", "查询定时执行的任务"})
     public String findAgentTask(InvocationParameters invocationParameters) {
         InvocationParametersWrapper invocationParametersWrapper = InvocationParametersWrapper.create(invocationParameters);
         List<ScheduledTask> tasks = scheduledTaskService.findByUserIdAndAgentId(invocationParametersWrapper.getUserId(), String.valueOf(invocationParametersWrapper.getAgentId()));
@@ -75,7 +75,7 @@ public class AgentTaskTool implements AgentTool {
     }
 
     @ToolSecurityLevel(ToolSecurityLevel.Level.PARAM_REQUIRE_APPROVAL)
-    @Tool(value = {"停止代理任务", "停止启动中的定时执行的任务"})
+    @Tool(name = "agentTask_stop", value = {"停止代理任务", "停止启动中的定时执行的任务"})
     public String stopAgentTask(@P("任务ID") Long taskId,InvocationParameters invocationParameters) {
         InvocationParametersWrapper invocationParametersWrapper = InvocationParametersWrapper.create(invocationParameters);
         //先查询，判断是否与agentId相等
@@ -88,7 +88,7 @@ public class AgentTaskTool implements AgentTool {
     }
 
     @ToolSecurityLevel(ToolSecurityLevel.Level.PARAM_REQUIRE_APPROVAL)
-    @Tool(value = {"启动代理任务", "启动停止中的定时执行的任务"})
+    @Tool(name = "agentTask_start", value = {"启动代理任务", "启动停止中的定时执行的任务"})
     public String startAgentTask(@P("任务ID") Long taskId,InvocationParameters invocationParameters) {
         InvocationParametersWrapper invocationParametersWrapper = InvocationParametersWrapper.create(invocationParameters);
         //先查询，判断是否与agentId相等
@@ -100,7 +100,7 @@ public class AgentTaskTool implements AgentTool {
         return "定时任务启动成功";
     }
     @ToolSecurityLevel(ToolSecurityLevel.Level.ALL_REQUIRE_APPROVAL)
-    @Tool(value = {"删除代理任务", "删除定时执行的任务"})
+    @Tool(name = "agentTask_delete", value = {"删除代理任务", "删除定时执行的任务"})
     public String deleteAgentTask(@P("任务ID") Long taskId,InvocationParameters invocationParameters) {
         InvocationParametersWrapper invocationParametersWrapper = InvocationParametersWrapper.create(invocationParameters);
         //先查询，判断是否与agentId相等

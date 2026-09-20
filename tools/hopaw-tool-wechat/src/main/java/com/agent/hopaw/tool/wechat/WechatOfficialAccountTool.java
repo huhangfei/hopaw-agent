@@ -71,7 +71,7 @@ public class WechatOfficialAccountTool implements AgentTool {
 
     @Override
     public String getName() {
-        return "wechatOfficialAccountTool";
+        return "wechat";
     }
 
     @Override
@@ -170,7 +170,7 @@ public class WechatOfficialAccountTool implements AgentTool {
     // ========== 连接测试 ==========
 
     @ToolSecurityLevel(ToolSecurityLevel.Level.SAFE)
-    @Tool(name = "wechatOfficialAccountTool_testConnection", value = {
+    @Tool(name = "wechat_testConnection", value = {
             "测试公众号连接",
             "验证公众号账号配置（AppID/AppSecret）是否正确并检查接口连通性。操作公众号前可先调用本方法确认配置。",
             "公众号,测试,连接,验证"
@@ -192,7 +192,7 @@ public class WechatOfficialAccountTool implements AgentTool {
     // ========== 草稿管理 ==========
 
     @ToolSecurityLevel(ToolSecurityLevel.Level.PARAM_REQUIRE_APPROVAL)
-    @Tool(name = "wechatOfficialAccountTool_addDraft", value = {
+    @Tool(name = "wechat_addDraft", value = {
             "新增公众号文章草稿",
             "在公众号草稿箱新增一篇文章（图文消息）。标题最长32字，正文支持HTML。封面图需先通过上传封面图片素材接口获得 mediaId。保存后可在公众号后台草稿箱中查看。",
             "公众号,文章,草稿,新增,创建,写作"
@@ -239,7 +239,7 @@ public class WechatOfficialAccountTool implements AgentTool {
     }
 
     @ToolSecurityLevel(ToolSecurityLevel.Level.SAFE)
-    @Tool(name = "wechatOfficialAccountTool_listDrafts", value = {
+    @Tool(name = "wechat_listDrafts", value = {
             "查询公众号草稿列表",
             "分页查询公众号草稿箱中的文章列表，返回草稿 mediaId、标题、作者、摘要、更新时间（不含正文内容）。",
             "公众号,草稿,列表,查询,文章"
@@ -288,7 +288,7 @@ public class WechatOfficialAccountTool implements AgentTool {
     }
 
     @ToolSecurityLevel(ToolSecurityLevel.Level.SAFE)
-    @Tool(name = "wechatOfficialAccountTool_getDraft", value = {
+    @Tool(name = "wechat_getDraft", value = {
             "查询公众号草稿详情",
             "查询单篇草稿的完整信息，包括标题、作者、摘要、正文HTML内容、封面素材等，可用于修改前的内容确认。",
             "公众号,草稿,详情,内容,正文"
@@ -337,7 +337,7 @@ public class WechatOfficialAccountTool implements AgentTool {
     }
 
     @ToolSecurityLevel(ToolSecurityLevel.Level.PARAM_REQUIRE_APPROVAL)
-    @Tool(name = "wechatOfficialAccountTool_updateDraft", value = {
+    @Tool(name = "wechat_updateDraft", value = {
             "修改公众号文章草稿",
             "修改草稿箱中的文章。只需传入要修改的字段，未传字段保持原样。多图文草稿通过 index 指定要修改的篇目（从0开始）。",
             "公众号,草稿,修改,编辑,更新"
@@ -383,7 +383,7 @@ public class WechatOfficialAccountTool implements AgentTool {
     }
 
     @ToolSecurityLevel(ToolSecurityLevel.Level.ALL_REQUIRE_APPROVAL)
-    @Tool(name = "wechatOfficialAccountTool_deleteDraft", value = {
+    @Tool(name = "wechat_deleteDraft", value = {
             "删除公众号文章草稿",
             "删除草稿箱中的指定草稿，删除后不可恢复，请谨慎操作。",
             "公众号,草稿,删除"
@@ -408,7 +408,7 @@ public class WechatOfficialAccountTool implements AgentTool {
     // ========== 素材管理 ==========
 
     @ToolSecurityLevel(ToolSecurityLevel.Level.PARAM_REQUIRE_APPROVAL)
-    @Tool(name = "wechatOfficialAccountTool_uploadCoverImage", value = {
+    @Tool(name = "wechat_uploadCoverImage", value = {
             "上传公众号封面图片素材",
             "上传本地图片为公众号永久图片素材，返回 mediaId，用作文章封面（新增/修改草稿的 thumbMediaId 参数）。支持 jpg/png/gif/bmp，大小不超过10M。",
             "公众号,封面,素材,上传,图片"
@@ -434,7 +434,7 @@ public class WechatOfficialAccountTool implements AgentTool {
     }
 
     @ToolSecurityLevel(ToolSecurityLevel.Level.PARAM_REQUIRE_APPROVAL)
-    @Tool(name = "wechatOfficialAccountTool_uploadContentImage", value = {
+    @Tool(name = "wechat_uploadContentImage", value = {
             "上传公众号文章内图片",
             "上传本地图片到公众号并返回可用于文章正文的微信图片URL。公众号正文中的图片必须使用本接口返回的URL，外链图片会被微信过滤。",
             "公众号,正文,图片,上传,素材"
@@ -459,7 +459,7 @@ public class WechatOfficialAccountTool implements AgentTool {
     }
 
     @ToolSecurityLevel(ToolSecurityLevel.Level.SAFE)
-    @Tool(name = "wechatOfficialAccountTool_listMaterials", value = {
+    @Tool(name = "wechat_listMaterials", value = {
             "查询公众号素材列表",
             "分页查询公众号永久素材列表（图片/视频/图文），返回素材 mediaId、名称、URL、更新时间。",
             "公众号,素材,列表,查询,图片"
@@ -509,7 +509,7 @@ public class WechatOfficialAccountTool implements AgentTool {
     // ========== 发布管理 ==========
 
     @ToolSecurityLevel(ToolSecurityLevel.Level.PARAM_REQUIRE_APPROVAL)
-    @Tool(name = "wechatOfficialAccountTool_publishDraft", value = {
+    @Tool(name = "wechat_publishDraft", value = {
             "发布公众号文章",
             "将草稿箱中的文章提交发布（异步任务）。提交成功后返回 publishId，需调用查询发布状态接口轮询发布结果，成功后文章会展示在公众号主页历史消息中。注意：发布不会给粉丝推送群发消息。",
             "公众号,发布,发表,群发,上线"
@@ -534,7 +534,7 @@ public class WechatOfficialAccountTool implements AgentTool {
     }
 
     @ToolSecurityLevel(ToolSecurityLevel.Level.SAFE)
-    @Tool(name = "wechatOfficialAccountTool_getPublishStatus", value = {
+    @Tool(name = "wechat_getPublishStatus", value = {
             "查询公众号发布状态",
             "通过 publishId 查询文章发布任务的执行状态与结果，返回发布状态、articleId 与文章链接。发布状态：0成功 / 1发布中 / 2原创失败 / 3常用错误 / 4平台审核不通过。",
             "公众号,发布,状态,查询,进度"
@@ -558,7 +558,7 @@ public class WechatOfficialAccountTool implements AgentTool {
     }
 
     @ToolSecurityLevel(ToolSecurityLevel.Level.SAFE)
-    @Tool(name = "wechatOfficialAccountTool_listPublishedArticles", value = {
+    @Tool(name = "wechat_listPublishedArticles", value = {
             "查询公众号已发布文章列表",
             "分页查询公众号已成功发布的文章列表，返回 articleId、标题、文章链接、发布时间。",
             "公众号,发布,文章,列表,历史消息"
@@ -607,7 +607,7 @@ public class WechatOfficialAccountTool implements AgentTool {
     }
 
     @ToolSecurityLevel(ToolSecurityLevel.Level.ALL_REQUIRE_APPROVAL)
-    @Tool(name = "wechatOfficialAccountTool_deletePublishedArticle", value = {
+    @Tool(name = "wechat_deletePublishedArticle", value = {
             "删除公众号已发布文章",
             "删除已发布成功的文章（从公众号主页历史消息中移除）。删除后不可恢复，若文章被自定义菜单或自动回复引用将失效，请谨慎操作。",
             "公众号,删除,下架,已发布"

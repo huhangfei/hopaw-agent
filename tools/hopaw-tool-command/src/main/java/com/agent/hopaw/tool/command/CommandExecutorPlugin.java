@@ -14,7 +14,7 @@ public class CommandExecutorPlugin extends AbstractAgentPlugin {
 
     @Override
     public String getId() {
-        return "commandExecutor";
+        return "command";
     }
 
     @Override

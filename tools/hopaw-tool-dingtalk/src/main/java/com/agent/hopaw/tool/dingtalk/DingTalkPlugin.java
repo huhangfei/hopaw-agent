@@ -14,7 +14,7 @@ public class DingTalkPlugin extends AbstractAgentPlugin {
 
     @Override
     public String getId() {
-        return "dingtalkNotify";
+        return "dingtalk";
     }
 
     @Override

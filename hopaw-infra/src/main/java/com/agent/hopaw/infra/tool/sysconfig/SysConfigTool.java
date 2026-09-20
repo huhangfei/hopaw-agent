@@ -12,7 +12,7 @@ import org.springframework.stereotype.Component;
 
 import java.util.List;
 
-@Component("sysConfigTool")
+@Component("sysConfig")
 public class SysConfigTool implements AgentTool {
     private final ISysConfigService sysConfigService;
 
@@ -22,7 +22,7 @@ public class SysConfigTool implements AgentTool {
 
     @Override
     public String getName() {
-        return "sysConfigTool";
+        return "sysConfig";
     }
 
     @Override
@@ -57,7 +57,7 @@ public class SysConfigTool implements AgentTool {
     }
 
     @ToolSecurityLevel(ToolSecurityLevel.Level.SAFE)
-    @Tool(value = {"查询系统配置值", "根据 Key 查询系统配置项的值（加密存储的配置项不返回明文）"})
+    @Tool(name = "sysConfig_getValue", value = {"查询系统配置值", "根据 Key 查询系统配置项的值（加密存储的配置项不返回明文）"})
     public String querySystemConfigValue(@P(description = "配置项的 Key") String key) {
         SysConfig config = sysConfigService.getByKey(key);
         if (config == null) {
@@ -71,7 +71,7 @@ public class SysConfigTool implements AgentTool {
     }
 
     @ToolSecurityLevel(ToolSecurityLevel.Level.SAFE)
-    @Tool(value={"查询所有系统配置", "查询所有系统配置项的 Key和描述","Value值通过调用querySystemConfigValue接口获取"})
+    @Tool(name = "sysConfig_listAll", value={"查询所有系统配置", "查询所有系统配置项的 Key和描述","Value值通过调用querySystemConfigValue接口获取"})
     public String queryAllSystemConfigs() {
         List<SysConfig> configs = sysConfigService.getAll();
         if (configs.isEmpty()) {
@@ -89,7 +89,7 @@ public class SysConfigTool implements AgentTool {
     }
 
     @ToolSecurityLevel(ToolSecurityLevel.Level.PARAM_REQUIRE_APPROVAL)
-    @Tool(value={"保存系统配置", "保存系统配置项（可能影响系统运行，请谨慎操作）"})
+    @Tool(name = "sysConfig_save", value={"保存系统配置", "保存系统配置项（可能影响系统运行，请谨慎操作）"})
     public String saveSystemConfig(@P(description = "配置项的 Key") String key,
                              @P(description = "配置项的值") String value,
                              @P(description = "配置项的描述", required = false) String description) {

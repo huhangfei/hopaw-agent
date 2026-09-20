@@ -299,7 +299,7 @@ public class ProjectIterateService implements IProjectIterateService {
 
     /**
      * 创建项目管理智能体执行器：参考工作流任务执行器（WorkflowTaskService#createTaskExecutor），
-     * 构建项目管理专用系统提示词与工具集（强制注入 projectTool 与 workflowTaskTool）。
+     * 构建项目管理专用系统提示词与工具集（强制注入 project 与 workflowTask）。
      * 自动迭代场景：模型/思考模式等参数取智能体配置。
      */
     private IAgentExecutor createProjectExecutor(String requestId,Project project, Agent agent, String sessionId) {
@@ -313,8 +313,8 @@ public class ProjectIterateService implements IProjectIterateService {
     private IAgentExecutor createProjectExecutor(String requestId,Project project, Agent agent, String sessionId,
                                                  UserChatRequest userChatRequest) {
         String systemMessage = buildProjectSystemMessage(project, agent);
-        // 构建工具集：智能体已配置工具 + 项目管理必需工具（projectTool / workflowTaskTool）
-        List<ToolSetInfo> selectedTools=agentService.getToolSetFromAgent(agent,"projectTool","workflowTaskTool");
+        // 构建工具集：智能体已配置工具 + 项目管理必需工具（project / workflowTask）
+        List<ToolSetInfo> selectedTools=agentService.getToolSetFromAgent(agent,"project","workflowTask");
         AgentExecutorParams params = new AgentExecutorParams();
         params.setSessionId(sessionId);
         params.setUserId(project.getUserId());

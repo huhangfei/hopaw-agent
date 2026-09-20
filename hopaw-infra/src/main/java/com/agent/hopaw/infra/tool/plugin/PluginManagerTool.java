@@ -21,11 +21,11 @@ import java.util.List;
  * 插件管理工具：以**插件**（AgentPlugin）为粒度管理内置与插件能力。
  *
  * <p>一个插件可提供 0..N 个工具集，因此安装/卸载/列出都以插件为单位；
- * 工具集明细可通过 {@code agentToolSetTool} 查询。</p>
+ * 工具集明细可通过 {@code agentToolSet} 查询。</p>
  *
- * <p>工具集名保留为 {@code pluginTool}（智能体绑定与前端 hook 按工具集名过滤）。</p>
+ * <p>工具集名保留为 {@code plugin}（智能体绑定与前端 hook 按工具集名过滤）。</p>
  */
-@Component("pluginManagerTool")
+@Component("plugin")
 public class PluginManagerTool implements AgentTool {
 
     private static final Logger log = LoggerFactory.getLogger(PluginManagerTool.class);
@@ -41,7 +41,7 @@ public class PluginManagerTool implements AgentTool {
 
     @Override
     public String getName() {
-        return "pluginTool";
+        return "plugin";
     }
 
     @Override
@@ -60,7 +60,7 @@ public class PluginManagerTool implements AgentTool {
     }
 
     @ToolSecurityLevel(ToolSecurityLevel.Level.SAFE)
-    @Tool(value = {
+    @Tool(name = "plugin_list", value = {
             "列出已安装插件",
             "列出当前系统已安装的全部插件及其提供的工具集数量、版本与启停状态"
     })
@@ -98,7 +98,7 @@ public class PluginManagerTool implements AgentTool {
     }
 
     @ToolSecurityLevel(ToolSecurityLevel.Level.PARAM_REQUIRE_APPROVAL)
-    @Tool(value = {
+    @Tool(name = "plugin_install", value = {
             "从本地文件安装插件",
             "从本地文件路径读取插件包并安装。文件应为 exportPlugin 导出的 zip 压缩包（包含插件清单 .json 和插件 .jar），"
                     + "或直接指定 .jar 插件文件"
@@ -128,7 +128,7 @@ public class PluginManagerTool implements AgentTool {
     }
 
     @ToolSecurityLevel(ToolSecurityLevel.Level.PARAM_REQUIRE_APPROVAL)
-    @Tool(value = {
+    @Tool(name = "plugin_uninstall", value = {
             "卸载插件",
             "按插件标识卸载已安装插件，可选择是否同时清理该插件及其所有工具集的配置项"
     })

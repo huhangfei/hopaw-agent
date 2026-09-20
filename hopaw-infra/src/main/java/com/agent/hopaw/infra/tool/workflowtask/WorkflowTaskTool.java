@@ -27,7 +27,7 @@ import java.util.List;
  * 也可代用户管理任务全生命周期（新增默认待启动，处理中的任务不允许编辑/删除）。
  * 任务数据不做用户归属隔离（跨用户共享协作）；状态变更类操作以智能体身份记录。
  */
-@Component("workflowTaskTool")
+@Component("workflowTask")
 public class WorkflowTaskTool implements AgentTool {
 
     private static final DateTimeFormatter TIME_FMT = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm");
@@ -52,7 +52,7 @@ public class WorkflowTaskTool implements AgentTool {
 
     @Override
     public String getName() {
-        return "workflowTaskTool";
+        return "workflowTask";
     }
 
     @Override
@@ -74,7 +74,7 @@ public class WorkflowTaskTool implements AgentTool {
      * 分页查询工作流任务列表，支持标题关键字与状态过滤（不做用户归属隔离）。
      */
     @ToolSecurityLevel(ToolSecurityLevel.Level.SAFE)
-    @Tool(value = {"查询任务列表", "分页查询工作流任务列表，可按标题关键字和状态过滤"}, searchBehavior = SearchBehavior.ALWAYS_VISIBLE)
+    @Tool(name = "workflowTask_list", value = {"查询任务列表", "分页查询工作流任务列表，可按标题关键字和状态过滤"}, searchBehavior = SearchBehavior.ALWAYS_VISIBLE)
     public String findWorkflowTasks(@P(value = "标题关键字，空表示不过滤", required = false) String keyword,
                                     @P(value = "任务状态：pending=待启动/pending_execution=待执行/processing=处理中/pending_acceptance=待验收/completed=已完成/failed=失败/rejected=已驳回/closed=已关闭，空表示不过滤", required = false) String status,
                                     @P(value = "页码，从1开始，默认1", required = false) Integer page,
@@ -110,7 +110,7 @@ public class WorkflowTaskTool implements AgentTool {
      * 按任务编号查询任务详细信息（含前置条件及满足情况）。
      */
     @ToolSecurityLevel(ToolSecurityLevel.Level.SAFE)
-    @Tool(value = {"查询任务详情", "按任务编号查询工作流任务详细信息（内容、状态、智能体、前置条件等）"}, searchBehavior = SearchBehavior.ALWAYS_VISIBLE)
+    @Tool(name = "workflowTask_getDetail", value = {"查询任务详情", "按任务编号查询工作流任务详细信息（内容、状态、智能体、前置条件等）"}, searchBehavior = SearchBehavior.ALWAYS_VISIBLE)
     public String getWorkflowTaskDetail(@P("任务编号") Long taskId,
                                         InvocationParameters invocationParameters) {
         InvocationParametersWrapper wrapper = InvocationParametersWrapper.create(invocationParameters);
@@ -163,7 +163,7 @@ public class WorkflowTaskTool implements AgentTool {
      * 添加工作流任务：创建后默认为待启动状态，由用户审核后进入执行。
      */
     @ToolSecurityLevel(ToolSecurityLevel.Level.PARAM_REQUIRE_APPROVAL)
-    @Tool(value = {"添加工作流任务", "创建工作流任务（默认待启动状态，需用户审核后才会执行）"}, searchBehavior = SearchBehavior.ALWAYS_VISIBLE)
+    @Tool(name = "workflowTask_add", value = {"添加工作流任务", "创建工作流任务（默认待启动状态，需用户审核后才会执行）"}, searchBehavior = SearchBehavior.ALWAYS_VISIBLE)
     public String addWorkflowTask(@P("任务标题") String title,
                                   @P("任务内容：下发给执行智能体的具体指令") String content,
                                   @P("执行智能体编号") Long agentId,
@@ -221,7 +221,7 @@ public class WorkflowTaskTool implements AgentTool {
      * 更新工作流任务：仅覆盖传入的非空字段，未传字段保持原值。处理中的任务不允许编辑。
      */
     @ToolSecurityLevel(ToolSecurityLevel.Level.PARAM_REQUIRE_APPROVAL)
-    @Tool(value = {"更新工作流任务", "更新工作流任务信息（仅覆盖传入的非空字段，未传字段保持原值；处理中的任务不允许编辑）"}, searchBehavior = SearchBehavior.ALWAYS_VISIBLE)
+    @Tool(name = "workflowTask_update", value = {"更新工作流任务", "更新工作流任务信息（仅覆盖传入的非空字段，未传字段保持原值；处理中的任务不允许编辑）"}, searchBehavior = SearchBehavior.ALWAYS_VISIBLE)
     public String updateWorkflowTask(@P("任务编号") Long taskId,
                                      @P(value = "任务标题，空表示保持原值", required = false) String title,
                                      @P(value = "任务内容：下发给执行智能体的具体指令，空表示保持原值", required = false) String content,
@@ -283,7 +283,7 @@ public class WorkflowTaskTool implements AgentTool {
      * 请勿随便删除任务，不再需要执行的任务应使用关闭工作流任务代替删除。
      */
     @ToolSecurityLevel(ToolSecurityLevel.Level.ALL_REQUIRE_APPROVAL)
-    @Tool(value = {"删除工作流任务", "按任务编号删除工作流任务，删除后不可恢复。请勿随便删除任务：不再需要执行的任务应优先使用「关闭工作流任务」"}, searchBehavior = SearchBehavior.ALWAYS_VISIBLE)
+    @Tool(name = "workflowTask_delete", value = {"删除工作流任务", "按任务编号删除工作流任务，删除后不可恢复。请勿随便删除任务：不再需要执行的任务应优先使用「关闭工作流任务」"}, searchBehavior = SearchBehavior.ALWAYS_VISIBLE)
     public String deleteWorkflowTask(@P("任务编号") Long taskId,
                                      InvocationParameters invocationParameters) {
         InvocationParametersWrapper wrapper = InvocationParametersWrapper.create(invocationParameters);
@@ -317,7 +317,7 @@ public class WorkflowTaskTool implements AgentTool {
      * 通过当前会话编号反查关联的任务。
      */
     @ToolSecurityLevel(ToolSecurityLevel.Level.SAFE)
-    @Tool(value = {"查询当前任务", "查询当前正在执行的工作流任务详情及评论历史"}, searchBehavior = SearchBehavior.ALWAYS_VISIBLE)
+    @Tool(name = "workflowTask_getCurrent", value = {"查询当前任务", "查询当前正在执行的工作流任务详情及评论历史"}, searchBehavior = SearchBehavior.ALWAYS_VISIBLE)
     public String queryCurrentWorkflowTask(InvocationParameters invocationParameters) {
         InvocationParametersWrapper wrapper = InvocationParametersWrapper.create(invocationParameters);
         Long taskId = workflowTaskService.findTaskIdBySessionId(wrapper.getSessionId());
@@ -366,7 +366,7 @@ public class WorkflowTaskTool implements AgentTool {
      * 任务编号为空时默认查询当前会话关联的任务。
      */
     @ToolSecurityLevel(ToolSecurityLevel.Level.SAFE)
-    @Tool(value = {"查询任务记忆", "按任务编号查询任务记忆文件内容（任务历次执行的进展、决策与经验总结）。任务编号为空时查询当前任务"}, searchBehavior = SearchBehavior.ALWAYS_VISIBLE)
+    @Tool(name = "workflowTask_getMemory", value = {"查询任务记忆", "按任务编号查询任务记忆文件内容（任务历次执行的进展、决策与经验总结）。任务编号为空时查询当前任务"}, searchBehavior = SearchBehavior.ALWAYS_VISIBLE)
     public String getWorkflowTaskMemory(@P(value = "任务编号，空表示查询当前会话关联的任务", required = false) Long taskId,
                                         InvocationParameters invocationParameters) {
         InvocationParametersWrapper wrapper = InvocationParametersWrapper.create(invocationParameters);
@@ -397,7 +397,7 @@ public class WorkflowTaskTool implements AgentTool {
      * 用于记录任务处理的关键细节，或向用户提出问题等待用户评论回复。
      */
     @ToolSecurityLevel(ToolSecurityLevel.Level.SAFE)
-    @Tool(value = {"添加任务评论", "向当前任务添加一条智能体评论，可用于记录处理细节或向用户提问。请通过 commentType 参数指明评论类型"}, searchBehavior = SearchBehavior.ALWAYS_VISIBLE)
+    @Tool(name = "workflowTask_addComment", value = {"添加任务评论", "向当前任务添加一条智能体评论，可用于记录处理细节或向用户提问。请通过 commentType 参数指明评论类型"}, searchBehavior = SearchBehavior.ALWAYS_VISIBLE)
     public String addWorkflowTaskComment(@P("评论内容：记录处理细节，或向用户提出的问题") String content,
                                  @P(value = "评论类型：summary=总结评论（用于任务阶段总结、关键结论、最终交付摘要）；default=普通评论（用于日常记录、提问、进度说明等）。请根据评论内容认真选择对应类型") String commentType,
                                  InvocationParameters invocationParameters) {
@@ -424,7 +424,7 @@ public class WorkflowTaskTool implements AgentTool {
      * 状态变更评论以智能体身份记录（commenterType=agent，commenterId=智能体编号）。
      */
     @ToolSecurityLevel(ToolSecurityLevel.Level.PARAM_REQUIRE_APPROVAL)
-    @Tool(value = {"审核工作流任务", "审核待启动的工作流任务，审核通过后进入待执行状态，由系统自动调度执行智能体处理"}, searchBehavior = SearchBehavior.ALWAYS_VISIBLE)
+    @Tool(name = "workflowTask_approve", value = {"审核工作流任务", "审核待启动的工作流任务，审核通过后进入待执行状态，由系统自动调度执行智能体处理"}, searchBehavior = SearchBehavior.ALWAYS_VISIBLE)
     public String approveWorkflowTask(@P("任务编号") Long taskId,
                                       InvocationParameters invocationParameters) {
         InvocationParametersWrapper wrapper = InvocationParametersWrapper.create(invocationParameters);
@@ -446,7 +446,7 @@ public class WorkflowTaskTool implements AgentTool {
      * 状态变更评论以智能体身份记录。
      */
     @ToolSecurityLevel(ToolSecurityLevel.Level.PARAM_REQUIRE_APPROVAL)
-    @Tool(value = {"验收工作流任务", "验收待验收的工作流任务，确认执行结果符合要求后任务标记为已完成"}, searchBehavior = SearchBehavior.ALWAYS_VISIBLE)
+    @Tool(name = "workflowTask_accept", value = {"验收工作流任务", "验收待验收的工作流任务，确认执行结果符合要求后任务标记为已完成"}, searchBehavior = SearchBehavior.ALWAYS_VISIBLE)
     public String acceptWorkflowTask(@P("任务编号") Long taskId,
                                      InvocationParameters invocationParameters) {
         InvocationParametersWrapper wrapper = InvocationParametersWrapper.create(invocationParameters);
@@ -468,7 +468,7 @@ public class WorkflowTaskTool implements AgentTool {
      * 状态变更评论以智能体身份记录。
      */
     @ToolSecurityLevel(ToolSecurityLevel.Level.PARAM_REQUIRE_APPROVAL)
-    @Tool(value = {"驳回工作流任务", "驳回待验收的工作流任务并注明驳回原因，驳回后任务转为失败状态等待处理"}, searchBehavior = SearchBehavior.ALWAYS_VISIBLE)
+    @Tool(name = "workflowTask_reject", value = {"驳回工作流任务", "驳回待验收的工作流任务并注明驳回原因，驳回后任务转为失败状态等待处理"}, searchBehavior = SearchBehavior.ALWAYS_VISIBLE)
     public String rejectWorkflowTask(@P("任务编号") Long taskId,
                                      @P("驳回原因：说明执行结果不符合要求的具体原因") String reason,
                                      InvocationParameters invocationParameters) {
@@ -494,7 +494,7 @@ public class WorkflowTaskTool implements AgentTool {
      * 状态变更评论以智能体身份记录。
      */
     @ToolSecurityLevel(ToolSecurityLevel.Level.PARAM_REQUIRE_APPROVAL)
-    @Tool(value = {"关闭工作流任务", "按任务编号关闭工作流任务，不需要再执行的任务可关闭（关闭前系统自动停止该任务的会话执行器），关闭后任务不再被调度执行"}, searchBehavior = SearchBehavior.ALWAYS_VISIBLE)
+    @Tool(name = "workflowTask_close", value = {"关闭工作流任务", "按任务编号关闭工作流任务，不需要再执行的任务可关闭（关闭前系统自动停止该任务的会话执行器），关闭后任务不再被调度执行"}, searchBehavior = SearchBehavior.ALWAYS_VISIBLE)
     public String closeWorkflowTask(@P("任务编号") Long taskId,
                                     InvocationParameters invocationParameters) {
         InvocationParametersWrapper wrapper = InvocationParametersWrapper.create(invocationParameters);
@@ -516,7 +516,7 @@ public class WorkflowTaskTool implements AgentTool {
      * 状态变更评论以智能体身份记录。
      */
     @ToolSecurityLevel(ToolSecurityLevel.Level.PARAM_REQUIRE_APPROVAL)
-    @Tool(value = {"重做工作流任务", "按任务编号重做工作流任务，将失败或已完成的任务重新移回待执行状态等待系统调度处理（同时清空历史驳回/失败原因）"}, searchBehavior = SearchBehavior.ALWAYS_VISIBLE)
+    @Tool(name = "workflowTask_redo", value = {"重做工作流任务", "按任务编号重做工作流任务，将失败或已完成的任务重新移回待执行状态等待系统调度处理（同时清空历史驳回/失败原因）"}, searchBehavior = SearchBehavior.ALWAYS_VISIBLE)
     public String redoWorkflowTask(@P("任务编号") Long taskId,
                                    InvocationParameters invocationParameters) {
         InvocationParametersWrapper wrapper = InvocationParametersWrapper.create(invocationParameters);

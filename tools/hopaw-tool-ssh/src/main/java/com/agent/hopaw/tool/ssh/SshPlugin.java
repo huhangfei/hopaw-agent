@@ -14,7 +14,7 @@ public class SshPlugin extends AbstractAgentPlugin {
 
     @Override
     public String getId() {
-        return "sshTool";
+        return "ssh";
     }
 
     @Override

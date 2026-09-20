@@ -57,7 +57,7 @@ public class AgentTaskHandler implements TaskHandler {
             Agent agent = agentService.getAgentById(agentId);
             ChatModelListener chatModelListener = chatModelListenerProvider.getChatModelListener(AiModelCallSourceEnum.AgentTask, task.getSessionId(), task.getUserId(), agentId, String.valueOf(task.getId()));
             ChatModel chatModel = aiModelService.createChatModel(agent.getAiModelId(), agent.getEnableThinking(),null,chatModelListener);
-            List<ToolSetInfo> selectedTools=  agentService.getToolSetFromAgent(agent,"agentTaskTool");
+            List<ToolSetInfo> selectedTools=  agentService.getToolSetFromAgent(agent,"agentTask");
             Function<Object, String> systemMessageProvider = x -> {
                 String systemMessage = "现在你要执行一个用户给定的任务，请你根据任务描述认真执行任务，如果任务中出现了指定时间执行或者定时执行的描述请忽略，直接执行要做的事情即可，有疑问可以尝试查询用户记忆，需要调用工具就调用工具。"
                         +"本次任务任务编号："+task.getId()+"，本次任务的表达式："+task.getCronExpression()+"，判断如果是一次性任务处理完后请删除任务。";

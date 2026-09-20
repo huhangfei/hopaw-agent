@@ -485,8 +485,8 @@ public class WorkflowTaskService implements IWorkflowTaskService {
         // 构建任务专用系统提示词
         String systemMessage = buildTaskSystemMessage(task, agent);
 
-        // 构建工具集（任务执行场景强制注入 workflowTaskTool，确保智能体可记录评论）
-        List<ToolSetInfo> selectedTools = agentService.getToolSetFromAgent(agent, "workflowTaskTool");
+        // 构建工具集（任务执行场景强制注入 workflowTask，确保智能体可记录评论）
+        List<ToolSetInfo> selectedTools = agentService.getToolSetFromAgent(agent, "workflowTask");
         // 构建 AgentExecutorParams
         AgentExecutorParams agentExecutorParams = new AgentExecutorParams();
         agentExecutorParams.setSessionId(userChatRequest.getSessionId());

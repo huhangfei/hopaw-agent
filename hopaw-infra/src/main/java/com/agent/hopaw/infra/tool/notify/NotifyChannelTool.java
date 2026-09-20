@@ -18,7 +18,7 @@ import java.util.List;
 /**
  * 消息通知渠道工具：查询当前用户的通知渠道，向一个或多个渠道发送通知消息。
  */
-@Component("notifyChannelTool")
+@Component("notifyChannel")
 public class NotifyChannelTool implements AgentTool {
 
     private static final Logger log = LoggerFactory.getLogger(NotifyChannelTool.class);
@@ -34,7 +34,7 @@ public class NotifyChannelTool implements AgentTool {
 
     @Override
     public String getName() {
-        return "notifyChannelTool";
+        return "notifyChannel";
     }
 
     @Override
@@ -56,7 +56,7 @@ public class NotifyChannelTool implements AgentTool {
      * 查询全部通知渠道（编号、名称、类型、启用状态）。
      */
     @ToolSecurityLevel(ToolSecurityLevel.Level.SAFE)
-    @Tool(value = {"查询通知渠道", "查询全部通知渠道（编号、名称、类型、启用状态）"})
+    @Tool(name = "notifyChannel_list", value = {"查询通知渠道", "查询全部通知渠道（编号、名称、类型、启用状态）"})
     public String queryNotifyChannels(InvocationParameters invocationParameters) {
         List<NotifyChannel> channels = notifyChannelService.listAll();
         if (channels == null || channels.isEmpty()) {
@@ -77,7 +77,7 @@ public class NotifyChannelTool implements AgentTool {
      * 向一个或多个通知渠道发送消息。
      */
     @ToolSecurityLevel(ToolSecurityLevel.Level.ALL_REQUIRE_APPROVAL)
-    @Tool(value = {"发送通知消息", "向一个或多个通知渠道发送消息通知（标题+内容），渠道编号可通过「查询通知渠道」获取"})
+    @Tool(name = "notifyChannel_send", value = {"发送通知消息", "向一个或多个通知渠道发送消息通知（标题+内容），渠道编号可通过「查询通知渠道」获取"})
     public String sendNotifyMessage(@P(value = "渠道编号列表，多个用逗号分隔，如 1,2", required = true) String channelIds,
                                     @P(value = "通知标题") String title,
                                     @P(value = "通知内容") String content,

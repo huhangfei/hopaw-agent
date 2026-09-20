@@ -18,7 +18,7 @@ public class DemoPlugin extends AbstractAgentPlugin {
 
     @Override
     public String getId() {
-        return "demoPluginTool";
+        return "demo";
     }
 
     @Override

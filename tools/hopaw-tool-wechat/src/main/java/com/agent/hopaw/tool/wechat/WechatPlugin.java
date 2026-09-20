@@ -14,7 +14,7 @@ public class WechatPlugin extends AbstractAgentPlugin {
 
     @Override
     public String getId() {
-        return "wechatOfficialAccountTool";
+        return "wechat";
     }
 
     @Override

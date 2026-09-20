@@ -14,7 +14,7 @@ public class FileOperationPlugin extends AbstractAgentPlugin {
 
     @Override
     public String getId() {
-        return "fileOperation";
+        return "file";
     }
 
     @Override

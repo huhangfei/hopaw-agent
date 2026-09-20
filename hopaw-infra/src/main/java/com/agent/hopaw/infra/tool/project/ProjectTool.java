@@ -23,7 +23,7 @@ import java.util.List;
  * 项目数据不做用户归属隔离（跨用户共享协作），仅新增项目时记录归属用户。
  * @author hhf
  */
-@Component("projectTool")
+@Component("project")
 public class ProjectTool implements AgentTool {
 
     private static final DateTimeFormatter TIME_FMT = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm");
@@ -41,7 +41,7 @@ public class ProjectTool implements AgentTool {
 
     @Override
     public String getName() {
-        return "projectTool";
+        return "project";
     }
 
     @Override
@@ -62,7 +62,7 @@ public class ProjectTool implements AgentTool {
      * 分页查询项目列表，支持名称关键字与状态过滤（不做用户归属隔离）。
      */
     @ToolSecurityLevel(ToolSecurityLevel.Level.SAFE)
-    @Tool(value = {"查询项目列表", "分页查询项目列表，可按名称关键字和状态过滤"}, searchBehavior = SearchBehavior.ALWAYS_VISIBLE)
+    @Tool(name = "project_list", value = {"查询项目列表", "分页查询项目列表，可按名称关键字和状态过滤"}, searchBehavior = SearchBehavior.ALWAYS_VISIBLE)
     public String findProjects(@P(value = "名称关键字，空表示不过滤", required = false) String keyword,
                                @P(value = "项目状态：planning=规划中/in_progress=进行中/paused=已暂停/completed=已完成/archived=已归档，空表示不过滤", required = false) String status,
                                @P(value = "页码，从1开始，默认1", required = false) Integer page,
@@ -97,7 +97,7 @@ public class ProjectTool implements AgentTool {
      * 按项目编号查询项目详细信息。
      */
     @ToolSecurityLevel(ToolSecurityLevel.Level.SAFE)
-    @Tool(value = {"查询项目详情", "按项目编号查询项目详细信息（名称、状态、描述、空间目录等）"}, searchBehavior = SearchBehavior.ALWAYS_VISIBLE)
+    @Tool(name = "project_getDetail", value = {"查询项目详情", "按项目编号查询项目详细信息（名称、状态、描述、空间目录等）"}, searchBehavior = SearchBehavior.ALWAYS_VISIBLE)
     public String getProjectDetail(@P("项目编号") Long projectId,
                                    InvocationParameters invocationParameters) {
         InvocationParametersWrapper wrapper = InvocationParametersWrapper.create(invocationParameters);
@@ -121,7 +121,7 @@ public class ProjectTool implements AgentTool {
      * 查询当前项目：通过当前会话编号反查关联的项目（项目管理智能体场景）。
      */
     @ToolSecurityLevel(ToolSecurityLevel.Level.SAFE)
-    @Tool(value = {"查询当前项目", "查询当前会话关联的项目详情（项目管理智能体场景使用）"}, searchBehavior = SearchBehavior.ALWAYS_VISIBLE)
+    @Tool(name = "project_getCurrent", value = {"查询当前项目", "查询当前会话关联的项目详情（项目管理智能体场景使用）"}, searchBehavior = SearchBehavior.ALWAYS_VISIBLE)
     public String getCurrentProject(InvocationParameters invocationParameters) {
         InvocationParametersWrapper wrapper = InvocationParametersWrapper.create(invocationParameters);
         Project p = projectService.getProjectBySessionId(wrapper.getSessionId());
@@ -142,7 +142,7 @@ public class ProjectTool implements AgentTool {
      * 更新时仅覆盖传入的非空字段（名称必填），状态需符合流转规则。
      */
     @ToolSecurityLevel(ToolSecurityLevel.Level.PARAM_REQUIRE_APPROVAL)
-    @Tool(value = {"保存项目", "保存项目信息：项目编号为空时新增项目，非空时更新已有项目"}, searchBehavior = SearchBehavior.ALWAYS_VISIBLE)
+    @Tool(name = "project_save", value = {"保存项目", "保存项目信息：项目编号为空时新增项目，非空时更新已有项目"}, searchBehavior = SearchBehavior.ALWAYS_VISIBLE)
     public String saveProject(@P(value = "项目编号：新增时留空，更新时必填", required = false) Long projectId,
                               @P("项目名称") String name,
                               @P(value = "项目描述", required = false) String description,
@@ -192,7 +192,7 @@ public class ProjectTool implements AgentTool {
      * 按项目编号删除项目（危险操作，需用户确认；仅项目创建人可删除）。
      */
     @ToolSecurityLevel(ToolSecurityLevel.Level.ALL_REQUIRE_APPROVAL)
-    @Tool(value = {"删除项目", "按项目编号删除项目，删除后不可恢复"}, searchBehavior = SearchBehavior.ALWAYS_VISIBLE)
+    @Tool(name = "project_delete", value = {"删除项目", "按项目编号删除项目，删除后不可恢复"}, searchBehavior = SearchBehavior.ALWAYS_VISIBLE)
     public String deleteProject(@P("项目编号") Long projectId,
                                 InvocationParameters invocationParameters) {
         InvocationParametersWrapper wrapper = InvocationParametersWrapper.create(invocationParameters);
@@ -209,7 +209,7 @@ public class ProjectTool implements AgentTool {
      * 分页查询项目操作日志（最新在前），供智能体了解项目历史操作与进展。
      */
     @ToolSecurityLevel(ToolSecurityLevel.Level.SAFE)
-    @Tool(value = {"查询项目日志", "分页查询项目操作日志（最新在前），了解项目历史操作与进展"}, searchBehavior = SearchBehavior.ALWAYS_VISIBLE)
+    @Tool(name = "project_listLogs", value = {"查询项目日志", "分页查询项目操作日志（最新在前），了解项目历史操作与进展"}, searchBehavior = SearchBehavior.ALWAYS_VISIBLE)
     public String findProjectLogs(@P("项目编号") Long projectId,
                                   @P(value = "页码，从1开始，默认1", required = false) Integer page,
                                   @P(value = "每页数量，默认20，最大100", required = false) Integer size,
@@ -252,7 +252,7 @@ public class ProjectTool implements AgentTool {
      * 项目编号为空时默认查询当前会话关联的项目（项目管理智能体场景）。
      */
     @ToolSecurityLevel(ToolSecurityLevel.Level.SAFE)
-    @Tool(value = {"查询项目记忆", "按项目编号查询项目记忆文件内容（项目目标、进展、关键决策、待办、经验教训），了解项目历史沉淀信息。项目编号为空时查询当前会话关联的项目"}, searchBehavior = SearchBehavior.ALWAYS_VISIBLE)
+    @Tool(name = "project_getMemory", value = {"查询项目记忆", "按项目编号查询项目记忆文件内容（项目目标、进展、关键决策、待办、经验教训），了解项目历史沉淀信息。项目编号为空时查询当前会话关联的项目"}, searchBehavior = SearchBehavior.ALWAYS_VISIBLE)
     public String getProjectMemory(@P(value = "项目编号，空表示查询当前会话关联的项目", required = false) Long projectId,
                                   InvocationParameters invocationParameters) {
         InvocationParametersWrapper wrapper = InvocationParametersWrapper.create(invocationParameters);

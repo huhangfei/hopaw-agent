@@ -41,7 +41,7 @@ public class DatabasePlugin extends AbstractAgentPlugin {
 
     @Override
     public String getName() {
-        return "数据库插件";
+        return "数据库";
     }
 
     @Override

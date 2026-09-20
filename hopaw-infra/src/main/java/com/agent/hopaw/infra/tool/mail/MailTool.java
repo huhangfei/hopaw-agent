@@ -9,7 +9,7 @@ import org.slf4j.LoggerFactory;
 import com.agent.hopaw.infra.tool.AgentTool;
 import org.springframework.stereotype.Component;
 
-@Component("mailTool")
+@Component("mail")
 public class MailTool implements AgentTool {
 
     private static final Logger log = LoggerFactory.getLogger(MailTool.class);
@@ -22,7 +22,7 @@ public class MailTool implements AgentTool {
 
     @Override
     public String getName() {
-        return "mailTool";
+        return "mail";
     }
 
     @Override
@@ -41,7 +41,7 @@ public class MailTool implements AgentTool {
     }
 
     @ToolSecurityLevel(ToolSecurityLevel.Level.ALL_REQUIRE_APPROVAL)
-    @Tool(value = {"发送文本邮件", "发送纯文本邮件。"})
+    @Tool(name = "mail_sendText", value = {"发送文本邮件", "发送纯文本邮件。"})
     public String sendTextMail(
             @P(description = "收件人邮箱地址") String to,
             @P(description = "邮件主题") String subject,
@@ -57,7 +57,7 @@ public class MailTool implements AgentTool {
     }
 
     @ToolSecurityLevel(ToolSecurityLevel.Level.ALL_REQUIRE_APPROVAL)
-    @Tool(value = {"发送HTML邮件", "发送HTML格式邮件。"})
+    @Tool(name = "mail_sendHtml", value = {"发送HTML邮件", "发送HTML格式邮件。"})
     public String sendHtmlMail(
             @P(description = "收件人邮箱地址") String to,
             @P(description = "邮件主题") String subject,

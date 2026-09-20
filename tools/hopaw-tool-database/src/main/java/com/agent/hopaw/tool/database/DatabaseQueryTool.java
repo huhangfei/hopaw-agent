@@ -65,7 +65,7 @@ public class DatabaseQueryTool implements AgentTool {
     // ========== @Tool 方法 ==========
 
     @ToolSecurityLevel(ToolSecurityLevel.Level.SAFE)
-    @Tool(name = "database_testDatabaseConnection", value = {
+    @Tool(name = "database_testConnection", value = {
             "测试数据库连接",
             "使用给定的 JDBC URL、用户名和密码测试数据库连通性；参数留空时使用插件配置的默认连接信息。"
     })

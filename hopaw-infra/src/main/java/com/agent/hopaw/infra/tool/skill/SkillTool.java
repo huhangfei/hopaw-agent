@@ -14,7 +14,7 @@ import java.util.List;
 /**
  * @author hhf
  */
-@Component("skillTool")
+@Component("skill")
 public class SkillTool implements AgentTool {
 
     private final ISkillService skillService;
@@ -25,7 +25,7 @@ public class SkillTool implements AgentTool {
 
     @Override
     public String getName() {
-        return "skillTool";
+        return "skill";
     }
 
     @Override
@@ -43,7 +43,7 @@ public class SkillTool implements AgentTool {
     }
 
     @ToolSecurityLevel(ToolSecurityLevel.Level.SAFE)
-    @Tool(value = {"列出技能", "查询所有技能列表，仅返回每个技能的 名称、Slug 和 描述"})
+    @Tool(name = "skill_list", value = {"列出技能", "查询所有技能列表，仅返回每个技能的 名称、Slug 和 描述"})
     public String listSkills() {
         List<SkillInfo> skills = skillService.listSkills();
         if (skills == null || skills.isEmpty()) {
@@ -62,7 +62,7 @@ public class SkillTool implements AgentTool {
     }
 
     @ToolSecurityLevel(ToolSecurityLevel.Level.SAFE)
-    @Tool(value = {"通过Slug获取技能", "根据 Slug 查询技能的具体内容，返回技能的名称、版本、描述、主页和完整内容"})
+    @Tool(name = "skill_getBySlug", value = {"通过Slug获取技能", "根据 Slug 查询技能的具体内容，返回技能的名称、版本、描述、主页和完整内容"})
     public String getSkillBySlug(@P(description = "技能的 Slug 标识") String slug) {
         SkillInfo found = skillService.getSkill(slug);
 

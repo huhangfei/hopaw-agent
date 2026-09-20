@@ -14,7 +14,7 @@ public class QrCodePlugin extends AbstractAgentPlugin {
 
     @Override
     public String getId() {
-        return "qrCodeTool";
+        return "qrCode";
     }
 
     @Override

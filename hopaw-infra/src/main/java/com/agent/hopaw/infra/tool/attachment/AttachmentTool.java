@@ -31,7 +31,7 @@ import java.util.UUID;
  * 文件按日期分目录保存，URL 由 {@code hopaw.attachment.url-prefix} 拼接，
  * 附件归属当前调用用户（通过 InvocationParameters 获取 userId），保证权限隔离。
  */
-@Component("attachmentTool")
+@Component("attachment")
 public class AttachmentTool implements AgentTool {
 
     private static final Logger log = LoggerFactory.getLogger(AttachmentTool.class);
@@ -53,7 +53,7 @@ public class AttachmentTool implements AgentTool {
 
     @Override
     public String getName() {
-        return "attachmentTool";
+        return "attachment";
     }
 
     @Override
@@ -70,7 +70,7 @@ public class AttachmentTool implements AgentTool {
     }
 
     @ToolSecurityLevel(ToolSecurityLevel.Level.PARAM_REQUIRE_APPROVAL)
-    @Tool(value = {"添加附件", "将指定路径的文件复制到附件系统，返回该附件的预览地址和下载地址", "文件上传为附件"})
+    @Tool(name = "attachment_add", value = {"添加附件", "将指定路径的文件复制到附件系统，返回该附件的预览地址和下载地址", "文件上传为附件"})
     public String addFileToAttachment(
             @P(description = "要添加为附件的文件路径") String filePath,
             @P(description = "附件备注（可选）", required = false) String remark,

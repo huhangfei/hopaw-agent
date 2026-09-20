@@ -22,7 +22,7 @@ import com.agent.hopaw.infra.plugin.AbstractAgentPlugin;
 public class ChatBackgroundPlugin extends AbstractAgentPlugin {
 
     /** 插件标识 */
-    public static final String PLUGIN_ID = "chat-background";
+    public static final String PLUGIN_ID = "chatBackground";
 
     @Override
     public String getId() {

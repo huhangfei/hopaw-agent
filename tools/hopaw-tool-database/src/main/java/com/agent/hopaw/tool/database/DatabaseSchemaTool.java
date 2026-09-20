@@ -84,7 +84,7 @@ public class DatabaseSchemaTool implements AgentTool {
     }
 
     @ToolSecurityLevel(ToolSecurityLevel.Level.SAFE)
-    @Tool(name = "database_listDatabaseTables", value = {
+    @Tool(name = "database_listTables", value = {
             "列出数据库表",
             "列出当前数据库中的所有表。"
     })
@@ -137,7 +137,7 @@ public class DatabaseSchemaTool implements AgentTool {
     }
 
     @ToolSecurityLevel(ToolSecurityLevel.Level.SAFE)
-    @Tool(name = "database_describeDatabaseTable", value = {
+    @Tool(name = "database_describeTable", value = {
             "查看表结构",
             "查看指定表的列定义、主键、索引信息。"
     })

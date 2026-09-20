@@ -22,7 +22,7 @@ import java.util.stream.Collectors;
  * 便于智能体在创建/更新工作流任务或项目时选择合适的执行智能体。
  * 智能体数据不做用户归属隔离（跨用户共享协作）。
  */
-@Component("agentInfoTool")
+@Component("agentInfo")
 public class AgentInfoTool implements AgentTool {
 
     private final IAgentService agentService;
@@ -35,7 +35,7 @@ public class AgentInfoTool implements AgentTool {
 
     @Override
     public String getName() {
-        return "agentInfoTool";
+        return "agentInfo";
     }
 
     @Override
@@ -58,7 +58,7 @@ public class AgentInfoTool implements AgentTool {
      * 返回编号、名称、描述、AI模型、可用工具等信息。
      */
     @ToolSecurityLevel(ToolSecurityLevel.Level.SAFE)
-    @Tool(value = {"查询智能体列表", "分页查询当前系统中的智能体清单（编号、名称、描述、AI模型、可用工具），可按名称或描述关键字过滤，用于选择任务执行智能体等场景"}, searchBehavior = SearchBehavior.ALWAYS_VISIBLE)
+    @Tool(name = "agentInfo_list", value = {"查询智能体列表", "分页查询当前系统中的智能体清单（编号、名称、描述、AI模型、可用工具），可按名称或描述关键字过滤，用于选择任务执行智能体等场景"}, searchBehavior = SearchBehavior.ALWAYS_VISIBLE)
     public String findAgents(@P(value = "名称或描述关键字，空表示不过滤", required = false) String keyword,
                              @P(value = "页码，从1开始，默认1", required = false) Integer page,
                              @P(value = "每页数量，默认20，最大100", required = false) Integer size,
