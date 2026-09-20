@@ -3,21 +3,20 @@ package com.agent.hopaw.tool.chatbg;
 import com.agent.hopaw.infra.plugin.AbstractAgentPlugin;
 
 /**
- * 会话背景色插件（<b>纯前端插件示范</b>）。
+ * 会话美化插件（<b>纯前端插件</b>）。
  *
  * <p>本插件示范「零 AgentTool 的纯前端插件」这一合法形态：</p>
  * <ul>
  *   <li>{@link #getTools()} 返回空列表——不给 LLM 提供任何工具；</li>
  *   <li>能力全部来自 {@code plugin-assets.json}：css / html / js 三个资产，
  *       页面标识 {@code index}（会话页）；</li>
- *   <li>三个资产都声明 {@code sandbox: true}：宿主把它们整体装进一个
- *       {@code <iframe sandbox="allow-scripts">} 容器，脚本进不了宿主全局作用域，
- *       只能通过 {@code postMessage} 调用宿主白名单能力
- *       （{@code ui.resize} / {@code theme.setBackground} / {@code theme.getBackground}）。</li>
+ *   <li>三个资产为<b>非沙箱</b>资产，直接注入宿主页面（不做 iframe），
+ *       脚本运行在宿主全局作用域，可直接操作会话页 DOM 与 localStorage。</li>
  * </ul>
  *
- * <p>因此本插件在「插件管理」页表现为：1 个插件、0 个工具集、3 个前端资产、不支持 invoke。
- * 没有 {@code @Tool} 方法，也不需要任何后端依赖。</p>
+ * <p>能力：在会话页头部「更多」按钮前插入一个「会话美化」按钮，点击向下弹出设置面板，
+ * 支持设置会话区背景色 / 背景图，以及拖拽调节会话消息字体大小（思考 / 普通消息 / 工具按钮），
+ * 全部设置由本插件自行持久化到 localStorage 并在页面加载时还原。</p>
  */
 public class ChatBackgroundPlugin extends AbstractAgentPlugin {
 
@@ -31,12 +30,13 @@ public class ChatBackgroundPlugin extends AbstractAgentPlugin {
 
     @Override
     public String getName() {
-        return "会话背景色";
+        return "会话美化";
     }
 
     @Override
     public String getDescription() {
-        return "纯前端插件示范：在会话页以沙箱面板提供背景色预设与自定义，设置结果由宿主持久化；"
+        return "纯前端插件：在会话页头部提供「会话美化」按钮，可设置会话区背景色、背景图，"
+                + "并拖拽调节会话消息字体大小（思考 / 普通 / 工具按钮）；设置结果本地持久化，"
                 + "不提供任何工具集，仅注入前端资产";
     }
 
@@ -52,7 +52,7 @@ public class ChatBackgroundPlugin extends AbstractAgentPlugin {
 
     @Override
     public String getKeyword() {
-        return "背景,背景色,主题,外观,配色,chat,background";
+        return "美化,背景,背景色,背景图,字体,字号,外观,主题,chat,background";
     }
 
     @Override

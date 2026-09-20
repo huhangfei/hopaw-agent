@@ -1,33 +1,28 @@
 {
   "assets": [
     {
-      "id": "chat-background-html",
+      "id": "chat-beautify-html",
       "type": "html",
       "path": "static/chat-background.html",
       "pages": ["index"],
       "mount": "body",
       "mode": "append",
-      "priority": 1000,
-      "sandbox": true,
-      "sandboxApis": ["ui.resize", "theme.setBackground", "theme.getBackground"]
+      "priority": 1000
     },
     {
-      "id": "chat-background-css",
+      "id": "chat-beautify-css",
       "type": "css",
       "path": "static/chat-background.css",
       "pages": ["index"],
-      "priority": 1000,
-      "sandbox": true,
-      "sandboxApis": ["ui.resize", "theme.setBackground", "theme.getBackground"]
+      "priority": 1000
     },
     {
-      "id": "chat-background-js",
+      "id": "chat-beautify-js",
       "type": "js",
       "path": "static/chat-background.js",
       "pages": ["index"],
-      "priority": 1000,
-      "sandbox": true,
-      "sandboxApis": ["ui.resize", "theme.setBackground", "theme.getBackground"]
+      "position": "body-end",
+      "priority": 1000
     }
   ]
 }

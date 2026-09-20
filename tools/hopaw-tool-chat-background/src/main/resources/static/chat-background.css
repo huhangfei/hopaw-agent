@@ -1,140 +1,96 @@
-/* 会话背景色插件（沙箱内样式）
-   说明：本样式表运行在 <iframe sandbox="allow-scripts"> 内，与宿主页面不同源，
-   因此这里只能影响沙箱自身的 DOM；改宿主背景必须走主题能力（见 chat-background.js）。 */
+/* 会话美化插件样式（非沙箱，直接注入宿主页面）。
+   按钮被 JS relocate 到会话头部「更多」按钮前，面板向下弹出；用 body.dark-theme 适配深浅主题。 */
 
 .cb-root {
-    width: 100%;
-    height: 100%;
-    box-sizing: border-box;
-    font-size: 12px;
-    color: #1f2328;
-    display: flex;
-    flex-direction: column;
+    position: relative;
+    display: inline-flex;
+    flex-shrink: 0;
 }
 
-/* ---------- 收起态圆钮 ---------- */
-.cb-fab {
-    width: 48px;
-    height: 48px;
+/* ---------- 触发按钮：与头部「更多」按钮同尺寸同风格 ---------- */
+.cb-root .cb-btn {
+    width: 32px;
+    height: 32px;
     padding: 0;
     border: none;
-    border-radius: 50%;
-    background: rgba(31, 35, 40, 0.86);
-    color: #fff;
+    border-radius: 6px;
     cursor: pointer;
     display: flex;
     align-items: center;
     justify-content: center;
-    box-shadow: 0 6px 18px rgba(0, 0, 0, 0.22);
-    transition: transform .16s ease, background .16s ease;
+    background: #e0e0e0;
+    color: #555;
+    transition: background 0.15s, color 0.15s;
+    flex-shrink: 0;
+}
+.cb-root .cb-btn:hover {
+    background: #bbb;
+    color: #333;
+}
+.cb-root .cb-btn.active {
+    background: #667eea;
+    color: #fff;
+}
+.cb-root .cb-btn svg {
+    width: 16px;
+    height: 16px;
 }
 
-.cb-fab:hover {
-    background: rgba(31, 35, 40, 0.96);
-    transform: scale(1.05);
-}
-
-.cb-fab:active {
-    transform: scale(0.95);
-}
-
-.cb-fab svg {
-    width: 22px;
-    height: 22px;
-}
-
-/* 展开时隐藏圆钮，避免与面板抢空间 */
-.cb-root.cb-open .cb-fab {
-    display: none;
-}
-
-/* ---------- 展开态面板 ---------- */
+/* ---------- 下拉面板 ---------- */
 .cb-panel {
-    flex: 1;
-    min-height: 0;
+    position: absolute;
+    top: calc(100% + 6px);
+    right: 0;
+    width: 300px;
+    max-width: 82vw;
     box-sizing: border-box;
-    display: flex;
-    flex-direction: column;
-    background: rgba(255, 255, 255, 0.96);
-    border: 1px solid rgba(31, 35, 40, 0.12);
-    border-radius: 12px;
-    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.18);
-    overflow: hidden;
+    background: #fff;
+    border: 1px solid #e0e0e0;
+    border-radius: 10px;
+    box-shadow: 0 8px 28px rgba(0, 0, 0, 0.16);
+    padding: 12px;
+    z-index: 100;
+    font-size: 13px;
+    color: #333;
 }
-
 .cb-panel[hidden] {
     display: none;
 }
 
-.cb-head {
-    flex-shrink: 0;
-    height: 32px;
-    padding: 0 6px 0 12px;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    border-bottom: 1px solid rgba(31, 35, 40, 0.08);
-    background: rgba(31, 35, 40, 0.03);
+.cb-group {
+    margin-bottom: 14px;
 }
-
-.cb-title {
-    font-size: 12.5px;
-    font-weight: 600;
+.cb-group:last-child {
+    margin-bottom: 0;
 }
-
-.cb-close {
-    width: 22px;
-    height: 22px;
-    padding: 0;
-    border: none;
-    border-radius: 6px;
-    background: transparent;
-    color: #57606a;
-    font-size: 16px;
-    line-height: 1;
-    cursor: pointer;
-}
-
-.cb-close:hover {
-    background: rgba(31, 35, 40, 0.08);
-    color: #1f2328;
-}
-
-.cb-body {
-    flex: 1;
-    min-height: 0;
-    padding: 10px 12px 6px;
-    overflow-y: auto;
-}
-
-.cb-label {
+.cb-group-title {
     font-size: 11px;
+    font-weight: 600;
     color: #6e7781;
-    margin: 2px 0 6px;
+    margin: 0 0 8px;
+    letter-spacing: 0.3px;
 }
 
+/* ---- 背景色 ---- */
 .cb-swatches {
     display: grid;
     grid-template-columns: repeat(8, 1fr);
     gap: 6px;
     margin-bottom: 10px;
 }
-
 .cb-swatch {
     width: 100%;
     aspect-ratio: 1 / 1;
     padding: 0;
-    border: 1px solid rgba(31, 35, 40, 0.16);
+    border: 1px solid rgba(0, 0, 0, 0.16);
     border-radius: 6px;
     cursor: pointer;
-    transition: transform .14s ease, box-shadow .14s ease;
+    transition: transform 0.14s ease, box-shadow 0.14s ease;
 }
-
 .cb-swatch:hover {
     transform: translateY(-1px);
     box-shadow: 0 3px 8px rgba(0, 0, 0, 0.18);
 }
-
 .cb-swatch.active {
     outline: 2px solid #3b82f6;
     outline-offset: 1px;
@@ -145,63 +101,164 @@
     align-items: center;
     gap: 8px;
 }
-
 .cb-custom input[type="color"] {
     width: 34px;
-    height: 26px;
+    height: 28px;
     padding: 0;
-    border: 1px solid rgba(31, 35, 40, 0.16);
+    border: 1px solid rgba(0, 0, 0, 0.16);
     border-radius: 6px;
     background: transparent;
     cursor: pointer;
+    flex-shrink: 0;
 }
 
 .cb-apply {
-    flex: 1;
     height: 26px;
+    padding: 0 12px;
     border: none;
     border-radius: 6px;
     background: #3b82f6;
     color: #fff;
     font-size: 12px;
     cursor: pointer;
+    flex-shrink: 0;
 }
-
 .cb-apply:hover {
     background: #2f74e0;
 }
 
-.cb-foot {
-    flex-shrink: 0;
-    height: 30px;
-    padding: 0 12px;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    border-top: 1px solid rgba(31, 35, 40, 0.08);
-}
-
-.cb-current {
-    font-size: 11px;
-    color: #6e7781;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-}
-
 .cb-reset {
-    flex-shrink: 0;
-    height: 20px;
-    padding: 0 8px;
-    border: 1px solid rgba(31, 35, 40, 0.18);
+    height: 26px;
+    padding: 0 10px;
+    border: 1px solid rgba(0, 0, 0, 0.18);
     border-radius: 6px;
     background: transparent;
     color: #57606a;
-    font-size: 11px;
+    font-size: 12px;
     cursor: pointer;
+    flex-shrink: 0;
+}
+.cb-reset:hover {
+    background: rgba(0, 0, 0, 0.06);
+    color: #1f2328;
 }
 
-.cb-reset:hover {
-    background: rgba(31, 35, 40, 0.06);
+/* ---- 背景图 ---- */
+.cb-image-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+.cb-image-preview {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-top: 10px;
+    padding: 8px;
+    border: 1px dashed rgba(0, 0, 0, 0.2);
+    border-radius: 8px;
+}
+.cb-image-preview[hidden] {
+    display: none;
+}
+.cb-image-thumb,
+.cb-image-preview img {
+    width: 56px;
+    height: 40px;
+    object-fit: cover;
+    border-radius: 4px;
+    border: 1px solid rgba(0, 0, 0, 0.12);
+    display: block;
+}
+.cb-image-hint {
+    font-size: 11px;
+    color: #6e7781;
+}
+
+/* ---- 字体大小滑块 ---- */
+.cb-range-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 8px;
+}
+.cb-range-row:last-child {
+    margin-bottom: 0;
+}
+.cb-range-label {
+    flex-shrink: 0;
+    width: 52px;
+    font-size: 12px;
+    color: #57606a;
+}
+.cb-range {
+    flex: 1;
+    min-width: 0;
+    margin: 0;
+    accent-color: #667eea;
+    cursor: pointer;
+}
+.cb-range-value {
+    flex-shrink: 0;
+    width: 34px;
+    text-align: right;
+    font-size: 12px;
     color: #1f2328;
+    font-variant-numeric: tabular-nums;
+}
+.cb-range-reset-row {
+    justify-content: flex-end;
+    margin-top: 2px;
+}
+
+/* ==================== 暗色主题适配 ==================== */
+body.dark-theme .cb-root .cb-btn {
+    background: #2a2e42;
+    color: #8ea2ff;
+}
+body.dark-theme .cb-root .cb-btn:hover {
+    background: #3a3f57;
+    color: #c3cbff;
+}
+body.dark-theme .cb-root .cb-btn.active {
+    background: #667eea;
+    color: #fff;
+}
+
+body.dark-theme .cb-panel {
+    background: #232637;
+    border-color: rgba(255, 255, 255, 0.12);
+    color: #e8eaf6;
+}
+body.dark-theme .cb-group-title {
+    color: #8ea2ff;
+}
+body.dark-theme .cb-swatch {
+    border-color: rgba(255, 255, 255, 0.2);
+}
+body.dark-theme .cb-custom input[type="color"] {
+    border-color: rgba(255, 255, 255, 0.2);
+}
+body.dark-theme .cb-reset {
+    border-color: rgba(255, 255, 255, 0.2);
+    color: #9aa0c0;
+}
+body.dark-theme .cb-reset:hover {
+    background: rgba(255, 255, 255, 0.08);
+    color: #e8eaf6;
+}
+body.dark-theme .cb-image-preview {
+    border-color: rgba(255, 255, 255, 0.2);
+}
+body.dark-theme .cb-image-hint {
+    color: #9aa0c0;
+}
+body.dark-theme .cb-range-label {
+    color: #9aa0c0;
+}
+body.dark-theme .cb-range-value {
+    color: #e8eaf6;
+}
+body.dark-theme .cb-range {
+    accent-color: #8ea2ff;
 }
