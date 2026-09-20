@@ -129,7 +129,7 @@
                             onclick="togglePlugin(this)"
                             th:text="${p.enabled ? '禁用插件' : '启用插件'}">禁用插件</button>
                     <button type="button" class="btn-config" th:if="${p.hasConfigItems}"
-                            th:attr="onclick=|location.href='/plugins/config/${p.id}'|"
+                            th:attr="onclick=|openConfigModal('/plugins/config/${p.id}', '插件配置')|"
                             title="配置此插件（多工具集共享的公共配置）">插件配置</button>
                     <button type="button" class="btn-export-plugin"
                             th:attr="data-plugin-id=${p.id}"
@@ -179,7 +179,7 @@
                                                onchange="toggleToolSet(this)">
                                         <span class="slider"></span>
                                     </label>
-                                    <button th:if="${ts.hasConfigItems}" th:attr="onclick=|location.href='/tool-config/${ts.name}'|"
+                                    <button th:if="${ts.hasConfigItems}" th:attr="onclick=|openConfigModal('/tool-config/${ts.name}', '工具配置')|"
                                             class="btn-config" title="配置此工具集">配置</button>
                                 </div>
                                 <!-- 工具方法列表（含方法级禁用开关） -->

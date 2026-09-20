@@ -240,9 +240,7 @@ function clearError(field) {
     field.classList.remove('invalid');
 }
 
-function validateForm(event) {
-    event.preventDefault();
-    var form = document.getElementById('configForm');
+function validateForm(form) {
     var isValid = true;
 
     var inputs = form.querySelectorAll('input:not([type="button"]):not([type="submit"]), select, textarea');
@@ -257,9 +255,61 @@ function validateForm(event) {
         isValid = false;
     }
 
-    if (isValid) {
-        form.submit();
+    return isValid;
+}
+
+/**
+ * 异步提交配置：校验通过后 fetch 提交，成功后提示并通知父窗口关闭弹框（不刷新页面）。
+ * 提交目标取自表单 data-api-action（无模板独立页面由后端下发对应 JSON 端点）。
+ */
+function submitConfigForm(event) {
+    event.preventDefault();
+    var form = event.target || document.getElementById('configForm');
+    if (!form) {
+        return false;
     }
 
-    return isValid;
+    if (!validateForm(form)) {
+        return false;
+    }
+
+    var action = form.getAttribute('data-api-action') || form.action;
+    var data = new URLSearchParams(new FormData(form));
+
+    var submitBtn = form.querySelector('button[type="submit"]');
+    var originalText = submitBtn ? submitBtn.textContent : '';
+    if (submitBtn) {
+        submitBtn.disabled = true;
+        submitBtn.textContent = '保存中...';
+    }
+
+    fetch(action, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: data.toString()
+    })
+        .then(function (r) { return r.json(); })
+        .then(function (resp) {
+            if (resp && resp.code === 200) {
+                // 嵌入弹框：通知父窗口关闭；独立打开：就地提示
+                if (window.parent && window.parent !== window) {
+                    window.parent.postMessage({ type: 'hopaw-config-saved', message: (resp.msg || '配置保存成功') }, '*');
+                } else {
+                    showToast(resp.msg || '配置保存成功', 'success');
+                }
+            } else {
+                showToast((resp && resp.msg) || '保存失败', 'error');
+            }
+        })
+        .catch(function () {
+            showToast('请求失败', 'error');
+        })
+        .finally(function () {
+            if (submitBtn) {
+                submitBtn.disabled = false;
+                submitBtn.textContent = originalText;
+            }
+        });
+
+    return false;
 }

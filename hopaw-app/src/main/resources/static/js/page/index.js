@@ -1844,10 +1844,14 @@ function createToolConfigButton(toolName) {
     if (!info || !info.hasConfigItems) return null;
     var btn = document.createElement('a');
     btn.className = 'tool-call-config-btn';
-    btn.href = '/tool-config/' + encodeURIComponent(info.toolSetName);
+    btn.href = 'javascript:void(0)';
     btn.title = '配置 ' + info.toolSetName;
     btn.textContent = '⚙';
-    btn.onclick = function(e) { e.stopPropagation(); };
+    btn.onclick = function(e) {
+        e.preventDefault();
+        e.stopPropagation();
+        openConfigModal('/tool-config/' + encodeURIComponent(info.toolSetName), '工具配置');
+    };
     return btn;
 }
 

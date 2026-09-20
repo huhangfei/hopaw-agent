@@ -27,7 +27,6 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseBody;
 import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
-import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
 import java.util.List;
 import java.util.Map;
@@ -240,29 +239,13 @@ public class PluginController {
         }
     }
 
-    // ==================== 插件级配置页（二级配置页） ====================
+    // ==================== 插件级配置页（无模板独立页面，可嵌入弹框 iframe） ====================
 
-    /** 插件级配置页：{@code plugin.<id>.*} 段的可视化编辑（多工具集共享的公共配置）。 */
+    /** 插件级配置页：{@code plugin.<id>.*} 段的可视化编辑（多工具集共享的公共配置），表单内异步提交。 */
     @GetMapping("/config/{pluginId}")
     public String pluginConfigPage(@PathVariable String pluginId, Model model) {
         model.addAttribute("config", pluginConfigService.getPluginConfig(pluginId));
         model.addAttribute("pluginId", pluginId);
-        model.addAttribute("activePage", "tools");
-        model.addAttribute("activeTab", "tools");
         return "plugin-config";
-    }
-
-    @PostMapping("/config/{pluginId}")
-    public String savePluginConfigPage(@PathVariable String pluginId,
-                                       @RequestParam Map<String, String> params,
-                                       RedirectAttributes redirectAttributes) {
-        try {
-            pluginConfigService.savePluginConfig(pluginId, params);
-            redirectAttributes.addFlashAttribute("success", "配置保存成功！");
-        } catch (Exception e) {
-            log.error("保存插件配置失败 pluginId={}", pluginId, e);
-            redirectAttributes.addFlashAttribute("error", "保存失败：" + e.getMessage());
-        }
-        return "redirect:/plugins/config/" + pluginId;
     }
 }

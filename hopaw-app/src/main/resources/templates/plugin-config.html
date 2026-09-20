@@ -1,35 +1,33 @@
 <!DOCTYPE html>
-<html xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
-      xmlns:th="http://www.thymeleaf.org"
-      layout:decorate="~{layouts/default}">
+<html xmlns:th="http://www.thymeleaf.org">
 <head>
-    <title>插件配置 - HoPaw</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title th:text="|${config.pluginName} 插件配置|">插件配置 - HoPaw</title>
+    <link rel="stylesheet" th:href="@{/css/site.css}">
+    <link rel="stylesheet" th:href="@{/css/form.css}">
+    <link rel="stylesheet" th:href="@{/css/toast.css}">
+    <link rel="stylesheet" th:href="@{/css/dark-theme.css}">
+    <link rel="stylesheet" th:href="@{/css/page/tool-config.css}">
 </head>
-<body>
-<div layout:fragment="pageTitle">🤖 HoPaw - 插件配置</div>
-
-<div class="tool-config-container" layout:fragment="content">
-    <div th:if="${success}" class="toast-success" th:text="${success}"></div>
-    <div th:if="${error}" class="toast-error" th:text="${error}"></div>
-
+<body th:class="${currentTheme == 'dark' ? 'dark-theme' : ''}">
+<div class="config-standalone">
     <div class="config-header">
-        <a href="/tools" class="btn-back">← 返回插件列表</a>
         <h2 th:text="|${config.pluginName} 插件配置|"></h2>
         <p class="config-desc" th:text="${config.pluginDescription}"></p>
         <p class="config-prefix-hint" th:text="|配置键前缀：plugin.${pluginId}.*|"></p>
     </div>
 
-    <form th:action="@{|/plugins/config/${pluginId}|}" method="post" class="config-form" id="configForm" onsubmit="return validateForm(event)">
+    <form class="config-form" id="configForm"
+          th:attr="data-api-action=|/plugins/api/config/${pluginId}|"
+          onsubmit="return submitConfigForm(event)">
         <div th:replace="~{fragment/config-form :: configItems(${config})}"></div>
     </form>
 </div>
 
-<th:block layout:fragment="extraCss">
-    <link rel="stylesheet" th:href="@{/css/page/tool-config.css}">
-</th:block>
+<div id="toast-container" class="toast-container"></div>
 
-<th:block layout:fragment="extraScripts">
-    <script th:src="@{/js/page/tool-config.js}"></script>
-</th:block>
+<script th:src="@{/js/toast.js}"></script>
+<script th:src="@{/js/page/tool-config.js}"></script>
 </body>
 </html>

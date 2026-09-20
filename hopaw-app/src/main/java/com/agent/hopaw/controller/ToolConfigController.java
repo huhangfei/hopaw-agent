@@ -1,12 +1,12 @@
 package com.agent.hopaw.controller;
 
+import com.agent.hopaw.infra.model.dto.ResponseBean;
 import com.agent.hopaw.infra.model.dto.ToolSetInfo;
 import com.agent.hopaw.infra.service.ToolConfigService;
 import com.agent.hopaw.infra.service.IToolSetService;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.*;
-import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
 import java.util.List;
 import java.util.Map;
@@ -23,26 +23,28 @@ public class ToolConfigController {
         this.agentToolService = agentToolService;
     }
 
+    /** 工具配置页：无模板独立页面（可嵌入弹框 iframe），表单内异步提交。 */
     @GetMapping("/{toolName}")
     public String configPage(@PathVariable String toolName, Model model) {
         Map<String, Object> config = toolConfigService.getToolConfig(toolName);
         model.addAttribute("config", config);
         model.addAttribute("toolName", toolName);
-        model.addAttribute("activePage", "tools");
         return "tool-config";
     }
 
-    @PostMapping("/{toolName}")
-    public String saveConfig(@PathVariable String toolName,
-                             @RequestParam Map<String, String> params,
-                             RedirectAttributes redirectAttributes) {
+    /** 异步保存工具配置（JSON）。 */
+    @PostMapping("/api/{toolName}")
+    @ResponseBody
+    public ResponseBean saveConfigApi(@PathVariable String toolName,
+                                      @RequestParam Map<String, String> params) {
         try {
             toolConfigService.saveToolConfig(toolName, params);
-            redirectAttributes.addFlashAttribute("success", "配置保存成功！");
+            return ResponseBean.success("配置保存成功");
+        } catch (IllegalArgumentException e) {
+            return ResponseBean.fail(e.getMessage());
         } catch (Exception e) {
-            redirectAttributes.addFlashAttribute("error", "保存失败：" + e.getMessage());
+            return ResponseBean.fail("保存失败：" + e.getMessage());
         }
-        return "redirect:/tool-config/" + toolName;
     }
 
     @GetMapping

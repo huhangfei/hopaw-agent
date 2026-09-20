@@ -4,6 +4,14 @@
     overflow-y: auto;
 }
 
+/* 无模板独立页面（嵌入弹框 iframe / 直接打开）的外层容器 */
+.config-standalone {
+    max-width: 860px;
+    margin: 0 auto;
+    padding: 20px 20px 40px;
+    box-sizing: border-box;
+}
+
 .config-header {
     margin-bottom: 24px;
 }

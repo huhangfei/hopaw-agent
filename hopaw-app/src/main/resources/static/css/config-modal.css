@@ -1,0 +1,30 @@
+/* ========== 通用 iframe 弹框（配置类无模板独立页面） ========== */
+.config-modal-overlay {
+    z-index: 2000;
+}
+
+.config-modal {
+    width: 780px;
+    max-width: 95vw;
+    height: 85vh;
+    max-height: 90vh;
+    overflow: hidden;
+}
+
+.config-modal-body {
+    flex: 1;
+    overflow: hidden;
+    padding: 0;
+}
+
+.config-modal-frame {
+    width: 100%;
+    height: 100%;
+    border: 0;
+    display: block;
+    background: #fff;
+}
+
+body.dark-theme .config-modal-frame {
+    background: #1a1a2e;
+}
