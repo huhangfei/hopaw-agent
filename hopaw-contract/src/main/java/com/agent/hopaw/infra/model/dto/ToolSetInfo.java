@@ -32,6 +32,20 @@ public class ToolSetInfo {
         return icon != null && icon.startsWith("<svg");
     }
 
+    /** 可用（未禁用）工具方法数 */
+    public int getEnabledToolCount() {
+        if (tools == null) {
+            return 0;
+        }
+        return (int) tools.stream().filter(ToolInfo::isEnabled).count();
+    }
+
+    /** 禁用工具方法数 */
+    public int getDisabledToolCount() {
+        int total = tools == null ? 0 : tools.size();
+        return total - getEnabledToolCount();
+    }
+
     public ToolSetInfo() {
     }
 

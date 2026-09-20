@@ -145,6 +145,7 @@ function toggleTool(input) {
                         row.classList.add('is-method-disabled');
                     }
                 }
+                refreshToolCounts(toolSetName);
             } else {
                 showToast(resp.msg || '操作失败', 'error');
                 input.checked = !enabled;
@@ -155,6 +156,31 @@ function toggleTool(input) {
             showToast('请求失败', 'error');
             input.checked = !enabled;
         });
+}
+
+/** 按详情区实际行状态重算某工具集的可用/禁用方法数，并同步到列表与详情角标 */
+function refreshToolCounts(toolSetName) {
+    var detail = document.querySelector('.tool-detail[data-tool-name="' + cssEscape(toolSetName) + '"]');
+    if (!detail) return;
+    var rows = detail.querySelectorAll('.detail-tool-item');
+    if (rows.length === 0) return;
+    var disabled = detail.querySelectorAll('.detail-tool-item.is-method-disabled').length;
+    var enabledCount = rows.length - disabled;
+    var text = disabled > 0 ? (enabledCount + ' 可用 / ' + disabled + ' 禁用') : (enabledCount + ' 可用');
+
+    // 详情角标
+    var badge = detail.querySelector('.detail-count-badge');
+    if (badge) badge.textContent = text;
+
+    // 左侧列表计数
+    var listItem = document.querySelector('#toolsListBody .tool-list-item[data-tool-name="' + cssEscape(toolSetName) + '"]');
+    if (listItem) {
+        var countEl = listItem.querySelector('.tool-list-count');
+        if (countEl) {
+            countEl.innerHTML = '<span class="count-enabled">' + enabledCount + ' 可用</span>' +
+                (disabled > 0 ? '<span class="count-disabled">' + disabled + ' 禁用</span>' : '');
+        }
+    }
 }
 
 /** 转义 CSS 选择器中的特殊字符（用于 data-* 属性值精确匹配） */

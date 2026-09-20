@@ -45,7 +45,12 @@
                         </div>
                         <div class="tool-list-desc" th:text="${ts.description}"></div>
                         <div class="tool-list-meta">
-                            <span class="tool-list-count" th:text="|${#lists.size(ts.tools)} 个工具方法|"></span>
+                            <span class="tool-list-count"
+                                  th:attr="data-tool-name=${ts.name}">
+                                <span class="count-enabled" th:text="|${ts.enabledToolCount} 可用|"></span>
+                                <span class="count-disabled" th:if="${ts.disabledToolCount > 0}"
+                                      th:text="|${ts.disabledToolCount} 禁用|"></span>
+                            </span>
                         </div>
                     </div>
                 </div>
@@ -77,7 +82,9 @@
                         </div>
                         <div class="detail-desc" th:text="${toolSet.description}"></div>
                     </div>
-                    <span class="detail-count-badge" th:if="${not #lists.isEmpty(toolSet.tools)}" th:text="|${#lists.size(toolSet.tools)} 个方法|"></span>
+                    <span class="detail-count-badge" th:if="${not #lists.isEmpty(toolSet.tools)}"
+                          th:attr="data-tool-name=${toolSet.name}"
+                          th:text="${toolSet.disabledToolCount > 0 ? toolSet.enabledToolCount + ' 可用 / ' + toolSet.disabledToolCount + ' 禁用' : toolSet.enabledToolCount + ' 可用'}"></span>
                 </div>
 
                 <div class="detail-meta">

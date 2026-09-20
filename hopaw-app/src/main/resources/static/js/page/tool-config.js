@@ -190,6 +190,35 @@ function validateMapKeys() {
     return valid;
 }
 
+/**
+ * 将浏览器原生校验结果转为中文提示（浏览器 validationMessage 受系统语言影响，英文环境会显示英文）
+ */
+function getChineseValidationMessage(field) {
+    var v = field.validity;
+    if (!v || v.valid) {
+        return '';
+    }
+    if (v.valueMissing) {
+        return '该项为必填项';
+    }
+    if (v.patternMismatch) {
+        return field.title || '格式不符合要求';
+    }
+    if (v.tooShort) {
+        return '长度不能少于 ' + field.minLength + ' 个字符';
+    }
+    if (v.tooLong) {
+        return '长度不能超过 ' + field.maxLength + ' 个字符';
+    }
+    if (v.typeMismatch) {
+        return '格式不正确';
+    }
+    if (v.rangeUnderflow || v.rangeOverflow || v.stepMismatch) {
+        return '数值超出允许范围';
+    }
+    return field.title || '格式不正确';
+}
+
 function validateField(field) {
     var key = field.dataset.key;
     if (!key) {
@@ -209,7 +238,7 @@ function validateField(field) {
     }
 
     if (!field.checkValidity()) {
-        errorDiv.textContent = field.validationMessage || field.title || '格式不正确';
+        errorDiv.textContent = getChineseValidationMessage(field);
         errorDiv.style.display = 'block';
         field.classList.add('invalid');
         return false;

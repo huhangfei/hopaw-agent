@@ -177,6 +177,14 @@
 .tool-list-count {
     font-size: 12px;
     color: #bbb;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+}
+
+/* 可用 / 禁用 方法数分色 */
+.tool-list-count .count-disabled {
+    color: #e57373;
 }
 
 .tools-list-empty {

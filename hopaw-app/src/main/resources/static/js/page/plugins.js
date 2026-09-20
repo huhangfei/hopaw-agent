@@ -312,6 +312,7 @@ function toggleTool(input) {
                         row.classList.add('is-method-disabled');
                     }
                 }
+                refreshAccordionCounts(input);
             } else {
                 showToast(resp.msg || '操作失败', 'error');
                 input.checked = !enabled;
@@ -322,6 +323,22 @@ function toggleTool(input) {
             showToast('请求失败', 'error');
             input.checked = !enabled;
         });
+}
+
+/** 按手风琴方法行实际状态重算该工具集的可用/禁用方法数，并同步到头部计数 */
+function refreshAccordionCounts(input) {
+    var item = input.closest('.accordion-item');
+    if (!item) return;
+    var rows = item.querySelectorAll('.accordion-method-row');
+    if (rows.length === 0) return;
+    var disabled = item.querySelectorAll('.accordion-method-row.is-method-disabled').length;
+    var enabledCount = rows.length - disabled;
+    var countEl = item.querySelector('.accordion-header-count');
+    if (countEl) {
+        countEl.textContent = disabled > 0
+            ? (enabledCount + ' 可用 / ' + disabled + ' 禁用')
+            : (enabledCount + ' 可用');
+    }
 }
 
 /** 页面初始化：无插件时显示空态，有插件时高亮首个插件 */

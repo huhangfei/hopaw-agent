@@ -58,6 +58,12 @@
                             <span th:if="${p.version != null and !p.version.isEmpty()}" th:text="|v${p.version}|"></span>
                             <span th:text="|${p.toolCount} 个工具集|"></span>
                         </div>
+                        <div class="plugin-list-keywords" th:if="${p.keyword != null and !p.keyword.isEmpty()}">
+                            <span class="plugin-list-keyword"
+                                  th:each="kw : ${p.keyword.split('[,，;；]')}"
+                                  th:if="${!#strings.isEmpty(#strings.trim(kw))}"
+                                  th:text="${#strings.trim(kw)}"></span>
+                        </div>
                     </div>
                 </div>
                 <div th:if="${#lists.isEmpty(plugins)}" class="plugins-list-empty">
@@ -166,7 +172,8 @@
                                     </div>
                                     <div class="accordion-header-desc" th:text="${ts.description}"></div>
                                 </div>
-                                <span class="accordion-header-count" th:text="|${#lists.size(ts.tools)} 个方法|"></span>
+                                <span class="accordion-header-count"
+                                      th:text="${ts.disabledToolCount > 0 ? ts.enabledToolCount + ' 可用 / ' + ts.disabledToolCount + ' 禁用' : ts.enabledToolCount + ' 可用'}"></span>
                                 <span class="accordion-config-tag" th:if="${ts.hasConfigItems}" title="此工具集支持配置">可配置</span>
                             </div>
                             <div class="accordion-body">
