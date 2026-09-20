@@ -2,6 +2,7 @@ package com.agent.hopaw.infra.service;
 
 import com.agent.hopaw.infra.model.dto.PluginDescriptor;
 import com.agent.hopaw.infra.model.dto.PluginRepoResult;
+import com.agent.hopaw.infra.util.SemVer;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -32,15 +33,12 @@ public class PluginStoreService implements IPluginStoreService {
         if (sourceUrls.isEmpty()) {
             return Collections.emptyList();
         }
-        // 已安装版本索引：pluginId 及其下所有工具集名 → 插件版本
-        // （商店条目可能以 pluginId 或历史工具集名命名，两个口径都能命中判定）
+        // 已安装版本索引：插件标识（pluginId）→ 已安装版本
+        // 条目与已安装插件统一走 pluginId 口径（不再按工具集名做别名匹配）
         Map<String, String> installedVersions = new HashMap<>();
         for (PluginDescriptor descriptor : agentPluginService.getPlugins()) {
-            installedVersions.put(descriptor.getId(), descriptor.getVersion());
-            if (descriptor.getToolSetNames() != null) {
-                for (String toolSetName : descriptor.getToolSetNames()) {
-                    installedVersions.put(toolSetName, descriptor.getVersion());
-                }
+            if (descriptor.getId() != null) {
+                installedVersions.put(descriptor.getId(), descriptor.getVersion());
             }
         }
 
@@ -55,18 +53,10 @@ public class PluginStoreService implements IPluginStoreService {
                 if (storePlugins == null) continue;
 
                 for (PluginRepoResult storePlugin : storePlugins) {
-                    String installedVersion = installedVersions.get(storePlugin.getName());
+                    String installedVersion = installedVersions.get(storePlugin.getId());
                     if (storePlugin.getVersions() != null) {
                         for (PluginRepoResult.VersionEntry version : storePlugin.getVersions()) {
-                            if (installedVersion != null) {
-                                if (version.getVersion().equals(installedVersion)) {
-                                    version.setStatus("installed");
-                                } else {
-                                    version.setStatus("update_available");
-                                }
-                            } else {
-                                version.setStatus("not_installed");
-                            }
+                            version.setStatus(resolveVersionStatus(installedVersion, version.getVersion()));
                         }
                     }
                     if (installedVersion != null) {
@@ -79,6 +69,28 @@ public class PluginStoreService implements IPluginStoreService {
             }
         }
         return result;
+    }
+
+    /**
+     * 判定某仓库版本相对已安装版本的状态。
+     *
+     * <ul>
+     *   <li>{@code installed}：与已安装版本一致；</li>
+     *   <li>{@code update_available}：比已安装版本新（语义化比较，{@code 1.10.0} 大于 {@code 1.9.0}）；</li>
+     *   <li>{@code older}：比已安装版本旧（可回退，但不应提示为"可更新"）；</li>
+     *   <li>{@code not_installed}：该插件尚未安装。</li>
+     * </ul>
+     */
+    private String resolveVersionStatus(String installedVersion, String candidateVersion) {
+        if (installedVersion == null || installedVersion.isEmpty()) {
+            return "not_installed";
+        }
+        int cmp = SemVer.compare(candidateVersion, installedVersion);
+        if (cmp == 0) {
+            // 含 1.2 与 1.2.0 这类"写法不同但语义相等"的情况
+            return "installed";
+        }
+        return cmp > 0 ? "update_available" : "older";
     }
 
     private List<PluginRepoResult> fetchStorePlugins(String urlStr) {

@@ -40,15 +40,17 @@
                     <p>暂无插件包</p>
                     <p class="empty-hint">点击「导入插件包」上传</p>
                 </div>
-                <div th:each="plugin, pIdx : ${plugins}" class="tree-node" th:attr="data-name=${plugin.name}"
+                <div th:each="plugin : ${plugins}" class="tree-node"
+                     th:attr="data-id=${plugin.id},data-name=${plugin.name}"
                      th:onclick="'toggleTreeNode(this)'">
                     <div class="tree-node-header">
                         <span class="tree-arrow">▸</span>
                         <span class="tree-icon">🧩</span>
                         <span class="tree-name" th:text="${plugin.name}">plugin-name</span>
-                        <span class="tree-badge" th:text="${plugin.versions.size() + '个版本'}">3个版本</span>
+                        <span class="tree-badge" th:text="${plugin.versions.size() + ' 个版本'}">3 个版本</span>
                     </div>
-                    <div class="tree-node-info" th:if="${plugin.description != null or plugin.keyword != null}">
+                    <div class="tree-node-info">
+                        <div class="tree-node-id" th:text="${plugin.id}">plugin-id</div>
                         <div class="tree-node-desc" th:if="${plugin.description != null and plugin.description != ''}"
                              th:text="${plugin.description}"
                              th:title="${plugin.description}">插件描述</div>
@@ -58,11 +60,13 @@
                         </div>
                     </div>
                     <div class="tree-node-children">
-                        <div th:each="version, vIdx : ${plugin.versions}" class="tree-leaf"
-                             th:attr="data-plugin=${plugin.name},data-version=${version.version}"
+                        <div th:each="version : ${plugin.versions}" class="tree-leaf"
+                             th:attr="data-plugin=${plugin.id},data-version=${version.version}"
                              th:onclick="'selectVersion(event, this)'">
                             <span class="leaf-dot"></span>
                             <span class="leaf-version" th:text="'v' + ${version.version}">v1.0.0</span>
+                            <span class="leaf-caps"
+                                  th:text="${version.toolSetCount > 0 ? version.toolSetCount + ' 工具集' : '纯前端'}">2 工具集</span>
                             <span class="leaf-hash" th:text="${#strings.isEmpty(version.sha256Hash) ? '' : version.sha256Hash.substring(0, 8)}"></span>
                         </div>
                     </div>
@@ -122,14 +126,31 @@
                         <span class="meta-label">SHA256</span>
                         <span class="meta-value hash-value" id="metaHash">-</span>
                     </div>
+                    <div class="meta-item">
+                        <span class="meta-label">插件标识</span>
+                        <span class="meta-value mono-value" id="metaId">-</span>
+                    </div>
+                    <div class="meta-item">
+                        <span class="meta-label">工具集</span>
+                        <span class="meta-value" id="metaToolSets">-</span>
+                    </div>
+                    <div class="meta-item">
+                        <span class="meta-label">前端资产</span>
+                        <span class="meta-value" id="metaAssets">-</span>
+                    </div>
+                    <div class="meta-item">
+                        <span class="meta-label">invoke</span>
+                        <span class="meta-value" id="metaInvoke">-</span>
+                    </div>
                 </div>
                 <div class="detail-section">
                     <h3>描述</h3>
                     <p id="metaDescription" class="detail-description">-</p>
                 </div>
                 <div class="detail-section">
-                    <h3>工具列表</h3>
-                    <div class="tools-list" id="toolsList"></div>
+                    <h3>提供能力</h3>
+                    <div class="cap-badges" id="capBadges"></div>
+                    <div class="tools-list" id="providesList"></div>
                 </div>
             </div>
         </main>

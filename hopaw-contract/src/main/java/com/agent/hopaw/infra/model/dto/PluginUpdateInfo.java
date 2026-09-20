@@ -11,6 +11,11 @@ public class PluginUpdateInfo {
     private String currentVersion;
     private boolean installed;
     private boolean needUpgrade;
+    /**
+     * 是否已显式确认安装「纯前端插件」（不提供任何工具集，仅前端资产 / invoke）。
+     * 默认 false——第三方商店来源的纯前端插件必须由使用者明确确认后才允许安装。
+     */
+    private boolean allowFrontendOnly;
 
     public PluginUpdateInfo() {
     }
@@ -85,5 +90,13 @@ public class PluginUpdateInfo {
 
     public void setNeedUpgrade(boolean needUpgrade) {
         this.needUpgrade = needUpgrade;
+    }
+
+    public boolean isAllowFrontendOnly() {
+        return allowFrontendOnly;
+    }
+
+    public void setAllowFrontendOnly(boolean allowFrontendOnly) {
+        this.allowFrontendOnly = allowFrontendOnly;
     }
 }

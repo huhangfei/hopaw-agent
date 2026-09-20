@@ -66,41 +66,47 @@ function renderTree(plugins) {
     plugins.forEach(function(plugin) {
         var desc = plugin.description || '';
         var keyword = plugin.keyword || '';
-        var infoHtml = '';
-        if (desc || keyword) {
-            infoHtml = '<div class="tree-node-info">';
-            if (desc) {
-                infoHtml += '<div class="tree-node-desc" title="' + escapeHtml(desc) + '">' + escapeHtml(desc) + '</div>';
-            }
-            if (keyword) {
-                infoHtml += '<div class="tree-node-keywords">';
-                keyword.split(',').forEach(function(kw) {
-                    var k = kw.trim();
-                    if (k) {
-                        infoHtml += '<span class="keyword-tag">' + escapeHtml(k) + '</span>';
-                    }
-                });
-                infoHtml += '</div>';
-            }
+        var infoHtml = '<div class="tree-node-info">';
+        if (plugin.id) {
+            infoHtml += '<div class="tree-node-id">' + escapeHtml(plugin.id) + '</div>';
+        }
+        if (desc) {
+            infoHtml += '<div class="tree-node-desc" title="' + escapeHtml(desc) + '">' + escapeHtml(desc) + '</div>';
+        }
+        if (keyword) {
+            infoHtml += '<div class="tree-node-keywords">';
+            keyword.split(',').forEach(function(kw) {
+                var k = kw.trim();
+                if (k) {
+                    infoHtml += '<span class="keyword-tag">' + escapeHtml(k) + '</span>';
+                }
+            });
             infoHtml += '</div>';
         }
-        html += '<div class="tree-node" data-name="' + escapeHtml(plugin.name) + '" onclick="toggleTreeNode(this)">' +
+        infoHtml += '</div>';
+
+        html += '<div class="tree-node"' +
+            ' data-id="' + escapeHtml(plugin.id) + '"' +
+            ' data-name="' + escapeHtml(plugin.name) + '"' +
+            ' onclick="toggleTreeNode(this)">' +
             '<div class="tree-node-header">' +
             '<span class="tree-arrow">▸</span>' +
             '<span class="tree-icon">🧩</span>' +
             '<span class="tree-name">' + escapeHtml(plugin.name) + '</span>' +
-            '<span class="tree-badge">' + plugin.versions.length + '个版本</span>' +
+            '<span class="tree-badge">' + plugin.versions.length + ' 个版本</span>' +
             '</div>' +
             infoHtml +
             '<div class="tree-node-children">';
         plugin.versions.forEach(function(v) {
             var hash = v.sha256Hash ? v.sha256Hash.substring(0, 8) : '';
+            var caps = v.toolSetCount > 0 ? (v.toolSetCount + ' 工具集') : '纯前端';
             html += '<div class="tree-leaf"' +
-                ' data-plugin="' + escapeHtml(plugin.name) + '"' +
+                ' data-plugin="' + escapeHtml(plugin.id) + '"' +
                 ' data-version="' + escapeHtml(v.version) + '"' +
                 ' onclick="selectVersion(event, this)">' +
                 '<span class="leaf-dot"></span>' +
                 '<span class="leaf-version">v' + escapeHtml(v.version) + '</span>' +
+                '<span class="leaf-caps">' + escapeHtml(caps) + '</span>' +
                 '<span class="leaf-hash">' + escapeHtml(hash) + '</span>' +
                 '</div>';
         });
@@ -148,7 +154,7 @@ function selectVersion(event, leaf, fromRefresh) {
 
     var plugin = null;
     for (var i = 0; i < pluginCache.length; i++) {
-        if (pluginCache[i].name === selectedPlugin) {
+        if (pluginCache[i].id === selectedPlugin) {
             plugin = pluginCache[i];
             break;
         }
@@ -169,18 +175,28 @@ function selectVersion(event, leaf, fromRefresh) {
     var metaAuthor = document.getElementById('metaAuthor');
     var metaHash = document.getElementById('metaHash');
     var metaFileSize = document.getElementById('metaFileSize');
+    var metaId = document.getElementById('metaId');
+    var metaToolSets = document.getElementById('metaToolSets');
+    var metaAssets = document.getElementById('metaAssets');
+    var metaInvoke = document.getElementById('metaInvoke');
     var metaDescription = document.getElementById('metaDescription');
     var keywordEl = document.getElementById('detailKeyword');
     var iconEl = document.getElementById('detailIcon');
     var btnDownload = document.getElementById('btnDownload');
     var btnDelete = document.getElementById('btnDelete');
 
-    if (detailName) detailName.textContent = selectedPlugin;
+    if (detailName) detailName.textContent = plugin.name || plugin.id;
     if (metaVersion) metaVersion.textContent = 'v' + selectedVersion;
     if (metaAuthor) metaAuthor.textContent = version.author || '-';
     if (metaHash) metaHash.textContent = version.sha256Hash || '-';
     if (metaFileSize) metaFileSize.textContent = formatFileSize(version.fileSize);
-    if (metaDescription) metaDescription.textContent = plugin.description || version.description || '暂无描述';
+    if (metaId) metaId.textContent = plugin.id || '-';
+    if (metaToolSets) {
+        metaToolSets.textContent = version.toolSetCount > 0 ? version.toolSetCount + ' 个' : '无（纯前端）';
+    }
+    if (metaAssets) metaAssets.textContent = version.frontendAssetCount > 0 ? version.frontendAssetCount + ' 个' : '无';
+    if (metaInvoke) metaInvoke.textContent = version.invokeSupport ? '支持' : '不支持';
+    if (metaDescription) metaDescription.textContent = plugin.description || '暂无描述';
 
     if (keywordEl) {
         var keyword = plugin.keyword || '';
@@ -215,7 +231,7 @@ function selectVersion(event, leaf, fromRefresh) {
         }
     }
 
-    renderToolsList(version.tools);
+    renderProvides(version);
 }
 
 function showWelcome() {
@@ -259,7 +275,8 @@ function filterPlugins() {
     var nodes = document.querySelectorAll('.tree-node');
 
     nodes.forEach(function(node) {
-        var name = node.getAttribute('data-name').toLowerCase();
+        var nodeId = node.getAttribute('data-id') || '';
+        var name = (node.getAttribute('data-name') || '').toLowerCase();
         var leaves = node.querySelectorAll('.tree-leaf');
 
         if (query === '') {
@@ -270,20 +287,34 @@ function filterPlugins() {
 
         var plugin = null;
         for (var i = 0; i < pluginCache.length; i++) {
-            if (pluginCache[i].name === node.getAttribute('data-name')) {
+            if (pluginCache[i].id === nodeId) {
                 plugin = pluginCache[i];
                 break;
             }
         }
 
-        var nameMatch = name.indexOf(query) !== -1;
+        var nameMatch = name.indexOf(query) !== -1 || nodeId.toLowerCase().indexOf(query) !== -1;
         var keywordMatch = plugin && plugin.keyword && plugin.keyword.toLowerCase().indexOf(query) !== -1;
         var descMatch = plugin && plugin.description && plugin.description.toLowerCase().indexOf(query) !== -1;
+        var providesMatch = false;
+        if (plugin) {
+            for (var p = 0; p < plugin.versions.length && !providesMatch; p++) {
+                var provides = plugin.versions[p].provides || [];
+                for (var q = 0; q < provides.length; q++) {
+                    var tsName = (provides[q].name || '').toLowerCase();
+                    if (tsName.indexOf(query) !== -1) {
+                        providesMatch = true;
+                        break;
+                    }
+                }
+            }
+        }
         var anyLeafMatch = false;
+        var hasMetaMatch = nameMatch || keywordMatch || descMatch || providesMatch;
 
         leaves.forEach(function(l) {
             var version = l.getAttribute('data-version').toLowerCase();
-            if (nameMatch || keywordMatch || descMatch || version.indexOf(query) !== -1) {
+            if (hasMetaMatch || version.indexOf(query) !== -1) {
                 l.classList.remove('filtered-hidden');
                 anyLeafMatch = true;
             } else {
@@ -291,9 +322,9 @@ function filterPlugins() {
             }
         });
 
-        if (nameMatch || keywordMatch || descMatch || anyLeafMatch) {
+        if (hasMetaMatch || anyLeafMatch) {
             node.classList.remove('filtered-hidden');
-            if ((nameMatch || keywordMatch || descMatch) && query !== '' && leaves.length > 0) {
+            if (hasMetaMatch && query !== '' && leaves.length > 0) {
                 node.classList.add('expanded');
             }
         } else {
@@ -392,40 +423,47 @@ function escapeHtml(text) {
     return div.innerHTML;
 }
 
-function renderToolsList(tools) {
-    var container = document.getElementById('toolsList');
+/**
+ * 渲染某版本的「提供能力」：
+ * 顶部为一排能力徽标（工具集 / 前端资产 / invoke / 配置项），下面逐个列出工具集摘要。
+ * 清单只带摘要（名称/描述/方法数），完整参数明细由安装后扫描 @Tool 得到。
+ */
+function renderProvides(version) {
+    var badgeContainer = document.getElementById('capBadges');
+    var container = document.getElementById('providesList');
     if (!container) return;
 
-    if (!tools || tools.length === 0) {
-        container.innerHTML = '<p class="empty-tools">此插件未包含工具</p>';
+    var provides = version.provides || [];
+
+    if (badgeContainer) {
+        var badges = '';
+        badges += '<span class="cap-badge cap-badge-toolset">' + provides.length + ' 个工具集</span>';
+        if (version.frontendAssetCount > 0) {
+            badges += '<span class="cap-badge cap-badge-frontend">' + version.frontendAssetCount + ' 个前端资产</span>';
+        }
+        if (version.invokeSupport) {
+            badges += '<span class="cap-badge cap-badge-invoke">支持 invoke</span>';
+        }
+        if (version.configItemCount > 0) {
+            badges += '<span class="cap-badge cap-badge-config">' + version.configItemCount + ' 项插件配置</span>';
+        }
+        badges += '<span class="cap-badge cap-badge-manifest">清单 v' + version.manifestVersion + '</span>';
+        badgeContainer.innerHTML = badges;
+    }
+
+    if (provides.length === 0) {
+        container.innerHTML = '<p class="empty-tools">纯前端插件 —— 不提供任何工具集</p>';
         return;
     }
 
     var html = '';
-    tools.forEach(function(tool) {
+    provides.forEach(function(ts) {
         html += '<div class="tool-item">';
         html += '<div class="tool-item-header">';
-        html += '<span class="tool-item-name">' + escapeHtml(tool.name) + '</span>';
-        html += '<span class="tool-item-desc">' + escapeHtml(tool.description || '') + '</span>';
+        html += '<span class="tool-item-name">' + escapeHtml(ts.name || '') + '</span>';
+        html += '<span class="tool-item-desc">' + escapeHtml(ts.description || '') + '</span>';
+        html += '<span class="tool-item-count">' + (ts.toolCount || 0) + ' 个方法</span>';
         html += '</div>';
-
-        if (tool.parameters && tool.parameters.length > 0) {
-            html += '<table class="tool-param-table">';
-            html += '<thead><tr><th>参数名</th><th>类型</th><th>说明</th><th>必填</th></tr></thead>';
-            html += '<tbody>';
-            tool.parameters.forEach(function(p) {
-                html += '<tr>';
-                html += '<td class="tp-name">' + escapeHtml(p.name) + '</td>';
-                html += '<td class="tp-type">' + escapeHtml(p.type || '-') + '</td>';
-                html += '<td class="tp-desc">' + escapeHtml(p.description || '-') + '</td>';
-                html += '<td class="tp-required">' + (p.required ? '✓' : '-') + '</td>';
-                html += '</tr>';
-            });
-            html += '</tbody></table>';
-        } else {
-            html += '<div class="tool-no-params">无参数</div>';
-        }
-
         html += '</div>';
     });
 

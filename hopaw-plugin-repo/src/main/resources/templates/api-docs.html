@@ -28,7 +28,7 @@
                     <span class="method-tag method-get">GET</span>
                     <span class="api-path">/plugin-repo/api/plugins</span>
                 </div>
-                <div class="api-desc">列出仓库内所有插件及其所有版本信息。</div>
+                <div class="api-desc">列出仓库内所有插件及其所有版本信息。条目以<b>插件</b>为主体（<code>id</code> 为插件标识，<code>name</code> 为展示名），每个版本声明其 <code>provides</code>（工具集摘要）、前端资产数与 invoke 能力。</div>
                 <div class="api-example">
                     <div class="example-label">请求示例：</div>
                     <div class="example-row">
@@ -60,7 +60,7 @@
                 <div class="api-params">
                     <div class="param-title">路径参数：</div>
                     <ul>
-                        <li><code>pluginName</code> &lt;String&gt; <span class="optional">必填</span>，插件名称。</li>
+                        <li><code>pluginName</code> &lt;String&gt; <span class="optional">必填</span>，插件标识（pluginId，即清单 <code>id</code>）。</li>
                         <li><code>version</code> &lt;String&gt; <span class="optional">必填</span>，插件版本号。</li>
                     </ul>
                 </div>
@@ -75,7 +75,7 @@
                     <span class="method-tag method-post">POST</span>
                     <span class="api-path">/plugin-repo/web/import</span>
                 </div>
-                <div class="api-desc">导入插件包，multipart/form-data 方式上传 zip 文件。</div>
+                <div class="api-desc">导入插件包，multipart/form-data 方式上传 zip 文件。<br>zip 内需包含 <b>v2 清单</b>（<code>manifestVersion=2</code>，必填 <code>id</code>，且至少声明 provides 工具集 / 前端资产 / invoke 之一）与插件 JAR；JAR 的 sha256 需与清单 <code>sha256Hash</code> 一致。仓库只接受 v2 清单。</div>
                 <div class="api-params">
                     <div class="param-title">参数：</div>
                     <ul>

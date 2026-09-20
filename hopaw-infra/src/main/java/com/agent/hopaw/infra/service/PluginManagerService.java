@@ -215,6 +215,26 @@ public class PluginManagerService implements IAgentPluginService {
         return manifest;
     }
 
+    /** 清单基础校验：只接受 v2 清单，且必须声明 id 与至少一项能力。 */
+    private void validateManifest(PluginPackageManifest manifest) {
+        if (manifest.getManifestVersion() != 2) {
+            throw new IllegalArgumentException(String.format(
+                    "不支持的插件清单版本：%d，只接受 v2 清单（manifestVersion=2）", manifest.getManifestVersion()));
+        }
+        if (manifest.getId() == null || manifest.getId().trim().isEmpty()) {
+            throw new IllegalArgumentException("插件清单缺少 id（插件标识）");
+        }
+        if (!manifest.hasAnyCapability()) {
+            throw new IllegalArgumentException(
+                    "插件清单未声明任何能力：至少需要 provides 工具集、前端资产或 invoke 之一");
+        }
+    }
+
+    /** 是否为「纯前端插件」：不提供任何工具集，仅靠前端资产 / invoke 生效。 */
+    private boolean isFrontendOnly(PluginPackageManifest manifest) {
+        return manifest.getProvides() == null || manifest.getProvides().isEmpty();
+    }
+
     // ==================== 安装 / 升级 ====================
 
     @Override
@@ -302,14 +322,40 @@ public class PluginManagerService implements IAgentPluginService {
 
             reportStage(stageCallback, "extracting");
             byte[] jarBytes = null;
+            PluginPackageManifest downloadedManifest = null;
             try (ZipInputStream zis = new ZipInputStream(Files.newInputStream(tempZip))) {
                 ZipEntry entry;
                 while ((entry = zis.getNextEntry()) != null) {
-                    if (entry.getName().endsWith(".jar")) {
+                    if (entry.getName().endsWith(".json")) {
+                        downloadedManifest = objectMapper.readValue(zis.readAllBytes(), PluginPackageManifest.class);
+                    } else if (entry.getName().endsWith(".jar")) {
                         jarBytes = zis.readAllBytes();
                     }
                     zis.closeEntry();
                 }
+            }
+
+            if (downloadedManifest == null) {
+                log.error("ZIP包中未找到插件清单文件（.json）");
+                Files.deleteIfExists(tempZip);
+                return PluginInstallResult.fail(pluginId, version, jarFileName, "ZIP包中未找到插件清单文件（.json）");
+            }
+
+            // 仓库/商店链路同样只接受 v2 清单，并在此拦截「纯前端插件」
+            try {
+                validateManifest(downloadedManifest);
+            } catch (IllegalArgumentException e) {
+                log.error("插件清单校验失败: {}", e.getMessage());
+                Files.deleteIfExists(tempZip);
+                return PluginInstallResult.fail(pluginId, version, jarFileName, e.getMessage());
+            }
+
+            if (isFrontendOnly(downloadedManifest) && !updateInfo.isAllowFrontendOnly()) {
+                log.warn("拒绝安装未经确认的纯前端插件: {}", downloadedManifest.getId());
+                Files.deleteIfExists(tempZip);
+                return PluginInstallResult.fail(pluginId, version, jarFileName,
+                        "该插件不提供任何工具集，属于「纯前端插件」——其前端资源会注入到聊天页面，"
+                                + "请确认来源可信后重新发起安装（需显式确认）。");
             }
 
             if (jarBytes == null) {
@@ -366,11 +412,9 @@ public class PluginManagerService implements IAgentPluginService {
         if (manifest == null) {
             throw new IllegalArgumentException("ZIP包中未找到插件清单文件（.json）");
         }
+        validateManifest(manifest);
         if (jarBytes == null) {
             throw new IllegalArgumentException("ZIP包中未找到插件JAR文件");
-        }
-        if (manifest.getId() == null || manifest.getId().isEmpty()) {
-            throw new IllegalArgumentException("插件清单缺少 id");
         }
 
         String pluginId = manifest.getId();

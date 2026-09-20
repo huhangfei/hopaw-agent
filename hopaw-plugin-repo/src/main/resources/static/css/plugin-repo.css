@@ -861,3 +861,80 @@ select.search-input {
     from { transform: translateX(100%); opacity: 0; }
     to { transform: translateX(0); opacity: 1; }
 }
+
+/* ===== 插件主体展示（S5：一级插件 / 二级版本 + 能力徽标） ===== */
+.tree-node-id {
+    font-size: 11px;
+    font-family: monospace;
+    color: var(--text-muted);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.leaf-caps {
+    font-size: 10px;
+    padding: 1px 6px;
+    border-radius: 8px;
+    background: var(--primary-light);
+    color: var(--primary);
+    flex-shrink: 0;
+    white-space: nowrap;
+}
+
+.cap-badges {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-bottom: 12px;
+}
+
+.cap-badge {
+    font-size: 11px;
+    padding: 3px 10px;
+    border-radius: 10px;
+    font-weight: 500;
+    background: var(--bg);
+    color: var(--text-secondary);
+    border: 1px solid var(--border);
+}
+
+.cap-badge-toolset {
+    background: var(--primary-light);
+    color: var(--primary);
+    border-color: var(--primary-light);
+}
+
+.cap-badge-frontend {
+    background: #ecfeff;
+    color: #0e7490;
+    border-color: #a5f3fc;
+}
+
+.cap-badge-invoke {
+    background: var(--green-light);
+    color: var(--green);
+    border-color: #a7f3d0;
+}
+
+.cap-badge-config {
+    background: #fefce8;
+    color: #a16207;
+    border-color: #fde68a;
+}
+
+.cap-badge-manifest {
+    font-family: monospace;
+}
+
+.tool-item-count {
+    margin-left: auto;
+    font-size: 11px;
+    color: var(--text-muted);
+    flex-shrink: 0;
+}
+
+.mono-value {
+    font-family: monospace;
+    font-size: 13px;
+}

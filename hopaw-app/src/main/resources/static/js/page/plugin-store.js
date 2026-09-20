@@ -26,13 +26,13 @@ function loadStorePlugins() {
                 if (selectedPlugin) {
                     var found = null;
                     for (var i = 0; i < storePlugins.length; i++) {
-                        if (storePlugins[i].name === selectedPlugin.name) {
+                        if (storePlugins[i].id === selectedPlugin) {
                             found = storePlugins[i];
                             break;
                         }
                     }
                     if (found) {
-                        selectPlugin(found.name);
+                        selectPlugin(found.id);
                     } else {
                         resetDetail();
                     }
@@ -65,7 +65,7 @@ function renderPluginList(plugins) {
             var hasUpdate = false;
             if (p.versions && p.versions.length > 0) {
                 for (var j = 0; j < p.versions.length; j++) {
-                    if (p.versions[j].version !== p.installedVersion && p.versions[j].version > p.installedVersion) {
+                    if (semverGt(p.versions[j].version, p.installedVersion)) {
                         hasUpdate = true;
                         break;
                     }
@@ -80,9 +80,9 @@ function renderPluginList(plugins) {
             }
         }
 
-        var isActive = selectedPlugin && selectedPlugin.name === p.name;
+        var isActive = selectedPlugin === p.id;
 
-        html += '<div class="tool-list-item' + (isActive ? ' active' : '') + '" data-name="' + escapeHtml(p.name) + '" onclick="selectPlugin(\'' + escapeJsStr(p.name) + '\')">';
+        html += '<div class="tool-list-item' + (isActive ? ' active' : '') + '" data-id="' + escapeHtml(p.id) + '" onclick="selectPlugin(\'' + escapeJsStr(p.id) + '\')">';
         html += '<div class="tool-list-icon">';
         if (p.icon && p.icon.indexOf('<svg') === 0) {
             html += '<span>' + p.icon + '</span>';
@@ -93,13 +93,21 @@ function renderPluginList(plugins) {
         }
         html += '</div>';
         html += '<div class="tool-list-info">';
-        html += '<div class="tool-list-name">' + escapeHtml(p.name);
+        html += '<div class="tool-list-name">' + escapeHtml(p.name || p.id);
         if (statusTag) {
             html += '<span class="store-status-tag ' + statusClass + '">' + statusTag + '</span>';
         }
         html += '</div>';
         html += '<div class="tool-list-desc">' + escapeHtml(p.description || '') + '</div>';
         html += '<div class="tool-list-meta">';
+        var newest = (p.versions && p.versions.length > 0) ? p.versions[0] : null;
+        if (newest) {
+            html += '<span class="tool-list-count">' + (newest.toolSetCount > 0
+                    ? (newest.toolSetCount + ' 个工具集') : '纯前端插件') + '</span>';
+            if (newest.frontendAssetCount > 0) {
+                html += '<span class="tool-list-count">' + newest.frontendAssetCount + ' 个前端资产</span>';
+            }
+        }
         if (p.versions && p.versions.length > 0) {
             html += '<span class="tool-list-count">' + p.versions.length + ' 个版本</span>';
         }
@@ -131,8 +139,9 @@ function filterPlugins() {
         var descEl = items[i].querySelector('.tool-list-desc');
         var name = (nameEl ? nameEl.textContent : '').toLowerCase();
         var desc = (descEl ? descEl.textContent : '').toLowerCase();
+        var id = (items[i].getAttribute('data-id') || '').toLowerCase();
 
-        if (name.indexOf(query) !== -1 || desc.indexOf(query) !== -1) {
+        if (name.indexOf(query) !== -1 || desc.indexOf(query) !== -1 || id.indexOf(query) !== -1) {
             items[i].classList.remove('filtered-hidden');
         } else {
             items[i].classList.add('filtered-hidden');
@@ -140,22 +149,23 @@ function filterPlugins() {
     }
 }
 
-function selectPlugin(pluginName) {
+/** 选中插件（参数为插件标识 pluginId） */
+function selectPlugin(pluginId) {
     var plugin = null;
     for (var i = 0; i < storePlugins.length; i++) {
-        if (storePlugins[i].name === pluginName) {
+        if (storePlugins[i].id === pluginId) {
             plugin = storePlugins[i];
             break;
         }
     }
     if (!plugin) return;
 
-    selectedPlugin = plugin;
+    selectedPlugin = plugin.id;
 
     var items = document.querySelectorAll('#storeListBody .tool-list-item');
     for (var j = 0; j < items.length; j++) {
         items[j].classList.remove('active');
-        if (items[j].getAttribute('data-name') === pluginName) {
+        if (items[j].getAttribute('data-id') === pluginId) {
             items[j].classList.add('active');
         }
     }
@@ -187,23 +197,35 @@ function selectPlugin(pluginName) {
 }
 
 function onVersionSwitch() {
-    if (!selectedPlugin) return;
+    var plugin = findStorePlugin(selectedPlugin);
+    if (!plugin) return;
 
     var selectEl = document.getElementById('storeVersionSelect');
     var selectedVersion = selectEl.value;
 
     var version = null;
-    if (selectedPlugin.versions) {
-        for (var i = 0; i < selectedPlugin.versions.length; i++) {
-            if (selectedPlugin.versions[i].version === selectedVersion) {
-                version = selectedPlugin.versions[i];
+    if (plugin.versions) {
+        for (var i = 0; i < plugin.versions.length; i++) {
+            if (plugin.versions[i].version === selectedVersion) {
+                version = plugin.versions[i];
                 break;
             }
         }
     }
     if (!version) return;
 
-    renderDetail(selectedPlugin, version);
+    renderDetail(plugin, version);
+}
+
+/** 按插件标识（pluginId）在商店列表中查找条目 */
+function findStorePlugin(pluginId) {
+    if (!pluginId) return null;
+    for (var i = 0; i < storePlugins.length; i++) {
+        if (storePlugins[i].id === pluginId) {
+            return storePlugins[i];
+        }
+    }
+    return null;
 }
 
 function renderDetail(plugin, version) {
@@ -221,7 +243,7 @@ function renderDetail(plugin, version) {
         iconEl.innerHTML = '<span style="font-size:28px;">🔌</span>';
     }
 
-    document.getElementById('storeDetailName').textContent = plugin.name;
+    document.getElementById('storeDetailName').textContent = plugin.name || plugin.id;
     document.getElementById('storeDetailDesc').textContent = plugin.description || '';
 
     var keywordEl = document.getElementById('storeDetailKeyword');
@@ -262,6 +284,12 @@ function renderDetail(plugin, version) {
         btnEl.textContent = '更新到 v' + version.version;
         btnEl.className = 'btn-store-action btn-update';
         btnEl.style.display = '';
+    } else if (version.status === 'older') {
+        badgeEl.textContent = '低于已安装版本';
+        badgeEl.className = 'store-status-badge badge-not-installed';
+        btnEl.textContent = '回退到 v' + version.version;
+        btnEl.className = 'btn-store-action btn-install';
+        btnEl.style.display = '';
     } else {
         badgeEl.textContent = '未安装';
         badgeEl.className = 'store-status-badge badge-not-installed';
@@ -271,6 +299,8 @@ function renderDetail(plugin, version) {
     }
 
     var metaHtml = '';
+    metaHtml += '<span class="detail-meta-label">插件标识</span>';
+    metaHtml += '<span class="detail-meta-value" style="font-family:monospace;">' + escapeHtml(plugin.id || '-') + '</span>';
     if (version.author) {
         metaHtml += '<span class="detail-meta-label">作者</span>';
         metaHtml += '<span class="detail-meta-value">' + escapeHtml(version.author) + '</span>';
@@ -279,6 +309,14 @@ function renderDetail(plugin, version) {
         metaHtml += '<span class="detail-meta-label">大小</span>';
         metaHtml += '<span class="detail-meta-value">' + formatFileSize(version.fileSize) + '</span>';
     }
+    metaHtml += '<span class="detail-meta-label">工具集</span>';
+    metaHtml += '<span class="detail-meta-value">' + (version.toolSetCount > 0
+            ? version.toolSetCount + ' 个' : '无（纯前端）') + '</span>';
+    metaHtml += '<span class="detail-meta-label">前端资产</span>';
+    metaHtml += '<span class="detail-meta-value">' + (version.frontendAssetCount > 0
+            ? version.frontendAssetCount + ' 个' : '无') + '</span>';
+    metaHtml += '<span class="detail-meta-label">invoke</span>';
+    metaHtml += '<span class="detail-meta-value">' + (version.invokeSupport ? '支持' : '不支持') + '</span>';
     if (version.url) {
         metaHtml += '<span class="detail-meta-label">地址</span>';
         metaHtml += '<a class="detail-meta-link" href="' + escapeHtml(version.url) + '" target="_blank" rel="noopener">' + escapeHtml(version.url) + '</a>';
@@ -287,58 +325,123 @@ function renderDetail(plugin, version) {
         metaHtml += '<span class="detail-meta-label">SHA256</span>';
         metaHtml += '<span class="detail-meta-value" style="font-size:11px;font-family:monospace;">' + escapeHtml(version.sha256Hash.substring(0, 16)) + '...</span>';
     }
-    document.getElementById('storeDetailMeta').innerHTML = metaHtml || '<span class="detail-meta-label">暂无元数据</span>';
+    document.getElementById('storeDetailMeta').innerHTML = metaHtml;
 
-    var bodyEl = document.getElementById('storeDetailBody');
-    if (version.tools && version.tools.length > 0) {
-        renderToolsList(version.tools);
-    } else {
-        bodyEl.innerHTML = '<div class="detail-empty-state">此版本未包含工具信息</div>';
-    }
+    renderProvides(version);
 }
 
-function renderToolsList(tools) {
+/**
+ * 渲染版本的「提供能力」：一排能力徽标 + 工具集摘要列表。
+ * 清单只带摘要（名称/描述/方法数），完整参数明细由安装后扫描 @Tool 得到。
+ */
+function renderProvides(version) {
     var bodyEl = document.getElementById('storeDetailBody');
-    if (!tools || tools.length === 0) {
-        bodyEl.innerHTML = '<div class="detail-empty-state">此版本未包含工具信息</div>';
+    if (!bodyEl) return;
+
+    var provides = version.provides || [];
+
+    var html = '<div class="cap-badges">';
+    html += '<span class="cap-badge cap-badge-toolset">' + provides.length + ' 个工具集</span>';
+    if (version.frontendAssetCount > 0) {
+        html += '<span class="cap-badge cap-badge-frontend">' + version.frontendAssetCount + ' 个前端资产</span>';
+    }
+    if (version.invokeSupport) {
+        html += '<span class="cap-badge cap-badge-invoke">支持 invoke</span>';
+    }
+    if (version.configItemCount > 0) {
+        html += '<span class="cap-badge cap-badge-config">' + version.configItemCount + ' 项插件配置</span>';
+    }
+    html += '<span class="cap-badge cap-badge-manifest">清单 v' + version.manifestVersion + '</span>';
+    html += '</div>';
+
+    if (provides.length === 0) {
+        html += '<div class="detail-empty-state">纯前端插件 —— 不提供任何工具集</div>';
+        bodyEl.innerHTML = html;
         return;
     }
 
-    var html = '';
-    for (var i = 0; i < tools.length; i++) {
-        var tool = tools[i];
+    for (var i = 0; i < provides.length; i++) {
+        var ts = provides[i];
         html += '<div class="detail-tool-item">';
         html += '<div class="detail-tool-header">';
-        html += '<span class="detail-tool-name">' + escapeHtml(tool.name) + '</span>';
-        html += '<span class="detail-tool-desc">' + escapeHtml(tool.description || '') + '</span>';
+        html += '<span class="detail-tool-name">' + escapeHtml(ts.name || '') + '</span>';
+        html += '<span class="detail-tool-desc">' + escapeHtml(ts.description || '') + '</span>';
         html += '</div>';
-
-        if (tool.parameters && tool.parameters.length > 0) {
-            html += '<div class="detail-tool-params">';
-            html += '<table class="detail-param-table">';
-            html += '<thead><tr><th>参数名</th><th>类型</th><th>说明</th><th>必填</th></tr></thead>';
-            html += '<tbody>';
-            for (var j = 0; j < tool.parameters.length; j++) {
-                var p = tool.parameters[j];
-                html += '<tr>';
-                html += '<td class="dp-name">' + escapeHtml(p.name) + '</td>';
-                html += '<td class="dp-type">' + escapeHtml(p.type || '-') + '</td>';
-                html += '<td class="dp-desc">' + escapeHtml(p.description || '-') + '</td>';
-                html += '<td class="dp-required">';
-                html += p.required ? '<span class="tag-required">是</span>' : '<span class="tag-optional">否</span>';
-                html += '</td>';
-                html += '</tr>';
-            }
-            html += '</tbody></table>';
-            html += '</div>';
-        } else {
-            html += '<div class="detail-no-params">无参数</div>';
-        }
-
+        html += '<div class="detail-no-params">' + (ts.toolCount || 0) + ' 个方法</div>';
         html += '</div>';
     }
-
     bodyEl.innerHTML = html;
+}
+
+// ==================== 语义化版本比较 ====================
+// 不能直接用字符串比较：'1.10.0' > '1.9.0' 会误判为 false
+
+/** 拆出 [主版本, 预发布标识]；忽略 build 元数据（+ 之后） */
+function semverSplit(version) {
+    var v = (version == null ? '' : String(version)).trim();
+    var plus = v.indexOf('+');
+    if (plus >= 0) v = v.substring(0, plus);
+    var dash = v.indexOf('-');
+    if (dash < 0) return [v, null];
+    return [v.substring(0, dash), v.substring(dash + 1)];
+}
+
+/** 主版本号逐段数值比较 */
+function semverCompareCore(a, b) {
+    var sa = a.split('.');
+    var sb = b.split('.');
+    var len = Math.max(sa.length, sb.length);
+    for (var i = 0; i < len; i++) {
+        var x = i < sa.length ? sa[i] : '0';
+        var y = i < sb.length ? sb[i] : '0';
+        if (x === y) continue;
+        var nx = /^\d+$/.test(x) ? parseInt(x, 10) : null;
+        var ny = /^\d+$/.test(y) ? parseInt(y, 10) : null;
+        if (nx !== null && ny !== null) {
+            if (nx !== ny) return nx < ny ? -1 : 1;
+        } else if (x !== y) {
+            return x < y ? -1 : 1;
+        }
+    }
+    return 0;
+}
+
+/** 预发布标识比较：正式版 > 预发布版；数字段 < 非数字段 */
+function semverComparePre(a, b) {
+    if (a === null && b === null) return 0;
+    if (a === null) return 1;
+    if (b === null) return -1;
+    var ia = a.split('.');
+    var ib = b.split('.');
+    var len = Math.max(ia.length, ib.length);
+    for (var i = 0; i < len; i++) {
+        if (i >= ia.length) return -1;
+        if (i >= ib.length) return 1;
+        var x = ia[i];
+        var y = ib[i];
+        if (x === y) continue;
+        var nx = /^\d+$/.test(x) ? parseInt(x, 10) : null;
+        var ny = /^\d+$/.test(y) ? parseInt(y, 10) : null;
+        if (nx !== null && ny !== null) return nx < ny ? -1 : 1;
+        if (nx !== null) return -1;
+        if (ny !== null) return 1;
+        return x < y ? -1 : 1;
+    }
+    return 0;
+}
+
+/** a > b 返回正数，a < b 返回负数，相等返回 0 */
+function semverCompare(a, b) {
+    var pa = semverSplit(a);
+    var pb = semverSplit(b);
+    var core = semverCompareCore(pa[0] === '' ? '0.0.0' : pa[0], pb[0] === '' ? '0.0.0' : pb[0]);
+    if (core !== 0) return core;
+    return semverComparePre(pa[1], pb[1]);
+}
+
+/** candidate 是否比 base 新 */
+function semverGt(candidate, base) {
+    return semverCompare(candidate, base) > 0;
 }
 
 function resetDetail() {
@@ -379,15 +482,28 @@ function doInstallOrUpgrade() {
     }
 
     var updateInfo = {
-        pluginId: plugin.name,
+        pluginId: plugin.id,
         version: v.version,
-        fileName: v.jarFileName || plugin.jarFileName || (plugin.name + '.jar'),
+        fileName: v.jarFileName || (plugin.id + '.jar'),
         fileSize: v.fileSize,
         downloadUrl: v.downloadUrl,
         sha256Hash: v.sha256Hash,
         currentVersion: plugin.installedVersion || '',
-        installed: v.status === 'installed' || v.status === 'update_available'
+        // 已安装（含更新与回退场景）时需要先卸载旧包再落盘
+        installed: !!plugin.installedVersion,
+        allowFrontendOnly: false
     };
+
+    // 纯前端插件（不提供任何工具集）的前端资源会注入聊天页面，第三方来源必须先显式确认
+    if (!v.toolSetCount) {
+        var confirmed = window.confirm(
+            '「' + (plugin.name || plugin.id) + '」是纯前端插件：不含任何后端工具集，'
+            + '其前端资源（JS/CSS）会注入到聊天页面。\n\n请确认该来源可信后再继续。是否安装？');
+        if (!confirmed) {
+            return;
+        }
+        updateInfo.allowFrontendOnly = true;
+    }
 
     var btn = document.getElementById('btnStoreAction');
     btn.disabled = true;
@@ -513,6 +629,9 @@ function handleInstallError(message, btn) {
         } else if (status === 'update_available') {
             btn.textContent = '更新到 v' + v.version;
             btn.className = 'btn-store-action btn-update';
+        } else if (status === 'older') {
+            btn.textContent = '回退到 v' + v.version;
+            btn.className = 'btn-store-action btn-install';
         } else {
             btn.textContent = '安装 v' + v.version;
             btn.className = 'btn-store-action btn-install';

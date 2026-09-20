@@ -305,3 +305,79 @@ body.dark-theme .store-progress-overlay{
 body.dark-theme .store-progress-card{
     background: #06183e;
 }
+
+/* ===== 提供能力徽标（S5：清单 v2 provides） ===== */
+.cap-badges {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-bottom: 14px;
+}
+
+.cap-badge {
+    font-size: 11px;
+    padding: 3px 10px;
+    border-radius: 10px;
+    font-weight: 500;
+    background: #f3f4f6;
+    color: #6b7280;
+    border: 1px solid #e5e7eb;
+}
+
+.cap-badge-toolset {
+    background: #eef2ff;
+    color: #4f46e5;
+    border-color: #e0e7ff;
+}
+
+.cap-badge-frontend {
+    background: #ecfeff;
+    color: #0e7490;
+    border-color: #a5f3fc;
+}
+
+.cap-badge-invoke {
+    background: #ecfdf5;
+    color: #059669;
+    border-color: #a7f3d0;
+}
+
+.cap-badge-config {
+    background: #fefce8;
+    color: #a16207;
+    border-color: #fde68a;
+}
+
+.cap-badge-manifest {
+    font-family: monospace;
+}
+
+body.dark-theme .cap-badge {
+    background: #2d2d44;
+    color: #a0a0b0;
+    border-color: #3d3d6b;
+}
+
+body.dark-theme .cap-badge-toolset {
+    background: #3d3d6b;
+    color: #b0b0ff;
+    border-color: #4d4d7b;
+}
+
+body.dark-theme .cap-badge-frontend {
+    background: #10343d;
+    color: #67e8f9;
+    border-color: #155e63;
+}
+
+body.dark-theme .cap-badge-invoke {
+    background: #10352a;
+    color: #6ee7b7;
+    border-color: #155e46;
+}
+
+body.dark-theme .cap-badge-config {
+    background: #3a2f12;
+    color: #fde68a;
+    border-color: #5c4a1a;
+}
