@@ -92,7 +92,7 @@ public class PluginController {
     public ResponseBean toggle(@RequestParam String pluginId, @RequestParam boolean enabled) {
         try {
             pluginService.setEnabled(pluginId, enabled);
-            return ResponseBean.success(enabled ? "插件已启用" : "插件已禁用");
+            return ResponseBean.successMsg(enabled ? "插件已启用" : "插件已禁用");
         } catch (Exception e) {
             log.warn("切换插件状态失败 pluginId={}, enabled={}", pluginId, enabled, e);
             return ResponseBean.fail(e.getMessage());
@@ -112,7 +112,7 @@ public class PluginController {
         if (!result) {
             return ResponseBean.fail("插件卸载失败");
         }
-        return ResponseBean.success(cleanConfig ? "插件卸载成功，配置已清理" : "插件卸载成功");
+        return ResponseBean.successMsg(cleanConfig ? "插件卸载成功，配置已清理" : "插件卸载成功");
     }
 
     @GetMapping("/api/export/{pluginId}")
@@ -230,7 +230,7 @@ public class PluginController {
                                          @RequestParam Map<String, String> params) {
         try {
             pluginConfigService.savePluginConfig(pluginId, params);
-            return ResponseBean.success("配置保存成功");
+            return ResponseBean.successMsg("配置保存成功");
         } catch (IllegalArgumentException e) {
             return ResponseBean.fail(e.getMessage());
         } catch (Exception e) {

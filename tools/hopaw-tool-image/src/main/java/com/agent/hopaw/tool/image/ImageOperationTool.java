@@ -11,11 +11,6 @@ import dev.langchain4j.data.message.Content;
 import dev.langchain4j.data.message.ImageContent;
 import dev.langchain4j.data.message.TextContent;
 import com.agent.hopaw.infra.tool.AbstractAgentTool;
-import org.apache.batik.transcoder.TranscoderInput;
-import org.apache.batik.transcoder.TranscoderOutput;
-import org.apache.batik.transcoder.image.ImageTranscoder;
-import org.apache.batik.transcoder.image.JPEGTranscoder;
-import org.apache.batik.transcoder.image.PNGTranscoder;
 import net.coobird.thumbnailator.Thumbnails;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -32,8 +27,6 @@ import java.awt.RenderingHints;
 import java.awt.image.BufferedImage;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
-import java.io.OutputStream;
-import java.io.StringReader;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -44,7 +37,8 @@ import java.util.Locale;
 
 /**
  * 图片操作工具集
- * 支持读取图片为base64、SVG代码渲染保存为图片、缩放、压缩、旋转、裁剪、格式转换等图片操作
+ * 支持读取图片为base64、缩放、压缩、旋转、裁剪、格式转换等图片操作
+ * <p>SVG 相关能力（SVG 代码/文件转图片、会话插槽预览）已迁至独立的 svg 插件。</p>
  */
 public class ImageOperationTool extends AbstractAgentTool {
 
@@ -159,143 +153,6 @@ public class ImageOperationTool extends AbstractAgentTool {
      */
     private List<Content> errorResult(String message) {
         return List.of(new TextContent("错误: " + message));
-    }
-
-    @ToolSecurityLevel(ToolSecurityLevel.Level.PARAM_REQUIRE_APPROVAL)
-    @Tool(name = "image_saveSvg", value = {"保存SVG图片", "将SVG代码渲染为位图并保存到指定路径，输出格式由文件扩展名决定(.png/.jpg/.jpeg)，SVG代码需包含xmlns命名空间", "SVG转图片"})
-    public String saveSvgImage(
-            @P(description = "SVG代码，根元素需包含xmlns=\"http://www.w3.org/2000/svg\"，建议指定width和height属性") String svgCode,
-            @P(description = "保存图片的完整文件路径，扩展名 .png 或 .jpg/.jpeg 决定输出格式，如 D:/images/logo.png") String filePath) {
-        try {
-            if (svgCode == null || svgCode.isBlank()) {
-                return "错误: SVG代码不能为空";
-            }
-            if (filePath == null || filePath.isBlank()) {
-                return "错误: 文件路径不能为空";
-            }
-            Path path = Paths.get(filePath).toAbsolutePath().normalize();
-            String name = path.getFileName().toString().toLowerCase(Locale.ROOT);
-            ImageTranscoder transcoder;
-            String format;
-            if (name.endsWith(".png")) {
-                transcoder = new PNGTranscoder();
-                format = "image/png";
-            } else if (name.endsWith(".jpg") || name.endsWith(".jpeg")) {
-                JPEGTranscoder jpeg = new JPEGTranscoder();
-                // 指定默认压缩质量，避免 Batik 未设置质量时的告警日志
-                jpeg.addTranscodingHint(JPEGTranscoder.KEY_QUALITY, 0.9f);
-                transcoder = jpeg;
-                format = "image/jpeg";
-            } else {
-                return "错误: 不支持的输出格式，请使用 .png 或 .jpg/.jpeg 扩展名: " + filePath;
-            }
-
-            // 创建父目录
-            Path parent = path.getParent();
-            if (parent != null) {
-                Files.createDirectories(parent);
-            }
-
-            long start = System.currentTimeMillis();
-            TranscoderInput input = new TranscoderInput(new StringReader(svgCode));
-            try (OutputStream os = Files.newOutputStream(path)) {
-                TranscoderOutput output = new TranscoderOutput(os);
-                transcoder.transcode(input, output);
-            }
-
-            StringBuilder sb = new StringBuilder();
-            sb.append("SVG图片保存成功\n");
-            sb.append("格式: ").append(format).append("\n");
-            sb.append("路径: ").append(path).append("\n");
-            sb.append("大小: ").append(formatFileSize(Files.size(path))).append("\n");
-            sb.append("耗时: ").append(System.currentTimeMillis() - start).append("ms");
-            return sb.toString();
-        } catch (Exception e) {
-            log.error("保存SVG图片失败: {}", filePath, e);
-            return "错误: 保存SVG图片失败 - " + e.getMessage();
-        }
-    }
-
-    @ToolSecurityLevel(ToolSecurityLevel.Level.PARAM_REQUIRE_APPROVAL)
-    @Tool(name = "image_saveSvgFile", value = {"SVG文件转图片", "读取指定路径的SVG文件并渲染为位图保存到指定路径，输出格式由文件扩展名决定(.png/.jpg/.jpeg)", "SVG文件转图片"})
-    public String saveSvgFileToImage(
-            @P(description = "SVG文件的完整路径") String svgFilePath,
-            @P(description = "保存图片的完整文件路径，扩展名 .png 或 .jpg/.jpeg 决定输出格式，如 D:/images/logo.png") String filePath) {
-        try {
-            if (svgFilePath == null || svgFilePath.isBlank()) {
-                return "错误: SVG文件路径不能为空";
-            }
-            if (filePath == null || filePath.isBlank()) {
-                return "错误: 输出文件路径不能为空";
-            }
-
-            Path svgPath = Paths.get(svgFilePath).toAbsolutePath().normalize();
-            if (!Files.exists(svgPath)) {
-                return "错误: SVG文件不存在: " + svgFilePath;
-            }
-            if (!Files.isRegularFile(svgPath)) {
-                return "错误: 路径不是文件: " + svgFilePath;
-            }
-            String svgFileName = svgPath.getFileName().toString().toLowerCase(Locale.ROOT);
-            if (!svgFileName.endsWith(".svg")) {
-                return "错误: 文件不是SVG格式(扩展名需为.svg): " + svgFilePath;
-            }
-
-            String svgCode = Files.readString(svgPath);
-            if (svgCode == null || svgCode.isBlank()) {
-                return "错误: SVG文件内容为空: " + svgFilePath;
-            }
-
-            Path path = Paths.get(filePath).toAbsolutePath().normalize();
-            String name = path.getFileName().toString().toLowerCase(Locale.ROOT);
-            ImageTranscoder transcoder;
-            String format;
-            if (name.endsWith(".png")) {
-                PNGTranscoder png = new PNGTranscoder();
-                transcoder = png;
-                format = "image/png";
-            } else if (name.endsWith(".jpg") || name.endsWith(".jpeg")) {
-                JPEGTranscoder jpeg = new JPEGTranscoder();
-                jpeg.addTranscodingHint(JPEGTranscoder.KEY_QUALITY, 0.9f);
-                transcoder = jpeg;
-                format = "image/jpeg";
-            } else {
-                return "错误: 不支持的输出格式，请使用 .png 或 .jpg/.jpeg 扩展名: " + filePath;
-            }
-
-            Path parent = path.getParent();
-            if (parent != null) {
-                Files.createDirectories(parent);
-            }
-
-            // 解析SVG原始尺寸，2倍缩放输出高清PNG
-            float scale = 2.0f;
-            float svgWidth = parseSvgWidth(svgCode);
-            float svgHeight = parseSvgHeight(svgCode);
-            if (svgWidth > 0 && svgHeight > 0) {
-                transcoder.addTranscodingHint(ImageTranscoder.KEY_WIDTH, svgWidth * scale);
-                transcoder.addTranscodingHint(ImageTranscoder.KEY_HEIGHT, svgHeight * scale);
-            }
-
-            long start = System.currentTimeMillis();
-            TranscoderInput input = new TranscoderInput(new StringReader(svgCode));
-            try (OutputStream os = Files.newOutputStream(path)) {
-                TranscoderOutput output = new TranscoderOutput(os);
-                transcoder.transcode(input, output);
-            }
-
-            StringBuilder sb = new StringBuilder();
-            sb.append("SVG文件转图片成功\n");
-            sb.append("源文件: ").append(svgPath).append("\n");
-            sb.append("格式: ").append(format).append("\n");
-            sb.append("路径: ").append(path).append("\n");
-            sb.append("大小: ").append(formatFileSize(Files.size(path))).append("\n");
-            sb.append("耗时: ").append(System.currentTimeMillis() - start).append("ms");
-            return sb.toString();
-        } catch (Exception e) {
-            log.error("SVG文件转图片失败: {} -> {}", svgFilePath, filePath, e);
-            return "错误: SVG文件转图片失败 - " + e.getMessage();
-        }
     }
 
     @ToolSecurityLevel(ToolSecurityLevel.Level.PARAM_REQUIRE_APPROVAL)
@@ -569,7 +426,7 @@ public class ImageOperationTool extends AbstractAgentTool {
 
     @Override
     public String getDescription() {
-        return "图片操作工具集，支持读取图片为base64、将SVG代码或SVG文件渲染保存为图片、缩放、压缩、旋转、裁剪、格式转换等图片操作";
+        return "图片操作工具集，支持读取图片为base64、缩放、压缩、旋转、裁剪、格式转换等图片操作";
     }
 
     @Override
@@ -595,38 +452,6 @@ public class ImageOperationTool extends AbstractAgentTool {
     @Override
     public void asyncInit() {
         reloadConfig();
-    }
-
-    /**
-     * 解析SVG宽度（支持width属性和viewBox）
-     */
-    private float parseSvgWidth(String svgCode) {
-        // 尝试从width属性解析
-        java.util.regex.Matcher m = java.util.regex.Pattern.compile("width=[\"']([\\d.]+)(?:px)?[\"']", java.util.regex.Pattern.CASE_INSENSITIVE).matcher(svgCode);
-        if (m.find()) {
-            try { return Float.parseFloat(m.group(1)); } catch (Exception ignored) {}
-        }
-        // 尝试从viewBox解析
-        m = java.util.regex.Pattern.compile("viewBox=[\"'][\\d.]+\\s+[\\d.]+\\s+([\\d.]+)\\s+([\\d.]+)[\"']").matcher(svgCode);
-        if (m.find()) {
-            try { return Float.parseFloat(m.group(1)); } catch (Exception ignored) {}
-        }
-        return -1;
-    }
-
-    /**
-     * 解析SVG高度（支持height属性和viewBox）
-     */
-    private float parseSvgHeight(String svgCode) {
-        java.util.regex.Matcher m = java.util.regex.Pattern.compile("height=[\"']([\\d.]+)(?:px)?[\"']", java.util.regex.Pattern.CASE_INSENSITIVE).matcher(svgCode);
-        if (m.find()) {
-            try { return Float.parseFloat(m.group(1)); } catch (Exception ignored) {}
-        }
-        m = java.util.regex.Pattern.compile("viewBox=[\"'][\\d.]+\\s+[\\d.]+\\s+([\\d.]+)\\s+([\\d.]+)[\"']").matcher(svgCode);
-        if (m.find()) {
-            try { return Float.parseFloat(m.group(2)); } catch (Exception ignored) {}
-        }
-        return -1;
     }
 
     @Override

@@ -1,0 +1,224 @@
+/* SVG 工具插件样式：会话侧边并排预览插槽（挂在通用槽位 #plugin-slot）
+   注：#plugin-slot 的默认隐藏样式已上提到公共 index.css，此处只定义激活态。 */
+
+.plugin-svg-panel {
+    box-sizing: border-box;
+    display: none; /* 默认隐藏，仅本插件激活时显示（避免多插件面板同时出现） */
+    flex-direction: column;
+    width: 100%;   /* 填满 #plugin-slot 宽度，页面伸缩时跟随 */
+    height: 100%;
+    min-height: 0;
+    padding: 12px;
+    background: var(--color-background-secondary, #fff);
+    border-left: 1px solid var(--color-border-tertiary, rgba(0, 0, 0, 0.12));
+}
+
+.plugin-svg-header {
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 10px;
+}
+
+.plugin-svg-title {
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--color-text-primary, #222);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.plugin-svg-status {
+    flex-shrink: 0;
+    font-size: 11px;
+    color: var(--color-text-tertiary, #888);
+    padding: 2px 8px;
+    border-radius: 10px;
+    background: var(--color-background-tertiary, #f1f1f1);
+}
+
+.plugin-svg-status.active {
+    color: #185fa5;
+    background: #e6f1fb;
+}
+
+.plugin-svg-actions {
+    flex-shrink: 0;
+    margin-left: auto;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.plugin-svg-btn {
+    flex-shrink: 0;
+    width: 24px;
+    height: 24px;
+    padding: 0;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border: none;
+    border-radius: 6px;
+    background: #f0f2f5;
+    color: #888;
+    cursor: pointer;
+    transition: background .18s ease, color .18s ease;
+}
+.plugin-svg-btn:hover {
+    background: #667eea;
+    color: #fff;
+}
+.plugin-svg-btn.plugin-svg-close:hover {
+    background: #ff5252;
+    color: #fff;
+}
+/* 切换到源码视图时高亮按钮 */
+.plugin-svg-btn.active {
+    background: #667eea;
+    color: #fff;
+}
+
+/* ==================== 主体：预览 / 源码二选一 ==================== */
+.plugin-svg-body {
+    flex: 1;
+    min-height: 0;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+}
+
+.plugin-svg-preview {
+    flex: 1;
+    min-height: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 12px;
+    border: 1px solid var(--color-border-tertiary, rgba(0, 0, 0, 0.12));
+    border-radius: 8px;
+    /* 棋盘格底纹：透明背景的 SVG 也能看清边界 */
+    background-color: #fff;
+    background-image:
+        linear-gradient(45deg, #f2f3f7 25%, transparent 25%, transparent 75%, #f2f3f7 75%),
+        linear-gradient(45deg, #f2f3f7 25%, transparent 25%, transparent 75%, #f2f3f7 75%);
+    background-size: 16px 16px;
+    background-position: 0 0, 8px 8px;
+    overflow: auto;
+}
+
+.plugin-svg-image {
+    max-width: 100%;
+    max-height: 100%;
+    display: block;
+}
+.plugin-svg-image[hidden] {
+    display: none;
+}
+
+.plugin-svg-empty {
+    font-size: 12px;
+    color: var(--color-text-tertiary, #999);
+}
+.plugin-svg-empty[hidden] {
+    display: none;
+}
+
+.plugin-svg-code {
+    flex: 1;
+    min-height: 0;
+    display: flex;
+}
+.plugin-svg-code[hidden] {
+    display: none;
+}
+
+.plugin-svg-code-input {
+    flex: 1;
+    width: 100%;
+    min-height: 0;
+    box-sizing: border-box;
+    resize: none;
+    padding: 12px;
+    border: 1px solid var(--color-border-tertiary, rgba(0, 0, 0, 0.12));
+    border-radius: 8px;
+    background: #fbfbfd;
+    color: #1f2328;
+    font-family: Consolas, Menlo, Monaco, "Courier New", monospace;
+    font-size: 12px;
+    line-height: 1.55;
+    tab-size: 2;
+}
+.plugin-svg-code-input:focus {
+    outline: none;
+    border-color: #667eea;
+    box-shadow: 0 0 0 2px rgba(102, 126, 234, 0.18);
+}
+
+/* ==================== 插槽激活布局 ==================== */
+/* 会话区与插槽对称平分空间：chat-area 保持 flex:1 不变，仅让 #plugin-slot 也 grow 1 平分，
+   避免 flex-grow 瞬时归 0 导致聊天区被压到 0 宽度。 */
+.chat-wrapper.svg-active #plugin-slot {
+    display: flex;
+    flex: 1 1 0;
+    height: 100%;
+    min-width: 0;
+    transition: flex-grow 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.chat-wrapper.svg-active .plugin-svg-panel {
+    display: flex;
+}
+
+.chat-wrapper.svg-active .chat-area {
+    flex: 1 1 0;
+    min-width: 0;
+}
+
+/* ==================== 暗色主题适配 ==================== */
+body.dark-theme .plugin-svg-panel {
+    background: #232637;
+    border-left-color: rgba(255, 255, 255, 0.12);
+}
+body.dark-theme .plugin-svg-title {
+    color: #e8eaf6;
+}
+body.dark-theme .plugin-svg-status {
+    background: #2a2e42;
+    color: #8ea2ff;
+}
+body.dark-theme .plugin-svg-btn {
+    background: #2a2e42;
+    color: #8ea2ff;
+}
+body.dark-theme .plugin-svg-btn:hover {
+    background: #667eea;
+    color: #fff;
+}
+/* 暗色下上面的规则会盖掉 .active 高亮，需单独提升特异性 */
+body.dark-theme .plugin-svg-btn.active {
+    background: #667eea;
+    color: #fff;
+    box-shadow: 0 0 0 2px rgba(142, 162, 255, 0.45);
+}
+body.dark-theme .plugin-svg-btn.plugin-svg-close:hover {
+    background: #ff5252;
+    color: #fff;
+}
+body.dark-theme .plugin-svg-preview {
+    border-color: rgba(255, 255, 255, 0.12);
+    background-color: #1b1d2b;
+    background-image:
+        linear-gradient(45deg, #232637 25%, transparent 25%, transparent 75%, #232637 75%),
+        linear-gradient(45deg, #232637 25%, transparent 25%, transparent 75%, #232637 75%);
+}
+body.dark-theme .plugin-svg-empty {
+    color: #7a7f99;
+}
+body.dark-theme .plugin-svg-code-input {
+    background: #1b1d2b;
+    color: #e8eaf6;
+    border-color: rgba(255, 255, 255, 0.12);
+}

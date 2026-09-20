@@ -288,6 +288,22 @@ function validateForm(form) {
 }
 
 /**
+ * 取后端提示文案：ResponseBean.success(Object) 的 msg 固定为英文 "success"，
+ * 历史接口可能把中文提示放在 data 里，这里统一兜底为中文。
+ */
+function resolveResultMessage(resp, fallback) {
+    var msg = resp ? resp.msg : '';
+    if (msg && msg !== 'success' && msg !== 'fail') {
+        return msg;
+    }
+    var data = resp ? resp.data : null;
+    if (typeof data === 'string' && data) {
+        return data;
+    }
+    return fallback;
+}
+
+/**
  * 异步提交配置：校验通过后 fetch 提交，成功后提示并通知父窗口关闭弹框（不刷新页面）。
  * 提交目标取自表单 data-api-action（无模板独立页面由后端下发对应 JSON 端点）。
  */
@@ -320,14 +336,15 @@ function submitConfigForm(event) {
         .then(function (r) { return r.json(); })
         .then(function (resp) {
             if (resp && resp.code === 200) {
+                var message = resolveResultMessage(resp, '配置保存成功');
                 // 嵌入弹框：通知父窗口关闭；独立打开：就地提示
                 if (window.parent && window.parent !== window) {
-                    window.parent.postMessage({ type: 'hopaw-config-saved', message: (resp.msg || '配置保存成功') }, '*');
+                    window.parent.postMessage({ type: 'hopaw-config-saved', message: message }, '*');
                 } else {
-                    showToast(resp.msg || '配置保存成功', 'success');
+                    showToast(message, 'success');
                 }
             } else {
-                showToast((resp && resp.msg) || '保存失败', 'error');
+                showToast(resolveResultMessage(resp, '保存失败'), 'error');
             }
         })
         .catch(function () {

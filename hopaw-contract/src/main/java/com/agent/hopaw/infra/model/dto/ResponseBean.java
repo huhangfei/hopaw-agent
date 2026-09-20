@@ -38,6 +38,20 @@ public class ResponseBean {
     }
 
     /**
+     * 成功（携带提示消息）
+     *
+     * <p>注意：{@link #success(Object)} 会把 msg 固定为 "success"，因此 {@code success("中文提示")}
+     * 实际会把提示文本放进 data 字段，前端读 msg 拿到的是英文 "success"。
+     * 需要向前端透出中文提示时请使用本方法。</p>
+     *
+     * @param msg 提示消息
+     * @return
+     */
+    public static ResponseBean successMsg(String msg) {
+        return new ResponseBean(ResultCodeEnum.SUCCESS.getCode(), msg, null);
+    }
+
+    /**
      * 成功
      *
      * @return

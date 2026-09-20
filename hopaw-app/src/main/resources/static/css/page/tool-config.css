@@ -6,7 +6,8 @@
 
 /* 无模板独立页面（嵌入弹框 iframe / 直接打开）的外层容器 */
 .config-standalone {
-    max-width: 1100px;
+    /* 既作为独立页面打开，也嵌入配置弹框 iframe：宽度铺满容器，避免弹框变宽后内容仍被卡住 */
+    max-width: 100%;
     margin: 0 auto;
     padding: 20px 28px 40px;
     box-sizing: border-box;

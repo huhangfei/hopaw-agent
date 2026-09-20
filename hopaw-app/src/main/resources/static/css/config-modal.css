@@ -1,30 +1,37 @@
-/* ========== 通用 iframe 弹框（配置类无模板独立页面） ========== */
+/* ========== 通用 iframe 弹框（配置类无模板独立页面） ==========
+   注意：元素同时带 modal / modal-wide 类，modal.css 中 .modal-wide 也声明了
+   width/max-width/max-height，且加载顺序在 modal.css 之后才引入本文件，
+   因此这里统一用 .modal.config-modal 提升特异性，保证尺寸不被覆盖。 */
+
 .config-modal-overlay {
     z-index: 2000;
 }
 
-.config-modal {
-    width: min(1200px, 92vw);
-    max-width: 92vw;
-    height: 88vh;
-    max-height: 90vh;
+.modal.config-modal {
+    width: min(1400px, 96vw);
+    max-width: 96vw;
+    height: 90vh;
+    max-height: 94vh;
     overflow: hidden;
 }
 
-.config-modal-body {
-    flex: 1;
+/* 覆盖 .modal-wide 的 max-height: 80vh 与 .modal-body 的 20px 内边距 */
+.modal.config-modal .config-modal-body {
+    flex: 1 1 auto;
+    min-height: 0;
     overflow: hidden;
     padding: 0;
 }
 
-.config-modal-frame {
+.modal.config-modal .config-modal-frame {
     width: 100%;
     height: 100%;
+    min-height: 100%;
     border: 0;
     display: block;
     background: #fff;
 }
 
-body.dark-theme .config-modal-frame {
+body.dark-theme .modal.config-modal .config-modal-frame {
     background: #1a1a2e;
 }

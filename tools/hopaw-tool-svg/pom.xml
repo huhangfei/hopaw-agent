@@ -11,12 +11,12 @@
     </parent>
 
     <groupId>com.hopaw.agent</groupId>
-    <artifactId>hopaw-tool-image</artifactId>
+    <artifactId>hopaw-tool-svg</artifactId>
     <version>1.0.0</version>
     <packaging>jar</packaging>
 
-    <name>hopaw-tool-image</name>
-    <description>图片操作工具，支持读取图片为base64、缩放、压缩、旋转、裁剪、格式转换等图片操作</description>
+    <name>hopaw-tool-svg</name>
+    <description>SVG 工具：SVG 代码/文件渲染为图片，并在会话前端插槽中预览、编辑与下载 SVG</description>
     <properties>
         <maven.install.skip>true</maven.install.skip>
     </properties>
@@ -42,10 +42,19 @@
             <artifactId>spring-beans</artifactId>
             <scope>provided</scope>
         </dependency>
-        <!-- Thumbnailator：图片缩放、压缩、旋转、裁剪等处理 -->
         <dependency>
-            <groupId>net.coobird</groupId>
-            <artifactId>thumbnailator</artifactId>
+            <groupId>com.alibaba.fastjson2</groupId>
+            <artifactId>fastjson2</artifactId>
+            <scope>provided</scope>
+        </dependency>
+        <!-- Apache Batik：SVG 渲染为位图（batik-codec 提供 PNG/JPEG 写出适配器，缺失会导致 "no WriteAdapter" 错误） -->
+        <dependency>
+            <groupId>org.apache.xmlgraphics</groupId>
+            <artifactId>batik-transcoder</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.xmlgraphics</groupId>
+            <artifactId>batik-codec</artifactId>
         </dependency>
     </dependencies>
 

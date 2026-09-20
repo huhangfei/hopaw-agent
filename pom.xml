@@ -37,6 +37,7 @@
         <module>tools/hopaw-tool-http</module>
         <module>tools/hopaw-tool-qrcode</module>
         <module>tools/hopaw-tool-canvas</module>
+        <module>tools/hopaw-tool-svg</module>
         <module>tools/hopaw-tool-gomoku</module>
         <module>tools/hopaw-tool-chat-background</module>
     </modules>

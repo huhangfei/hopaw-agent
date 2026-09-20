@@ -19,7 +19,7 @@ public class ImageOperationPlugin extends AbstractAgentPlugin {
 
     @Override
     public String getDescription() {
-        return "图片操作工具集，支持读取图片为base64、将SVG代码或SVG文件渲染保存为图片、缩放、压缩、旋转、裁剪、格式转换等图片操作";
+        return "图片操作工具集，支持读取图片为base64、缩放、压缩、旋转、裁剪、格式转换等图片操作";
     }
 
     @Override

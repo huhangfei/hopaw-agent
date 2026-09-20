@@ -39,7 +39,7 @@ public class ToolConfigController {
                                       @RequestParam Map<String, String> params) {
         try {
             toolConfigService.saveToolConfig(toolName, params);
-            return ResponseBean.success("配置保存成功");
+            return ResponseBean.successMsg("配置保存成功");
         } catch (IllegalArgumentException e) {
             return ResponseBean.fail(e.getMessage());
         } catch (Exception e) {

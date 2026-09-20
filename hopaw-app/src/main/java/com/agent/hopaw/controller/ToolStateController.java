@@ -34,7 +34,7 @@ public class ToolStateController {
     public ResponseBean toggleToolSet(@RequestParam String toolSetName, @RequestParam boolean enabled) {
         try {
             toolStateService.setToolSetEnabled(toolSetName, enabled);
-            return ResponseBean.success(enabled ? "工具集已启用" : "工具集已禁用");
+            return ResponseBean.successMsg(enabled ? "工具集已启用" : "工具集已禁用");
         } catch (Exception e) {
             log.warn("切换工具集状态失败 toolSetName={}, enabled={}", toolSetName, enabled, e);
             return ResponseBean.fail(e.getMessage());
@@ -49,7 +49,7 @@ public class ToolStateController {
                                    @RequestParam boolean enabled) {
         try {
             toolStateService.setToolEnabled(toolSetName, toolName, enabled);
-            return ResponseBean.success(enabled ? "工具方法已启用" : "工具方法已禁用");
+            return ResponseBean.successMsg(enabled ? "工具方法已启用" : "工具方法已禁用");
         } catch (Exception e) {
             log.warn("切换工具方法状态失败 toolSetName={}, toolName={}, enabled={}", toolSetName, toolName, enabled, e);
             return ResponseBean.fail(e.getMessage());

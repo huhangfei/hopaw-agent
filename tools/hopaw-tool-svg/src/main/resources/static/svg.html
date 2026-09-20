@@ -1,0 +1,39 @@
+<div class="plugin-svg-panel" data-plugin="hopaw-tool-svg-1.0.0.jar">
+    <div class="plugin-svg-header">
+        <span class="plugin-svg-title" data-svg-title>SVG 预览</span>
+        <span class="plugin-svg-status" data-svg-status>待命</span>
+        <span class="plugin-svg-actions">
+            <button type="button" class="plugin-svg-btn" data-svg-toggle-code title="切换预览 / 源码" aria-label="切换预览或源码">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="14" height="14">
+                    <polyline points="16 18 22 12 16 6"/>
+                    <polyline points="8 6 2 12 8 18"/>
+                </svg>
+            </button>
+            <button type="button" class="plugin-svg-btn" data-svg-download title="下载 SVG 图片" aria-label="下载 SVG 图片">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="14" height="14">
+                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                    <polyline points="7 10 12 15 17 10"/>
+                    <line x1="12" y1="15" x2="12" y2="3"/>
+                </svg>
+            </button>
+            <button type="button" class="plugin-svg-btn plugin-svg-close" data-svg-close title="关闭插槽" aria-label="关闭插槽">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" width="14" height="14">
+                    <line x1="18" y1="6" x2="6" y2="18"/>
+                    <line x1="6" y1="6" x2="18" y2="18"/>
+                </svg>
+            </button>
+        </span>
+    </div>
+    <div class="plugin-svg-body">
+        <!-- 预览视图：渲染 SVG 图片 -->
+        <div class="plugin-svg-preview" data-svg-preview>
+            <img class="plugin-svg-image" data-svg-image alt="SVG 预览">
+            <div class="plugin-svg-empty" data-svg-empty>暂无 SVG 内容</div>
+        </div>
+        <!-- 源码视图：可编辑，编辑后实时重渲染预览 -->
+        <div class="plugin-svg-code" data-svg-code hidden>
+            <textarea class="plugin-svg-code-input" data-svg-code-input spellcheck="false"
+                      placeholder="在此编辑 SVG 源码，预览会实时更新"></textarea>
+        </div>
+    </div>
+</div>

@@ -1,0 +1,25 @@
+{
+  "assets": [
+    {
+      "id": "svg-css",
+      "type": "css",
+      "path": "static/svg.css",
+      "pages": ["index"]
+    },
+    {
+      "id": "svg-js",
+      "type": "js",
+      "path": "static/svg.js",
+      "pages": ["index"],
+      "position": "body-end"
+    },
+    {
+      "id": "svg-html",
+      "type": "html",
+      "path": "static/svg.html",
+      "pages": ["index"],
+      "mount": "#plugin-slot",
+      "mode": "append"
+    }
+  ]
+}
