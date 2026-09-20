@@ -134,9 +134,4 @@ public class DemoTool implements AgentTool {
         }
         return sb.toString();
     }
-
-    @Override
-    public String getVersion() {
-        return "1.0.0";
-    }
 }

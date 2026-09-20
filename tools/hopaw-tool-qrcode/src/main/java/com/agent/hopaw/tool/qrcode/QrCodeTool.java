@@ -52,16 +52,6 @@ public class QrCodeTool implements AgentTool {
         return "二维码工具集，支持生成二维码图片和解析二维码图片内容";
     }
 
-    @Override
-    public String getIcon() {
-        return "qrcode-tool.svg";
-    }
-
-    @Override
-    public String getKeyword() {
-        return "二维码,qrcode,QR,扫码";
-    }
-
     @ToolSecurityLevel(ToolSecurityLevel.Level.PARAM_REQUIRE_APPROVAL)
     @Tool(value = {"生成二维码", "将文本或链接生成二维码图片，保存到指定路径"})
     public String generateQrCode(

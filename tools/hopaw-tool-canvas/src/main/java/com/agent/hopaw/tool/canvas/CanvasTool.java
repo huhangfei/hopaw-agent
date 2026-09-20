@@ -66,21 +66,6 @@ public class CanvasTool implements AgentTool {
         return "画布绘图工具：在浏览器前端并排展示实时画布并绘制图形，结束时获取画布结果图";
     }
 
-    @Override
-    public String getKeyword() {
-        return "画布,绘图,canvas,绘制";
-    }
-
-    @Override
-    public String getIcon() {
-        return "canvas-tool.svg";
-    }
-
-    @Override
-    public String getVersion() {
-        return "1.0.0";
-    }
-
     @ToolSecurityLevel(ToolSecurityLevel.Level.SAFE)
     @Tool(value = {"开始画布绘制", "在浏览器前端收缩会话区并新建一个并排的实时画布，返回确认信息（含画布尺寸与坐标系说明）"})
     public String drawCanvas(

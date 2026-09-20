@@ -81,11 +81,6 @@ public class AliyunImageGenTool implements AgentTool {
     }
 
     @Override
-    public String getVersion() {
-        return "1.0.0";
-    }
-
-    @Override
     public List<ToolConfigItem> getConfigItems() {
         return List.of(
                 new ToolConfigItem(CONFIG_KEY_API_KEY, "阿里云百炼API Key",

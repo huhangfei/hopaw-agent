@@ -86,11 +86,6 @@ public class SshTool implements AgentTool {
         return "SSH, SFTP";
     }
 
-    @Override
-    public String getVersion() {
-        return "1.0.2";
-    }
-
     // ========== 多服务器配置定义与解析 ==========
 
     /**

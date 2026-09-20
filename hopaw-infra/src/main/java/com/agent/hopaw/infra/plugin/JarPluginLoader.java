@@ -19,19 +19,32 @@ import org.springframework.stereotype.Component;
 
 import com.agent.hopaw.infra.tool.AgentTool;
 
+/**
+ * 插件加载器：以 {@link AgentPlugin} 为主体加载插件 JAR。
+ *
+ * <p>加载契约（一个 JAR = 一个 AgentPlugin）：</p>
+ * <ol>
+ *   <li>扫描 JAR 内的 AgentPlugin 实现，未提供则拒绝安装（纯前端插件也应提供空工具的 AgentPlugin）；</li>
+ *   <li>实例化插件 → autowireBean → 插件 {@code asyncInit()}（构建插件级共享资源）；</li>
+ *   <li>调用插件 {@code getTools()} 取 0..N 个工具实例 → 逐个 autowireBean → 逐个 {@code asyncInit()}；</li>
+ *   <li>以 pluginId 为键注册；同 pluginId 已存在则拒绝（升级走覆盖安装）。</li>
+ * </ol>
+ *
+ * <p>卸载契约（逆序）：逐工具 {@code destroy()} → 插件 {@code destroy()} → 关闭 classloader。</p>
+ */
 @Component
 public class JarPluginLoader {
 
     private static final Logger logger = LoggerFactory.getLogger(JarPluginLoader.class);
 
-    private final DynamicToolRegistry registry;
+    private final PluginRegistry registry;
     private final AutowireCapableBeanFactory beanFactory;
     private final Path pluginDir;
 
     /** shutdown 标志，防止 PreDestroy 之后仍有 loadPlugin 在后台注册插件。 */
     private volatile boolean shuttingDown = false;
 
-    public JarPluginLoader(DynamicToolRegistry registry,
+    public JarPluginLoader(PluginRegistry registry,
                            AutowireCapableBeanFactory beanFactory,
                            @Value("${agent.plugin.dir:plugins}") String pluginDirPath) {
         this.registry = registry;
@@ -71,8 +84,9 @@ public class JarPluginLoader {
     @PreDestroy
     public void shutdown() {
         shuttingDown = true;
-        for (String jarName : registry.getPluginNames()) {
-            registry.unregister(jarName);
+        List<PluginRegistry.PluginEntry> entries = registry.getAllPluginEntries();
+        for (PluginRegistry.PluginEntry entry : entries) {
+            registry.unregister(entry.getPluginId());
         }
         logger.info("Plugin loader shutdown, all plugins unloaded");
     }
@@ -88,10 +102,15 @@ public class JarPluginLoader {
         }
     }
 
+    /**
+     * 加载插件 JAR。
+     *
+     * @return 插件提供的工具数量（加载失败返回 0）
+     */
     public int loadPlugin(File jarFile) {
         String jarName = jarFile.getName();
-        if (registry.hasPlugin(jarName)) {
-            logger.debug("Plugin already loaded: {}", jarName);
+        if (registry.hasPluginJar(jarName)) {
+            logger.debug("Plugin jar already loaded: {}", jarName);
             return 0;
         }
         if (shuttingDown) {
@@ -102,31 +121,53 @@ public class JarPluginLoader {
         PluginClassLoader classLoader = null;
         try {
             classLoader = new PluginClassLoader(jarFile);
-            List<String> classNames = classLoader.scanAgentToolClasses();
 
-            if (classNames.isEmpty()) {
-                logger.warn("No AgentTool implementation found in: {}", jarName);
+            List<String> pluginClassNames = classLoader.scanAgentPluginClasses();
+            if (pluginClassNames.isEmpty()) {
+                logger.error("Rejected plugin [{}]: 未找到 AgentPlugin 实现（插件 JAR 必须提供 AgentPlugin，"
+                        + "纯前端插件也应提供 getTools() 返回空列表的 AgentPlugin）", jarName);
+                classLoader.close();
+                return 0;
+            }
+            if (pluginClassNames.size() > 1) {
+                logger.error("Rejected plugin [{}]: 存在 {} 个 AgentPlugin 实现，一个插件 JAR 只能提供一个插件主体",
+                        jarName, pluginClassNames.size());
                 classLoader.close();
                 return 0;
             }
 
+            // 1) 实例化插件主体并注入 Spring 依赖
+            Class<?> pluginClass = classLoader.loadClass(pluginClassNames.get(0));
+            AgentPlugin plugin = (AgentPlugin) pluginClass.getDeclaredConstructor().newInstance();
+            beanFactory.autowireBean(plugin);
+
+            // 2) 同 pluginId 拒绝共存（升级必须走覆盖安装）
+            if (registry.hasPlugin(plugin.getId())) {
+                logger.error("Rejected plugin [{}]: pluginId [{}] 已被占用，请先卸载或走覆盖升级", jarName, plugin.getId());
+                classLoader.close();
+                return 0;
+            }
+
+            // 3) 插件级异步初始化（构建共享资源，供其创建的工具使用）
+            plugin.asyncInit();
+
+            // 4) 插件作为工具工厂分发工具实例，框架补充依赖注入与工具级初始化
             List<AgentTool> tools = new ArrayList<>();
-            for (String className : classNames) {
-                try {
-                    Class<?> clazz = classLoader.loadClass(className);
-                    AgentTool tool = (AgentTool) clazz.getDeclaredConstructor().newInstance();
-                    beanFactory.autowireBean(tool);
-                    tool.asyncInit();
-                    tools.add(tool);
-                } catch (Exception e) {
-                    logger.error("Failed to load tool class: {}", className, e);
+            List<AgentTool> provided = plugin.getTools();
+            if (provided != null) {
+                for (AgentTool tool : provided) {
+                    if (tool == null) {
+                        continue;
+                    }
+                    try {
+                        beanFactory.autowireBean(tool);
+                        tool.asyncInit();
+                        tools.add(tool);
+                    } catch (Exception e) {
+                        logger.error("Failed to initialize tool [{}] of plugin [{}]",
+                                tool.getClass().getSimpleName(), plugin.getId(), e);
+                    }
                 }
-            }
-
-            if (tools.isEmpty()) {
-                logger.warn("No tool could be instantiated in plugin: {} (all {} classes failed)", jarName, classNames.size());
-                classLoader.close();
-                return 0;
             }
 
             // shutdown 复查：asyncInit 可能耗时较长，避免在 shutdown 之后注册新插件
@@ -136,14 +177,14 @@ public class JarPluginLoader {
                 return 0;
             }
 
-            boolean registered = registry.register(jarName, classLoader, tools);
+            boolean registered = registry.register(plugin, jarName, classLoader, tools);
             if (!registered) {
-                // 并发下同名插件已被注册，丢弃本次 classloader，避免泄漏
+                // 并发下同 pluginId 已被注册，丢弃本次 classloader，避免泄漏
                 classLoader.close();
-                logger.warn("Plugin [{}] was already registered concurrently, dropped redundant load", jarName);
+                logger.warn("Plugin [{}] was already registered concurrently, dropped redundant load", plugin.getId());
                 return 0;
             }
-            logger.info("Loaded plugin: {} with {} tools", jarName, tools.size());
+            logger.info("Loaded plugin: {} [{}] with {} tools", plugin.getId(), jarName, tools.size());
             return tools.size();
         } catch (VirtualMachineError e) {
             closeQuietly(classLoader);
@@ -155,31 +196,38 @@ public class JarPluginLoader {
         }
     }
 
+    /**
+     * 扫描 JAR 内的插件信息（不注册、不初始化），用于安装前的校验与冲突检测。
+     *
+     * <p>会实例化 AgentPlugin 以读取元数据，因此插件构造器应保持无副作用。</p>
+     */
     public PluginScanResult scanPluginInfo(File jarFile) {
         String jarName = jarFile.getName();
         PluginScanResult result = new PluginScanResult();
         result.jarFileName = jarName;
 
         try (PluginClassLoader classLoader = new PluginClassLoader(jarFile)) {
-            List<String> classNames = classLoader.scanAgentToolClasses();
-
-            if (classNames.isEmpty()) {
-                result.errorMessage = "No AgentTool implementation found";
+            List<String> pluginClassNames = classLoader.scanAgentPluginClasses();
+            if (pluginClassNames.isEmpty()) {
+                result.errorMessage = "未找到 AgentPlugin 实现（插件 JAR 必须提供 AgentPlugin）";
+                return result;
+            }
+            if (pluginClassNames.size() > 1) {
+                result.errorMessage = "存在多个 AgentPlugin 实现，一个插件 JAR 只能提供一个插件主体";
                 return result;
             }
 
-            // 遍历所有 AgentTool 类，聚合 JAR 内全部工具方法（不再只报告第一个类）
+            Class<?> pluginClass = classLoader.loadClass(pluginClassNames.get(0));
+            AgentPlugin plugin = (AgentPlugin) pluginClass.getDeclaredConstructor().newInstance();
+            result.pluginId = plugin.getId();
+            result.pluginName = plugin.getName();
+            result.pluginVersion = plugin.getVersion();
+
+            // 反射收集 JAR 内所有 AgentTool 实现类声明的 @Tool 方法名（不实例化工具，避免副作用）
             List<String> toolNames = new ArrayList<>();
-            for (String className : classNames) {
+            for (String className : classLoader.scanAgentToolClasses()) {
                 try {
                     Class<?> clazz = classLoader.loadClass(className);
-                    // 仅在尚未取得插件名时实例化一次（构造器可能有副作用，避免多余实例化）；
-                    // 其余类仅通过反射收集方法，无需实例化
-                    if (result.pluginName == null) {
-                        AgentTool tool = (AgentTool) clazz.getDeclaredConstructor().newInstance();
-                        result.pluginName = tool.getName();
-                    }
-                    // 使用 getDeclaredMethods 仅收集本类声明的 @Tool 方法，避免误收继承方法
                     for (java.lang.reflect.Method method : clazz.getDeclaredMethods()) {
                         dev.langchain4j.agent.tool.Tool toolAnn = method.getAnnotation(dev.langchain4j.agent.tool.Tool.class);
                         if (toolAnn != null) {
@@ -194,11 +242,7 @@ public class JarPluginLoader {
                     logger.debug("Failed to scan tool class: {}", className, e);
                 }
             }
-            if (result.pluginName == null) {
-                result.errorMessage = "No usable AgentTool class found";
-            } else {
-                result.toolNames = toolNames;
-            }
+            result.toolNames = toolNames;
         } catch (Throwable e) {
             result.errorMessage = e.getMessage() != null ? e.getMessage() : e.getClass().getName();
         }
@@ -207,7 +251,11 @@ public class JarPluginLoader {
 
     public static class PluginScanResult {
         public String jarFileName;
+        /** 插件标识 */
+        public String pluginId;
+        /** 插件显示名称 */
         public String pluginName;
+        public String pluginVersion;
         public List<String> toolNames;
         public String errorMessage;
 
@@ -217,14 +265,15 @@ public class JarPluginLoader {
     }
 
     /**
-     * 卸载插件（注销并关闭 classloader、destroy 工具）。
+     * 卸载插件（按 JAR 文件名定位，注销、销毁工具与插件、关闭 classloader）。
      *
      * @return true 表示确实卸载了已注册的插件
      */
     private boolean unloadPlugin(String jarName) {
-        DynamicToolRegistry.PluginEntry removed = registry.unregister(jarName);
+        PluginRegistry.PluginEntry removed = registry.unregisterByJarFileName(jarName);
         if (removed != null) {
-            logger.info("Unloaded plugin: {} ({} tools released)", jarName, removed.getTools().size());
+            logger.info("Unloaded plugin: {} [{}] ({} tools released)",
+                    removed.getPluginId(), jarName, removed.getTools().size());
             return true;
         }
         return false;

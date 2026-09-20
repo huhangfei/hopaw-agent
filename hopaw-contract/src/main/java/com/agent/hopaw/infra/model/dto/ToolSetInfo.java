@@ -17,6 +17,10 @@ public class ToolSetInfo {
     private String author;
     private String url;
     private String jarFileName;
+    /** 所属插件标识（内置工具为 null） */
+    private String pluginId;
+    /** 所属插件显示名称（内置工具为 null） */
+    private String pluginName;
     private boolean hasConfigItems;
 
     @JsonIgnore
@@ -105,6 +109,22 @@ public class ToolSetInfo {
 
     public void setJarFileName(String jarFileName) {
         this.jarFileName = jarFileName;
+    }
+
+    public String getPluginId() {
+        return pluginId;
+    }
+
+    public void setPluginId(String pluginId) {
+        this.pluginId = pluginId;
+    }
+
+    public String getPluginName() {
+        return pluginName;
+    }
+
+    public void setPluginName(String pluginName) {
+        this.pluginName = pluginName;
     }
 
     public boolean isHasConfigItems() {

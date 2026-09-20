@@ -81,16 +81,6 @@ public class WechatOfficialAccountTool implements AgentTool {
                 + "要求：已认证的非个人主体公众号，服务器 IP 需加入公众号后台 IP 白名单。";
     }
 
-    @Override
-    public String getKeyword() {
-        return "微信公众号,公众号,文章,草稿,发布,图文,素材,封面,weixin,wechat,official account";
-    }
-
-    @Override
-    public String getIcon() {
-        return "wechat-official-account-tool.svg";
-    }
-
     // ========== 配置定义与账号解析 ==========
 
     /**

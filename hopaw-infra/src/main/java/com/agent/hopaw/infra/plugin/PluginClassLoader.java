@@ -136,6 +136,32 @@ public class PluginClassLoader extends ClassLoader implements Closeable {
         return result;
     }
 
+    /**
+     * 扫描 JAR 内所有 {@link com.agent.hopaw.infra.plugin.AgentPlugin} 实现类。
+     *
+     * <p>插件体系以 AgentPlugin 为主体：一个 JAR 应且仅应提供一个 AgentPlugin 实现，
+     * 由它声明插件元数据并通过 getTools() 对外分发 0..N 个 AgentTool。</p>
+     */
+    public List<String> scanAgentPluginClasses() {
+        List<String> result = new java.util.ArrayList<>();
+        for (String className : classCache.keySet()) {
+            try {
+                Class<?> clazz = loadClass(className);
+                if (com.agent.hopaw.infra.plugin.AgentPlugin.class.isAssignableFrom(clazz)
+                        && !clazz.isInterface()
+                        && !java.lang.reflect.Modifier.isAbstract(clazz.getModifiers())) {
+                    result.add(className);
+                    logger.debug("Found AgentPlugin class: {} in {}", className, jarFileName);
+                }
+            } catch (ClassNotFoundException | NoClassDefFoundError | UnsupportedClassVersionError e) {
+                logger.debug("Skip class {} during plugin scan: {} - {}", className, e.getClass().getSimpleName(), e.getMessage());
+            } catch (Throwable e) {
+                logger.error("Unexpected error scanning plugin class {}: {} - {}", className, e.getClass().getSimpleName(), e.getMessage(), e);
+            }
+        }
+        return result;
+    }
+
     @Override
     protected Class<?> findClass(String name) throws ClassNotFoundException {
         byte[] bytes = classCache.get(name);

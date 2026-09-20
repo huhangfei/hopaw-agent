@@ -39,16 +39,6 @@ public class HttpTool implements AgentTool {
         return "HTTP请求工具集，支持GET/POST/PUT/DELETE/PATCH/HEAD/OPTIONS等常见HTTP方法，用于接口调用测试";
     }
 
-    @Override
-    public String getIcon() {
-        return "http-tool.svg";
-    }
-
-    @Override
-    public String getKeyword() {
-        return "http,接口,api,request";
-    }
-
     @ToolSecurityLevel(ToolSecurityLevel.Level.PARAM_REQUIRE_APPROVAL)
     @Tool(value = {"发送HTTP GET请求", "发送HTTP GET请求，用于查询接口数据"})
     public String doHttpGet(

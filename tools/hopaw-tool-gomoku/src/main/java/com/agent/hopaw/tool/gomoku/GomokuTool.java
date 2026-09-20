@@ -85,21 +85,6 @@ public class GomokuTool implements AgentTool {
         return "五子棋对弈工具：LLM 与用户在浏览器前端对弈五子棋，支持开局、落子、等待用户落子、查棋盘、结束对局";
     }
 
-    @Override
-    public String getKeyword() {
-        return "五子棋,gomoku,棋,对弈,下棋";
-    }
-
-    @Override
-    public String getIcon() {
-        return "gomoku-tool.svg";
-    }
-
-    @Override
-    public String getVersion() {
-        return "1.0.0";
-    }
-
     // =====================================================================
     // @Tool 方法
     // =====================================================================
@@ -287,7 +272,6 @@ public class GomokuTool implements AgentTool {
      * 唤醒 waitUserMove 并移除对局；非等待态无阻塞的工具调用，由此兜底删除，
      * 使 LLM 后续落子得到「未找到对局」提醒）。</p>
      */
-    @Override
     public Map<String, Object> invoke(Map<String, Object> params) {
         Map<String, Object> result = new HashMap<>();
         String action = params == null ? "state" : String.valueOf(params.getOrDefault("action", "state"));

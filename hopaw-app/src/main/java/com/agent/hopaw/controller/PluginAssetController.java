@@ -1,6 +1,6 @@
 package com.agent.hopaw.controller;
 
-import com.agent.hopaw.infra.plugin.DynamicToolRegistry;
+import com.agent.hopaw.infra.plugin.PluginRegistry;
 import com.agent.hopaw.infra.plugin.PluginAsset;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -37,9 +37,9 @@ public class PluginAssetController {
 
     private static final Logger log = LoggerFactory.getLogger(PluginAssetController.class);
 
-    private final DynamicToolRegistry registry;
+    private final PluginRegistry registry;
 
-    public PluginAssetController(DynamicToolRegistry registry) {
+    public PluginAssetController(PluginRegistry registry) {
         this.registry = registry;
     }
 
@@ -94,7 +94,7 @@ public class PluginAssetController {
             return ResponseEntity.status(404).build();
         }
 
-        DynamicToolRegistry.PluginEntry entry = registry.getPlugin(plugin);
+        PluginRegistry.PluginEntry entry = registry.getPlugin(plugin);
         if (entry == null) {
             return ResponseEntity.notFound().build();
         }

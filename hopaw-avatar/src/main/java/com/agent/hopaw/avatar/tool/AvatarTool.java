@@ -162,32 +162,7 @@ public class AvatarTool implements AgentTool {
     }
 
     @Override
-    public String getVersion() {
-        return AgentTool.super.getVersion();
-    }
-
-    @Override
-    public String getAuthor() {
-        return AgentTool.super.getAuthor();
-    }
-
-    @Override
-    public String getUrl() {
-        return AgentTool.super.getUrl();
-    }
-
-    @Override
     public String getKeyword() {
         return "虚拟人换装,虚拟人移动,虚拟人消息,虚拟人语音,Avatar";
-    }
-
-    @Override
-    public void asyncInit() {
-        AgentTool.super.asyncInit();
-    }
-
-    @Override
-    public void destroy() {
-        AgentTool.super.destroy();
     }
 }

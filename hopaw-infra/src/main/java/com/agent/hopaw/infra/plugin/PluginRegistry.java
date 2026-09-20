@@ -12,60 +12,104 @@ import java.io.InputStreamReader;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.stream.Collectors;
 
+/**
+ * 插件注册表：以 {@link AgentPlugin} 为主体，主键为 pluginId。
+ *
+ * <p>与旧 DynamicToolRegistry 的区别：注册单位从「JAR 文件名」提升为「插件标识」，
+ * 一个条目持有一个 AgentPlugin 实例 + 其分发的 0..N 个 AgentTool + 前端资产。
+ * JAR 文件名降级为条目的物理属性，仅用于文件卸载等物理操作。</p>
+ */
 @Component
-public class DynamicToolRegistry {
+public class PluginRegistry {
 
-    private static final Logger logger = LoggerFactory.getLogger(DynamicToolRegistry.class);
+    private static final Logger logger = LoggerFactory.getLogger(PluginRegistry.class);
 
+    /** pluginId -> PluginEntry */
     private final ConcurrentMap<String, PluginEntry> plugins = new ConcurrentHashMap<>();
 
     /**
-     * 注册插件。并发安全：使用 putIfAbsent 原子化，拒绝重复注册同名插件。
+     * 注册插件。并发安全：使用 putIfAbsent 原子化，拒绝重复注册同一 pluginId。
      *
      * @return true 表示本次成功注册；false 表示同名插件已存在（本次被拒绝），
      *         调用方需自行关闭传入的 classLoader。
      */
-    public boolean register(String jarFileName, PluginClassLoader classLoader, List<AgentTool> tools) {
-        PluginEntry entry = new PluginEntry(jarFileName, classLoader, tools);
-        boolean added = plugins.putIfAbsent(jarFileName, entry) == null;
+    public boolean register(AgentPlugin plugin, String jarFileName, PluginClassLoader classLoader, List<AgentTool> tools) {
+        PluginEntry entry = new PluginEntry(plugin, jarFileName, classLoader, tools);
+        boolean added = plugins.putIfAbsent(plugin.getId(), entry) == null;
         if (added) {
-            logger.info("Registered plugin [{}] with {} tools", jarFileName, tools.size());
+            logger.info("Registered plugin [{}] (jar={}) with {} tools", plugin.getId(), jarFileName, tools.size());
         } else {
-            logger.warn("Plugin [{}] already registered, ignore duplicate registration", jarFileName);
+            logger.warn("Plugin [{}] already registered, ignore duplicate registration", plugin.getId());
         }
         return added;
     }
 
-    public PluginEntry unregister(String jarFileName) {
-        PluginEntry entry = plugins.remove(jarFileName);
+    /**
+     * 按插件标识卸载：先销毁各工具，再销毁插件，最后关闭 classloader。
+     */
+    public PluginEntry unregister(String pluginId) {
+        PluginEntry entry = plugins.remove(pluginId);
         if (entry != null) {
-            // 调用所有工具的 destroy 方法（如果存在）
-            for (AgentTool tool : entry.getTools()) {
-                try {
-                    tool.destroy();
-                    logger.debug("Called destroy() on tool: {}", tool.getName());
-                } catch (Exception e) {
-                    logger.error("Error calling destroy() on tool: {}", tool.getClass().getSimpleName(), e);
-                }
-            }
-            // 关闭 classloader，释放 JAR 文件句柄与临时文件，保证 Windows 上可删除 JAR
-            try {
-                entry.getClassLoader().close();
-            } catch (Exception e) {
-                logger.error("Error closing plugin classloader [{}]", jarFileName, e);
-            }
-            logger.info("Unregistered plugin [{}]", jarFileName);
+            destroyEntry(entry);
         }
         return entry;
     }
 
-    public List<AgentTool> getAllDynamicTools() {
+    /**
+     * 按 JAR 文件名卸载（物理文件操作路径使用）。
+     */
+    public PluginEntry unregisterByJarFileName(String jarFileName) {
+        PluginEntry entry = findByJarFileName(jarFileName);
+        if (entry == null) {
+            return null;
+        }
+        return unregister(entry.getPluginId());
+    }
+
+    private PluginEntry findByJarFileName(String jarFileName) {
+        for (PluginEntry entry : plugins.values()) {
+            if (jarFileName.equals(entry.getJarFileName())) {
+                return entry;
+            }
+        }
+        return null;
+    }
+
+    /**
+     * 销毁顺序契约：逐工具 destroy → 插件 destroy → 关闭 classloader。
+     * 任何一步异常都不影响后续清理。
+     */
+    private void destroyEntry(PluginEntry entry) {
+        for (AgentTool tool : entry.getTools()) {
+            try {
+                tool.destroy();
+                logger.debug("Called destroy() on tool: {}", tool.getName());
+            } catch (Exception e) {
+                logger.error("Error calling destroy() on tool: {}", tool.getClass().getSimpleName(), e);
+            }
+        }
+        try {
+            entry.getPlugin().destroy();
+        } catch (Exception e) {
+            logger.error("Error calling destroy() on plugin: {}", entry.getPluginId(), e);
+        }
+        // 关闭 classloader，释放 JAR 文件句柄与临时文件，保证 Windows 上可删除 JAR
+        try {
+            entry.getClassLoader().close();
+        } catch (Exception e) {
+            logger.error("Error closing plugin classloader [{}]", entry.getPluginId(), e);
+        }
+        logger.info("Unregistered plugin [{}]", entry.getPluginId());
+    }
+
+    public List<AgentTool> getAllPluginTools() {
         List<AgentTool> result = new ArrayList<>();
         for (PluginEntry entry : plugins.values()) {
             result.addAll(entry.getTools());
@@ -77,15 +121,26 @@ public class DynamicToolRegistry {
         return List.copyOf(plugins.values());
     }
 
-    public boolean hasPlugin(String jarFileName) {
-        return plugins.containsKey(jarFileName);
+    public boolean hasPlugin(String pluginId) {
+        return plugins.containsKey(pluginId);
+    }
+
+    public boolean hasPluginJar(String jarFileName) {
+        return findByJarFileName(jarFileName) != null;
+    }
+
+    /**
+     * 按插件标识获取插件条目。
+     */
+    public PluginEntry getPlugin(String pluginId) {
+        return plugins.get(pluginId);
     }
 
     /**
      * 按 JAR 文件名获取插件条目。
      */
-    public PluginEntry getPlugin(String jarFileName) {
-        return plugins.get(jarFileName);
+    public PluginEntry getPluginByJarFileName(String jarFileName) {
+        return findByJarFileName(jarFileName);
     }
 
     /**
@@ -104,8 +159,13 @@ public class DynamicToolRegistry {
                 .collect(Collectors.toList());
     }
 
-    public List<String> getPluginNames() {
-        return new ArrayList<>(plugins.keySet());
+    /**
+     * 已注册插件标识列表（按标识排序，保证展示顺序稳定）。
+     */
+    public List<String> getPluginIds() {
+        List<String> ids = new ArrayList<>(plugins.keySet());
+        Collections.sort(ids);
+        return ids;
     }
 
     public Map<String, PluginEntry> getPlugins() {
@@ -116,7 +176,11 @@ public class DynamicToolRegistry {
         return plugins.isEmpty();
     }
 
+    /**
+     * 插件条目：一个 AgentPlugin 实例 + 其工具与前端资产。
+     */
     public static class PluginEntry {
+        private final AgentPlugin plugin;
         private final String jarFileName;
         private final PluginClassLoader classLoader;
         private final List<AgentTool> tools;
@@ -125,11 +189,24 @@ public class DynamicToolRegistry {
         // 前端资源清单（plugin-assets.json 解析结果，构造时解析一次，仅缓存清单本身）
         private volatile List<PluginAsset> assets;
 
-        public PluginEntry(String jarFileName, PluginClassLoader classLoader, List<AgentTool> tools) {
+        public PluginEntry(AgentPlugin plugin, String jarFileName, PluginClassLoader classLoader, List<AgentTool> tools) {
+            this.plugin = plugin;
             this.jarFileName = jarFileName;
             this.classLoader = classLoader;
             this.tools = Collections.unmodifiableList(tools);
             this.assets = loadAssets();
+        }
+
+        public AgentPlugin getPlugin() {
+            return plugin;
+        }
+
+        public String getPluginId() {
+            return plugin.getId();
+        }
+
+        public String getPluginName() {
+            return plugin.getName();
         }
 
         public String getJarFileName() {
@@ -181,7 +258,7 @@ public class DynamicToolRegistry {
                     }
                     result.add(new PluginAsset(
                             node.getString("id"),
-                            jarFileName,
+                            plugin.getId(),
                             type,
                             path,
                             pages,

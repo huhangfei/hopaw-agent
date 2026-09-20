@@ -9,7 +9,8 @@ import com.agent.hopaw.infra.model.dto.PluginConflictInfo;
 import com.agent.hopaw.infra.model.dto.ToolInfo;
 import com.agent.hopaw.infra.model.dto.ToolParamInfo;
 import com.agent.hopaw.infra.model.dto.ToolSetInfo;
-import com.agent.hopaw.infra.plugin.DynamicToolRegistry;
+import com.agent.hopaw.infra.plugin.PluginRegistry;
+import com.agent.hopaw.infra.plugin.AgentPlugin;
 import com.agent.hopaw.infra.plugin.JarPluginLoader;
 import com.agent.hopaw.infra.tool.AgentTool;
 import com.agent.hopaw.infra.tool.IAgentToolService;
@@ -48,13 +49,13 @@ public class AgentToolService implements IAgentToolService {
     private static final int BUFFER_SIZE = 8192;
 
     private final ApplicationContext applicationContext;
-    private final DynamicToolRegistry dynamicToolRegistry;
+    private final PluginRegistry pluginRegistry;
     private final JarPluginLoader jarPluginLoader;
     private final ObjectMapper objectMapper;
 
-    public AgentToolService(ApplicationContext applicationContext, DynamicToolRegistry dynamicToolRegistry, JarPluginLoader jarPluginLoader) {
+    public AgentToolService(ApplicationContext applicationContext, PluginRegistry pluginRegistry, JarPluginLoader jarPluginLoader) {
         this.applicationContext = applicationContext;
-        this.dynamicToolRegistry = dynamicToolRegistry;
+        this.pluginRegistry = pluginRegistry;
         this.jarPluginLoader = jarPluginLoader;
         this.objectMapper = new ObjectMapper();
     }
@@ -63,7 +64,7 @@ public class AgentToolService implements IAgentToolService {
     public List<AgentTool> getAgentTools() {
         Map<String, AgentTool> beans = applicationContext.getBeansOfType(AgentTool.class);
         List<AgentTool> tools = new ArrayList<>(beans.values());
-        tools.addAll(dynamicToolRegistry.getAllDynamicTools());
+        tools.addAll(pluginRegistry.getAllPluginTools());
         tools.sort(Comparator.comparing(AgentTool::getName));
         return tools;
     }
@@ -92,7 +93,7 @@ public class AgentToolService implements IAgentToolService {
         List<ToolSetInfo> result = new ArrayList<>();
         Map<String, AgentTool> beans = applicationContext.getBeansOfType(AgentTool.class);
         for (AgentTool agentTool : beans.values()) {
-            result.add(scanToolSet(agentTool, AgentToolSourceEnum.BUILT_IN));
+            result.add(scanToolSet(agentTool, AgentToolSourceEnum.BUILT_IN, null));
         }
         result.addAll(getAllPluginToolSets());
         return result;
@@ -110,21 +111,33 @@ public class AgentToolService implements IAgentToolService {
 
     private List<ToolSetInfo> getAllPluginToolSets() {
         List<ToolSetInfo> result = new ArrayList<>();
-        List<DynamicToolRegistry.PluginEntry> allPluginEntries = dynamicToolRegistry.getAllPluginEntries();
-        for (DynamicToolRegistry.PluginEntry entry : allPluginEntries) {
-            List<AgentTool> tools = entry.getTools();
-            for (AgentTool tool : tools) {
-                ToolSetInfo toolSetInfo = scanToolSet(tool, AgentToolSourceEnum.PLUGIN);
+        List<PluginRegistry.PluginEntry> allPluginEntries = pluginRegistry.getAllPluginEntries();
+        for (PluginRegistry.PluginEntry entry : allPluginEntries) {
+            for (AgentTool tool : entry.getTools()) {
+                ToolSetInfo toolSetInfo = scanToolSet(tool, AgentToolSourceEnum.PLUGIN, entry);
                 toolSetInfo.setJarFileName(entry.getJarFileName());
+                toolSetInfo.setPluginId(entry.getPluginId());
+                toolSetInfo.setPluginName(entry.getPluginName());
                 if(!AgentTool.DEFAULT_ICON.equals(toolSetInfo.getIcon())){
-                    toolSetInfo.setIcon(entry.getCachedResource("static/icons/tools/"+tool.getIcon()));
+                    String iconContent = entry.getCachedResource("static/icons/tools/" + toolSetInfo.getIcon());
+                    if (iconContent != null && !iconContent.isEmpty()) {
+                        toolSetInfo.setIcon(iconContent);
+                    }
                 }
                 result.add(toolSetInfo);
             }
         }
         return result;
     }
-    private ToolSetInfo scanToolSet(AgentTool agentTool, AgentToolSourceEnum source) {
+
+    /**
+     * 扫描工具集元数据。
+     *
+     * @param agentTool 工具实例
+     * @param source    来源（内置 / 插件）
+     * @param entry     所属插件条目；内置工具传 null
+     */
+    private ToolSetInfo scanToolSet(AgentTool agentTool, AgentToolSourceEnum source, PluginRegistry.PluginEntry entry) {
         List<ToolInfo> tools = new ArrayList<>();
         for (Method method : agentTool.getClass().getMethods()) {
             Tool toolAnn = method.getAnnotation(Tool.class);
@@ -164,15 +177,36 @@ public class AgentToolService implements IAgentToolService {
             }
             tools.add(toolInfo);
         }
-        ToolSetInfo toolSetInfo = new ToolSetInfo(agentTool.getName(), agentTool.getDescription(), agentTool.getIcon(), tools, source);
-        toolSetInfo.setVersion(agentTool.getVersion());
-        toolSetInfo.setAuthor(agentTool.getAuthor());
-        toolSetInfo.setUrl(agentTool.getUrl());
-        toolSetInfo.setKeyword(agentTool.getKeyword());
+        ToolSetInfo toolSetInfo = new ToolSetInfo(agentTool.getName(), agentTool.getDescription(),
+                resolveIcon(agentTool, entry == null ? null : entry.getPlugin()), tools, source);
+        // 插件身份元数据（版本/作者/来源）取自插件主体，工具不再承载；内置工具用默认值
+        AgentPlugin plugin = entry == null ? null : entry.getPlugin();
+        if (plugin != null) {
+            toolSetInfo.setVersion(plugin.getVersion());
+            toolSetInfo.setAuthor(plugin.getAuthor());
+            toolSetInfo.setUrl(plugin.getUrl());
+            toolSetInfo.setKeyword(agentTool.getKeyword().isEmpty() ? plugin.getKeyword() : agentTool.getKeyword());
+        } else {
+            toolSetInfo.setVersion("1.0.0");
+            toolSetInfo.setAuthor("Agent Tool");
+            toolSetInfo.setUrl("https://gitee.com/hgflydream/hopaw-agent");
+            toolSetInfo.setKeyword(agentTool.getKeyword());
+        }
         toolSetInfo.setHasConfigItems(!agentTool.getConfigItems().isEmpty());
         toolSetInfo.setAgentTool(agentTool);
 
         return toolSetInfo;
+    }
+
+    /**
+     * 解析工具集图标：优先工具自身声明，工具未声明（默认图标）时回退到所属插件声明的图标。
+     */
+    private String resolveIcon(AgentTool agentTool, AgentPlugin plugin) {
+        String icon = agentTool.getIcon();
+        if (AgentTool.DEFAULT_ICON.equals(icon) && plugin != null && plugin.getIcon() != null) {
+            return plugin.getIcon();
+        }
+        return icon;
     }
 
     @Override
@@ -217,7 +251,7 @@ public class AgentToolService implements IAgentToolService {
                 log.info("Plugin {} is installed, uninstalling before upgrade", toolName);
                 reportStage(stageCallback, "uninstalling");
                 // unregister 内部会统一调用各工具的 destroy 并关闭 classloader，无需重复 destroy
-                dynamicToolRegistry.unregister(jarFileName);
+                pluginRegistry.unregisterByJarFileName(jarFileName);
                 File existingFile = targetPath.toFile();
                 if (existingFile.exists() && !existingFile.delete()) {
                     log.warn("Failed to delete existing plugin file: {}", targetPath);
@@ -355,27 +389,25 @@ public class AgentToolService implements IAgentToolService {
         return hexString.toString();
     }
 
-    private PluginConflictInfo detectConflicts(File jarFile, String currentToolName) {
+    private PluginConflictInfo detectConflicts(File jarFile, String currentPluginId) {
         List<String> conflictingPlugins = new ArrayList<>();
         List<String> conflictingTools = new ArrayList<>();
 
         JarPluginLoader.PluginScanResult scanResult = jarPluginLoader.scanPluginInfo(jarFile);
-        if (scanResult.hasError() || scanResult.pluginName == null) {
+        if (scanResult.hasError() || scanResult.pluginId == null) {
             return null;
         }
 
-        Map<String, DynamicToolRegistry.PluginEntry> allPlugins = dynamicToolRegistry.getPlugins();
-        for (DynamicToolRegistry.PluginEntry entry : allPlugins.values()) {
-            if (entry.getTools().isEmpty()) continue;
-            AgentTool existingTool = entry.getTools().get(0);
-            String existingPluginName = existingTool.getName();
-            if (!entry.getJarFileName().equals(jarFile.getName()) && existingPluginName.equals(scanResult.pluginName)) {
-                conflictingPlugins.add(existingPluginName);
+        Map<String, PluginRegistry.PluginEntry> allPlugins = pluginRegistry.getPlugins();
+        for (PluginRegistry.PluginEntry entry : allPlugins.values()) {
+            if (!entry.getJarFileName().equals(jarFile.getName())
+                    && scanResult.pluginId.equals(entry.getPluginId())) {
+                conflictingPlugins.add(entry.getPluginId());
             }
         }
 
         if (scanResult.toolNames != null) {
-            List<AgentTool> allDynamicTools = dynamicToolRegistry.getAllDynamicTools();
+            List<AgentTool> allDynamicTools = pluginRegistry.getAllPluginTools();
             for (AgentTool existingTool : allDynamicTools) {
                 for (Method method : existingTool.getClass().getMethods()) {
                     dev.langchain4j.agent.tool.Tool toolAnn = method.getAnnotation(dev.langchain4j.agent.tool.Tool.class);
@@ -427,9 +459,9 @@ public class AgentToolService implements IAgentToolService {
                 return null;
             }
 
-            DynamicToolRegistry.PluginEntry entry = dynamicToolRegistry.getPlugins().get(jarFileName);
-            if (entry == null || entry.getTools().isEmpty()) {
-                log.warn("exportPlugin: plugin not loaded or has no tools: {}", jarFileName);
+            PluginRegistry.PluginEntry entry = pluginRegistry.getPluginByJarFileName(jarFileName);
+            if (entry == null) {
+                log.warn("exportPlugin: plugin not loaded: {}", jarFileName);
                 return null;
             }
 
@@ -506,11 +538,11 @@ public class AgentToolService implements IAgentToolService {
         Path targetPath = jarPluginLoader.getPluginDir().resolve(jarFileName);
         File existingFile = targetPath.toFile();
 
-        if (existingFile.exists() || dynamicToolRegistry.hasPlugin(jarFileName)) {
+        if (existingFile.exists() || pluginRegistry.hasPluginJar(jarFileName)) {
             isUpgrade = true;
-            DynamicToolRegistry.PluginEntry existing = dynamicToolRegistry.getPlugins().get(jarFileName);
-            if (existing != null && !existing.getTools().isEmpty()) {
-                previousVersion = existing.getTools().get(0).getVersion();
+            PluginRegistry.PluginEntry existing = pluginRegistry.getPluginByJarFileName(jarFileName);
+            if (existing != null) {
+                previousVersion = existing.getPlugin().getVersion();
             }
             jarPluginLoader.unloadAndDeletePlugin(jarFileName);
         }
@@ -555,10 +587,10 @@ public class AgentToolService implements IAgentToolService {
             throw new IllegalArgumentException("文件扩展名必须为 .jar: " + jarFileName);
         }
 
-        // 先扫描 JAR 拿到插件名/工具名（用于冲突检测与升级判断）
+        // 先扫描 JAR 拿到插件标识/版本/工具名（用于冲突检测与升级判断）
         JarPluginLoader.PluginScanResult scanResult = jarPluginLoader.scanPluginInfo(src);
-        if (scanResult.hasError() || scanResult.pluginName == null) {
-            String err = scanResult.errorMessage != null ? scanResult.errorMessage : "JAR 内未发现可用的 AgentTool 实现";
+        if (scanResult.hasError() || scanResult.pluginId == null) {
+            String err = scanResult.errorMessage != null ? scanResult.errorMessage : "JAR 内未发现可用的 AgentPlugin 实现";
             return PluginInstallResult.fail(jarFileName, null, jarFileName, "JAR 无效: " + err);
         }
 
@@ -566,11 +598,11 @@ public class AgentToolService implements IAgentToolService {
         String previousVersion = null;
         Path targetPath = jarPluginLoader.getPluginDir().resolve(jarFileName);
         File existingFile = targetPath.toFile();
-        if (existingFile.exists() || dynamicToolRegistry.hasPlugin(jarFileName)) {
+        if (existingFile.exists() || pluginRegistry.hasPluginJar(jarFileName)) {
             isUpgrade = true;
-            DynamicToolRegistry.PluginEntry existing = dynamicToolRegistry.getPlugins().get(jarFileName);
-            if (existing != null && !existing.getTools().isEmpty()) {
-                previousVersion = existing.getTools().get(0).getVersion();
+            PluginRegistry.PluginEntry existing = pluginRegistry.getPluginByJarFileName(jarFileName);
+            if (existing != null) {
+                previousVersion = existing.getPlugin().getVersion();
             }
             jarPluginLoader.unloadAndDeletePlugin(jarFileName);
         }
@@ -578,22 +610,22 @@ public class AgentToolService implements IAgentToolService {
         Files.copy(src.toPath(), targetPath, java.nio.file.StandardCopyOption.REPLACE_EXISTING);
         log.info("Plugin JAR copied from {} to {}", src, targetPath);
 
-        PluginConflictInfo conflictInfo = detectConflicts(targetPath.toFile(), scanResult.pluginName);
+        PluginConflictInfo conflictInfo = detectConflicts(targetPath.toFile(), scanResult.pluginId);
 
         int toolCount = jarPluginLoader.loadPlugin(targetPath.toFile());
 
-        String version = null;
+        String version = scanResult.pluginVersion;
         try {
-            // 加载后从注册表中读取版本号
-            DynamicToolRegistry.PluginEntry entry = dynamicToolRegistry.getPlugins().get(jarFileName);
-            if (entry != null && !entry.getTools().isEmpty()) {
-                version = entry.getTools().get(0).getVersion();
+            // 加载后以注册表中的插件版本为准
+            PluginRegistry.PluginEntry entry = pluginRegistry.getPluginByJarFileName(jarFileName);
+            if (entry != null) {
+                version = entry.getPlugin().getVersion();
             }
         } catch (Exception ignored) {
             // 版本读取失败不阻塞安装结果
         }
 
-        return PluginInstallResult.success(scanResult.pluginName, version, jarFileName, toolCount, isUpgrade, previousVersion, conflictInfo);
+        return PluginInstallResult.success(scanResult.pluginId, version, jarFileName, toolCount, isUpgrade, previousVersion, conflictInfo);
     }
 
     private String formatFileSize(long bytes) {
