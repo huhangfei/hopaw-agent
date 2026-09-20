@@ -1,0 +1,248 @@
+<!DOCTYPE html>
+<html xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+      xmlns:th="http://www.thymeleaf.org"
+      layout:decorate="~{layouts/default}">
+<head>
+    <title>插件管理 - HoPaw</title>
+</head>
+<body>
+<div layout:fragment="pageTitle">🤖 HoPaw - 插件管理</div>
+
+<div class="content-wrapper" layout:fragment="content">
+    <div th:replace="~{fragments/op-tabs :: op-tabs(${activeTab})}"></div>
+    <div class="plugins-split">
+        <!-- ==================== 左：插件列表（平铺，无二级树） ==================== -->
+        <div class="plugins-list-panel">
+            <div class="plugins-list-header">
+                <div class="plugins-list-header-row">
+                    <h3>插件列表</h3>
+                    <button class="btn-install-plugin" onclick="location.href='/tools/plugin-store'" title="插件商店">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M3 3h18l-1 16H4L3 3z"></path>
+                            <circle cx="9" cy="21" r="1"></circle>
+                            <circle cx="18" cy="21" r="1"></circle>
+                        </svg>
+                        插件商店
+                    </button>
+                    <button class="btn-local-install" onclick="document.getElementById('localInstallInput').click()" title="从本地安装插件">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                            <polyline points="17 8 12 3 7 8"></polyline>
+                            <line x1="12" y1="3" x2="12" y2="15"></line>
+                        </svg>
+                    </button>
+                    <input type="file" id="localInstallInput" accept=".zip,.jar" style="display:none;" onchange="localInstallPlugin(this)">
+                </div>
+                <div class="plugins-list-search">
+                    <input type="text" class="plugins-search-input" id="pluginsSearchInput" placeholder="搜索插件..." oninput="filterPlugins()">
+                </div>
+            </div>
+            <div class="plugins-list-body" id="pluginsListBody">
+                <div th:each="p : ${plugins}" class="plugin-list-item" th:attr="data-plugin-id=${p.id}"
+                     onclick="selectPlugin(this)">
+                    <div class="plugin-list-icon">
+                        <th:block th:if="${p.icon != null and #strings.startsWith(p.icon, '<svg')}">
+                            <span th:utext="${p.icon}"></span>
+                        </th:block>
+                        <th:block th:unless="${p.icon != null and #strings.startsWith(p.icon, '<svg')}">
+                            <img th:if="${p.icon != null and !p.icon.isEmpty()}" th:src="@{/icons/tools/__${p.icon}__}" alt="icon" onerror="this.style.display='none'">
+                            <span th:if="${p.icon == null or p.icon.isEmpty()}" class="plugin-icon-fallback">🧩</span>
+                        </th:block>
+                    </div>
+                    <div class="plugin-list-info">
+                        <div class="plugin-list-name">
+                            <span th:text="${p.name}"></span>
+                            <span class="plugin-list-badge badge-disabled" th:unless="${p.enabled}">已禁用</span>
+                        </div>
+                        <div class="plugin-list-meta">
+                            <span th:if="${p.version != null and !p.version.isEmpty()}" th:text="|v${p.version}|"></span>
+                            <span th:text="|${p.toolCount} 个工具集|"></span>
+                        </div>
+                    </div>
+                </div>
+                <div th:if="${#lists.isEmpty(plugins)}" class="plugins-list-empty">
+                    暂无插件，可从插件商店或本地安装
+                </div>
+            </div>
+        </div>
+
+        <!-- ==================== 右：插件详情（工具集以手风琴展示） ==================== -->
+        <div class="plugins-detail-panel">
+            <div th:each="p, pIter : ${plugins}"
+                 class="plugin-detail"
+                 th:classappend="${pIter.first ? 'active' : ''}"
+                 th:attr="data-plugin-id=${p.id}">
+                <div class="detail-header">
+                    <div class="detail-header-icon">
+                        <th:block th:if="${p.icon != null and #strings.startsWith(p.icon, '<svg')}">
+                            <span th:utext="${p.icon}"></span>
+                        </th:block>
+                        <th:block th:unless="${p.icon != null and #strings.startsWith(p.icon, '<svg')}">
+                            <img th:if="${p.icon != null and !p.icon.isEmpty()}" th:src="@{/icons/tools/__${p.icon}__}" alt="icon" onerror="this.style.display='none'">
+                            <span th:if="${p.icon == null or p.icon.isEmpty()}" class="plugin-icon-fallback">🧩</span>
+                        </th:block>
+                    </div>
+                    <div class="detail-header-info">
+                        <div class="detail-name">
+                            <span th:text="${p.name}"></span>
+                            <span class="plugin-list-badge badge-disabled" th:unless="${p.enabled}">已禁用</span>
+                        </div>
+                        <div class="detail-desc" th:text="${p.description}"></div>
+                    </div>
+                    <span class="detail-count-badge" th:text="|${p.toolCount} 个工具集|"></span>
+                </div>
+
+                <div class="detail-meta">
+                    <span class="detail-meta-label">插件标识</span>
+                    <span class="detail-meta-value" th:text="${p.id}"></span>
+                    <th:block th:if="${p.version != null and !p.version.isEmpty()}">
+                        <span class="detail-meta-label">版本</span>
+                        <span class="detail-meta-value" th:text="${p.version}"></span>
+                    </th:block>
+                    <th:block th:if="${p.author != null and !p.author.isEmpty()}">
+                        <span class="detail-meta-label">作者</span>
+                        <span class="detail-meta-value" th:text="${p.author}"></span>
+                    </th:block>
+                    <th:block th:if="${p.keyword != null and !p.keyword.isEmpty()}">
+                        <span class="detail-meta-label">关键词</span>
+                        <span class="detail-meta-tag" th:text="${p.keyword}"></span>
+                    </th:block>
+                    <span class="detail-meta-label">前端资产</span>
+                    <span class="detail-meta-value" th:text="|${p.frontendAssetCount} 个|"></span>
+                    <span class="detail-meta-label">通用调用</span>
+                    <span class="detail-meta-badge" th:classappend="${p.invokeSupported ? 'source-builtin' : ''}"
+                          th:text="${p.invokeSupported ? '支持 invoke' : '不支持'}"></span>
+                    <th:block th:if="${p.jarFileName != null and !p.jarFileName.isEmpty()}">
+                        <span class="detail-meta-label">包文件</span>
+                        <span class="detail-meta-value" th:text="${p.jarFileName}"></span>
+                    </th:block>
+                    <th:block th:if="${p.url != null and !p.url.isEmpty()}">
+                        <span class="detail-meta-label">地址</span>
+                        <a class="detail-meta-link" th:href="${p.url}" target="_blank" rel="noopener" th:text="${p.url}"></a>
+                    </th:block>
+                </div>
+
+                <div class="plugin-actions">
+                    <button type="button" class="btn-toggle-plugin"
+                            th:classappend="${p.enabled ? '' : 'is-off'}"
+                            th:attr="data-plugin-id=${p.id},data-enabled=${p.enabled}"
+                            onclick="togglePlugin(this)"
+                            th:text="${p.enabled ? '禁用插件' : '启用插件'}">禁用插件</button>
+                    <button type="button" class="btn-config" th:if="${p.hasConfigItems}"
+                            th:attr="onclick=|location.href='/plugins/config/${p.id}'|"
+                            title="配置此插件（多工具集共享的公共配置）">插件配置</button>
+                    <button type="button" class="btn-export-plugin"
+                            th:attr="data-plugin-id=${p.id}"
+                            onclick="exportPlugin(this)" title="导出插件包">导出</button>
+                    <button type="button" class="btn-unload-plugin"
+                            th:attr="data-plugin-id=${p.id},data-plugin-name=${p.name},data-plugin-version=${p.version}"
+                            th:id="'uninstallPlugin_' + ${p.id}"
+                            onclick="uninstallPlugin(this)" title="卸载此插件">卸载</button>
+                </div>
+
+                <!-- ==================== 工具集手风琴（默认收起） ==================== -->
+                <div class="plugin-accordion">
+                    <div class="plugin-accordion-title">该插件提供的工具集</div>
+
+                    <!-- 插件已启用：手风琴展示各工具集（含方法） -->
+                    <th:block th:if="${p.enabled}">
+                        <div th:each="ts : ${pluginToolSets.get(p.id)}" class="accordion-item"
+                             th:classappend="${ts.enabled ? '' : ' is-toolset-disabled'}"
+                             th:attr="data-tool-name=${ts.name}">
+                            <div class="accordion-header" onclick="toggleAccordion(this)">
+                                <span class="accordion-caret">▶</span>
+                                <div class="accordion-header-icon">
+                                    <th:block th:if="${ts.iconIsSvgCode()}">
+                                        <span th:utext="${ts.icon}"></span>
+                                    </th:block>
+                                    <th:block th:unless="${ts.iconIsSvgCode()}">
+                                        <img th:src="@{/icons/tools/__${ts.icon}__}" alt="icon" onerror="this.style.display='none'">
+                                    </th:block>
+                                </div>
+                                <div class="accordion-header-info">
+                                    <div class="accordion-header-name">
+                                        <span th:text="${ts.name}"></span>
+                                        <span class="plugin-list-badge badge-disabled" th:unless="${ts.enabled}">工具集已禁用</span>
+                                    </div>
+                                    <div class="accordion-header-desc" th:text="${ts.description}"></div>
+                                </div>
+                                <span class="accordion-header-count" th:text="|${#lists.size(ts.tools)} 个方法|"></span>
+                                <span class="accordion-config-tag" th:if="${ts.hasConfigItems}" title="此工具集支持配置">可配置</span>
+                            </div>
+                            <div class="accordion-body">
+                                <!-- 工具集级启用开关 -->
+                                <div class="accordion-toolset-switch">
+                                    <span class="accordion-switch-label">工具集启用</span>
+                                    <label class="switch">
+                                        <input type="checkbox" th:checked="${ts.enabled}"
+                                               th:attr="data-tool-set-name=${ts.name}"
+                                               onchange="toggleToolSet(this)">
+                                        <span class="slider"></span>
+                                    </label>
+                                    <button th:if="${ts.hasConfigItems}" th:attr="onclick=|location.href='/tool-config/${ts.name}'|"
+                                            class="btn-config" title="配置此工具集">配置</button>
+                                </div>
+                                <!-- 工具方法列表（含方法级禁用开关） -->
+                                <div th:if="${not #lists.isEmpty(ts.tools)}" class="accordion-methods">
+                                    <div th:each="tool : ${ts.tools}" class="accordion-method-row"
+                                         th:classappend="${tool.enabled ? '' : ' is-method-disabled'}">
+                                        <div class="accordion-method-info">
+                                            <span class="accordion-method-name" th:text="${tool.name}"></span>
+                                            <span class="accordion-method-desc" th:text="${tool.description}"></span>
+                                        </div>
+                                        <label class="switch switch-sm">
+                                            <input type="checkbox" th:checked="${tool.enabled}"
+                                                   th:attr="data-tool-set-name=${ts.name},data-tool-name=${tool.name}"
+                                                   onchange="toggleTool(this)">
+                                            <span class="slider"></span>
+                                        </label>
+                                    </div>
+                                </div>
+                                <div th:if="${#lists.isEmpty(ts.tools)}" class="accordion-empty">
+                                    该工具集下没有工具方法（纯前端组件）
+                                </div>
+                            </div>
+                        </div>
+                        <div th:if="${#lists.isEmpty(pluginToolSets.get(p.id))}" class="plugin-accordion-empty">
+                            该插件未提供工具集（纯前端插件）
+                        </div>
+                    </th:block>
+
+                    <!-- 插件已禁用：仅展示工具集名，不可展开 -->
+                    <th:block th:unless="${p.enabled}">
+                        <div th:each="tsName : ${p.toolSetNames}" class="accordion-item is-toolset-disabled">
+                            <div class="accordion-header accordion-header-static">
+                                <span class="accordion-caret accordion-caret-disabled">·</span>
+                                <div class="accordion-header-info">
+                                    <div class="accordion-header-name">
+                                        <span th:text="${tsName}"></span>
+                                        <span class="plugin-list-badge badge-disabled">插件已禁用</span>
+                                    </div>
+                                    <div class="accordion-header-desc">插件已禁用，工具集不可用</div>
+                                </div>
+                            </div>
+                        </div>
+                        <div th:if="${p.toolSetNames == null or p.toolSetNames.length == 0}" class="plugin-accordion-empty">
+                            纯前端插件（无工具集）
+                        </div>
+                    </th:block>
+                </div>
+            </div>
+
+            <div th:if="${#lists.isEmpty(plugins)}" class="plugin-detail active" data-plugin-id="">
+                <div class="detail-empty-state">暂无插件，可从插件商店或本地安装插件包</div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<th:block layout:fragment="extraCss">
+    <link rel="stylesheet" th:href="@{/css/page/cap-tabs.css}">
+    <link rel="stylesheet" th:href="@{/css/page/plugins.css}">
+</th:block>
+
+<th:block layout:fragment="extraScripts">
+    <script th:src="@{/js/page/plugins.js}"></script>
+</th:block>
+</body>
+</html>

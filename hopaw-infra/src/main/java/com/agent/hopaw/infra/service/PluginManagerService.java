@@ -53,16 +53,19 @@ public class PluginManagerService implements IAgentPluginService {
     private final PluginRegistry pluginRegistry;
     private final JarPluginLoader jarPluginLoader;
     private final PluginStateService pluginStateService;
+    private final ToolStateService toolStateService;
     private final ConfigItemStore configItemStore;
     private final ObjectMapper objectMapper = new ObjectMapper();
 
     public PluginManagerService(PluginRegistry pluginRegistry,
                                 JarPluginLoader jarPluginLoader,
                                 PluginStateService pluginStateService,
+                                ToolStateService toolStateService,
                                 ConfigItemStore configItemStore) {
         this.pluginRegistry = pluginRegistry;
         this.jarPluginLoader = jarPluginLoader;
         this.pluginStateService = pluginStateService;
+        this.toolStateService = toolStateService;
         this.configItemStore = configItemStore;
     }
 
@@ -127,8 +130,10 @@ public class PluginManagerService implements IAgentPluginService {
         // 之后再去调插件类实例上的 getConfigPrefix()/getConfigItems() 不再可靠
         List<ToolConfigItem> pluginConfigItems = List.copyOf(entry.getPlugin().getConfigItems());
         List<ToolConfigCleanup> toolCleanups = new ArrayList<>();
+        List<String> toolSetNames = new ArrayList<>();
         for (AgentTool tool : entry.getTools()) {
             toolCleanups.add(new ToolConfigCleanup(tool.getConfigPrefix(), List.copyOf(tool.getConfigItems())));
+            toolSetNames.add(tool.getName());
         }
 
         boolean result = jarPluginLoader.unloadAndDeletePlugin(entry.getJarFileName());
@@ -144,6 +149,10 @@ public class PluginManagerService implements IAgentPluginService {
                 int swept = configItemStore.deleteByPrefix(PluginConfigService.prefix(pluginId));
                 log.info("Cleaned config of plugin [{}]: {} plugin-level items, {} tool sets, {} keys swept by prefix",
                         pluginId, pluginConfigItems.size(), toolCleanups.size(), swept);
+            }
+            // 清理该插件下所有工具集的工具级/方法级禁用状态
+            for (String toolSetName : toolSetNames) {
+                toolStateService.removeToolSet(toolSetName);
             }
             pluginStateService.remove(pluginId);
         }

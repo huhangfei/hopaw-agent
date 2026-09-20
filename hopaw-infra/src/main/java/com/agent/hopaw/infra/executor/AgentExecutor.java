@@ -17,7 +17,10 @@ import com.agent.hopaw.infra.tool.AgentTool;
 import com.agent.hopaw.infra.tool.ToolSecurityLevel;
 import com.agent.hopaw.infra.util.*;
 import com.alibaba.fastjson2.JSON;
+import dev.langchain4j.agent.tool.Tool;
 import dev.langchain4j.agent.tool.ToolExecutionRequest;
+import dev.langchain4j.agent.tool.ToolSpecification;
+import dev.langchain4j.agent.tool.ToolSpecifications;
 import dev.langchain4j.data.message.Content;
 import dev.langchain4j.data.message.TextContent;
 import dev.langchain4j.data.message.ToolExecutionResultMessage;
@@ -42,6 +45,8 @@ import dev.langchain4j.service.AiServices;
 import dev.langchain4j.service.TokenStream;
 import dev.langchain4j.service.tool.ToolErrorHandlerResult;
 import dev.langchain4j.service.tool.ToolProvider;
+import dev.langchain4j.service.tool.DefaultToolExecutor;
+import dev.langchain4j.service.tool.ToolExecutor;
 import dev.langchain4j.service.tool.search.vector.VectorToolSearchStrategy;
 import dev.langchain4j.store.memory.chat.InMemoryChatMemoryStore;
 import org.slf4j.Logger;
@@ -49,6 +54,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.util.StringUtils;
 
+import java.lang.reflect.Method;
 import java.time.LocalDateTime;
 import java.util.*;
 import java.util.concurrent.*;
@@ -658,7 +664,10 @@ public class AgentExecutor implements IAgentExecutor {
                     return ToolErrorHandlerResult.text(
                             "工具执行异常：" + throwable.getMessage() + "。请根据异常信息调整调用方式或修正后重试。");
                 });
-        List<AgentTool> selectedTools = agentExecutorParams.getToolSets().stream().map(x -> x.getAgentTool()).collect(Collectors.toList());
+        List<AgentTool> selectedTools = agentExecutorParams.getToolSets().stream()
+                .map(ToolSetInfo::getAgentTool)
+                .filter(Objects::nonNull)
+                .collect(Collectors.toList());
         if(selectedTools != null && !selectedTools.isEmpty()){
             if (agentExecutorParams.getVectorToolSearch() != null && agentExecutorParams.getVectorToolSearch()) {
                 int maxResults = agentExecutorParams.getVectorToolSearchMaxResults() != null ? agentExecutorParams.getVectorToolSearchMaxResults() : 20;
@@ -674,7 +683,7 @@ public class AgentExecutor implements IAgentExecutor {
             if (maxToolInvocations > 0) {
                 aiBuilder.maxToolCallingRoundTrips(maxToolInvocations);
             }
-            aiBuilder.tools(selectedTools.toArray());
+            aiBuilder.tools(buildEnabledToolMap(selectedTools));
         }
 
 
@@ -718,6 +727,31 @@ public class AgentExecutor implements IAgentExecutor {
         ChatModelListener chatModelListener = chatModelListenerProvider.getChatModelListener(agentExecutorParams.getBizType().getAiModelCallSourceEnum(), sessionId, userId, agentId, requestId, agentExecutorParams.getExtParams());
         StreamingChatModel streamingModel = aiModelService.createStreamingChatModel(agentExecutorParams.getAiModelId(), agentExecutorParams.getEnableThinking(),agentExecutorParams.getReasoningEffort(), chatModelListener);
         return aiBuilder.streamingChatModel(streamingModel).build();
+    }
+
+    /**
+     * 依据工具方法级禁用状态，把选中的 {@link AgentTool} 反射扫描为
+     * {@code Map<ToolSpecification, ToolExecutor>}，排除 {@code enabled=false} 的方法。
+     * 与 langchain4j 内置 {@code tools(Object...)} 的反射逻辑等价，仅多出方法级禁用过滤。
+     */
+    private Map<ToolSpecification, ToolExecutor> buildEnabledToolMap(List<AgentTool> tools) {
+        Map<ToolSpecification, ToolExecutor> map = new LinkedHashMap<>();
+        for (AgentTool tool : tools) {
+            for (Method method : tool.getClass().getMethods()) {
+                Tool toolAnn = method.getAnnotation(Tool.class);
+                if (toolAnn == null) {
+                    continue;
+                }
+                String toolName = toolAnn.name().isEmpty() ? method.getName() : toolAnn.name();
+                ToolInfo info = toolInfoMap.get(toolName);
+                if (info != null && !info.isEnabled()) {
+                    logger.info("跳过已禁用的工具方法 [{}.{}]", tool.getName(), toolName);
+                    continue;
+                }
+                map.put(ToolSpecifications.toolSpecificationFrom(method), new DefaultToolExecutor(tool, method));
+            }
+        }
+        return map;
     }
 
     /**

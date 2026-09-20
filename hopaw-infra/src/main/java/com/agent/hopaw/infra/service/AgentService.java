@@ -141,14 +141,18 @@ public class AgentService implements IAgentService {
             appendTools=new ArrayList<>();
         }
         List<String> finalAppendTools = appendTools;
+        // 先排除工具集级禁用的工具集（禁用后智能体不可选择、不可执行）
+        List<ToolSetInfo> enabledToolSets = toolSetService.getToolSets().stream()
+                .filter(ToolSetInfo::isEnabled)
+                .collect(Collectors.toList());
         if (Boolean.TRUE.equals(agent.getEnableAllTools())) {
             //启用所有,此时选中的是要排除的
-            selectedTools = toolSetService.getToolSets().stream()
+            selectedTools = enabledToolSets.stream()
                     .filter(t -> !selectedToolNames.contains(t.getName()) || finalAppendTools.contains(t.getName()))
                     .collect(Collectors.toList());
         } else {
             //启用所有,此时选中的是要使用的
-            selectedTools = toolSetService.getToolSets().stream()
+            selectedTools = enabledToolSets.stream()
                     .filter(t -> selectedToolNames.contains(t.getName()) || finalAppendTools.contains(t.getName()))
                     .collect(Collectors.toList());
 

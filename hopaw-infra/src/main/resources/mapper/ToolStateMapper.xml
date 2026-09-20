@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.agent.hopaw.infra.mapper.ToolStateMapper">
+
+    <resultMap id="ToolStateResultMap" type="com.agent.hopaw.infra.model.entity.ToolState">
+        <id property="toolSetName" column="tool_set_name"/>
+        <id property="toolName" column="tool_name"/>
+        <result property="enabled" column="enabled"/>
+        <result property="updateTime" column="update_time"/>
+    </resultMap>
+
+    <sql id="allColumns">
+        tool_set_name, tool_name, enabled, update_time
+    </sql>
+
+    <select id="findAll" resultMap="ToolStateResultMap">
+        SELECT <include refid="allColumns"/>
+        FROM tool_state
+    </select>
+
+    <insert id="upsert" parameterType="com.agent.hopaw.infra.model.entity.ToolState">
+        INSERT INTO tool_state (tool_set_name, tool_name, enabled, update_time)
+        VALUES (#{toolSetName}, #{toolName}, #{enabled}, datetime('now', 'localtime'))
+        ON CONFLICT(tool_set_name, tool_name) DO UPDATE SET
+            enabled = #{enabled},
+            update_time = datetime('now', 'localtime')
+    </insert>
+
+    <delete id="deleteByToolSetName">
+        DELETE FROM tool_state WHERE tool_set_name = #{toolSetName}
+    </delete>
+
+    <delete id="deleteByToolSetNameAndToolName">
+        DELETE FROM tool_state WHERE tool_set_name = #{toolSetName} AND tool_name = #{toolName}
+    </delete>
+
+</mapper>

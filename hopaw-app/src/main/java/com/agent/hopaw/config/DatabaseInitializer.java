@@ -636,6 +636,16 @@ public class DatabaseInitializer implements CommandLineRunner {
                     "update_time TIMESTAMP DEFAULT (datetime('now','localtime'))" +
                     ")");
 
+            // 工具运行态状态表：持久化工具集级 / 工具方法级启用禁用决策（未记录视为启用）
+            // tool_name 为空串表示工具集级，非空表示方法级
+            stmt.execute("CREATE TABLE IF NOT EXISTS tool_state (" +
+                    "tool_set_name TEXT NOT NULL, " +
+                    "tool_name TEXT NOT NULL DEFAULT '', " +
+                    "enabled INTEGER DEFAULT 1, " +
+                    "update_time TIMESTAMP DEFAULT (datetime('now','localtime')), " +
+                    "PRIMARY KEY (tool_set_name, tool_name)" +
+                    ")");
+
             log.info("Database tables created");
         }
     }

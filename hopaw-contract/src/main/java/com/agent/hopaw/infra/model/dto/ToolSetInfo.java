@@ -22,6 +22,8 @@ public class ToolSetInfo {
     /** 所属插件显示名称（内置工具为 null） */
     private String pluginName;
     private boolean hasConfigItems;
+    /** 是否启用：false 表示工具集级禁用（未记录视为 true）。仅做标记，不影响展示，用于智能体选择与执行过滤 */
+    private boolean enabled = true;
 
     @JsonIgnore
     private AgentTool agentTool;
@@ -141,5 +143,13 @@ public class ToolSetInfo {
 
     public void setAgentTool(AgentTool agentTool) {
         this.agentTool = agentTool;
+    }
+
+    public boolean isEnabled() {
+        return enabled;
+    }
+
+    public void setEnabled(boolean enabled) {
+        this.enabled = enabled;
     }
 }

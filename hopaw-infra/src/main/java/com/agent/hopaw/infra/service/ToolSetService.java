@@ -43,13 +43,16 @@ public class ToolSetService implements IToolSetService {
     private final ApplicationContext applicationContext;
     private final PluginRegistry pluginRegistry;
     private final PluginStateService pluginStateService;
+    private final ToolStateService toolStateService;
 
     public ToolSetService(ApplicationContext applicationContext,
                           PluginRegistry pluginRegistry,
-                          PluginStateService pluginStateService) {
+                          PluginStateService pluginStateService,
+                          ToolStateService toolStateService) {
         this.applicationContext = applicationContext;
         this.pluginRegistry = pluginRegistry;
         this.pluginStateService = pluginStateService;
+        this.toolStateService = toolStateService;
     }
 
     @Override
@@ -215,6 +218,7 @@ public class ToolSetService implements IToolSetService {
             if (methodSecurityAnn != null) {
                 toolInfo.setSecurityLevel(methodSecurityAnn.value());
             }
+            toolInfo.setEnabled(toolStateService.isToolEnabled(agentTool.getName(), toolName));
             tools.add(toolInfo);
         }
         AgentPlugin plugin = entry == null ? null : entry.getPlugin();
@@ -233,6 +237,7 @@ public class ToolSetService implements IToolSetService {
             toolSetInfo.setKeyword(agentTool.getKeyword());
         }
         toolSetInfo.setHasConfigItems(!agentTool.getConfigItems().isEmpty());
+        toolSetInfo.setEnabled(toolStateService.isToolSetEnabled(agentTool.getName()));
         toolSetInfo.setAgentTool(agentTool);
 
         return toolSetInfo;

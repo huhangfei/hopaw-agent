@@ -7,9 +7,11 @@
     checkboxClass - 附加到 checkbox 上的样式类（编辑表单需要，新增表单传空字符串）
 -->
 <th:block th:fragment="toolSetLabels(toolSets, checkboxClass)">
-    <label th:each="ts : ${toolSets}" class="checkbox-item">
+    <label th:each="ts : ${toolSets}" class="checkbox-item"
+           th:classappend="${ts.enabled ? null : ' checkbox-item-unavailable'}">
         <div class="tool-item-row">
             <input type="checkbox" name="tools" th:value="${ts.name}"
+                   th:disabled="${not ts.enabled}"
                    th:classappend="${#strings.isEmpty(checkboxClass) ? null : checkboxClass}">
             <div class="tool-item-icon">
                 <th:block th:if="${ts.iconIsSvgCode()}">
@@ -21,7 +23,8 @@
                 </th:block>
             </div>
             <span class="tool-item-name" th:text="${ts.name}"></span>
-            <span class="tool-item-count"
+            <span class="tool-item-count warn-text" th:if="${not ts.enabled}">工具集已禁用，暂不可用</span>
+            <span class="tool-item-count" th:if="${ts.enabled}"
                   th:text="${#lists.size(ts.tools)} + ' 个方法'"></span>
         </div>
         <span class="tool-item-desc" th:text="${ts.description}"></span>

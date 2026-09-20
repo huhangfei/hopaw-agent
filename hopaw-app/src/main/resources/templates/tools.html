@@ -3,255 +3,63 @@
       xmlns:th="http://www.thymeleaf.org"
       layout:decorate="~{layouts/default}">
 <head>
-    <title>插件与工具管理 - HoPaw</title>
+    <title>工具管理 - HoPaw</title>
 </head>
 <body>
-<div layout:fragment="pageTitle">🤖 HoPaw - 插件与工具管理</div>
+<div layout:fragment="pageTitle">🤖 HoPaw - 工具管理</div>
 
 <div class="content-wrapper" layout:fragment="content">
     <div th:replace="~{fragments/cap-tabs :: cap-tabs(${activeTab})}"></div>
     <div class="tools-split">
-        <!-- ==================== 左：两级列表（插件 → 工具集） ==================== -->
+        <!-- ==================== 左：工具集平铺列表（含内置 + 插件） ==================== -->
         <div class="tools-list-panel">
             <div class="tools-list-header">
                 <div class="tools-list-header-row">
-                    <h3>插件与工具集</h3>
-                    <button class="btn-install-plugin" onclick="location.href='/tools/plugin-store'" title="插件商店">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                            <path d="M3 3h18l-1 16H4L3 3z"></path>
-                            <circle cx="9" cy="21" r="1"></circle>
-                            <circle cx="18" cy="21" r="1"></circle>
-                        </svg>
-                        插件商店
-                    </button>
-                    <button class="btn-local-install" onclick="document.getElementById('localInstallInput').click()" title="从本地安装插件">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
-                            <polyline points="17 8 12 3 7 8"></polyline>
-                            <line x1="12" y1="3" x2="12" y2="15"></line>
-                        </svg>
-                    </button>
-                    <input type="file" id="localInstallInput" accept=".zip,.jar" style="display:none;" onchange="localInstallPlugin(this)">
-                </div>
-                <div class="tools-tab-bar">
-                    <button type="button" class="tools-tab active" id="tabPluginsBtn" onclick="switchToolTab('plugins')"
-                            th:text="|插件 (${#lists.size(plugins)})|">插件</button>
-                    <button type="button" class="tools-tab" id="tabBuiltinBtn" onclick="switchToolTab('builtin')"
-                            th:text="|内置工具 (${#lists.size(builtinToolSets)})|">内置工具</button>
+                    <h3>全部工具集</h3>
                 </div>
                 <div class="tools-list-search">
-                    <input type="text" class="tools-search-input" id="toolsSearchInput" placeholder="搜索插件 / 工具集..." oninput="filterTools()">
+                    <input type="text" class="tools-search-input" id="toolsSearchInput" placeholder="搜索工具集..." oninput="filterTools()">
                 </div>
             </div>
-            <div class="tools-list-body">
-                <!-- 插件 Tab：插件为一级，其工具集为二级 -->
-                <div class="tools-tab-pane" id="panePlugins">
-                    <div th:each="p : ${plugins}" class="tool-plugin-group" th:attr="data-plugin-id=${p.id}">
-                        <div class="tool-plugin-header" th:attr="data-plugin-id=${p.id}" onclick="selectPlugin(this)">
-                            <div class="tool-plugin-icon">
-                                <th:block th:if="${p.icon != null and #strings.startsWith(p.icon, '<svg')}">
-                                    <span th:utext="${p.icon}"></span>
-                                </th:block>
-                                <th:block th:unless="${p.icon != null and #strings.startsWith(p.icon, '<svg')}">
-                                    <img th:if="${p.icon != null and !p.icon.isEmpty()}" th:src="@{/icons/tools/__${p.icon}__}" alt="icon" onerror="this.style.display='none'">
-                                    <span th:if="${p.icon == null or p.icon.isEmpty()}" class="plugin-icon-fallback">🧩</span>
-                                </th:block>
-                            </div>
-                            <div class="tool-plugin-info">
-                                <div class="tool-plugin-name">
-                                    <span th:text="${p.name}"></span>
-                                    <span class="tool-plugin-badge badge-disabled" th:unless="${p.enabled}">已禁用</span>
-                                </div>
-                                <div class="tool-plugin-meta">
-                                    <span th:if="${p.version != null and !p.version.isEmpty()}" th:text="|v${p.version}|"></span>
-                                    <span th:text="|${p.toolCount} 个工具集|"></span>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="tool-plugin-children">
-                            <!-- 启用：正常渲染其工具集（可点选查看详情） -->
-                            <th:block th:if="${p.enabled}">
-                                <div th:each="ts : ${pluginToolSets.get(p.id)}"
-                                     class="tool-list-item tool-list-child"
-                                     th:attr="data-tool-name=${ts.name},data-plugin-id=${p.id}"
-                                     onclick="selectToolSet(this)">
-                                    <div class="tool-list-icon">
-                                        <th:block th:if="${ts.iconIsSvgCode()}">
-                                            <span th:utext="${ts.icon}"></span>
-                                        </th:block>
-                                        <th:block th:unless="${ts.iconIsSvgCode()}">
-                                            <img th:src="@{/icons/tools/__${ts.icon}__}" alt="icon" onerror="this.style.display='none'">
-                                        </th:block>
-                                    </div>
-                                    <div class="tool-list-info">
-                                        <div class="tool-list-name">
-                                            <span th:text="${ts.name}"></span>
-                                            <span class="tool-list-config-tag" th:if="${ts.hasConfigItems}" title="此工具集支持配置">可配置</span>
-                                        </div>
-                                        <div class="tool-list-desc" th:text="${ts.description}"></div>
-                                        <div class="tool-list-meta">
-                                            <span class="tool-list-count" th:text="|${#lists.size(ts.tools)} 个工具方法|"></span>
-                                        </div>
-                                    </div>
-                                </div>
-                                <div th:if="${#lists.isEmpty(pluginToolSets.get(p.id))}" class="tool-plugin-empty">
-                                    该插件未提供工具集（纯前端插件）
-                                </div>
-                            </th:block>
-                            <!-- 禁用：工具集名照常展示但不可用 -->
-                            <th:block th:unless="${p.enabled}">
-                                <div th:each="tsName : ${p.toolSetNames}" class="tool-list-item tool-list-child is-disabled">
-                                    <div class="tool-list-info">
-                                        <div class="tool-list-name"><span th:text="${tsName}"></span></div>
-                                        <div class="tool-list-desc">插件已禁用，工具集不可用</div>
-                                    </div>
-                                </div>
-                                <div th:if="${p.toolSetNames == null or p.toolSetNames.length == 0}" class="tool-plugin-empty">
-                                    纯前端插件（无工具集）
-                                </div>
-                            </th:block>
-                        </div>
+            <div class="tools-list-body" id="toolsListBody">
+                <div th:each="ts : ${toolSets}"
+                     class="tool-list-item"
+                     th:classappend="${ts.enabled ? '' : ' is-disabled'}"
+                     th:attr="data-tool-name=${ts.name}"
+                     onclick="selectToolSet(this)">
+                    <div class="tool-list-icon">
+                        <th:block th:if="${ts.iconIsSvgCode()}">
+                            <span th:utext="${ts.icon}"></span>
+                        </th:block>
+                        <th:block th:unless="${ts.iconIsSvgCode()}">
+                            <img th:src="@{/icons/tools/__${ts.icon}__}" alt="icon" onerror="this.style.display='none'">
+                        </th:block>
                     </div>
-                    <div th:if="${#lists.isEmpty(plugins)}" class="tools-list-empty">
-                        暂无插件，可从插件商店或本地安装
+                    <div class="tool-list-info">
+                        <div class="tool-list-name">
+                            <span th:text="${ts.name}"></span>
+                            <span class="tool-list-source-badge" th:classappend="${ts.source.code == 'built_in' ? 'source-builtin' : 'source-plugin'}"
+                                  th:text="${ts.source.description}"></span>
+                            <span class="tool-list-config-tag" th:if="${ts.hasConfigItems}" title="此工具集支持配置">可配置</span>
+                            <span class="tool-list-badge badge-disabled" th:unless="${ts.enabled}">已禁用</span>
+                        </div>
+                        <div class="tool-list-desc" th:text="${ts.description}"></div>
+                        <div class="tool-list-meta">
+                            <span class="tool-list-count" th:text="|${#lists.size(ts.tools)} 个工具方法|"></span>
+                        </div>
                     </div>
                 </div>
-
-                <!-- 内置工具 Tab：无插件父节点，平铺展示 -->
-                <div class="tools-tab-pane" id="paneBuiltin" style="display:none;">
-                    <div th:each="ts : ${builtinToolSets}"
-                         class="tool-list-item"
-                         th:attr="data-tool-name=${ts.name}"
-                         onclick="selectToolSet(this)">
-                        <div class="tool-list-icon">
-                            <th:block th:if="${ts.iconIsSvgCode()}">
-                                <span th:utext="${ts.icon}"></span>
-                            </th:block>
-                            <th:block th:unless="${ts.iconIsSvgCode()}">
-                                <img th:src="@{/icons/tools/__${ts.icon}__}" alt="icon" onerror="this.style.display='none'">
-                            </th:block>
-                        </div>
-                        <div class="tool-list-info">
-                            <div class="tool-list-name">
-                                <span th:text="${ts.name}"></span>
-                                <span class="tool-list-source-badge source-builtin" th:text="${ts.source.description}"></span>
-                                <span class="tool-list-config-tag" th:if="${ts.hasConfigItems}" title="此工具集支持配置">可配置</span>
-                            </div>
-                            <div class="tool-list-desc" th:text="${ts.description}"></div>
-                            <div class="tool-list-meta">
-                                <span class="tool-list-count" th:text="|${#lists.size(ts.tools)} 个工具方法|"></span>
-                            </div>
-                        </div>
-                    </div>
-                    <div th:if="${#lists.isEmpty(builtinToolSets)}" class="tools-list-empty">
-                        暂无内置工具
-                    </div>
+                <div th:if="${#lists.isEmpty(toolSets)}" class="tools-list-empty">
+                    暂无工具集
                 </div>
             </div>
         </div>
 
-        <!-- ==================== 右：详情面板 ==================== -->
+        <!-- ==================== 右：工具集详情（含工具集级 + 方法级开关） ==================== -->
         <div class="tools-detail-panel">
-            <!-- 插件详情（一级） -->
-            <div th:each="p, pIter : ${plugins}"
-                 class="plugin-detail"
-                 th:classappend="${pIter.first ? 'active' : ''}"
-                 th:attr="data-plugin-id=${p.id}">
-                <div class="detail-header">
-                    <div class="detail-header-icon">
-                        <th:block th:if="${p.icon != null and #strings.startsWith(p.icon, '<svg')}">
-                            <span th:utext="${p.icon}"></span>
-                        </th:block>
-                        <th:block th:unless="${p.icon != null and #strings.startsWith(p.icon, '<svg')}">
-                            <img th:if="${p.icon != null and !p.icon.isEmpty()}" th:src="@{/icons/tools/__${p.icon}__}" alt="icon" onerror="this.style.display='none'">
-                            <span th:if="${p.icon == null or p.icon.isEmpty()}" class="plugin-icon-fallback">🧩</span>
-                        </th:block>
-                    </div>
-                    <div class="detail-header-info">
-                        <div class="detail-name">
-                            <span th:text="${p.name}"></span>
-                            <span class="tool-plugin-badge badge-disabled" th:unless="${p.enabled}">已禁用</span>
-                        </div>
-                        <div class="detail-desc" th:text="${p.description}"></div>
-                    </div>
-                    <span class="detail-count-badge" th:text="|${p.toolCount} 个工具集|"></span>
-                </div>
-
-                <div class="detail-meta">
-                    <span class="detail-meta-label">插件标识</span>
-                    <span class="detail-meta-value" th:text="${p.id}"></span>
-                    <th:block th:if="${p.version != null and !p.version.isEmpty()}">
-                        <span class="detail-meta-label">版本</span>
-                        <span class="detail-meta-value" th:text="${p.version}"></span>
-                    </th:block>
-                    <th:block th:if="${p.author != null and !p.author.isEmpty()}">
-                        <span class="detail-meta-label">作者</span>
-                        <span class="detail-meta-value" th:text="${p.author}"></span>
-                    </th:block>
-                    <th:block th:if="${p.keyword != null and !p.keyword.isEmpty()}">
-                        <span class="detail-meta-label">关键词</span>
-                        <span class="detail-meta-tag" th:text="${p.keyword}"></span>
-                    </th:block>
-                    <span class="detail-meta-label">前端资产</span>
-                    <span class="detail-meta-value" th:text="|${p.frontendAssetCount} 个|"></span>
-                    <span class="detail-meta-label">通用调用</span>
-                    <span class="detail-meta-badge" th:classappend="${p.invokeSupported ? 'source-builtin' : ''}"
-                          th:text="${p.invokeSupported ? '支持 invoke' : '不支持'}"></span>
-                    <th:block th:if="${p.jarFileName != null and !p.jarFileName.isEmpty()}">
-                        <span class="detail-meta-label">包文件</span>
-                        <span class="detail-meta-value" th:text="${p.jarFileName}"></span>
-                    </th:block>
-                    <th:block th:if="${p.url != null and !p.url.isEmpty()}">
-                        <span class="detail-meta-label">地址</span>
-                        <a class="detail-meta-link" th:href="${p.url}" target="_blank" rel="noopener" th:text="${p.url}"></a>
-                    </th:block>
-                </div>
-
-                <div class="plugin-actions">
-                    <button type="button" class="btn-toggle-plugin"
-                            th:classappend="${p.enabled ? '' : 'is-off'}"
-                            th:attr="data-plugin-id=${p.id},data-enabled=${p.enabled}"
-                            onclick="togglePlugin(this)"
-                            th:text="${p.enabled ? '禁用插件' : '启用插件'}">禁用插件</button>
-                    <button type="button" class="btn-config" th:if="${p.hasConfigItems}"
-                            th:attr="onclick=|location.href='/plugins/config/${p.id}'|"
-                            title="配置此插件（多工具集共享的公共配置）">插件配置</button>
-                    <button type="button" class="btn-export-plugin"
-                            th:attr="data-plugin-id=${p.id}"
-                            onclick="exportPlugin(this)" title="导出插件包">导出</button>
-                    <button type="button" class="btn-unload-plugin"
-                            th:attr="data-plugin-id=${p.id},data-plugin-name=${p.name},data-plugin-version=${p.version}"
-                            th:id="'uninstallPlugin_' + ${p.id}"
-                            onclick="uninstallPlugin(this)" title="卸载此插件">卸载</button>
-                </div>
-
-                <div class="plugin-toolset-list" th:if="${not #lists.isEmpty(pluginToolSets.get(p.id))}">
-                    <div class="plugin-toolset-title">该插件提供的工具集</div>
-                    <div th:each="ts : ${pluginToolSets.get(p.id)}" class="plugin-toolset-row"
-                         th:attr="data-tool-name=${ts.name}" onclick="selectToolSetByName(this.getAttribute('data-tool-name'))">
-                        <div class="plugin-toolset-icon">
-                            <th:block th:if="${ts.iconIsSvgCode()}">
-                                <span th:utext="${ts.icon}"></span>
-                            </th:block>
-                            <th:block th:unless="${ts.iconIsSvgCode()}">
-                                <img th:src="@{/icons/tools/__${ts.icon}__}" alt="icon" onerror="this.style.display='none'">
-                            </th:block>
-                        </div>
-                        <div class="plugin-toolset-info">
-                            <div class="plugin-toolset-name" th:text="${ts.name}"></div>
-                            <div class="plugin-toolset-desc" th:text="${ts.description}"></div>
-                        </div>
-                        <span class="plugin-toolset-count" th:text="|${#lists.size(ts.tools)} 个方法|"></span>
-                    </div>
-                </div>
-                <div class="plugin-toolset-empty" th:if="${#lists.isEmpty(pluginToolSets.get(p.id))}">
-                    该插件不提供工具集（纯前端组件插件）
-                </div>
-            </div>
-
-            <!-- 工具集详情（二级） -->
-            <div th:each="toolSet : ${toolSets}"
+            <div th:each="toolSet, tsIter : ${toolSets}"
                  class="tool-detail"
+                 th:classappend="${tsIter.first ? 'active' : ''}"
                  th:attr="data-tool-name=${toolSet.name}">
                 <div class="detail-header">
                     <div class="detail-header-icon">
@@ -263,15 +71,13 @@
                         </th:block>
                     </div>
                     <div class="detail-header-info">
-                        <div class="detail-name" th:text="${toolSet.name}"></div>
+                        <div class="detail-name">
+                            <span th:text="${toolSet.name}"></span>
+                            <span class="tool-list-badge badge-disabled" th:unless="${toolSet.enabled}">已禁用</span>
+                        </div>
                         <div class="detail-desc" th:text="${toolSet.description}"></div>
                     </div>
                     <span class="detail-count-badge" th:if="${not #lists.isEmpty(toolSet.tools)}" th:text="|${#lists.size(toolSet.tools)} 个方法|"></span>
-                    <button th:if="${toolSet.hasConfigItems}" th:attr="onclick=|location.href='/tool-config/${toolSet.name}'|" class="btn-config" title="配置此工具集">配置</button>
-                    <button class="btn-back-to-plugin" th:if="${toolSet.pluginId != null}"
-                            th:attr="data-plugin-id=${toolSet.pluginId}"
-                            onclick="selectPluginById(this.getAttribute('data-plugin-id'))"
-                            title="返回所属插件">返回插件</button>
                 </div>
 
                 <div class="detail-meta">
@@ -295,11 +101,32 @@
                     </th:block>
                 </div>
 
+                <!-- 工具集级启用开关 -->
+                <div class="toolset-switch-bar">
+                    <span class="toolset-switch-label">工具集启用</span>
+                    <label class="switch">
+                        <input type="checkbox" th:checked="${toolSet.enabled}"
+                               th:attr="data-tool-set-name=${toolSet.name}"
+                               onchange="toggleToolSet(this)">
+                        <span class="slider"></span>
+                    </label>
+                    <span class="toolset-switch-hint">禁用后智能体将无法选择该工具集</span>
+                    <button th:if="${toolSet.hasConfigItems}" th:attr="onclick=|location.href='/tool-config/${toolSet.name}'|"
+                            class="btn-config" title="配置此工具集">配置</button>
+                </div>
+
                 <div class="detail-body" th:if="${not #lists.isEmpty(toolSet.tools)}">
-                    <div th:each="tool : ${toolSet.tools}" class="detail-tool-item">
+                    <div th:each="tool : ${toolSet.tools}" class="detail-tool-item"
+                         th:classappend="${tool.enabled ? '' : ' is-method-disabled'}">
                         <div class="detail-tool-header">
                             <span class="detail-tool-name" th:text="${tool.name}"></span>
                             <span class="detail-tool-desc" th:text="${tool.description}"></span>
+                            <label class="switch switch-sm">
+                                <input type="checkbox" th:checked="${tool.enabled}"
+                                       th:attr="data-tool-set-name=${toolSet.name},data-tool-name=${tool.name}"
+                                       onchange="toggleTool(this)">
+                                <span class="slider"></span>
+                            </label>
                         </div>
                         <div th:if="${not #lists.isEmpty(tool.parameters)}" class="detail-tool-params">
                             <table class="detail-param-table">
@@ -335,8 +162,8 @@
                 </div>
             </div>
 
-            <div th:if="${#lists.isEmpty(plugins)}" class="tool-detail active" data-tool-name="">
-                <div class="detail-empty-state">暂无插件，可从插件商店或本地安装插件包</div>
+            <div th:if="${#lists.isEmpty(toolSets)}" class="tool-detail active" data-tool-name="">
+                <div class="detail-empty-state">暂无工具集</div>
             </div>
         </div>
     </div>

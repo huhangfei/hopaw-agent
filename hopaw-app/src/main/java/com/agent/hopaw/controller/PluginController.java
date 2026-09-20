@@ -1,10 +1,14 @@
 package com.agent.hopaw.controller;
 
+import com.agent.hopaw.infra.model.dto.PluginDescriptor;
 import com.agent.hopaw.infra.model.dto.PluginInstallResult;
 import com.agent.hopaw.infra.model.dto.PluginUpdateInfo;
 import com.agent.hopaw.infra.model.dto.ResponseBean;
+import com.agent.hopaw.infra.model.dto.ToolSetInfo;
 import com.agent.hopaw.infra.service.IAgentPluginService;
+import com.agent.hopaw.infra.service.IToolSetService;
 import com.agent.hopaw.infra.service.PluginConfigService;
+import com.agent.hopaw.util.ToolSetViewUtil;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -25,6 +29,7 @@ import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 
@@ -42,10 +47,27 @@ public class PluginController {
 
     private final IAgentPluginService pluginService;
     private final PluginConfigService pluginConfigService;
+    private final IToolSetService toolSetService;
 
-    public PluginController(IAgentPluginService pluginService, PluginConfigService pluginConfigService) {
+    public PluginController(IAgentPluginService pluginService, PluginConfigService pluginConfigService,
+                            IToolSetService toolSetService) {
         this.pluginService = pluginService;
         this.pluginConfigService = pluginConfigService;
+        this.toolSetService = toolSetService;
+    }
+
+    // ==================== 页面 ====================
+
+    /** 插件管理页（运维管理一级）：插件列表 + 详情内手风琴展示工具集。 */
+    @GetMapping
+    public String pluginsPage(Model model) {
+        List<PluginDescriptor> plugins = pluginService.getPlugins();
+        List<ToolSetInfo> toolSets = toolSetService.getToolSets();
+        model.addAttribute("plugins", plugins);
+        model.addAttribute("pluginToolSets", ToolSetViewUtil.byPlugin(toolSets, plugins));
+        model.addAttribute("activePage", "plugins");
+        model.addAttribute("activeTab", "plugins");
+        return "plugins";
     }
 
     // ==================== 查询 ====================

@@ -12,6 +12,8 @@ public class ToolInfo {
     private List<String> descriptions;
     private List<ToolParamInfo> parameters;
     private ToolSecurityLevel.Level securityLevel;
+    /** 是否启用：false 表示工具方法级禁用（未记录视为 true） */
+    private boolean enabled = true;
 
     public ToolInfo() {
     }
@@ -40,5 +42,13 @@ public class ToolInfo {
 
     public void setDescriptions(List<String> descriptions) {
         this.descriptions = descriptions;
+    }
+
+    public boolean isEnabled() {
+        return enabled;
+    }
+
+    public void setEnabled(boolean enabled) {
+        this.enabled = enabled;
     }
 }
