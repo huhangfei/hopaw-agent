@@ -628,6 +628,14 @@ public class DatabaseInitializer implements CommandLineRunner {
             stmt.execute("CREATE INDEX IF NOT EXISTS idx_prompts_user ON prompts(user_id)");
             stmt.execute("CREATE INDEX IF NOT EXISTS idx_prompts_heat ON prompts(heat DESC)");
 
+            // 插件运行时状态表：持久化插件的启用/禁用决策（未记录的插件视为启用）
+            // 不保存版本等可由插件自身提供的元数据，避免与磁盘 JAR 不一致
+            stmt.execute("CREATE TABLE IF NOT EXISTS plugin_state (" +
+                    "plugin_id TEXT PRIMARY KEY, " +
+                    "enabled INTEGER DEFAULT 1, " +
+                    "update_time TIMESTAMP DEFAULT (datetime('now','localtime'))" +
+                    ")");
+
             log.info("Database tables created");
         }
     }

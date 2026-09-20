@@ -3,7 +3,6 @@ package com.agent.hopaw.infra.service;
 import com.agent.hopaw.infra.mapper.AgentMapper;
 import com.agent.hopaw.infra.model.dto.ToolSetInfo;
 import com.agent.hopaw.infra.model.entity.Agent;
-import com.agent.hopaw.infra.tool.IAgentToolService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
@@ -17,10 +16,11 @@ import java.util.stream.Collectors;
 public class AgentService implements IAgentService {
     private final static Logger logger = LoggerFactory.getLogger(AgentService.class);
     private final AgentMapper agentMapper;
-    private final IAgentToolService agentToolService;
-    public AgentService(AgentMapper agentMapper, IAgentToolService agentToolService) {
+    private final IToolSetService toolSetService;
+
+    public AgentService(AgentMapper agentMapper, IToolSetService toolSetService) {
         this.agentMapper = agentMapper;
-        this.agentToolService = agentToolService;
+        this.toolSetService = toolSetService;
     }
 
     @Override
@@ -143,12 +143,12 @@ public class AgentService implements IAgentService {
         List<String> finalAppendTools = appendTools;
         if (Boolean.TRUE.equals(agent.getEnableAllTools())) {
             //启用所有,此时选中的是要排除的
-            selectedTools = agentToolService.getToolSets().stream()
+            selectedTools = toolSetService.getToolSets().stream()
                     .filter(t -> !selectedToolNames.contains(t.getName()) || finalAppendTools.contains(t.getName()))
                     .collect(Collectors.toList());
         } else {
             //启用所有,此时选中的是要使用的
-            selectedTools = agentToolService.getToolSets().stream()
+            selectedTools = toolSetService.getToolSets().stream()
                     .filter(t -> selectedToolNames.contains(t.getName()) || finalAppendTools.contains(t.getName()))
                     .collect(Collectors.toList());
 

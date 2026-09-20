@@ -31,8 +31,8 @@ public class ChatSessionController {
     private final IChatHistoryService chatHistoryService;
     private final IChatMemoryService chatMemoryService;
     private final IRequestResponseLogService requestResponseLogService;
-    private final com.agent.hopaw.infra.tool.IAgentToolService agentToolService;
-    public ChatSessionController(IChatSessionService chatSessionService, IAgentExecutorService agentExecutorService, IChatHistoryService chatHistoryService, IChatMemoryService chatMemoryService, IRequestResponseLogService requestResponseLogService, com.agent.hopaw.infra.tool.IAgentToolService agentToolService) {
+    private final com.agent.hopaw.infra.service.IToolSetService agentToolService;
+    public ChatSessionController(IChatSessionService chatSessionService, IAgentExecutorService agentExecutorService, IChatHistoryService chatHistoryService, IChatMemoryService chatMemoryService, IRequestResponseLogService requestResponseLogService, com.agent.hopaw.infra.service.IToolSetService agentToolService) {
         this.chatSessionService = chatSessionService;
         this.agentExecutorService = agentExecutorService;
         this.chatHistoryService = chatHistoryService;

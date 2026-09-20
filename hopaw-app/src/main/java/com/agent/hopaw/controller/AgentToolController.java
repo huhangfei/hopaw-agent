@@ -1,195 +1,71 @@
 package com.agent.hopaw.controller;
 
-import com.agent.hopaw.infra.model.dto.*;
-import com.agent.hopaw.infra.model.entity.SysConfig;
-import com.agent.hopaw.infra.service.ISysConfigService;
-import com.agent.hopaw.infra.tool.IAgentToolService;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-import org.springframework.http.ContentDisposition;
-import org.springframework.http.HttpHeaders;
-import org.springframework.http.MediaType;
-import org.springframework.http.ResponseEntity;
+import com.agent.hopaw.infra.model.dto.ResponseBean;
+import com.agent.hopaw.infra.service.IAgentPluginService;
+import com.agent.hopaw.infra.service.IToolSetService;
+import com.agent.hopaw.infra.tool.AgentTool;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
-import org.springframework.web.bind.annotation.*;
-import org.springframework.web.multipart.MultipartFile;
-import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.ResponseBody;
 
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.CompletableFuture;
 
+/**
+ * 工具集管理页面与查询接口（二级）。
+ *
+ * <p>插件级操作（安装/升级/卸载/导出/启停）已迁至 {@link PluginController}（{@code /plugins}）。
+ * 本控制器只负责工具集（{@link AgentTool}）层面的展示与查询。</p>
+ */
 @Controller
 @RequestMapping("/tools")
 public class AgentToolController {
 
-    private static final Logger log = LoggerFactory.getLogger(AgentToolController.class);
-    private static final ObjectMapper objectMapper = new ObjectMapper();
+    private final IToolSetService toolSetService;
+    private final IAgentPluginService pluginService;
 
-    private final IAgentToolService IAgentToolService;
-    private final ISysConfigService sysConfigService;
-
-    public AgentToolController(IAgentToolService IAgentToolService, ISysConfigService sysConfigService) {
-        this.IAgentToolService = IAgentToolService;
-        this.sysConfigService = sysConfigService;
+    public AgentToolController(IToolSetService toolSetService, IAgentPluginService pluginService) {
+        this.toolSetService = toolSetService;
+        this.pluginService = pluginService;
     }
 
+    /** 工具管理页：内置工具 + 各插件的工具集。 */
     @GetMapping
     public String toolsPage(Model model) {
-        model.addAttribute("toolSets", IAgentToolService.getToolSets());
+        model.addAttribute("toolSets", toolSetService.getToolSets());
+        model.addAttribute("plugins", pluginService.getPlugins());
         model.addAttribute("activePage", "tools");
         model.addAttribute("activeTab", "tools");
         return "tools";
     }
 
+    /** 工具集列表（前端 index 页工具图标/配置按钮、智能体表单等消费）。 */
     @GetMapping("/api/list")
     @ResponseBody
     public ResponseBean list() {
-        return ResponseBean.success(IAgentToolService.getToolSets());
+        return ResponseBean.success(toolSetService.getToolSets());
     }
 
-    @PostMapping("/api/unload")
+    /**
+     * 工具集配置信息：是否存在配置项及其配置键（工具级）。
+     */
+    @GetMapping("/api/toolset-config-info")
     @ResponseBody
-    public ResponseBean unloadPlugin(@RequestParam String toolName,@RequestParam String toolVersion,
-                                     @RequestParam(required = false, defaultValue = "false") boolean cleanConfig) {
-        List<ToolSetInfo> toolSets = IAgentToolService.getToolSets();
-        var tool = toolSets.stream().filter(t -> t.getName().equals(toolName) && t.getVersion().equals(toolVersion)).findFirst().orElse(null);
-        if(tool!=null){
-            boolean result = IAgentToolService.unloadPlugin(tool.getJarFileName());
-            if(cleanConfig && result && tool.isHasConfigItems()){
-                String prefix = tool.getAgentTool().getConfigPrefix();
-                for (ToolConfigItem configItem : tool.getAgentTool().getConfigItems()) {
-                    String key = prefix + configItem.getKey();
-                    sysConfigService.deleteByKey(key);
-                    // MAP 结构：同步删除各组散键（主体键:mapKey:子配置key）
-                    if (configItem.getStructure() == ToolConfigItem.ConfigStructure.MAP) {
-                        for (SysConfig config : sysConfigService.getAll()) {
-                            if (config.getConfigKey().startsWith(key + ":")) {
-                                sysConfigService.deleteByKey(config.getConfigKey());
-                            }
-                        }
-                    }
-                }
-            }
-            return ResponseBean.success("插件卸载成功");
+    public ResponseBean toolSetConfigInfo(@RequestParam String toolSetName) {
+        AgentTool tool = toolSetService.getAgentTool(toolSetName);
+        if (tool != null && !tool.getConfigItems().isEmpty()) {
+            List<String> configKeys = tool.getConfigItems().stream()
+                    .map(item -> tool.getConfigPrefix() + item.getKey())
+                    .toList();
+            return ResponseBean.success(Map.of(
+                    "hasConfig", true,
+                    "toolSetName", tool.getName(),
+                    "configKeys", configKeys
+            ));
         }
-        return ResponseBean.fail("插件不存在或卸载失败");
-    }
-
-    @GetMapping("/api/plugin-config-info")
-    @ResponseBody
-    public ResponseBean getPluginConfigInfo(@RequestParam String toolName) {
-        try {
-            var tool = IAgentToolService.getAgentTools().stream()
-                    .filter(t -> t.getName().equals(toolName))
-                    .findFirst().orElse(null);
-            if (tool != null && !tool.getConfigItems().isEmpty()) {
-                return ResponseBean.success(java.util.Map.of(
-                        "hasConfig", true,
-                        "configKeys", tool.getConfigItems().stream()
-                                .map(item -> tool.getConfigPrefix() + item.getKey())
-                                .toList()
-                ));
-            }
-        } catch (Exception e) {
-            // ignore
-        }
-        return ResponseBean.success(java.util.Map.of("hasConfig", false));
-    }
-
-    @PostMapping("/api/install-upgrade")
-    public SseEmitter installOrUpgrade(@RequestBody PluginUpdateInfo updateInfo) {
-        SseEmitter emitter = new SseEmitter(600000L);
-
-        CompletableFuture.runAsync(() -> {
-            try {
-                PluginInstallResult result = IAgentToolService.installOrUpgradePlugin(updateInfo,
-                        stage -> {
-                            try {
-                                String data = objectMapper.writeValueAsString(Map.of("stage", stage));
-                                emitter.send(SseEmitter.event().name("stage").data(data));
-                            } catch (Exception e) {
-                                log.warn("Failed to send stage event", e);
-                            }
-                        },
-                        percent -> {
-                            try {
-                                String data = objectMapper.writeValueAsString(Map.of("percent", percent));
-                                emitter.send(SseEmitter.event().name("progress").data(data));
-                            } catch (Exception e) {
-                                log.warn("Failed to send progress event", e);
-                            }
-                        });
-
-                String resultJson = objectMapper.writeValueAsString(result);
-                Thread.sleep(100);
-                emitter.send(SseEmitter.event().name("complete").data(resultJson));
-                Thread.sleep(100);
-                emitter.complete();
-            } catch (Exception e) {
-                log.error("Install/upgrade failed", e);
-                try {
-                    String errData = objectMapper.writeValueAsString(Map.of("message", e.getMessage()));
-                    emitter.send(SseEmitter.event().name("error").data(errData));
-                } catch (Exception ex) {
-                    log.warn("Failed to send error event", ex);
-                }
-                emitter.completeWithError(e);
-            }
-        });
-        return emitter;
-    }
-
-    @PostMapping("/api/local-install")
-    @ResponseBody
-    public ResponseBean localInstall(@RequestParam("file") MultipartFile file) {
-        if (file.isEmpty()) {
-            return ResponseBean.fail("文件为空");
-        }
-        try {
-            String originalFilename = file.getOriginalFilename();
-            PluginInstallResult result;
-
-            // 根据文件扩展名自动判断类型
-            if (originalFilename != null && originalFilename.toLowerCase().endsWith(".jar")) {
-                // JAR文件：用原始文件名创建临时文件，安装时以原始文件名写入 plugins/ 目录
-                String safeName = originalFilename.replaceAll("[\\\\/:*?\"<>|]", "_");
-                java.nio.file.Path tempJar = java.nio.file.Files.createTempFile("plugin-install-", "-" + safeName);
-                try {
-                    file.transferTo(tempJar.toFile());
-                    result = IAgentToolService.installPluginFromJarFile(tempJar, safeName);
-                } finally {
-                    java.nio.file.Files.deleteIfExists(tempJar);
-                }
-            } else {
-                // ZIP文件或其他：使用原有的ZIP安装逻辑
-                result = IAgentToolService.installPluginFromBytes(file.getBytes());
-            }
-
-            return ResponseBean.success(result);
-        } catch (IllegalArgumentException e) {
-            return ResponseBean.fail(e.getMessage());
-        } catch (Exception e) {
-            log.error("Local install failed", e);
-            return ResponseBean.fail("安装失败: " + e.getMessage());
-        }
-    }
-
-    @GetMapping("/api/export/{toolName}/{toolVersion}")
-    @ResponseBody
-    public ResponseEntity<byte[]> exportPlugin(@PathVariable String toolName, @PathVariable String toolVersion) {
-        byte[] zipBytes = IAgentToolService.exportPlugin(toolName, toolVersion);
-        if (zipBytes == null) {
-            return ResponseEntity.notFound().build();
-        }
-        HttpHeaders headers = new HttpHeaders();
-        headers.setContentType(MediaType.APPLICATION_OCTET_STREAM);
-        String exportFileName = toolName + "-" + toolVersion;
-        headers.setContentDisposition(ContentDisposition.attachment()
-                .filename(exportFileName + ".zip").build());
-        headers.setContentLength(zipBytes.length);
-        return ResponseEntity.ok().headers(headers).body(zipBytes);
+        return ResponseBean.success(Map.of("hasConfig", false));
     }
 }

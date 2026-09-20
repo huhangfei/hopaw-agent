@@ -2,7 +2,7 @@ package com.agent.hopaw.controller;
 
 import com.agent.hopaw.infra.model.dto.ToolSetInfo;
 import com.agent.hopaw.infra.service.ToolConfigService;
-import com.agent.hopaw.infra.service.AgentToolService;
+import com.agent.hopaw.infra.service.IToolSetService;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.*;
@@ -16,9 +16,9 @@ import java.util.Map;
 public class ToolConfigController {
 
     private final ToolConfigService toolConfigService;
-    private final AgentToolService agentToolService;
+    private final IToolSetService agentToolService;
 
-    public ToolConfigController(ToolConfigService toolConfigService, AgentToolService agentToolService) {
+    public ToolConfigController(ToolConfigService toolConfigService, IToolSetService agentToolService) {
         this.toolConfigService = toolConfigService;
         this.agentToolService = agentToolService;
     }

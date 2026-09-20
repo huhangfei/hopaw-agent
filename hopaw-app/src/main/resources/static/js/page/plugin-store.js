@@ -379,7 +379,7 @@ function doInstallOrUpgrade() {
     }
 
     var updateInfo = {
-        toolName: plugin.name,
+        pluginId: plugin.name,
         version: v.version,
         fileName: v.jarFileName || plugin.jarFileName || (plugin.name + '.jar'),
         fileSize: v.fileSize,

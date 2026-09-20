@@ -15,7 +15,6 @@ import com.agent.hopaw.infra.model.dto.UserChatRequest;
 import com.agent.hopaw.infra.model.entity.Agent;
 import com.agent.hopaw.infra.model.entity.Project;
 import com.agent.hopaw.infra.model.entity.ProjectLog;
-import com.agent.hopaw.infra.tool.IAgentToolService;
 import com.agent.hopaw.infra.util.UuidUtil;
 import dev.langchain4j.data.message.Content;
 import dev.langchain4j.data.message.TextContent;

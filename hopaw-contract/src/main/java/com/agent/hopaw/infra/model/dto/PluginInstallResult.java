@@ -4,7 +4,7 @@ package com.agent.hopaw.infra.model.dto;
  * 插件安装/更新结果 DTO
  */
 public class PluginInstallResult {
-    private String toolName;
+    private String pluginId;
     private String version;
     private String fileName;
     private boolean success;
@@ -17,18 +17,18 @@ public class PluginInstallResult {
     public PluginInstallResult() {
     }
 
-    public PluginInstallResult(String toolName, String version, String fileName) {
-        this.toolName = toolName;
+    public PluginInstallResult(String pluginId, String version, String fileName) {
+        this.pluginId = pluginId;
         this.version = version;
         this.fileName = fileName;
     }
 
-    public String getToolName() {
-        return toolName;
+    public String getPluginId() {
+        return pluginId;
     }
 
-    public void setToolName(String toolName) {
-        this.toolName = toolName;
+    public void setPluginId(String pluginId) {
+        this.pluginId = pluginId;
     }
 
     public String getVersion() {
@@ -95,9 +95,9 @@ public class PluginInstallResult {
         this.conflictInfo = conflictInfo;
     }
 
-    public static PluginInstallResult success(String toolName, String version, String fileName, 
+    public static PluginInstallResult success(String pluginId, String version, String fileName, 
                                                int toolCount, boolean isUpgrade, String previousVersion) {
-        PluginInstallResult result = new PluginInstallResult(toolName, version, fileName);
+        PluginInstallResult result = new PluginInstallResult(pluginId, version, fileName);
         result.setSuccess(true);
         result.setToolCount(toolCount);
         result.setUpgrade(isUpgrade);
@@ -105,18 +105,18 @@ public class PluginInstallResult {
         
         if (isUpgrade) {
             result.setMessage(String.format("成功更新插件 %s 从 v%s 到 v%s，加载了 %d 个工具", 
-                                          toolName, previousVersion, version, toolCount));
+                                          pluginId, previousVersion, version, toolCount));
         } else {
             result.setMessage(String.format("成功安装插件 %s v%s，加载了 %d 个工具", 
-                                          toolName, version, toolCount));
+                                          pluginId, version, toolCount));
         }
         return result;
     }
 
-    public static PluginInstallResult success(String toolName, String version, String fileName, 
+    public static PluginInstallResult success(String pluginId, String version, String fileName, 
                                                int toolCount, boolean isUpgrade, String previousVersion,
                                                PluginConflictInfo conflictInfo) {
-        PluginInstallResult result = success(toolName, version, fileName, toolCount, isUpgrade, previousVersion);
+        PluginInstallResult result = success(pluginId, version, fileName, toolCount, isUpgrade, previousVersion);
         result.setConflictInfo(conflictInfo);
         if (conflictInfo != null && conflictInfo.hasConflicts()) {
             result.setMessage(result.getMessage() + "\n⚠️ 警告: " + conflictInfo.getMessage());
@@ -124,8 +124,8 @@ public class PluginInstallResult {
         return result;
     }
 
-    public static PluginInstallResult fail(String toolName, String version, String fileName, String message) {
-        PluginInstallResult result = new PluginInstallResult(toolName, version, fileName);
+    public static PluginInstallResult fail(String pluginId, String version, String fileName, String message) {
+        PluginInstallResult result = new PluginInstallResult(pluginId, version, fileName);
         result.setSuccess(false);
         result.setMessage(message);
         return result;

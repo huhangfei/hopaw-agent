@@ -7,7 +7,7 @@ import com.agent.hopaw.infra.model.entity.Agent;
 import com.agent.hopaw.infra.model.entity.AiModel;
 import com.agent.hopaw.infra.service.AgentService;
 import com.agent.hopaw.infra.service.AiModelService;
-import com.agent.hopaw.infra.tool.IAgentToolService;
+import com.agent.hopaw.infra.service.IToolSetService;
 import com.agent.hopaw.util.CurrentUser;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
@@ -28,10 +28,10 @@ import java.util.UUID;
 public class AgentController {
 
     private final AgentService agentService;
-    private final IAgentToolService agentToolService;
+    private final IToolSetService agentToolService;
     private final AiModelService aiModelService;
 
-    public AgentController(AgentService agentService, IAgentToolService agentToolService,
+    public AgentController(AgentService agentService, IToolSetService agentToolService,
                            AiModelService aiModelService) {
         this.agentService = agentService;
         this.agentToolService = agentToolService;

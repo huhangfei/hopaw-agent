@@ -1,8 +1,7 @@
 package com.agent.hopaw.infra.service;
 
+import com.agent.hopaw.infra.model.dto.PluginDescriptor;
 import com.agent.hopaw.infra.model.dto.PluginRepoResult;
-import com.agent.hopaw.infra.model.dto.ToolSetInfo;
-import com.agent.hopaw.infra.tool.IAgentToolService;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -20,11 +19,11 @@ public class PluginStoreService implements IPluginStoreService {
     private static final Logger log = LoggerFactory.getLogger(PluginStoreService.class);
     private static final ObjectMapper objectMapper = new ObjectMapper();
     private final ISysConfigService sysConfigService;
-    private final IAgentToolService agentToolService;
+    private final IAgentPluginService agentPluginService;
 
-    public PluginStoreService(ISysConfigService sysConfigService, IAgentToolService agentToolService) {
+    public PluginStoreService(ISysConfigService sysConfigService, IAgentPluginService agentPluginService) {
         this.sysConfigService = sysConfigService;
-        this.agentToolService = agentToolService;
+        this.agentPluginService = agentPluginService;
     }
 
     @Override
@@ -33,9 +32,16 @@ public class PluginStoreService implements IPluginStoreService {
         if (sourceUrls.isEmpty()) {
             return Collections.emptyList();
         }
-        Map<String, ToolSetInfo> installedMap = new HashMap<>();
-        for (ToolSetInfo info : agentToolService.getToolSets()) {
-            installedMap.put(info.getName(), info);
+        // 已安装版本索引：pluginId 及其下所有工具集名 → 插件版本
+        // （商店条目可能以 pluginId 或历史工具集名命名，两个口径都能命中判定）
+        Map<String, String> installedVersions = new HashMap<>();
+        for (PluginDescriptor descriptor : agentPluginService.getPlugins()) {
+            installedVersions.put(descriptor.getId(), descriptor.getVersion());
+            if (descriptor.getToolSetNames() != null) {
+                for (String toolSetName : descriptor.getToolSetNames()) {
+                    installedVersions.put(toolSetName, descriptor.getVersion());
+                }
+            }
         }
 
         List<PluginRepoResult> result = new ArrayList<>();
@@ -49,11 +55,11 @@ public class PluginStoreService implements IPluginStoreService {
                 if (storePlugins == null) continue;
 
                 for (PluginRepoResult storePlugin : storePlugins) {
-                    ToolSetInfo installed = installedMap.get(storePlugin.getName());
+                    String installedVersion = installedVersions.get(storePlugin.getName());
                     if (storePlugin.getVersions() != null) {
                         for (PluginRepoResult.VersionEntry version : storePlugin.getVersions()) {
-                            if (installed != null) {
-                                if (version.getVersion().equals(installed.getVersion())) {
+                            if (installedVersion != null) {
+                                if (version.getVersion().equals(installedVersion)) {
                                     version.setStatus("installed");
                                 } else {
                                     version.setStatus("update_available");
@@ -63,8 +69,8 @@ public class PluginStoreService implements IPluginStoreService {
                             }
                         }
                     }
-                    if (installed != null) {
-                        storePlugin.setInstalledVersion(installed.getVersion());
+                    if (installedVersion != null) {
+                        storePlugin.setInstalledVersion(installedVersion);
                     }
                     result.add(storePlugin);
                 }

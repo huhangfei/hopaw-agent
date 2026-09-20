@@ -1,6 +1,6 @@
 package com.agent.hopaw.controller;
 
-import com.agent.hopaw.infra.plugin.PluginRegistry;
+import com.agent.hopaw.infra.service.IAgentPluginService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.ResponseEntity;
@@ -24,7 +24,7 @@ import java.util.Map;
  * 缺省时由插件自行决定默认行为。</p>
  *
  * <p>返回体即插件 invoke 的返回 Map（插件自行约定内容结构）；
- * 插件不存在返回 404，插件未提供 invoke 能力返回 404，插件内部异常返回 500（body 携带错误信息）。</p>
+ * 插件不存在、插件已禁用、插件未提供 invoke 能力均返回 404，插件内部异常返回 500（body 携带错误信息）。</p>
  */
 @RestController
 @RequestMapping("/api/plugins")
@@ -32,28 +32,27 @@ public class PluginInvokeController {
 
     private static final Logger log = LoggerFactory.getLogger(PluginInvokeController.class);
 
-    private final PluginRegistry registry;
+    private final IAgentPluginService pluginService;
 
-    public PluginInvokeController(PluginRegistry registry) {
-        this.registry = registry;
+    public PluginInvokeController(IAgentPluginService pluginService) {
+        this.pluginService = pluginService;
     }
 
     @PostMapping("/{pluginId}/invoke")
     public ResponseEntity<Map<String, Object>> invoke(@PathVariable String pluginId,
                                                       @RequestBody(required = false) Map<String, Object> params) {
-        PluginRegistry.PluginEntry entry = registry.getPlugin(pluginId);
-        if (entry == null) {
-            return ResponseEntity.status(404).body(error("plugin not found: " + pluginId));
-        }
-
         Map<String, Object> safeParams = params == null ? Map.of() : params;
-        String toolRef = safeParams.get("toolRef") instanceof String ? (String) safeParams.get("toolRef") : null;
+        Object toolRefValue = safeParams.get("toolRef");
+        String toolRef = toolRefValue instanceof String ? (String) toolRefValue : null;
         try {
-            Map<String, Object> result = entry.getPlugin().invoke(toolRef, safeParams);
+            Map<String, Object> result = pluginService.invoke(pluginId, toolRef, safeParams);
             return ResponseEntity.ok(result == null ? Map.of() : result);
         } catch (UnsupportedOperationException e) {
             log.debug("Plugin [{}] does not support invoke", pluginId);
             return ResponseEntity.status(404).body(error("插件 " + pluginId + " 不支持 invoke 调用"));
+        } catch (IllegalArgumentException e) {
+            log.debug("Plugin invoke rejected, pluginId={}: {}", pluginId, e.getMessage());
+            return ResponseEntity.status(404).body(error(e.getMessage()));
         } catch (Exception e) {
             log.error("Plugin invoke failed, pluginId={}, toolRef={}, params={}", pluginId, toolRef, safeParams.keySet(), e);
             return ResponseEntity.status(500).body(error(e.getMessage() == null ? e.getClass().getSimpleName() : e.getMessage()));

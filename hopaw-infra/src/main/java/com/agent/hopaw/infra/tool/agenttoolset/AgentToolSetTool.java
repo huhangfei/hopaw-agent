@@ -5,8 +5,8 @@ import com.agent.hopaw.infra.model.dto.ToolParamInfo;
 import com.agent.hopaw.infra.model.dto.ToolSetInfo;
 import com.agent.hopaw.infra.model.entity.Agent;
 import com.agent.hopaw.infra.service.IAgentService;
+import com.agent.hopaw.infra.service.IToolSetService;
 import com.agent.hopaw.infra.tool.AgentTool;
-import com.agent.hopaw.infra.tool.IAgentToolService;
 import com.agent.hopaw.infra.tool.ToolSecurityLevel;
 import com.agent.hopaw.infra.util.InvocationParametersWrapper;
 import dev.langchain4j.agent.tool.P;
@@ -24,11 +24,11 @@ import java.util.List;
 @Component("agentToolSetTool")
 public class AgentToolSetTool implements AgentTool {
 
-    private final IAgentToolService agentToolService;
+    private final IToolSetService toolSetService;
     private final IAgentService agentService;
 
-    public AgentToolSetTool(IAgentToolService agentToolService, IAgentService agentService) {
-        this.agentToolService = agentToolService;
+    public AgentToolSetTool(IToolSetService toolSetService, IAgentService agentService) {
+        this.toolSetService = toolSetService;
         this.agentService = agentService;
     }
 
@@ -94,7 +94,7 @@ public class AgentToolSetTool implements AgentTool {
     @Tool(value = {"查询智能体工具集详情", "按工具集名称查询该工具集的详细信息和工具参数明细"})
     public String findAgentToolSetDetail(@P(value = "工具集名称，例如 projectTool、workflowTaskTool") String toolSetName,
                                          InvocationParameters invocationParameters) {
-        List<ToolSetInfo> toolSets = agentToolService.getToolSets();
+        List<ToolSetInfo> toolSets = toolSetService.getToolSets();
         if (toolSets == null || toolSets.isEmpty()) {
             return "失败：当前系统中没有可用的智能体工具集";
         }
@@ -149,7 +149,7 @@ public class AgentToolSetTool implements AgentTool {
             return "失败：工具名称不能为空，可先调用「获取所有智能体工具」获取工具清单";
         }
         String target = toolName.trim();
-        List<ToolSetInfo> toolSets = agentToolService.getToolSets();
+        List<ToolSetInfo> toolSets = toolSetService.getToolSets();
         if (toolSets == null || toolSets.isEmpty()) {
             return "失败：当前系统中没有可用的智能体工具集";
         }

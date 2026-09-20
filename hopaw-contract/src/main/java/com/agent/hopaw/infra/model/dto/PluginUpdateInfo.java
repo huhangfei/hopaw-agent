@@ -6,7 +6,8 @@ public class PluginUpdateInfo {
     private long fileSize;
     private String downloadUrl;
     private String sha256Hash;
-    private String toolName;
+    /** 插件标识（pluginId） */
+    private String pluginId;
     private String currentVersion;
     private boolean installed;
     private boolean needUpgrade;
@@ -54,12 +55,12 @@ public class PluginUpdateInfo {
         this.sha256Hash = sha256Hash;
     }
 
-    public String getToolName() {
-        return toolName;
+    public String getPluginId() {
+        return pluginId;
     }
 
-    public void setToolName(String toolName) {
-        this.toolName = toolName;
+    public void setPluginId(String pluginId) {
+        this.pluginId = pluginId;
     }
 
     public String getCurrentVersion() {

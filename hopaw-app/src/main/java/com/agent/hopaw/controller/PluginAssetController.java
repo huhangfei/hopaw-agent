@@ -2,6 +2,7 @@ package com.agent.hopaw.controller;
 
 import com.agent.hopaw.infra.plugin.PluginRegistry;
 import com.agent.hopaw.infra.plugin.PluginAsset;
+import com.agent.hopaw.infra.service.IAgentPluginService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpHeaders;
@@ -27,9 +28,11 @@ import java.util.Map;
  *
  * <p>两个能力：</p>
  * <ol>
- *   <li>{@code GET /api/plugins/assets?page=} —— 前端 loader 拉取当前页面需要的资源清单；</li>
- *   <li>{@code GET /api/plugins/{plugin}/assets/**} —— 流式返回 JAR 内 static/ 资源（路径穿越防护 + immutable 缓存）。</li>
+ *   <li>{@code GET /api/plugins/assets?page=} —— 前端 loader 拉取当前页面需要的资源清单（已禁用插件不返回）；</li>
+ *   <li>{@code GET /api/plugins/{pluginId}/assets/**} —— 流式返回 JAR 内 static/ 资源（路径穿越防护 + immutable 缓存）。</li>
  * </ol>
+ *
+ * <p>路径变量 {@code pluginId} 为插件标识（不再是 JAR 文件名）。</p>
  */
 @RestController
 @RequestMapping("/api/plugins")
@@ -38,19 +41,25 @@ public class PluginAssetController {
     private static final Logger log = LoggerFactory.getLogger(PluginAssetController.class);
 
     private final PluginRegistry registry;
+    private final IAgentPluginService pluginService;
 
-    public PluginAssetController(PluginRegistry registry) {
+    public PluginAssetController(PluginRegistry registry, IAgentPluginService pluginService) {
         this.registry = registry;
+        this.pluginService = pluginService;
     }
 
     /**
-     * 前端页面调用：拉取给定页面标识需要的资源清单（已按 priority 升序）。
+     * 前端页面调用：拉取给定页面标识需要的资源清单（已按 priority 升序，已禁用插件不注入）。
      */
     @GetMapping("/assets")
     public List<Map<String, Object>> list(@RequestParam(required = false) String page) {
         List<PluginAsset> assets = registry.assetsForPage(page == null ? "" : page);
         List<Map<String, Object>> result = new ArrayList<>(assets.size());
         for (PluginAsset a : assets) {
+            if (!pluginService.isEnabled(a.getPlugin())) {
+                log.debug("Skip assets of disabled plugin [{}]", a.getPlugin());
+                continue;
+            }
             Map<String, Object> item = new HashMap<>();
             item.put("id", a.getId());
             item.put("plugin", a.getPlugin());
@@ -69,14 +78,14 @@ public class PluginAssetController {
     /**
      * 实际资源下载。路径来自 URL，需严格防护路径穿越，仅允许 static/ 前缀。
      */
-    @GetMapping("/{plugin}/assets/**")
-    public ResponseEntity<byte[]> serve(@PathVariable String plugin, HttpServletRequest request) throws IOException {
+    @GetMapping("/{pluginId}/assets/**")
+    public ResponseEntity<byte[]> serve(@PathVariable String pluginId, HttpServletRequest request) throws IOException {
         String fullPath = (String) request.getAttribute(
                 org.springframework.web.servlet.HandlerMapping.PATH_WITHIN_HANDLER_MAPPING_ATTRIBUTE);
         if (fullPath == null) {
             fullPath = request.getRequestURI();
         }
-        String prefix = "/api/plugins/" + plugin + "/assets/";
+        String prefix = "/api/plugins/" + pluginId + "/assets/";
         int idx = fullPath.indexOf(prefix);
         if (idx < 0) {
             return ResponseEntity.notFound().build();
@@ -94,9 +103,13 @@ public class PluginAssetController {
             return ResponseEntity.status(404).build();
         }
 
-        PluginRegistry.PluginEntry entry = registry.getPlugin(plugin);
+        PluginRegistry.PluginEntry entry = registry.getPlugin(pluginId);
         if (entry == null) {
             return ResponseEntity.notFound().build();
+        }
+        if (!pluginService.isEnabled(pluginId)) {
+            log.debug("Rejected asset request for disabled plugin [{}]", pluginId);
+            return ResponseEntity.status(404).build();
         }
 
         try (InputStream is = entry.getClassLoader().getResourceAsStream(path)) {

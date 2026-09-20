@@ -7,7 +7,7 @@ import com.agent.hopaw.infra.model.entity.ChatSession;
 import com.agent.hopaw.infra.service.AgentService;
 import com.agent.hopaw.infra.service.IAgentExecutorService;
 import com.agent.hopaw.infra.service.IChatSessionService;
-import com.agent.hopaw.infra.tool.IAgentToolService;
+import com.agent.hopaw.infra.service.IToolSetService;
 import com.agent.hopaw.infra.util.UuidUtil;
 import com.agent.hopaw.util.CurrentUser;
 import org.springframework.stereotype.Controller;
@@ -23,11 +23,11 @@ public class ChatController {
 
     private final IChatSessionService chatSessionService;
     private final AgentService agentService;
-    private final IAgentToolService agentToolService;
+    private final IToolSetService agentToolService;
     private final IAgentExecutorService agentExecutorService;
     private final AvatarSettingsService avatarSettingsService;
 
-    public ChatController(IChatSessionService chatSessionService, AgentService agentService, IAgentToolService agentToolService,
+    public ChatController(IChatSessionService chatSessionService, AgentService agentService, IToolSetService agentToolService,
                           IAgentExecutorService agentExecutorService,
                           AvatarSettingsService avatarSettingsService) {
         this.chatSessionService = chatSessionService;
