@@ -17,6 +17,7 @@ import org.springframework.boot.context.event.ApplicationReadyEvent;
 import org.springframework.context.event.EventListener;
 import org.springframework.stereotype.Component;
 
+import com.agent.hopaw.infra.tool.AbstractAgentTool;
 import com.agent.hopaw.infra.tool.AgentTool;
 
 /**
@@ -161,6 +162,8 @@ public class JarPluginLoader {
                     }
                     try {
                         beanFactory.autowireBean(tool);
+                        // 必须在 asyncInit 之前回填宿主身份：工具常在 asyncInit 内按 getConfigPrefix() 读自己的配置
+                        injectPluginId(plugin.getId(), tool);
                         tool.asyncInit();
                         tools.add(tool);
                     } catch (Exception e) {
@@ -306,6 +309,26 @@ public class JarPluginLoader {
 
     public Path getPluginDir() {
         return pluginDir;
+    }
+
+    /**
+     * 回填工具所属的宿主插件标识，使其配置键落在 {@code plugin.<pluginId>.tool.<工具集名>.} 下。
+     *
+     * <p>调用时机必须在工具 {@code asyncInit()} 之前——工具可能在 {@code asyncInit} 里就按
+     * {@link AgentTool#getConfigPrefix()} 读自己的配置，注入晚了会读到空配置。</p>
+     *
+     * <p>未继承 {@link AbstractAgentTool} 的工具无处存放该标识，配置键退化为
+     * {@code tool.<工具集名>.}（兼容未按新契约重新打包的旧插件 JAR），此处打 WARN 提示重新打包。</p>
+     */
+    private void injectPluginId(String pluginId, AgentTool tool) {
+        if (tool instanceof AbstractAgentTool) {
+            tool.setPluginId(pluginId);
+        } else {
+            logger.warn("Tool [{}] of plugin [{}] does not extend AbstractAgentTool, "
+                            + "its config prefix falls back to tool.{}. Please re-package the plugin "
+                            + "with the current hopaw-contract.",
+                    tool.getClass().getName(), pluginId, tool.getName());
+        }
     }
 
     private static void closeQuietly(PluginClassLoader classLoader) {
