@@ -191,7 +191,7 @@ public class SshTool implements AgentTool {
     }
 
     @ToolSecurityLevel(ToolSecurityLevel.Level.ALL_REQUIRE_APPROVAL)
-    @Tool(value = {"SSH连接", "SSH远程连接服务器，建立SSH会话。密码属于敏感信息，如果账号密码错误不要自行猜测，请搜索记忆或询问用户。连接成功后会返回sessionKey，后续操作需要使用此sessionKey。"})
+    @Tool(name = "sshTool_sshConnect", value = {"SSH连接", "SSH远程连接服务器，建立SSH会话。密码属于敏感信息，如果账号密码错误不要自行猜测，请搜索记忆或询问用户。连接成功后会返回sessionKey，后续操作需要使用此sessionKey。"})
     public String sshConnect(
             @P(description = "服务器IP地址或域名") String host,
             @P(description = "SSH端口号，默认22", required = false) Integer port,
@@ -325,7 +325,7 @@ public class SshTool implements AgentTool {
     }
 
     @ToolSecurityLevel(ToolSecurityLevel.Level.ALL_REQUIRE_APPROVAL)
-    @Tool(value = {"SSH按配置连接", "通过系统配置中预置的服务器配置主键建立SSH会话，无需传入明文的IP、账号与密码。服务器配置在系统配置的SSH工具中维护（包含服务器IP、端口、账号、密码，密码加密存储）。连接成功后返回该配置主键作为sessionKey，后续操作使用此sessionKey。"})
+    @Tool(name = "sshTool_sshConnectFromConfig", value = {"SSH按配置连接", "通过系统配置中预置的服务器配置主键建立SSH会话，无需传入明文的IP、账号与密码。服务器配置在系统配置的SSH工具中维护（包含服务器IP、端口、账号、密码，密码加密存储）。连接成功后返回该配置主键作为sessionKey，后续操作使用此sessionKey。"})
     public String sshConnectFromConfig(
             @P(description = "服务器配置主键，即系统配置中的服务器配置名称") String serverKey) {
         SshServer server = resolveServer(serverKey);
@@ -345,7 +345,7 @@ public class SshTool implements AgentTool {
     }
 
     @ToolSecurityLevel(ToolSecurityLevel.Level.SAFE)
-    @Tool(value = {"SSH获取服务器配置列表", "获取系统配置中所有已配置的SSH服务器列表（配置名称、服务器IP、端口、登录账号），不包含密码。可用于查询可用配置或确认某个配置主键是否存在，供sshConnectFromConfig使用。", "SSH,配置,列表,服务器"})
+    @Tool(name = "sshTool_getSshConnectConfigs", value = {"SSH获取服务器配置列表", "获取系统配置中所有已配置的SSH服务器列表（配置名称、服务器IP、端口、登录账号），不包含密码。可用于查询可用配置或确认某个配置主键是否存在，供sshConnectFromConfig使用。", "SSH,配置,列表,服务器"})
     public String getSshConnectConfigs() {
         if (cachedServers.isEmpty()) {
             reloadServers();
@@ -367,7 +367,7 @@ public class SshTool implements AgentTool {
     }
 
     @ToolSecurityLevel(ToolSecurityLevel.Level.ALL_REQUIRE_APPROVAL)
-    @Tool(value = {"SSH执行命令", "在已连接的SSH会话上执行远程命令，需要先通过sshConnect建立连接获取sessionKey"})
+    @Tool(name = "sshTool_sshExec", value = {"SSH执行命令", "在已连接的SSH会话上执行远程命令，需要先通过sshConnect建立连接获取sessionKey"})
     public String sshExec(
             @P(description = "会话标识，由sshConnect返回的sessionKey") String sessionKey,
             @P(description = "要执行的远程命令") String command,
@@ -450,7 +450,7 @@ public class SshTool implements AgentTool {
     }
 
     @ToolSecurityLevel(ToolSecurityLevel.Level.ALL_REQUIRE_APPROVAL)
-    @Tool(value = {"SSH上传文件", "通过SFTP上传本地文件到远程服务器，需要先建立SSH连接"})
+    @Tool(name = "sshTool_sshUpload", value = {"SSH上传文件", "通过SFTP上传本地文件到远程服务器，需要先建立SSH连接"})
     public String sshUpload(
             @P(description = "会话标识，由sshConnect返回的sessionKey") String sessionKey,
             @P(description = "本地文件路径") String localPath,
@@ -501,7 +501,7 @@ public class SshTool implements AgentTool {
     }
 
     @ToolSecurityLevel(ToolSecurityLevel.Level.ALL_REQUIRE_APPROVAL)
-    @Tool(value = {"SSH下载文件", "通过SFTP从远程服务器下载文件到本地，需要先建立SSH连接"})
+    @Tool(name = "sshTool_sshDownload", value = {"SSH下载文件", "通过SFTP从远程服务器下载文件到本地，需要先建立SSH连接"})
     public String sshDownload(
             @P(description = "会话标识，由sshConnect返回的sessionKey") String sessionKey,
             @P(description = "远程服务器文件路径") String remotePath,
@@ -550,7 +550,7 @@ public class SshTool implements AgentTool {
     }
 
     @ToolSecurityLevel(ToolSecurityLevel.Level.SAFE)
-    @Tool(value = {"SSH断开连接", "断开SSH远程连接，释放会话资源"})
+    @Tool(name = "sshTool_sshDisconnect", value = {"SSH断开连接", "断开SSH远程连接，释放会话资源"})
     public String sshDisconnect(
             @P(description = "会话标识，由sshConnect返回的sessionKey") String sessionKey) {
         if (sessionKey == null || sessionKey.trim().isEmpty()) {
@@ -567,7 +567,7 @@ public class SshTool implements AgentTool {
     }
 
     @ToolSecurityLevel(ToolSecurityLevel.Level.SAFE)
-    @Tool(value = {"断开所有SSH连接", "断开所有SSH远程连接，清理所有会话资源"})
+    @Tool(name = "sshTool_sshDisconnectAll", value = {"断开所有SSH连接", "断开所有SSH远程连接，清理所有会话资源"})
     public String sshDisconnectAll() {
         int count = 0;
         for (Map.Entry<String, Session> entry : SESSION_CACHE.entrySet()) {

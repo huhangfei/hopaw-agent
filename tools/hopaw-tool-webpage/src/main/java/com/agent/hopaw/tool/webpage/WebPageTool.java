@@ -144,7 +144,7 @@ public class WebPageTool implements AgentTool {
     }
 
     @ToolSecurityLevel(ToolSecurityLevel.Level.SAFE)
-    @Tool(value = {"获取网页", "获取网页内容，输入URL地址，返回网页的纯文本或HTML源文件"})
+    @Tool(name = "webPage_fetchWebPage", value = {"获取网页", "获取网页内容，输入URL地址，返回网页的纯文本或HTML源文件"})
     public String fetchWebPage(@P(description = "URL地址") String url,
                                @P(description = "返回文本最大长度，超出截断，默认5000", required = false) Integer maxLength,
                                @P(description = "返回格式: text=纯文本(默认), html=HTML源文件", required = false) String format) {

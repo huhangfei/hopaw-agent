@@ -60,7 +60,7 @@ public class ImageOperationTool implements AgentTool {
     private volatile int cachedMaxReturnSizeKb = 0;
 
     @ToolSecurityLevel(ToolSecurityLevel.Level.SAFE)
-    @Tool(value = {"读取图片", "读取指定路径的图片文件并以图片内容返回给大模型，可通过质量参数压缩图片以减少数据量", "图片读取"})
+    @Tool(name = "imageOperation_readImage", value = {"读取图片", "读取指定路径的图片文件并以图片内容返回给大模型，可通过质量参数压缩图片以减少数据量", "图片读取"})
     public List<Content> readImage(
             @P(description = "图片文件路径，支持 jpg/jpeg/png/bmp/gif") String filePath,
             @P(description = "图片压缩质量(0.1-1.0)，传入时按JPEG重新编码压缩，值越小体积越小；为空则返回原始图片", required = false) Double quality) {
@@ -162,7 +162,7 @@ public class ImageOperationTool implements AgentTool {
     }
 
     @ToolSecurityLevel(ToolSecurityLevel.Level.PARAM_REQUIRE_APPROVAL)
-    @Tool(value = {"保存SVG图片", "将SVG代码渲染为位图并保存到指定路径，输出格式由文件扩展名决定(.png/.jpg/.jpeg)，SVG代码需包含xmlns命名空间", "SVG转图片"})
+    @Tool(name = "imageOperation_saveSvgImage", value = {"保存SVG图片", "将SVG代码渲染为位图并保存到指定路径，输出格式由文件扩展名决定(.png/.jpg/.jpeg)，SVG代码需包含xmlns命名空间", "SVG转图片"})
     public String saveSvgImage(
             @P(description = "SVG代码，根元素需包含xmlns=\"http://www.w3.org/2000/svg\"，建议指定width和height属性") String svgCode,
             @P(description = "保存图片的完整文件路径，扩展名 .png 或 .jpg/.jpeg 决定输出格式，如 D:/images/logo.png") String filePath) {
@@ -217,7 +217,7 @@ public class ImageOperationTool implements AgentTool {
     }
 
     @ToolSecurityLevel(ToolSecurityLevel.Level.PARAM_REQUIRE_APPROVAL)
-    @Tool(value = {"SVG文件转图片", "读取指定路径的SVG文件并渲染为位图保存到指定路径，输出格式由文件扩展名决定(.png/.jpg/.jpeg)", "SVG文件转图片"})
+    @Tool(name = "imageOperation_saveSvgFileToImage", value = {"SVG文件转图片", "读取指定路径的SVG文件并渲染为位图保存到指定路径，输出格式由文件扩展名决定(.png/.jpg/.jpeg)", "SVG文件转图片"})
     public String saveSvgFileToImage(
             @P(description = "SVG文件的完整路径") String svgFilePath,
             @P(description = "保存图片的完整文件路径，扩展名 .png 或 .jpg/.jpeg 决定输出格式，如 D:/images/logo.png") String filePath) {
@@ -299,7 +299,7 @@ public class ImageOperationTool implements AgentTool {
     }
 
     @ToolSecurityLevel(ToolSecurityLevel.Level.PARAM_REQUIRE_APPROVAL)
-    @Tool(value = {"缩放图片", "按比例或目标宽高缩放图片并保存到指定路径，可只传宽或高按比例缩放", "图片缩放"})
+    @Tool(name = "imageOperation_scaleImage", value = {"缩放图片", "按比例或目标宽高缩放图片并保存到指定路径，可只传宽或高按比例缩放", "图片缩放"})
     public String scaleImage(
             @P(description = "源图片路径，支持 jpg/jpeg/png/bmp/gif") String sourcePath,
             @P(description = "输出图片路径，扩展名(.png/.jpg/.jpeg/.bmp/.gif)决定输出格式") String targetPath,
@@ -334,7 +334,7 @@ public class ImageOperationTool implements AgentTool {
     }
 
     @ToolSecurityLevel(ToolSecurityLevel.Level.PARAM_REQUIRE_APPROVAL)
-    @Tool(value = {"压缩图片", "按质量参数重新编码压缩图片以减小体积，输出格式由目标路径扩展名决定，建议输出为 jpg/jpeg 以获得明显压缩效果", "图片压缩"})
+    @Tool(name = "imageOperation_compressImage", value = {"压缩图片", "按质量参数重新编码压缩图片以减小体积，输出格式由目标路径扩展名决定，建议输出为 jpg/jpeg 以获得明显压缩效果", "图片压缩"})
     public String compressImage(
             @P(description = "源图片路径，支持 jpg/jpeg/png/bmp/gif") String sourcePath,
             @P(description = "输出图片路径，扩展名(.png/.jpg/.jpeg/.bmp/.gif)决定输出格式") String targetPath,
@@ -357,7 +357,7 @@ public class ImageOperationTool implements AgentTool {
     }
 
     @ToolSecurityLevel(ToolSecurityLevel.Level.PARAM_REQUIRE_APPROVAL)
-    @Tool(value = {"旋转图片", "顺时针旋转图片并保存到指定路径，支持任意角度如 90、180、270、45", "图片旋转"})
+    @Tool(name = "imageOperation_rotateImage", value = {"旋转图片", "顺时针旋转图片并保存到指定路径，支持任意角度如 90、180、270、45", "图片旋转"})
     public String rotateImage(
             @P(description = "源图片路径，支持 jpg/jpeg/png/bmp/gif") String sourcePath,
             @P(description = "输出图片路径，扩展名(.png/.jpg/.jpeg/.bmp/.gif)决定输出格式") String targetPath,
@@ -382,7 +382,7 @@ public class ImageOperationTool implements AgentTool {
     }
 
     @ToolSecurityLevel(ToolSecurityLevel.Level.PARAM_REQUIRE_APPROVAL)
-    @Tool(value = {"裁剪图片", "按坐标和尺寸裁剪图片区域并保存到指定路径", "图片裁剪"})
+    @Tool(name = "imageOperation_cropImage", value = {"裁剪图片", "按坐标和尺寸裁剪图片区域并保存到指定路径", "图片裁剪"})
     public String cropImage(
             @P(description = "源图片路径，支持 jpg/jpeg/png/bmp/gif") String sourcePath,
             @P(description = "输出图片路径，扩展名(.png/.jpg/.jpeg/.bmp/.gif)决定输出格式") String targetPath,
@@ -418,7 +418,7 @@ public class ImageOperationTool implements AgentTool {
     }
 
     @ToolSecurityLevel(ToolSecurityLevel.Level.PARAM_REQUIRE_APPROVAL)
-    @Tool(value = {"转换图片格式", "将图片转换为其他格式并保存到指定路径，输出格式由目标路径扩展名决定", "图片格式转换"})
+    @Tool(name = "imageOperation_convertImageFormat", value = {"转换图片格式", "将图片转换为其他格式并保存到指定路径，输出格式由目标路径扩展名决定", "图片格式转换"})
     public String convertImageFormat(
             @P(description = "源图片路径，支持 jpg/jpeg/png/bmp/gif") String sourcePath,
             @P(description = "输出图片路径，扩展名(.png/.jpg/.jpeg/.bmp/.gif)决定输出格式") String targetPath) {

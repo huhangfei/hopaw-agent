@@ -65,7 +65,7 @@ public class DatabaseQueryTool implements AgentTool {
     // ========== @Tool 方法 ==========
 
     @ToolSecurityLevel(ToolSecurityLevel.Level.SAFE)
-    @Tool(value = {
+    @Tool(name = "database_testDatabaseConnection", value = {
             "测试数据库连接",
             "使用给定的 JDBC URL、用户名和密码测试数据库连通性；参数留空时使用插件配置的默认连接信息。"
     })
@@ -94,7 +94,7 @@ public class DatabaseQueryTool implements AgentTool {
     }
 
     @ToolSecurityLevel(ToolSecurityLevel.Level.SAFE)
-    @Tool(value = {
+    @Tool(name = "database_executeSelectQuery", value = {
             "查询数据库",
             "执行 SELECT 查询并返回结果集。结果以表格形式展示，最多返回指定行数。"
     })
@@ -135,7 +135,7 @@ public class DatabaseQueryTool implements AgentTool {
     }
 
     @ToolSecurityLevel(ToolSecurityLevel.Level.PARAM_REQUIRE_APPROVAL)
-    @Tool(value = {
+    @Tool(name = "database_executeUpdateSql", value = {
             "执行SQL",
             "执行 INSERT / UPDATE / DELETE 或 DDL 语句。返回影响行数或执行结果。"
     })
@@ -173,7 +173,7 @@ public class DatabaseQueryTool implements AgentTool {
     }
 
     @ToolSecurityLevel(ToolSecurityLevel.Level.SAFE)
-    @Tool(value = {
+    @Tool(name = "database_exportQueryToCsv", value = {
             "导出查询结果到CSV",
             "将大查询结果导出为 CSV 文件，保存到项目 exports/ 目录下。返回文件路径及下载链接，适合数据量较大的场景。"
     })

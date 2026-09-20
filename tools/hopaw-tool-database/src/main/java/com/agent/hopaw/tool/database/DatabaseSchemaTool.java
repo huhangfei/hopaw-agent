@@ -65,7 +65,7 @@ public class DatabaseSchemaTool implements AgentTool {
     // ========== @Tool 方法 ==========
 
     @ToolSecurityLevel(ToolSecurityLevel.Level.SAFE)
-    @Tool(value = {
+    @Tool(name = "database_loadJdbcDriverFromJar", value = {
             "加载JDBC驱动JAR",
             "从本地 .jar 文件路径动态加载 JDBC 驱动。调用 query / execute 前若驱动未加载可先调用本方法。"
     })
@@ -75,7 +75,7 @@ public class DatabaseSchemaTool implements AgentTool {
     }
 
     @ToolSecurityLevel(ToolSecurityLevel.Level.SAFE)
-    @Tool(value = {
+    @Tool(name = "database_listLoadedJdbcDrivers", value = {
             "列出已加载的JDBC驱动",
             "查看当前进程中已加载的 JDBC 驱动 JAR、对应驱动类与支持的 URL 前缀。"
     })
@@ -84,7 +84,7 @@ public class DatabaseSchemaTool implements AgentTool {
     }
 
     @ToolSecurityLevel(ToolSecurityLevel.Level.SAFE)
-    @Tool(value = {
+    @Tool(name = "database_listDatabaseTables", value = {
             "列出数据库表",
             "列出当前数据库中的所有表。"
     })
@@ -137,7 +137,7 @@ public class DatabaseSchemaTool implements AgentTool {
     }
 
     @ToolSecurityLevel(ToolSecurityLevel.Level.SAFE)
-    @Tool(value = {
+    @Tool(name = "database_describeDatabaseTable", value = {
             "查看表结构",
             "查看指定表的列定义、主键、索引信息。"
     })

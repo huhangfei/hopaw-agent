@@ -89,7 +89,7 @@ public class FileOperationTool implements AgentTool {
     }
 
     @ToolSecurityLevel(ToolSecurityLevel.Level.SAFE)
-    @Tool(value = {"读取文件", "读取文本文件内容", "文件读取"})
+    @Tool(name = "fileOperation_readFile", value = {"读取文件", "读取文本文件内容", "文件读取"})
     public String readFile(
             @P(description = "文件路径") String filePath,
             @P(description = "编码格式，如 UTF-8、GBK、ISO-8859-1 等，默认 UTF-8", required = false) String encoding,
@@ -140,7 +140,7 @@ public class FileOperationTool implements AgentTool {
     }
 
     @ToolSecurityLevel(ToolSecurityLevel.Level.SAFE)
-    @Tool(value = {"按行读取文件", "按行读取文本文件内容，返回带行号的结果", "文件读取"})
+    @Tool(name = "fileOperation_readFileByLine", value = {"按行读取文件", "按行读取文本文件内容，返回带行号的结果", "文件读取"})
     public String readFileByLine(
             @P(description = "文件路径") String filePath,
             @P(description = "起始行号(从1开始)，为空表示从头开始", required = false) Integer startLine,
@@ -194,7 +194,7 @@ public class FileOperationTool implements AgentTool {
     }
 
     @ToolSecurityLevel(ToolSecurityLevel.Level.PARAM_REQUIRE_APPROVAL)
-    @Tool(value = {"写入文件", "写入内容到文本文件，会覆盖原文件", "文件写入"})
+    @Tool(name = "fileOperation_writeFile", value = {"写入文件", "写入内容到文本文件，会覆盖原文件", "文件写入"})
     public String writeFile(
             @P(description = "文件路径") String filePath,
             @P(description = "要写入的内容") String content,
@@ -225,7 +225,7 @@ public class FileOperationTool implements AgentTool {
     }
 
     @ToolSecurityLevel(ToolSecurityLevel.Level.PARAM_REQUIRE_APPROVAL)
-    @Tool(value = {"追加文件", "追加内容到文本文件末尾", "文件写入"})
+    @Tool(name = "fileOperation_appendFile", value = {"追加文件", "追加内容到文本文件末尾", "文件写入"})
     public String appendFile(
             @P(description = "文件路径") String filePath,
             @P(description = "要追加的内容") String content,
@@ -257,7 +257,7 @@ public class FileOperationTool implements AgentTool {
     }
 
     @ToolSecurityLevel(ToolSecurityLevel.Level.PARAM_REQUIRE_APPROVAL)
-    @Tool(value = {"按行写入文件", "按行写入内容到文本文件，会覆盖原文件", "文件写入"})
+    @Tool(name = "fileOperation_writeFileByLine", value = {"按行写入文件", "按行写入内容到文本文件，会覆盖原文件", "文件写入"})
     public String writeFileByLine(
             @P(description = "文件路径") String filePath,
             @P(description = "要写入的行内容列表，每行一个元素，用逗号分隔") String lines,
@@ -293,7 +293,7 @@ public class FileOperationTool implements AgentTool {
     }
 
     @ToolSecurityLevel(ToolSecurityLevel.Level.PARAM_REQUIRE_APPROVAL)
-    @Tool(value = {"插入行", "在指定位置插入行到文本文件", "文件写入"})
+    @Tool(name = "fileOperation_insertLine", value = {"插入行", "在指定位置插入行到文本文件", "文件写入"})
     public String insertLine(
             @P(description = "文件路径") String filePath,
             @P(description = "要插入的内容") String content,
@@ -328,7 +328,7 @@ public class FileOperationTool implements AgentTool {
     }
 
     @ToolSecurityLevel(ToolSecurityLevel.Level.PARAM_REQUIRE_APPROVAL)
-    @Tool(value = {"替换文件内容", "在指定行范围内将匹配内容替换为新内容（支持普通文本与正则）", "文件写入"})
+    @Tool(name = "fileOperation_replaceInLines", value = {"替换文件内容", "在指定行范围内将匹配内容替换为新内容（支持普通文本与正则）", "文件写入"})
     public String replaceInLines(
             @P(description = "文件路径") String filePath,
             @P(description = "要查找的内容：普通文本或正则表达式（由 isRegex 参数决定）") String searchText,
@@ -419,7 +419,7 @@ public class FileOperationTool implements AgentTool {
     }
 
     @ToolSecurityLevel(ToolSecurityLevel.Level.ALL_REQUIRE_APPROVAL)
-    @Tool(value = {"删除文件", "删除指定文件", "文件删除"})
+    @Tool(name = "fileOperation_deleteFile", value = {"删除文件", "删除指定文件", "文件删除"})
     public String deleteFile(@P(description = "文件路径") String filePath) {
         try {
             Path path = Paths.get(filePath).toAbsolutePath().normalize();
@@ -442,7 +442,7 @@ public class FileOperationTool implements AgentTool {
     }
 
     @ToolSecurityLevel(ToolSecurityLevel.Level.ALL_REQUIRE_APPROVAL)
-    @Tool(value = {"删除目录", "删除指定目录", "文件删除"})
+    @Tool(name = "fileOperation_deleteDirectory", value = {"删除目录", "删除指定目录", "文件删除"})
     public String deleteDirectory(
             @P(description = "目录路径") String dirPath,
             @P(description = "是否递归删除子目录和文件", required = false) Boolean recursive) {
@@ -489,7 +489,7 @@ public class FileOperationTool implements AgentTool {
     }
 
     @ToolSecurityLevel(ToolSecurityLevel.Level.PARAM_REQUIRE_APPROVAL)
-    @Tool(value = {"移动文件", "移动或重命名文件", "文件移动"})
+    @Tool(name = "fileOperation_moveFile", value = {"移动文件", "移动或重命名文件", "文件移动"})
     public String moveFile(
             @P(description = "源文件路径") String sourcePath,
             @P(description = "目标路径或新文件名") String destinationPath) {
@@ -518,7 +518,7 @@ public class FileOperationTool implements AgentTool {
     }
 
     @ToolSecurityLevel(ToolSecurityLevel.Level.PARAM_REQUIRE_APPROVAL)
-    @Tool(value = {"复制文件", "复制文件", "文件复制"})
+    @Tool(name = "fileOperation_copyFile", value = {"复制文件", "复制文件", "文件复制"})
     public String copyFile(
             @P(description = "源文件路径") String sourcePath,
             @P(description = "目标路径") String destinationPath) {
@@ -547,7 +547,7 @@ public class FileOperationTool implements AgentTool {
     }
 
     @ToolSecurityLevel(ToolSecurityLevel.Level.PARAM_REQUIRE_APPROVAL)
-    @Tool(value = {"复制目录", "复制目录", "文件复制"})
+    @Tool(name = "fileOperation_copyDirectory", value = {"复制目录", "复制目录", "文件复制"})
     public String copyDirectory(
             @P(description = "源目录路径") String sourcePath,
             @P(description = "目标目录路径") String destinationPath) {
@@ -590,7 +590,7 @@ public class FileOperationTool implements AgentTool {
     }
 
     @ToolSecurityLevel(ToolSecurityLevel.Level.SAFE)
-    @Tool(value = {"获取文件信息", "获取文件或目录信息", "文件信息"})
+    @Tool(name = "fileOperation_getFileInfo", value = {"获取文件信息", "获取文件或目录信息", "文件信息"})
     public String getFileInfo(@P(description = "文件或目录路径") String pathStr) {
         try {
             Path path = Paths.get(pathStr).toAbsolutePath().normalize();
@@ -624,7 +624,7 @@ public class FileOperationTool implements AgentTool {
     }
 
     @ToolSecurityLevel(ToolSecurityLevel.Level.SAFE)
-    @Tool(value = {"列出目录", "列出目录内容", "文件列表"})
+    @Tool(name = "fileOperation_listDirectory", value = {"列出目录", "列出目录内容", "文件列表"})
     public String listDirectory(
             @P(description = "目录路径") String dirPath,
             @P(description = "是否递归列出子目录", required = false) Boolean recursive,
@@ -712,7 +712,7 @@ public class FileOperationTool implements AgentTool {
     }
 
     @ToolSecurityLevel(ToolSecurityLevel.Level.PARAM_REQUIRE_APPROVAL)
-    @Tool(value = {"创建目录", "创建目录", "文件操作"})
+    @Tool(name = "fileOperation_createDirectory", value = {"创建目录", "创建目录", "文件操作"})
     public String createDirectory(
             @P(description = "目录路径") String dirPath,
             @P(description = "是否创建父目录", required = false) Boolean createParent) {
@@ -739,7 +739,7 @@ public class FileOperationTool implements AgentTool {
     }
 
     @ToolSecurityLevel(ToolSecurityLevel.Level.SAFE)
-    @Tool(value = {"搜索文件", "在文件或目录中高性能搜索关键词，支持多关键词、正则、多线程并行处理", "文件搜索"})
+    @Tool(name = "fileOperation_searchInFiles", value = {"搜索文件", "在文件或目录中高性能搜索关键词，支持多关键词、正则、多线程并行处理", "文件搜索"})
     public String searchInFiles(
             @P(description = "搜索关键词，多个关键词用逗号、空格或分号分隔") String keywords,
             @P(description = "文件或目录路径") String targetPath,

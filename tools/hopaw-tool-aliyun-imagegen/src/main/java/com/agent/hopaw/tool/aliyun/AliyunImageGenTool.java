@@ -139,7 +139,7 @@ public class AliyunImageGenTool implements AgentTool {
      * 文生图：根据文字描述调用阿里云百炼生成图片，并将图片作为图片内容返回给大模型。
      */
     @ToolSecurityLevel(ToolSecurityLevel.Level.PARAM_REQUIRE_APPROVAL)
-    @Tool(value = {"文生图", "根据文字描述生成图片，调用阿里云百炼通义万相模型，返回生成的图片给用户", "AI画图", "生成图片", "画图"})
+    @Tool(name = "aliyunImageGen_generateImage", value = {"文生图", "根据文字描述生成图片，调用阿里云百炼通义万相模型，返回生成的图片给用户", "AI画图", "生成图片", "画图"})
     public List<Content> generateImage(
             @P(value = "正向提示词，描述期望生成的图片内容、风格和构图，支持中英文", required = false) String prompt,
             @P(value = "输出图像分辨率，格式为宽*高，如 1024*1024；不传由模型自动推荐", required = false) String size,

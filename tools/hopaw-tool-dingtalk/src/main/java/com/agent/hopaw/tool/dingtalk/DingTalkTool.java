@@ -116,7 +116,7 @@ public class DingTalkTool implements AgentTool {
     }
 
     @ToolSecurityLevel(ToolSecurityLevel.Level.ALL_REQUIRE_APPROVAL)
-    @Tool(value = {"发送文本到钉钉", "发送纯文本消息到钉钉群"})
+    @Tool(name = "dingtalkNotify_sendTextToDingTalk", value = {"发送文本到钉钉", "发送纯文本消息到钉钉群"})
     public String sendTextToDingTalk(
             @P("要发送的文本内容") String message,
             @P(value = "钉钉机器人webhook地址，不传则使用内部配置地址", required = false) String webhookUrl,
@@ -138,7 +138,7 @@ public class DingTalkTool implements AgentTool {
     }
 
     @ToolSecurityLevel(ToolSecurityLevel.Level.ALL_REQUIRE_APPROVAL)
-    @Tool(value = {"发送Markdown到钉钉", "发送Markdown格式消息到钉钉群"})
+    @Tool(name = "dingtalkNotify_sendMarkdownToDingTalk", value = {"发送Markdown到钉钉", "发送Markdown格式消息到钉钉群"})
     public String sendMarkdownToDingTalk(
             @P("消息标题") String title,
             @P("Markdown格式的消息内容") String text,

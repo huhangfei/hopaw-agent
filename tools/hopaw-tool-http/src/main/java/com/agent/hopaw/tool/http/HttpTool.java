@@ -40,7 +40,7 @@ public class HttpTool implements AgentTool {
     }
 
     @ToolSecurityLevel(ToolSecurityLevel.Level.PARAM_REQUIRE_APPROVAL)
-    @Tool(value = {"发送HTTP GET请求", "发送HTTP GET请求，用于查询接口数据"})
+    @Tool(name = "httpTool_doHttpGet", value = {"发送HTTP GET请求", "发送HTTP GET请求，用于查询接口数据"})
     public String doHttpGet(
             @P(description = "请求URL，如 https://api.example.com/users") String url,
             @P(description = "请求头，JSON格式，如 {\"Authorization\":\"Bearer xxx\"}", required = false) String headers,
@@ -49,7 +49,7 @@ public class HttpTool implements AgentTool {
     }
 
     @ToolSecurityLevel(ToolSecurityLevel.Level.PARAM_REQUIRE_APPROVAL)
-    @Tool(value = {"发送HTTP POST请求", "发送HTTP POST请求，用于提交数据或创建资源"})
+    @Tool(name = "httpTool_doHttpPost", value = {"发送HTTP POST请求", "发送HTTP POST请求，用于提交数据或创建资源"})
     public String doHttpPost(
             @P(description = "请求URL") String url,
             @P(description = "请求体内容，如JSON字符串") String body,
@@ -60,7 +60,7 @@ public class HttpTool implements AgentTool {
     }
 
     @ToolSecurityLevel(ToolSecurityLevel.Level.PARAM_REQUIRE_APPROVAL)
-    @Tool(value = {"发送HTTP PUT请求", "发送HTTP PUT请求，用于更新资源"})
+    @Tool(name = "httpTool_doHttpPut", value = {"发送HTTP PUT请求", "发送HTTP PUT请求，用于更新资源"})
     public String doHttpPut(
             @P(description = "请求URL") String url,
             @P(description = "请求体内容") String body,
@@ -71,7 +71,7 @@ public class HttpTool implements AgentTool {
     }
 
     @ToolSecurityLevel(ToolSecurityLevel.Level.PARAM_REQUIRE_APPROVAL)
-    @Tool(value = {"发送HTTP DELETE请求", "发送HTTP DELETE请求，用于删除资源"})
+    @Tool(name = "httpTool_doHttpDelete", value = {"发送HTTP DELETE请求", "发送HTTP DELETE请求，用于删除资源"})
     public String doHttpDelete(
             @P(description = "请求URL") String url,
             @P(description = "请求头，JSON格式", required = false) String headers,
@@ -80,7 +80,7 @@ public class HttpTool implements AgentTool {
     }
 
     @ToolSecurityLevel(ToolSecurityLevel.Level.PARAM_REQUIRE_APPROVAL)
-    @Tool(value = {"发送HTTP PATCH请求", "发送HTTP PATCH请求，用于部分更新资源"})
+    @Tool(name = "httpTool_doHttpPatch", value = {"发送HTTP PATCH请求", "发送HTTP PATCH请求，用于部分更新资源"})
     public String doHttpPatch(
             @P(description = "请求URL") String url,
             @P(description = "请求体内容") String body,
@@ -91,7 +91,7 @@ public class HttpTool implements AgentTool {
     }
 
     @ToolSecurityLevel(ToolSecurityLevel.Level.SAFE)
-    @Tool(value = {"发送HTTP HEAD请求", "发送HTTP HEAD请求，用于获取响应头信息"})
+    @Tool(name = "httpTool_doHttpHead", value = {"发送HTTP HEAD请求", "发送HTTP HEAD请求，用于获取响应头信息"})
     public String doHttpHead(
             @P(description = "请求URL") String url,
             @P(description = "请求头，JSON格式", required = false) String headers,
@@ -100,7 +100,7 @@ public class HttpTool implements AgentTool {
     }
 
     @ToolSecurityLevel(ToolSecurityLevel.Level.SAFE)
-    @Tool(value = {"发送HTTP OPTIONS请求", "发送HTTP OPTIONS请求，用于查询支持的HTTP方法"})
+    @Tool(name = "httpTool_doHttpOptions", value = {"发送HTTP OPTIONS请求", "发送HTTP OPTIONS请求，用于查询支持的HTTP方法"})
     public String doHttpOptions(
             @P(description = "请求URL") String url,
             @P(description = "请求头，JSON格式", required = false) String headers,
@@ -109,7 +109,7 @@ public class HttpTool implements AgentTool {
     }
 
     @ToolSecurityLevel(ToolSecurityLevel.Level.PARAM_REQUIRE_APPROVAL)
-    @Tool(value = {"发送自定义HTTP请求", "发送自定义方法的HTTP请求，支持任意HTTP方法"})
+    @Tool(name = "httpTool_doHttpRequest", value = {"发送自定义HTTP请求", "发送自定义方法的HTTP请求，支持任意HTTP方法"})
     public String doHttpRequest(
             @P(description = "HTTP方法，如 GET/POST/PUT/DELETE/PATCH/HEAD/OPTIONS") String method,
             @P(description = "请求URL") String url,

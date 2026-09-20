@@ -177,7 +177,7 @@ public class WebPagePlaywrightTool implements AgentTool {
     }
 
     @ToolSecurityLevel(ToolSecurityLevel.Level.SAFE)
-    @Tool(value = {"获取网页用Playwright", "获取网页内容，输入URL地址，返回网页的纯文本或HTML源文件"})
+    @Tool(name = "webPagePlaywright_fetchWebPageByPlaywright", value = {"获取网页用Playwright", "获取网页内容，输入URL地址，返回网页的纯文本或HTML源文件"})
     public String fetchWebPageByPlaywright(@P(description = "URL地址") String url,
                                            @P(description = "返回文本最大长度，超出截断，默认5000", required = false) Integer maxLength,
                                            @P(description = "返回格式: text=纯文本(默认), html=HTML源文件", required = false) String format) {
@@ -236,7 +236,7 @@ public class WebPagePlaywrightTool implements AgentTool {
     }
 
     @ToolSecurityLevel(ToolSecurityLevel.Level.PARAM_REQUIRE_APPROVAL)
-    @Tool(value = {"网页截图", "使用Playwright截取指定URL网页的整页图片并保存到本地文件。支持png/jpg/jpeg格式，按保存路径扩展名自动选择格式，自动创建父目录。", "网页,截图,截图保存,页面截图"})
+    @Tool(name = "webPagePlaywright_captureWebPageScreenshot", value = {"网页截图", "使用Playwright截取指定URL网页的整页图片并保存到本地文件。支持png/jpg/jpeg格式，按保存路径扩展名自动选择格式，自动创建父目录。", "网页,截图,截图保存,页面截图"})
     public String captureWebPageScreenshot(
             @P(description = "URL地址") String url,
             @P(description = "图片保存路径（本地文件路径，扩展名支持png/jpg/jpeg，自动创建父目录）") String savePath) {
