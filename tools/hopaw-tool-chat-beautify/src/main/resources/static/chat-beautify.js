@@ -5,6 +5,7 @@
  *   - 触发按钮：relocate 到会话头部「更多」按钮前，点击向下弹出设置面板；
  *   - 背景色：预设色板 / 自定义取色器，作用到会话区（.chat-area），可还原；
  *   - 背景图：上传本地图片（FileReader → dataURL）铺满会话区，可清除，并支持 0~100% 透明度；
+ *     调低透明度时顶部栏 / 输入区等容器底色同步淡出，背景图能透到这些原本不透明的容器上；
  *   - 气泡背景透明度：滑块统一控制 agent 回合大盒子（.agent-turn）与用户气泡（.message.user）
  *     底色的 alpha（100% 即原色）；并按底色与透明度的合成结果自动切换气泡文字深浅，
  *     避免亮色模式下透明度调低后白色文字看不见；
@@ -40,6 +41,15 @@
     var CHAT_BG_LIGHT = [255, 255, 255];   // .chat-area → white
     var CHAT_BG_DARK = [26, 26, 46];       // body.dark-theme .chat-area → #1a1a2e
 
+    /* 容器底色基准值：会话页里几处不透明的「墙板」，跟「背景图透明度」一起淡出，
+       背景图才能透到它们上面；100% 时各自还原成原色，外观与未接入前完全一致 */
+    var HEADER_RGB_LIGHT = [250, 250, 250];    // .chat-header / .chat-input-area → #fafafa
+    var HEADER_RGB_DARK = [22, 33, 62];        // body.dark-theme 同两者 → #16213e
+    var INPUT_BOX_RGB_LIGHT = [255, 255, 255]; // .chat-input-wrapper → #fff
+    var INPUT_BOX_RGB_DARK = [30, 58, 95];     // body.dark-theme .chat-input-wrapper → #1e3a5f
+    var PAGE_RGB_LIGHT = [240, 242, 245];      // .chat-wrapper 自身无底色，实际透出的是 body → #f0f2f5
+    var PAGE_RGB_DARK = [26, 26, 46];          // body.dark-theme → #1a1a2e
+
     var root = null;
     var btn = null;
     var panel = null;
@@ -67,6 +77,7 @@
     var resetFontBtn = null;
     var fontStyleEl = null;
     var alphaStyleEl = null;
+    var containerStyleEl = null;
 
     var state = {
         backgroundColor: null,
@@ -225,6 +236,7 @@
     function applyBackground() {
         var area = chatArea();
         if (!area) return;
+        applyContainerAlpha();
         area.style.backgroundColor = state.backgroundColor || '';
         if (state.backgroundImage) {
             var url = 'url("' + state.backgroundImage + '")';
@@ -244,6 +256,34 @@
             area.style.backgroundPosition = '';
             area.style.backgroundRepeat = '';
         }
+    }
+
+    /**
+     * 容器背景透明度：顶部栏 / 输入区等容器本身是不透明的「墙板」，会把铺在 .chat-area 上的
+     * 背景图挡在外面。这里按「背景图透明度」把它们的底色一并换算成 rgba，让背景图透上来。
+     *
+     * <p>100% 时注入的就是各自原色，外观与未接入前完全一致；调低才逐步透出背景图与消息区。
+     * 注入的目标与基准色都跟随深浅主题，由 observeTheme 在切主题时重算。</p>
+     *
+     * <p>`.chat-input-wrapper` 加 `:not(.disabled)`：禁用态宿主用了灰底表达不可输入，
+     * 那个语义不该被透明度联动覆盖掉。</p>
+     */
+    function applyContainerAlpha() {
+        if (!containerStyleEl) {
+            containerStyleEl = document.createElement('style');
+            containerStyleEl.id = 'cbContainerAlphaStyle';
+            document.head.appendChild(containerStyleEl);
+        }
+        var a = state.imageAlpha / 100;
+        var dark = isDarkTheme();
+        var headerRgb = dark ? HEADER_RGB_DARK : HEADER_RGB_LIGHT;
+        var inputBoxRgb = dark ? INPUT_BOX_RGB_DARK : INPUT_BOX_RGB_LIGHT;
+        var pageRgb = dark ? PAGE_RGB_DARK : PAGE_RGB_LIGHT;
+        containerStyleEl.textContent =
+            '.chat-wrapper{background:' + rgba(pageRgb, a) + ' !important;}'
+            + '.chat-header{background:' + rgba(headerRgb, a) + ' !important;}'
+            + '.chat-input-area{background:' + rgba(headerRgb, a) + ' !important;}'
+            + '.chat-input-wrapper:not(.disabled){background:' + rgba(inputBoxRgb, a) + ' !important;}';
     }
 
     /**
