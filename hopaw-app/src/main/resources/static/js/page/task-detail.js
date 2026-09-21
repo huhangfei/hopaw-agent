@@ -950,11 +950,3 @@ function renderTaskTokenChart(container, data) {
         }
     });
 }
-
-/** token 数量格式化（1.2w 形式） */
-function formatTokenCount(n) {
-    n = Number(n) || 0;
-    if (n >= 10000) return (n / 10000).toFixed(1) + 'w';
-    if (n >= 1000) return (n / 1000).toFixed(1) + 'k';
-    return String(n);
-}
