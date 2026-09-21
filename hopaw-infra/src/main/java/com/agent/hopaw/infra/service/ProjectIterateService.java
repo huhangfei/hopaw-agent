@@ -149,7 +149,7 @@ public class ProjectIterateService implements IProjectIterateService {
         int maxCount = 20;
         StringBuilder sb=new StringBuilder();
         // 注入项目日志，提供历史信息
-        List<ProjectLog> logs =projectLogService.getLogsPage(projectId, 1, 200);
+        List<ProjectLog> logs =projectLogService.getLogsPage(projectId, 1, 500);
         if (logs != null && !logs.isEmpty()) {
             // 合并连续的 auto_iterate 记录
             List<String> mergedLines = new ArrayList<>();
