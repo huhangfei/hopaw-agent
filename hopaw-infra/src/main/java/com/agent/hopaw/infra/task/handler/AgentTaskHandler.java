@@ -72,7 +72,7 @@ public class AgentTaskHandler implements TaskHandler {
                     .chatModel(chatModel)
                     .systemMessageProvider(systemMessageProvider)
                     .tools(selectedTools.stream().map(x->x.getAgentTool()).toArray())
-                    .maxToolCallingRoundTrips(agent.getMaxToolInvocations())
+                    .maxToolCallingRoundTrips(Agent.toRoundTripsLimit(agent.getMaxToolInvocations()))
                     .build();
             ChatRequestParameters chatRequestParameters=ChatRequestParameters.builder()
                     .temperature(0.1)

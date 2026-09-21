@@ -35,7 +35,7 @@ public interface IAgentExecutor {
     /** 本执行器生命周期内已开始的工具调用次数 */
     int getExecutedToolCount();
 
-    /** 本执行器允许的最大工具调用次数（0表示不限制） */
+    /** 本执行器允许的最大工具调用轮次（0 或负数表示不限制）；未配置时返回 Agent.DEFAULT_MAX_TOOL_INVOCATIONS */
     int getMaxToolInvocations();
 
     /**
