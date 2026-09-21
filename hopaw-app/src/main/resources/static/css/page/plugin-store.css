@@ -429,6 +429,7 @@ body.dark-theme .cap-badge-config {
     font-size: 13px;
     font-weight: 600;
     color: #374151;
+    padding-left: 12px;
 }
 
 .asset-list {
