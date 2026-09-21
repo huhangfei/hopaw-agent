@@ -8,6 +8,7 @@ import com.agent.hopaw.infra.model.dto.PluginUpdateInfo;
 import com.agent.hopaw.infra.model.dto.ToolConfigItem;
 import com.agent.hopaw.infra.plugin.AgentPlugin;
 import com.agent.hopaw.infra.plugin.JarPluginLoader;
+import com.agent.hopaw.infra.plugin.PluginAsset;
 import com.agent.hopaw.infra.plugin.PluginIconResolver;
 import com.agent.hopaw.infra.plugin.PluginRegistry;
 import com.agent.hopaw.infra.tool.AgentTool;
@@ -229,13 +230,64 @@ public class PluginManagerService implements IAgentPluginService {
         List<PluginPackageManifest.ProvidedToolSet> provides = new ArrayList<>();
         for (AgentTool tool : entry.getTools()) {
             provides.add(new PluginPackageManifest.ProvidedToolSet(
-                    tool.getName(), tool.getDescription(), countToolMethods(tool)));
+                    tool.getName(), tool.getDescription(), countToolMethods(tool), collectToolMethods(tool)));
         }
         manifest.setProvides(provides);
         manifest.setFrontendAssetCount(entry.getAssets().size());
+        manifest.setFrontendAssets(collectFrontendAssets(entry));
         manifest.setInvokeSupport(supportsInvoke(plugin));
         manifest.setConfigItems(plugin.getConfigItems());
         return manifest;
+    }
+
+    /** 收集工具集的方法明细：@Tool 注解声明的名称与描述（按名称排序，保证导出稳定）。 */
+    private List<PluginPackageManifest.ProvidedToolMethod> collectToolMethods(AgentTool tool) {
+        List<PluginPackageManifest.ProvidedToolMethod> methods = new ArrayList<>();
+        for (Method method : tool.getClass().getMethods()) {
+            dev.langchain4j.agent.tool.Tool ann =
+                    method.getAnnotation(dev.langchain4j.agent.tool.Tool.class);
+            if (ann == null) {
+                continue;
+            }
+            String name = (ann.name() == null || ann.name().isEmpty()) ? method.getName() : ann.name();
+            String description = (ann.value() == null) ? "" : String.join("；", ann.value());
+            methods.add(new PluginPackageManifest.ProvidedToolMethod(name, description));
+        }
+        methods.sort(Comparator.comparing(PluginPackageManifest.ProvidedToolMethod::getName,
+                Comparator.nullsLast(Comparator.naturalOrder())));
+        return methods;
+    }
+
+    /** 收集前端资产明细：从插件 JAR 条目读取未压缩大小，读取失败时大小记为 -1（前端显示「未知」）。 */
+    private List<PluginPackageManifest.ProvidedAsset> collectFrontendAssets(PluginRegistry.PluginEntry entry) {
+        List<PluginAsset> assets = entry.getAssets();
+        List<PluginPackageManifest.ProvidedAsset> result = new ArrayList<>();
+        if (assets == null || assets.isEmpty()) {
+            return result;
+        }
+        Path jarPath = jarPluginLoader.getPluginDir().resolve(entry.getJarFileName());
+        try (java.util.jar.JarFile jar = new java.util.jar.JarFile(jarPath.toFile())) {
+            for (PluginAsset asset : assets) {
+                long size = -1;
+                java.util.jar.JarEntry jarEntry = jar.getJarEntry(asset.getPath());
+                if (jarEntry != null) {
+                    size = jarEntry.getSize();
+                }
+                result.add(toProvidedAsset(asset, size));
+            }
+        } catch (Exception e) {
+            log.warn("Failed to read asset sizes from {}: {}", entry.getJarFileName(), e.getMessage());
+            for (PluginAsset asset : assets) {
+                result.add(toProvidedAsset(asset, -1));
+            }
+        }
+        return result;
+    }
+
+    private PluginPackageManifest.ProvidedAsset toProvidedAsset(PluginAsset asset, long size) {
+        String path = asset.getPath() == null ? "" : asset.getPath();
+        String name = path.substring(path.lastIndexOf('/') + 1);
+        return new PluginPackageManifest.ProvidedAsset(name, path, asset.getType(), size);
     }
 
     /** 清单基础校验：只接受 v2 清单，且必须声明 id 与至少一项能力。 */
@@ -513,17 +565,44 @@ public class PluginManagerService implements IAgentPluginService {
         String previousVersion = null;
         Path targetPath = jarPluginLoader.getPluginDir().resolve(jarFileName);
         File existingFile = targetPath.toFile();
+        // 源文件即插件目录内目标文件（如通过 plugin_install 指定 plugins/ 下已有的 JAR）：
+        // 此时绝不能先删目标文件——那等于删掉安装源，后续复制必然失败
+        boolean sameFile = isSameFile(src.toPath(), targetPath);
         if (existingFile.exists() || pluginRegistry.hasPluginJar(jarFileName)) {
             isUpgrade = true;
             PluginRegistry.PluginEntry existing = pluginRegistry.getPluginByJarFileName(jarFileName);
             if (existing != null) {
                 previousVersion = existing.getPlugin().getVersion();
             }
-            jarPluginLoader.unloadAndDeletePlugin(jarFileName);
+            if (sameFile) {
+                // 只注销插件释放 JAR 句柄，保留文件本体
+                jarPluginLoader.unloadPluginKeepJar(jarFileName);
+            } else {
+                jarPluginLoader.unloadAndDeletePlugin(jarFileName);
+            }
         }
 
-        Files.copy(src.toPath(), targetPath, java.nio.file.StandardCopyOption.REPLACE_EXISTING);
-        log.info("Plugin JAR copied from {} to {}", src, targetPath);
+        if (sameFile) {
+            // 源即目标：文件已在位，跳过复制
+            log.info("Plugin JAR is already the target file, skip copy: {}", targetPath);
+        } else {
+            // 先落同目录临时文件再原子改名：避免直接 REPLACE_EXISTING 覆盖时
+            // 被并发读取到半写文件，也规避源/目标为同一文件的边界情况
+            Path tempTarget = Files.createTempFile(jarPluginLoader.getPluginDir(), "install-", ".tmp");
+            try {
+                Files.copy(src.toPath(), tempTarget, java.nio.file.StandardCopyOption.REPLACE_EXISTING);
+                try {
+                    Files.move(tempTarget, targetPath,
+                            java.nio.file.StandardCopyOption.REPLACE_EXISTING,
+                            java.nio.file.StandardCopyOption.ATOMIC_MOVE);
+                } catch (java.nio.file.AtomicMoveNotSupportedException e) {
+                    Files.move(tempTarget, targetPath, java.nio.file.StandardCopyOption.REPLACE_EXISTING);
+                }
+            } finally {
+                Files.deleteIfExists(tempTarget);
+            }
+            log.info("Plugin JAR copied from {} to {}", src, targetPath);
+        }
 
         PluginConflictInfo conflictInfo = detectConflicts(targetPath.toFile());
 
@@ -637,6 +716,21 @@ public class PluginManagerService implements IAgentPluginService {
             }
         }
         return count;
+    }
+
+    /** 判断两个路径是否指向同一文件：先比规范化绝对路径，再用文件系统同一性判断兜底。 */
+    private boolean isSameFile(Path a, Path b) {
+        Path na = a.toAbsolutePath().normalize();
+        Path nb = b.toAbsolutePath().normalize();
+        if (na.equals(nb)) {
+            return true;
+        }
+        try {
+            return Files.isSameFile(na, nb);
+        } catch (Exception e) {
+            // 任一文件不存在时 isSameFile 抛异常，按不同文件处理
+            return false;
+        }
     }
 
     /**

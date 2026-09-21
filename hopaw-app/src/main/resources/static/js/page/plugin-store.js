@@ -331,8 +331,8 @@ function renderDetail(plugin, version) {
 }
 
 /**
- * 渲染版本的「提供能力」：一排能力徽标 + 工具集摘要列表。
- * 清单只带摘要（名称/描述/方法数），完整参数明细由安装后扫描 @Tool 得到。
+ * 渲染版本的「提供能力」：一排能力徽标 + 工具集（含方法明细）+ 前端资产明细。
+ * 清单已带方法名/描述与资产名/大小；旧版清单缺这两项时降级显示提示。
  */
 function renderProvides(version) {
     var bodyEl = document.getElementById('storeDetailBody');
@@ -355,21 +355,65 @@ function renderProvides(version) {
 
     if (provides.length === 0) {
         html += '<div class="detail-empty-state">纯前端插件 —— 不提供任何工具集</div>';
-        bodyEl.innerHTML = html;
-        return;
+    } else {
+        for (var i = 0; i < provides.length; i++) {
+            var ts = provides[i];
+            html += '<div class="detail-tool-item">';
+            html += '<div class="detail-tool-header">';
+            html += '<span class="detail-tool-name">' + escapeHtml(ts.name || '') + '</span>';
+            html += '<span class="detail-tool-desc">' + escapeHtml(ts.description || '') + '</span>';
+            html += '<span class="detail-tool-count">' + (ts.toolCount || 0) + ' 个方法</span>';
+            html += '</div>';
+            html += renderMethodList(ts.methods);
+            html += '</div>';
+        }
     }
 
-    for (var i = 0; i < provides.length; i++) {
-        var ts = provides[i];
-        html += '<div class="detail-tool-item">';
-        html += '<div class="detail-tool-header">';
-        html += '<span class="detail-tool-name">' + escapeHtml(ts.name || '') + '</span>';
-        html += '<span class="detail-tool-desc">' + escapeHtml(ts.description || '') + '</span>';
-        html += '</div>';
-        html += '<div class="detail-no-params">' + (ts.toolCount || 0) + ' 个方法</div>';
+    html += renderAssetList(version.frontendAssets);
+    bodyEl.innerHTML = html;
+}
+
+/** 工具方法明细：方法名 + 描述（旧版清单无 methods 时提示重新导出）。 */
+function renderMethodList(methods) {
+    if (!methods || methods.length === 0) {
+        return '<div class="detail-no-params">无方法明细（该版本清单由旧版导出，不含方法信息）</div>';
+    }
+    var html = '<div class="method-list">';
+    for (var i = 0; i < methods.length; i++) {
+        var m = methods[i];
+        html += '<div class="method-row">';
+        html += '<span class="method-name">' + escapeHtml(m.name || '') + '</span>';
+        if (m.description) {
+            html += '<span class="method-desc">' + escapeHtml(m.description) + '</span>';
+        }
         html += '</div>';
     }
-    bodyEl.innerHTML = html;
+    html += '</div>';
+    return html;
+}
+
+/** 前端资产明细：类型徽标 + 文件名 + 大小（旧版清单无 frontendAssets 时整体不渲染）。 */
+function renderAssetList(assets) {
+    if (!assets || assets.length === 0) return '';
+    var html = '<div class="detail-section-title">前端资产</div>';
+    html += '<div class="asset-list">';
+    for (var i = 0; i < assets.length; i++) {
+        var a = assets[i];
+        var type = (a.type || '').toLowerCase();
+        html += '<div class="asset-row">';
+        html += '<span class="asset-type asset-type-' + escapeHtml(type) + '">' + escapeHtml(type) + '</span>';
+        html += '<span class="asset-name" title="' + escapeHtml(a.path || '') + '">' + escapeHtml(a.name || '') + '</span>';
+        html += '<span class="asset-size">' + formatAssetSize(a.size) + '</span>';
+        html += '</div>';
+    }
+    html += '</div>';
+    return html;
+}
+
+/** 资产大小格式化；size<0 表示 JAR 内读不到，显示「未知」。 */
+function formatAssetSize(size) {
+    if (size === null || size === undefined || size < 0) return '未知';
+    return formatFileSize(size);
 }
 
 // ==================== 语义化版本比较 ====================

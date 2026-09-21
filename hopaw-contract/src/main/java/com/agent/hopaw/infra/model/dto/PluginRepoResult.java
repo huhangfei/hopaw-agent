@@ -71,10 +71,12 @@ public class PluginRepoResult {
         private String downloadUrl;
         private String jarFileName;
 
-        /** 提供的工具集摘要（0..N；纯前端插件为空） */
+        /** 提供的工具集摘要（0..N；纯前端插件为空）；每项含方法明细 methods */
         private List<PluginPackageManifest.ProvidedToolSet> provides = new ArrayList<>();
-        /** 前端资产数量 */
+        /** 前端资产数量（与 frontendAssets 长度一致，摘要字段） */
         private int frontendAssetCount;
+        /** 前端资产明细（名称 / JAR 内路径 / 类型 / 大小） */
+        private List<PluginPackageManifest.ProvidedAsset> frontendAssets = new ArrayList<>();
         /** 是否提供 invoke 能力 */
         private boolean invokeSupport;
         /** 插件级配置项数量 */
@@ -112,6 +114,9 @@ public class PluginRepoResult {
 
         public int getFrontendAssetCount() { return frontendAssetCount; }
         public void setFrontendAssetCount(int frontendAssetCount) { this.frontendAssetCount = frontendAssetCount; }
+
+        public List<PluginPackageManifest.ProvidedAsset> getFrontendAssets() { return frontendAssets; }
+        public void setFrontendAssets(List<PluginPackageManifest.ProvidedAsset> frontendAssets) { this.frontendAssets = frontendAssets; }
 
         public boolean isInvokeSupport() { return invokeSupport; }
         public void setInvokeSupport(boolean invokeSupport) { this.invokeSupport = invokeSupport; }
@@ -157,6 +162,8 @@ public class PluginRepoResult {
             entry.setProvides(manifest.getProvides() == null
                     ? new ArrayList<>() : new ArrayList<>(manifest.getProvides()));
             entry.setFrontendAssetCount(manifest.getFrontendAssetCount());
+            entry.setFrontendAssets(manifest.getFrontendAssets() == null
+                    ? new ArrayList<>() : new ArrayList<>(manifest.getFrontendAssets()));
             entry.setInvokeSupport(manifest.isInvokeSupport());
             entry.setConfigItemCount(manifest.getConfigItems() == null ? 0 : manifest.getConfigItems().size());
             return entry;
