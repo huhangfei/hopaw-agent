@@ -28,7 +28,12 @@
  *     toolNames 为工具集名/工具名过滤（如 'canvas'/'gomoku'，前端已把工具方法名/描述归一到工具集名），
  *     支持传数组以同时声明工具历史名称/别名（工具改名后旧历史记录仍能命中）；
  *     传 null/'' 表示订阅所有工具。handler 统一接收 ctx 对象：
- *       { phase:'live'|'static', event, status, toolCallId, toolName, toolSetName, data|chat, element, header, body }
+ *       { phase:'live'|'static', event, status, toolCallId, toolName, toolSetName,
+ *         toolArguments, data|chat, element, header, body }
+ *     toolArguments 为**本次工具调用的入参**（已解析为对象，拿不到为 null）：after 系列 hook
+ *     分发前由 index.js 兜底填充（实时取后端 arguments → 历史取 chat.toolArguments → 补挂场景
+ *     从工具项 DOM 的参数区反查），插件可据此判断「这次调用是否带了我需要的数据」，
+ *     例如 svg 插件据此判断该次调用有无 svgCode、从而决定点击按钮能否恢复那一次的插槽内容。
  *     注意：插件 JS 晚于历史列表渲染加载，注册后 index.js 会对已渲染节点补发一次 after hook（retrofit，
  *     ctx.event === 'retrofit'，data/chat 为 null），因此 hook 必须幂等（勿重复插入 DOM）。
  */
