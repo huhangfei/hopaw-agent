@@ -348,10 +348,6 @@ body.dark-theme .store-progress-card{
     border-color: #fde68a;
 }
 
-.cap-badge-manifest {
-    font-family: monospace;
-}
-
 body.dark-theme .cap-badge {
     background: #2d2d44;
     color: #a0a0b0;

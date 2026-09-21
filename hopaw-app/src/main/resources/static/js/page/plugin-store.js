@@ -351,7 +351,6 @@ function renderProvides(version) {
     if (version.configItemCount > 0) {
         html += '<span class="cap-badge cap-badge-config">' + version.configItemCount + ' 项插件配置</span>';
     }
-    html += '<span class="cap-badge cap-badge-manifest">清单 v' + version.manifestVersion + '</span>';
     html += '</div>';
 
     if (provides.length === 0) {

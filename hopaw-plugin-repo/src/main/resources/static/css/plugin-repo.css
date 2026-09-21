@@ -254,18 +254,6 @@ body {
     font-size: 13px;
 }
 
-.tree-arrow {
-    font-size: 10px;
-    color: var(--text-muted);
-    width: 16px;
-    text-align: center;
-    transition: transform var(--transition);
-}
-
-.tree-node.expanded > .tree-node-header .tree-arrow {
-    transform: rotate(90deg);
-}
-
 .tree-icon {
     font-size: 16px;
 }
@@ -287,13 +275,13 @@ body {
     font-weight: 500;
 }
 
-.tree-node-children {
-    display: none;
-    padding: 2px 0 4px 28px;
+/* 选中态：列表只展示插件，点中整条高亮 */
+.tree-node.active {
+    background: var(--primary-light);
 }
 
-.tree-node.expanded > .tree-node-children {
-    display: block;
+.tree-node.active .tree-name {
+    color: var(--primary);
 }
 
 /* 插件描述与关键字 */
@@ -336,55 +324,7 @@ body {
     white-space: nowrap;
 }
 
-.tree-leaf {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    padding: 8px 12px;
-    margin: 1px 4px;
-    border-radius: 6px;
-    cursor: pointer;
-    font-size: 13px;
-    transition: background var(--transition);
-}
-
-.tree-leaf:hover {
-    background: var(--primary-light);
-}
-
-.tree-leaf.active {
-    background: var(--primary-light);
-    color: var(--primary);
-    font-weight: 600;
-}
-
-.leaf-dot {
-    width: 6px;
-    height: 6px;
-    border-radius: 50%;
-    background: var(--text-muted);
-    flex-shrink: 0;
-}
-
-.tree-leaf.active .leaf-dot {
-    background: var(--primary);
-}
-
-.leaf-version {
-    flex: 1;
-}
-
-.leaf-hash {
-    font-size: 10px;
-    color: var(--text-muted);
-    font-family: monospace;
-}
-
 .tree-node.filtered-hidden {
-    display: none;
-}
-
-.tree-leaf.filtered-hidden {
     display: none;
 }
 
@@ -428,16 +368,16 @@ body {
 
 .detail-header {
     display: flex;
-    align-items: flex-start;
+    align-items: center;
     justify-content: space-between;
-    margin-bottom: 24px;
-    gap: 16px;
+    margin-bottom: 14px;
+    gap: 12px;
 }
 
 .detail-header-icon {
-    width: 56px;
-    height: 56px;
-    border-radius: 12px;
+    width: 44px;
+    height: 44px;
+    border-radius: 10px;
     background: var(--bg);
     display: flex;
     align-items: center;
@@ -453,8 +393,8 @@ body {
 }
 
 .detail-header-icon svg {
-    width: 32px;
-    height: 32px;
+    width: 24px;
+    height: 24px;
 }
 
 .detail-header-info {
@@ -463,9 +403,9 @@ body {
 }
 
 .detail-header h2 {
-    font-size: 22px;
+    font-size: 18px;
     font-weight: 700;
-    margin-bottom: 6px;
+    margin-bottom: 4px;
 }
 
 .detail-header-tags {
@@ -536,14 +476,15 @@ body {
 .detail-meta {
     display: grid;
     grid-template-columns: repeat(4, 1fr);
-    gap: 16px;
-    margin-bottom: 28px;
+    gap: 10px;
+    margin-bottom: 16px;
 }
 
 .meta-item {
     background: var(--bg);
-    border-radius: 8px;
-    padding: 12px 16px;
+    border-radius: 6px;
+    padding: 8px 12px;
+    min-width: 0;
 }
 
 .meta-label {
@@ -552,13 +493,51 @@ body {
     font-weight: 600;
     color: var(--text-muted);
     text-transform: uppercase;
-    margin-bottom: 4px;
+    margin-bottom: 2px;
 }
 
 .meta-value {
-    font-size: 14px;
+    font-size: 13px;
     font-weight: 600;
     color: var(--text);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+/* 版本下拉（详情内的版本切换控件，从新到旧） */
+.meta-select {
+    display: block;
+    width: 100%;
+    max-width: 100%;
+    font-size: 13px;
+    font-weight: 600;
+    font-family: inherit;
+    color: var(--text);
+    background: var(--card-bg);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 3px 6px;
+    cursor: pointer;
+    outline: none;
+    transition: border-color var(--transition);
+}
+
+.meta-select:hover:not(:disabled) {
+    border-color: var(--primary);
+}
+
+.meta-select:focus {
+    border-color: var(--primary);
+    box-shadow: 0 0 0 2px var(--primary-light);
+}
+
+.meta-select:disabled {
+    color: var(--text-secondary);
+    cursor: default;
+    background: transparent;
+    border-color: transparent;
+    padding-left: 0;
 }
 
 .hash-value {
@@ -568,7 +547,7 @@ body {
 }
 
 .detail-section {
-    margin-bottom: 24px;
+    margin-bottom: 18px;
 }
 
 .detail-section h3 {
@@ -872,16 +851,6 @@ select.search-input {
     white-space: nowrap;
 }
 
-.leaf-caps {
-    font-size: 10px;
-    padding: 1px 6px;
-    border-radius: 8px;
-    background: var(--primary-light);
-    color: var(--primary);
-    flex-shrink: 0;
-    white-space: nowrap;
-}
-
 .cap-badges {
     display: flex;
     flex-wrap: wrap;
@@ -921,10 +890,6 @@ select.search-input {
     background: #fefce8;
     color: #a16207;
     border-color: #fde68a;
-}
-
-.cap-badge-manifest {
-    font-family: monospace;
 }
 
 .tool-item-count {
