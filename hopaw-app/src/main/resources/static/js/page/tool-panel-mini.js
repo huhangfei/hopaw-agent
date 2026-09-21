@@ -46,11 +46,9 @@
             .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
     }
 
+    /* Token 数量格式化统一走 js/common.js 的 formatTokenCount（万级以 w 显示） */
     function fmtNum(n) {
-        n = Number(n || 0);
-        if (n >= 1000000) return (n / 1000000).toFixed(1) + 'M';
-        if (n >= 1000) return (n / 1000).toFixed(1) + 'K';
-        return String(n);
+        return typeof formatTokenCount === 'function' ? formatTokenCount(n) : String(Number(n) || 0);
     }
 
     function isDark() { return document.body.classList.contains('dark-theme'); }

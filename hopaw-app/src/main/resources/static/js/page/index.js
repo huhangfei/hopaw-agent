@@ -320,12 +320,7 @@ function formatTaskElapsed(elapsedMs) {
     return (ms / 60000).toFixed(1) + '分';
 }
 
-/** 格式化Token数量：≥1000用k表示（保留1位小数） */
-function formatTokenCount(n) {
-    var v = Number(n || 0);
-    if (Math.abs(v) >= 1000) { return (v / 1000).toFixed(1) + 'k'; }
-    return String(v);
-}
+// Token 数量格式化统一走 js/common.js 的 formatTokenCount（万级以 w 显示）
 
 /**
  * 任务执行统计：运行时长/工具执行次数/Token用量/每秒Token，
@@ -3221,7 +3216,7 @@ function renderTokenChart(data) {
                             font: { size: 9 },
                             color: isDark ? '#888' : '#999',
                             callback: function(v) {
-                                return v >= 1000 ? (v / 1000).toFixed(0) + 'k' : v;
+                                return formatTokenCount(v);
                             }
                         },
                         grid: { color: isDark ? '#2d2d44' : '#f0f0f0' }
@@ -3252,11 +3247,6 @@ function updateTokenTitle(input, output, total) {
     }
 }
 
-
-function formatTokenCount(n) {
-    if (n >= 1000) return (n / 1000).toFixed(1) + 'K';
-    return n.toString();
-}
 
 window.onload = function() {
 

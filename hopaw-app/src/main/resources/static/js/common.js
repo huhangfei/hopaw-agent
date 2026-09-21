@@ -26,6 +26,24 @@ function escapeHtml(text) {
     return div.innerHTML;
 }
 
+/**
+ * 格式化 Token 数量（紧凑显示，避免长数字撑破窄容器）：
+ *   < 1000    → 原样数字，如 998
+ *   < 10000   → 保留 1 位小数的 k（千），如 1234 → 1.2k
+ *   >= 10000  → 保留 1 位小数的 w（万），如 12345 → 1.2w，1234567 → 123.5w
+ * 负数按绝对值判定单位并保留符号（-12345 → -1.2w）；非法值按 0 处理。
+ * 全站统一入口，勿在页面脚本内重复实现。
+ */
+function formatTokenCount(n) {
+    var v = Number(n);
+    if (!isFinite(v)) { return '0'; }
+    var sign = v < 0 ? '-' : '';
+    var abs = Math.abs(v);
+    if (abs >= 10000) { return sign + (abs / 10000).toFixed(1) + 'w'; }
+    if (abs >= 1000) { return sign + (abs / 1000).toFixed(1) + 'k'; }
+    return sign + String(abs);
+}
+
 // marked v15 全局配置：注册 hooks.preprocess 统一转义单波浪线，防止 ~text~ 被误判为删除线
 document.addEventListener('DOMContentLoaded', function() {
     if (typeof marked !== 'undefined') {
