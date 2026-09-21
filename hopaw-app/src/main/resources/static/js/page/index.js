@@ -3949,8 +3949,8 @@ function updateThinkingLevelUI(restoreOnly) {
  * 兼容历史数据（旧版写入的 workflow-task-chat / project-chat）
  */
 function sessionFilterTypeOf(bizType) {
-    if (bizType === 'workflowTaskChat') return 'task';
-    if (bizType === 'projectChat') return 'project';
+    if (bizType === 'workflowTaskChat' || bizType === 'workflow-task-chat') return 'task';
+    if (bizType === 'projectChat' || bizType === 'project-chat') return 'project';
     return 'chat';
 }
 
