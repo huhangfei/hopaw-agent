@@ -39,7 +39,7 @@
         <module>tools/hopaw-tool-canvas</module>
         <module>tools/hopaw-tool-svg</module>
         <module>tools/hopaw-tool-gomoku</module>
-        <module>tools/hopaw-tool-chat-background</module>
+        <module>tools/hopaw-tool-chat-beautify</module>
     </modules>
 
     <properties>

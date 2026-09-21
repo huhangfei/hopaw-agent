@@ -1,4 +1,4 @@
-package com.agent.hopaw.tool.chatbg;
+package com.agent.hopaw.tool.chatbeautify;
 
 import com.agent.hopaw.infra.plugin.AbstractAgentPlugin;
 
@@ -18,7 +18,7 @@ import com.agent.hopaw.infra.plugin.AbstractAgentPlugin;
  * 支持设置会话区背景色 / 背景图，以及拖拽调节会话消息字体大小（思考 / 普通消息 / 工具按钮），
  * 全部设置由本插件自行持久化到 localStorage 并在页面加载时还原。</p>
  */
-public class ChatBackgroundPlugin extends AbstractAgentPlugin {
+public class ChatBeautifyPlugin extends AbstractAgentPlugin {
 
     /** 插件标识 */
     public static final String PLUGIN_ID = "chatBeautify";
@@ -57,6 +57,6 @@ public class ChatBackgroundPlugin extends AbstractAgentPlugin {
 
     @Override
     public String getIcon() {
-        return "chat-background.svg";
+        return "chat-beautify.svg";
     }
 }

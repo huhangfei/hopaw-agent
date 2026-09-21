@@ -3,7 +3,7 @@
     {
       "id": "chat-beautify-html",
       "type": "html",
-      "path": "static/chat-background.html",
+      "path": "static/chat-beautify.html",
       "pages": ["index"],
       "mount": "body",
       "mode": "append",
@@ -12,14 +12,14 @@
     {
       "id": "chat-beautify-css",
       "type": "css",
-      "path": "static/chat-background.css",
+      "path": "static/chat-beautify.css",
       "pages": ["index"],
       "priority": 1000
     },
     {
       "id": "chat-beautify-js",
       "type": "js",
-      "path": "static/chat-background.js",
+      "path": "static/chat-beautify.js",
       "pages": ["index"],
       "position": "body-end",
       "priority": 1000

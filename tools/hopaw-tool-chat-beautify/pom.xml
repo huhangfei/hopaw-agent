@@ -11,12 +11,12 @@
     </parent>
 
     <groupId>com.hopaw.agent</groupId>
-    <artifactId>hopaw-tool-chat-background</artifactId>
+    <artifactId>hopaw-tool-chat-beautify</artifactId>
     <version>1.0.0</version>
     <packaging>jar</packaging>
 
-    <name>hopaw-tool-chat-background</name>
-    <description>会话背景色纯前端插件：不提供任何 AgentTool，仅通过 plugin-assets.json 在沙箱容器中注入设置面板，为会话页设置背景色</description>
+    <name>hopaw-tool-chat-beautify</name>
+    <description>会话美化纯前端插件：不提供任何 AgentTool，仅通过 plugin-assets.json 向会话页注入「会话美化」面板，可设置会话区背景色 / 背景图并拖拽调节消息字体大小（非沙箱，直接注入宿主 DOM）</description>
     <properties>
         <maven.install.skip>true</maven.install.skip>
     </properties>
