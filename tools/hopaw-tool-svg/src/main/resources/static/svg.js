@@ -10,6 +10,11 @@
  *   - 下载：优先把当前（含手工编辑后）的 SVG 光栅化为 PNG 下载；光栅化失败则回退下载 .svg 源文件
  *   - 关闭：隐藏插槽、还原聊天区与侧边栏状态
  *
+ * 工具执行列表上的「打开插槽」按钮（由渲染 hook 注入）：
+ *   从 ctx.toolArguments（框架统一解析的本次调用入参）判断能否恢复该次 SVG——
+ *   入参含 svgCode 时点击即还原那一次的图与标题；只有文件路径时仅打开插槽并提示无法恢复。
+ *   实时渲染、历史列表、补挂（retrofit）三种来源的参数都由框架在 ctx.toolArguments 中尽力提供。
+ *
  * 尺寸策略：预览 <img> 由 CSS 限制在容器内等比缩放，不改变 SVG 本身尺寸；下载时按 2 倍
  * 光栅化保证清晰度，尺寸取 SVG 自身 width/height（缺失时回退 viewBox，再回退默认值）。
  */
@@ -244,15 +249,38 @@
         if (cmd.action === 'show') {
             var data = {};
             try { data = JSON.parse(cmd.payload) || {}; } catch (e) { data = {}; }
-            if (els.title) {
-                els.title.textContent = (data.title && data.title.trim()) ? data.title : 'SVG 预览';
-            }
-            renderPreview(data.svg || '');
-            setCodeView(false);
-            if (!active) shrinkChatArea();
+            showSvgContent(data.svg || '', data.title);
         } else if (cmd.action === 'close') {
             if (active) restoreLayout();
         }
+    }
+
+    /** 在插槽中展示 SVG（后端 show 指令与历史工具项「恢复」共用） */
+    function showSvgContent(svg, title) {
+        if (els.title) {
+            els.title.textContent = (title && title.trim()) ? title : 'SVG 预览';
+        }
+        renderPreview(svg || '');
+        setCodeView(false);
+        if (!active) shrinkChatArea();
+    }
+
+    /**
+     * 从渲染 hook 的 ctx 解析本次调用可恢复的 SVG 源码。
+     *
+     * 框架会把工具入参统一解析到 ctx.toolArguments（实时渲染 / 历史渲染 / 补挂场景都尽力提供），
+     * 但并非每次调用都带源码：例如 svg_saveFile 只带文件路径，源码在磁盘上、前端不可见。
+     * 因此「能否恢复」由插件自己判断：返回 null 表示本次调用无法还原插槽内容。
+     */
+    function resolveRecoverableSource(ctx) {
+        var args = ctx && ctx.toolArguments;
+        if (!args || typeof args !== 'object') return null;
+        var code = args.svgCode || args.svg;
+        if (typeof code !== 'string' || !code.trim()) return null;
+        return {
+            svg: code,
+            title: (typeof args.title === 'string') ? args.title.trim() : ''
+        };
     }
 
     function closeSvg() {
@@ -273,27 +301,53 @@
         if (window.PluginHook) {
             window.PluginHook.onCommand(handleCommand);
         }
-        // 打开插槽面板（供「工具执行列表」上的插槽按钮调用）
-        window.openSvgSlot = function () {
+        /**
+         * 打开插槽面板（供「工具执行列表」上的插槽按钮调用）。
+         * @param {Object|null} [source] 本次调用的可恢复内容 {svg, title}；
+         *        传 null 表示「明确来自某个历史工具项但该次调用无源码可还原」，
+         *        不传（undefined）表示只打开面板、保留插槽当前内容。
+         */
+        window.openSvgSlot = function (source) {
+            if (source && source.svg) {
+                // 历史工具项「恢复」：直接按本次调用的入参渲染，不依赖后端最后一次 show 指令
+                showSvgContent(source.svg, source.title);
+                setStatus(source.title ? '已恢复：' + source.title : '已恢复该次 SVG', true);
+                return;
+            }
             if (!active) shrinkChatArea();
+            if (source === null) {
+                // 该次调用没带 SVG 源码（如 svg_saveFile 只有文件路径），插槽保留最近一次内容并提示
+                setStatus('该次调用未携带 SVG 源码，无法恢复', false);
+                setTimeout(function () {
+                    if (active) setStatus(codeView ? '源码编辑' : '预览中', true);
+                }, 1800);
+            }
         };
         // 通过渲染 hook 在工具项名称后追加「打开插槽」按钮
         if (window.PluginHook && window.PluginHook.registerToolRenderHook) {
             window.PluginHook.registerToolRenderHook('afterRender', ['svg'], function (ctx) {
-                if (!ctx || !ctx.header || ctx.header.querySelector('.tool-call-slot-btn')) return;
-                var btn = document.createElement('button');
-                btn.type = 'button';
-                btn.className = 'tool-call-slot-btn';
-                btn.title = '打开 SVG 插槽';
-                btn.innerHTML = '<svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18"/><path d="M9 21V9"/></svg>';
-                btn.addEventListener('click', function (e) {
-                    e.stopPropagation();
-                    e.preventDefault();
-                    if (typeof window.openSvgSlot === 'function') window.openSvgSlot();
-                });
-                var nameEl = ctx.header.querySelector('.tool-call-name');
-                if (nameEl) nameEl.parentNode.insertBefore(btn, nameEl.nextSibling);
-                else ctx.header.appendChild(btn);
+                if (!ctx || !ctx.header) return;
+                var btn = ctx.header.querySelector('.tool-call-slot-btn');
+                if (!btn) {
+                    btn = document.createElement('button');
+                    btn.type = 'button';
+                    btn.className = 'tool-call-slot-btn';
+                    btn.innerHTML = '<svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18"/><path d="M9 21V9"/></svg>';
+                    btn.addEventListener('click', function (e) {
+                        e.stopPropagation();
+                        e.preventDefault();
+                        if (typeof window.openSvgSlot === 'function') window.openSvgSlot(btn.svgSlotSource || null);
+                    });
+                    var nameEl = ctx.header.querySelector('.tool-call-name');
+                    if (nameEl) nameEl.parentNode.insertBefore(btn, nameEl.nextSibling);
+                    else ctx.header.appendChild(btn);
+                }
+                // 同一节点会随状态推进多次触发 hook：DOM 创建幂等，但参数必须每次刷新
+                // （首帧可能是 preparing、参数未到齐；started/executed 才是完整入参）
+                btn.svgSlotSource = resolveRecoverableSource(ctx);
+                btn.title = btn.svgSlotSource
+                    ? '在插槽中预览该次 SVG' + (btn.svgSlotSource.title ? '：' + btn.svgSlotSource.title : '')
+                    : '打开 SVG 插槽（该次调用未携带 SVG 源码）';
             });
         }
     }

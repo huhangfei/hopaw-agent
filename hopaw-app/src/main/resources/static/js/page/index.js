@@ -841,6 +841,7 @@ function buildToolCallStaticNode(chat) {
         toolName: chat.toolName,
         toolSetName: resolveToolSetName(chat.toolName),
         chat: chat,
+        toolArguments: parseToolArguments(chat && chat.toolArguments),
         element: null,
         header: null,
         body: null
@@ -950,6 +951,7 @@ function buildToolCallStaticNode(chat) {
     hookCtx.element = container;
     hookCtx.header = callDiv.querySelector('.tool-call-header');
     hookCtx.body = callDiv.querySelector('.tool-call-body');
+    fillHookCtxToolArguments(hookCtx, container);
     dispatchToolRenderHook('afterStaticRender', hookCtx);
 
     return container;
@@ -1395,6 +1397,8 @@ function handleToolCall(data, requestId) {
         toolName: data.toolName,
         toolSetName: resolveToolSetName(data.toolName),
         data: data,
+        // 本次工具调用的入参（started/executed/approval 状态下后端会下发 arguments），供插件按参数决定自己的行为
+        toolArguments: parseToolArguments(data && data.arguments),
         element: null,
         header: null,
         body: null
@@ -1686,6 +1690,7 @@ function handleToolCall(data, requestId) {
     hookCtx.element = toolCallDiv;
     hookCtx.header = toolCallDiv.querySelector('.tool-call-header');
     hookCtx.body = toolCallDiv.querySelector('.tool-call-body');
+    fillHookCtxToolArguments(hookCtx, toolCallDiv);
     dispatchToolRenderHook('afterRender', hookCtx);
 
     if (toolExecList) toolExecList.scrollTop = toolExecList.scrollHeight;
@@ -1707,6 +1712,46 @@ var toolOwnerSetMap = {};
 /** 解析某工具名/描述所属的工具集名，未识别返回 '' */
 function resolveToolSetName(name) {
     return (name && toolOwnerSetMap[name]) || '';
+}
+
+/**
+ * 把工具调用参数解析为对象（结构化对象 / JSON 字符串均可）。
+ * 解析不出内容（null / 空串 / 非法 JSON / 非对象 JSON）时返回 null，调用方据此判断「本次调用无可用参数」。
+ */
+function parseToolArguments(source) {
+    if (source == null) return null;
+    if (typeof source === 'object') return source;
+    if (typeof source !== 'string') return null;
+    var text = source.trim();
+    if (!text) return null;
+    try {
+        var parsed = JSON.parse(text);
+        return (parsed && typeof parsed === 'object') ? parsed : null;
+    } catch (e) {
+        return null;
+    }
+}
+
+/**
+ * 从已渲染的工具项 DOM 反查参数（渲染 hook 的兜底来源）。
+ * 工具项的「参数」区块结构为 .tool-call-args > pre.args-content，其 textContent 即参数原文
+ * （服务端/前端渲染时只做 HTML 转义，读回 textContent 会还原为原始 JSON 文本）。
+ */
+function readToolArgumentsFromDom(element) {
+    if (!element || typeof element.querySelector !== 'function') return null;
+    var argsEl = element.querySelector('.tool-call-args .args-content');
+    if (!argsEl) return null;
+    return parseToolArguments(argsEl.textContent);
+}
+
+/**
+ * 渲染 hook ctx 收尾：element 就绪后，若 ctx 还没拿到参数则用 DOM 反查兜底。
+ * after 系列 hook 一律在此之后分发，保证插件补挂（retrofit，ctx.data/chat 为 null）时
+ * ctx.toolArguments 依然尽量可用；拿不到时保持 null，插件需自行降级。
+ */
+function fillHookCtxToolArguments(ctx, element) {
+    if (!ctx || ctx.toolArguments) return;
+    ctx.toolArguments = readToolArgumentsFromDom(element);
 }
 
 /**
@@ -1762,10 +1807,13 @@ function applyToolRenderHooksToExisting() {
             toolSetName: resolveToolSetName(toolName),
             data: null,
             chat: null,
+            toolArguments: null,
             element: isStatic ? div.parentNode : div,
             header: div.querySelector('.tool-call-header'),
             body: div.querySelector('.tool-call-body')
         };
+        // 补挂时 data/chat 均为 null，参数只能从已渲染的「参数」区块反查
+        fillHookCtxToolArguments(ctx, ctx.element);
         dispatchToolRenderHook(isStatic ? 'afterStaticRender' : 'afterRender', ctx);
     });
 }
