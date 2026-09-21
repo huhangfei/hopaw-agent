@@ -7,7 +7,7 @@ function loadStorePlugins() {
     var statusEl = document.getElementById('storeStatus');
     listBody.innerHTML = '<div class="tools-list-empty">加载中...</div>';
 
-    fetch('/tools/plugin-store/api/plugins')
+    fetch('/plugins/store/api/plugins')
         .then(function(r) { return r.json(); })
         .then(function(resp) {
             if (resp.code === 200) {
