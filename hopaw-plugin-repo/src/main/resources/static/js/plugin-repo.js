@@ -26,16 +26,13 @@ function refreshPlugins() {
         .then(function(data) {
             pluginCache = data;
             renderTree(data);
-            if (selectedPlugin && selectedVersion) {
-                var leaf = document.querySelector(
-                    '.tree-leaf[data-plugin="' + selectedPlugin + '"][data-version="' + selectedVersion + '"]');
-                if (leaf) {
-                    selectVersion(null, leaf, true);
-                } else {
-                    selectedPlugin = null;
-                    selectedVersion = null;
-                    showWelcome();
-                }
+            // 保持当前选中：插件仍在则尽量停在原版本，原版本被删则回退到最新版
+            if (selectedPlugin && findPlugin(selectedPlugin)) {
+                selectPlugin(selectedPlugin, selectedVersion);
+            } else {
+                selectedPlugin = null;
+                selectedVersion = null;
+                showWelcome();
             }
         })
         .catch(function(err) {
@@ -49,6 +46,10 @@ function refreshPlugins() {
         });
 }
 
+/**
+ * 左侧列表 —— 只展示插件（版本收进详情页的下拉里）。
+ * 点击整条即选中该插件，默认展示最新版本。
+ */
 function renderTree(plugins) {
     var container = document.getElementById('treeContainer');
     if (!container) return;
@@ -88,31 +89,17 @@ function renderTree(plugins) {
         html += '<div class="tree-node"' +
             ' data-id="' + escapeHtml(plugin.id) + '"' +
             ' data-name="' + escapeHtml(plugin.name) + '"' +
-            ' onclick="toggleTreeNode(this)">' +
+            ' onclick="selectPluginNode(this)">' +
             '<div class="tree-node-header">' +
-            '<span class="tree-arrow">▸</span>' +
             '<span class="tree-icon">🧩</span>' +
             '<span class="tree-name">' + escapeHtml(plugin.name) + '</span>' +
             '<span class="tree-badge">' + plugin.versions.length + ' 个版本</span>' +
             '</div>' +
             infoHtml +
-            '<div class="tree-node-children">';
-        plugin.versions.forEach(function(v) {
-            var hash = v.sha256Hash ? v.sha256Hash.substring(0, 8) : '';
-            var caps = v.toolSetCount > 0 ? (v.toolSetCount + ' 工具集') : '纯前端';
-            html += '<div class="tree-leaf"' +
-                ' data-plugin="' + escapeHtml(plugin.id) + '"' +
-                ' data-version="' + escapeHtml(v.version) + '"' +
-                ' onclick="selectVersion(event, this)">' +
-                '<span class="leaf-dot"></span>' +
-                '<span class="leaf-version">v' + escapeHtml(v.version) + '</span>' +
-                '<span class="leaf-caps">' + escapeHtml(caps) + '</span>' +
-                '<span class="leaf-hash">' + escapeHtml(hash) + '</span>' +
-                '</div>';
-        });
-        html += '</div></div>';
+            '</div>';
     });
     container.innerHTML = html;
+    syncActiveNode();
 
     var wp = document.getElementById('welcomePanel');
     var dp = document.getElementById('detailPanel');
@@ -120,58 +107,72 @@ function renderTree(plugins) {
     if (dp) dp.style.display = '';
 }
 
-function toggleTreeNode(node) {
-    // 兼容从 header 触发的旧调用
-    if (!node.classList.contains('tree-node')) {
-        node = node.parentNode;
+/** 列表项点击入口（从节点自身取 id，避免把 id 拼进 onclick 字符串） */
+function selectPluginNode(node) {
+    if (node && !node.classList.contains('tree-node')) {
+        node = node.closest('.tree-node');
     }
-    node.classList.toggle('expanded');
+    if (!node) return;
+    selectPlugin(node.getAttribute('data-id'), null);
 }
 
-function selectVersion(event, leaf, fromRefresh) {
-    if (event) {
-        event.stopPropagation();
-    }
-    var detailPanel = document.getElementById('detailPanel');
-    var welcomePanel = document.getElementById('welcomePanel');
-    if (!detailPanel || !welcomePanel) return;
-
-    document.querySelectorAll('.tree-leaf.active').forEach(function(el) {
-        el.classList.remove('active');
-    });
-    leaf.classList.add('active');
-
-    var node = leaf.closest('.tree-node');
-    if (node && !node.classList.contains('expanded')) {
-        node.classList.add('expanded');
-    }
-
-    selectedPlugin = leaf.getAttribute('data-plugin');
-    selectedVersion = leaf.getAttribute('data-version');
-
-    welcomePanel.style.display = 'none';
-    detailPanel.style.display = '';
-
-    var plugin = null;
+function findPlugin(pluginId) {
+    if (!pluginId) return null;
     for (var i = 0; i < pluginCache.length; i++) {
-        if (pluginCache[i].id === selectedPlugin) {
-            plugin = pluginCache[i];
-            break;
-        }
+        if (pluginCache[i].id === pluginId) return pluginCache[i];
     }
+    return null;
+}
+
+/** 版本语义化降序副本（服务端已排好，这里兜底，保证下拉恒为「从新到旧」） */
+function sortedVersions(plugin) {
+    var list = (plugin && plugin.versions ? plugin.versions.slice() : []);
+    list.sort(function(a, b) { return compareVersion(b.version, a.version); });
+    return list;
+}
+
+function findVersion(plugin, version) {
+    if (!plugin || !version) return null;
+    for (var i = 0; i < plugin.versions.length; i++) {
+        if (String(plugin.versions[i].version) === String(version)) return plugin.versions[i];
+    }
+    return null;
+}
+
+/** 选中某插件的某版本（version 为空/不存在时回退到最新版） */
+function selectPlugin(pluginId, version) {
+    var plugin = findPlugin(pluginId);
     if (!plugin) return;
 
-    var version = null;
-    for (var j = 0; j < plugin.versions.length; j++) {
-        if (plugin.versions[j].version === selectedVersion) {
-            version = plugin.versions[j];
-            break;
-        }
-    }
-    if (!version) return;
+    var versions = sortedVersions(plugin);
+    if (versions.length === 0) return;
 
+    var entry = findVersion(plugin, version) || versions[0];
+    selectedPlugin = plugin.id;
+    selectedVersion = entry.version;
+
+    syncActiveNode();
+
+    var welcomePanel = document.getElementById('welcomePanel');
+    var detailPanel = document.getElementById('detailPanel');
+    if (welcomePanel) welcomePanel.style.display = 'none';
+    if (detailPanel) detailPanel.style.display = '';
+
+    renderDetail(plugin, entry, versions);
+}
+
+function syncActiveNode() {
+    document.querySelectorAll('.tree-node').forEach(function(node) {
+        if (node.getAttribute('data-id') === selectedPlugin) {
+            node.classList.add('active');
+        } else {
+            node.classList.remove('active');
+        }
+    });
+}
+
+function renderDetail(plugin, entry, versions) {
     var detailName = document.getElementById('detailName');
-    var metaVersion = document.getElementById('metaVersion');
     var metaAuthor = document.getElementById('metaAuthor');
     var metaHash = document.getElementById('metaHash');
     var metaFileSize = document.getElementById('metaFileSize');
@@ -186,16 +187,19 @@ function selectVersion(event, leaf, fromRefresh) {
     var btnDelete = document.getElementById('btnDelete');
 
     if (detailName) detailName.textContent = plugin.name || plugin.id;
-    if (metaVersion) metaVersion.textContent = 'v' + selectedVersion;
-    if (metaAuthor) metaAuthor.textContent = version.author || '-';
-    if (metaHash) metaHash.textContent = version.sha256Hash || '-';
-    if (metaFileSize) metaFileSize.textContent = formatFileSize(version.fileSize);
+    if (metaAuthor) metaAuthor.textContent = entry.author || '-';
+    if (metaHash) {
+        // 字段区已收紧为单行 + 省略号，完整哈希挂 title 供悬停查看
+        metaHash.textContent = entry.sha256Hash || '-';
+        metaHash.title = entry.sha256Hash || '';
+    }
+    if (metaFileSize) metaFileSize.textContent = formatFileSize(entry.fileSize);
     if (metaId) metaId.textContent = plugin.id || '-';
     if (metaToolSets) {
-        metaToolSets.textContent = version.toolSetCount > 0 ? version.toolSetCount + ' 个' : '无（纯前端）';
+        metaToolSets.textContent = entry.toolSetCount > 0 ? entry.toolSetCount + ' 个' : '无（纯前端）';
     }
-    if (metaAssets) metaAssets.textContent = version.frontendAssetCount > 0 ? version.frontendAssetCount + ' 个' : '无';
-    if (metaInvoke) metaInvoke.textContent = version.invokeSupport ? '支持' : '不支持';
+    if (metaAssets) metaAssets.textContent = entry.frontendAssetCount > 0 ? entry.frontendAssetCount + ' 个' : '无';
+    if (metaInvoke) metaInvoke.textContent = entry.invokeSupport ? '支持' : '不支持';
     if (metaDescription) metaDescription.textContent = plugin.description || '暂无描述';
 
     if (keywordEl) {
@@ -224,21 +228,44 @@ function selectVersion(event, leaf, fromRefresh) {
     }
 
     if (btnDelete) {
-        if (isAdmin) {
-            btnDelete.style.display = '';
-        } else {
-            btnDelete.style.display = 'none';
-        }
+        btnDelete.style.display = isAdmin ? '' : 'none';
     }
 
-    renderProvides(version);
+    renderVersionSelect(versions, selectedVersion);
+    renderProvides(entry);
+}
+
+/** 版本下拉：从新到旧，最新版带「（最新）」标注；仅一个版本时禁用 */
+function renderVersionSelect(versions, current) {
+    var select = document.getElementById('versionSelect');
+    if (!select) return;
+
+    var html = '';
+    versions.forEach(function(v, i) {
+        var value = escapeHtml(String(v.version));
+        html += '<option value="' + value + '"' +
+            (String(v.version) === String(current) ? ' selected' : '') + '>v' + value +
+            (i === 0 ? '（最新）' : '') +
+            '</option>';
+    });
+    select.innerHTML = html;
+    select.value = String(current);
+    select.disabled = versions.length <= 1;
+    select.title = versions.length <= 1 ? '当前仅一个版本' : '共 ' + versions.length + ' 个版本，可切换查看';
+}
+
+function onVersionChange() {
+    var select = document.getElementById('versionSelect');
+    if (!select || !selectedPlugin) return;
+    selectPlugin(selectedPlugin, select.value);
 }
 
 function showWelcome() {
     var wp = document.getElementById('welcomePanel');
     var dp = document.getElementById('detailPanel');
     if (wp) wp.style.display = '';
-    if (dp) dp.style.display = '';
+    if (dp) dp.style.display = 'none';
+    syncActiveNode();
 }
 
 function downloadPlugin() {
@@ -258,7 +285,7 @@ function deletePlugin() {
     .then(function(r) { return r.json(); })
     .then(function(d) {
         if (d.type === 'success') {
-            selectedPlugin = null;
+            // 当前版本已删除 —— 版本置空，刷新后自动回退到该插件的最新版；插件被删空则回到欢迎页
             selectedVersion = null;
             refreshPlugins();
         } else {
@@ -270,66 +297,41 @@ function deletePlugin() {
     });
 }
 
+/** 搜索：插件维度匹配（名称 / 标识 / 描述 / 关键词 / 工具集名 / 任一带的版本号） */
 function filterPlugins() {
     var query = document.getElementById('searchInput').value.toLowerCase().trim();
-    var nodes = document.querySelectorAll('.tree-node');
 
-    nodes.forEach(function(node) {
-        var nodeId = node.getAttribute('data-id') || '';
-        var name = (node.getAttribute('data-name') || '').toLowerCase();
-        var leaves = node.querySelectorAll('.tree-leaf');
-
+    document.querySelectorAll('.tree-node').forEach(function(node) {
         if (query === '') {
             node.classList.remove('filtered-hidden');
-            leaves.forEach(function(l) { l.classList.remove('filtered-hidden'); });
             return;
         }
 
-        var plugin = null;
-        for (var i = 0; i < pluginCache.length; i++) {
-            if (pluginCache[i].id === nodeId) {
-                plugin = pluginCache[i];
-                break;
-            }
-        }
+        var nodeId = node.getAttribute('data-id') || '';
+        var name = (node.getAttribute('data-name') || '').toLowerCase();
+        var plugin = findPlugin(nodeId);
 
-        var nameMatch = name.indexOf(query) !== -1 || nodeId.toLowerCase().indexOf(query) !== -1;
-        var keywordMatch = plugin && plugin.keyword && plugin.keyword.toLowerCase().indexOf(query) !== -1;
-        var descMatch = plugin && plugin.description && plugin.description.toLowerCase().indexOf(query) !== -1;
-        var providesMatch = false;
-        if (plugin) {
-            for (var p = 0; p < plugin.versions.length && !providesMatch; p++) {
-                var provides = plugin.versions[p].provides || [];
+        var matched = name.indexOf(query) !== -1 || nodeId.toLowerCase().indexOf(query) !== -1;
+        if (!matched && plugin) {
+            if (plugin.keyword && plugin.keyword.toLowerCase().indexOf(query) !== -1) matched = true;
+            if (!matched && plugin.description && plugin.description.toLowerCase().indexOf(query) !== -1) matched = true;
+            for (var p = 0; p < plugin.versions.length && !matched; p++) {
+                var ver = plugin.versions[p];
+                if (String(ver.version).toLowerCase().indexOf(query) !== -1) {
+                    matched = true;
+                    break;
+                }
+                var provides = ver.provides || [];
                 for (var q = 0; q < provides.length; q++) {
-                    var tsName = (provides[q].name || '').toLowerCase();
-                    if (tsName.indexOf(query) !== -1) {
-                        providesMatch = true;
+                    if ((provides[q].name || '').toLowerCase().indexOf(query) !== -1) {
+                        matched = true;
                         break;
                     }
                 }
             }
         }
-        var anyLeafMatch = false;
-        var hasMetaMatch = nameMatch || keywordMatch || descMatch || providesMatch;
 
-        leaves.forEach(function(l) {
-            var version = l.getAttribute('data-version').toLowerCase();
-            if (hasMetaMatch || version.indexOf(query) !== -1) {
-                l.classList.remove('filtered-hidden');
-                anyLeafMatch = true;
-            } else {
-                l.classList.add('filtered-hidden');
-            }
-        });
-
-        if (hasMetaMatch || anyLeafMatch) {
-            node.classList.remove('filtered-hidden');
-            if (hasMetaMatch && query !== '' && leaves.length > 0) {
-                node.classList.add('expanded');
-            }
-        } else {
-            node.classList.add('filtered-hidden');
-        }
+        node.classList.toggle('filtered-hidden', !matched);
     });
 }
 
@@ -423,6 +425,41 @@ function escapeHtml(text) {
     return div.innerHTML;
 }
 
+// ==================== 语义化版本比较 ====================
+// 不能直接用字符串比较：'1.10.0' > '1.9.0' 会误判为 false
+
+/** 拆出 [数字段数组, 预发布标识]；忽略 build 元数据（+ 之后） */
+function parseVersion(str) {
+    var s = String(str == null ? '' : str).trim();
+    if (s.charAt(0) === 'v' || s.charAt(0) === 'V') s = s.substring(1);
+    var plus = s.indexOf('+');
+    if (plus !== -1) s = s.substring(0, plus);
+    var dash = s.indexOf('-');
+    var core = dash === -1 ? s : s.substring(0, dash);
+    var pre = dash === -1 ? '' : s.substring(dash + 1);
+    var nums = core.split('.').map(function(n) {
+        var v = parseInt(n, 10);
+        return isNaN(v) ? 0 : v;
+    });
+    return { nums: nums, pre: pre };
+}
+
+/** 返回 <0 / 0 / >0，遵循 SemVer：预发布版本小于同段正式版 */
+function compareVersion(a, b) {
+    var pa = parseVersion(a);
+    var pb = parseVersion(b);
+    var len = Math.max(pa.nums.length, pb.nums.length);
+    for (var i = 0; i < len; i++) {
+        var na = pa.nums[i] || 0;
+        var nb = pb.nums[i] || 0;
+        if (na !== nb) return na < nb ? -1 : 1;
+    }
+    if (pa.pre === pb.pre) return 0;
+    if (pa.pre === '') return 1;
+    if (pb.pre === '') return -1;
+    return pa.pre < pb.pre ? -1 : 1;
+}
+
 /**
  * 渲染某版本的「提供能力」：
  * 顶部为一排能力徽标（工具集 / 前端资产 / invoke / 配置项），下面逐个列出工具集摘要。
@@ -447,7 +484,6 @@ function renderProvides(version) {
         if (version.configItemCount > 0) {
             badges += '<span class="cap-badge cap-badge-config">' + version.configItemCount + ' 项插件配置</span>';
         }
-        badges += '<span class="cap-badge cap-badge-manifest">清单 v' + version.manifestVersion + '</span>';
         badgeContainer.innerHTML = badges;
     }
 

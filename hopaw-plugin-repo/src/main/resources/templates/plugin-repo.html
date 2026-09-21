@@ -42,9 +42,8 @@
                 </div>
                 <div th:each="plugin : ${plugins}" class="tree-node"
                      th:attr="data-id=${plugin.id},data-name=${plugin.name}"
-                     th:onclick="'toggleTreeNode(this)'">
+                     th:onclick="'selectPluginNode(this)'">
                     <div class="tree-node-header">
-                        <span class="tree-arrow">▸</span>
                         <span class="tree-icon">🧩</span>
                         <span class="tree-name" th:text="${plugin.name}">plugin-name</span>
                         <span class="tree-badge" th:text="${plugin.versions.size() + ' 个版本'}">3 个版本</span>
@@ -57,17 +56,6 @@
                         <div class="tree-node-keywords" th:if="${plugin.keyword != null and plugin.keyword != ''}">
                             <span class="keyword-tag" th:each="kw : ${#strings.listSplit(plugin.keyword, ',')}"
                                   th:text="${#strings.trim(kw)}">keyword</span>
-                        </div>
-                    </div>
-                    <div class="tree-node-children">
-                        <div th:each="version : ${plugin.versions}" class="tree-leaf"
-                             th:attr="data-plugin=${plugin.id},data-version=${version.version}"
-                             th:onclick="'selectVersion(event, this)'">
-                            <span class="leaf-dot"></span>
-                            <span class="leaf-version" th:text="'v' + ${version.version}">v1.0.0</span>
-                            <span class="leaf-caps"
-                                  th:text="${version.toolSetCount > 0 ? version.toolSetCount + ' 工具集' : '纯前端'}">2 工具集</span>
-                            <span class="leaf-hash" th:text="${#strings.isEmpty(version.sha256Hash) ? '' : version.sha256Hash.substring(0, 8)}"></span>
                         </div>
                     </div>
                 </div>
@@ -112,7 +100,8 @@
                 <div class="detail-meta">
                     <div class="meta-item">
                         <span class="meta-label">版本</span>
-                        <span class="meta-value" id="metaVersion">-</span>
+                        <select class="meta-select" id="versionSelect" onchange="onVersionChange()"
+                                title="切换版本"></select>
                     </div>
                     <div class="meta-item">
                         <span class="meta-label">作者</span>
