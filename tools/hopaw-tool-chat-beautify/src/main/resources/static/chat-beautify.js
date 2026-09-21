@@ -5,8 +5,11 @@
  *   - 触发按钮：relocate 到会话头部「更多」按钮前，点击向下弹出设置面板；
  *   - 背景色：预设色板 / 自定义取色器，作用到会话区（.chat-area），可还原；
  *   - 背景图：上传本地图片（FileReader → dataURL）铺满会话区，可清除，并支持 0~100% 透明度；
- *   - 气泡背景透明度：滑块统一控制 agent 回合大盒子（.agent-turn）与用户气泡（.message.user）
- *     底色的 alpha（100% 即原色）；并按底色与透明度的合成结果自动切换气泡文字深浅，
+ *   - 气泡与容器透明度：一个滑块统一控制 agent 回合大盒子（.agent-turn）、用户气泡（.message.user）、
+ *     顶部栏 / 输入区 / 输入框等容器（.chat-header / .chat-input-area / .chat-input-wrapper），
+ *     以及消息区滚动条（.chat-messages 的轨道 / 滑块）与代码块（.message-content pre）底色的 alpha
+ *     （100% 即各自原色，调低后背景图 / 背景色会透上来）；
+ *     并按底色与透明度的合成结果自动切换气泡文字深浅，
  *     避免亮色模式下透明度调低后白色文字看不见；
  *   - 字体大小：三个滑块分别拖拽调节「思考 / 普通消息 / 工具按钮」字号，实时生效；
  *   - 全部设置持久化到 localStorage（键 hopaw.chatBeautify），页面加载时还原；
@@ -20,7 +23,7 @@
     var STORAGE_KEY = 'hopaw.chatBeautify';
     var LEGACY_KEY = 'hopaw.chatBackground';
     var FONT_DEFAULT = { thinking: 12, message: 14, tool: 14 };
-    var ALPHA_DEFAULT = 100;
+    var ALPHA_DEFAULT = 100;   // 气泡与容器透明度默认值
     var IMG_ALPHA_DEFAULT = 100;
     var MAX_IMAGE_BYTES = 4 * 1024 * 1024; // 背景图上限 4MB（localStorage 约 5MB）
 
@@ -39,6 +42,27 @@
     /* 会话区默认底色：未设置背景色时，背景图透明度以它为底衬（与宿主 index.css 一致） */
     var CHAT_BG_LIGHT = [255, 255, 255];   // .chat-area → white
     var CHAT_BG_DARK = [26, 26, 46];       // body.dark-theme .chat-area → #1a1a2e
+
+    /* 容器底色基准值：会话页里几处不透明的「墙板」，跟「气泡与容器透明度」滑块一起淡出，
+       背景图 / 背景色才能透到它们上面；100% 时各自还原成原色，外观与未接入前完全一致 */
+    var HEADER_RGB_LIGHT = [250, 250, 250];    // .chat-header / .chat-input-area → #fafafa
+    var HEADER_RGB_DARK = [22, 33, 62];        // body.dark-theme 同两者 → #16213e
+    var INPUT_BOX_RGB_LIGHT = [255, 255, 255]; // .chat-input-wrapper → #fff
+    var INPUT_BOX_RGB_DARK = [30, 58, 95];     // body.dark-theme .chat-input-wrapper → #1e3a5f
+    var PAGE_RGB_LIGHT = [240, 242, 245];      // .chat-wrapper 自身无底色，实际透出的是 body → #f0f2f5
+    var PAGE_RGB_DARK = [26, 26, 46];          // body.dark-theme → #1a1a2e
+
+    /* 消息区滚动条基准值：轨道 / 滑块由浏览器单独绘制、不受元素底色影响，
+       亮色下是 UA 默认灰、暗色下被 dark-theme.css 固定成 #16213e，铺背景图后便是那条不透明的竖条 */
+    var SCROLL_TRACK_LIGHT = [241, 241, 241];  // Chrome 默认轨道观感
+    var SCROLL_TRACK_DARK = [22, 33, 62];      // body.dark-theme ::-webkit-scrollbar-track → #16213e
+    var SCROLL_THUMB_LIGHT = [193, 193, 193];  // Chrome 默认滑块观感
+    var SCROLL_THUMB_DARK = [45, 45, 68];      // body.dark-theme ::-webkit-scrollbar-thumb → #2d2d44
+
+    /* 代码块底色基准值：agent 侧是实色「砖块」，不跟着淡出会在一片半透明里格外突兀 */
+    var CODE_RGB_LIGHT = [246, 248, 250];      // .message-content pre → #f6f8fa
+    var CODE_RGB_DARK = [45, 45, 68];          // body.dark-theme .message-content pre → #2d2d44
+    var USER_CODE_WHITE_ALPHA = 0.1;           // .message.user .message-content pre → rgba(255,255,255,.1)
 
     var root = null;
     var btn = null;
@@ -67,6 +91,7 @@
     var resetFontBtn = null;
     var fontStyleEl = null;
     var alphaStyleEl = null;
+    var containerStyleEl = null;
 
     var state = {
         backgroundColor: null,
@@ -134,8 +159,9 @@
         return null;
     }
 
+    /** 拼 rgba()，alpha 统一收成三位小数，避免 0.30000000000000004 这类浮点尾巴写进 CSS */
     function rgba(rgb, a) {
-        return 'rgba(' + rgb[0] + ',' + rgb[1] + ',' + rgb[2] + ',' + a + ')';
+        return 'rgba(' + rgb[0] + ',' + rgb[1] + ',' + rgb[2] + ',' + Math.round(a * 1000) / 1000 + ')';
     }
 
     /** 当前是否暗色主题（宿主在 body 上挂 dark-theme） */
@@ -200,13 +226,20 @@
     }
 
     /**
-     * 背景图的「底衬色」：用户显式设了背景色就用它；
-     * 否则用会话区自身默认底色（随深浅主题变化）。
+     * 会话区「底衬色」：用户显式设了背景色就用它；否则用会话区自身默认底色。
+     *
+     * <p>默认底色随深浅主题变化，而注入的规则是亮 / 暗两套一次写死的，
+     * 因此这里按「假定主题」取色（dark 形参），而不是去读当前 DOM 状态。</p>
      */
-    function baseRgb() {
+    function baseRgbFor(dark) {
         var fromColor = parseRgb(state.backgroundColor);
         if (fromColor) return fromColor;
-        return isDarkTheme() ? CHAT_BG_DARK : CHAT_BG_LIGHT;
+        return dark ? CHAT_BG_DARK : CHAT_BG_LIGHT;
+    }
+
+    /** 当前主题下的会话区底衬色（供 .chat-area 行内背景图叠层使用） */
+    function baseRgb() {
+        return baseRgbFor(isDarkTheme());
     }
 
     /* ---------------- 应用 ---------------- */
@@ -247,7 +280,76 @@
     }
 
     /**
-     * 气泡背景透明度：控制 agent 回合大盒子（.agent-turn）与用户气泡（.message.user）底色的 alpha。
+     * 容器背景透明度：顶部栏 / 输入区 / 输入框这些容器本身是不透明的「墙板」，会把铺在 .chat-area 上的
+     * 背景图与背景色挡在外面；消息区的滚动条同理 —— 轨道 / 滑块由浏览器单独绘制，不受元素底色影响，
+     * 亮色下是 UA 默认灰、暗色下被 dark-theme.css 固定成 #16213e，铺了背景图就留下一条不透明的竖条。
+     * 这里按「气泡与容器透明度」把它们各自的主题底色换算成 rgba，随滑块一起淡出，让背景图透上来。
+     *
+     * <p>宿主把主题开关挂在 body（body.dark-theme）上，所以亮 / 暗两套规则一次注入：
+     * 暗色那条选择器以 body.dark-theme 打头、特异性更高且写在后面，天然覆盖亮色那条，
+     * 主题切换由 CSS 直接生效，无须 JS 重算。</p>
+     *
+     * <p>100% 时注入的就是各自原色，外观与未接入前完全一致；调低才逐步透出背景图与消息区。
+     * `.chat-input-wrapper` 加 `:not(.disabled)`：禁用态宿主用灰底 + 半透明表达「不可输入」，
+     * 那个语义不该被透明度联动覆盖掉。</p>
+     *
+     * <p>`.chat-messages-wrap` 本身没有底色（真正的滚动容器是它的子元素 `.chat-messages`），
+     * 所以它只参与滚动条那条规则 —— 若给它刷底色，100% 时反而会把背景图整片盖住。</p>
+     */
+    function applyContainerAlpha() {
+        if (!containerStyleEl) {
+            containerStyleEl = document.createElement('style');
+            containerStyleEl.id = 'cbContainerAlphaStyle';
+            document.head.appendChild(containerStyleEl);
+        }
+        var a = state.msgAlpha / 100;
+        containerStyleEl.textContent =
+            containerCss('', {
+                header: HEADER_RGB_LIGHT, inputBox: INPUT_BOX_RGB_LIGHT, page: PAGE_RGB_LIGHT,
+                track: SCROLL_TRACK_LIGHT, thumb: SCROLL_THUMB_LIGHT
+            }, a)
+            + containerCss('body.dark-theme ', {
+                header: HEADER_RGB_DARK, inputBox: INPUT_BOX_RGB_DARK, page: PAGE_RGB_DARK,
+                track: SCROLL_TRACK_DARK, thumb: SCROLL_THUMB_DARK
+            }, a);
+    }
+
+    /** 一套（亮或暗）容器底色 + 消息区滚动条规则：prefix 空串即亮色默认，'body.dark-theme ' 即暗色覆盖 */
+    function containerCss(prefix, t, a) {
+        return prefix + '.chat-wrapper{background:' + rgba(t.page, a) + ' !important;}'
+            + prefix + '.chat-header{background:' + rgba(t.header, a) + ' !important;}'
+            + prefix + '.chat-input-area{background:' + rgba(t.header, a) + ' !important;}'
+            + prefix + '.chat-input-wrapper:not(.disabled){background:' + rgba(t.inputBox, a) + ' !important;}'
+            + scrollbarCss(prefix, t, a);
+    }
+
+    /**
+     * 消息区滚动条：目标取真正的滚动容器 `.chat-messages`，并顺带写上外层 `.chat-messages-wrap`
+     * （它在某些布局下也可能是滚动容器，多写一条选择器无副作用）。
+     *
+     * <p>注意这里逐条拼选择器、不能用 `'.a, .b' + '::-webkit-scrollbar-track'` 的写法 ——
+     * 伪元素只会挂到选择器列表的最后一项上，前面的会被静默丢掉。</p>
+     *
+     * <p>只改底色、不定宽度：暗色下 dark-theme.css 已把宽度定成 8px、滑块圆角 4px，不去碰它；
+     * 亮色下保持浏览器默认宽度，这样 100% 时两种主题的滚动条都与接入前一致。
+     * 末尾补一条标准属性 `scrollbar-color`，让 Firefox 也能跟着淡出。</p>
+     */
+    function scrollbarCss(prefix, t, a) {
+        var targets = ['.chat-messages', '.chat-messages-wrap'];
+        var css = '';
+        for (var i = 0; i < targets.length; i++) {
+            var sel = prefix + targets[i];
+            css += sel + '::-webkit-scrollbar-track{background:' + rgba(t.track, a) + ' !important;}'
+                + sel + '::-webkit-scrollbar-corner{background:' + rgba(t.track, a) + ' !important;}'
+                + sel + '::-webkit-scrollbar-thumb{background:' + rgba(t.thumb, a) + ' !important;}'
+                + sel + '{scrollbar-color:' + rgba(t.thumb, a) + ' ' + rgba(t.track, a) + ';}';
+        }
+        return css;
+    }
+
+    /**
+     * 气泡与容器透明度：控制 agent 回合大盒子（.agent-turn）、用户气泡（.message.user）
+     * 以及顶部栏 / 输入区等容器底色的 alpha，末尾顺带刷新容器那组规则。
      *
      * <p>agent 侧的目标是 .agent-turn 而不是 .message.agent —— 宿主里小节底色已被置为 transparent，
      * 整盒底色统一落在盒子上，注入点必须跟着上移，否则透明度对 agent 完全无效。</p>
@@ -255,6 +357,9 @@
      * <p>文字色随透明度一起自适应：底色往会话区底色淡出后，亮色模式下白字会看不见，
      * 因此按合成后的亮度决定用深色还是浅色字；user 气泡里几个原本为白字设计的元素（链接/代码块）
      * 在切到深色字时一并反转，避免低透明度下只剩一块看不清的浅底。</p>
+     *
+     * <p>亮 / 暗两套规则一次注入：暗色气泡的底色基准与文字深浅都单独按暗色会话区底色算过，
+     * 主题切换由 CSS 直接生效，不依赖 MutationObserver 重算。</p>
      */
     function applyMessageAlpha() {
         if (!alphaStyleEl) {
@@ -263,23 +368,43 @@
             document.head.appendChild(alphaStyleEl);
         }
         var a = state.msgAlpha / 100;
-        var base = baseRgb();
-        var agentRgb = isDarkTheme() ? AGENT_RGB_DARK : AGENT_RGB_LIGHT;
-        var agentText = pickTextColor([agentRgb], base, a, TEXT_DARK, TEXT_LIGHT_AGENT);
+        var userGradient = 'linear-gradient(135deg,' + rgba(USER_RGB_FROM, a) + ' 0%,'
+            + rgba(USER_RGB_TO, a) + ' 100%)';
+
+        alphaStyleEl.textContent =
+            bubbleCss('', { agent: AGENT_RGB_LIGHT, code: CODE_RGB_LIGHT }, baseRgbFor(false), userGradient, a)
+            + bubbleCss('body.dark-theme ', { agent: AGENT_RGB_DARK, code: CODE_RGB_DARK },
+                baseRgbFor(true), userGradient, a);
+
+        applyContainerAlpha();
+    }
+
+    /**
+     * 一套（亮或暗）气泡底色 + 文字色 + 代码块规则。
+     *
+     * @param base 该主题下气泡底色淡出后露出的会话区底衬色，用于反推文字该用深色还是浅色
+     */
+    function bubbleCss(prefix, theme, base, userGradient, a) {
+        var agentText = pickTextColor([theme.agent], base, a, TEXT_DARK, TEXT_LIGHT_AGENT);
         var userText = pickTextColor([USER_RGB_FROM, USER_RGB_TO], base, a, TEXT_DARK, TEXT_LIGHT_USER);
 
-        var css = '.agent-turn{background:' + rgba(agentRgb, a) + ' !important;'
+        var css = prefix + '.agent-turn{background:' + rgba(theme.agent, a) + ' !important;'
             + 'color:' + agentText + ' !important;}'
-            + '.message.user{background:linear-gradient(135deg,' + rgba(USER_RGB_FROM, a) + ' 0%,'
-            + rgba(USER_RGB_TO, a) + ' 100%) !important;color:' + userText + ' !important;}';
+            + prefix + '.message.user{background:' + userGradient + ' !important;'
+            + 'color:' + userText + ' !important;}'
+            // 代码块是实色「砖块」，不跟着淡出会在一片半透明里格外突兀
+            + prefix + '.message-content pre{background:' + rgba(theme.code, a) + ' !important;}'
+            // 用户气泡的代码块宿主用的是 10% 白，按同比例淡出，100% 时与宿主完全一致
+            + prefix + '.message.user .message-content pre{background:'
+            + rgba([255, 255, 255], USER_CODE_WHITE_ALPHA * a) + ' !important;}';
         if (userText === TEXT_DARK) {
-            css += '.message.user .message-content a{color:inherit !important;}'
-                + '.message.user .message-content code{background:rgba(0,0,0,0.06) !important;}'
-                + '.message.user .message-content pre{background:rgba(0,0,0,0.05) !important;}'
-                + '.message.user .message-content blockquote{border-left-color:currentColor !important;'
+            css += prefix + '.message.user .message-content a{color:inherit !important;}'
+                + prefix + '.message.user .message-content code{background:rgba(0,0,0,0.06) !important;}'
+                + prefix + '.message.user .message-content pre{background:rgba(0,0,0,0.05) !important;}'
+                + prefix + '.message.user .message-content blockquote{border-left-color:currentColor !important;'
                 + 'background:rgba(0,0,0,0.04) !important;}';
         }
-        alphaStyleEl.textContent = css;
+        return css;
     }
 
     function applyFont() {
@@ -419,7 +544,7 @@
             });
         }
 
-        // 消息背景透明度：一个滑块
+        // 气泡与容器透明度：一个滑块（内部会连带刷新容器注入规则）
         if (alphaInput) {
             alphaInput.addEventListener('input', function () {
                 state.msgAlpha = clampInt(alphaInput.value, 0, 100, ALPHA_DEFAULT);
@@ -507,15 +632,16 @@
     }
 
     /**
-     * 跟随深浅主题切换重算：未设背景色时，背景图透明度的底衬色取的是会话区默认底色
-     * （亮 white / 暗 #1a1a2e）；气泡底色的基准色与文字深浅同样随主题变化，
-     * 主题一变这些都必须重新合成才不出错。
+     * 跟随深浅主题切换重算。
+     *
+     * <p>容器与气泡的透明度规则本身就分了亮 / 暗两套，主题切换由 CSS 直接生效、无须重算；
+     * 唯一需要 JS 重算的是 .chat-area 的行内背景图叠层——它的底衬色取的是会话区自身默认底色
+     * （亮 white / 暗 #1a1a2e），主题一变必须重新合成才不出错。</p>
      */
     function observeTheme() {
         if (!window.MutationObserver || !document.body) return;
         new MutationObserver(function () {
             applyBackground();
-            applyMessageAlpha();
         }).observe(document.body, { attributes: true, attributeFilter: ['class'] });
     }
 

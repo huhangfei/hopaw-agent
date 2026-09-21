@@ -45,17 +45,19 @@
             </div>
             <div class="cb-range-row" id="cbImgAlphaRow">
                 <span class="cb-range-label">透明度</span>
-                <input type="range" class="cb-range" id="cbImgAlpha" min="0" max="100" step="1" value="100">
+                <input type="range" class="cb-range" id="cbImgAlpha" min="0" max="100" step="1" value="100"
+                       title="仅调节背景图自身的透明度">
                 <span class="cb-range-value" id="cbImgAlphaVal">100%</span>
             </div>
         </div>
 
-        <!-- 气泡背景透明度 -->
+        <!-- 气泡与容器透明度 -->
         <div class="cb-group">
-            <div class="cb-group-title">气泡背景透明度</div>
+            <div class="cb-group-title">气泡与容器透明度</div>
             <div class="cb-range-row">
-                <span class="cb-range-label">气泡</span>
-                <input type="range" class="cb-range" id="cbMsgAlpha" min="0" max="100" step="1" value="100">
+                <span class="cb-range-label">透明度</span>
+                <input type="range" class="cb-range" id="cbMsgAlpha" min="0" max="100" step="1" value="100"
+                       title="统一控制气泡（agent 回合 / 用户消息）、顶部栏 / 输入区 / 输入框等容器，以及消息区滚动条与代码块的背景透明度，100% 即原色">
                 <span class="cb-range-value" id="cbMsgAlphaVal">100%</span>
             </div>
             <div class="cb-range-row cb-range-reset-row">
