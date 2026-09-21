@@ -798,7 +798,9 @@ body.dark-theme .chat-header-glow::after {
 }
 .message.agent {
     align-self: flex-start;
-    background: #f0f2f5;
+    /* 底色一律由 .agent-turn 大盒子承载（见下）：小节自身透明，整盒视觉连续，
+       底色也好统一交给「会话美化」插件按透明度调成 rgba 注入 */
+    background: transparent;
     color: #333;
     border-bottom-left-radius: 5px;
 }
@@ -811,7 +813,8 @@ body.dark-theme .chat-header-glow::after {
     max-width: 100%;
     min-width: 0;
     padding: 8px 12px;
-    /* 大盒子自身不再铺底：底色改由「会话美化」插件按透明度设置注入到 .agent-turn 内的 .message.agent 上 */
+    /* 整盒底色（亮色）：agent 小节底色统一上移到盒子上，透明度的注入目标也是它 */
+    background: #f0f2f5;
     color: #333;
     border-radius: 15px;
     border-bottom-left-radius: 5px;
@@ -2862,12 +2865,13 @@ body.dark-theme .chat-header-desc {
 }
 
 body.dark-theme .message.agent {
-    background: #2d2d44;
+    /* 底色同样上移到 .agent-turn 盒子，见下 */
     color: #e0e0e0;
 }
 
 body.dark-theme .agent-turn {
-    /* 暗色底同样不再硬编码，交由「会话美化」插件按透明度注入 */
+    /* 整盒底色（暗色）：与亮色对称，可被「会话美化」插件按透明度调成 rgba 注入覆盖 */
+    background: #2d2d44;
     color: #e0e0e0;
 }
 
