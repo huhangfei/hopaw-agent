@@ -56,6 +56,36 @@ public enum ChatSessionTypeFilterEnum {
         return this == ALL;
     }
 
+    /**
+     * 按 biz_type 归组（用于给会话归类，如首页默认选中哪条会话）。
+     *
+     * <p>空值与无法识别的历史取值一律按 {@link #CHAT} 处理，与首页可见会话列表
+     * （ChatSessionMapper.findVisibleSessions）的「非项目/非任务即聊天」口径保持一致。</p>
+     *
+     * <p>注意与「会话类型筛选」的 SQL 口径差异：筛选侧只把字面量 {@code chat} 与空值算作聊天，
+     * 无法识别的历史取值不会出现在任何分组里（仅「全部」可见）。</p>
+     *
+     * @param bizType 会话业务类型，可空
+     * @return 所属分组，不会返回 {@link #ALL}
+     */
+    public static ChatSessionTypeFilterEnum match(String bizType) {
+        String value = bizType == null ? "" : bizType.trim();
+        if (value.isEmpty()) {
+            return CHAT;
+        }
+        for (ChatSessionTypeFilterEnum item : values()) {
+            if (item == ALL) {
+                continue;
+            }
+            for (String candidate : item.bizTypes) {
+                if (candidate.equalsIgnoreCase(value)) {
+                    return item;
+                }
+            }
+        }
+        return CHAT;
+    }
+
     /** 按取值反查；空或未知一律回退「全部」，保证筛选参数异常时仍能出数据 */
     public static ChatSessionTypeFilterEnum getByValue(String value) {
         if (value == null || value.trim().isEmpty()) {

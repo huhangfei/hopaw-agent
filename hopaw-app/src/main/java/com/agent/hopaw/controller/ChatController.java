@@ -1,6 +1,7 @@
 package com.agent.hopaw.controller;
 
 import com.agent.hopaw.avatar.service.AvatarSettingsService;
+import com.agent.hopaw.infra.constant.ChatSessionTypeFilterEnum;
 import com.agent.hopaw.infra.model.dto.ToolSetInfo;
 import com.agent.hopaw.infra.model.entity.Agent;
 import com.agent.hopaw.infra.model.entity.ChatSession;
@@ -51,12 +52,8 @@ public class ChatController {
         List<Agent> agents = agentService.getAgentsPage(currentUserId, null, 0, 100);
         model.addAttribute("agents", agents);
         if(sessionId == null && !chatSessions.isEmpty()){
-            // 从已有会话列表中找自己最后更新的一条作为默认选中
-            sessionId = chatSessions.stream()
-                    .filter(s -> currentUserId.equals(s.getUserId()))
-                    .findFirst()
-                    .map(ChatSession::getSessionId)
-                    .orElse(null);
+            // 默认选中：优先自己最新的一条聊天会话，没有聊天会话才退回其他类型
+            sessionId = pickDefaultSession(chatSessions, currentUserId);
         }
         Agent selectedAgent=null;
         Long aiModelId=null;
@@ -97,6 +94,38 @@ public class ChatController {
         List<ToolSetInfo> toolSets = agentToolService.getToolSets();
         model.addAttribute("toolSets", toolSets);
         return "index";
+    }
+
+    /**
+     * 首页默认选中的会话。
+     *
+     * <p>优先级：① 自己名下最新的聊天会话；② 没有聊天会话时，退回项目/工作流任务会话
+     * （不限用户）中最新的那条。</p>
+     *
+     * <p>列表（{@code getVisibleSessions}）已按 last_update_time 倒序，因此每个条件取第一条即是「最新」。
+     * 类型判定用 {@link ChatSessionTypeFilterEnum#match(String)}，与首页列表的归类口径一致
+     * （历史遗留的 biz_type 取值也按聊天处理）。</p>
+     *
+     * @return 默认选中的 sessionId；列表为空或无可选会话时返回 null（前端会新建会话）
+     */
+    private static String pickDefaultSession(List<ChatSession> chatSessions, String currentUserId) {
+        String chatSessionId = chatSessions.stream()
+                .filter(s -> currentUserId.equals(s.getUserId()))
+                .filter(s -> ChatSessionTypeFilterEnum.match(s.getBizType()) == ChatSessionTypeFilterEnum.CHAT)
+                .map(ChatSession::getSessionId)
+                .findFirst()
+                .orElse(null);
+        if (chatSessionId != null) {
+            return chatSessionId;
+        }
+        return chatSessions.stream()
+                .filter(s -> {
+                    ChatSessionTypeFilterEnum type = ChatSessionTypeFilterEnum.match(s.getBizType());
+                    return type == ChatSessionTypeFilterEnum.PROJECT || type == ChatSessionTypeFilterEnum.TASK;
+                })
+                .map(ChatSession::getSessionId)
+                .findFirst()
+                .orElse(null);
     }
 
 }
