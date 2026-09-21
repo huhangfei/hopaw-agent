@@ -79,6 +79,10 @@ public class LongTermMemoryTaskHandler implements TaskHandler {
     // 运行中标记，防止并发执行
     private volatile boolean running = false;
 
+    /** 未配置记忆整理模型时的告警节流间隔：避免每轮（50 秒）都刷同一条日志 */
+    private static final long MISSING_MODEL_WARN_INTERVAL_MS = 10 * 60 * 1000L;
+    private volatile long lastMissingModelWarnAt = 0L;
+
     public LongTermMemoryTaskHandler(IAiModelService aiModelService,
                                      ILongTermMemoryService longTermMemoryService,
                                      ISysConfigService sysConfigService,
@@ -105,6 +109,16 @@ public class LongTermMemoryTaskHandler implements TaskHandler {
         this.projectMemoryService = projectMemoryService;
     }
     public void processAgentMemories() {
+        // 未配置记忆整理模型：所有整理路径（聊天/项目/任务）都必然失败，整轮跳过并打醒目日志
+        if (!isMemoryModelConfigured()) {
+            long now = System.currentTimeMillis();
+            if (now - lastMissingModelWarnAt >= MISSING_MODEL_WARN_INTERVAL_MS) {
+                lastMissingModelWarnAt = now;
+                logger.error("记忆整理模型未配置（sys_config.memory_ai_model_id 为空或非法），本轮记忆整理已跳过；"
+                        + "聊天/项目/任务记忆均不会更新，请在「记忆设置」中选择记忆整理模型");
+            }
+            return;
+        }
         try {
             // 同时从 chat_memory_obsolete 与 chat_memory(status=TASK_DONE) 中发现需要整理的会话
             // 去重后再逐个处理
@@ -120,6 +134,20 @@ public class LongTermMemoryTaskHandler implements TaskHandler {
 
         } catch (Exception e) {
             logger.error("Error fetching agent ids for memory processing", e);
+        }
+    }
+
+    /** 记忆整理模型是否已配置（memory_ai_model_id 为合法数字编号） */
+    private boolean isMemoryModelConfigured() {
+        String modelIdStr = getConfig("memory_ai_model_id", "");
+        if (modelIdStr == null || modelIdStr.isBlank()) {
+            return false;
+        }
+        try {
+            Long.parseLong(modelIdStr.trim());
+            return true;
+        } catch (NumberFormatException e) {
+            return false;
         }
     }
 
@@ -403,6 +431,10 @@ public class LongTermMemoryTaskHandler implements TaskHandler {
      * - 任务会话：按任务维度沉淀到项目空间 memory/task-{taskId}-memory.md
      * - 项目会话：按项目维度沉淀到项目空间 memory/project-memory.md
      *
+     * 三条路径的失败语义一致：整理失败（模型不可用/校验不通过/写入失败）返回 false 且不推进游标，
+     * 未处理数据保留在 chat_memory / chat_memory_obsolete 中等待下轮重试；仅"无法定位归属"这类
+     * 重试也不会变好的情况返回 true 直接推进，避免每轮空转。
+     *
      * @return 是否处理成功（成功才推进游标）
      */
     private boolean dispatchMemoryByBizType(String sessionId, String userId, String newConversation) {
@@ -421,8 +453,11 @@ public class LongTermMemoryTaskHandler implements TaskHandler {
                     logger.info("任务会话记忆整理：任务[{}]无关联项目，跳过沉淀", taskId);
                     return true;
                 }
-                projectMemoryService.updateTaskMemory(task.getProjectId(), taskId, newConversation, userId);
-                return true;
+                boolean done = projectMemoryService.updateTaskMemory(task.getProjectId(), taskId, newConversation, userId);
+                if (!done) {
+                    logger.warn("任务会话记忆整理未完成，保留未处理数据待下次重试 sessionId={} taskId={}", sessionId, taskId);
+                }
+                return done;
             } catch (Exception e) {
                 logger.error("任务会话记忆整理失败 sessionId={}", sessionId, e);
                 return false;
@@ -437,8 +472,11 @@ public class LongTermMemoryTaskHandler implements TaskHandler {
                     logger.warn("项目会话记忆整理：未找到会话关联项目，跳过 sessionId={}", sessionId);
                     return true;
                 }
-                projectMemoryService.updateProjectMemory(project.getId(), newConversation, userId);
-                return true;
+                boolean done = projectMemoryService.updateProjectMemory(project.getId(), newConversation, userId);
+                if (!done) {
+                    logger.warn("项目会话记忆整理未完成，保留未处理数据待下次重试 sessionId={} projectId={}", sessionId, project.getId());
+                }
+                return done;
             } catch (Exception e) {
                 logger.error("项目会话记忆整理失败 sessionId={}", sessionId, e);
                 return false;

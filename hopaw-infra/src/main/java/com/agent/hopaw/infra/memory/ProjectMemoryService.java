@@ -20,8 +20,6 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.time.LocalDateTime;
-import java.time.format.DateTimeFormatter;
 
 /**
  * 项目/任务维度记忆服务：与用户维度长时记忆（LongTermMemoryService）并列。
@@ -36,12 +34,15 @@ import java.time.format.DateTimeFormatter;
  * - memory/task-{taskId}-memory.md  单任务执行记忆（每次执行/交互的增量总结）
  *
  * 写入策略：AI 增量总结合并——新会话纪要与现有记忆一并交给模型，产出精简合并后的记忆全文写回，
- * 避免追加式存储无限膨胀；AI 不可用时回退为带时间戳的分节追加。
+ * 避免追加式存储无限膨胀。
+ *
+ * 失败策略（与用户维度长时记忆对齐）：**不做原文兜底追加**。模型不可用、结果校验不通过或文件写入失败时，
+ * 一律返回 false 且不改动记忆文件，由调用方（记忆整理定时任务）保留未处理数据、下轮重试，
+ * 避免"未总结原文"污染记忆文件、以及游标已推进而内容未落盘造成的数据丢失。
  */
 @Service
 public class ProjectMemoryService implements IProjectMemoryService {
     private static final Logger logger = LoggerFactory.getLogger(ProjectMemoryService.class);
-    private static final DateTimeFormatter TIME_FMT = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm");
 
     private static final String MEMORY_DIR = "memory";
     private static final String PROJECT_MEMORY_FILE = "project-memory.md";
@@ -83,49 +84,78 @@ public class ProjectMemoryService implements IProjectMemoryService {
      * @param taskId    任务编号
      * @param newConversation 新增会话纪要文本
      * @param userId    触发本次整理的用户（用于定位项目空间与模型调用监听）
+     * @return true 已处理；false 整理失败，调用方应保留未处理数据等待重试
      */
     @Override
-    public void updateTaskMemory(Long projectId, Long taskId, String newConversation, String userId) {
-        if (projectId == null || taskId == null || newConversation == null || newConversation.isBlank()) {
-            return;
+    public boolean updateTaskMemory(Long projectId, Long taskId, String newConversation, String userId) {
+        if (projectId == null || taskId == null) {
+            // 缺少定位信息：重试也不会变好，直接视为已处理，避免每轮空转
+            logger.warn("任务记忆整理：缺少 projectId/taskId，跳过本次（projectId={}, taskId={}）", projectId, taskId);
+            return true;
+        }
+        if (newConversation == null || newConversation.isBlank()) {
+            return true;
         }
         Path file = resolveMemoryFile(projectId, TASK_MEMORY_FILE_PREFIX + taskId + TASK_MEMORY_FILE_SUFFIX);
-        writeMergedMemory(file, "任务记忆（任务编号 " + taskId + "）", newConversation, userId);
+        return writeMergedMemory(file, "任务记忆（任务编号 " + taskId + "）", newConversation, userId);
     }
 
-    /** 更新项目整体记忆：新会话纪要与现有记忆 AI 总结合并后写回 */
+    /**
+     * 更新项目整体记忆：新会话纪要与现有记忆 AI 总结合并后写回。
+     *
+     * @return true 已处理；false 整理失败，调用方应保留未处理数据等待重试
+     */
     @Override
-    public void updateProjectMemory(Long projectId, String newConversation, String userId) {
-        if (projectId == null || newConversation == null || newConversation.isBlank()) {
-            return;
+    public boolean updateProjectMemory(Long projectId, String newConversation, String userId) {
+        if (projectId == null) {
+            logger.warn("项目记忆整理：缺少 projectId，跳过本次");
+            return true;
+        }
+        if (newConversation == null || newConversation.isBlank()) {
+            return true;
         }
         Path file = resolveMemoryFile(projectId, PROJECT_MEMORY_FILE);
-        writeMergedMemory(file, "项目记忆（项目编号 " + projectId + "）", newConversation, userId);
+        return writeMergedMemory(file, "项目记忆（项目编号 " + projectId + "）", newConversation, userId);
     }
 
     /**
      * 合并写入：每次都将现有记忆与新纪要一并交给 AI 合并总结（去重、压缩、按主题重组）后写回全文，
-     * 避免追加式存储产生大量重复分节。AI 失败时回退为分节追加（带时间戳，永不丢失数据）。
+     * 避免追加式存储产生大量重复分节。
+     *
+     * 失败即返回 false 且不触碰记忆文件：既不做原文兜底追加，也不产生"游标已推进但内容未落盘"的丢数据窗口。
+     *
+     * @return true 写入成功；false 未能写入（路径不可用 / 总结失败 / 落盘异常），调用方不得推进游标
      */
-    private void writeMergedMemory(Path file, String memoryTitle, String newConversation, String userId) {
+    private boolean writeMergedMemory(Path file, String memoryTitle, String newConversation, String userId) {
+        if (file == null) {
+            // 解析不出落盘路径（项目不存在或项目空间不可用）：先不写，返回失败让下轮重试，避免丢弃本次纪要
+            logger.warn("{}整理中止：无法解析记忆文件路径（项目不存在或项目空间不可用），保留未处理数据待下次重试", memoryTitle);
+            return false;
+        }
         try {
             String existing = readFile(file);
             String merged = trySummarize(memoryTitle, existing, newConversation, userId);
-            if (merged != null && !merged.isBlank()) {
-                Files.createDirectories(file.getParent());
-                Files.write(file, merged.getBytes(StandardCharsets.UTF_8));
-                logger.info("项目空间记忆已更新: {}", file);
+            if (merged == null || merged.isBlank()) {
+                // 模型不可用或两次总结均未通过校验：放弃本次，不写入、不追加原文
+                logger.warn("{}整理未完成：AI 总结不可用或未通过校验，保留未处理数据待下次重试", memoryTitle);
+                return false;
             }
+            Files.createDirectories(file.getParent());
+            Files.write(file, merged.getBytes(StandardCharsets.UTF_8));
+            logger.info("项目空间记忆已更新: {}", file);
+            return true;
         } catch (Exception e) {
-            logger.warn("项目空间记忆写入失败: file={}", file, e);
+            logger.warn("项目空间记忆写入失败（本次不推进游标，下轮重试）: file={}", file, e);
+            return false;
         }
     }
 
     /**
      * AI 总结合并：现有记忆 + 新纪要 -> 精简记忆全文。
      * 每次更新均为全量合并（跨轮次重复内容会被合并去重），保持记忆整洁。
-     * 总结结果经校验模型校验，不通过则重试一次；两次均不通过回退分节追加。
-     * 返回 null 表示放弃 AI 结果（调用方按需回退）。
+     * 总结结果经校验模型校验，不通过则重试一次；两次均不通过返回 null，由调用方保留数据、下轮重试（不做原文兜底）。
+     *
+     * @return 合并后的记忆全文；null 表示放弃 AI 结果（调用方不得写入/推进游标）
      */
     private String trySummarize(String memoryTitle, String existing, String newConversation, String userId) {
         String merged = callMemoryModel(memoryTitle, existing, newConversation, userId);
@@ -138,9 +168,7 @@ public class ProjectMemoryService implements IProjectMemoryService {
         if (retry != null && !retry.isBlank() && validateMemoryResult(memoryTitle, retry, newConversation)) {
             return retry;
         }
-
-        // AI 失败兜底：带时间戳分节追加（粗略截断保留最新内容）
-        return (existing != null ? existing : "") + "\n\n---- [" + LocalDateTime.now().format(TIME_FMT) + "] 以下是因为上次记忆总结失败遗留的未总结信息，下次记忆整理一起处理 ----\n" + truncate(newConversation);
+        return null;
     }
 
     private String truncate(String text) {
@@ -193,6 +221,12 @@ public class ProjectMemoryService implements IProjectMemoryService {
     private String callMemoryModel(String memoryTitle, String existing, String newConversation, String userId) {
         try {
             Long modelId = parseMemoryModelId();
+            if (modelId == null) {
+                // 未配置记忆整理模型：不再让 SDK 抛 "Unknown API model: null"，显式打醒目日志并放弃本次整理
+                logger.error("{}整理中止：未配置记忆整理模型（sys_config.memory_ai_model_id 为空或非法），"
+                        + "请先在「记忆设置」中选择记忆整理模型", memoryTitle);
+                return null;
+            }
             LangChain4jChatModelListener listener = new LangChain4jChatModelListener(AiModelCallSourceEnum.MemoryOrganize)
                     .setUserId(userId)
                     .setEventPublisher(eventPublisher);
