@@ -311,7 +311,7 @@ body.dark-theme .store-progress-card{
     display: flex;
     flex-wrap: wrap;
     gap: 6px;
-    margin-bottom: 14px;
+    margin: 14px;
 }
 
 .cap-badge {
