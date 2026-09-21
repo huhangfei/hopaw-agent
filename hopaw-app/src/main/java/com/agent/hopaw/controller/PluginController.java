@@ -118,16 +118,31 @@ public class PluginController {
     @GetMapping("/api/export/{pluginId}")
     @ResponseBody
     public ResponseEntity<byte[]> exportPlugin(@PathVariable String pluginId) {
+        PluginDescriptor descriptor = pluginService.getPlugin(pluginId);
+        if (descriptor == null) {
+            return ResponseEntity.notFound().build();
+        }
         byte[] zipBytes = pluginService.exportPlugin(pluginId);
         if (zipBytes == null) {
             return ResponseEntity.notFound().build();
         }
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_OCTET_STREAM);
+        // 文件名带版本后缀：同一插件的多版本包下载到本地不会互相覆盖，便于区分
         headers.setContentDisposition(ContentDisposition.attachment()
-                .filename(pluginId + ".zip").build());
+                .filename(exportFileName(pluginId, descriptor.getVersion())).build());
         headers.setContentLength(zipBytes.length);
         return ResponseEntity.ok().headers(headers).body(zipBytes);
+    }
+
+    /** 导出包文件名：{@code <pluginId>-<version>.zip}；版本缺失时退化为 {@code <pluginId>.zip}。 */
+    private String exportFileName(String pluginId, String version) {
+        String safeId = pluginId == null ? "plugin" : pluginId.replaceAll("[\\\\/:*?\"<>|]", "_");
+        if (version == null || version.trim().isEmpty() || "unknown".equalsIgnoreCase(version.trim())) {
+            return safeId + ".zip";
+        }
+        String safeVersion = version.trim().replaceAll("[\\\\/:*?\"<>|]", "_");
+        return safeId + "-" + safeVersion + ".zip";
     }
 
     // ==================== 安装 / 升级 ====================
