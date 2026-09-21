@@ -366,7 +366,8 @@ public class AgentExecutor implements IAgentExecutor {
 
     @Override
     public int getMaxToolInvocations() {
-        return agentExecutorParams.getMaxToolInvocations() != null ? agentExecutorParams.getMaxToolInvocations() : 0;
+        // 返回配置口径（负数为无限制），供前端渲染 "本次 x/∞"
+        return Agent.resolveMaxToolInvocations(agentExecutorParams.getMaxToolInvocations());
     }
 
     @Override
@@ -679,10 +680,14 @@ public class AgentExecutor implements IAgentExecutor {
                                 .build()
                 );
             }
-            int maxToolInvocations = agentExecutorParams.getMaxToolInvocations() != null ? agentExecutorParams.getMaxToolInvocations() : 0;
-            if (maxToolInvocations > 0) {
-                aiBuilder.maxToolCallingRoundTrips(maxToolInvocations);
-            }
+            // 工具调用轮次上限：>0 为具体上限；0/负数（-1）表示不限制。
+            // SDK 无「无限制」语义（传 0 会在首次工具调用时直接抛异常），故由 Agent.toRoundTripsLimit 统一换算。
+            Integer configuredMaxToolInvocations = agentExecutorParams.getMaxToolInvocations();
+            int effectiveMaxToolInvocations = Agent.toRoundTripsLimit(configuredMaxToolInvocations);
+            aiBuilder.maxToolCallingRoundTrips(effectiveMaxToolInvocations);
+            logger.info("工具调用轮次上限: sessionId={}, 配置值={}, 生效值={}{}",
+                    sessionId, configuredMaxToolInvocations, effectiveMaxToolInvocations,
+                    Agent.isToolInvocationsUnlimited(configuredMaxToolInvocations) ? "（无限制）" : "");
             aiBuilder.tools(buildEnabledToolMap(selectedTools));
         }
 

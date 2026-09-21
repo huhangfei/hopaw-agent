@@ -4,6 +4,7 @@ import com.agent.hopaw.constant.DefaultUser;
 import com.agent.hopaw.infra.constant.ModelCapabilityEnum;
 import com.agent.hopaw.infra.constant.ModelProviderEnum;
 import com.agent.hopaw.infra.constant.ReasoningEffortEnum;
+import com.agent.hopaw.infra.model.entity.Agent;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.boot.CommandLineRunner;
@@ -47,7 +48,7 @@ public class DatabaseInitializer implements CommandLineRunner {
                     "description TEXT, " +
                     "tools TEXT, " +
                     "max_memory_tokens INTEGER DEFAULT 20480, " +
-                    "max_tool_invocations INTEGER DEFAULT 20, " +
+                    "max_tool_invocations INTEGER DEFAULT 500, " +
                     "vector_tool_search INTEGER DEFAULT 1, " +
                     "vector_tool_search_max_results INTEGER DEFAULT 5, " +
                     "ai_model_id INTEGER, " +
@@ -819,12 +820,13 @@ public class DatabaseInitializer implements CommandLineRunner {
             if (agentCount == 0) {
                 log.info("Initializing default agent...");
                 String tools = "";
+                // 默认智能体：工具调用最大轮次取 Agent.DEFAULT_MAX_TOOL_INVOCATIONS（500）
                 stmt.execute(String.format(
                         "INSERT INTO agents (name, description, tools, max_memory_tokens, max_tool_invocations, vector_tool_search, vector_tool_search_max_results, user_id, enable_thinking, temperature, reasoning_effort,enable_all_tools) VALUES ('%s', '%s', '%s', %d, %d, %d, %d, '%s', %d, %s, '%s',1)",
                         escapeSQL("大虾\uD83E\uDD90"),
                         escapeSQL("善于使用多种工具解决用户问题"),
                         escapeSQL(tools),
-                        20480, 20, 1, 30,
+                        20480, Agent.DEFAULT_MAX_TOOL_INVOCATIONS, 1, 30,
                         DefaultUser.USER,
                         1,
                         0.5,

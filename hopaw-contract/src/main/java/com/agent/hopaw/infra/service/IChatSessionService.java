@@ -40,6 +40,10 @@ public interface IChatSessionService {
 
     void updateBizType(String sessionId, String bizType);
 
-    /** 分页查询用户会话及消息记录数量（会话清理设置页），返回 total/page/pageSize/list */
-    Map<String, Object> getSessionStatsPage(String userId, int page, int pageSize);
+    /**
+     * 分页查询用户会话及消息记录数量（会话清理设置页），返回 total/page/pageSize/list/typeFilter
+     *
+     * @param sessionType 会话类型筛选（ChatSessionTypeFilterEnum 的 value，如 chat / project / task；空或未知视作全部）
+     */
+    Map<String, Object> getSessionStatsPage(String userId, int page, int pageSize, String sessionType);
 }

@@ -502,7 +502,8 @@ public class WorkflowTaskService implements IWorkflowTaskService {
 
         agentExecutorParams.setAgentId(agent.getId());
         agentExecutorParams.setMaxMemoryTokens(agent.getMaxMemoryTokens() != null ? agent.getMaxMemoryTokens() : Agent.DEFAULT_MAX_MEMORY_TOKENS);
-        agentExecutorParams.setMaxToolInvocations(agent.getMaxToolInvocations() != null ? agent.getMaxToolInvocations() : 3);
+        // 工具调用最大轮次：未配置取默认 500，配置为负数表示不限制
+        agentExecutorParams.setMaxToolInvocations(Agent.resolveMaxToolInvocations(agent.getMaxToolInvocations()));
         agentExecutorParams.setVectorToolSearch(agent.getVectorToolSearch() != null ? agent.getVectorToolSearch() : false);
         agentExecutorParams.setVectorToolSearchMaxResults(agent.getVectorToolSearchMaxResults() != null ? agent.getVectorToolSearchMaxResults() : 5);
         agentExecutorParams.setToolSets(selectedTools);

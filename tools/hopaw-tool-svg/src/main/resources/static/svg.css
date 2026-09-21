@@ -168,8 +168,21 @@
     transition: flex-grow 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
+/* 关键：plugin-loader 注入 HTML 时会包一层无样式的 wrapper div（#plugin-slot 的直接子元素）。
+   #plugin-slot 是 flex 容器而 wrapper 不是 flex 项、宽度由内容收缩，面板的 width/flex:1
+   写在非 flex 的 wrapper 里无从生效（表现为插槽没撑满右侧空间）。wrapper 必须先撑满槽位。 */
+.chat-wrapper.svg-active #plugin-slot > [data-plugin-id="svg-html"] {
+    display: flex;
+    flex: 1 1 0;
+    min-width: 0;
+    min-height: 0;
+}
+
 .chat-wrapper.svg-active .plugin-svg-panel {
     display: flex;
+    /* 面板撑满 wrapper（wrapper 已撑满槽位），保证页面伸缩时跟随 */
+    flex: 1 1 0;
+    min-width: 0;
 }
 
 .chat-wrapper.svg-active .chat-area {

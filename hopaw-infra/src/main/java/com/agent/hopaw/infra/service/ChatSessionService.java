@@ -1,5 +1,6 @@
 package com.agent.hopaw.infra.service;
 
+import com.agent.hopaw.infra.constant.ChatSessionTypeFilterEnum;
 import com.agent.hopaw.infra.mapper.ChatHistoryMapper;
 import com.agent.hopaw.infra.mapper.ChatSessionMapper;
 import com.agent.hopaw.infra.mapper.RequestResponseLogMapper;
@@ -126,13 +127,19 @@ public class ChatSessionService implements IChatSessionService {
     }
 
     /**
-     * 分页查询用户会话及消息记录数量（会话清理设置页）
+     * 分页查询用户会话及消息记录数量（会话清理设置页），支持按会话类型筛选
      */
     @Override
-    public Map<String, Object> getSessionStatsPage(String userId, int page, int pageSize) {
-        int total = chatSessionMapper.countByUserId(userId);
+    public Map<String, Object> getSessionStatsPage(String userId, int page, int pageSize, String sessionType) {
+        ChatSessionTypeFilterEnum typeFilter = ChatSessionTypeFilterEnum.getByValue(sessionType);
+        // 「全部」不下发 biz_type 条件，SQL 侧据此跳过过滤
+        List<String> bizTypes = typeFilter.isAll() ? null : typeFilter.getBizTypes();
+        boolean includeBlank = typeFilter.isIncludeBlank();
+
+        int total = chatSessionMapper.countByUserIdWithFilters(userId, bizTypes, includeBlank);
         int offset = Math.max(0, (page - 1) * pageSize);
-        List<ChatSession> sessions = chatSessionMapper.findPageByUserId(userId, offset, pageSize);
+        List<ChatSession> sessions = chatSessionMapper.findPageByUserIdWithFilters(
+                userId, bizTypes, includeBlank, offset, pageSize);
 
         // 批量统计消息数量，避免逐会话查询
         Map<String, Long> countMap = new HashMap<>();
@@ -163,11 +170,13 @@ public class ChatSessionService implements IChatSessionService {
             list.add(vo);
         }
 
-        Map<String, Object> result = new HashMap<>(4);
+        Map<String, Object> result = new HashMap<>(6);
         result.put("total", total);
         result.put("page", page);
         result.put("pageSize", pageSize);
         result.put("list", list);
+        // 回显生效的筛选项，便于前端确认（未知取值会被回退为 all）
+        result.put("typeFilter", typeFilter.getValue());
         return result;
     }
 }

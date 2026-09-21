@@ -13,9 +13,18 @@
     <main class="settings-content">
         <div class="settings-panel active" id="tab-session-clean">
             <div class="session-clean-toolbar">
-                <div class="session-clean-batch-btns">
-                    <button class="btn-save-settings session-clean-btn" id="scBatchClearBtn" onclick="scBatchClear()">一键清理历史</button>
-                    <button class="btn-save-settings session-clean-btn session-clean-btn-danger" id="scBatchDeleteBtn" onclick="scBatchDelete()">一键删除</button>
+                <div class="session-clean-toolbar-left">
+                    <!-- 会话类型筛选：切换后回到第 1 页重新查询 -->
+                    <div class="sc-type-filter" id="scTypeFilter">
+                        <span class="sc-type-tab active" data-type="all" onclick="scSetTypeFilter('all')" title="显示全部类型的会话">全部</span>
+                        <span class="sc-type-tab" data-type="chat" onclick="scSetTypeFilter('chat')" title="仅显示聊天会话">聊天</span>
+                        <span class="sc-type-tab" data-type="project" onclick="scSetTypeFilter('project')" title="仅显示项目管理会话">项目管理</span>
+                        <span class="sc-type-tab" data-type="task" onclick="scSetTypeFilter('task')" title="仅显示工作流任务会话">工作流任务</span>
+                    </div>
+                    <div class="session-clean-batch-btns">
+                        <button class="btn-save-settings session-clean-btn" id="scBatchClearBtn" onclick="scBatchClear()">一键清理历史</button>
+                        <button class="btn-save-settings session-clean-btn session-clean-btn-danger" id="scBatchDeleteBtn" onclick="scBatchDelete()">一键删除</button>
+                    </div>
                 </div>
                 <span class="session-clean-selected-tip" id="scSelectedTip">已选 0 项</span>
             </div>
@@ -36,7 +45,7 @@
                     </tbody>
                 </table>
                 <div class="session-clean-empty" id="scEmptyState" style="display:none;">
-                    <p>暂无会话</p>
+                    <p id="scEmptyText">暂无会话</p>
                 </div>
                 <div class="session-clean-pagination" id="scPagination">
                     <button class="sc-page-btn" id="scPrevBtn" onclick="scPrevPage()">上一页</button>

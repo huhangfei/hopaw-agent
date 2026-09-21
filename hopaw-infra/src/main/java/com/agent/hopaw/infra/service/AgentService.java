@@ -45,7 +45,7 @@ public class AgentService implements IAgentService {
             agent.setMaxMemoryTokens(Agent.DEFAULT_MAX_MEMORY_TOKENS);
         }
         if (agent.getMaxToolInvocations() == null) {
-            agent.setMaxToolInvocations(10);
+            agent.setMaxToolInvocations(Agent.DEFAULT_MAX_TOOL_INVOCATIONS);
         }
         if (agent.getVectorToolSearch() == null) {
             agent.setVectorToolSearch(true);
@@ -79,7 +79,8 @@ public class AgentService implements IAgentService {
             existing.setDescription(agent.getDescription());
             existing.setTools(agent.getTools());
             existing.setMaxMemoryTokens(agent.getMaxMemoryTokens() != null ? agent.getMaxMemoryTokens() : Agent.DEFAULT_MAX_MEMORY_TOKENS);
-            existing.setMaxToolInvocations(agent.getMaxToolInvocations());
+            // 未提交该字段时回退默认值，避免把无上限配置写成 NULL（负数表示不限制）
+            existing.setMaxToolInvocations(Agent.resolveMaxToolInvocations(agent.getMaxToolInvocations()));
             existing.setAiModelId(agent.getAiModelId());
             if (agent.getEnableThinking() != null) {
                 existing.setEnableThinking(agent.getEnableThinking());

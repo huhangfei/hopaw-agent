@@ -3079,7 +3079,7 @@ function loadToolStats() {
             var total = res.data.sessionTotal || 0;
             var executed = res.data.executedCount || 0;
             var max = res.data.maxToolInvocations || 0;
-            // 上限为0表示不限制
+            // 上限为 0 或负数均表示不限制（负数 -1 为显式无限制）
             var maxText = max > 0 ? max : '∞';
             el.textContent = '共' + total + '次 · 本次' + executed + '/' + maxText;
         });
