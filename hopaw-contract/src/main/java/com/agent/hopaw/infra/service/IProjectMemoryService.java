@@ -34,19 +34,27 @@ public interface IProjectMemoryService {
     /**
      * 更新任务记忆：新会话纪要与现有记忆 AI 总结合并后写回任务记忆文件。
      *
+     * 与用户维度长时记忆一致：整理失败时**不做原文兜底**，返回 false 由调用方保留未处理数据、下次重试。
+     *
      * @param projectId       项目编号（决定记忆落盘位置）
      * @param taskId          任务编号
      * @param newConversation 新增会话纪要文本
      * @param userId          触发本次整理的用户（用于定位项目空间与模型调用监听）
+     * @return true 已处理（写入成功，或本次无需处理，可推进整理游标）；
+     *         false 整理失败（模型不可用 / 结果校验不通过 / 记忆文件写入失败），调用方不得推进游标
      */
-    void updateTaskMemory(Long projectId, Long taskId, String newConversation, String userId);
+    boolean updateTaskMemory(Long projectId, Long taskId, String newConversation, String userId);
 
     /**
      * 更新项目整体记忆：新会话纪要与现有记忆 AI 总结合并后写回。
      *
+     * 与用户维度长时记忆一致：整理失败时**不做原文兜底**，返回 false 由调用方保留未处理数据、下次重试。
+     *
      * @param projectId       项目编号
      * @param newConversation 新增会话纪要文本
      * @param userId          触发本次整理的用户
+     * @return true 已处理（写入成功，或本次无需处理，可推进整理游标）；
+     *         false 整理失败（模型不可用 / 结果校验不通过 / 记忆文件写入失败），调用方不得推进游标
      */
-    void updateProjectMemory(Long projectId, String newConversation, String userId);
+    boolean updateProjectMemory(Long projectId, String newConversation, String userId);
 }
