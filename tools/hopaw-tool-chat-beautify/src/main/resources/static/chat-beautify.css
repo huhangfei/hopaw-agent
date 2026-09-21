@@ -1,6 +1,15 @@
 /* 会话美化插件样式（非沙箱，直接注入宿主页面）。
    按钮被 JS relocate 到会话头部「更多」按钮前，面板向下弹出；用 body.dark-theme 适配深浅主题。 */
 
+/* 面板内一律 border-box：色板宽度 100% 时若不把边框算进自身宽度，会逐块挤出轨道，
+   导致最后一个色块跑到面板外（原 bug）。 */
+.cb-root,
+.cb-root *,
+.cb-root *::before,
+.cb-root *::after {
+    box-sizing: border-box;
+}
+
 .cb-root {
     position: relative;
     display: inline-flex;
@@ -74,7 +83,8 @@
 /* ---- 背景色 ---- */
 .cb-swatches {
     display: grid;
-    grid-template-columns: repeat(8, 1fr);
+    /* minmax(0,1fr) 阻止轨道被内容最小宽度撑开，与上面的 border-box 一起彻底消除溢出 */
+    grid-template-columns: repeat(8, minmax(0, 1fr));
     gap: 6px;
     margin-bottom: 10px;
 }
@@ -200,7 +210,8 @@
 }
 .cb-range-value {
     flex-shrink: 0;
-    width: 34px;
+    /* 40px 以容纳「100%」这类四位读数，避免把滑块挤窄 */
+    width: 40px;
     text-align: right;
     font-size: 12px;
     color: #1f2328;

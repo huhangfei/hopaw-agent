@@ -5,6 +5,7 @@
  *   - 触发按钮：relocate 到会话头部「更多」按钮前，点击向下弹出设置面板；
  *   - 背景色：预设色板 / 自定义取色器，作用到会话区（.chat-area），可还原；
  *   - 背景图：上传本地图片（FileReader → dataURL）铺满会话区，可清除；
+ *   - 消息背景透明度：滑块统一控制 agent / user 消息气泡底色的 alpha（100% 即原色）；
  *   - 字体大小：三个滑块分别拖拽调节「思考 / 普通消息 / 工具按钮」字号，实时生效；
  *   - 全部设置持久化到 localStorage（键 hopaw.chatBeautify），页面加载时还原；
  *   - 深浅主题通过 body.dark-theme 由 CSS 适配，JS 无需感知。
@@ -17,7 +18,14 @@
     var STORAGE_KEY = 'hopaw.chatBeautify';
     var LEGACY_KEY = 'hopaw.chatBackground';
     var FONT_DEFAULT = { thinking: 12, message: 14, tool: 14 };
+    var ALPHA_DEFAULT = 100;
     var MAX_IMAGE_BYTES = 4 * 1024 * 1024; // 背景图上限 4MB（localStorage 约 5MB）
+
+    /* 气泡底色基准值：与宿主 index.css 保持一致，按滑块换算 alpha 后重新注入 */
+    var AGENT_RGB_LIGHT = [240, 242, 245]; // .message.agent → #f0f2f5
+    var AGENT_RGB_DARK = [45, 45, 68];     // body.dark-theme .message.agent → #2d2d44
+    var USER_RGB_FROM = [102, 126, 234];   // .message.user 渐变起点 → #667eea
+    var USER_RGB_TO = [118, 75, 162];      // .message.user 渐变终点 → #764ba2
 
     var root = null;
     var btn = null;
@@ -31,6 +39,9 @@
     var clearImageBtn = null;
     var imagePreview = null;
     var imageThumb = null;
+    var alphaInput = null;
+    var alphaVal = null;
+    var resetAlphaBtn = null;
     var fontThinking = null;
     var fontMessage = null;
     var fontTool = null;
@@ -39,10 +50,12 @@
     var fontToolVal = null;
     var resetFontBtn = null;
     var fontStyleEl = null;
+    var alphaStyleEl = null;
 
     var state = {
         backgroundColor: null,
         backgroundImage: null,
+        msgAlpha: ALPHA_DEFAULT,
         font: { thinking: FONT_DEFAULT.thinking, message: FONT_DEFAULT.message, tool: FONT_DEFAULT.tool }
     };
 
@@ -64,6 +77,7 @@
                 var parsed = JSON.parse(raw);
                 state.backgroundColor = normalizeColor(parsed.backgroundColor) || null;
                 state.backgroundImage = (parsed.backgroundImage && /^data:image\//.test(parsed.backgroundImage)) ? parsed.backgroundImage : null;
+                state.msgAlpha = clampInt(parsed.msgAlpha, 0, 100, ALPHA_DEFAULT);
                 state.font.thinking = clampInt(parsed.font && parsed.font.thinking, 10, 18, FONT_DEFAULT.thinking);
                 state.font.message = clampInt(parsed.font && parsed.font.message, 12, 26, FONT_DEFAULT.message);
                 state.font.tool = clampInt(parsed.font && parsed.font.tool, 12, 22, FONT_DEFAULT.tool);
@@ -82,6 +96,7 @@
         write(STORAGE_KEY, JSON.stringify({
             backgroundColor: state.backgroundColor,
             backgroundImage: state.backgroundImage,
+            msgAlpha: state.msgAlpha,
             font: state.font
         }));
     }
@@ -98,6 +113,10 @@
         if (/^#[0-9a-fA-F]{3}$/.test(v) || /^#[0-9a-fA-F]{6}$/.test(v)) return v;
         if (/^rgba?\(\s*\d{1,3}\s*,\s*\d{1,3}\s*,\s*\d{1,3}\s*(,\s*(0|1|0?\.\d+)\s*)?\)$/.test(v)) return v;
         return null;
+    }
+
+    function rgba(rgb, a) {
+        return 'rgba(' + rgb[0] + ',' + rgb[1] + ',' + rgb[2] + ',' + a + ')';
     }
 
     /* ---------------- 应用 ---------------- */
@@ -120,6 +139,28 @@
             area.style.backgroundPosition = '';
             area.style.backgroundRepeat = '';
         }
+    }
+
+    /**
+     * 消息气泡背景透明度：把 agent / user 的底色按当前 alpha 重算成 rgba 后注入。
+     *
+     * <p>agent 侧必须用 !important —— 宿主 CSS 里 `.agent-turn .message.agent` 把小节底色置为
+     * transparent（让整盒视觉连续），不压过它则透明度设置对 agent 消息完全无效。
+     * 同时用 :not() 排除错误 / 警告小节，它们自带语义化的红色底（宿主里也是 !important），
+     * 不该被透明度设置覆盖。</p>
+     */
+    function applyMessageAlpha() {
+        if (!alphaStyleEl) {
+            alphaStyleEl = document.createElement('style');
+            alphaStyleEl.id = 'cbMsgAlphaStyle';
+            document.head.appendChild(alphaStyleEl);
+        }
+        var a = state.msgAlpha / 100;
+        var agentSel = '.message.agent:not(.error-message):not(.warn-message)';
+        alphaStyleEl.textContent =
+            agentSel + '{background:' + rgba(AGENT_RGB_LIGHT, a) + ' !important;}' +
+            'body.dark-theme ' + agentSel + '{background:' + rgba(AGENT_RGB_DARK, a) + ' !important;}' +
+            '.message.user{background:linear-gradient(135deg,' + rgba(USER_RGB_FROM, a) + ' 0%,' + rgba(USER_RGB_TO, a) + ' 100%) !important;}';
     }
 
     function applyFont() {
@@ -153,6 +194,11 @@
         if (imageThumb && state.backgroundImage) imageThumb.src = state.backgroundImage;
     }
 
+    function syncAlphaControl() {
+        if (alphaInput) alphaInput.value = state.msgAlpha;
+        if (alphaVal) alphaVal.textContent = state.msgAlpha + '%';
+    }
+
     function syncFontControls() {
         if (fontThinking) fontThinking.value = state.font.thinking;
         if (fontMessage) fontMessage.value = state.font.message;
@@ -164,9 +210,11 @@
 
     function syncAll() {
         applyBackground();
+        applyMessageAlpha();
         applyFont();
         syncSwatches();
         syncImagePreview();
+        syncAlphaControl();
         syncFontControls();
     }
 
@@ -233,6 +281,24 @@
             save();
         });
 
+        // 消息背景透明度：一个滑块
+        if (alphaInput) {
+            alphaInput.addEventListener('input', function () {
+                state.msgAlpha = clampInt(alphaInput.value, 0, 100, ALPHA_DEFAULT);
+                if (alphaVal) alphaVal.textContent = state.msgAlpha + '%';
+                applyMessageAlpha();
+                save();
+            });
+        }
+        if (resetAlphaBtn) {
+            resetAlphaBtn.addEventListener('click', function () {
+                state.msgAlpha = ALPHA_DEFAULT;
+                applyMessageAlpha();
+                syncAlphaControl();
+                save();
+            });
+        }
+
         // 字体大小：三个滑块
         bindRange(fontThinking, 'thinking', fontThinkingVal);
         bindRange(fontMessage, 'message', fontMessageVal);
@@ -278,6 +344,9 @@
         clearImageBtn = document.getElementById('cbClearImage');
         imagePreview = document.getElementById('cbImagePreview');
         imageThumb = document.getElementById('cbImageThumb');
+        alphaInput = document.getElementById('cbMsgAlpha');
+        alphaVal = document.getElementById('cbMsgAlphaVal');
+        resetAlphaBtn = document.getElementById('cbResetAlpha');
         fontThinking = document.getElementById('cbFontThinking');
         fontMessage = document.getElementById('cbFontMessage');
         fontTool = document.getElementById('cbFontTool');

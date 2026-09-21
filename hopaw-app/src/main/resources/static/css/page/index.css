@@ -811,7 +811,7 @@ body.dark-theme .chat-header-glow::after {
     max-width: 100%;
     min-width: 0;
     padding: 8px 12px;
-    background: #f0f2f5;
+    /* 大盒子自身不再铺底：底色改由「会话美化」插件按透明度设置注入到 .agent-turn 内的 .message.agent 上 */
     color: #333;
     border-radius: 15px;
     border-bottom-left-radius: 5px;
@@ -2867,7 +2867,7 @@ body.dark-theme .message.agent {
 }
 
 body.dark-theme .agent-turn {
-    background: #2d2d44;
+    /* 暗色底同样不再硬编码，交由「会话美化」插件按透明度注入 */
     color: #e0e0e0;
 }
 
