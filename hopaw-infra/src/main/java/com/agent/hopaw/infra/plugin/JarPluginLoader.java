@@ -106,6 +106,11 @@ public class JarPluginLoader {
     /**
      * 加载插件 JAR。
      *
+     * <p>失败路径的资源释放契约：一旦插件 {@code asyncInit()} 或任一工具初始化已执行，
+     * 后续任何失败（shutdown 竞态、并发重复注册、异常）都必须按逆序 destroy 已初始化
+     * 的工具与插件，再关闭 classloader——否则插件创建的共享资源（连接池、客户端、线程等）
+     * 会随「加载失败」静默泄漏。</p>
+     *
      * @return 插件提供的工具数量（加载失败返回 0）
      */
     public int loadPlugin(File jarFile) {
@@ -120,6 +125,9 @@ public class JarPluginLoader {
         }
 
         PluginClassLoader classLoader = null;
+        AgentPlugin plugin = null;
+        boolean pluginInitialized = false;
+        List<AgentTool> initializedTools = new ArrayList<>();
         try {
             classLoader = new PluginClassLoader(jarFile);
 
@@ -139,10 +147,11 @@ public class JarPluginLoader {
 
             // 1) 实例化插件主体并注入 Spring 依赖
             Class<?> pluginClass = classLoader.loadClass(pluginClassNames.get(0));
-            AgentPlugin plugin = (AgentPlugin) pluginClass.getDeclaredConstructor().newInstance();
+            plugin = (AgentPlugin) pluginClass.getDeclaredConstructor().newInstance();
             beanFactory.autowireBean(plugin);
 
-            // 2) 同 pluginId 拒绝共存（升级必须走覆盖安装）
+            // 2) 同 pluginId 拒绝共存（升级必须走覆盖安装）。
+            //    此时尚未 asyncInit、未创建工具，除 classloader 外无资源需释放
             if (registry.hasPlugin(plugin.getId())) {
                 logger.error("Rejected plugin [{}]: pluginId [{}] 已被占用，请先卸载或走覆盖升级", jarName, plugin.getId());
                 classLoader.close();
@@ -151,6 +160,7 @@ public class JarPluginLoader {
 
             // 3) 插件级异步初始化（构建共享资源，供其创建的工具使用）
             plugin.asyncInit();
+            pluginInitialized = true;
 
             // 4) 插件作为工具工厂分发工具实例，框架补充依赖注入与工具级初始化
             List<AgentTool> tools = new ArrayList<>();
@@ -166,15 +176,19 @@ public class JarPluginLoader {
                         injectPluginId(plugin.getId(), tool);
                         tool.asyncInit();
                         tools.add(tool);
+                        initializedTools.add(tool);
                     } catch (Exception e) {
                         logger.error("Failed to initialize tool [{}] of plugin [{}]",
                                 tool.getClass().getSimpleName(), plugin.getId(), e);
+                        // 该工具 asyncInit 可能已部分获取资源，best-effort 释放
+                        destroyToolQuietly(tool);
                     }
                 }
             }
 
             // shutdown 复查：asyncInit 可能耗时较长，避免在 shutdown 之后注册新插件
             if (shuttingDown) {
+                destroyInitialized(plugin, pluginInitialized, initializedTools);
                 classLoader.close();
                 logger.debug("Plugin loader is shutting down, skip registering: {}", jarName);
                 return 0;
@@ -182,7 +196,8 @@ public class JarPluginLoader {
 
             boolean registered = registry.register(plugin, jarName, classLoader, tools);
             if (!registered) {
-                // 并发下同 pluginId 已被注册，丢弃本次 classloader，避免泄漏
+                // 并发下同 pluginId 已被注册：逆序销毁本次已初始化的工具与插件，再丢弃 classloader
+                destroyInitialized(plugin, pluginInitialized, initializedTools);
                 classLoader.close();
                 logger.warn("Plugin [{}] was already registered concurrently, dropped redundant load", plugin.getId());
                 return 0;
@@ -190,12 +205,38 @@ public class JarPluginLoader {
             logger.info("Loaded plugin: {} [{}] with {} tools", plugin.getId(), jarName, tools.size());
             return tools.size();
         } catch (VirtualMachineError e) {
+            destroyInitialized(plugin, pluginInitialized, initializedTools);
             closeQuietly(classLoader);
             throw e;
         } catch (Throwable e) {
+            destroyInitialized(plugin, pluginInitialized, initializedTools);
             closeQuietly(classLoader);
             logger.error("Failed to load plugin: {}", jarName, e);
             return 0;
+        }
+    }
+
+    /** 逆序销毁已初始化的工具，再销毁插件（未 asyncInit 的插件不调 destroy，避免误触未就绪资源）。 */
+    private void destroyInitialized(AgentPlugin plugin, boolean pluginInitialized, List<AgentTool> tools) {
+        if (tools != null) {
+            for (int i = tools.size() - 1; i >= 0; i--) {
+                destroyToolQuietly(tools.get(i));
+            }
+        }
+        if (plugin != null && pluginInitialized) {
+            try {
+                plugin.destroy();
+            } catch (Exception e) {
+                logger.warn("Error calling destroy() on partially loaded plugin: {}", plugin.getId(), e);
+            }
+        }
+    }
+
+    private static void destroyToolQuietly(AgentTool tool) {
+        try {
+            tool.destroy();
+        } catch (Exception e) {
+            logger.warn("Error calling destroy() on tool: {}", tool.getClass().getSimpleName(), e);
         }
     }
 
@@ -280,6 +321,23 @@ public class JarPluginLoader {
             return true;
         }
         return false;
+    }
+
+    /**
+     * 卸载插件但**保留** JAR 文件本体（只注销注册表条目并关闭 classloader 释放句柄）。
+     *
+     * <p>用于「安装源即插件目录内目标文件」的场景：此时删文件等于删掉安装源，
+     * 但又要先卸载旧插件才能重新加载同一路径的 JAR。</p>
+     *
+     * @return true 表示确实卸载了已注册的插件
+     */
+    public boolean unloadPluginKeepJar(String jarName) {
+        Path resolved = pluginDir.resolve(jarName).normalize();
+        if (!resolved.startsWith(pluginDir)) {
+            logger.error("Rejected plugin path traversal attempt: {}", jarName);
+            return false;
+        }
+        return unloadPlugin(jarName);
     }
 
     public boolean unloadAndDeletePlugin(String jarName) {

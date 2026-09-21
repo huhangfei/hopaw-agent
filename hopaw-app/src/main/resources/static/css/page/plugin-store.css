@@ -377,3 +377,191 @@ body.dark-theme .cap-badge-config {
     color: #fde68a;
     border-color: #5c4a1a;
 }
+
+/* ===== 工具方法明细 ===== */
+.detail-tool-count {
+    margin-left: auto;
+    flex-shrink: 0;
+    font-size: 11px;
+    color: #9ca3af;
+}
+
+.method-list {
+    margin-top: 8px;
+    border: 1px solid #eef0f3;
+    border-radius: 8px;
+    overflow: hidden;
+}
+
+.method-row {
+    display: flex;
+    align-items: baseline;
+    gap: 10px;
+    padding: 7px 12px;
+    border-bottom: 1px solid #f4f5f7;
+}
+
+.method-row:last-child {
+    border-bottom: none;
+}
+
+.method-row:hover {
+    background: #fafbfc;
+}
+
+.method-name {
+    flex-shrink: 0;
+    font-family: 'Consolas', 'Courier New', monospace;
+    font-size: 12px;
+    font-weight: 500;
+    color: #4a66d6;
+}
+
+.method-desc {
+    font-size: 12px;
+    line-height: 1.45;
+    color: #6b7280;
+}
+
+/* ===== 前端资产明细 ===== */
+.detail-section-title {
+    margin: 16px 0 8px;
+    font-size: 13px;
+    font-weight: 600;
+    color: #374151;
+}
+
+.asset-list {
+    border: 1px solid #eef0f3;
+    border-radius: 8px;
+    overflow: hidden;
+}
+
+.asset-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 7px 12px;
+    border-bottom: 1px solid #f4f5f7;
+}
+
+.asset-row:last-child {
+    border-bottom: none;
+}
+
+.asset-row:hover {
+    background: #fafbfc;
+}
+
+.asset-type {
+    flex-shrink: 0;
+    min-width: 40px;
+    text-align: center;
+    font-size: 10px;
+    font-weight: 600;
+    text-transform: uppercase;
+    padding: 2px 6px;
+    border-radius: 4px;
+    background: #f3f4f6;
+    color: #6b7280;
+    border: 1px solid #e5e7eb;
+}
+
+.asset-type-js {
+    background: #fefce8;
+    color: #a16207;
+    border-color: #fde68a;
+}
+
+.asset-type-css {
+    background: #eff6ff;
+    color: #1d4ed8;
+    border-color: #bfdbfe;
+}
+
+.asset-type-html {
+    background: #fef2f2;
+    color: #b91c1c;
+    border-color: #fecaca;
+}
+
+.asset-name {
+    font-family: 'Consolas', 'Courier New', monospace;
+    font-size: 12px;
+    color: #374151;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.asset-size {
+    margin-left: auto;
+    flex-shrink: 0;
+    font-size: 11px;
+    color: #9ca3af;
+    font-variant-numeric: tabular-nums;
+}
+
+/* ===== 暗色主题 ===== */
+body.dark-theme .detail-tool-count {
+    color: #8a8a9a;
+}
+
+body.dark-theme .detail-section-title {
+    color: #d0d0e0;
+}
+
+body.dark-theme .method-list,
+body.dark-theme .asset-list {
+    border-color: #3a3a52;
+}
+
+body.dark-theme .method-row,
+body.dark-theme .asset-row {
+    border-bottom-color: #2f2f45;
+}
+
+body.dark-theme .method-row:hover,
+body.dark-theme .asset-row:hover {
+    background: #2a2a40;
+}
+
+body.dark-theme .method-name {
+    color: #8fa8ff;
+}
+
+body.dark-theme .method-desc {
+    color: #a0a0b0;
+}
+
+body.dark-theme .asset-name {
+    color: #c0c0d0;
+}
+
+body.dark-theme .asset-size {
+    color: #8a8a9a;
+}
+
+body.dark-theme .asset-type {
+    background: #2d2d44;
+    color: #a0a0b0;
+    border-color: #3d3d6b;
+}
+
+body.dark-theme .asset-type-js {
+    background: #3a2f12;
+    color: #fde68a;
+    border-color: #5c4a1a;
+}
+
+body.dark-theme .asset-type-css {
+    background: #1e2a4a;
+    color: #93c5fd;
+    border-color: #2d3f66;
+}
+
+body.dark-theme .asset-type-html {
+    background: #3a1f1f;
+    color: #fca5a5;
+    border-color: #5c2a2a;
+}
