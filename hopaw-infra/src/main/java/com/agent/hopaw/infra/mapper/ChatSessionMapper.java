@@ -12,11 +12,22 @@ public interface ChatSessionMapper {
 
     List<ChatSession> findByUserId(@Param("userId") String userId);
 
-    /** 分页查询用户会话（按最后更新时间倒序） */
-    List<ChatSession> findPageByUserId(@Param("userId") String userId, @Param("offset") int offset, @Param("limit") int limit);
+    /**
+     * 分页查询用户会话（按最后更新时间倒序），可按 biz_type 集合过滤（会话清理设置页）
+     *
+     * @param bizTypes          允许的 biz_type 取值集合；null / 空集合表示不过滤
+     * @param includeBlankBizType 是否把 biz_type 为 NULL / 空串的会话也算作命中（聊天分组需要）
+     */
+    List<ChatSession> findPageByUserIdWithFilters(@Param("userId") String userId,
+                                                  @Param("bizTypes") List<String> bizTypes,
+                                                  @Param("includeBlankBizType") boolean includeBlankBizType,
+                                                  @Param("offset") int offset,
+                                                  @Param("limit") int limit);
 
-    /** 用户的会话总数 */
-    int countByUserId(@Param("userId") String userId);
+    /** 用户的会话总数，过滤条件同上 */
+    int countByUserIdWithFilters(@Param("userId") String userId,
+                                 @Param("bizTypes") List<String> bizTypes,
+                                 @Param("includeBlankBizType") boolean includeBlankBizType);
 
     List<ChatSession> findByUserIdAndAgentId(@Param("userId") String userId, @Param("agentId") Long agentId);
 

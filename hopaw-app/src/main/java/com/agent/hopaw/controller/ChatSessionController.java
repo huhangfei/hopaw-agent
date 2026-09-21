@@ -269,17 +269,20 @@ public class ChatSessionController {
     }
 
     /**
-     * 会话清理设置页：分页查询当前用户的会话列表（含消息记录数量）
+     * 会话清理设置页：分页查询当前用户的会话列表（含消息记录数量），可按会话类型筛选
+     *
+     * @param sessionType all / chat / project / task，空或未知视作 all
      */
     @GetMapping("/stats-page")
     @ResponseBody
     public ResponseBean statsPage(HttpServletRequest request,
                                   @RequestParam(defaultValue = "1") int page,
-                                  @RequestParam(defaultValue = "20") int pageSize) {
+                                  @RequestParam(defaultValue = "20") int pageSize,
+                                  @RequestParam(required = false) String sessionType) {
         if (pageSize < 1) pageSize = 20;
         if (pageSize > 100) pageSize = 100;
         String userId = CurrentUser.require(request);
-        return ResponseBean.success(chatSessionService.getSessionStatsPage(userId, page, pageSize));
+        return ResponseBean.success(chatSessionService.getSessionStatsPage(userId, page, pageSize, sessionType));
     }
 
     /**

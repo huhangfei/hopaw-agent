@@ -1,10 +1,20 @@
 /**
- * 设置 - 会话清理 tab：分页显示会话列表，支持单行/批量清理历史与删除
+ * 设置 - 会话清理 tab：分页显示会话列表，支持会话类型筛选、单行/批量清理历史与删除
  */
 var scPage = 1;
 var scPageSize = 20;
 var scTotal = 0;
 var scPageSizeSel = null;
+/** 当前会话类型筛选：all / chat / project / task（与后端 ChatSessionTypeFilterEnum 的取值一致） */
+var scTypeFilter = 'all';
+
+/** 各筛选值的空态提示文案 */
+var SC_EMPTY_TIPS = {
+    all: '暂无会话',
+    chat: '暂无聊天会话',
+    project: '暂无项目管理会话',
+    task: '暂无工作流任务会话'
+};
 
 function scFormatTime(t) {
     if (!t) return '-';
@@ -23,7 +33,8 @@ function scBizTypeLabel(bizType) {
 }
 
 function scLoad() {
-    fetch('/api/session/stats-page?page=' + scPage + '&pageSize=' + scPageSize)
+    fetch('/api/session/stats-page?page=' + scPage + '&pageSize=' + scPageSize
+            + '&sessionType=' + encodeURIComponent(scTypeFilter))
         .then(function(r) { return r.json(); })
         .then(function(res) {
             if (res.code !== 200 || !res.data) {
@@ -31,6 +42,11 @@ function scLoad() {
                 return;
             }
             scTotal = res.data.total || 0;
+            // 以服务端回显为准（未知取值会被回退为 all），避免前后端筛选项不一致
+            if (res.data.typeFilter && res.data.typeFilter !== scTypeFilter) {
+                scTypeFilter = res.data.typeFilter;
+                scUpdateTypeFilterUI();
+            }
             var list = res.data.list || [];
             scRender(list);
             scRenderPagination();
@@ -39,13 +55,30 @@ function scLoad() {
         .catch(function() { showToast('加载会话列表失败', 'error'); });
 }
 
+/** 切换会话类型筛选：回到第 1 页重新查询 */
+function scSetTypeFilter(type) {
+    if (scTypeFilter === type) return;
+    scTypeFilter = type;
+    scPage = 1;
+    scUpdateTypeFilterUI();
+    scLoad();
+}
+
+function scUpdateTypeFilterUI() {
+    document.querySelectorAll('#scTypeFilter .sc-type-tab').forEach(function(tab) {
+        tab.classList.toggle('active', tab.getAttribute('data-type') === scTypeFilter);
+    });
+}
+
 function scRender(list) {
     var tbody = document.getElementById('scTableBody');
     var empty = document.getElementById('scEmptyState');
+    var emptyText = document.getElementById('scEmptyText');
     var checkAll = document.getElementById('scCheckAll');
     if (checkAll) checkAll.checked = false;
     if (!list.length) {
         tbody.innerHTML = '';
+        if (emptyText) emptyText.textContent = SC_EMPTY_TIPS[scTypeFilter] || SC_EMPTY_TIPS.all;
         empty.style.display = '';
         return;
     }

@@ -22,6 +22,21 @@
         id, session_id, agent_id, user_id, title, enable_thinking, skill_names, ai_model_id, tool_call_permission, biz_type, thinking_level, create_time, last_update_time
     </sql>
 
+    <!-- 会话类型过滤：bizTypes 为空表示不过滤；includeBlankBizType 用于把 NULL / 空串算作聊天会话 -->
+    <sql id="bizTypeFilter">
+        <if test="bizTypes != null and bizTypes.size() > 0">
+            AND (
+                biz_type IN
+                <foreach collection="bizTypes" item="bizType" open="(" separator="," close=")">
+                    #{bizType}
+                </foreach>
+                <if test="includeBlankBizType">
+                    OR biz_type IS NULL OR biz_type = ''
+                </if>
+            )
+        </if>
+    </sql>
+
     <select id="findAll" resultMap="ChatSessionResultMap">
         SELECT <include refid="allColumns"/>
         FROM chat_sessions
@@ -35,19 +50,21 @@
         ORDER BY last_update_time DESC
     </select>
 
-    <!-- 分页查询用户会话（会话清理设置页） -->
-    <select id="findPageByUserId" resultMap="ChatSessionResultMap">
+    <!-- 分页查询用户会话（会话清理设置页），可按会话类型过滤 -->
+    <select id="findPageByUserIdWithFilters" resultMap="ChatSessionResultMap">
         SELECT <include refid="allColumns"/>
         FROM chat_sessions
         WHERE user_id = #{userId}
+        <include refid="bizTypeFilter"/>
         ORDER BY last_update_time DESC
         LIMIT #{limit} OFFSET #{offset}
     </select>
 
-    <select id="countByUserId" resultType="java.lang.Integer">
+    <select id="countByUserIdWithFilters" resultType="java.lang.Integer">
         SELECT COUNT(*)
         FROM chat_sessions
         WHERE user_id = #{userId}
+        <include refid="bizTypeFilter"/>
     </select>
 
     <select id="findByUserIdAndAgentId" resultMap="ChatSessionResultMap">
