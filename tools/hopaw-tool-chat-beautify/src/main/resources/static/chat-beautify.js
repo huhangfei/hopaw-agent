@@ -5,7 +5,9 @@
  *   - 触发按钮：relocate 到会话头部「更多」按钮前，点击向下弹出设置面板；
  *   - 背景色：预设色板 / 自定义取色器，作用到会话区（.chat-area），可还原；
  *   - 背景图：上传本地图片（FileReader → dataURL）铺满会话区，可清除，并支持 0~100% 透明度；
- *   - 消息背景透明度：滑块统一控制 agent / user 消息气泡底色的 alpha（100% 即原色）；
+ *   - 气泡背景透明度：滑块统一控制 agent 回合大盒子（.agent-turn）与用户气泡（.message.user）
+ *     底色的 alpha（100% 即原色）；并按底色与透明度的合成结果自动切换气泡文字深浅，
+ *     避免亮色模式下透明度调低后白色文字看不见；
  *   - 字体大小：三个滑块分别拖拽调节「思考 / 普通消息 / 工具按钮」字号，实时生效；
  *   - 全部设置持久化到 localStorage（键 hopaw.chatBeautify），页面加载时还原；
  *   - 深浅主题通过 body.dark-theme 由 CSS 适配，JS 无需感知。
@@ -23,10 +25,16 @@
     var MAX_IMAGE_BYTES = 4 * 1024 * 1024; // 背景图上限 4MB（localStorage 约 5MB）
 
     /* 气泡底色基准值：与宿主 index.css 保持一致，按滑块换算 alpha 后重新注入 */
-    var AGENT_RGB_LIGHT = [240, 242, 245]; // .message.agent → #f0f2f5
-    var AGENT_RGB_DARK = [45, 45, 68];     // body.dark-theme .message.agent → #2d2d44
+    var AGENT_RGB_LIGHT = [240, 242, 245]; // .agent-turn（亮色）→ #f0f2f5
+    var AGENT_RGB_DARK = [45, 45, 68];     // body.dark-theme .agent-turn → #2d2d44
     var USER_RGB_FROM = [102, 126, 234];   // .message.user 渐变起点 → #667eea
     var USER_RGB_TO = [118, 75, 162];      // .message.user 渐变终点 → #764ba2
+
+    /* 气泡文字色：底色与透明度合成后亮度超过阈值就用深色字，否则用浅色字 */
+    var TEXT_LUM_THRESHOLD = 0.45;
+    var TEXT_DARK = '#333';
+    var TEXT_LIGHT_AGENT = '#e0e0e0'; // 与 body.dark-theme .agent-turn 的 color 一致
+    var TEXT_LIGHT_USER = '#fff';     // 与 .message.user 的 color 一致
 
     /* 会话区默认底色：未设置背景色时，背景图透明度以它为底衬（与宿主 index.css 一致） */
     var CHAT_BG_LIGHT = [255, 255, 255];   // .chat-area → white
@@ -130,6 +138,42 @@
         return 'rgba(' + rgb[0] + ',' + rgb[1] + ',' + rgb[2] + ',' + a + ')';
     }
 
+    /** 当前是否暗色主题（宿主在 body 上挂 dark-theme） */
+    function isDarkTheme() {
+        return !!(document.body && document.body.classList.contains('dark-theme'));
+    }
+
+    /** sRGB 相对亮度（WCAG）：用于判断某个底色上该配深色还是浅色文字 */
+    function luminance(rgb) {
+        var channel = function (c) {
+            c = c / 255;
+            return c <= 0.03928 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4);
+        };
+        return 0.2126 * channel(rgb[0]) + 0.7152 * channel(rgb[1]) + 0.0722 * channel(rgb[2]);
+    }
+
+    /** 把 color 按 alpha a 叠到底色 base 上，返回合成后的 [r,g,b] */
+    function composite(color, base, a) {
+        return [
+            Math.round(color[0] * a + base[0] * (1 - a)),
+            Math.round(color[1] * a + base[1] * (1 - a)),
+            Math.round(color[2] * a + base[2] * (1 - a))
+        ];
+    }
+
+    /**
+     * 气泡文字色：底色按 alpha 往会话区底色淡出后，白字在亮色模式下会越来越看不清。
+     * 取候选底色（渐变取两端）合成后较亮的一侧，亮度超过阈值就给深色字，否则给浅色字。
+     */
+    function pickTextColor(colors, base, a, darkText, lightText) {
+        var max = 0;
+        for (var i = 0; i < colors.length; i++) {
+            var l = luminance(composite(colors[i], base, a));
+            if (l > max) max = l;
+        }
+        return max > TEXT_LUM_THRESHOLD ? darkText : lightText;
+    }
+
     /** 把 #rgb / #rrggbb / rgb() / rgba() 解析为 [r,g,b]；无法解析返回 null */
     function parseRgb(color) {
         if (!color) return null;
@@ -162,8 +206,7 @@
     function baseRgb() {
         var fromColor = parseRgb(state.backgroundColor);
         if (fromColor) return fromColor;
-        var dark = document.body && document.body.classList.contains('dark-theme');
-        return dark ? CHAT_BG_DARK : CHAT_BG_LIGHT;
+        return isDarkTheme() ? CHAT_BG_DARK : CHAT_BG_LIGHT;
     }
 
     /* ---------------- 应用 ---------------- */
@@ -204,12 +247,14 @@
     }
 
     /**
-     * 消息气泡背景透明度：把 agent / user 的底色按当前 alpha 重算成 rgba 后注入。
+     * 气泡背景透明度：控制 agent 回合大盒子（.agent-turn）与用户气泡（.message.user）底色的 alpha。
      *
-     * <p>agent 侧必须用 !important —— 宿主 CSS 里 `.agent-turn .message.agent` 把小节底色置为
-     * transparent（让整盒视觉连续），不压过它则透明度设置对 agent 消息完全无效。
-     * 同时用 :not() 排除错误 / 警告小节，它们自带语义化的红色底（宿主里也是 !important），
-     * 不该被透明度设置覆盖。</p>
+     * <p>agent 侧的目标是 .agent-turn 而不是 .message.agent —— 宿主里小节底色已被置为 transparent，
+     * 整盒底色统一落在盒子上，注入点必须跟着上移，否则透明度对 agent 完全无效。</p>
+     *
+     * <p>文字色随透明度一起自适应：底色往会话区底色淡出后，亮色模式下白字会看不见，
+     * 因此按合成后的亮度决定用深色还是浅色字；user 气泡里几个原本为白字设计的元素（链接/代码块）
+     * 在切到深色字时一并反转，避免低透明度下只剩一块看不清的浅底。</p>
      */
     function applyMessageAlpha() {
         if (!alphaStyleEl) {
@@ -218,11 +263,23 @@
             document.head.appendChild(alphaStyleEl);
         }
         var a = state.msgAlpha / 100;
-        var agentSel = '.message.agent:not(.error-message):not(.warn-message)';
-        alphaStyleEl.textContent =
-            agentSel + '{background:' + rgba(AGENT_RGB_LIGHT, a) + ' !important;}' +
-            'body.dark-theme ' + agentSel + '{background:' + rgba(AGENT_RGB_DARK, a) + ' !important;}' +
-            '.message.user{background:linear-gradient(135deg,' + rgba(USER_RGB_FROM, a) + ' 0%,' + rgba(USER_RGB_TO, a) + ' 100%) !important;}';
+        var base = baseRgb();
+        var agentRgb = isDarkTheme() ? AGENT_RGB_DARK : AGENT_RGB_LIGHT;
+        var agentText = pickTextColor([agentRgb], base, a, TEXT_DARK, TEXT_LIGHT_AGENT);
+        var userText = pickTextColor([USER_RGB_FROM, USER_RGB_TO], base, a, TEXT_DARK, TEXT_LIGHT_USER);
+
+        var css = '.agent-turn{background:' + rgba(agentRgb, a) + ' !important;'
+            + 'color:' + agentText + ' !important;}'
+            + '.message.user{background:linear-gradient(135deg,' + rgba(USER_RGB_FROM, a) + ' 0%,'
+            + rgba(USER_RGB_TO, a) + ' 100%) !important;color:' + userText + ' !important;}';
+        if (userText === TEXT_DARK) {
+            css += '.message.user .message-content a{color:inherit !important;}'
+                + '.message.user .message-content code{background:rgba(0,0,0,0.06) !important;}'
+                + '.message.user .message-content pre{background:rgba(0,0,0,0.05) !important;}'
+                + '.message.user .message-content blockquote{border-left-color:currentColor !important;'
+                + 'background:rgba(0,0,0,0.04) !important;}';
+        }
+        alphaStyleEl.textContent = css;
     }
 
     function applyFont() {
@@ -450,13 +507,15 @@
     }
 
     /**
-     * 跟随深浅主题切换重算背景：未设背景色时，背景图透明度的底衬色取的是
-     * 会话区默认底色（亮 white / 暗 #1a1a2e），主题一变必须重新合成才不出错。
+     * 跟随深浅主题切换重算：未设背景色时，背景图透明度的底衬色取的是会话区默认底色
+     * （亮 white / 暗 #1a1a2e）；气泡底色的基准色与文字深浅同样随主题变化，
+     * 主题一变这些都必须重新合成才不出错。
      */
     function observeTheme() {
         if (!window.MutationObserver || !document.body) return;
         new MutationObserver(function () {
             applyBackground();
+            applyMessageAlpha();
         }).observe(document.body, { attributes: true, attributeFilter: ['class'] });
     }
 

@@ -341,15 +341,27 @@ public class PluginManagerService implements IAgentPluginService {
 
         Path pluginDir = jarPluginLoader.getPluginDir();
         Path targetPath = pluginDir.resolve(jarFileName);
-        String previousVersion = updateInfo.getCurrentVersion();
-        boolean isUpgrade = updateInfo.isInstalled();
+        // 升级判定以注册表为准：插件新版常常改了 JAR 文件名（Maven 产物名带版本号），
+        // 只认 updateInfo.installed / 同名文件会漏掉旧条目，新包随后会被「pluginId 已被占用」直接拒掉
+        PluginRegistry.PluginEntry installedEntry = pluginRegistry.getPlugin(pluginId);
+        boolean isUpgrade = updateInfo.isInstalled() || installedEntry != null;
+        String previousVersion = installedEntry != null
+                ? installedEntry.getPlugin().getVersion() : updateInfo.getCurrentVersion();
+        boolean sameJarEntry = pluginRegistry.hasPluginJar(jarFileName);
+        String staleJarName = null;
 
         try {
-            if (isUpgrade) {
+            if (isUpgrade || sameJarEntry || targetPath.toFile().exists()) {
                 log.info("Plugin {} is installed, uninstalling before upgrade", pluginId);
                 reportStage(stageCallback, "uninstalling");
                 // unregister 内部会统一调用各工具与插件的 destroy 并关闭 classloader，无需重复 destroy
-                pluginRegistry.unregisterByJarFileName(jarFileName);
+                if (installedEntry != null) {
+                    // 自己的旧版本一律拆掉：旧 JAR 名与本次目标不同时，旧文件登记为待清理
+                    staleJarName = detachPluginForReplace(pluginId, jarFileName);
+                } else if (sameJarEntry) {
+                    // 注册表占着同名 JAR 但 pluginId 对不上：兜底按文件名注销（文件随后被覆盖写入）
+                    jarPluginLoader.unloadPluginKeepJar(jarFileName);
+                }
                 File existingFile = targetPath.toFile();
                 if (existingFile.exists() && !existingFile.delete()) {
                     log.warn("Failed to delete existing plugin file: {}", targetPath);
@@ -450,13 +462,24 @@ public class PluginManagerService implements IAgentPluginService {
 
             reportStage(stageCallback, "installing");
             Files.write(targetPath, jarBytes);
+            // 新包已落盘，清掉升级前的旧 JAR 残留，避免下次启动又扫出一份同标识插件
+            deleteStaleJar(staleJarName, targetPath);
             log.info("Plugin {} installed successfully to {}, JAR哈希校验通过", pluginId, targetPath);
 
-            PluginConflictInfo conflictInfo = detectConflicts(targetPath.toFile());
+            String effectivePluginId = downloadedManifest.getId() != null
+                    ? downloadedManifest.getId() : pluginId;
+            PluginConflictInfo conflictInfo = detectConflicts(targetPath.toFile(), effectivePluginId);
 
             int toolCount = jarPluginLoader.loadPlugin(targetPath.toFile());
 
             Files.deleteIfExists(tempZip);
+
+            if (!pluginRegistry.hasPlugin(effectivePluginId)) {
+                log.error("Plugin [{}] 已落盘但未被加载，安装未生效", effectivePluginId);
+                return PluginInstallResult.fail(pluginId, version, jarFileName,
+                        "插件包已写入 " + jarFileName + "，但加载被拒绝（JAR 无效或注册表中存在同标识插件），"
+                                + "请检查 plugins 目录后重试");
+            }
 
             return PluginInstallResult.success(pluginId, version, jarFileName, toolCount, isUpgrade, previousVersion, conflictInfo);
         } catch (Exception e) {
@@ -501,25 +524,37 @@ public class PluginManagerService implements IAgentPluginService {
 
         boolean isUpgrade = false;
         String previousVersion = null;
+        String staleJarName = null;
 
         Path targetPath = jarPluginLoader.getPluginDir().resolve(jarFileName);
         File existingFile = targetPath.toFile();
 
-        if (existingFile.exists() || pluginRegistry.hasPluginJar(jarFileName)) {
+        // 以 pluginId 为升级判定依据（新包可能换了 JAR 文件名），把「自己的旧版本」排除在重复之外
+        PluginRegistry.PluginEntry installedEntry = pluginRegistry.getPlugin(pluginId);
+        if (installedEntry != null || existingFile.exists() || pluginRegistry.hasPluginJar(jarFileName)) {
             isUpgrade = true;
-            PluginRegistry.PluginEntry existing = pluginRegistry.getPluginByJarFileName(jarFileName);
-            if (existing != null) {
-                previousVersion = existing.getPlugin().getVersion();
+            if (installedEntry != null) {
+                previousVersion = installedEntry.getPlugin().getVersion();
+                staleJarName = detachPluginForReplace(pluginId, jarFileName);
+            } else if (pluginRegistry.hasPluginJar(jarFileName)) {
+                jarPluginLoader.unloadPluginKeepJar(jarFileName);
             }
-            jarPluginLoader.unloadAndDeletePlugin(jarFileName);
         }
 
         Files.write(targetPath, jarBytes);
+        deleteStaleJar(staleJarName, targetPath);
         log.info("Plugin JAR written to: {}", targetPath);
 
-        PluginConflictInfo conflictInfo = detectConflicts(targetPath.toFile());
+        PluginConflictInfo conflictInfo = detectConflicts(targetPath.toFile(), pluginId);
 
         int toolCount = jarPluginLoader.loadPlugin(targetPath.toFile());
+
+        if (!pluginRegistry.hasPlugin(pluginId)) {
+            log.error("Plugin [{}] 已落盘但未被加载，安装未生效", pluginId);
+            return PluginInstallResult.fail(pluginId, version, jarFileName,
+                    "插件包已写入 " + jarFileName + "，但加载被拒绝（JAR 无效或注册表中存在同标识插件），"
+                            + "请检查 plugins 目录后重试");
+        }
 
         return PluginInstallResult.success(pluginId, version, jarFileName, toolCount, isUpgrade, previousVersion, conflictInfo);
     }
@@ -563,22 +598,22 @@ public class PluginManagerService implements IAgentPluginService {
 
         boolean isUpgrade = false;
         String previousVersion = null;
+        String staleJarName = null;
         Path targetPath = jarPluginLoader.getPluginDir().resolve(jarFileName);
         File existingFile = targetPath.toFile();
         // 源文件即插件目录内目标文件（如通过 plugin_install 指定 plugins/ 下已有的 JAR）：
         // 此时绝不能先删目标文件——那等于删掉安装源，后续复制必然失败
         boolean sameFile = isSameFile(src.toPath(), targetPath);
-        if (existingFile.exists() || pluginRegistry.hasPluginJar(jarFileName)) {
+        // 以 pluginId 判定升级：新包可能换了 JAR 文件名（带版本号），同名判定会漏掉「自己的旧版本」
+        PluginRegistry.PluginEntry installedEntry = pluginRegistry.getPlugin(scanResult.pluginId);
+        if (installedEntry != null || existingFile.exists() || pluginRegistry.hasPluginJar(jarFileName)) {
             isUpgrade = true;
-            PluginRegistry.PluginEntry existing = pluginRegistry.getPluginByJarFileName(jarFileName);
-            if (existing != null) {
-                previousVersion = existing.getPlugin().getVersion();
-            }
-            if (sameFile) {
-                // 只注销插件释放 JAR 句柄，保留文件本体
+            if (installedEntry != null) {
+                previousVersion = installedEntry.getPlugin().getVersion();
+                staleJarName = detachPluginForReplace(scanResult.pluginId, jarFileName);
+            } else if (pluginRegistry.hasPluginJar(jarFileName)) {
+                // 只注销插件释放 JAR 句柄，文件本体随后由覆盖写入 / 原子改名处理
                 jarPluginLoader.unloadPluginKeepJar(jarFileName);
-            } else {
-                jarPluginLoader.unloadAndDeletePlugin(jarFileName);
             }
         }
 
@@ -604,9 +639,18 @@ public class PluginManagerService implements IAgentPluginService {
             log.info("Plugin JAR copied from {} to {}", src, targetPath);
         }
 
-        PluginConflictInfo conflictInfo = detectConflicts(targetPath.toFile());
+        deleteStaleJar(staleJarName, targetPath, src.toPath());
+
+        PluginConflictInfo conflictInfo = detectConflicts(targetPath.toFile(), scanResult.pluginId);
 
         int toolCount = jarPluginLoader.loadPlugin(targetPath.toFile());
+
+        if (!pluginRegistry.hasPlugin(scanResult.pluginId)) {
+            log.error("Plugin [{}] 已落盘但未被加载，安装未生效", scanResult.pluginId);
+            return PluginInstallResult.fail(scanResult.pluginId, scanResult.pluginVersion, jarFileName,
+                    "插件包已写入 " + jarFileName + "，但加载被拒绝（JAR 无效或注册表中存在同标识插件），"
+                            + "请检查 plugins 目录后重试");
+        }
 
         String version = scanResult.pluginVersion;
         try {
@@ -667,8 +711,13 @@ public class PluginManagerService implements IAgentPluginService {
 
     /**
      * 冲突检测：同 pluginId 被不同 JAR 占用（插件冲突），或工具方法名与其他插件工具重名（工具冲突）。
+     *
+     * <p><b>自己的旧版本不算冲突</b>：升级时新旧包的 JAR 文件名常常不同（Maven 产物名带版本号），
+     * 同 pluginId 的旧条目正是本次要替换的对象，必须排除，否则每次升级都会报一堆"冲突"。</p>
+     *
+     * @param installingPluginId 本次安装的 pluginId（用于排除自身旧版本），可为 null
      */
-    private PluginConflictInfo detectConflicts(File jarFile) {
+    private PluginConflictInfo detectConflicts(File jarFile, String installingPluginId) {
         List<String> conflictingPlugins = new ArrayList<>();
         List<String> conflictingTools = new ArrayList<>();
 
@@ -678,14 +727,16 @@ public class PluginManagerService implements IAgentPluginService {
         }
 
         for (PluginRegistry.PluginEntry entry : pluginRegistry.getPlugins().values()) {
-            if (!entry.getJarFileName().equals(jarFile.getName())
-                    && scanResult.pluginId.equals(entry.getPluginId())) {
+            if (isSelfEntry(entry, jarFile, installingPluginId)) {
+                continue;
+            }
+            if (scanResult.pluginId.equals(entry.getPluginId())) {
                 conflictingPlugins.add(entry.getPluginId());
             }
-        }
-
-        if (scanResult.toolNames != null) {
-            for (AgentTool existingTool : pluginRegistry.getAllPluginTools()) {
+            if (scanResult.toolNames == null) {
+                continue;
+            }
+            for (AgentTool existingTool : entry.getTools()) {
                 for (Method method : existingTool.getClass().getMethods()) {
                     dev.langchain4j.agent.tool.Tool toolAnn = method.getAnnotation(dev.langchain4j.agent.tool.Tool.class);
                     if (toolAnn != null) {
@@ -706,6 +757,73 @@ public class PluginManagerService implements IAgentPluginService {
             return null;
         }
         return new PluginConflictInfo(conflictingPlugins, conflictingTools);
+    }
+
+    /** 条目是否为「本次安装要替换的自己」：同一 pluginId，或同一 JAR 文件（自己旧版本的两种表现形式）。 */
+    private boolean isSelfEntry(PluginRegistry.PluginEntry entry, File jarFile, String installingPluginId) {
+        if (jarFile.getName().equals(entry.getJarFileName())) {
+            return true;
+        }
+        return installingPluginId != null && installingPluginId.equals(entry.getPluginId());
+    }
+
+    /**
+     * 升级前拆掉同 pluginId 的旧注册条目（销毁工具/插件、释放 JAR 句柄）。
+     *
+     * <p>新旧包 JAR 文件名可能不同（例如 Maven 产物名带版本号）：只按文件名卸载会漏掉旧条目，
+     * 之后 {@code loadPlugin} 会以「pluginId 已被占用」直接拒绝，表现为"更新成功但没生效"；
+     * 旧文件残留还会在下次启动时再被扫出一份同标识插件。</p>
+     *
+     * @param targetJarName 本次要落盘的 JAR 文件名（同名即保留文件本体，由写入覆盖）
+     * @return 需要在新包落盘后删除的旧 JAR 文件名；同名或无需删除时返回 null
+     */
+    private String detachPluginForReplace(String pluginId, String targetJarName) {
+        PluginRegistry.PluginEntry existing = pluginRegistry.getPlugin(pluginId);
+        if (existing == null) {
+            return null;
+        }
+        String oldJarName = existing.getJarFileName();
+        if (oldJarName == null) {
+            // 理论上不会出现（注册时必带 JAR 名），兜底直接按 pluginId 注销
+            pluginRegistry.unregister(pluginId);
+            return null;
+        }
+        // 只注销、保留文件本体：同名文件随后会被覆盖写入，异名文件由调用方决定何时删除
+        jarPluginLoader.unloadPluginKeepJar(oldJarName);
+        if (oldJarName.equals(targetJarName)) {
+            return null;
+        }
+        log.info("Replacing plugin [{}]: 旧 JAR [{}] 将在新包落盘后清理", pluginId, oldJarName);
+        return oldJarName;
+    }
+
+    /**
+     * 删除升级遗留的旧 JAR。keepPaths 内的文件（本次目标文件、安装源文件）不删，避免删掉刚装好的包或安装源。
+     */
+    private void deleteStaleJar(String staleJarName, Path... keepPaths) {
+        if (staleJarName == null || staleJarName.isBlank()) {
+            return;
+        }
+        Path pluginDir = jarPluginLoader.getPluginDir();
+        Path stale = pluginDir.resolve(staleJarName).normalize();
+        if (!stale.startsWith(pluginDir)) {
+            log.error("Rejected stale jar path traversal: {}", staleJarName);
+            return;
+        }
+        if (keepPaths != null) {
+            for (Path keep : keepPaths) {
+                if (keep != null && isSameFile(keep, stale)) {
+                    return;
+                }
+            }
+        }
+        try {
+            if (Files.deleteIfExists(stale)) {
+                log.info("Deleted stale plugin JAR after upgrade: {}", stale);
+            }
+        } catch (Exception e) {
+            log.warn("Failed to delete stale plugin JAR {}: {}", stale, e.getMessage());
+        }
     }
 
     private int countToolMethods(AgentTool tool) {
