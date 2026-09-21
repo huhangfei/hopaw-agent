@@ -184,6 +184,15 @@
     font-size: 11px;
     color: #6e7781;
 }
+/* 背景图透明度滑块紧跟在上传行 / 预览框之下，补一点上间距 */
+.cb-image-row + .cb-range-row,
+.cb-image-preview + .cb-range-row {
+    margin-top: 10px;
+}
+/* 未设置背景图时把透明度滑块置灰（仍可拖动，值会保留，待设置图后生效） */
+.cb-range-row.is-muted {
+    opacity: 0.45;
+}
 
 /* ---- 字体大小滑块 ---- */
 .cb-range-row {

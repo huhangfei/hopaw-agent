@@ -15,7 +15,8 @@ import com.agent.hopaw.infra.plugin.AbstractAgentPlugin;
  * </ul>
  *
  * <p>能力：在会话页头部「更多」按钮前插入一个「会话美化」按钮，点击向下弹出设置面板，
- * 支持设置会话区背景色 / 背景图，以及拖拽调节会话消息字体大小（思考 / 普通消息 / 工具按钮），
+ * 支持设置会话区背景色 / 背景图（背景图可调透明度），消息气泡背景透明度，
+ * 以及拖拽调节会话消息字体大小（思考 / 普通消息 / 工具按钮），
  * 全部设置由本插件自行持久化到 localStorage 并在页面加载时还原。</p>
  */
 public class ChatBeautifyPlugin extends AbstractAgentPlugin {
@@ -35,9 +36,9 @@ public class ChatBeautifyPlugin extends AbstractAgentPlugin {
 
     @Override
     public String getDescription() {
-        return "纯前端插件：在会话页头部提供「会话美化」按钮，可设置会话区背景色、背景图，"
-                + "并拖拽调节会话消息字体大小（思考 / 普通 / 工具按钮）；设置结果本地持久化，"
-                + "不提供任何工具集，仅注入前端资产";
+        return "纯前端插件：在会话页头部提供「会话美化」按钮，可设置会话区背景色、背景图（含透明度），"
+                + "调节消息气泡透明度，并拖拽调节会话消息字体大小（思考 / 普通 / 工具按钮）；"
+                + "设置结果本地持久化，不提供任何工具集，仅注入前端资产";
     }
 
     @Override
@@ -52,7 +53,7 @@ public class ChatBeautifyPlugin extends AbstractAgentPlugin {
 
     @Override
     public String getKeyword() {
-        return "美化,背景,背景色,背景图,字体,字号,外观,主题,chat,background";
+        return "美化,背景,背景色,背景图,透明度,透明,字体,字号,外观,主题,chat,background,opacity";
     }
 
     @Override
