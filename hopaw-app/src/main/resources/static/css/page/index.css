@@ -990,6 +990,19 @@ body.dark-theme .chat-header-glow::after {
     padding: 0 8px 8px;
     height: 30px;
 }
+/* 输入工具栏窄时收起带文字按钮的文字，仅保留图标（模型/技能/调用权限），避免图标+文字排不下 */
+.chat-input-tools.compact .btn-label {
+    display: none;
+}
+.chat-input-tools.compact .chat-btn-model,
+.chat-input-tools.compact .chat-btn-skill,
+.chat-input-tools.compact .chat-btn-permission {
+    padding: 4px 7px;
+    gap: 0;
+}
+.chat-input-tools.compact .chat-btn-model {
+    max-width: none;
+}
 .chat-btn-plus {
     width: 32px;
     height: 32px;
