@@ -5,9 +5,10 @@
  *   - 触发按钮：relocate 到会话头部「更多」按钮前，点击向下弹出设置面板；
  *   - 背景色：预设色板 / 自定义取色器，作用到会话区（.chat-area），可还原；
  *   - 背景图：上传本地图片（FileReader → dataURL）铺满会话区，可清除，并支持 0~100% 透明度；
- *     调低透明度时顶部栏 / 输入区等容器底色同步淡出，背景图能透到这些原本不透明的容器上；
- *   - 气泡背景透明度：滑块统一控制 agent 回合大盒子（.agent-turn）与用户气泡（.message.user）
- *     底色的 alpha（100% 即原色）；并按底色与透明度的合成结果自动切换气泡文字深浅，
+ *   - 气泡与容器透明度：一个滑块统一控制 agent 回合大盒子（.agent-turn）、用户气泡（.message.user），
+ *     以及顶部栏 / 输入区 / 输入框等容器（.chat-header / .chat-input-area / .chat-input-wrapper）
+ *     底色的 alpha（100% 即各自原色，调低后背景图 / 背景色会透到这些容器上）；
+ *     并按底色与透明度的合成结果自动切换气泡文字深浅，
  *     避免亮色模式下透明度调低后白色文字看不见；
  *   - 字体大小：三个滑块分别拖拽调节「思考 / 普通消息 / 工具按钮」字号，实时生效；
  *   - 全部设置持久化到 localStorage（键 hopaw.chatBeautify），页面加载时还原；
@@ -21,7 +22,7 @@
     var STORAGE_KEY = 'hopaw.chatBeautify';
     var LEGACY_KEY = 'hopaw.chatBackground';
     var FONT_DEFAULT = { thinking: 12, message: 14, tool: 14 };
-    var ALPHA_DEFAULT = 100;
+    var ALPHA_DEFAULT = 100;   // 气泡与容器透明度默认值
     var IMG_ALPHA_DEFAULT = 100;
     var MAX_IMAGE_BYTES = 4 * 1024 * 1024; // 背景图上限 4MB（localStorage 约 5MB）
 
@@ -41,8 +42,8 @@
     var CHAT_BG_LIGHT = [255, 255, 255];   // .chat-area → white
     var CHAT_BG_DARK = [26, 26, 46];       // body.dark-theme .chat-area → #1a1a2e
 
-    /* 容器底色基准值：会话页里几处不透明的「墙板」，跟「背景图透明度」一起淡出，
-       背景图才能透到它们上面；100% 时各自还原成原色，外观与未接入前完全一致 */
+    /* 容器底色基准值：会话页里几处不透明的「墙板」，跟「气泡与容器透明度」滑块一起淡出，
+       背景图 / 背景色才能透到它们上面；100% 时各自还原成原色，外观与未接入前完全一致 */
     var HEADER_RGB_LIGHT = [250, 250, 250];    // .chat-header / .chat-input-area → #fafafa
     var HEADER_RGB_DARK = [22, 33, 62];        // body.dark-theme 同两者 → #16213e
     var INPUT_BOX_RGB_LIGHT = [255, 255, 255]; // .chat-input-wrapper → #fff
@@ -211,13 +212,20 @@
     }
 
     /**
-     * 背景图的「底衬色」：用户显式设了背景色就用它；
-     * 否则用会话区自身默认底色（随深浅主题变化）。
+     * 会话区「底衬色」：用户显式设了背景色就用它；否则用会话区自身默认底色。
+     *
+     * <p>默认底色随深浅主题变化，而注入的规则是亮 / 暗两套一次写死的，
+     * 因此这里按「假定主题」取色（dark 形参），而不是去读当前 DOM 状态。</p>
      */
-    function baseRgb() {
+    function baseRgbFor(dark) {
         var fromColor = parseRgb(state.backgroundColor);
         if (fromColor) return fromColor;
-        return isDarkTheme() ? CHAT_BG_DARK : CHAT_BG_LIGHT;
+        return dark ? CHAT_BG_DARK : CHAT_BG_LIGHT;
+    }
+
+    /** 当前主题下的会话区底衬色（供 .chat-area 行内背景图叠层使用） */
+    function baseRgb() {
+        return baseRgbFor(isDarkTheme());
     }
 
     /* ---------------- 应用 ---------------- */
@@ -236,7 +244,6 @@
     function applyBackground() {
         var area = chatArea();
         if (!area) return;
-        applyContainerAlpha();
         area.style.backgroundColor = state.backgroundColor || '';
         if (state.backgroundImage) {
             var url = 'url("' + state.backgroundImage + '")';
@@ -259,13 +266,16 @@
     }
 
     /**
-     * 容器背景透明度：顶部栏 / 输入区等容器本身是不透明的「墙板」，会把铺在 .chat-area 上的
-     * 背景图挡在外面。这里按「背景图透明度」把它们的底色一并换算成 rgba，让背景图透上来。
+     * 容器背景透明度：顶部栏 / 输入区 / 输入框这些容器本身是不透明的「墙板」，会把铺在 .chat-area 上的
+     * 背景图与背景色挡在外面。这里按「气泡与容器透明度」把它们各自的主题底色换算成 rgba，
+     * 随滑块一起淡出，让背景图透上来。
+     *
+     * <p>宿主把主题开关挂在 body（body.dark-theme）上，所以亮 / 暗两套规则一次注入：
+     * 暗色那条选择器以 body.dark-theme 打头、特异性更高且写在后面，天然覆盖亮色那条，
+     * 主题切换由 CSS 直接生效，无须 JS 重算。</p>
      *
      * <p>100% 时注入的就是各自原色，外观与未接入前完全一致；调低才逐步透出背景图与消息区。
-     * 注入的目标与基准色都跟随深浅主题，由 observeTheme 在切主题时重算。</p>
-     *
-     * <p>`.chat-input-wrapper` 加 `:not(.disabled)`：禁用态宿主用了灰底表达不可输入，
+     * `.chat-input-wrapper` 加 `:not(.disabled)`：禁用态宿主用灰底 + 半透明表达「不可输入」，
      * 那个语义不该被透明度联动覆盖掉。</p>
      */
     function applyContainerAlpha() {
@@ -274,20 +284,23 @@
             containerStyleEl.id = 'cbContainerAlphaStyle';
             document.head.appendChild(containerStyleEl);
         }
-        var a = state.imageAlpha / 100;
-        var dark = isDarkTheme();
-        var headerRgb = dark ? HEADER_RGB_DARK : HEADER_RGB_LIGHT;
-        var inputBoxRgb = dark ? INPUT_BOX_RGB_DARK : INPUT_BOX_RGB_LIGHT;
-        var pageRgb = dark ? PAGE_RGB_DARK : PAGE_RGB_LIGHT;
+        var a = state.msgAlpha / 100;
         containerStyleEl.textContent =
-            '.chat-wrapper{background:' + rgba(pageRgb, a) + ' !important;}'
-            + '.chat-header{background:' + rgba(headerRgb, a) + ' !important;}'
-            + '.chat-input-area{background:' + rgba(headerRgb, a) + ' !important;}'
-            + '.chat-input-wrapper:not(.disabled){background:' + rgba(inputBoxRgb, a) + ' !important;}';
+            containerCss('', HEADER_RGB_LIGHT, INPUT_BOX_RGB_LIGHT, PAGE_RGB_LIGHT, a)
+            + containerCss('body.dark-theme ', HEADER_RGB_DARK, INPUT_BOX_RGB_DARK, PAGE_RGB_DARK, a);
+    }
+
+    /** 一套（亮或暗）容器底色规则：prefix 空串即亮色默认，'body.dark-theme ' 即暗色覆盖 */
+    function containerCss(prefix, headerRgb, inputBoxRgb, pageRgb, a) {
+        return prefix + '.chat-wrapper{background:' + rgba(pageRgb, a) + ' !important;}'
+            + prefix + '.chat-header{background:' + rgba(headerRgb, a) + ' !important;}'
+            + prefix + '.chat-input-area{background:' + rgba(headerRgb, a) + ' !important;}'
+            + prefix + '.chat-input-wrapper:not(.disabled){background:' + rgba(inputBoxRgb, a) + ' !important;}';
     }
 
     /**
-     * 气泡背景透明度：控制 agent 回合大盒子（.agent-turn）与用户气泡（.message.user）底色的 alpha。
+     * 气泡与容器透明度：控制 agent 回合大盒子（.agent-turn）、用户气泡（.message.user）
+     * 以及顶部栏 / 输入区等容器底色的 alpha，末尾顺带刷新容器那组规则。
      *
      * <p>agent 侧的目标是 .agent-turn 而不是 .message.agent —— 宿主里小节底色已被置为 transparent，
      * 整盒底色统一落在盒子上，注入点必须跟着上移，否则透明度对 agent 完全无效。</p>
@@ -295,6 +308,9 @@
      * <p>文字色随透明度一起自适应：底色往会话区底色淡出后，亮色模式下白字会看不见，
      * 因此按合成后的亮度决定用深色还是浅色字；user 气泡里几个原本为白字设计的元素（链接/代码块）
      * 在切到深色字时一并反转，避免低透明度下只剩一块看不清的浅底。</p>
+     *
+     * <p>亮 / 暗两套规则一次注入：暗色气泡的底色基准与文字深浅都单独按暗色会话区底色算过，
+     * 主题切换由 CSS 直接生效，不依赖 MutationObserver 重算。</p>
      */
     function applyMessageAlpha() {
         if (!alphaStyleEl) {
@@ -303,23 +319,37 @@
             document.head.appendChild(alphaStyleEl);
         }
         var a = state.msgAlpha / 100;
-        var base = baseRgb();
-        var agentRgb = isDarkTheme() ? AGENT_RGB_DARK : AGENT_RGB_LIGHT;
+        var userGradient = 'linear-gradient(135deg,' + rgba(USER_RGB_FROM, a) + ' 0%,'
+            + rgba(USER_RGB_TO, a) + ' 100%)';
+
+        alphaStyleEl.textContent =
+            bubbleCss('', AGENT_RGB_LIGHT, baseRgbFor(false), userGradient, a)
+            + bubbleCss('body.dark-theme ', AGENT_RGB_DARK, baseRgbFor(true), userGradient, a);
+
+        applyContainerAlpha();
+    }
+
+    /**
+     * 一套（亮或暗）气泡底色 + 文字色规则。
+     *
+     * @param base 该主题下气泡底色淡出后露出的会话区底衬色，用于反推文字该用深色还是浅色
+     */
+    function bubbleCss(prefix, agentRgb, base, userGradient, a) {
         var agentText = pickTextColor([agentRgb], base, a, TEXT_DARK, TEXT_LIGHT_AGENT);
         var userText = pickTextColor([USER_RGB_FROM, USER_RGB_TO], base, a, TEXT_DARK, TEXT_LIGHT_USER);
 
-        var css = '.agent-turn{background:' + rgba(agentRgb, a) + ' !important;'
+        var css = prefix + '.agent-turn{background:' + rgba(agentRgb, a) + ' !important;'
             + 'color:' + agentText + ' !important;}'
-            + '.message.user{background:linear-gradient(135deg,' + rgba(USER_RGB_FROM, a) + ' 0%,'
-            + rgba(USER_RGB_TO, a) + ' 100%) !important;color:' + userText + ' !important;}';
+            + prefix + '.message.user{background:' + userGradient + ' !important;'
+            + 'color:' + userText + ' !important;}';
         if (userText === TEXT_DARK) {
-            css += '.message.user .message-content a{color:inherit !important;}'
-                + '.message.user .message-content code{background:rgba(0,0,0,0.06) !important;}'
-                + '.message.user .message-content pre{background:rgba(0,0,0,0.05) !important;}'
-                + '.message.user .message-content blockquote{border-left-color:currentColor !important;'
+            css += prefix + '.message.user .message-content a{color:inherit !important;}'
+                + prefix + '.message.user .message-content code{background:rgba(0,0,0,0.06) !important;}'
+                + prefix + '.message.user .message-content pre{background:rgba(0,0,0,0.05) !important;}'
+                + prefix + '.message.user .message-content blockquote{border-left-color:currentColor !important;'
                 + 'background:rgba(0,0,0,0.04) !important;}';
         }
-        alphaStyleEl.textContent = css;
+        return css;
     }
 
     function applyFont() {
@@ -459,7 +489,7 @@
             });
         }
 
-        // 消息背景透明度：一个滑块
+        // 气泡与容器透明度：一个滑块（内部会连带刷新容器注入规则）
         if (alphaInput) {
             alphaInput.addEventListener('input', function () {
                 state.msgAlpha = clampInt(alphaInput.value, 0, 100, ALPHA_DEFAULT);
@@ -547,15 +577,16 @@
     }
 
     /**
-     * 跟随深浅主题切换重算：未设背景色时，背景图透明度的底衬色取的是会话区默认底色
-     * （亮 white / 暗 #1a1a2e）；气泡底色的基准色与文字深浅同样随主题变化，
-     * 主题一变这些都必须重新合成才不出错。
+     * 跟随深浅主题切换重算。
+     *
+     * <p>容器与气泡的透明度规则本身就分了亮 / 暗两套，主题切换由 CSS 直接生效、无须重算；
+     * 唯一需要 JS 重算的是 .chat-area 的行内背景图叠层——它的底衬色取的是会话区自身默认底色
+     * （亮 white / 暗 #1a1a2e），主题一变必须重新合成才不出错。</p>
      */
     function observeTheme() {
         if (!window.MutationObserver || !document.body) return;
         new MutationObserver(function () {
             applyBackground();
-            applyMessageAlpha();
         }).observe(document.body, { attributes: true, attributeFilter: ['class'] });
     }
 
