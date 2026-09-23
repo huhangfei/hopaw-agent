@@ -18,7 +18,9 @@ import com.agent.hopaw.infra.plugin.AbstractAgentPlugin;
  * 支持设置会话区背景色 / 背景图（背景图可调透明度），
  * 并用同一个滑块调节气泡与容器透明度（agent 回合大盒子、用户气泡，顶部栏 / 输入区 / 输入框等容器，
  * 以及消息区滚动条与代码块底色；气泡文字深浅随透明度自适应），
- * 以及拖拽调节会话消息字体大小（思考 / 普通消息 / 工具按钮），
+ * 以及拖拽调节会话消息字体大小（思考 / 普通消息 / 工具按钮）；
+ * 字体大小还支持可选的「自适应字号」开关——开启后用 ResizeObserver 监听消息区真实宽度，
+ * 按宽度档位自动缩放三类字号（rAF 合帧 + 样式 diff，开销可忽略），
  * 全部设置由本插件自行持久化到 localStorage 并在页面加载时还原。</p>
  */
 public class ChatBeautifyPlugin extends AbstractAgentPlugin {
@@ -56,7 +58,8 @@ public class ChatBeautifyPlugin extends AbstractAgentPlugin {
 
     @Override
     public String getKeyword() {
-        return "美化,背景,背景色,背景图,透明度,透明,气泡,容器,字体,字号,外观,主题,chat,background,opacity";
+        return "美化,背景,背景色,背景图,透明度,透明,气泡,容器,字体,字号,自适应,宽度,外观,主题,"
+                + "chat,background,opacity,adaptive,width";
     }
 
     @Override

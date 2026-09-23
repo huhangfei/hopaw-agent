@@ -231,6 +231,72 @@
     margin-top: 2px;
 }
 
+/* ---- 自适应字号开关 ---- */
+.cb-adaptive-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 6px;
+}
+.cb-adaptive-label {
+    font-size: 12px;
+    color: #1f2328;
+    font-weight: 500;
+}
+.cb-switch {
+    position: relative;
+    display: inline-block;
+    width: 34px;
+    height: 20px;
+    flex-shrink: 0;
+    cursor: pointer;
+}
+.cb-switch input {
+    opacity: 0;
+    width: 0;
+    height: 0;
+    position: absolute;
+}
+.cb-switch-track {
+    position: absolute;
+    inset: 0;
+    border-radius: 999px;
+    background: #cfd4dc;
+    transition: background 0.15s;
+}
+.cb-switch-track::after {
+    content: "";
+    position: absolute;
+    top: 2px;
+    left: 2px;
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    background: #fff;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.25);
+    transition: transform 0.15s;
+}
+.cb-switch input:checked + .cb-switch-track {
+    background: #667eea;
+}
+.cb-switch input:checked + .cb-switch-track::after {
+    transform: translateX(14px);
+}
+.cb-switch input:focus-visible + .cb-switch-track {
+    outline: 2px solid #3b82f6;
+    outline-offset: 1px;
+}
+.cb-adaptive-hint {
+    font-size: 11px;
+    line-height: 1.5;
+    color: #8a919c;
+    margin-bottom: 10px;
+}
+/* 自适应开启时三个手动滑块整组置灰（值保留，关闭开关即还原生效） */
+.cb-font-sliders.is-muted .cb-range-row {
+    opacity: 0.45;
+}
+
 /* ==================== 暗色主题适配 ==================== */
 body.dark-theme .cb-root .cb-btn {
     background: #2a2e42;
@@ -281,4 +347,16 @@ body.dark-theme .cb-range-value {
 }
 body.dark-theme .cb-range {
     accent-color: #8ea2ff;
+}
+body.dark-theme .cb-adaptive-label {
+    color: #e8eaf6;
+}
+body.dark-theme .cb-adaptive-hint {
+    color: #9aa0c0;
+}
+body.dark-theme .cb-switch-track {
+    background: #3a3f57;
+}
+body.dark-theme .cb-switch input:checked + .cb-switch-track {
+    background: #667eea;
 }

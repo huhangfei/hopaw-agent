@@ -12,6 +12,9 @@
  *     并按底色与透明度的合成结果自动切换气泡文字深浅，
  *     避免亮色模式下透明度调低后白色文字看不见；
  *   - 字体大小：三个滑块分别拖拽调节「思考 / 普通消息 / 工具按钮」字号，实时生效；
+ *   - 自适应字号：可选开关。开启后用 ResizeObserver 监听消息区（.chat-messages）真实宽度，
+ *     按宽度档位缩放上方三个手动字号（倍率 0.85~1.3，逐类 clamp 到各自滑块范围）；
+ *     回调经 rAF 合帧，注入前做 diff（宽度未跨档不写样式），关闭即还原手动值；
  *   - 全部设置持久化到 localStorage（键 hopaw.chatBeautify），页面加载时还原；
  *   - 深浅主题通过 body.dark-theme 由 CSS 适配，JS 无需感知。
  *
@@ -23,6 +26,17 @@
     var STORAGE_KEY = 'hopaw.chatBeautify';
     var LEGACY_KEY = 'hopaw.chatBackground';
     var FONT_DEFAULT = { thinking: 12, message: 14, tool: 14 };
+    /* 自适应字号：消息区宽度档位 → 手动字号的缩放倍率（逐档阶跃，避免连续重排抖动） */
+    var ADAPTIVE_STEPS = [
+        { max: 480, factor: 0.85 },   // 窄栏 / 半屏
+        { max: 768, factor: 0.95 },
+        { max: 1200, factor: 1.0 },   // 常规
+        { max: 1600, factor: 1.1 },
+        { max: 2000, factor: 1.2 },
+        { max: Infinity, factor: 1.3 } // 宽屏 / 分屏
+    ];
+    /* 各类字号的合法区间：与面板滑块 min/max 保持一致，自适应结果同样受它约束 */
+    var FONT_LIMITS = { thinking: [10, 18], message: [12, 26], tool: [12, 22] };
     var ALPHA_DEFAULT = 100;   // 气泡与容器透明度默认值
     var IMG_ALPHA_DEFAULT = 100;
     var MAX_IMAGE_BYTES = 4 * 1024 * 1024; // 背景图上限 4MB（localStorage 约 5MB）
@@ -92,13 +106,21 @@
     var fontStyleEl = null;
     var alphaStyleEl = null;
     var containerStyleEl = null;
+    /* 自适应字号相关 */
+    var adaptiveToggle = null;
+    var fontSlidersBox = null;
+    var msgAreaEl = null;          // 被观察的消息区元素（.chat-messages）
+    var resizeObserver = null;     // 复用的单个 ResizeObserver 实例
+    var rafPending = false;        // rAF 合帧标记：一次宽度抖动最多排一次重算
+    var lastAppliedFont = null;    // 上次实际注入的字号，宽度未跨档时跳过样式重写
 
     var state = {
         backgroundColor: null,
         backgroundImage: null,
         imageAlpha: IMG_ALPHA_DEFAULT,
         msgAlpha: ALPHA_DEFAULT,
-        font: { thinking: FONT_DEFAULT.thinking, message: FONT_DEFAULT.message, tool: FONT_DEFAULT.tool }
+        font: { thinking: FONT_DEFAULT.thinking, message: FONT_DEFAULT.message, tool: FONT_DEFAULT.tool },
+        adaptive: false
     };
 
     /* ---------------- 存储 ---------------- */
@@ -124,6 +146,7 @@
                 state.font.thinking = clampInt(parsed.font && parsed.font.thinking, 10, 18, FONT_DEFAULT.thinking);
                 state.font.message = clampInt(parsed.font && parsed.font.message, 12, 26, FONT_DEFAULT.message);
                 state.font.tool = clampInt(parsed.font && parsed.font.tool, 12, 22, FONT_DEFAULT.tool);
+                state.adaptive = parsed.adaptive === true;
                 return;
             } catch (e) { /* 解析失败则回退默认 */ }
         }
@@ -141,7 +164,8 @@
             backgroundImage: state.backgroundImage,
             imageAlpha: state.imageAlpha,
             msgAlpha: state.msgAlpha,
-            font: state.font
+            font: state.font,
+            adaptive: state.adaptive
         }));
     }
 
@@ -407,16 +431,106 @@
         return css;
     }
 
+    /** 当前手动基准字号（未开启自适应时即最终生效值） */
+    function manualFont() {
+        return state.font;
+    }
+
+    /** 消息区宽度 → 缩放倍率：逐档阶跃匹配，宽度只在档内变化时倍率不变 */
+    function factorFor(width) {
+        for (var i = 0; i < ADAPTIVE_STEPS.length; i++) {
+            if (width < ADAPTIVE_STEPS[i].max) return ADAPTIVE_STEPS[i].factor;
+        }
+        return 1.0;
+    }
+
+    /** 自适应字号：手动基准 × 档位倍率，逐类 clamp 到各自滑块区间，保证结果永远合法 */
+    function computeAdaptiveFont() {
+        var w = msgAreaEl ? msgAreaEl.clientWidth : 0;
+        var factor = factorFor(w);
+        var out = {};
+        for (var k in state.font) {
+            if (!Object.prototype.hasOwnProperty.call(state.font, k)) continue;
+            var lim = FONT_LIMITS[k];
+            out[k] = Math.max(lim[0], Math.min(lim[1], Math.round(state.font[k] * factor)));
+        }
+        return out;
+    }
+
+    /** 当前最终生效的字号（自适应开 → 按宽度算，关 → 手动值） */
+    function effectiveFont() {
+        return state.adaptive ? computeAdaptiveFont() : state.font;
+    }
+
     function applyFont() {
         if (!fontStyleEl) {
             fontStyleEl = document.createElement('style');
             fontStyleEl.id = 'cbFontStyle';
             document.head.appendChild(fontStyleEl);
         }
+        var t = effectiveFont();
+        // diff 后再写：宽度未跨档 / 关闭自适应还原成同值时，不触发无意义的样式重算
+        if (lastAppliedFont
+            && lastAppliedFont.thinking === t.thinking
+            && lastAppliedFont.message === t.message
+            && lastAppliedFont.tool === t.tool) {
+            return;
+        }
+        lastAppliedFont = { thinking: t.thinking, message: t.message, tool: t.tool };
         fontStyleEl.textContent =
-            '.thinking-content{font-size:' + state.font.thinking + 'px !important;}' +
-            '.message,.agent-turn{font-size:' + state.font.message + 'px !important;}' +
-            '.tool-call-name{font-size:' + state.font.tool + 'px !important;}';
+            '.thinking-content{font-size:' + t.thinking + 'px !important;}' +
+            '.message,.agent-turn{font-size:' + t.message + 'px !important;}' +
+            '.tool-call-name{font-size:' + t.tool + 'px !important;}';
+    }
+
+    /* ---------------- 自适应字号：监听消息区真实宽度 ---------------- */
+
+    /**
+     * 用一个长期复用的 ResizeObserver 观察消息区（.chat-messages，Thymeleaf 静态节点）。
+     * 元素被整体替换时（理论上不会）在下次回调里重挂；无 ResizeObserver 的老浏览器
+     * 降级为 window resize + 轮询当前宽度。
+     */
+    function watchMsgArea() {
+        if (window.ResizeObserver) {
+            if (!resizeObserver) {
+                resizeObserver = new ResizeObserver(function () { scheduleAdaptiveApply(); });
+            }
+            attachObserver();
+        } else {
+            // 降级：老浏览器没有 ResizeObserver，退化为窗口 resize 事件
+            window.addEventListener('resize', scheduleAdaptiveApply);
+        }
+    }
+
+    function attachObserver() {
+        if (!resizeObserver) return;
+        var el = document.querySelector('.chat-messages');
+        if (!el) return;
+        if (el === msgAreaEl) return;
+        if (msgAreaEl) resizeObserver.unobserve(msgAreaEl);
+        msgAreaEl = el;
+        resizeObserver.observe(el); // observe 首次会立即回调一次，正好完成初始应用
+    }
+
+    function unwatchMsgArea() {
+        if (resizeObserver && msgAreaEl) {
+            resizeObserver.unobserve(msgAreaEl);
+        }
+        msgAreaEl = null;
+        lastAppliedFont = null; // 回到手动值时强制重写一次样式
+    }
+
+    /** rAF 合帧：一帧内多次宽度变化只重算一次；applyFont 内部再 diff，未跨档不写样式 */
+    function scheduleAdaptiveApply() {
+        if (!state.adaptive) return;
+        if (rafPending) return;
+        rafPending = true;
+        window.requestAnimationFrame(function () {
+            rafPending = false;
+            attachObserver();   // 防御：消息区节点被替换时重挂观察
+            applyFont();
+            syncFontControls(); // 让滑块旁的读数实时反映当前生效字号
+        });
     }
 
     /* ---------------- UI 同步 ---------------- */
@@ -452,17 +566,26 @@
     }
 
     function syncFontControls() {
+        // 滑块位置始终对准手动基准值（自适应开启时滑块置灰、暂停生效）；
+        // 读数显示当前真正生效的字号，自适应时随宽度实时变化
+        var t = effectiveFont();
         if (fontThinking) fontThinking.value = state.font.thinking;
         if (fontMessage) fontMessage.value = state.font.message;
         if (fontTool) fontTool.value = state.font.tool;
-        if (fontThinkingVal) fontThinkingVal.textContent = state.font.thinking + 'px';
-        if (fontMessageVal) fontMessageVal.textContent = state.font.message + 'px';
-        if (fontToolVal) fontToolVal.textContent = state.font.tool + 'px';
+        if (fontThinkingVal) fontThinkingVal.textContent = t.thinking + 'px';
+        if (fontMessageVal) fontMessageVal.textContent = t.message + 'px';
+        if (fontToolVal) fontToolVal.textContent = t.tool + 'px';
+    }
+
+    function syncAdaptiveControl() {
+        if (adaptiveToggle) adaptiveToggle.checked = state.adaptive;
+        if (fontSlidersBox) fontSlidersBox.classList.toggle('is-muted', state.adaptive);
     }
 
     function syncAll() {
         applyBackground();
         applyMessageAlpha();
+        syncAdaptiveControl();
         applyFont();
         syncSwatches();
         syncImagePreview();
@@ -575,6 +698,22 @@
             save();
         });
 
+        // 自适应字号：开关。开 → 挂观察器按宽度算字号并置灰滑块；关 → 断开观察并还原手动值
+        if (adaptiveToggle) {
+            adaptiveToggle.addEventListener('change', function () {
+                state.adaptive = adaptiveToggle.checked;
+                if (fontSlidersBox) fontSlidersBox.classList.toggle('is-muted', state.adaptive);
+                if (state.adaptive) {
+                    watchMsgArea();
+                } else {
+                    unwatchMsgArea();
+                }
+                applyFont();
+                syncFontControls();
+                save();
+            });
+        }
+
         // 点击面板外部关闭
         document.addEventListener('click', function (ev) {
             if (panel.hidden) return;
@@ -620,6 +759,8 @@
         fontMessageVal = document.getElementById('cbFontMessageVal');
         fontToolVal = document.getElementById('cbFontToolVal');
         resetFontBtn = document.getElementById('cbResetFont');
+        adaptiveToggle = document.getElementById('cbAdaptive');
+        fontSlidersBox = document.getElementById('cbFontSliders');
     }
 
     /** 把按钮 + 面板整体移动到会话头部「更多」按钮前（无 header 时不显示） */

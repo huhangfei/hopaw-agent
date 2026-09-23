@@ -68,7 +68,16 @@
         <!-- 字体大小 -->
         <div class="cb-group">
             <div class="cb-group-title">消息字体大小</div>
-            <div class="cb-range-row">
+            <div class="cb-adaptive-row">
+                <label class="cb-switch" title="按消息区宽度自动缩放字号">
+                    <input type="checkbox" id="cbAdaptive">
+                    <span class="cb-switch-track"></span>
+                </label>
+                <span class="cb-adaptive-label">自适应字号</span>
+            </div>
+            <div class="cb-adaptive-hint">按消息区宽度自动缩放下方字号；开启后手动滑块暂停生效，关闭即还原</div>
+            <div class="cb-font-sliders" id="cbFontSliders">
+                <div class="cb-range-row">
                 <span class="cb-range-label">思考</span>
                 <input type="range" class="cb-range" id="cbFontThinking" min="10" max="18" step="1" value="12" data-kind="thinking">
                 <span class="cb-range-value" id="cbFontThinkingVal">12px</span>
@@ -85,6 +94,7 @@
             </div>
             <div class="cb-range-row cb-range-reset-row">
                 <button type="button" class="cb-reset" id="cbResetFont">重置字体</button>
+            </div>
             </div>
         </div>
     </div>
