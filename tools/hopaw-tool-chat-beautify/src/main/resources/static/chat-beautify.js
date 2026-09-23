@@ -14,7 +14,8 @@
  *   - 字体大小：三个滑块分别拖拽调节「思考 / 普通消息 / 工具按钮」字号，实时生效；
  *   - 自适应字号：可选开关。开启后用 ResizeObserver 监听消息区（.chat-messages）真实宽度，
  *     按宽度档位缩放上方三个手动字号（倍率 0.85~1.3，逐类 clamp 到各自滑块范围）；
- *     回调经 rAF 合帧，注入前做 diff（宽度未跨档不写样式），关闭即还原手动值；
+ *     回调经 rAF 合帧，注入前做 diff（宽度未跨档不写样式），跨档跳变挂 font-size
+ *     过渡使字号逐渐增减，关闭即还原手动值（过渡随规则一起移除）；
  *   - 全部设置持久化到 localStorage（键 hopaw.chatBeautify），页面加载时还原；
  *   - 深浅主题通过 body.dark-theme 由 CSS 适配，JS 无需感知。
  *
@@ -477,10 +478,14 @@
             return;
         }
         lastAppliedFont = { thinking: t.thinking, message: t.message, tool: t.tool };
+        // 自适应跨档是离散跳变：挂 font-size 过渡让字号逐渐增减；
+        // 只在自适应开启时注入（关闭即随规则一起移除，还原手动值不拖尾）。
+        // 宿主在这几个元素上没有已定义的 transition，整属性覆盖无副作用。
+        var trans = state.adaptive ? 'transition:font-size 0.3s ease-out;' : '';
         fontStyleEl.textContent =
-            '.thinking-content{font-size:' + t.thinking + 'px !important;}' +
-            '.message,.agent-turn{font-size:' + t.message + 'px !important;}' +
-            '.tool-call-name{font-size:' + t.tool + 'px !important;}';
+            '.thinking-content{font-size:' + t.thinking + 'px !important;' + trans + '}' +
+            '.message,.agent-turn{font-size:' + t.message + 'px !important;' + trans + '}' +
+            '.tool-call-name{font-size:' + t.tool + 'px !important;' + trans + '}';
     }
 
     /* ---------------- 自适应字号：监听消息区真实宽度 ---------------- */
